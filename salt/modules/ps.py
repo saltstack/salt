@@ -14,6 +14,7 @@ import datetime
 import re
 
 # Import salt libs
+import salt.utils.data
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
@@ -53,9 +54,9 @@ def _get_proc_cmdline(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.cmdline() if PSUTIL2 else proc.cmdline
+        return salt.utils.data.decode(proc.cmdline() if PSUTIL2 else proc.cmdline)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
-        return ''
+        return []
 
 
 def _get_proc_create_time(proc):
@@ -65,7 +66,7 @@ def _get_proc_create_time(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.create_time() if PSUTIL2 else proc.create_time
+        return salt.utils.data.decode(proc.create_time() if PSUTIL2 else proc.create_time)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return None
 
@@ -77,7 +78,7 @@ def _get_proc_name(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.name() if PSUTIL2 else proc.name
+        return salt.utils.data.decode(proc.name() if PSUTIL2 else proc.name)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return []
 
@@ -89,7 +90,7 @@ def _get_proc_status(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.status() if PSUTIL2 else proc.status
+        return salt.utils.data.decode(proc.status() if PSUTIL2 else proc.status)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return None
 
@@ -101,7 +102,7 @@ def _get_proc_username(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.username() if PSUTIL2 else proc.username
+        return salt.utils.data.decode(proc.username() if PSUTIL2 else proc.username)
     except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError):
         return None
 
@@ -156,7 +157,7 @@ def top(num_processes=5, interval=3):
     for idx, (diff, process) in enumerate(reversed(sorted(usage))):
         if num_processes and idx >= num_processes:
             break
-        if len(_get_proc_cmdline(process)) == 0:
+        if not _get_proc_cmdline(process):
             cmdline = _get_proc_name(process)
         else:
             cmdline = _get_proc_cmdline(process)

@@ -403,6 +403,7 @@ of a field to null.
 def _failing_new(*args, **kwargs):
     raise TypeError('Can\'t create another NullSentinel instance')
 
+
 NullSentinel.__new__ = staticmethod(_failing_new)
 del _failing_new
 
@@ -1442,7 +1443,7 @@ class NotItem(SchemaItem):
         if not isinstance(self.item, (Schema, SchemaItem)):
             raise RuntimeError(
                 'The passed item be of type Schema, SchemaItem or '
-                'BaseSchemaItem, not \'{1}\''.format(type(self.item))
+                'BaseSchemaItem, not \'{0}\''.format(type(self.item))
             )
 
     def serialize(self):

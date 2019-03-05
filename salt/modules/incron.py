@@ -151,8 +151,9 @@ def raw_system_incron():
 
         salt '*' incron.raw_system_incron
     '''
-    log.debug("read_file {0}" . format(_read_file(_INCRON_SYSTEM_TAB, 'salt')))
-    return ''.join(_read_file(_INCRON_SYSTEM_TAB, 'salt'))
+    _contents = _read_file(_INCRON_SYSTEM_TAB, 'salt')
+    log.debug('incron read_file contents: %s', _contents)
+    return ''.join(_contents)
 
 
 def raw_incron(user):
@@ -186,7 +187,7 @@ def list_tab(user):
         data = raw_system_incron()
     else:
         data = raw_incron(user)
-        log.debug("user data {0}" . format(data))
+        log.debug('incron user data %s', data)
     ret = {'crons': [],
            'pre': []
            }
@@ -211,6 +212,7 @@ def list_tab(user):
         else:
             ret['pre'].append(line)
     return ret
+
 
 # For consistency's sake
 ls = salt.utils.functools.alias_function(list_tab, 'ls')
@@ -316,5 +318,6 @@ def rm_job(user,
         return comdat['stderr']
 
     return ret
+
 
 rm = salt.utils.functools.alias_function(rm_job, 'rm')

@@ -2,7 +2,7 @@
 '''
 Execution module for `ciscoconfparse <http://www.pennington.net/py/ciscoconfparse/index.html>`_
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 This module can be used for basic configuration parsing, audit or validation
 for a variety of network platforms having Cisco IOS style configuration (one

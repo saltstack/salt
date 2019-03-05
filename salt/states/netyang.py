@@ -12,7 +12,7 @@ Dependencies
 ------------
 
 - napalm-yang
-- pyangbing > 0.5.11
+- pyangbind > 0.5.11
 
 To be able to load configuration on network devices,
 it requires NAPALM_ library to be installed:  ``pip install napalm``.
@@ -206,7 +206,7 @@ def configured(name,
                data,
                **kwargs):
     '''
-    Configure the network device, given the input data strucuted
+    Configure the network device, given the input data structured
     according to the YANG models.
 
     .. note::

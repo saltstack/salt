@@ -74,3 +74,6 @@ salt/modules/reg.py                 @saltstack/team-windows
 salt/states/reg.py                  @saltstack/team-windows
 tests/*/*win*                       @saltstack/team-windows
 tests/*/test_reg.py                 @saltstack/team-windows
+
+# Jenkins Integration
+.ci/*                               @saltstack/saltstack-sre-team @saltstack/team-core

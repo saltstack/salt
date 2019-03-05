@@ -262,6 +262,7 @@ state modules
     slack
     smartos
     smtp
+    snap
     snapper
     solrcloud
     splunk

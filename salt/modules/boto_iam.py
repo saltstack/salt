@@ -48,6 +48,7 @@ import salt.utils.compat
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.versions
+from salt.exceptions import SaltInvocationError
 
 # Import third party libs
 # pylint: disable=unused-import
@@ -1519,6 +1520,56 @@ def upload_server_cert(cert_name, cert_body, private_key, cert_chain=None, path=
         log.debug(e)
         log.error('Failed to failed to create certificate %s.', cert_name)
         return False
+
+
+def list_server_certificates(path_prefix='/', region=None, key=None, keyid=None, profile=None):
+    '''
+    Lists the server certificates stored in IAM that have the specified path prefix.
+
+    .. versionadded:: ???
+
+    :param path_prefix:
+        The path prefix for filtering the results.  For example:  /company/servercerts would get
+        all server certificates for which the path starts with /company/servercerts .
+        This parameter is optional.  If it is not included, it defaults to a slash (/), listing all
+        server certificates.  This parameter allows (per its regex pattern) a string of characters
+        consisting of either a forward slash (/) by itself or a string that must begin and end with
+        forward slashes.  In addition, it can contain any ASCII character from the ! (u0021)
+        through the DEL character (u007F), including most punctuation characters, digits, and upper
+        and lowercased letters.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.list_server_certificates path_prefix=/somepath/
+    '''
+    retries = 10
+    sleep = 6
+    conn = __utils__['boto3.get_connection']('iam', region=region, key=key, keyid=keyid,
+            profile=profile)
+    Items = []
+    while retries:
+        try:
+            log.debug('Garnering list of IAM Server Certificates')
+            IsTruncated = True
+            while IsTruncated:
+                kwargs = {'PathPrefix': path_prefix}
+                ret = conn.list_server_certificates(**kwargs)
+                Items += ret.get('ServerCertificateMetadataList', [])
+                IsTruncated = ret.get('IsTruncated')
+                kwargs.update({'Marker': ret.get('Marker')})
+            return Items
+        except botocore.exceptions.ParamValidationError as err:
+            raise SaltInvocationError(str(err))
+        except botocore.exceptions.ClientError as err:
+            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+                retries -= 1
+                log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
+                time.sleep(sleep)
+                continue
+            log.error('Failed to list IAM Server Certificates: %s', err.message)
+            return None
 
 
 def get_server_certificate(cert_name, region=None, key=None, keyid=None, profile=None):

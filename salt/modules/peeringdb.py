@@ -3,7 +3,7 @@
 PeeringDB Module
 ================
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Execution module for the basic interaction with the
 `PeeringDB <https://www.peeringdb.com/>`_ API.
