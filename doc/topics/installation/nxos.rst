@@ -307,7 +307,7 @@ Example:
 
 Start the Minon in the Guestshell and accept the key on the SaltStack Master.
 
-  ``[root@guestshell ~]# salt-minion -d``
+  ``[root@guestshell ~]# systemctl start salt-minion``
 
 .. code:: bash
 
@@ -383,33 +383,6 @@ Next, enable the SaltStack Minion systemd service (the ``enable`` command adds i
 
   systemctl enable salt-minion
   systemctl start salt-minion
-
-
-GuestShell NAPALM Installation
-==============================
-
-This section documents installing NAPALM in the ``guestshell`` after the Saltstack Minion has already been installed.
-
-Before NAPALM can be successfully installed a few packages need to be installed or updated.
-
-.. code:: bash
-
-  pip uninstall setuptools
-  pip install setuptools
-  python -m pip install pip==9.0.3
-  pip install napalm
-  pip install napalm-nxos
-
-Tell the SaltStack Minion to use NAPALM for NXOS.  Add the following to the minion configuration file (typically /etc/salt/minion):
-
-.. code:: yaml
-
-  napalm:
-    driver: nxos
-
-A ``username`` can be optionally provided if necessary.  However, by default, the username is 'admin'.  A ``password`` is not necessary as requests to NXAPI are made over the Unix Domain Socket (UDS) inside the ``guestshell``.  
-
-Once the above packages have installed successfully and configuration changes have been made, restart the Saltstack Minion inside the ``guestshell``.
 
 
 References
