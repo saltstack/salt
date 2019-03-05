@@ -168,6 +168,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
             self.assertIn(empty_line, file_txt)
             self.assertIn(comment_line, file_txt)
 
+    @skipIf(not salt.utils.path.which('ssh-keyscan'), 'ssh-keyscan not installed')
     def test_recv_known_hosts_hashed_shoud_be_findable_by_ssh_keygen(self):
         hostname = 'example.com'
         port = 12345
