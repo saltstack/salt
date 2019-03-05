@@ -109,7 +109,7 @@ def _ips_get_pkgversion(line):
     return line.split()[0].split('@')[1].strip()
 
 
-def refresh_db(full=False):
+def refresh_db(full=False, **kwargs):
     '''
     Updates the remote repos database.
 
@@ -133,7 +133,7 @@ def refresh_db(full=False):
         return __salt__['cmd.retcode']('/bin/pkg refresh') == 0
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     '''
     Check if there is an upgrade available for a certain package
     Accepts full or partial FMRI. Returns all matches found.

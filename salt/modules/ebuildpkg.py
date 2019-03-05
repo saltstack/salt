@@ -358,7 +358,7 @@ def list_upgrades(refresh=True, backtrack=3, **kwargs):  # pylint: disable=W0613
     return _get_upgradable(backtrack)
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
 
@@ -440,7 +440,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
-def refresh_db():
+def refresh_db(**kwargs):
     '''
     Update the portage tree using the first available method from the following
     list:
@@ -765,7 +765,7 @@ def install(name=None,
     return changes
 
 
-def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
+def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None, **kwargs):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -858,7 +858,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
     return ret
 
 
-def upgrade(refresh=True, binhost=None, backtrack=3):
+def upgrade(refresh=True, binhost=None, backtrack=3, **kwargs):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to

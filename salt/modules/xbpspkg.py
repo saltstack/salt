@@ -121,7 +121,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, **kwargs):
     '''
     Check whether or not an upgrade is available for all packages
 
@@ -247,7 +247,7 @@ def latest_version(*names, **kwargs):
 available_version = latest_version
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
 
@@ -260,7 +260,7 @@ def upgrade_available(name):
     return latest_version(name) != ''
 
 
-def refresh_db():
+def refresh_db(**kwargs):
     '''
     Update list of available packages from installed repos
 
@@ -300,7 +300,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True, **kwargs):
     '''
     Run a full system upgrade
 
@@ -484,7 +484,7 @@ def remove(name=None, pkgs=None, recursive=True, **kwargs):
     return salt.utils.data.compare_dicts(old, new)
 
 
-def list_repos():
+def list_repos(**kwargs):
     '''
     List all repos known by XBPS
 
@@ -607,7 +607,7 @@ def add_repo(repo, conffile='/usr/share/xbps.d/15-saltstack.conf'):
     return True
 
 
-def del_repo(repo):
+def del_repo(repo, **kwargs):
     '''
     Remove an XBPS repository from the system.
 

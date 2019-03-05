@@ -671,7 +671,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs) or {}
 
 
-def version_cmp(ver1, ver2, ignore_epoch=False):
+def version_cmp(ver1, ver2, ignore_epoch=False, **kwargs):
     '''
     .. versionadded:: 2015.5.4
 
@@ -948,7 +948,7 @@ def get_repo(repo, **kwargs):  # pylint: disable=unused-argument
     return _get_repo_info(repo)
 
 
-def list_repos():
+def list_repos(root=None, **kwargs):
     '''
     Lists all repos.
 
@@ -2291,7 +2291,7 @@ def _get_patches(installed_only=False):
     return patches
 
 
-def list_patches(refresh=False):
+def list_patches(refresh=False, root=None, **kwargs):
     '''
     .. versionadded:: 2017.7.0
 
@@ -2314,7 +2314,7 @@ def list_patches(refresh=False):
     return _get_patches()
 
 
-def list_installed_patches():
+def list_installed_patches(root=None, **kwargs):
     '''
     .. versionadded:: 2017.7.0
 
