@@ -423,7 +423,7 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
             if vtype == win32con.REG_MULTI_SZ:
                 value['vdata'] = [_to_mbcs(i) for i in vdata]
             elif vtype in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
-                value['vdata'] = _to_mbcs(vdata)
+                value['vdata'] = _to_mbcs(vdata).rstrip('\0')
             else:
                 value['vdata'] = vdata
             values.append(value)
@@ -528,7 +528,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
                 if vtype == win32con.REG_MULTI_SZ:
                     ret['vdata'] = [_to_mbcs(i) for i in vdata]
                 elif vtype in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
-                    ret['vdata'] = _to_mbcs(vdata)
+                    ret['vdata'] = _to_mbcs(vdata).rstrip('\0')
                 else:
                     ret['vdata'] = vdata
             else:
