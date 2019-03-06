@@ -58,7 +58,7 @@ def _get_proxy_windows(types=None):
     if types is None:
         types = ['http', 'https', 'ftp']
 
-    servers = __salt__['reg.read_value'](
+    servers = __utils__['reg.read_value'](
         hive='HKEY_CURRENT_USER',
         key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
         vname='ProxyServer')['vdata']
@@ -79,15 +79,12 @@ def _get_proxy_windows(types=None):
             ret[proxy_type] = {"server": server, "port": port}
 
     # Filter out types
-    if len(types) == 1:
-        return ret[types[0]]
-    else:
-        for key in ret:
-            if key not in types:
-                del ret[key]
+    for key in ret:
+        if key not in types:
+            del ret[key]
 
     # Return enabled info
-    ret['enabled'] = __salt__['reg.read_value'](
+    ret['enabled'] = __utils__['reg.read_value'](
         hive='HKEY_CURRENT_USER',
         key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
         vname='ProxyEnable')['vdata'] == 1
@@ -107,13 +104,13 @@ def _set_proxy_windows(server,
     for t in types:
         server_str += '{0}={1}:{2};'.format(t, server, port)
 
-    __salt__['reg.set_value'](
+    __utils__['reg.set_value'](
         hive='HKEY_CURRENT_USER',
         key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
         vname='ProxyServer',
         vdata=server_str)
 
-    __salt__['reg.set_value'](
+    __utils__['reg.set_value'](
         hive='HKEY_CURRENT_USER',
         key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
         vname='ProxyEnable',
@@ -123,7 +120,7 @@ def _set_proxy_windows(server,
     if bypass_hosts is not None:
         bypass_hosts_str = '<local>;{0}'.format(';'.join(bypass_hosts))
 
-        __salt__['reg.set_value'](
+        __utils__['reg.set_value'](
             hive='HKEY_CURRENT_USER',
             key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
             vname='ProxyOverride',
@@ -366,7 +363,7 @@ def get_proxy_bypass(network_service="Ethernet"):
 
     '''
     if __grains__['os'] == 'Windows':
-        reg_val = __salt__['reg.read_value'](
+        reg_val = __utils__['reg.read_value'](
             hive='HKEY_CURRENT_USER',
             key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
             vname='ProxyOverride')['vdata']
