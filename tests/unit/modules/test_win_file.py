@@ -39,9 +39,11 @@ class WinFileTestCase(TestCase):
         FAKE_PATH = os.sep.join(['path', 'does', 'not', 'exist'])
 
     def setup_loader_modules(self):
-        self.current_user = salt.utils.win_functions.get_current_user(False)
         return {
             win_file: {
+                '__opts__': {
+                    'test': False}},
+            default_file: {
                 '__opts__': {
                     'test': False}}}
 
