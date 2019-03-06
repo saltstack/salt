@@ -415,3 +415,9 @@ State Deprecations
     - Support for the ``force`` kwarg has been removed from the
       :py:func:`win_servermanager.installed <salt.states.win_servermanager.installed>`
       function. Please use ``recurse`` instead.
+
+Engine Removal
+--------------
+
+- The hipchat engine has been removed due to the service being retired. For users migrating
+  to Slack, the :py:func:`slack <salt.engines.slack>` engine may be a suitable replacement.
