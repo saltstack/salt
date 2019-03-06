@@ -19,7 +19,7 @@ from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
 import salt.modules.win_file as win_file
-import salt.modules.file
+import salt.modules.file as filemod
 import salt.modules.temp as temp
 from salt.exceptions import CommandExecutionError
 import salt.utils.platform
@@ -28,7 +28,7 @@ import salt.utils.win_dacl
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinFileTestCase(TestCase):
+class WinFileTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.win_file
     '''
@@ -40,10 +40,7 @@ class WinFileTestCase(TestCase):
 
     def setup_loader_modules(self):
         return {
-            win_file: {
-                '__opts__': {
-                    'test': False}},
-            salt.modules.file: {
+            filemod: {
                 '__opts__': {
                     'test': False}}}
 
@@ -328,7 +325,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         symlink = os.path.join(base, 'child 2', 'link')
         self.assertFalse(win_file.directory_exists(target))
         self.assertFalse(win_file.directory_exists(symlink))
-        self.assertTrue(salt.modules.file.makedirs_(target))
+        self.assertTrue(filemod.makedirs_(target))
         self.assertTrue(win_file.directory_exists(symlink))
         self.assertTrue(win_file.symlink(target, symlink))
         self.assertTrue(win_file.is_link(symlink))
