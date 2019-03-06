@@ -3234,9 +3234,9 @@ def has_privileges(
             else:
                 perms = [_PRIVILEGES_MAP[perm] for perm in _perms]
                 if "ALL" in _privs:
-                    retval = perms.sort() == _privileges[name].keys().sort()
+                    retval = sorted(perms) == sorted(_privileges[name])
                 else:
-                    retval = set(_privs).issubset(set(_privileges[name].keys()))
+                    retval = set(_privs).issubset(set(_privileges[name]))
             return retval
 
     return False
