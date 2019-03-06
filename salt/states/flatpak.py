@@ -7,6 +7,7 @@ Allows the installation and uninstallation of flatpak packages.
 .. versionadded:: Neon
 '''
 from __future__ import absolute_import, print_function, unicode_literals
+
 import salt.utils.path
 
 __virtualname__ = 'flatpak'
@@ -25,7 +26,7 @@ def installed(location, name):
     location
         The location or remote to install the flatpak from.
     name
-        The flatpak package
+        The name of the package or runtime
     '''
     ret = {'name': name,
            'changes': {},

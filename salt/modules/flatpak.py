@@ -9,12 +9,11 @@ Manage flatpak packages via Salt
 
 from __future__ import absolute_import, print_function, unicode_literals
 import subprocess
+import re
 
 import salt.utils.path
 
 FLATPAK_BINARY_NAME = 'flatpak'
-
-log = logging.getLogger(__name__)
 
 __virtualname__ = 'flatpak'
 
@@ -26,20 +25,19 @@ def __virtual__():
     return (False, 'The flatpak execution module cannot be loaded: the "flatpak" binary is not in the path.')
 
 
-def install(location, pkg):
+def install(location, name):
     '''
-    Install the specified flatpak package from the specified location.
+    Install the specified flatpak package or runtime from the specified location.
     Returns a dictionary of "result" and "output".
     location
-        The location or remote to install the flatpak from.
-    pkg
-        The flatpak package name
+        The location or remote to install from.
+    name
+        The name of the package or runtime
     '''
     ret = {'result': None, 'output': ""}
 
     try:
-        # Try to run it, merging stderr into output
-        ret['output'] = subprocess.check_output([FLATPAK_BINARY_NAME, 'install', location, pkg], stderr=subprocess.STDOUT)
+        ret['output'] = subprocess.check_output([FLATPAK_BINARY_NAME, 'install', location, name], stderr=subprocess.STDOUT)
         ret['result'] = True
     except subprocess.CalledProcessError as e:
         ret['output'] = e.output
@@ -48,14 +46,14 @@ def install(location, pkg):
     return ret
 
 
-def is_installed(pkg):
+def is_installed(name):
     '''
-    Returns True if there is any version of the specified package installed.
-    pkg
-        The package name
+    Returns True if the specified package or runtime is installed.
+    name
+        The name of the package or the runtime
     '''
     try:
-        output = subprocess.check_output([FLATPAK_BINARY_NAME, 'info', pkg], stderr=subprocess.STDOUT)
+        output = subprocess.check_output([FLATPAK_BINARY_NAME, 'info', name], stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError:
         return False
 
@@ -104,9 +102,9 @@ def is_remote_added(remote):
     except subprocess.CalledProcessError:
         return []
 
-    lines = output.splitlines()[1:] 
+    lines = output.splitlines()
     for item in lines:
-        i = item.split()
+        i = re.split(r'\t+', item.rstrip('\t'))
         if i[0] == remote:
             return True
     return False
