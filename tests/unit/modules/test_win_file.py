@@ -12,7 +12,6 @@ from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
 import salt.modules.win_file as win_file
-import salt.modules.file as filemod
 import salt.modules.temp as temp
 from salt.exceptions import CommandExecutionError
 import salt.utils.platform
@@ -20,7 +19,7 @@ import salt.utils.win_dacl
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinFileTestCase(TestCase, LoaderModuleMockMixin):
+class WinFileTestCase(TestCase):
     '''
         Test cases for salt.modules.win_file
     '''
@@ -29,12 +28,6 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
         FAKE_PATH = os.sep.join(['C:', 'path', 'does', 'not', 'exist'])
     else:
         FAKE_PATH = os.sep.join(['path', 'does', 'not', 'exist'])
-
-    def setup_loader_modules(self):
-        return {
-            filemod: {
-                '__opts__': {
-                    'test': False}}}
 
     def test_issue_43328_stats(self):
         '''
@@ -55,6 +48,7 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
             self.assertRaises(
                 CommandExecutionError, win_file.check_perms, self.FAKE_PATH)
 
+    @skipIf(not salt.utils.platform.is_windows(), 'Skip on Non-Windows systems')
     def test_issue_52002_check_file_remove_symlink(self):
         '''
         Make sure that directories including symlinks or symlinks can be removed
@@ -64,7 +58,7 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
         symlink = os.path.join(base, 'child 2', 'link')
         self.assertFalse(win_file.directory_exists(target))
         self.assertFalse(win_file.directory_exists(symlink))
-        self.assertTrue(filemod.makedirs_(target))
+        self.assertTrue(win_file.makedirs_(target))
         self.assertTrue(win_file.directory_exists(symlink))
         self.assertTrue(win_file.symlink(target, symlink))
         self.assertTrue(win_file.is_link(symlink))
