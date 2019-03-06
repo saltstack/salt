@@ -1234,6 +1234,44 @@ def clear_job_cache(hours=24):
     return True
 
 
+def clear_masterpillar(**kwargs):
+    '''
+    The minion sends a request to the master to clear its
+    PillarCache.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.clear_masterpillar
+    '''
+
+    masters = list()
+    ret = True
+    if 'master_uri_list' in __opts__:
+        for master_uri in __opts__['master_uri_list']:
+            masters.append(master_uri)
+    elif 'master_uri' in __opts__:
+        masters.append(__opts__['master_uri'])
+
+    for master in masters:
+        channel = salt.transport.client.ReqChannel.factory(__opts__, master_uri=master)
+        tok = channel.auth.gen_token(b'salt')
+        load = {'cmd': 'clear_pillarcache',
+                'id': __opts__['id'],
+                'tok': tok,
+                'grains': __grains__,
+                'saltenv': kwargs.get('saltenv', None),
+                'pillarenv': kwargs.get('pillarenv', None)}
+        try:
+            channel.send(load)
+        except SaltReqTimeoutError:
+            ret = False
+        finally:
+            channel.close()
+    return ret
+
+
 def find_job(jid):
     '''
     Return the data for a specific job id that is currently running.

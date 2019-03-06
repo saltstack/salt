@@ -1857,6 +1857,32 @@ class AESFuncs(object):
         # Encrypt the return
         return ret, {'fun': 'send'}
 
+    def clear_pillarcache(self, load):
+        '''
+        Allow a minion to clear its master pillar cache
+
+        :param dict load: The minion payload
+
+        :rtype: dict
+        :return: If the load is invalid, it may be returned. No operation is performed.
+
+        :rtype: bool
+        :return: True if cache was cleared, False if not
+        '''
+        load = self.__verify_load(load, ('id', 'tok'))
+
+        if not self.opts.get('allow_minion_pillar_flush', False):
+            log.warning(
+                'Minion %s requests pillar cache flush, but allow_minion_pillar_flush '
+                'is set to False', load['id']
+            )
+            return load
+
+        if load is False:
+            return load
+        else:
+            return self.masterapi.clear_pillarcache(load)
+
 
 class ClearFuncs(object):
     '''

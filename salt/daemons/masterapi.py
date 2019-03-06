@@ -1034,6 +1034,31 @@ class RemoteFuncs(object):
                                                          False))
         return True
 
+    def clear_pillarcache(self, load):
+        '''
+        Allow a minion to clear its master pillar cache
+        '''
+        if not all(k in load for k in ('id', 'grains', 'saltenv', 'pillarenv')):
+            return False
+        if self.opts.get('pillar_cache', False):
+            try:
+                pillar_cache = salt.pillar.PillarCache(
+                    self.opts,
+                    load['grains'],
+                    load['id'],
+                    saltenv=load['saltenv'],
+                    functions=self.mminion.functions,
+                    pillarenv=load['pillarenv']).cache
+                if load['id'] in pillar_cache:
+                    del pillar_cache[load['id']]
+            except Exception as exc:
+                log.error(
+                    'Exception %s occurred in clear pillarcache for minion %s',
+                    exc, load['id'], exc_info_on_loglevel=logging.DEBUG
+                )
+                return False
+        return True
+
 
 class LocalFuncs(object):
     '''
