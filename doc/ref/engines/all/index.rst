@@ -12,7 +12,6 @@ engine modules
 
     docker_events
     fluent
-    hipchat
     http_logstash
     ircbot
     junos_syslog
