@@ -318,7 +318,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         symlink = os.path.join(base, 'child 2', 'link')
         self.assertFalse(win_file.directory_exists(target))
         self.assertFalse(win_file.directory_exists(symlink))
-        self.assertTrue(win_file.makedirs(target))
+        self.assertTrue(win_file.makedirs_(target))
         self.assertTrue(win_file.directory_exists(symlink))
         self.assertTrue(win_file.symlink(target, symlink))
         self.assertTrue(win_file.is_link(symlink))
