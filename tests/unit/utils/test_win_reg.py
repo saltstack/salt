@@ -113,6 +113,51 @@ class WinFunctionsTestCase(TestCase):
             expected
         )
 
+    def test_list_values_existing_with_nullbytes_issue_51940(self):
+        '''
+        Test the list_values function where the values end with null byte
+        characters
+        '''
+        try:
+            self.assertTrue(
+                win_reg.set_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='fake_name01',
+                    vdata='data_ending in null bytes\0'
+                )
+            )
+            self.assertTrue(
+                win_reg.set_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='fake_name02',
+                    vdata='data_ending in null bytes\0\0\0\0'
+                )
+            )
+            expected = [
+                {'vtype': 'REG_SZ',
+                 'vname': 'fake_name01',
+                 'success': True,
+                 'hive': 'HKLM',
+                 'vdata': u'data_ending in null bytes',
+                 'key': FAKE_KEY},
+                {'vtype': 'REG_SZ',
+                 'vname': 'fake_name02',
+                 'success': True,
+                 'hive': 'HKLM',
+                 'vdata': 'data_ending in null bytes',
+                 'key': FAKE_KEY}]
+            self.assertEqual(
+                win_reg.list_values(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                ),
+                expected
+            )
+        finally:
+            win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
+
     def test_read_value_existing(self):
         '''
         Test the read_value function using a well known registry value
