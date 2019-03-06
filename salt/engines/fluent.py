@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 An engine that reads messages from the salt event bus and pushes
-them onto a fluent endpoint. 
+them onto a fluent endpoint.
 
 .. versionadded: neon
 
