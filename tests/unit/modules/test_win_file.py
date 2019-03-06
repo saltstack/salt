@@ -30,6 +30,13 @@ class WinFileTestCase(TestCase):
     else:
         FAKE_PATH = os.sep.join(['path', 'does', 'not', 'exist'])
 
+    def setup_loader_modules(self):
+        self.current_user = salt.utils.win_functions.get_current_user(False)
+        return {
+            win_file: {
+                '__opts__': {
+                    'test': False}}}
+
     def test_issue_43328_stats(self):
         '''
         Make sure that a CommandExecutionError is raised if the file does NOT
