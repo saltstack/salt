@@ -12,6 +12,7 @@ from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
 import salt.modules.win_file as win_file
+import salt.modules.file as default_file
 import salt.modules.temp as temp
 from salt.exceptions import CommandExecutionError
 import salt.utils.platform
@@ -57,7 +58,7 @@ class WinFileTestCase(TestCase):
         symlink = os.path.join(base, 'child 2', 'link')
         self.assertFalse(win_file.directory_exists(target))
         self.assertFalse(win_file.directory_exists(symlink))
-        self.assertTrue(win_file.makedirs_(target))
+        self.assertTrue(default_file.makedirs_(target))
         self.assertTrue(win_file.directory_exists(symlink))
         self.assertTrue(win_file.symlink(target, symlink))
         self.assertTrue(win_file.is_link(symlink))
