@@ -456,7 +456,7 @@ def certificate_managed(name,
                               new=private_key_args['new'],
                               overwrite=private_key_args['overwrite']):
             private_key = __salt__['x509.get_pem_entry'](
-                private_key_args['name'], pem_type='RSA PRIVATE KEY')
+                private_key_args['name'], pem_type='RSA PRIVATE KEY').decode()
         else:
             new_private_key = True
             private_key = __salt__['x509.create_private_key'](text=True, bits=private_key_args['bits'], passphrase=private_key_args[
