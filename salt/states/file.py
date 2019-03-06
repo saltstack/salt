@@ -2757,6 +2757,8 @@ def managed(name,
             elif ret['changes']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
+                ret['comment'] += ('\nNote: No changes made, actual changes may\n'
+                                   'be different due to other states.')
                 if 'diff' in ret['changes'] and not show_changes:
                     ret['changes']['diff'] = '<show_changes=False>'
             else:
