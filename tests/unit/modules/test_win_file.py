@@ -12,6 +12,7 @@ from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
 import salt.modules.win_file as win_file
+import salt.modules.temp as temp
 from salt.exceptions import CommandExecutionError
 import salt.utils.platform
 import salt.utils.win_dacl
@@ -46,3 +47,19 @@ class WinFileTestCase(TestCase):
         with patch('os.path.exists', return_value=False):
             self.assertRaises(
                 CommandExecutionError, win_file.check_perms, self.FAKE_PATH)
+
+    def test_issue_52002_check_file_remove_symlink(self):
+        '''
+        Make sure that directories including symlinks or symlinks can be removed
+        '''
+        base = temp.dir(prefix='base')
+        target = os.path.join(base, 'child 1', 'target/')
+        symlink = os.path.join(base, 'child 2', 'link')
+        self.assertFalse(win_file.directory_exists(target))
+        self.assertFalse(win_file.directory_exists(symlink))
+        self.assertTrue(win_file.makedirs(target))
+        self.assertTrue(win_file.directory_exists(symlink))
+        self.assertTrue(win_file.symlink(target, symlink))
+        self.assertTrue(win_file.is_link(symlink))
+        self.assertTrue(win_file.remove(base))
+        self.assertFalse(win_file.directory_exists(base))
