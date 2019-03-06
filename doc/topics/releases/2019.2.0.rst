@@ -280,7 +280,7 @@ a BGP policy referenced in many places, you can do so by running:
 
 .. code-block:: bash
 
-    salt '*' net.replae_pattern OLD-POLICY-CONFIG new-policy-config
+    salt '*' net.replace_pattern OLD-POLICY-CONFIG new-policy-config
 
 Similarly, you can also replace entire configuration blocks using the
 :mod:`net.blockreplace <salt.modules.napalm_network.blockreplace>` function.
