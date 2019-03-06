@@ -2719,7 +2719,7 @@ def managed(name,
     try:
         if __opts__['test']:
             if 'file.check_managed_changes' in __salt__:
-                ret['pchanges'] = __salt__['file.check_managed_changes'](
+                ret['changes'] = __salt__['file.check_managed_changes'](
                     name,
                     source,
                     source_hash,
@@ -2750,15 +2750,15 @@ def managed(name,
                             reset=win_perms_reset)
                     except CommandExecutionError as exc:
                         if exc.strerror.startswith('Path not found'):
-                            ret['pchanges'] = '{0} will be created'.format(name)
+                            ret['changes'] = '{0} will be created'.format(name)
 
-            if isinstance(ret['pchanges'], tuple):
-                ret['result'], ret['comment'] = ret['pchanges']
-            elif ret['pchanges']:
+            if isinstance(ret['changes'], tuple):
+                ret['result'], ret['comment'] = ret['changes']
+            elif ret['changes']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
-                if 'diff' in ret['pchanges'] and not show_changes:
-                    ret['pchanges']['diff'] = '<show_changes=False>'
+                if 'diff' in ret['changes'] and not show_changes:
+                    ret['changes']['diff'] = '<show_changes=False>'
             else:
                 ret['result'] = True
                 ret['comment'] = 'The file {0} is in the correct state'.format(name)
