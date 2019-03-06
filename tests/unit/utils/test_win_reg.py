@@ -114,10 +114,11 @@ class WinFunctionsTestCase(TestCase):
         )
 
     @destructiveTest
-    def test_list_values_existing_with_nullbytes_issue_51940(self):
+    def test_list_values_with_nullbytes__issue_51940(self):
         '''
         Test the list_values function where the values end with null byte
         characters
+        https://github.com/saltstack/salt/issues/51940
         '''
         try:
             self.assertTrue(
