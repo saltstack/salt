@@ -211,8 +211,6 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         '''
         if hasattr(self, 'message_client'):
             self.message_client.destroy()
-        else:
-            log.debug('No message_client attr for AsyncZeroMQReqChannel found. Not destroying sockets.')
 
     @property
     def master_uri(self):
