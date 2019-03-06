@@ -75,7 +75,7 @@ class IscsiGrainsTestCase(TestCase, LoaderModuleMockMixin):
         Test grains._windows_disks, retcode 1
         Should return empty lists
         '''
-        mock_which = MagicMock(return_value='C:\Windows\System32\wbem\WMIC.exe')
+        mock_which = MagicMock(return_value='C:\\Windows\\System32\\wbem\\WMIC.exe')
         mock_run_all = MagicMock(return_value={'stdout': '',
                                                'retcode': 1})
         with patch('salt.utils.path.which', mock_which), \
