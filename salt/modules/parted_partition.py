@@ -424,6 +424,7 @@ def _is_fstype(fs_type):
             "ext2",
             "ext3",
             "ext4",
+            "fat",
             "fat32",
             "fat16",
             "linux-swap",
