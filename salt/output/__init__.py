@@ -125,7 +125,12 @@ def display_output(data, out=None, opts=None, **kwargs):
                     ofh.close()
             return
         if display_data:
-            salt.utils.stringutils.print_cli(display_data)
+            if six.PY2:
+                salt.utils.stringutils.print_cli(display_data)
+            else:
+                encoded_data = display_data.encode('utf-8')
+                sys.stdout.buffer.write(encoded_data)
+                sys.stdout.buffer.write(b"\n")
     except IOError as exc:
         # Only raise if it's NOT a broken pipe
         if exc.errno != errno.EPIPE:
