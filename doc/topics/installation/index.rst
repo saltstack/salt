@@ -95,7 +95,7 @@ Salt should run on any Unix-like platform so long as the dependencies are met.
   cloud service providers using a unified API
 * `Requests`_ - HTTP library
 * `Tornado`_ - Web framework and asynchronous networking library
-* `futures`_ - Backport of the concurrent.futures package from Python 3.2
+* `futures`_ - Python2 only dependency. Backport of the concurrent.futures package from Python 3.2
 
 Depending on the chosen Salt transport, `ZeroMQ`_ or `RAET`_, dependencies
 vary:
