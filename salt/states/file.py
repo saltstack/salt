@@ -696,6 +696,11 @@ def _check_directory(name,
         for i in walk_l:
             walk_d[i[0]] = (i[1], i[2])
 
+    # Recurse skips root (we always do dirs, not root), so always check root:
+    fchange = _check_dir_meta(name, user, group, dir_mode, follow_symlinks)
+    if fchange:
+        changes[name] = fchange
+
     if recurse:
         try:
             recurse_set = _get_recurse_set(recurse)
@@ -732,10 +737,6 @@ def _check_directory(name,
                     fchange = _check_dir_meta(path, user, group, dir_mode, follow_symlinks)
                     if fchange:
                         changes[path] = fchange
-    # Recurse skips root (we always do dirs, not root), so always check root:
-    fchange = _check_dir_meta(name, user, group, dir_mode, follow_symlinks)
-    if fchange:
-        changes[name] = fchange
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
 
