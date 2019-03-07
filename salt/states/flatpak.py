@@ -64,6 +64,7 @@ def installed(location, name):
     ret['result'] = True
     return ret
 
+
 def uninstalled(name):
     '''
     Ensure that the named package is not installed
@@ -95,6 +96,7 @@ def uninstalled(name):
     ret['changes']['old'] = old[0]['version']
     ret['changes']['new'] = None
     return ret
+
 
 def add_remote(name, location):
     '''

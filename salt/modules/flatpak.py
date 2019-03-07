@@ -91,6 +91,7 @@ def add_remote(name, location):
         ret['output'] = e.output
         ret['result'] = False
 
+
 def is_remote_added(remote):
     '''
     Returns True if the remote has already been added.
