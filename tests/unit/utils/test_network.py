@@ -185,11 +185,17 @@ class NetworkTestCase(TestCase):
     def test_is_ip(self):
         self.assertTrue(network.is_ip('10.10.0.3'))
         self.assertFalse(network.is_ip('0.9.800.1000'))
+        # Check 16-char-long unicode string
+        # https://github.com/saltstack/salt/issues/51258
+        self.assertFalse(network.is_ipv6('sixteen-char-str'))
 
     def test_is_ipv4(self):
         self.assertTrue(network.is_ipv4('10.10.0.3'))
         self.assertFalse(network.is_ipv4('10.100.1'))
         self.assertFalse(network.is_ipv4('2001:db8:0:1:1:1:1:1'))
+        # Check 16-char-long unicode string
+        # https://github.com/saltstack/salt/issues/51258
+        self.assertFalse(network.is_ipv4('sixteen-char-str'))
 
     def test_is_ipv6(self):
         self.assertTrue(network.is_ipv6('2001:db8:0:1:1:1:1:1'))
@@ -202,6 +208,9 @@ class NetworkTestCase(TestCase):
         self.assertFalse(network.is_ipv6('2001:0db8:::0370:7334'))
         self.assertFalse(network.is_ipv6('10.0.1.2'))
         self.assertFalse(network.is_ipv6('2001.0db8.85a3.0000.0000.8a2e.0370.7334'))
+        # Check 16-char-long unicode string
+        # https://github.com/saltstack/salt/issues/51258
+        self.assertFalse(network.is_ipv6('sixteen-char-str'))
 
     def test_parse_host_port(self):
         _ip = ipaddress.ip_address
@@ -231,6 +240,54 @@ class NetworkTestCase(TestCase):
             except AssertionError as _e_:
                 log.error('bad host_port value: "%s" failed to trigger ValueError exception', host_port)
                 raise _e_
+
+    def test_dns_check(self):
+        class MockSocket(object):
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def __call__(self, *args, **kwargs):
+                pass
+
+            def setsockopt(self, *args, **kwargs):
+                pass
+
+            def sendto(self, *args, **kwargs):
+                pass
+
+            def connect(self, *args, **kwargs):
+                pass
+
+            def close(self, *args, **kwargs):
+                pass
+
+        hosts = [
+            {'host': '10.10.0.3',
+             'port': '',
+             'mocked': [(2, 1, 6, '', ('10.10.0.3', 0))],
+             'ret': '10.10.0.3'},
+            {'host': '10.10.0.3',
+             'port': '1234',
+             'mocked': [(2, 1, 6, '', ('10.10.0.3', 0))],
+             'ret': '10.10.0.3'},
+            {'host': '2001:0db8:85a3::8a2e:0370:7334',
+             'port': '',
+             'mocked': [(10, 1, 6, '', ('2001:db8:85a3::8a2e:370:7334', 0, 0, 0))],
+             'ret': '2001:db8:85a3::8a2e:370:7334'},
+            {'host': '2001:0db8:85a3::8a2e:370:7334',
+             'port': '1234',
+             'mocked': [(10, 1, 6, '', ('2001:db8:85a3::8a2e:370:7334', 0, 0, 0))],
+             'ret': '2001:db8:85a3::8a2e:370:7334'},
+            {'host': 'salt-master',
+             'port': '1234',
+             'mocked': [(2, 1, 6, '', ('127.0.0.1', 0))],
+             'ret': '127.0.0.1'},
+        ]
+        for host in hosts:
+            with patch.object(socket, 'getaddrinfo', MagicMock(return_value=host['mocked'])):
+                with patch('socket.socket', MockSocket):
+                    ret = network.dns_check(host['host'], host['port'])
+                    self.assertEqual(ret, host['ret'])
 
     def test_is_subnet(self):
         for subnet_data in (IPV4_SUBNETS, IPV6_SUBNETS):

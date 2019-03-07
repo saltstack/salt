@@ -340,8 +340,17 @@ Building the documentation
 4.  A useful method of viewing the HTML documentation locally is to start
     Python's built-in HTTP server:
 
+    Python 3:
+    
     .. code-block:: bash
+		    
+        cd /path/to/salt/doc/_build/html
+	python3 -m http.server
 
+    Python 2:
+    
+    .. code-block:: bash
+		    
         cd /path/to/salt/doc/_build/html
         python -m SimpleHTTPServer
 

@@ -889,6 +889,31 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(os.path.exists(straydir))
         self.assertTrue(os.path.isdir(name))
 
+    def test_directory_is_idempotent(self):
+        '''
+        Ensure the file.directory state produces no changes when rerun.
+        '''
+        name = os.path.join(TMP, 'a_dir_twice')
+
+        if IS_WINDOWS:
+            username = os.environ.get('USERNAME', 'Administrators')
+            domain = os.environ.get('USERDOMAIN', '')
+            fullname = '{0}\\{1}'.format(domain, username)
+
+            ret = self.run_state('file.directory', name=name, win_owner=fullname)
+        else:
+            ret = self.run_state('file.directory', name=name)
+
+        self.assertSaltTrueReturn(ret)
+
+        if IS_WINDOWS:
+            ret = self.run_state('file.directory', name=name, win_owner=username)
+        else:
+            ret = self.run_state('file.directory', name=name)
+
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, {})
+
     @with_tempdir()
     def test_directory_clean_exclude(self, base_dir):
         '''
@@ -2549,6 +2574,22 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(name, 'r') as fp:
             contents = fp.read()
         assert contents == expected
+
+    def test_managed_file_issue_51208(self):
+        '''
+        Test to ensure we can handle a file with escaped double-quotes
+        '''
+        name = os.path.join(TMP, 'issue_51208.txt')
+        ret = self.run_state(
+            'file.managed', name=name, source='salt://issue-51208/vimrc.stub'
+        )
+        src = os.path.join(BASE_FILES, 'issue-51208', 'vimrc.stub')
+        with salt.utils.files.fopen(src, 'r') as fp_:
+            master_data = fp_.read()
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            minion_data = fp_.read()
+        self.assertEqual(master_data, minion_data)
+        self.assertSaltTrueReturn(ret)
 
 
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):

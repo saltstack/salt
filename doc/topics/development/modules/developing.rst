@@ -235,3 +235,17 @@ Defined in: State
 __sdb__
 -------
 Defined in: SDB
+
+
+Additional Globals
+==================
+
+Defined for: Runners, Execution Modules, Wheels
+
+* ``__jid__``: The job ID
+* ``__user__``: The user
+* ``__tag__``: The jid tag
+* ``__jid_event__``: A :py:class:`salt.utils.event.NamespacedEvent`.
+
+:py:class:`NamespacedEvent <salt.utils.event.NamespacedEvent>` defines a single
+method :py:meth:`fire_event <salt.utils.event.NamespacedEvent.fire_event>`, that takes data and tag. The :ref:`Runner docs <runners>` has examples.
