@@ -9,7 +9,6 @@ dictionaries and lists of the function names and their arguments.
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
-import json
 import logging
 import os
 import re
