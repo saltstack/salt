@@ -721,13 +721,13 @@ def _check_directory(name,
             group = None
         if 'mode' not in recurse_set:
             mode = None
+            file_mode = None
         check_files = 'ignore_files' not in recurse_set
         check_dirs = 'ignore_dirs' not in recurse_set
         for root, dirs, files in walk_l:
             if check_files:
                 for fname in files:
                     fchange = {}
-                    mode = file_mode if mode is not None else None
                     path = os.path.join(root, fname)
                     stats = __salt__['file.stats'](
                         path, None, follow_symlinks
@@ -736,8 +736,8 @@ def _check_directory(name,
                         fchange['user'] = user
                     if group is not None and group != stats.get('group'):
                         fchange['group'] = group
-                    if mode is not None and mode != stats.get('mode'):
-                        fchange['mode'] = mode
+                    if file_mode is not None and file_mode != stats.get('mode'):
+                        fchange['mode'] = file_mode
                     if fchange:
                         changes[path] = fchange
             if check_dirs:
