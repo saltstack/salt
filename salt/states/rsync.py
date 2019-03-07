@@ -155,7 +155,6 @@ def synchronized(name, source,
         if result.get('retcode'):
             ret['result'] = False
             ret['comment'] = result['stderr']
-            ret['changes'] = result['stdout']
         # Changed
         elif _get_changes(result['stdout'])['changed']:
             ret['comment'] = _get_summary(result['stdout'])
