@@ -53,7 +53,7 @@ def _set_proxy_osx(cmd_function, server, port, user, password, network_service):
 
 
 def _get_proxy_windows(types=None):
-    ret = {}
+    proxies = {}
 
     if types is None:
         types = ['http', 'https', 'ftp']
@@ -76,12 +76,17 @@ def _get_proxy_windows(types=None):
                 port = None
 
             proxy_type, server = server_type.split("=")
-            ret[proxy_type] = {"server": server, "port": port}
+            proxies[proxy_type] = {"server": server, "port": port}
 
-    # Filter out types
-    for key in ret:
-        if key not in types:
-            del ret[key]
+    ret = {}
+    if proxies:
+        if len(types) == 1:
+            return proxies[types[0]]
+        else:
+            # Filter out types
+            for proxy in proxies:
+                if proxy in types:
+                    ret[proxy] = proxies[proxy]
 
     # Return enabled info
     ret['enabled'] = __utils__['reg.read_value'](
