@@ -12,6 +12,7 @@ import fnmatch
 import logging
 import os
 import shlex
+import sys
 import re
 import time
 import unicodedata
@@ -500,8 +501,23 @@ def print_cli(msg, retries=10, step=0.01):
         try:
             try:
                 print(msg)
+
             except UnicodeEncodeError:
-                print(msg.encode('utf-8'))
+                # when print fails because of an encoding error (e.g. in py<=3.6),
+                # the system's locale may cause the problem,
+                # so we force-encode with utf-8 and try again.
+
+                if six.PY2:
+                    # in py2, the "raw bytes" can be printed directly
+                    print(msg.encode('utf-8'))
+
+                else:
+                    # the above statement would print a b'$text',
+                    # so we need to write it to the raw buffer instead.
+                    msg_encoded = msg.encode('utf-8')
+                    sys.stdout.buffer.write(msg_encoded)
+                    sys.stdout.buffer.write(b"\n")
+
         except IOError as exc:
             err = "{0}".format(exc)
             if exc.errno != errno.EPIPE:
