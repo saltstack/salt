@@ -1725,10 +1725,7 @@ def absent(name,
             ret['comment'] = 'File {0} is set for removal'.format(name)
             return ret
         try:
-            if salt.utils.platform.is_windows():
-                __salt__['file.remove'](name, force=True)
-            else:
-                __salt__['file.remove'](name)
+            __salt__['file.remove'](name, force=True)
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
@@ -1742,10 +1739,7 @@ def absent(name,
             ret['comment'] = 'Directory {0} is set for removal'.format(name)
             return ret
         try:
-            if salt.utils.platform.is_windows():
-                __salt__['file.remove'](name, force=True)
-            else:
-                __salt__['file.remove'](name)
+            __salt__['file.remove'](name, force=True)
             ret['comment'] = 'Removed directory {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
@@ -1862,10 +1856,7 @@ def tidied(name,
         # Iterate over collected items
         try:
             for path in todelete:
-                if salt.utils.platform.is_windows():
-                    __salt__['file.remove'](path, force=True)
-                else:
-                    __salt__['file.remove'](path)
+                __salt__['file.remove'](path, force=True)
                 # Remember what we've removed, will appear in the summary
                 ret['changes']['removed'].append(path)
         except CommandExecutionError as exc:
@@ -6766,7 +6757,9 @@ def copy_(name,
         elif not __opts__['test'] and changed:
             # Remove the destination to prevent problems later
             try:
-                __salt__['file.remove'](name)
+                # On windows, if a file has the read-only attribute then we are unable
+                # to complete this copy unless force is set to true.
+                __salt__['file.remove'](name, force=force)
             except (IOError, OSError):
                 return _error(
                     ret,
