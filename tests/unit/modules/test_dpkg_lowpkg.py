@@ -128,9 +128,9 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}):
             self.assertEqual(dpkg.file_dict('httpd'), 'Error:  error')
 
-    @patch('salt.modules.dpkg._get_pkg_ds_avail', MagicMock(return_value=dselect_pkg))
-    @patch('salt.modules.dpkg._get_pkg_info', MagicMock(return_value=pkgs_info))
-    @patch('salt.modules.dpkg._get_pkg_license', MagicMock(return_value='BSD v3'))
+    @patch('salt.modules.dpkg_lowpkg._get_pkg_ds_avail', MagicMock(return_value=dselect_pkg))
+    @patch('salt.modules.dpkg_lowpkg._get_pkg_info', MagicMock(return_value=pkgs_info))
+    @patch('salt.modules.dpkg_lowpkg._get_pkg_license', MagicMock(return_value='BSD v3'))
     def test_info(self):
         '''
         Test info
@@ -156,9 +156,9 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
         assert pkg_data['license'] == 'BSD v3'
         assert pkg_data['status'] == 'ii'
 
-    @patch('salt.modules.dpkg._get_pkg_ds_avail', MagicMock(return_value=dselect_pkg))
-    @patch('salt.modules.dpkg._get_pkg_info', MagicMock(return_value=pkgs_info))
-    @patch('salt.modules.dpkg._get_pkg_license', MagicMock(return_value='BSD v3'))
+    @patch('salt.modules.dpkg_lowpkg._get_pkg_ds_avail', MagicMock(return_value=dselect_pkg))
+    @patch('salt.modules.dpkg_lowpkg._get_pkg_info', MagicMock(return_value=pkgs_info))
+    @patch('salt.modules.dpkg_lowpkg._get_pkg_license', MagicMock(return_value='BSD v3'))
     def test_info_attr(self):
         '''
         Test info with 'attr' parameter
