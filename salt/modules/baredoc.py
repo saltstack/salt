@@ -29,6 +29,7 @@ from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
+
 def _parse_function_definition(fn_def, modulename, ret):
     args = []
     match = re.match(r'def\s+(.*?)\((.*)\):$', fn_def)
@@ -58,6 +59,7 @@ def _parse_function_definition(fn_def, modulename, ret):
     else:
         ret[key] = args
     ret[key] = list(set(ret[key]))
+
 
 def _mods_with_args(dirs):
     ret = {}
@@ -180,4 +182,3 @@ def modules_with_test():
             testmods.append(module_name)
 
     return sorted(testmods)
-
