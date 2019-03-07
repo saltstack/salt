@@ -14,7 +14,6 @@ import datetime
 
 # Import salt libs
 import salt.log
-import salt.crypt
 import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.stringutils
