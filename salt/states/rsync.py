@@ -66,7 +66,6 @@ def _get_changes(rsync_out):
         else:
             copied.append(line)
 
-    log.debug('=== copied %s ===', copied)
     ret = {
         'copied': os.linesep.join(sorted(copied)) or "N/A",
         'deleted': os.linesep.join(sorted(deleted)) or "N/A",
@@ -150,7 +149,6 @@ def synchronized(name, source,
                                          dryrun=dryrun,
                                          additional_opts=additional_opts)
 
-        log.debug('=== result %s ===', result)
         if __opts__['test'] or dryrun:
             ret['result'] = None
             ret['comment'] = _get_summary(result['stdout'])
