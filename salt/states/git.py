@@ -704,6 +704,15 @@ def latest(name,
     if https_pass is not None and not isinstance(https_pass, six.string_types):
         https_pass = six.text_type(https_pass)
 
+    # Check for lfs filter settings, and setup lfs_opts accordingly. These opts
+    # will be passed where appropriate to ensure that these commands are
+    # authenticated and that the git LFS plugin can download files.
+    use_lfs = bool(
+        __salt__['git.config_get_regexp'](
+            r'filter\.lfs\.',
+            **{'global': True}))
+    lfs_opts = {'identity': identity} if use_lfs else {}
+
     if os.path.isfile(target):
         return _fail(
             ret,
@@ -1583,7 +1592,8 @@ def latest(name,
                         opts=['--hard', remote_rev],
                         user=user,
                         password=password,
-                        output_encoding=output_encoding)
+                        output_encoding=output_encoding,
+                        **lfs_opts)
                     ret['changes']['forced update'] = True
                     if local_changes:
                         comments.append('Uncommitted changes were discarded')
@@ -1647,7 +1657,8 @@ def latest(name,
                                 opts=merge_opts,
                                 user=user,
                                 password=password,
-                                output_encoding=output_encoding)
+                                output_encoding=output_encoding,
+                                **lfs_opts)
                             comments.append(
                                 'Repository was fast-forwarded to {0}'
                                 .format(remote_loc)
@@ -1667,7 +1678,8 @@ def latest(name,
                                   remote_rev if rev == 'HEAD' else rev],
                             user=user,
                             password=password,
-                            output_encoding=output_encoding)
+                            output_encoding=output_encoding,
+                            **lfs_opts)
                         comments.append(
                             'Repository was reset to {0} (fast-forward)'
                             .format(rev)
