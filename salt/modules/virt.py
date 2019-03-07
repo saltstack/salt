@@ -5246,14 +5246,14 @@ def _get_all_volumes_paths(conn):
             for vol in volumes if _is_valid_volume(vol)}
 
 
-def volume_infos(pool, volume, **kwargs):
+def volume_infos(pool=None, volume=None, **kwargs):
     '''
     Provide details on a storage volume. If no volume name is provided, the infos
     all the volumes contained in the pool are provided. If no pool is provided,
     the infos of the volumes of all pools are output.
 
-    :param pool: libvirt storage pool name
-    :param volume: name of the volume to get infos from
+    :param pool: libvirt storage pool name (default: ``None``)
+    :param volume: name of the volume to get infos from (default: ``None``)
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
