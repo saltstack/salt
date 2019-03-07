@@ -1365,6 +1365,144 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         for item, descr in six.iteritems(ret):
             self.assertEqual(descr['comment'], 'onlyif condition is false')
 
+    def test_onlyif_req(self):
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {}
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertEqual(ret['comment'], 'Success!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.fail_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.false'},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-fail_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'onlyif condition is false')
+        ret = self.run_function(
+            'state.single',
+            fun='test.fail_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.true'},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-fail_with_changes']
+        self.assertFalse(ret['result'])
+        self.assertTrue(ret['changes'])
+        self.assertEqual(ret['comment'], 'Failure!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_without_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.true'},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-succeed_without_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'Success!')
+
+    def test_onlyif_req_retcode(self):
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.retcode'},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'onlyif condition is false')
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.retcode', 'code': 0},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertTrue(ret['changes'])
+        self.assertEqual(ret['comment'], 'Success!')
+
+    def test_unless_req(self):
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='unless test',
+            unless=[
+                {}
+            ],
+        )['test_|-unless test_|-unless test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertEqual(ret['comment'], 'Success!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.fail_with_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.true'},
+            ],
+        )['test_|-unless test_|-unless test_|-fail_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'unless condition is true')
+        ret = self.run_function(
+            'state.single',
+            fun='test.fail_with_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.false'},
+            ],
+        )['test_|-unless test_|-unless test_|-fail_with_changes']
+        self.assertFalse(ret['result'])
+        self.assertTrue(ret['changes'])
+        self.assertEqual(ret['comment'], 'Failure!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_without_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.false'},
+            ],
+        )['test_|-unless test_|-unless test_|-succeed_without_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'Success!')
+
+    def test_unless_req_retcode(self):
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.retcode'},
+            ],
+        )['test_|-unless test_|-unless test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertTrue(ret['changes'])
+        self.assertEqual(ret['comment'], 'Success!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.retcode', 'code': 0},
+            ],
+        )['test_|-unless test_|-unless test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'unless condition is true')
+
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(TMP, 'prod-cheese-file')
         try:

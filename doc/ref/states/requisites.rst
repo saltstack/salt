@@ -922,6 +922,22 @@ For example:
 In the above case, ``some_check`` will be run prior to _each_ name -- once for
 ``first_deploy_cmd`` and a second time for ``second_deploy_cmd``.
 
+.. versionchanged:: Neon
+    The ``unless`` requisite can take a module as a dictionary field in unless.
+    The dictionary must contain an argument ``fun`` which is the module that is
+    being run, and everything else passed in will be kwargs passed to the module
+    function.
+
+    .. code-block:: yaml
+
+        install apache on debian based distros:
+          cmd.run:
+            - name: make install
+            - cwd: /path/to/dir/whatever-2.1.5/
+            - unless:
+              - fun: file.file_exists
+                path: /usr/local/bin/whatever
+
 .. _onlyif-requisite:
 
 Onlyif
@@ -962,8 +978,30 @@ concept of ``True`` and ``False``.
 The above example ensures that the stop_volume and delete modules only run
 if the gluster commands return a 0 ret value.
 
-Listen/Listen_in
-----------------
+.. versionchanged:: Neon
+    The ``onlyif`` requisite can take a module as a dictionary field in onlyif.
+    The dictionary must contain an argument ``fun`` which is the module that is
+    being run, and everything else passed in will be kwargs passed to the module
+    function.
+
+    .. code-block:: yaml
+
+        install apache on redhat based distros:
+          pkg.latest:
+            - name: httpd
+            - onlyif:
+              - fun: match.grain
+                tgt: 'os_family: RedHat'
+
+        install apache on debian based distros:
+          pkg.latest:
+            - name: apache2
+            - onlyif:
+              - fun: match.grain
+                tgt: 'os_family: Debian'
+
+runas
+~~~~~
 
 .. versionadded:: 2014.7.0
 
