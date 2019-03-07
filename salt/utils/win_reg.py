@@ -184,8 +184,8 @@ def key_exists(hive, key, use_32bit_registry=False):
 
         .. code-block:: python
 
-            import salt.utils.win_reg
-            winreg.key_exists(hive='HKLM', key='SOFTWARE\\Microsoft')
+            import salt.utils.win_reg as reg
+            reg.key_exists(hive='HKLM', key='SOFTWARE\\Microsoft')
     """
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
@@ -233,8 +233,8 @@ def value_exists(hive, key, vname, use_32bit_registry=False):
 
         .. code-block:: python
 
-            import salt.utils.win_reg
-            winreg.value_exists(hive='HKLM',
+            import salt.utils.win_reg as reg
+            reg.value_exists(hive='HKLM',
                                 key='SOFTWARE\\Microsoft\\Windows\\CurrentVersion',
                                 vname='CommonFilesDir')
     """
@@ -428,6 +428,8 @@ def list_values(hive, key=None, use_32bit_registry=False):
             vname, vdata, vtype = win32api.RegEnumValue(handle, i)
 
             if not vname:
+                if not include_default:
+                    continue
                 vname = "(Default)"
 
             value = {
@@ -502,8 +504,8 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
 
         .. code-block:: python
 
-            import salt.utils.win_reg
-            winreg.read_value(hive='HKLM', key='SOFTWARE\\Salt', vname='version')
+            import salt.utils.win_reg as reg
+            reg.read_value(hive='HKLM', key='SOFTWARE\\Salt', vname='version')
 
     Usage:
 
@@ -512,8 +514,8 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
 
         .. code-block:: python
 
-            import salt.utils.win_reg
-            winreg.read_value(hive='HKLM', key='SOFTWARE\\Salt')
+            import salt.utils.win_reg as reg
+            reg.read_value(hive='HKLM', key='SOFTWARE\\Salt')
     """
     # If no name is passed, the default value of the key will be returned
     # The value name is Default
