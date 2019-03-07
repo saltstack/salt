@@ -3077,6 +3077,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 'name': 'pool1',
                 'volumes': [
                     {
+                        'key': '/key/of/vol0bad',
+                        'name': 'vol0bad',
+                        'path': '/path/to/vol0bad.qcow2',
+                        'info': None,
+                        'backingStore': None
+                    },
+                    {
                         'key': '/key/of/vol1',
                         'name': 'vol1',
                         'path': '/path/to/vol1.qcow2',
@@ -3104,23 +3111,27 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 mock_volume.name.return_value = vol_data['name']
                 mock_volume.key.return_value = vol_data['key']
                 mock_volume.path.return_value = '/path/to/{0}.qcow2'.format(vol_data['name'])
-                mock_volume.info.return_value = vol_data['info']
-                backing_store = '''
-                    <backingStore>
-                      <format>qcow2</format>
-                      <path>{0}</path>
-                    </backingStore>
-                '''.format(vol_data['backingStore']) if vol_data['backingStore'] else '<backingStore/>'
-                mock_volume.XMLDesc.return_value = '''
-                    <volume type='file'>
-                      <name>{0}</name>
-                      <target>
-                        <format>qcow2</format>
-                        <path>/path/to/{0}.qcow2</path>
-                      </target>
-                      {1}
-                    </volume>
-                '''.format(vol_data['name'], backing_store)
+                if vol_data['info']:
+                    mock_volume.info.return_value = vol_data['info']
+                    backing_store = '''
+                        <backingStore>
+                          <format>qcow2</format>
+                          <path>{0}</path>
+                        </backingStore>
+                    '''.format(vol_data['backingStore']) if vol_data['backingStore'] else '<backingStore/>'
+                    mock_volume.XMLDesc.return_value = '''
+                        <volume type='file'>
+                          <name>{0}</name>
+                          <target>
+                            <format>qcow2</format>
+                            <path>/path/to/{0}.qcow2</path>
+                          </target>
+                          {1}
+                        </volume>
+                    '''.format(vol_data['name'], backing_store)
+                else:
+                    mock_volume.info.side_effect = self.mock_libvirt.libvirtError('No such volume')
+                    mock_volume.XMLDesc.side_effect = self.mock_libvirt.libvirtError('No such volume')
                 mock_volumes.append(mock_volume)
                 # pylint: enable=no-member
             mock_pool.listAllVolumes.return_value = mock_volumes  # pylint: disable=no-member

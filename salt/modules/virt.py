@@ -5222,6 +5222,19 @@ def _get_storage_vol(conn, pool, vol):
     return pool_obj.storageVolLookupByName(vol)
 
 
+def _is_valid_volume(vol):
+    '''
+    Checks whether a volume is valid for further use since those may have disappeared since
+    the last pool refresh.
+    '''
+    try:
+        # Getting info on an invalid volume raises error
+        vol.info()
+        return True
+    except libvirt.libvirtError as err:
+        return False
+
+
 def _get_all_volumes_paths(conn):
     '''
     Extract the path and backing stores path of all volumes.
@@ -5230,7 +5243,7 @@ def _get_all_volumes_paths(conn):
     '''
     volumes = [vol for l in [obj.listAllVolumes() for obj in conn.listAllStoragePools()] for vol in l]
     return {vol.path(): [path.text for path in ElementTree.fromstring(vol.XMLDesc()).findall('.//backingStore/path')]
-            for vol in volumes}
+            for vol in volumes if _is_valid_volume(vol)}
 
 
 def volume_infos(pool, volume, **kwargs):
@@ -5290,7 +5303,7 @@ def volume_infos(pool, volume, **kwargs):
         pools = [obj for obj in conn.listAllStoragePools() if pool is None or obj.name() == pool]
         vols = {pool_obj.name(): {vol.name(): _volume_extract_infos(vol)
                                   for vol in pool_obj.listAllVolumes()
-                                  if volume is None or vol.name() == volume}
+                                  if (volume is None or vol.name() == volume) and _is_valid_volume(vol)}
                 for pool_obj in pools}
         return {pool_name: volumes for (pool_name, volumes) in vols.items() if volumes}
     except libvirt.libvirtError as err:
