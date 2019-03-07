@@ -179,8 +179,8 @@ def key_exists(hive, key, use_32bit_registry=False):
 
         .. code-block:: python
 
-            import salt.utils.win_reg
-            winreg.key_exists(hive='HKLM', key='SOFTWARE\\Microsoft')
+            import salt.utils.win_reg as reg
+            reg.key_exists(hive='HKLM', key='SOFTWARE\\Microsoft')
     '''
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
@@ -228,8 +228,8 @@ def value_exists(hive, key, vname, use_32bit_registry=False):
 
         .. code-block:: python
 
-            import salt.utils.win_reg
-            winreg.key_exists(hive='HKLM', key='SOFTWARE\\Microsoft')
+            import salt.utils.win_reg as reg
+            reg.key_exists(hive='HKLM', key='SOFTWARE\\Microsoft')
     '''
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
@@ -412,7 +412,9 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
             vname, vdata, vtype = win32api.RegEnumValue(handle, i)
 
             if not vname:
-                vname = "(Default)"
+                if not include_default:
+                    continue
+                vname = '(Default)'
 
             value = {'hive':   local_hive,
                      'key':    local_key,
@@ -423,7 +425,7 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
             if vtype == win32con.REG_MULTI_SZ:
                 value['vdata'] = [_to_mbcs(i) for i in vdata]
             elif vtype in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
-                value['vdata'] = _to_mbcs(vdata).rstrip('\0')
+                value['vdata'] = _to_mbcs(vdata)
             else:
                 value['vdata'] = vdata
             values.append(value)
@@ -480,8 +482,8 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
 
         .. code-block:: python
 
-            import salt.utils.win_reg
-            winreg.read_value(hive='HKLM', key='SOFTWARE\\Salt', vname='version')
+            import salt.utils.win_reg as reg
+            reg.read_value(hive='HKLM', key='SOFTWARE\\Salt', vname='version')
 
     Usage:
 
@@ -490,8 +492,8 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
 
         .. code-block:: python
 
-            import salt.utils.win_reg
-            winreg.read_value(hive='HKLM', key='SOFTWARE\\Salt')
+            import salt.utils.win_reg as reg
+            reg.read_value(hive='HKLM', key='SOFTWARE\\Salt')
     '''
     # If no name is passed, the default value of the key will be returned
     # The value name is Default
@@ -528,7 +530,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
                 if vtype == win32con.REG_MULTI_SZ:
                     ret['vdata'] = [_to_mbcs(i) for i in vdata]
                 elif vtype in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
-                    ret['vdata'] = _to_mbcs(vdata).rstrip('\0')
+                    ret['vdata'] = _to_mbcs(vdata)
                 else:
                     ret['vdata'] = vdata
             else:
