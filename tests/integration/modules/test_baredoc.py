@@ -5,11 +5,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
-
-# Import Salt Libs
-import salt.utils.path
-import salt.utils.platform
 
 
 class BaredocTest(ModuleCase):
