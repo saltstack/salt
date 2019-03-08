@@ -37,7 +37,7 @@ Azure (ARM) Compute Execution Module
 
     Optional provider parameters:
 
-    **cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
+**cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
     Possible values:
       * ``AZURE_PUBLIC_CLOUD`` (default)
       * ``AZURE_CHINA_CLOUD``
