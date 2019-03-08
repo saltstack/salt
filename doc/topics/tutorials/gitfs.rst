@@ -734,6 +734,19 @@ Then the ``roots`` backend (the default backend of files in ``/srv/salt``) will
 be searched first for the requested file; then, if it is not found on the
 master, each configured git remote will be searched.
 
+.. note::
+
+    This can be used together with `file_roots` accepting `__env__` as a catch-all
+    environment, since 2018.3.5 and 2019.2.1:
+
+    .. code-block:: yaml
+
+        file_roots:
+          base:
+            - /srv/salt
+          __env__:
+            - /srv/salt
+
 Branches, Environments, and Top Files
 =====================================
 
