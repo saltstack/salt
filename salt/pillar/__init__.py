@@ -257,7 +257,7 @@ class RemotePillar(RemotePillarMixin):
         return ret_pillar
 
     def destroy(self):
-        if self._closing:
+        if hasattr(self, '_closing') and self._closing:
             return
 
         self._closing = True
