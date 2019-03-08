@@ -17,6 +17,7 @@ import re
 import salt.loader
 import salt.runner
 import salt.state
+import salt.utils.data
 import salt.utils.files
 import salt.utils.args
 import salt.utils.schema
@@ -71,7 +72,7 @@ def _mods_with_args(dirs):
                     virtualname = None
 
                     for l in f:
-                        l = l.decode('utf-8').rstrip()
+                        l = salt.utils.data.decode(l).rstrip()
                         l = re.sub(r'(.*)#(.*)', r'\1', l)
                         if '__virtualname__ =' in l and not virtualname:
                             virtualname = l.split()[2].strip("'").strip('"')
