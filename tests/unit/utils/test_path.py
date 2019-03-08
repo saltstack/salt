@@ -204,7 +204,7 @@ class TestWhich(TestCase):
     def test_existing_binary_in_windows(self):
         with patch('os.path.isfile') as isfile:
             # We define the side_effect attribute on the mocked object in order to
-            # specify which calls return which values. First call to os.access
+            # specify which calls return which values. First call to os.path.isfile
             # returns X, the second Y, the third Z, etc...
             isfile.side_effect = [
                 # The first os.path.isfile should return False due to checking the explicit path (first is_executable)
@@ -217,7 +217,7 @@ class TestWhich(TestCase):
             ]
 
             # Patch os.access so that it always returns True
-            with patch('os.access', lambda path: True):
+            with patch('os.access', lambda path, mode: True):
                 # Disable os.path.islink
                 with patch('os.path.islink', lambda path: False):
                     # we're using ';' as os.pathsep in this test
@@ -259,7 +259,7 @@ class TestWhich(TestCase):
     def test_existing_binary_in_windows_pathext(self):
         with patch('os.path.isfile') as isfile:
             # We define the side_effect attribute on the mocked object in order to
-            # specify which calls return which values. First call to os.access
+            # specify which calls return which values. First call to os.path.isfile
             # returns X, the second Y, the third Z, etc...
             isfile.side_effect = [
                 # The first os.path.isfile should return False due to checking the explicit path (first is_executable)
@@ -272,7 +272,7 @@ class TestWhich(TestCase):
             ]
 
             # Patch os.access so that it always returns True
-            with patch('os.access', lambda path: True):
+            with patch('os.access', lambda path, mode: True):
 
                 # Disable os.path.islink
                 with patch('os.path.islink', lambda path: False):
