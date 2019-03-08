@@ -301,6 +301,7 @@ from salt.state import get_accumulator_dir as _get_accumulator_dir
 if salt.utils.platform.is_windows():
     import salt.utils.win_dacl
     import salt.utils.win_functions
+    import salt.utils.winapi
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -1214,7 +1215,8 @@ def _shortcut_check(name,
         ), pchanges
 
     if os.path.isfile(name):
-        shell = win32com.client.Dispatch("WScript.Shell")
+        with salt.utils.winapi.Com():
+            shell = win32com.client.Dispatch("WScript.Shell")
         scut = shell.CreateShortcut(name)
         state_checks = [scut.TargetPath.lower() == target.lower()]
         if arguments is not None:
@@ -7434,7 +7436,8 @@ def shortcut(
 
     # This will just load the shortcut if it already exists
     # It won't create the file until calling scut.Save()
-    shell = win32com.client.Dispatch("WScript.Shell")
+    with salt.utils.winapi.Com():
+        shell = win32com.client.Dispatch("WScript.Shell")
     scut = shell.CreateShortcut(name)
 
     # The shortcut target will automatically be created with its
