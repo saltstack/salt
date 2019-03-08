@@ -365,6 +365,7 @@ def installed(name,
               cache_dir=None,
               no_binary=None,
               extra_args=None,
+              user_install=False,
               **kwargs):
     '''
     Make sure the package is installed
@@ -404,6 +405,10 @@ def installed(name,
         Force to not use binary packages (requires pip >= 7.0.0)
         Accepts either :all: to disable all binary packages, :none: to empty the set,
         or a list of one or more packages
+
+    user_install
+        Enable install to occur inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows.
 
     Example:
 
@@ -865,6 +870,7 @@ def installed(name,
         use_vt=use_vt,
         trusted_host=trusted_host,
         no_cache_dir=no_cache_dir,
+        user_install=user_install,
         extra_args=extra_args,
         **kwargs
     )
