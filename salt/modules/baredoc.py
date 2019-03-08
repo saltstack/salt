@@ -72,7 +72,7 @@ def _mods_with_args(dirs):
                     virtualname = None
 
                     for l in f:
-                        l = salt.utils.data.decode(l).rstrip()
+                        l = salt.utils.data.decode(l, encoding='utf-8').rstrip()
                         l = re.sub(r'(.*)#(.*)', r'\1', l)
                         if '__virtualname__ =' in l and not virtualname:
                             virtualname = l.split()[2].strip("'").strip('"')
