@@ -28,10 +28,20 @@ __virtualname__ = "dism"
 # running 32bit salt the 64bit dism will be found in SysNative
 # Sysnative is a virtual folder, a special alias, that can be used to access the
 # 64-bit System32 folder from a 32-bit application
-if os.path.exists(os.path.join(os.environ.get('SystemRoot'), 'SysNative')):
-    bin_dism = os.path.join(os.environ.get('SystemRoot'), 'SysNative', 'dism.exe')
-else:
-    bin_dism = os.path.join(os.environ.get('SystemRoot'), 'System32', 'dism.exe')
+try:
+    # This does not apply to Non-Windows platforms
+    if not salt.utils.platform.is_windows():
+        raise OSError
+
+    if os.path.exists(os.path.join(os.environ.get('SystemRoot'), 'SysNative')):
+        bin_path = os.path.join(os.environ.get('SystemRoot'), 'SysNative')
+    else:
+        bin_path = os.path.join(os.environ.get('SystemRoot'), 'System32')
+    bin_dism = os.path.join(bin_path, 'dism.exe')
+
+except OSError:
+    log.trace('win_dism: Non-Windows system')
+    bin_dism = 'dism.exe'
 
 
 def __virtual__():
