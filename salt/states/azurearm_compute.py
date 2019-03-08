@@ -62,7 +62,7 @@ Azure (ARM) Compute State Module
 
     Example states using Azure Resource Manager authentication:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set profile = salt['pillar.get']('azurearm:mysubscription') %}
         Ensure availability set exists:
