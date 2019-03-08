@@ -20,7 +20,6 @@ class BaredocTest(ModuleCase):
         self.assertIn('xml.value_present', ret)
         self.assertIn('xpath', ret['xml.value_present'])
 
-
     def test_baredoc_modules_with_test(self):
         '''
         baredoc.modules_and_args

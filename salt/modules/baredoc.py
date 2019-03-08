@@ -27,6 +27,7 @@ from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
+
 def _parse_function_definition(fn_def, modulename, ret):
     args = []
     match = re.match(r'def\s+(.*?)\((.*)\):$', fn_def)
