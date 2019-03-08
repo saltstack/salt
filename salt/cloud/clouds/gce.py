@@ -399,6 +399,7 @@ def __get_tags(vm_):
         tags = None
     return tags
 
+
 def __get_labels(vm_):
     '''
     Get configured labels.
@@ -415,6 +416,7 @@ def __get_labels(vm_):
     if not labels or not isinstance(labels, dict):
         labels = None
     return labels
+
 
 def __get_metadata(vm_):
     '''
