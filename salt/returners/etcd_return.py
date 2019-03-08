@@ -316,7 +316,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
 
     # Now we can try and read the load out of it.
     try:
-        load = cient.read(loadp)
+        load = client.read(loadp)
 
     # If it doesn't exist, then bitch and complain because somebody lied to us
     except etcd.EtcdKeyNotFound as E:
@@ -379,7 +379,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
                 res = client.write('/'.join([resultp, 'master_id']), syndic_id)
 
         except Exception as E:
-            log.trace("sdstack_etcd returner <save_minions> unable to write master_id {syndic:s} to the result for job {jid:s} at {path:s} due to exception ({exception})".format(jid=jid, minion=minion, path='/'.join([resultp, 'master_id']), syndic=syndic_id, exception=E))
+            log.trace("sdstack_etcd returner <save_minions> unable to write master_id {syndic:s} to the result for job {jid:s} at {path:s} due to exception ({exception})".format(jid=jid, path='/'.join([resultp, 'master_id']), syndic=syndic_id, exception=E))
             exceptions.append((E, 'result.master_id', minion))
 
         # Crruuunch.
@@ -388,7 +388,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     # fields and log them.
     for E, field, minion in exceptions:
         if field == 'job':
-            log.exception("sdstack_etcd returner <save_minions> exception ({exception}) was raised while trying to update the function cache for minion {minion:s} to job {jid:s}".format(exception=E, field=field, minion=minion, jid=jid))
+            log.exception("sdstack_etcd returner <save_minions> exception ({exception}) was raised while trying to update the function cache for minion {minion:s} to job {jid:s}".format(exception=E, minion=minion, jid=jid))
             continue
         log.exception("sdstack_etcd returner <save_minions> exception ({exception}) was raised while trying to update the {field:s} field in the result for job {jid:s} belonging to minion {minion:s}".format(exception=E, field=field, minion=minion, jid=jid))
     return
