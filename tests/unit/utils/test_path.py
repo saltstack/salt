@@ -217,9 +217,9 @@ class TestWhich(TestCase):
             ]
 
             # Patch os.access so that it always returns True
-            with patch('os.access', lambda: True):
+            with patch('os.access', lambda path: True):
                 # Disable os.path.islink
-                with patch('os.path.islink', lambda: False):
+                with patch('os.path.islink', lambda path: False):
                     # we're using ';' as os.pathsep in this test
                     with patch('os.pathsep', ';'):
                         # Let's patch os.environ to provide a custom PATH variable
@@ -272,10 +272,10 @@ class TestWhich(TestCase):
             ]
 
             # Patch os.access so that it always returns True
-            with patch('os.access', lambda: True):
+            with patch('os.access', lambda path: True):
 
                 # Disable os.path.islink
-                with patch('os.path.islink', lambda: False):
+                with patch('os.path.islink', lambda path: False):
 
                     # we're using ';' as os.pathsep in this test
                     with patch('os.pathsep', ';'):
