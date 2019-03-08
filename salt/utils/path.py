@@ -201,7 +201,7 @@ def which(exe=None):
         This returns truth if posixy semantics (which python simulates on
         windows) states that this is executable.
         '''
-        return os.path.isfile(path) or os.access(path, os.X_OK)
+        return os.path.isfile(path) and os.access(path, os.X_OK)
 
     def resolve(path):
         '''
@@ -236,7 +236,7 @@ def which(exe=None):
     if not salt.utils.platform.is_windows():
         res = set(system_path)
         extended_path = ['/sbin', '/bin', '/usr/sbin', '/usr/bin', '/usr/local/sbin', '/usr/local/bin']
-        system_path.extend([p for p in extended_path if p in res])
+        system_path.extend([p for p in extended_path if p not in res])
 
     ## now to define the semantics of what's considered executable on a given platform
     if salt.utils.platform.is_windows():
