@@ -427,7 +427,7 @@ def get_pending_computer_name():
         salt 'minion-id' system.get_pending_computer_name
     '''
     current = get_computer_name()
-    pending = __salt__['reg.read_value'](
+    pending = __utils__['reg.read_value'](
                 'HKLM',
                 r'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters',
                 'NV Hostname')['vdata']
@@ -1358,7 +1358,7 @@ def get_pending_file_rename():
     # then a reboot is pending.
 
     for vname in vnames:
-        reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
+        reg_ret = __utils__['reg.read_value']('HKLM', key, vname)
 
         if reg_ret['success']:
             log.debug('Found key: %s', key)
@@ -1394,7 +1394,7 @@ def get_pending_servermanager():
     # the value data, and since an actual reboot won't be pending in that
     # instance, just catch instances where we try unsuccessfully to cast as int.
 
-    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
+    reg_ret = __utils__['reg.read_value']('HKLM', key, vname)
 
     if reg_ret['success']:
         log.debug('Found key: %s', key)
@@ -1469,12 +1469,13 @@ def set_reboot_required_witnessed():
 
         salt '*' system.set_reboot_required_witnessed
     '''
-    return __salt__['reg.set_value'](hive='HKLM',
-                                     key=MINION_VOLATILE_KEY,
-                                     volatile=True,
-                                     vname=REBOOT_REQUIRED_NAME,
-                                     vdata=1,
-                                     vtype='REG_DWORD')
+    return __utils__['reg.set_value'](
+        hive='HKLM',
+        key=MINION_VOLATILE_KEY,
+        volatile=True,
+        vname=REBOOT_REQUIRED_NAME,
+        vdata=1,
+        vtype='REG_DWORD')
 
 
 def get_reboot_required_witnessed():
@@ -1499,9 +1500,10 @@ def get_reboot_required_witnessed():
         salt '*' system.get_reboot_required_witnessed
 
     '''
-    value_dict = __salt__['reg.read_value'](hive='HKLM',
-                                            key=MINION_VOLATILE_KEY,
-                                            vname=REBOOT_REQUIRED_NAME)
+    value_dict = __utils__['reg.read_value'](
+        hive='HKLM',
+        key=MINION_VOLATILE_KEY,
+        vname=REBOOT_REQUIRED_NAME)
     return value_dict['vdata'] == 1
 
 
