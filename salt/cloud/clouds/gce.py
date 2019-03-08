@@ -399,6 +399,22 @@ def __get_tags(vm_):
         tags = None
     return tags
 
+def __get_labels(vm_):
+    '''
+    Get configured labels.
+    '''
+    lbl = config.get_cloud_config_value(
+        'labels', vm_, __opts__,
+        default='[]', search_global=False)
+    # Consider warning the user that the tags in the cloud profile
+    # could not be interpreted, bad formatting?
+    try:
+        labels = literal_eval(lbl)
+    except Exception:  # pylint: disable=W0703
+        labels = None
+    if not labels or not isinstance(labels, dict):
+        labels = None
+    return labels
 
 def __get_metadata(vm_):
     '''
@@ -2455,6 +2471,7 @@ def request_instance(vm_):
         'ex_network': __get_network(conn, vm_),
         'ex_subnetwork': __get_subnetwork(vm_),
         'ex_tags': __get_tags(vm_),
+        'ex_labels': __get_labels(vm_),
         'ex_metadata': __get_metadata(vm_),
     }
     external_ip = config.get_cloud_config_value(
