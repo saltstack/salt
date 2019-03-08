@@ -406,7 +406,7 @@ def __get_labels(vm_):
     lbl = config.get_cloud_config_value(
         'labels', vm_, __opts__,
         default='[]', search_global=False)
-    # Consider warning the user that the tags in the cloud profile
+    # Consider warning the user that the labels in the cloud profile
     # could not be interpreted, bad formatting?
     try:
         labels = literal_eval(lbl)
