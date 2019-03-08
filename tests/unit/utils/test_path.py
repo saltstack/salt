@@ -202,12 +202,12 @@ class TestWhich(TestCase):
                 self.assertTrue(salt.utils.path.which('this-binary-exists-under-linux'))
 
     def test_existing_binary_in_windows(self):
-        with patch('os.access') as osaccess:
+        with patch('os.path.isfile') as isfile:
             # We define the side_effect attribute on the mocked object in order to
             # specify which calls return which values. First call to os.access
             # returns X, the second Y, the third Z, etc...
-            osaccess.side_effect = [
-                # The first os.access should return False due to checking the explicit path (first is_executable)
+            isfile.side_effect = [
+                # The first os.path.isfile should return False due to checking the explicit path (first is_executable)
                 False,
                 # We will now also return False once so we get a .EXE back from
                 # the function, see PATHEXT below.
@@ -215,18 +215,22 @@ class TestWhich(TestCase):
                 # Lastly return True, this is the windows check.
                 True
             ]
-            # we're using ';' as os.pathsep in this test
-            with patch('os.pathsep', ';'):
-                # Let's patch os.environ to provide a custom PATH variable
-                with patch.dict(os.environ, {'PATH': os.sep + 'bin',
-                                             'PATHEXT': '.COM;.EXE;.BAT;.CMD'}):
-                    # Let's also patch is_windows to return True
-                    with patch('salt.utils.platform.is_windows', lambda: True):
-                        with patch('os.path.isfile', lambda x: True):
-                            self.assertEqual(
-                                salt.utils.path.which('this-binary-exists-under-windows'),
-                                os.path.join(os.sep + 'bin', 'this-binary-exists-under-windows.EXE')
-                            )
+
+            # Patch os.access so that it always returns True
+            with patch('os.access', lambda: True):
+                # Disable os.path.islink
+                with patch('os.path.islink', lambda: False):
+                    # we're using ';' as os.pathsep in this test
+                    with patch('os.pathsep', ';'):
+                        # Let's patch os.environ to provide a custom PATH variable
+                        with patch.dict(os.environ, {'PATH': os.sep + 'bin',
+                                                     'PATHEXT': '.COM;.EXE;.BAT;.CMD'}):
+                            # Let's also patch is_windows to return True
+                            with patch('salt.utils.platform.is_windows', lambda: True):
+                                self.assertEqual(
+                                    salt.utils.path.which('this-binary-exists-under-windows'),
+                                    os.path.join(os.sep + 'bin', 'this-binary-exists-under-windows.EXE')
+                                )
 
     def test_missing_binary_in_windows(self):
         with patch('os.access') as osaccess:
@@ -253,12 +257,12 @@ class TestWhich(TestCase):
                         )
 
     def test_existing_binary_in_windows_pathext(self):
-        with patch('os.access') as osaccess:
+        with patch('os.path.isfile') as isfile:
             # We define the side_effect attribute on the mocked object in order to
             # specify which calls return which values. First call to os.access
             # returns X, the second Y, the third Z, etc...
-            osaccess.side_effect = [
-                # The first os.access should return False due to checking the explicit path (first is_executable)
+            isfile.side_effect = [
+                # The first os.path.isfile should return False due to checking the explicit path (first is_executable)
                 False,
                 # We will now also return False 3 times so we get a .CMD back from
                 # the function, see PATHEXT below.
@@ -267,16 +271,23 @@ class TestWhich(TestCase):
                 True
             ]
 
-            # we're using ';' as os.pathsep in this test
-            with patch('os.pathsep', ';'):
-                # Let's patch os.environ to provide a custom PATH variable
-                with patch.dict(os.environ, {'PATH': os.sep + 'bin',
-                                             'PATHEXT': '.COM;.EXE;.BAT;.CMD;.VBS;'
-                                             '.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY'}):
-                    # Let's also patch is_windows to return True
-                    with patch('salt.utils.platform.is_windows', lambda: True):
-                        with patch('os.path.isfile', lambda x: True):
-                            self.assertEqual(
-                                salt.utils.path.which('this-binary-exists-under-windows'),
-                                os.path.join(os.sep + 'bin', 'this-binary-exists-under-windows.CMD')
-                            )
+            # Patch os.access so that it always returns True
+            with patch('os.access', lambda: True):
+
+                # Disable os.path.islink
+                with patch('os.path.islink', lambda: False):
+
+                    # we're using ';' as os.pathsep in this test
+                    with patch('os.pathsep', ';'):
+
+                        # Let's patch os.environ to provide a custom PATH variable
+                        with patch.dict(os.environ, {'PATH': os.sep + 'bin',
+                                                     'PATHEXT': '.COM;.EXE;.BAT;.CMD;.VBS;'
+                                                     '.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY'}):
+
+                            # Let's also patch is_windows to return True
+                            with patch('salt.utils.platform.is_windows', lambda: True):
+                                self.assertEqual(
+                                    salt.utils.path.which('this-binary-exists-under-windows'),
+                                    os.path.join(os.sep + 'bin', 'this-binary-exists-under-windows.CMD')
+                                )
