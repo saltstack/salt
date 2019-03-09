@@ -114,7 +114,6 @@ state modules
     group
     heat
     hg
-    hipchat
     host
     htpasswd
     http

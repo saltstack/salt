@@ -168,7 +168,6 @@ execution modules
     hashutil
     heat
     hg
-    hipchat
     hosts
     htpasswd
     http
