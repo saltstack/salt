@@ -23,9 +23,6 @@ try:
 except ImportError:
     has_depends = False
 
-ASN1 = OpenSSL.crypto.FILETYPE_ASN1
-PEM = OpenSSL.crypto.FILETYPE_PEM
-
 
 def __virtual__():
     '''
@@ -38,6 +35,8 @@ def __virtual__():
 
 
 def _parse_cert(alias, public_cert, return_cert=False):
+    ASN1 = OpenSSL.crypto.FILETYPE_ASN1
+    PEM = OpenSSL.crypto.FILETYPE_PEM
     cert_data = {}
     sha1 = public_cert.digest(b'sha1')
 
@@ -83,6 +82,8 @@ def list(keystore, passphrase, alias=None, return_cert=False):
         salt '*' keystore.list /usr/lib/jvm/java-8/jre/lib/security/cacerts changeit debian:verisign_-_g5.pem
 
     '''
+    ASN1 = OpenSSL.crypto.FILETYPE_ASN1
+    PEM = OpenSSL.crypto.FILETYPE_PEM
     decoded_certs = []
     entries = []
 
@@ -139,6 +140,8 @@ def add(name, keystore, passphrase, certificate, private_key=None):
         salt '*' keystore.add keyname /tmp/test.store changeit /tmp/512.cert private_key=/tmp/512.key
 
     '''
+    ASN1 = OpenSSL.crypto.FILETYPE_ASN1
+    PEM = OpenSSL.crypto.FILETYPE_PEM
     certs_list = []
     if os.path.isfile(keystore):
         keystore_object = jks.KeyStore.load(keystore, passphrase)

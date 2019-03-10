@@ -16,7 +16,8 @@ to see the data loaded from a jinja map, or imported using ``import_yaml`` or
 Saltcheck Updates
 =================
 
-Available since 2018.3, the saltcheck module has been enhanced to:
+Available since 2018.3, the :py:func:`saltcheck module <salt.modules.saltcheck>`
+has been enhanced to:
  * Support saltenv environments
  * Associate tests with states by naming convention
  * Adds empty and notempty assertions
@@ -173,11 +174,62 @@ New output:
           Skipped:
               0
 
-XML Module
+
+Keystore State and Module
+=========================
+
+A new :py:func:`state <salt.states.keystore>` and
+:py:func:`execution module <salt.modules.keystore>` for manaing Java
+Keystore files is now included. It allows for adding/removing/listing
+as well as managing keystore files.
+
+.. code-block:: bash
+
+  # salt-call keystore.list /path/to/keystore.jks changeit
+  local:
+    |_
+      ----------
+      alias:
+          hostname1
+      expired:
+          True
+      sha1:
+          CB:5E:DE:50:57:99:51:87:8E:2E:67:13:C5:3B:E9:38:EB:23:7E:40
+      type:
+          TrustedCertEntry
+      valid_start:
+          August 22 2012
+      valid_until:
+          August 21 2017
+
+.. code-block:: yaml
+
+  define_keystore:
+    keystore.managed:
+      - name: /tmp/statestore.jks
+      - passphrase: changeit
+      - force_remove: True
+      - entries:
+        - alias: hostname1
+          certificate: /tmp/testcert.crt
+        - alias: remotehost
+          certificate: /tmp/512.cert
+          private_key: /tmp/512.key
+        - alias: stringhost
+          certificate: |
+            -----BEGIN CERTIFICATE-----
+            MIICEjCCAX
+            Hn+GmxZA
+            -----END CERTIFICATE-----
+
+
+XML State and Module
 ==========
 
-A new state and execution module for editing XML files is now included. Currently it allows for
-editing values from an xpath query, or editing XML IDs.
+A new :py:func:`state <salt.states.xml>` and
+:py:func:`execution module <salt.modules.xml>` for editing XML files is
+now included. Currently it allows for editing values from an xpath query, or
+editing XML IDs.
 
 .. code-block:: bash
 
@@ -208,7 +260,6 @@ editing values from an xpath query, or editing XML IDs.
         - name: /tmp/test.xml
         - xpath: .//actor[@id='1']
         - value: William Shatner
-
 
 
 State Changes
