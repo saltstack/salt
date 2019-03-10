@@ -106,6 +106,10 @@ def _get_split_zone(zone, _conn, private_zone):
     return False
 
 
+def _is_retryable_error(exception):
+    return exception.code not in ["SignatureDoesNotMatch"]
+
+
 def describe_hosted_zones(
     zone_id=None, domain_name=None, region=None, key=None, keyid=None, profile=None
 ):
@@ -295,7 +299,7 @@ def zone_exists(
             return bool(conn.get_zone(zone))
 
         except DNSServerError as e:
-            if retry_on_errors:
+            if retry_on_errors and _is_retryable_error(e):
                 if "Throttling" == e.code:
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
@@ -475,7 +479,7 @@ def create_healthcheck(
             return {"result": conn.create_health_check(hc_)}
         except DNSServerError as exc:
             log.debug(exc)
-            if retry_on_errors:
+            if retry_on_errors and _is_retryable_error(exc):
                 if "Throttling" == exc.code:
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == exc.code:
@@ -594,7 +598,7 @@ def get_record(
             break  # the while True
 
         except DNSServerError as e:
-            if retry_on_errors:
+            if retry_on_errors and _is_retryable_error(e):
                 if "Throttling" == e.code:
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
@@ -694,7 +698,7 @@ def add_record(
             break
 
         except DNSServerError as e:
-            if retry_on_errors:
+            if retry_on_errors and _is_retryable_error(e):
                 if "Throttling" == e.code:
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
@@ -717,7 +721,7 @@ def add_record(
             return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:
-            if retry_on_errors:
+            if retry_on_errors and _is_retryable_error(e):
                 if "Throttling" == e.code:
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
@@ -804,7 +808,7 @@ def update_record(
             return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:
-            if retry_on_errors:
+            if retry_on_errors and _is_retryable_error(e):
                 if "Throttling" == e.code:
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
@@ -891,7 +895,7 @@ def delete_record(
             return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:
-            if retry_on_errors:
+            if retry_on_errors and _is_retryable_error(e):
                 if "Throttling" == e.code:
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
