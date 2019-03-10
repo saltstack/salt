@@ -87,7 +87,7 @@ def managed(name, passphrase, entries, force_remove=False):
             existing_entries = __salt__['keystore.list'](name, passphrase)
             for entry in existing_entries:
                 old_aliases.append(entry.get('alias'))
-            log.debug(": {0}".format(old_aliases))
+            log.debug("Existing aliases list: %s", old_aliases)
 
     for entry in entries:
         update_entry = True
@@ -136,7 +136,7 @@ def managed(name, passphrase, entries, force_remove=False):
     if force_remove:
         # Determine which aliases need to be removed
         remove_list = list(set(old_aliases) - set(keep_list))
-        log.debug("Will remove: {0}".format(remove_list))
+        log.debug("Will remove: %s", remove_list)
         for alias_name in remove_list:
             if __opts__['test']:
                 ret['comment'] += "Alias {0} would have been removed".format(alias_name)
