@@ -6,8 +6,8 @@ Module to interact with keystores
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
 import logging
-import os
 from datetime import datetime
+import os
 
 log = logging.getLogger(__name__)
 
@@ -100,13 +100,19 @@ def list(keystore, passphrase, alias=None, return_cert=False):
         for entry_alias, cert_enc in entries:
             entry_data = {}
             if isinstance(cert_enc, jks.PrivateKeyEntry):
-                public_cert = OpenSSL.crypto.load_certificate(ASN1, cert_enc.cert_chain[0][1])
+                cert_result = cert_enc.cert_chain[0][1]
                 entry_data['type'] = 'PrivateKeyEntry'
             elif isinstance(cert_enc, jks.TrustedCertEntry):
-                public_cert = OpenSSL.crypto.load_certificate(ASN1, cert_enc.cert)
+                cert_result = cert_enc.cert
                 entry_data['type'] = 'TrustedCertEntry'
             else:
                 raise CommandExecutionError('Unsupported EntryType detected in keystore')
+
+            # Detect if ASN1 binary, otherwise assume PEM
+            if '\x30' in cert_result[0]:
+                public_cert = OpenSSL.crypto.load_certificate(ASN1, cert_result)
+            else:
+                public_cert = OpenSSL.crypto.load_certificate(PEM, cert_result)
 
             entry_data.update(_parse_cert(entry_alias, public_cert, return_cert))
             decoded_certs.append(entry_data)
