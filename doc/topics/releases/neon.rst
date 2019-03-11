@@ -224,7 +224,7 @@ as well as managing keystore files.
 
 
 XML State and Module
-==========
+====================
 
 A new :py:func:`state <salt.states.xml>` and
 :py:func:`execution module <salt.modules.xml>` for editing XML files is
