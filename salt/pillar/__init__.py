@@ -776,7 +776,7 @@ class Pillar(object):
                             try:
                                 matched_pstates.extend(fnmatch.filter(
                                     self.avail[saltenv],
-                                    sub_sls.replace('/', '.'),
+                                    sub_sls.lstrip('.').replace('/', '.'),
                                 ))
                             except KeyError:
                                 errors.extend(
