@@ -97,7 +97,7 @@ def is_pid_healthy(pid):
     '''
     This is a health check that will confirm the PID is running
     and executed by salt.
-    
+  
     If pusutil is available:
         * all architectures are checked
 
