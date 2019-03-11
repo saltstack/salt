@@ -408,7 +408,7 @@ def installed(name,
 
     user_install
         Enable install to occur inside the user base's (site.USER_BASE) binary directory,
-        typically ~/.local/, or %APPDATA%\Python on Windows.
+        typically ~/.local/, or %APPDATA%\Python on Windows
 
     Example:
 

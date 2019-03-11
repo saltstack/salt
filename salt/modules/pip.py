@@ -617,7 +617,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     user_install
         Enable install to occur inside the user base's (site.USER_BASE) binary directory,
-        typically ~/.local/, or %APPDATA%\Python on Windows.
+        typically ~/.local/, or %APPDATA%\Python on Windows
 
     extra_args
         pip keyword and positional arguments not yet implemented in salt
