@@ -814,7 +814,8 @@ class Pillar(object):
             defaults = {}
         err = ""
         errors = []
-        fn_ = self.client.get_state(sls, saltenv).get("dest", False)
+        state_data = self.client.get_state(sls, saltenv)
+        fn_ = state_data.get("dest", False)
         if not fn_:
             if sls in self.ignored_pillars.get(saltenv, []):
                 log.debug(
@@ -903,10 +904,16 @@ class Pillar(object):
                             else:
                                 key = None
                             try:
-                                matched_pstates = fnmatch.filter(
-                                    self.avail[saltenv],
-                                    sub_sls.lstrip(".").replace("/", "."),
-                                )
+                                if sub_sls.startswith("."):
+                                    if state_data.get("source", "").endswith(
+                                        "/init.sls"
+                                    ):
+                                        include_parts = sls.split(".")
+                                    else:
+                                        include_parts = sls.split(".")[:-1]
+                                    sub_sls = ".".join(include_parts + [sub_sls[1:]])
+                                matches = fnmatch.filter(self.avail[saltenv], sub_sls,)
+                                matched_pstates.extend(matches)
                             except KeyError:
                                 errors.extend(
                                     [
