@@ -192,9 +192,10 @@ class Schedule(object):
         if remove_hidden:
             _schedule = copy.deepcopy(schedule)
             for job in _schedule:
-                for item in _schedule[job]:
-                    if item.startswith('_'):
-                        del schedule[job][item]
+                if isinstance(_schedule[job], dict):
+                    for item in _schedule[job]:
+                        if item.startswith('_'):
+                            del schedule[job][item]
         return schedule
 
     def _check_max_running(self, func, data, opts, now):
@@ -239,7 +240,7 @@ class Schedule(object):
                             )
                             data['_skip_reason'] = 'maxrunning'
                             data['_skipped'] = True
-                            data['_skip_time'] = now
+                            data['_skipped_time'] = now
                             data['run'] = False
                             return data
         return data
@@ -1328,8 +1329,10 @@ class Schedule(object):
             # Clear these out between runs
             for item in ['_continue',
                          '_error',
+                         '_enabled',
                          '_skipped',
-                         '_skip_reason']:
+                         '_skip_reason',
+                         '_skipped_time']:
                 if item in data:
                     del data[item]
             run = False
@@ -1562,10 +1565,20 @@ class Schedule(object):
             if 'enabled' not in data:
                 data['enabled'] = self.enabled
 
+            # If globally disabled, disable the job
+            if not self.enabled:
+                data['enabled'] = self.enabled
+                data['_skip_reason'] = 'disabled'
+                data['_skipped_time'] = now
+                data['_skipped'] = True
+                run = False
+
             # Job is disabled, set run to False
             if 'enabled' in data and not data['enabled']:
-                log.debug('Job: %s is disabled', job_name)
+                data['_enabled'] = False
                 data['_skip_reason'] = 'disabled'
+                data['_skipped_time'] = now
+                data['_skipped'] = True
                 run = False
 
             miss_msg = ''

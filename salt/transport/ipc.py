@@ -678,6 +678,8 @@ class IPCMessageSubscriber(IPCClient):
         self._sync_ioloop_running = False
         self.saved_data = []
         self._sync_read_in_progress = Semaphore()
+        self.callbacks = set()
+        self.reading = False
 
     @tornado.gen.coroutine
     def _read_sync(self, timeout):
@@ -765,6 +767,7 @@ class IPCMessageSubscriber(IPCClient):
         while not self.stream.closed():
             try:
                 self._read_stream_future = self.stream.read_bytes(4096, partial=True)
+                self.reading = True
                 wire_bytes = yield self._read_stream_future
                 self._read_stream_future = None
                 self.unpacker.feed(wire_bytes)
@@ -777,8 +780,12 @@ class IPCMessageSubscriber(IPCClient):
             except Exception as exc:
                 log.error('Exception occurred while Subscriber handling stream: %s', exc)
 
+    def __run_callbacks(self, raw):
+        for callback in self.callbacks:
+            self.io_loop.spawn_callback(callback, raw)
+
     @tornado.gen.coroutine
-    def read_async(self, callback):
+    def read_async(self):
         '''
         Asynchronously read messages and invoke a callback when they are ready.
 
@@ -793,7 +800,7 @@ class IPCMessageSubscriber(IPCClient):
             except Exception as exc:
                 log.error('Exception occurred while Subscriber connecting: %s', exc)
                 yield tornado.gen.sleep(1)
-        yield self._read_async(callback)
+        yield self._read_async(self.__run_callbacks)
 
     def close(self):
         '''
