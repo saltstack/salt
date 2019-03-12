@@ -3062,7 +3062,7 @@ def has_default_privileges(name,
             else:
                 defperms = [_DEFAULT_PRIVILEGES_MAP[defperm] for defperm in _defperms]
                 if 'ALL' in _defprivs:
-                    retval = defperms.sort() == _defprivileges[name].keys().sort()
+                    retval = sorted(defperms) == sorted(_defprivileges[name].keys())
                 else:
                     retval = set(_defprivs).issubset(
                         set(_defprivileges[name].keys()))
@@ -3185,7 +3185,7 @@ def has_privileges(name,
             else:
                 perms = [_PRIVILEGES_MAP[perm] for perm in _perms]
                 if 'ALL' in _privs:
-                    retval = perms.sort() == _privileges[name].keys().sort()
+                    retval = sorted(perms) == sorted(_privileges[name].keys())
                 else:
                     retval = set(_privs).issubset(
                         set(_privileges[name].keys()))

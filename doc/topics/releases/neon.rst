@@ -269,6 +269,9 @@ Module Changes
   module now supports perstant changes with ``persist=True`` by calling the
   :py:func:`selinux.fcontext_add_policy <salt.modules.selinux.fcontext_add_policy>` module.
 
+- The :py:func:`yumpkg <salt.modules.yumpkg>` module has been updated to support
+  VMWare's Photon OS, which uses tdnf (a C implementation of dnf).
+
 Enhancements to Engines
 =======================
 
