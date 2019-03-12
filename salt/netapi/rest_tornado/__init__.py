@@ -49,6 +49,7 @@ def get_application(opts):
     paths = [
         (r"/", saltnado.SaltAPIHandler),
         (r"/login", saltnado.SaltAuthHandler),
+        (r"/token", saltnado.SaltAuthHandler),
         (r"/minions/(.*)", saltnado.MinionSaltAPIHandler),
         (r"/minions", saltnado.MinionSaltAPIHandler),
         (r"/jobs/(.*)", saltnado.JobsSaltAPIHandler),

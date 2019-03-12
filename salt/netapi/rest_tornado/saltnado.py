@@ -785,6 +785,10 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             'perms': perms,
             }]}
 
+        # to provide cherrypy backcompat, the /token return is slightly different
+        if self.request.path == '/token':
+            ret = ret['return']
+
         self.write(self.serialize(ret))
 
 
