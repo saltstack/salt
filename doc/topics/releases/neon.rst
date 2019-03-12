@@ -272,6 +272,13 @@ Module Changes
 - The :py:func:`yumpkg <salt.modules.yumpkg>` module has been updated to support
   VMWare's Photon OS, which uses tdnf (a C implementation of dnf).
 
+Runner Changes
+==============
+
+- The :py:func:`saltutil.sync_auth <salt.runners.saltutil.sync_auth>` function
+  has been added to sync loadable auth modules. :py:func:`saltutil.sync_all <salt.runners.saltutil.sync_all>`
+  will also include these modules.
+
 Enhancements to Engines
 =======================
 
