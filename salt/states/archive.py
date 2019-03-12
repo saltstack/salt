@@ -412,6 +412,10 @@ def extracted(name,
         Set this to ``True`` if archive should be extracted if source_hash has
         changed. This would extract regardless of the ``if_missing`` parameter.
 
+        Note that this is only checked if the ``source`` value has not changed.
+        If it has (e.g. to increment a version number in the path) then the
+        archive will not be extracted even if the hash has changed.
+
         .. versionadded:: 2016.3.0
 
     skip_verify : False
@@ -1057,7 +1061,7 @@ def extracted(name,
 
     if enforce_toplevel and contents is not None \
             and (len(contents['top_level_dirs']) > 1
-                 or len(contents['top_level_files']) > 0):
+                 or contents['top_level_files']):
         ret['comment'] = ('Archive does not have a single top-level directory. '
                           'To allow this archive to be extracted, set '
                           '\'enforce_toplevel\' to False. To avoid a '
@@ -1477,7 +1481,7 @@ def extracted(name,
                             enforce_failed.append(filename)
 
     if extraction_needed:
-        if len(files) > 0:
+        if files:
             if created_destdir:
                 ret['changes']['directories_created'] = [name]
             ret['changes']['extracted_files'] = files

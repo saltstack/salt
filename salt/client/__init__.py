@@ -31,7 +31,7 @@ import salt.config
 import salt.cache
 import salt.defaults.exitcodes
 import salt.payload
-import salt.transport
+import salt.transport.client
 import salt.loader
 import salt.utils.args
 import salt.utils.event
@@ -530,12 +530,10 @@ class LocalClient(object):
         '''
         # Late import - not used anywhere else in this file
         import salt.cli.batch
-        opts = salt.cli.batch._batch_get_opts(
+        opts = salt.cli.batch.batch_get_opts(
             tgt, fun, batch, self.opts,
             arg=arg, tgt_type=tgt_type, ret=ret, kwarg=kwarg, **kwargs)
-
-        eauth = salt.cli.batch._batch_get_eauth(kwargs)
-
+        eauth = salt.cli.batch.batch_get_eauth(kwargs)
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret in batch.run():
             yield ret
@@ -1720,9 +1718,9 @@ class LocalClient(object):
 
         master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
                      ':' + six.text_type(self.opts['ret_port'])
-        channel = salt.transport.Channel.factory(self.opts,
-                                                 crypt='clear',
-                                                 master_uri=master_uri)
+        channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           master_uri=master_uri)
 
         try:
             # Ensure that the event subscriber is connected.
@@ -1730,7 +1728,8 @@ class LocalClient(object):
             if listen and not self.event.connect_pub(timeout=timeout):
                 raise SaltReqTimeoutError()
             payload = channel.send(payload_kwargs, timeout=timeout)
-        except SaltReqTimeoutError:
+        except SaltReqTimeoutError as err:
+            log.error(err)
             raise SaltReqTimeoutError(
                 'Salt request timed out. The master is not responding. You '
                 'may need to run your command with `--async` in order to '
@@ -1767,7 +1766,7 @@ class LocalClient(object):
             return payload
 
         # We have the payload, let's get rid of the channel fast(GC'ed faster)
-        del channel
+        channel.close()
 
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
@@ -1875,7 +1874,7 @@ class LocalClient(object):
             raise tornado.gen.Return(payload)
 
         # We have the payload, let's get rid of the channel fast(GC'ed faster)
-        del channel
+        channel.close()
 
         raise tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})

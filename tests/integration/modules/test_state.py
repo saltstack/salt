@@ -16,7 +16,6 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir
 from tests.support.unit import skipIf
-from tests.support.paths import BASE_FILES
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
@@ -83,9 +82,9 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 for line in lines:
                     fhw.write(line + ending)
 
-        destpath = os.path.join(BASE_FILES, 'testappend', 'firstif')
+        destpath = os.path.join(RUNTIME_VARS.BASE_FILES, 'testappend', 'firstif')
         _reline(destpath)
-        destpath = os.path.join(BASE_FILES, 'testappend', 'secondif')
+        destpath = os.path.join(RUNTIME_VARS.BASE_FILES, 'testappend', 'secondif')
         _reline(destpath)
 
     def test_show_highstate(self):
@@ -1425,6 +1424,144 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         for item, descr in six.iteritems(ret):
             self.assertEqual(descr['comment'], 'onlyif condition is false')
 
+    def test_onlyif_req(self):
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {}
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertEqual(ret['comment'], 'Success!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.fail_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.false'},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-fail_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'onlyif condition is false')
+        ret = self.run_function(
+            'state.single',
+            fun='test.fail_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.true'},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-fail_with_changes']
+        self.assertFalse(ret['result'])
+        self.assertTrue(ret['changes'])
+        self.assertEqual(ret['comment'], 'Failure!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_without_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.true'},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-succeed_without_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'Success!')
+
+    def test_onlyif_req_retcode(self):
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.retcode'},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'onlyif condition is false')
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.retcode', 'code': 0},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertTrue(ret['changes'])
+        self.assertEqual(ret['comment'], 'Success!')
+
+    def test_unless_req(self):
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='unless test',
+            unless=[
+                {}
+            ],
+        )['test_|-unless test_|-unless test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertEqual(ret['comment'], 'Success!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.fail_with_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.true'},
+            ],
+        )['test_|-unless test_|-unless test_|-fail_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'unless condition is true')
+        ret = self.run_function(
+            'state.single',
+            fun='test.fail_with_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.false'},
+            ],
+        )['test_|-unless test_|-unless test_|-fail_with_changes']
+        self.assertFalse(ret['result'])
+        self.assertTrue(ret['changes'])
+        self.assertEqual(ret['comment'], 'Failure!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_without_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.false'},
+            ],
+        )['test_|-unless test_|-unless test_|-succeed_without_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'Success!')
+
+    def test_unless_req_retcode(self):
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.retcode'},
+            ],
+        )['test_|-unless test_|-unless test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertTrue(ret['changes'])
+        self.assertEqual(ret['comment'], 'Success!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.retcode', 'code': 0},
+            ],
+        )['test_|-unless test_|-unless test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'unless condition is true')
+
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(RUNTIME_VARS.TMP, 'prod-cheese-file')
         try:
@@ -2168,6 +2305,19 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         state_id = 'test_|-always-passes_|-always-passes_|-succeed_without_changes'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'Success!')
+        self.assertTrue(state_run[state_id]['result'])
+
+    def test_state_sls_lazyloader_allows_recursion(self):
+        '''
+        This tests that referencing dunders like __salt__ work
+        context: https://github.com/saltstack/salt/pull/51499
+        '''
+        state_run = self.run_function('state.sls', mods='issue-51499')
+
+        state_id = 'test_|-always-passes_|-foo_|-succeed_without_changes'
         self.assertIn(state_id, state_run)
         self.assertEqual(state_run[state_id]['comment'],
                          'Success!')

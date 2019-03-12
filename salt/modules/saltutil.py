@@ -46,7 +46,6 @@ import salt.defaults.events
 import salt.payload
 import salt.runner
 import salt.state
-import salt.transport
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
@@ -58,6 +57,7 @@ import salt.utils.path
 import salt.utils.process
 import salt.utils.url
 import salt.wheel
+import salt.transport.client
 
 HAS_PSUTIL = True
 try:
@@ -552,7 +552,7 @@ def sync_proxymodules(saltenv=None, refresh=False, extmod_whitelist=None, extmod
 
 def sync_matchers(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Flourine
+    .. versionadded:: 2019.2.0
 
     Sync engine modules from ``salt://_matchers`` to the minion
 
@@ -780,7 +780,7 @@ def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackli
 
 def sync_serializers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Sync serializers from ``salt://_serializers`` to the minion
 
@@ -812,6 +812,45 @@ def sync_serializers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_b
         salt '*' saltutil.sync_serializers saltenv=base,dev
     '''
     ret = _sync('serializers', saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
+def sync_executors(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: Neon
+
+    Sync executors from ``salt://_executors`` to the minion
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for executor modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new serializer modules are
+        synced. Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist : None
+        comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_executors
+        salt '*' saltutil.sync_executors saltenv=dev
+        salt '*' saltutil.sync_executors saltenv=base,dev
+    '''
+    ret = _sync('executors', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
     return ret
@@ -986,6 +1025,7 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
     ret['thorium'] = sync_thorium(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['serializers'] = sync_serializers(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['matchers'] = sync_matchers(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['executors'] = sync_executors(saltenv, False, extmod_whitelist, extmod_blacklist)
     if __opts__['file_client'] == 'local':
         ret['pillar'] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
     if refresh:
@@ -1132,7 +1172,7 @@ def running():
     return salt.utils.minion.running(__opts__)
 
 
-def clear_cache():
+def clear_cache(days=-1):
     '''
     Forcibly removes all caches on a minion.
 
@@ -1145,12 +1185,16 @@ def clear_cache():
 
     .. code-block:: bash
 
-        salt '*' saltutil.clear_cache
+        salt '*' saltutil.clear_cache days=7
     '''
+    threshold = time.time() - days * 24 * 60 * 60
     for root, dirs, files in salt.utils.files.safe_walk(__opts__['cachedir'], followlinks=False):
         for name in files:
             try:
-                os.remove(os.path.join(root, name))
+                file = os.path.join(root, name)
+                mtime = os.path.getmtime(file)
+                if mtime < threshold:
+                    os.remove(file)
             except OSError as exc:
                 log.error(
                     'Attempt to clear cache with saltutil.clear_cache '
@@ -1175,7 +1219,7 @@ def clear_job_cache(hours=24):
 
         salt '*' saltutil.clear_job_cache hours=12
     '''
-    threshold = time.time() - hours * 3600
+    threshold = time.time() - hours * 60 * 60
     for root, dirs, files in salt.utils.files.safe_walk(os.path.join(__opts__['cachedir'], 'minion_jobs'),
                                                   followlinks=False):
         for name in dirs:
@@ -1396,7 +1440,8 @@ def regen_keys():
             pass
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
-    channel = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.client.ReqChannel.factory(__opts__)
+    channel.close()
 
 
 def revoke_auth(preserve_minion_cache=False):
@@ -1423,7 +1468,7 @@ def revoke_auth(preserve_minion_cache=False):
         masters.append(__opts__['master_uri'])
 
     for master in masters:
-        channel = salt.transport.Channel.factory(__opts__, master_uri=master)
+        channel = salt.transport.client.ReqChannel.factory(__opts__, master_uri=master)
         tok = channel.auth.gen_token(b'salt')
         load = {'cmd': 'revoke_auth',
                 'id': __opts__['id'],
@@ -1433,6 +1478,8 @@ def revoke_auth(preserve_minion_cache=False):
             channel.send(load)
         except SaltReqTimeoutError:
             ret = False
+        finally:
+            channel.close()
     return ret
 
 

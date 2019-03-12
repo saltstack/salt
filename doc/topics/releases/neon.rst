@@ -5,6 +5,14 @@ Salt Release Notes - Codename Neon
 ==================================
 
 
+Execution Module for Checking Jinja Map Files
+=============================================
+
+To aid in troubleshooting, an execution module has been added, which allows one
+to see the data loaded from a jinja map, or imported using ``import_yaml`` or
+``import_json``. See :py:mod:`here <salt.modules.jinja>` for more information.
+
+
 Saltcheck Updates
 =================
 
@@ -260,6 +268,9 @@ Module Changes
 - The :py:func:`file.set_selinux_context <salt.modules.file.set_selinux_context>`
   module now supports perstant changes with ``persist=True`` by calling the
   :py:func:`selinux.fcontext_add_policy <salt.modules.selinux.fcontext_add_policy>` module.
+
+- The :py:func:`yumpkg <salt.modules.yumpkg>` module has been updated to support
+  VMWare's Photon OS, which uses tdnf (a C implementation of dnf).
 
 Enhancements to Engines
 =======================

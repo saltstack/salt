@@ -12,10 +12,10 @@ import tempfile
 # Import Salt Testing libs
 from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import BASE_FILES
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.paths import TMP
 
 # Import Salt libs
 import salt.fileserver.roots as roots
@@ -63,7 +63,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         else:
             cls.test_symlink_list_file_roots = None
         cls.tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        full_path_to_file = os.path.join(BASE_FILES, 'testfile')
+        full_path_to_file = os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile')
         with salt.utils.files.fopen(full_path_to_file, 'rb') as s_fp:
             with salt.utils.files.fopen(os.path.join(cls.tmp_dir, 'testfile'), 'wb') as d_fp:
                 for line in s_fp:
@@ -93,7 +93,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         ret = roots.find_file('testfile')
         self.assertEqual('testfile', ret['rel'])
 
-        full_path_to_file = os.path.join(BASE_FILES, 'testfile')
+        full_path_to_file = os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile')
         self.assertEqual(full_path_to_file, ret['path'])
 
     def test_serve_file(self):
@@ -107,7 +107,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
             ret = roots.serve_file(load, fnd)
 
             with salt.utils.files.fopen(
-                    os.path.join(BASE_FILES, 'testfile'), 'rb') as fp_:
+                    os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile'), 'rb') as fp_:
                 data = fp_.read()
 
             self.assertDictEqual(
@@ -137,7 +137,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         # Hashes are different in Windows. May be how git translates line
         # endings
         with salt.utils.files.fopen(
-                os.path.join(BASE_FILES, 'testfile'), 'rb') as fp_:
+                os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile'), 'rb') as fp_:
             hsum = salt.utils.hashutils.sha256_digest(fp_.read())
 
         self.assertDictEqual(
@@ -151,6 +151,17 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
     def test_file_list_emptydirs(self):
         ret = roots.file_list_emptydirs({'saltenv': 'base'})
         self.assertIn('empty_dir', ret)
+
+    def test_file_list_with_slash(self):
+        opts = {'file_roots': copy.copy(self.opts['file_roots'])}
+        opts['file_roots']['foo/bar'] = opts['file_roots']['base']
+        load = {
+                'saltenv': 'foo/bar',
+                }
+        with patch.dict(roots.__opts__, opts):
+            ret = roots.file_list(load)
+        self.assertIn('testfile', ret)
+        self.assertIn(UNICODE_FILENAME, ret)
 
     def test_dir_list(self):
         ret = roots.dir_list({'saltenv': 'base'})
@@ -167,3 +178,20 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         finally:
             if self.test_symlink_list_file_roots:
                 self.opts['file_roots'] = orig_file_roots
+
+    def test_dynamic_file_roots(self):
+        dyn_root_dir = tempfile.mkdtemp(dir=TMP)
+        top_sls = os.path.join(dyn_root_dir, 'top.sls')
+        with salt.utils.files.fopen(top_sls, 'w') as fp_:
+            fp_.write("{{saltenv}}:\n  '*':\n    - dynamo\n")
+        dynamo_sls = os.path.join(dyn_root_dir, 'dynamo.sls')
+        with salt.utils.files.fopen(dynamo_sls, 'w') as fp_:
+            fp_.write("foo:\n  test.nop\n")
+        opts = {'file_roots': copy.copy(self.opts['file_roots'])}
+        opts['file_roots']['__env__'] = [dyn_root_dir]
+        with patch.dict(roots.__opts__, opts):
+            ret1 = roots.find_file('dynamo.sls', 'dyn')
+            ret2 = roots.file_list({'saltenv': 'dyn'})
+        self.assertEqual('dynamo.sls', ret1['rel'])
+        self.assertIn('top.sls', ret2)
+        self.assertIn('dynamo.sls', ret2)

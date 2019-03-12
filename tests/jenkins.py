@@ -1001,6 +1001,7 @@ def parse():
 
     return options
 
+
 if __name__ == '__main__':
     exit_code = run(parse())
     print('Exit Code: {0}'.format(exit_code))

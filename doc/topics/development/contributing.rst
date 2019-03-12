@@ -40,6 +40,27 @@ see the :ref:`Linting<pylint-instructions>` documentation for more information.
 
 .. _github-pull-request:
 
+New Features
+------------
+
+Feature requests through Salt go through a multi-stage process.
+
+All features are added to major releases only. Salt does not accept
+feature additions in bug-fix branches. Therefore, all feature work
+is done exclusively in the develop branch.
+
+To formally propose a new feature, the proposal must take the form
+of an RFC. To create an RFC, copy the template file found in the rfcs/
+directory of the Salt codebase and fill the outline with the reasoning
+for the new feature and with implementation details.
+
+Upon submitting the written RFC via a pull-request, it will be reviewed
+by the core development team as well as the community. Once discussed
+and agreed upon, the RFC may be merged.
+
+A merged RFC indicates that a feature has been accepted and will be
+added to an upcoming release of Salt.
+
 Sending a GitHub pull request
 -----------------------------
 
