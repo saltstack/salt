@@ -30,6 +30,9 @@ import salt.utils.user
 import salt.utils.versions
 import salt.transport.client
 import salt.log.setup
+import salt.output
+import salt.utils.text
+
 from salt.ext import six
 
 # Import 3rd-party libs
@@ -317,7 +320,7 @@ class SyncClientMixin(object):
             print_func=print_func
         )
 
-        # TODO: document these, and test that they exist
+        # TODO: test that they exist
         # TODO: Other things to inject??
         func_globals = {'__jid__': jid,
                         '__user__': data['user'],
@@ -376,7 +379,10 @@ class SyncClientMixin(object):
                 try:
                     data['return'] = func(*args, **kwargs)
                 except TypeError as exc:
-                    data['return'] = '\nPassed invalid arguments: {0}\n\nUsage:\n{1}'.format(exc, func.__doc__)
+                    data['return'] = salt.utils.text.cli_info('Error: {exc}\nUsage:\n{doc}'.format(
+                        exc=exc, doc=func.__doc__), 'Passed invalid arguments')
+                except Exception as exc:
+                    data['return'] = salt.utils.text.cli_info(six.text_type(exc), 'General error occurred')
                 try:
                     data['success'] = self.context.get('retcode', 0) == 0
                 except AttributeError:
@@ -389,11 +395,8 @@ class SyncClientMixin(object):
             if isinstance(ex, salt.exceptions.NotImplemented):
                 data['return'] = six.text_type(ex)
             else:
-                data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
-                    self.client,
-                    fun,
-                    traceback.format_exc(),
-                    )
+                data['return'] = 'Exception occurred in {client} {fun}: {tb}'.format(
+                    client=self.client, fun=fun, tb=traceback.format_exc())
             data['success'] = False
 
         if self.store_job:

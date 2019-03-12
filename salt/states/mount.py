@@ -226,6 +226,10 @@ def mounted(name,
         if opts == 'defaults':
             opts = ''
 
+    # Defaults is not a valid option on Solaris
+    if 'Solaris' in __grains__['os'] and opts == 'defaults':
+        opts = '-'
+
     # Make sure that opts is correct, it can be a list or a comma delimited
     # string
     if isinstance(opts, string_types):
@@ -617,6 +621,14 @@ def mounted(name,
                                                   config,
                                                   test=True,
                                                   match_on=match_on)
+            elif 'Solaris' in __grains__['os']:
+                out = __salt__['mount.set_vfstab'](name,
+                                                   device,
+                                                   fstype,
+                                                   opts,
+                                                   config=config,
+                                                   test=True,
+                                                   match_on=match_on)
             else:
                 out = __salt__['mount.set_fstab'](name,
                                                   device,
@@ -673,6 +685,13 @@ def mounted(name,
                                                   mount,
                                                   config,
                                                   match_on=match_on)
+            elif 'Solaris' in __grains__['os']:
+                out = __salt__['mount.set_vfstab'](name,
+                                                   device,
+                                                   fstype,
+                                                   opts,
+                                                   config=config,
+                                                   match_on=match_on)
             else:
                 out = __salt__['mount.set_fstab'](name,
                                                   device,
@@ -894,6 +913,10 @@ def unmounted(name,
             if config == '/etc/fstab':
                 config = "/etc/filesystems"
             fstab_data = __salt__['mount.filesystems'](config)
+        elif 'Solaris' in __grains__['os']:
+            if config == '/etc/fstab':
+                config = '/etc/vfstab'
+            fstab_data = __salt__['mount.vfstab'](config)
         else:
             fstab_data = __salt__['mount.fstab'](config)
 
@@ -915,6 +938,8 @@ def unmounted(name,
                     out = __salt__['mount.rm_automaster'](name, device, config)
                 elif 'AIX' in __grains__['os']:
                     out = __salt__['mount.rm_filesystems'](name, device, config)
+                elif 'Solaris' in __grains__['os']:
+                    out = __salt__['mount.rm_vfstab'](name, device, config)
                 else:
                     out = __salt__['mount.rm_fstab'](name, device, config)
                 if out is not True:

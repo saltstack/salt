@@ -1217,6 +1217,9 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util
     if 'AIX' in __grains__['os']:
         if fstype:
             args += ' -v {0}'.format(fstype)
+    elif 'solaris' in __grains__['os'].lower():
+        if fstype:
+            args += ' -F {0}'.format(fstype)
     else:
         args += ' -t {0}'.format(fstype)
     cmd = 'mount {0} {1} {2} '.format(args, device, name)
