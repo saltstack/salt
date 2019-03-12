@@ -75,3 +75,26 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                               '--force -l 5 -e default -n 3 '
                               '/dev/sdb1 /dev/sdc1 /dev/sdd1'.split()), sorted(ret.split()))
             assert not mock.called, 'test mode failed, cmd.run called'
+
+    def test_examine(self):
+        '''
+        Test for mdadm_raid.examine
+        '''
+        mock = MagicMock(return_value='ARRAY /dev/md/pool metadata=1.2 UUID=567da122:fb8e445e:55b853e0:81bd0a3e name=positron:pool')
+        with patch.dict(mdadm.__salt__, {'cmd.run_stdout': mock}):
+            self.assertEqual(mdadm.examine('/dev/md0'),
+                             {
+                                 'ARRAY /dev/md/pool metadata': '1.2 UUID=567da122:fb8e445e:55b853e0:81bd0a3e name=positron:pool'
+                             })
+            mock.assert_called_with('mdadm -Y -E /dev/md0', ignore_retcode=False,
+                                    python_shell=False)
+
+    def test_examine_quiet(self):
+        '''
+        Test for mdadm_raid.examine
+        '''
+        mock = MagicMock(return_value='')
+        with patch.dict(mdadm.__salt__, {'cmd.run_stdout': mock}):
+            self.assertEqual(mdadm.examine('/dev/md0', quiet=True), {})
+            mock.assert_called_with('mdadm -Y -E /dev/md0', ignore_retcode=True,
+                                    python_shell=False)
