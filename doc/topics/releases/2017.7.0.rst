@@ -710,7 +710,7 @@ Execution modules
 - :mod:`salt.modules.grafana4 <salt.modules.grafana4>`
 - :mod:`salt.modules.heat <salt.modules.heat>`
 - :mod:`salt.modules.icinga2 <salt.modules.icinga2>`
-- :mod:`salt.modules.kubernetes <salt.modules.kubernetes>`
+- :mod:`salt.modules.kubernetesmod <salt.modules.kubernetesmod>`
 - :mod:`salt.modules.logmod <salt.modules.logmod>`
 - :mod:`salt.modules.mattermost <salt.modules.mattermost>`
 - :mod:`salt.modules.namecheap_dns <salt.modules.namecheap_dns>`
