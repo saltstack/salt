@@ -18,14 +18,14 @@ Saltcheck Updates
 
 Available since 2018.3, the :py:func:`saltcheck module <salt.modules.saltcheck>`
 has been enhanced to:
- * Support saltenv environments
- * Associate tests with states by naming convention
- * Adds empty and notempty assertions
- * Adds skip keyword
- * Adds print_result keyword
- * Adds assertion_section keyword
- * Use saltcheck.state_apply to run state.apply for test setup or teardown
- * Changes output to display test time
+* Support saltenv environments
+* Associate tests with states by naming convention
+* Adds empty and notempty assertions
+* Adds skip keyword
+* Adds print_result keyword
+* Adds assertion_section keyword
+* Use saltcheck.state_apply to run state.apply for test setup or teardown
+* Changes output to display test time
 
 Saltcheck provides unittest like functionality requiring only the knowledge of
 salt module execution and yaml. Saltcheck uses salt modules to return data, then
