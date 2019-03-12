@@ -5,36 +5,12 @@ Tests for the state runner
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import errno
 import logging
 import os
-import re
-import shutil
-import signal
-import tempfile
-import time
-import textwrap
-import threading
 
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
-from tests.support.helpers import flaky, expensiveTest
-from tests.support.mock import MagicMock, patch
-from tests.support.unit import skipIf
-
-# Import Salt Libs
-import salt.exceptions
-import salt.utils.platform
-import salt.utils.event
-import salt.utils.files
-import salt.utils.json
-import salt.utils.stringutils
-import salt.utils.yaml
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import queue
 
 log = logging.getLogger(__name__)
 
