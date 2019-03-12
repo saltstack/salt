@@ -2805,7 +2805,7 @@ def managed(name,
 
     try:
         if __opts__['test']:
-            if 'file.check_managed_changes' in __salt__:
+            try:
                 ret['changes'] = __salt__['file.check_managed_changes'](
                     name,
                     source,
@@ -2828,20 +2828,24 @@ def managed(name,
                     serange=serange,
                     **kwargs
                 )
+            except CommandExecutionError as exc:
+                ret['result'] = False
+                ret['comment'] = six.text_type(exc)
+                return ret
 
-                if salt.utils.platform.is_windows():
-                    try:
-                        ret = __salt__['file.check_perms'](
-                            path=name,
-                            ret=ret,
-                            owner=win_owner,
-                            grant_perms=win_perms,
-                            deny_perms=win_deny_perms,
-                            inheritance=win_inheritance,
-                            reset=win_perms_reset)
-                    except CommandExecutionError as exc:
-                        if exc.strerror.startswith('Path not found'):
-                            ret['comment'] = '{0} will be created'.format(name)
+            if salt.utils.platform.is_windows():
+                try:
+                    ret = __salt__['file.check_perms'](
+                        path=name,
+                        ret=ret,
+                        owner=win_owner,
+                        grant_perms=win_perms,
+                        deny_perms=win_deny_perms,
+                        inheritance=win_inheritance,
+                        reset=win_perms_reset)
+                except CommandExecutionError as exc:
+                    if exc.strerror.startswith('Path not found'):
+                        ret['comment'] = '{0} will be created'.format(name)
 
             if isinstance(ret['changes'], tuple):
                 ret['result'], ret['comment'] = ret['changes']
@@ -7338,23 +7342,28 @@ def serialize(name,
     mode = salt.utils.files.normalize_mode(mode)
 
     if __opts__['test']:
-        ret['changes'] = __salt__['file.check_managed_changes'](
-            name=name,
-            source=None,
-            source_hash={},
-            source_hash_name=None,
-            user=user,
-            group=group,
-            mode=mode,
-            attrs=None,
-            template=None,
-            context=None,
-            defaults=None,
-            saltenv=__env__,
-            contents=contents,
-            skip_verify=False,
-            **kwargs
-        )
+        try:
+            ret['changes'] = __salt__['file.check_managed_changes'](
+                name=name,
+                source=None,
+                source_hash={},
+                source_hash_name=None,
+                user=user,
+                group=group,
+                mode=mode,
+                attrs=None,
+                template=None,
+                context=None,
+                defaults=None,
+                saltenv=__env__,
+                contents=contents,
+                skip_verify=False,
+                **kwargs
+            )
+        except CommandExecutionError as exc:
+            ret['result'] = False
+            ret['comment'] = six.text_type(exc)
+            return ret
 
         if ret['changes']:
             ret['result'] = None
