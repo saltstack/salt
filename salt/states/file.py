@@ -294,6 +294,7 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
+from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError
 from salt.serializers import DeserializationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
@@ -631,6 +632,7 @@ def _check_file(name):
 def _find_keep_files(root, keep):
     '''
     Compile a list of valid keep files (and directories).
+    Used by _clean_dir()
     '''
     real_keep = set()
     real_keep.add(root)
@@ -654,6 +656,7 @@ def _clean_dir(root, keep, exclude_pat):
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     '''
+    root = os.path.normcase(root)
     real_keep = _find_keep_files(root, keep)
     removed = set()
 
@@ -1725,10 +1728,7 @@ def absent(name,
             ret['comment'] = 'File {0} is set for removal'.format(name)
             return ret
         try:
-            if salt.utils.platform.is_windows():
-                __salt__['file.remove'](name, force=True)
-            else:
-                __salt__['file.remove'](name)
+            __salt__['file.remove'](name, force=True)
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
@@ -1742,10 +1742,7 @@ def absent(name,
             ret['comment'] = 'Directory {0} is set for removal'.format(name)
             return ret
         try:
-            if salt.utils.platform.is_windows():
-                __salt__['file.remove'](name, force=True)
-            else:
-                __salt__['file.remove'](name)
+            __salt__['file.remove'](name, force=True)
             ret['comment'] = 'Removed directory {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
@@ -1862,10 +1859,7 @@ def tidied(name,
         # Iterate over collected items
         try:
             for path in todelete:
-                if salt.utils.platform.is_windows():
-                    __salt__['file.remove'](path, force=True)
-                else:
-                    __salt__['file.remove'](path)
+                __salt__['file.remove'](path, force=True)
                 # Remember what we've removed, will appear in the summary
                 ret['changes']['removed'].append(path)
         except CommandExecutionError as exc:
@@ -3302,7 +3296,7 @@ def directory(name,
                   perms: full_control
             - win_inheritance: False
     '''
-    name = os.path.normcase(os.path.expanduser(name))
+    name = os.path.expanduser(name)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -3850,9 +3844,7 @@ def recurse(name,
         # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
-    name = salt.utils.data.decode(
-        os.path.normcase(os.path.expanduser(name))
-    )
+    name = os.path.expanduser(sdecode(name))
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.platform.is_windows():
@@ -5392,15 +5384,9 @@ def comment(name, regex, char='#', backup='.bak'):
 
     comment_regex = char + unanchor_regex
 
-    # Check if the line is already commented
-    if __salt__['file.search'](name, comment_regex, multiline=True):
-        commented = True
-    else:
-        commented = False
-
     # Make sure the pattern appears in the file before continuing
-    if commented or not __salt__['file.search'](name, regex, multiline=True):
-        if __salt__['file.search'](name, unanchor_regex, multiline=True):
+    if not __salt__['file.search'](name, regex, multiline=True):
+        if __salt__['file.search'](name, comment_regex, multiline=True):
             ret['comment'] = 'Pattern already commented'
             ret['result'] = True
             return ret
@@ -5499,17 +5485,17 @@ def uncomment(name, regex, char='#', backup='.bak'):
     # Make sure the pattern appears in the file
     if __salt__['file.search'](
             name,
+            '{0}[ \t]*{1}'.format(char, regex.lstrip('^')),
+            multiline=True):
+        # Line exists and is commented
+        pass
+    elif __salt__['file.search'](
+            name,
             '^[ \t]*{0}'.format(regex.lstrip('^')),
             multiline=True):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
-    elif __salt__['file.search'](
-            name,
-            '{0}[ \t]*{1}'.format(char, regex.lstrip('^')),
-            multiline=True):
-        # Line exists and is commented
-        pass
     else:
         return _error(ret, '{0}: Pattern not found'.format(regex))
 
@@ -6772,7 +6758,9 @@ def copy_(name,
         elif not __opts__['test'] and changed:
             # Remove the destination to prevent problems later
             try:
-                __salt__['file.remove'](name)
+                # On windows, if a file has the read-only attribute then we are unable
+                # to complete this copy unless force is set to true.
+                __salt__['file.remove'](name, force=force)
             except (IOError, OSError):
                 return _error(
                     ret,

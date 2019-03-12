@@ -3787,7 +3787,7 @@ def rmdir(path):
         return exc.strerror
 
 
-def remove(path):
+def remove(path, **kwargs):
     '''
     Remove the named file. If a directory is supplied, it will be recursively
     deleted.
