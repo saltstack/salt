@@ -218,6 +218,7 @@ class StateRunnerTest(ShellCase):
                        '      Result: False'):
             self.assertIn(result, ret)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Causes pickling error on Windows')
     def test_orchestrate_retcode_async(self):
         '''
         Test orchestration with nonzero retcode set in __context__ for async
@@ -342,6 +343,7 @@ class StateRunnerTest(ShellCase):
 
         server_thread.join()
 
+    # This test fails on Windows with ERROR: No minions returned
     def test_orchestrate_subset(self):
         '''
         test orchestration state using subset

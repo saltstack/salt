@@ -295,15 +295,11 @@ class Runner(RunnerClient):
                 ret = None
 
             # If we didn't get docs returned then
-            # return the `not availble` message.
+            # return the `not available` message.
             if not ret:
                 ret = '{0}'.format(exc)
             if not self.opts.get('quiet', False):
                 display_output(ret, 'nested', self.opts)
-        else:
-            ret = {
-                'retcode': salt.defaults.exitcodes.EX_SOFTWARE,
-            }
         log.debug('Runner return: %s', ret)
 
         return ret
