@@ -87,6 +87,13 @@ the context into the included file is required:
 .. code-block:: jinja
 
     {% from 'lib.sls' import test with context %}
+    
+Includes must use full paths, like so:
+
+.. code-block:: jinja
+   :caption: spam/eggs.jinja
+
+    {% include 'spam/foobar.jinja' %}
 
 Including Context During Include/Import
 ---------------------------------------
@@ -959,7 +966,7 @@ Example:
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
     when it was added. ``json_decode_list`` will be supported until the Neon
     release.
-.. deprecated:: 2018.3.3,Fluorine
+.. deprecated:: 2018.3.3,2019.2.0
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
     to do, making this filter redundant.
 
@@ -992,7 +999,7 @@ Returns:
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
     when it was added. ``json_decode_dict`` will be supported until the Neon
     release.
-.. deprecated:: 2018.3.3,Fluorine
+.. deprecated:: 2018.3.3,2019.2.0
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
     to do, making this filter redundant.
 
@@ -1019,7 +1026,7 @@ Returns:
 ``tojson``
 ----------
 
-.. versionadded:: 2018.3.3,Fluorine
+.. versionadded:: 2018.3.3,2019.2.0
 
 Dumps a data structure to JSON.
 

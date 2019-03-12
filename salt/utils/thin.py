@@ -275,7 +275,7 @@ def get_tops(extra_mods='', so_mods=''):
             try:
                 locals()[mod] = __import__(mod)
                 moddir, modname = os.path.split(locals()[mod].__file__)
-                base, ext = os.path.splitext(modname)
+                base, _ = os.path.splitext(modname)
                 if base == '__init__':
                     tops.append(moddir)
                 else:
@@ -318,6 +318,20 @@ def _get_supported_py_config(tops, extended_cfg):
     pymap.append('')
 
     return salt.utils.stringutils.to_bytes(os.linesep.join(pymap))
+
+
+def _get_thintar_prefix(tarname):
+    '''
+    Make sure thintar temporary name is concurrent and secure.
+
+    :param tarname: name of the chosen tarball
+    :return: prefixed tarname
+    '''
+    tfd, tmp_tarname = tempfile.mkstemp(dir=os.path.dirname(tarname), prefix=".thin-",
+                                        suffix="." + os.path.basename(tarname).split(".", 1)[-1])
+    os.close(tfd)
+
+    return tmp_tarname
 
 
 def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
@@ -375,7 +389,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             except OSError as exc:
                 log.error('Error while removing %s file: %s', thintar, exc)
                 if os.path.exists(thintar):
-                    raise salt.exceptions.SaltSystemExit('Unable to remove %s file. See logs for details.', thintar)
+                    raise salt.exceptions.SaltSystemExit(
+                        'Unable to remove {0}. See logs for details.'.format(thintar)
+                    )
         else:
             return thintar
     if _six.PY3:
@@ -438,10 +454,11 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     with salt.utils.files.fopen(pymap_cfg, 'wb') as fp_:
         fp_.write(_get_supported_py_config(tops=tops_py_version_mapping, extended_cfg=extended_cfg))
 
+    tmp_thintar = _get_thintar_prefix(thintar)
     if compress == 'gzip':
-        tfp = tarfile.open(thintar, 'w:gz', dereference=True)
+        tfp = tarfile.open(tmp_thintar, 'w:gz', dereference=True)
     elif compress == 'zip':
-        tfp = zipfile.ZipFile(thintar, 'w', compression=zlib and zipfile.ZIP_DEFLATED or zipfile.ZIP_STORED)
+        tfp = zipfile.ZipFile(tmp_thintar, 'w', compression=zlib and zipfile.ZIP_DEFLATED or zipfile.ZIP_STORED)
         tfp.add = tfp.write
 
     try:  # cwd may not exist if it was removed but salt was run from it
@@ -540,6 +557,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     if start_dir:
         os.chdir(start_dir)
     tfp.close()
+
+    shutil.move(tmp_thintar, thintar)
 
     return thintar
 

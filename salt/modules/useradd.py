@@ -136,7 +136,8 @@ def add(name,
         createhome=True,
         loginclass=None,
         nologinit=False,
-        root=None):
+        root=None,
+        usergroup=None):
     '''
     Add a user to the minion
 
@@ -147,7 +148,7 @@ def add(name,
         User ID of the new account
 
     gid
-        Name or ID of the primary group of the new accoun
+        Name or ID of the primary group of the new account
 
     groups
         List of supplementary groups of the new account
@@ -159,7 +160,7 @@ def add(name,
         Login shell of the new account
 
     unique
-        Allow to create users with duplicate
+        If not True, the user account can have a non-unique UID
 
     system
         Create a system account
@@ -191,6 +192,9 @@ def add(name,
     root
         Directory to chroot into
 
+    usergroup
+        Create and add the user to a new primary group of the same name
+
     CLI Example:
 
     .. code-block:: bash
@@ -204,6 +208,10 @@ def add(name,
         cmd.extend(['-u', uid])
     if gid not in (None, ''):
         cmd.extend(['-g', gid])
+    elif usergroup:
+        cmd.append('-U')
+        if __grains__['kernel'] != 'Linux':
+            log.warning("'usergroup' is only supported on GNU/Linux hosts.")
     elif groups is not None and name in groups:
         defs_file = '/etc/login.defs'
         if __grains__['kernel'] != 'OpenBSD':
@@ -222,10 +230,8 @@ def add(name,
                         # We found what we wanted, let's break out of the loop
                         break
             except OSError:
-                log.debug(
-                    'Error reading ' + defs_file,
-                    exc_info_on_loglevel=logging.DEBUG
-                )
+                log.debug('Error reading %s', defs_file,
+                          exc_info_on_loglevel=logging.DEBUG)
         else:
             usermgmt_file = '/etc/usermgmt.conf'
             try:
@@ -244,6 +250,11 @@ def add(name,
             except OSError:
                 # /etc/usermgmt.conf not present: defaults will be used
                 pass
+    # Setting usergroup to False adds the -N command argument. If
+    # usergroup is None, no arguments are added to allow useradd to go
+    # with the defaults defined for the OS.
+    if usergroup is False:
+        cmd.append('-N')
 
     if createhome:
         cmd.append('-m')
@@ -914,3 +925,111 @@ def _getpwall(root=None):
             # Generate a getpwall compatible output
             comps[2], comps[3] = int(comps[2]), int(comps[3])
             yield pwd.struct_passwd(comps)
+
+
+def add_subuids(name, first=100000, last=110000):
+    '''
+    Add a range of subordinate uids to the user
+
+    name
+        User to modify
+
+    first
+        Begin of the range
+
+    last
+        End of the range
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' user.add_subuids foo
+        salt '*' user.add_subuids foo first=105000
+        salt '*' user.add_subuids foo first=600000000 last=600100000
+    '''
+    if __grains__['kernel'] != 'Linux':
+        log.warning("'subuids' are only supported on GNU/Linux hosts.")
+
+    return __salt__['cmd.run'](['usermod', '-v', '-'.join(str(x) for x in (first, last)), name])
+
+
+def del_subuids(name, first=100000, last=110000):
+    '''
+    Remove a range of subordinate uids to the user
+
+    name
+        User to modify
+
+    first
+        Begin of the range
+
+    last
+        End of the range
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' user.del_subuids foo
+        salt '*' user.del_subuids foo first=105000
+        salt '*' user.del_subuids foo first=600000000 last=600100000
+    '''
+    if __grains__['kernel'] != 'Linux':
+        log.warning("'subuids' are only supported on GNU/Linux hosts.")
+
+    return __salt__['cmd.run'](['usermod', '-V', '-'.join(str(x) for x in (first, last)), name])
+
+
+def add_subgids(name, first=100000, last=110000):
+    '''
+    Add a range of subordinate gids to the user
+
+    name
+        User to modify
+
+    first
+        Begin of the range
+
+    last
+        End of the range
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' user.add_subgids foo
+        salt '*' user.add_subgids foo first=105000
+        salt '*' user.add_subgids foo first=600000000 last=600100000
+    '''
+    if __grains__['kernel'] != 'Linux':
+        log.warning("'subgids' are only supported on GNU/Linux hosts.")
+
+    return __salt__['cmd.run'](['usermod', '-w', '-'.join(str(x) for x in (first, last)), name])
+
+
+def del_subgids(name, first=100000, last=110000):
+    '''
+    Remove a range of subordinate gids to the user
+
+    name
+        User to modify
+
+    first
+        Begin of the range
+
+    last
+        End of the range
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' user.del_subgids foo
+        salt '*' user.del_subgids foo first=105000
+        salt '*' user.del_subgids foo first=600000000 last=600100000
+    '''
+    if __grains__['kernel'] != 'Linux':
+        log.warning("'subgids' are only supported on GNU/Linux hosts.")
+
+    return __salt__['cmd.run'](['usermod', '-W', '-'.join(str(x) for x in (first, last)), name])

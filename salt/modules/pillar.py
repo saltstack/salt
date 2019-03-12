@@ -10,7 +10,6 @@ import collections
 # Import third party libs
 import copy
 import os
-import copy
 import logging
 from salt.ext import six
 
@@ -157,7 +156,7 @@ def get(key,
                     'skipped.', default, ret, type(ret).__name__
                 )
         elif isinstance(default, list):
-            ret = salt.utils.data.traverse_dict_and_list(
+            ret = salt.utils.data.traverse_dict_and_list(  # pylint: disable=redefined-variable-type
                 pillar_dict,
                 key,
                 [],
@@ -277,6 +276,7 @@ def items(*args, **kwargs):
 
     return pillar.compile_pillar()
 
+
 # Allow pillar.data to also be used to return pillar data
 data = salt.utils.functools.alias_function(items, 'data')
 
@@ -344,7 +344,7 @@ def ls(*args):
         salt '*' pillar.ls
     '''
 
-    return list(items(*args).keys())
+    return list(items(*args))
 
 
 def item(*args, **kwargs):
@@ -543,7 +543,7 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
     if not isinstance(ret, dict):
         raise ValueError("Pillar value in key {0} is not a dict".format(key))
 
-    return ret.keys()
+    return list(ret)
 
 
 def file_exists(path, saltenv=None):
@@ -614,7 +614,7 @@ def filter_by(lookup_dict,
         on that particular OS.
 
         The dictionary key can be a globbing pattern. The function will return
-        the corresponding ``lookup_dict`` value where the pilalr value matches
+        the corresponding ``lookup_dict`` value where the pillar value matches
         the  pattern. For example:
 
         .. code-block:: bash

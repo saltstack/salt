@@ -2,7 +2,10 @@
 
 # import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
+import subprocess
 import tempfile
+
+from textwrap import dedent
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -17,8 +20,30 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.utils.files
 import salt.utils.platform
+import salt.modules.cmdmod as cmd
 import salt.modules.ssh as ssh
 from salt.exceptions import CommandExecutionError
+
+
+def _mock_ssh_keyscan(*args, **kwargs):
+    if 'ssh-keyscan' in args[0]:
+        if '-H' in args[0]:
+            return dedent('''
+                # home.waynewerner.com:55555 SSH-2.0-OpenSSH_7.4p1 Raspbian-10+deb9u3
+                |1|0yq63FhgFbcGawJwr7XyBPEL2Fs=|HkqTDf6bE0p2CMLHyCY7fdH5Uo0= ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCY7tcbLrsTFPb2je3VFiH9cC9+ac04H0X8BQG7croyqvdUY5zTLmIidXJe6R1zUS7Jqpy/pXwHSB5HWpsMu+ytovPZ/LKl6AiYlcdcpS//QASb7TbcDzHFIlcdCoL5C5TOHXdRKrgIa64akuPMxvXxbgXAHjud+2jK1FhGTBbTkbrWA4xhDukWkswLpCRyHhsNzJd/seP651UDd/3rkrbgFSN9o/4LXZtsEfV3xRfJOaZq5/SW+sDVNlArFgg9EXXOzrKKWkSjS9BnN0hBaK3IyJfUAwppLYHgF0LvcNl4jF38EAU00pkNX5mknGbAFF7OMkcQI9/vkl+jaajv8Q3
+                # home.waynewerner.com:55555 SSH-2.0-OpenSSH_7.4p1 Raspbian-10+deb9u3
+                |1|F1wCSzHHJMMPw/DAuRJGMKeTwFk=|GKQ9FyLzHqe0n+WaWKWHzzmS5/c= ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIOEPebJNvI/rqc0ttSuow97J6i8k3YLRF69v1GhF1+gCvM9NW1UQs1gzwB/cLPds9PuwCgyKzUxVqpP7ua41WU=
+                # home.waynewerner.com:55555 SSH-2.0-OpenSSH_7.4p1 Raspbian-10+deb9u3
+                |1|SZAE/yAB5UH3OOJvkU6ks1yfHO8=|lay+ajhv8yXZ9kke2j86F7RJunw= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBGI17y+DW7z4q4r13Ewd/WnrorEwQWqaE2unjU1TS7G
+            ''').lstrip()
+        else:
+            return dedent('''
+                [example.com]:12345 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCY7tcbLrsTFPb2je3VFiH9cC9+ac04H0X8BQG7croyqvdUY5zTLmIidXJe6R1zUS7Jqpy/pXwHSB5HWpsMu+ytovPZ/LKl6AiYlcdcpS//QASb7TbcDzHFIlcdCoL5C5TOHXdRKrgIa64akuPMxvXxbgXAHjud+2jK1FhGTBbTkbrWA4xhDukWkswLpCRyHhsNzJd/seP651UDd/3rkrbgFSN9o/4LXZtsEfV3xRfJOaZq5/SW+sDVNlArFgg9EXXOzrKKWkSjS9BnN0hBaK3IyJfUAwppLYHgF0LvcNl4jF38EAU00pkNX5mknGbAFF7OMkcQI9/vkl+jaajv8Q3
+                [example.com]:12345 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIOEPebJNvI/rqc0ttSuow97J6i8k3YLRF69v1GhF1+gCvM9NW1UQs1gzwB/cLPds9PuwCgyKzUxVqpP7ua41WU=
+                [example.com]:12345 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBGI17y+DW7z4q4r13Ewd/WnrorEwQWqaE2unjU1TS7G
+            ''').lstrip()
+    else:
+        return cmd.run(*args, **kwargs)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -142,3 +167,45 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
             self.assertIn(email, file_txt)
             self.assertIn(empty_line, file_txt)
             self.assertIn(comment_line, file_txt)
+
+    @skipIf(not salt.utils.path.which('ssh-keyscan'), 'ssh-keyscan not installed')
+    def test_recv_known_hosts_hashed_shoud_be_findable_by_ssh_keygen(self):
+        hostname = 'example.com'
+        port = 12345
+        with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
+            with patch.dict(ssh.__salt__, {'cmd.run': MagicMock(side_effect=_mock_ssh_keyscan)}):
+                entries = ssh.recv_known_host_entries(
+                    hostname=hostname,
+                    port=port,
+                    hash_known_hosts=True,
+                )
+                for entry in entries:
+                    print(
+                        '{0[hostname]} {0[enc]} {0[key]}'.format(entry),
+                        file=temp_file,
+                    )
+                temp_file.flush()
+                result = subprocess.check_output([
+                    'ssh-keygen',
+                    '-f',
+                    temp_file.name,
+                    '-F',
+                    '[{hostname}]:{port}'.format(hostname=hostname, port=port),
+                ])
+
+    def test_recv_known_hosts_hashed_should_return_hashed_hostnames(self):
+        hostname = 'example.com'
+        port = 12345
+        with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
+            with patch.dict(ssh.__salt__, {'cmd.run': MagicMock(side_effect=_mock_ssh_keyscan)}):
+                entries = ssh.recv_known_host_entries(
+                    hostname=hostname,
+                    port=port,
+                    hash_known_hosts=True,
+                )
+                hostnames = [e.get('hostname') for e in entries]
+                # We better have *some* hostnames, or the next test is
+                # irrelevant
+                self.assertTrue(bool(hostnames))
+                bad_hostnames = [h for h in hostnames if h.startswith(hostname)]
+                self.assertFalse(bool(bad_hostnames), bad_hostnames)

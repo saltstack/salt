@@ -25,7 +25,7 @@ import tests.integration as integration
 import salt.utils.schedule
 import salt.utils.platform
 
-from salt.modules.test import ping as ping
+from salt.modules.test import ping
 
 try:
     import croniter  # pylint: disable=W0611
@@ -492,6 +492,32 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
             job_name: {
               'function': 'test.ping',
               'when': '11/29/2017 4:00pm',
+            }
+          }
+        }
+        run_time1 = dateutil_parser.parse('11/29/2017 4:00pm')
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        # Evaluate 1 second at the run time
+        self.schedule.eval(now=run_time1)
+        ret = self.schedule.job_status(job_name)
+        self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_skip_reason'], 'disabled')
+
+    def test_eval_global_disabled_job_enabled(self):
+        '''
+        verify that scheduled job does not run
+        '''
+        job_name = 'test_eval_global_disabled'
+        job = {
+          'schedule': {
+            'enabled': False,
+            job_name: {
+              'function': 'test.ping',
+              'when': '11/29/2017 4:00pm',
+              'enabled': True,
             }
           }
         }

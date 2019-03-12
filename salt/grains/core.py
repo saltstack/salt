@@ -23,6 +23,7 @@ import uuid
 import zlib
 from errno import EACCES, EPERM
 import datetime
+import warnings
 
 # pylint: disable=import-error
 try:
@@ -42,7 +43,12 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 
 # linux_distribution deprecated in py3.7
 try:
-    from platform import linux_distribution
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
 except ImportError:
     from distro import linux_distribution
 
@@ -788,7 +794,10 @@ def _virtual(osdata):
                 grains['virtual'] = 'LXC'
                 break
         elif command == 'virt-what':
-            output = output.splitlines()[-1]
+            try:
+                output = output.splitlines()[-1]
+            except IndexError:
+                pass
             if output in ('kvm', 'qemu', 'uml', 'xen', 'lxc'):
                 grains['virtual'] = output
                 break
@@ -1008,10 +1017,11 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in model:
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'OpenBSD':
-        if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
-            grains['virtual'] = 'kvm'
-        if osdata['manufacturer'] == 'OpenBSD':
-            grains['virtual'] = 'vmm'
+        if 'manufacturer' in osdata:
+            if osdata['manufacturer'] in ['QEMU', 'Red Hat', 'Joyent']:
+                grains['virtual'] = 'kvm'
+            if osdata['manufacturer'] == 'OpenBSD':
+                grains['virtual'] = 'vmm'
     elif osdata['kernel'] == 'SunOS':
         if grains['virtual'] == 'LDOM':
             roles = []
@@ -1151,8 +1161,7 @@ def _clean_value(key, val):
     NOTE: This logic also exists in the smbios module. This function is
           for use when not using smbios to retrieve the value.
     '''
-    if (val is None or
-            not len(val) or
+    if (val is None or not val or
             re.match('none', val, flags=re.IGNORECASE)):
         return None
     elif 'uuid' in key:
@@ -1239,24 +1248,33 @@ def _windows_platform_data():
         kernel_version = platform.version()
         info = salt.utils.win_osinfo.get_os_version_info()
         net_info = salt.utils.win_osinfo.get_join_info()
-        server = {'Vista': '2008Server',
-                  '7': '2008ServerR2',
-                  '8': '2012Server',
-                  '8.1': '2012ServerR2',
-                  '10': '2016Server'}
-
-        # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
-        # started reporting the Desktop version instead of the Server version on
-        # Server versions of Windows, so we need to look those up
-        # So, if you find a Server Platform that's a key in the server
-        # dictionary, then lookup the actual Server Release.
-        # (Product Type 1 is Desktop, Everything else is Server)
-        if info['ProductType'] > 1 and os_release in server:
-            os_release = server[os_release]
 
         service_pack = None
         if info['ServicePackMajor'] > 0:
             service_pack = ''.join(['SP', six.text_type(info['ServicePackMajor'])])
+
+        # This creates the osrelease grain based on the Windows Operating
+        # System Product Name. As long as Microsoft maintains a similar format
+        # this should be future proof
+        version = 'Unknown'
+        release = ''
+        if 'Server' in osinfo.Caption:
+            for item in osinfo.Caption.split(' '):
+                # If it's all digits, then it's version
+                if re.match(r'\d+', item):
+                    version = item
+                # If it starts with R and then numbers, it's the release
+                # ie: R2
+                if re.match(r'^R\d+$', item):
+                    release = item
+            os_release = '{0}Server{1}'.format(version, release)
+        else:
+            for item in osinfo.Caption.split(' '):
+                # If it's a number, decimal number, Thin or Vista, then it's the
+                # version
+                if re.match(r'^(\d+(\.\d+)?)|Thin|Vista$', item):
+                    version = item
+            os_release = version
 
         grains = {
             'kernelrelease': _clean_value('kernelrelease', osinfo.Version),
@@ -1446,6 +1464,7 @@ _OS_FAMILY_MAP = {
     'IDMS': 'Debian',
     'Funtoo': 'Gentoo',
     'AIX': 'AIX',
+    'TurnKey': 'Debian',
 }
 
 # Matches any possible format:
@@ -1868,7 +1887,7 @@ def os_data():
         # (though apparently it's not intelligent enough to strip quotes)
         log.trace(
             'Getting OS name, release, and codename from '
-            'platform.linux_distribution()'
+            'distro.linux_distribution()'
         )
         (osname, osrelease, oscodename) = \
             [x.strip('"').strip("'") for x in
@@ -2153,14 +2172,13 @@ def fqdns():
     grains = {}
     fqdns = set()
 
-    addresses = salt.utils.network.ip_addrs(include_loopback=False,
-                                            interface_data=_INTERFACES)
-    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False,
-                                                  interface_data=_INTERFACES))
+    addresses = salt.utils.network.ip_addrs(include_loopback=False, interface_data=_get_interfaces())
+    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False, interface_data=_get_interfaces()))
     err_message = 'Exception during resolving address: %s'
     for ip in addresses:
         try:
-            fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
+            name, aliaslist, addresslist = socket.gethostbyaddr(ip)
+            fqdns.update([socket.getfqdn(name)] + [als for als in aliaslist if salt.utils.network.is_fqdn(als)])
         except socket.herror as err:
             if err.errno == 0:
                 # No FQDN for this IP address, so we don't need to know this all the time.
@@ -2170,8 +2188,7 @@ def fqdns():
         except (socket.error, socket.gaierror, socket.timeout) as err:
             log.error(err_message, err)
 
-    grains['fqdns'] = sorted(list(fqdns))
-    return grains
+    return {"fqdns": sorted(list(fqdns))}
 
 
 def ip_fqdn():
@@ -2338,6 +2355,13 @@ def get_machine_id():
     else:
         with salt.utils.files.fopen(existing_locations[0]) as machineid:
             return {'machine_id': machineid.read().strip()}
+
+
+def cwd():
+    '''
+    Current working directory
+    '''
+    return {'cwd': os.getcwd()}
 
 
 def path():

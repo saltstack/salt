@@ -98,7 +98,7 @@ def balancer_present(name, port, protocol, profile, algorithm=None, members=None
     '''
     balancers = __salt__['libcloud_loadbalancer.list_balancers'](profile)
     match = [z for z in balancers if z['name'] == name]
-    if len(match) > 0:
+    if match:
         return state_result(True, "Balancer already exists", name)
     else:
         starting_members = None
@@ -126,7 +126,7 @@ def balancer_absent(name, profile, **libcloud_kwargs):
     '''
     balancers = __salt__['libcloud_loadbalancer.list_balancers'](profile)
     match = [z for z in balancers if z['name'] == name]
-    if len(match) == 0:
+    if not match:
         return state_result(True, "Balancer already absent", name)
     else:
         result = __salt__['libcloud_loadbalancer.destroy_balancer'](match[0]['id'], profile, **libcloud_kwargs)

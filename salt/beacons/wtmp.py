@@ -71,7 +71,7 @@ can be overridden using a ``ut_type`` key in the beacon configuration:
 This beacon's events include an ``action`` key which will be either ``login``
 or ``logout`` depending on the event type.
 
-.. versionchanged:: Fluorine
+.. versionchanged:: 2019.2.0
     ``action`` key added to beacon event, and ``ut_type`` config parameter
     added.
 
