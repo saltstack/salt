@@ -1395,7 +1395,7 @@ def create_certificate(
         certs = __salt__['publish.publish'](
             tgt=ca_server,
             fun='x509.sign_remote_certificate',
-            arg=six.text_type(kwargs))
+            arg=kwargs)
 
         if not any(certs):
             raise salt.exceptions.SaltInvocationError(
