@@ -772,8 +772,8 @@ def write_pem(text, path, overwrite=True, pem_type=None):
 
         salt '*' x509.write_pem "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." path=/etc/pki/mycert.crt
     '''
+    text = get_pem_entry(text, pem_type=pem_type)
     with salt.utils.files.set_umask(0o077):
-        text = get_pem_entry(text, pem_type=pem_type)
         _dhparams = ''
         _private_key = ''
         if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and not overwrite:
