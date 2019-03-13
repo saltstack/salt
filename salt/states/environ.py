@@ -135,7 +135,7 @@ def setenv(name,
                         permanent_hive = 'HKLM'
                         permanent_key = r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
 
-                    out = __salt__['reg.read_value'](permanent_hive, permanent_key, _norm_key(key))
+                    out = __utils__['reg.read_value'](permanent_hive, permanent_key, _norm_key(key))
                     return out['success'] is True
                 else:
                     return False
