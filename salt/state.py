@@ -2117,33 +2117,33 @@ class State(object):
         slot_return = self.functions[fun](*args, **kwargs)
 
         # Given input  __slot__:salt:test.arg(somekey="value").not.exist ~ /appended
-        # parse_return should be __slot...).not.exist
-        # parse_append should be ~ /appended
-        parse_return = fmt[2].split()[0]
-        parse_append = fmt[2].split()[1:]
+        # slot_text should be __slot...).not.exist
+        # slot_after should be ~ /appended
+        slot_text = fmt[2].split()[0]
+        slot_after = fmt[2].split()[1:]
 
         # Support parsing slot response
         # return_get should result in a kwargs:nested:dict path
         # Initially get everything after first closing paren: )
-        return_get = parse_return[parse_return.rindex(')')+1:]
+        return_get = slot_text[slot_text.rindex(')')+1:]
         if return_get:
             #remove first period, then replace . with : for parsing
             return_get = return_get.split('.', 1)[1]
-            return_get = return_get.replace(".",":")
-            log.debug("Searching slot result for %s", return_get)
+            return_get = return_get.replace(".", ":")
+            log.debug('Searching slot result for %s', return_get)
             slot_return = salt.utils.data.traverse_dict(slot_return, return_get, default=None)
 
-        if parse_append:
+        if slot_after:
             if isinstance(slot_return, six.string_types):
-                parse_append = ' '.join(parse_append)
-                append_text = parse_append.replace('~', '', 1).strip()
-                log.debug('appending to slot result: %s', append_text)
+                # Chop off leading ~ and append remainder of text to slot result
+                slot_after = ' '.join(slot_after)
+                append_text = slot_after.replace('~', '', 1).strip()
+                log.debug('appending to slot result: %s', slot_after)
                 slot_return += append_text
             else:
                 log.error('Ignoring slot append, slot result is not a string')
 
         return slot_return
-
 
     def format_slots(self, cdata):
         '''
