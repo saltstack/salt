@@ -2143,6 +2143,8 @@ class State(object):
                 log.error('Ignoring slot append, slot result is not a string')
 
         return slot_return
+
+
     def format_slots(self, cdata):
         '''
         Read in the arguments from the low level slot syntax to make a last
