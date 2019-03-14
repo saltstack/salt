@@ -63,10 +63,13 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
            'comment': ''}
 
     _octal = {'r': 4, 'w': 2, 'x': 1, '-': 0}
-    _octal_lookup = {'1': 'x',
+    _octal_lookup = {'0': '-',
+                     '1': 'x',
                      '2': 'w',
+                     '3': 'wx',
                      '4': 'r',
                      '5': 'rx',
+                     '6': 'rw',
                      '7': 'rwx'}
 
     if not os.path.exists(name):
