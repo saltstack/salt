@@ -822,11 +822,11 @@ class SMinion(MinionBase):
                 penv = 'base'
             cache_top = {penv: {self.opts['id']: ['cache']}}
             with salt.utils.files.fopen(ptop, 'wb') as fp_:
-                salt.utils.yaml.safe_dump(cache_top, fp_)
+                salt.utils.yaml.safe_dump(cache_top, fp_, encoding=__salt_system_encoding__)
                 os.chmod(ptop, 0o600)
             cache_sls = os.path.join(pdir, 'cache.sls')
             with salt.utils.files.fopen(cache_sls, 'wb') as fp_:
-                salt.utils.yaml.safe_dump(self.opts['pillar'], fp_)
+                salt.utils.yaml.safe_dump(self.opts['pillar'], fp_, encoding=__salt_system_encoding__)
                 os.chmod(cache_sls, 0o600)
 
     def gen_modules(self, initial_load=False):
