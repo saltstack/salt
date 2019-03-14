@@ -63,14 +63,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
            'comment': ''}
 
     _octal = {'r': 4, 'w': 2, 'x': 1, '-': 0}
-    _octal_lookup = {'0': '-',
-                     '1': 'x',
-                     '2': 'w',
-                     '3': 'wx',
-                     '4': 'r',
-                     '5': 'rx',
-                     '6': 'rw',
-                     '7': 'rwx'}
+    _octal_lookup = {0: '-', 1: 'r', 2: 'w', 4: 'x'}
 
     if not os.path.exists(name):
         ret['comment'] = '{0} does not exist'.format(name)
@@ -122,7 +115,10 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
             if not need_refresh:
                 ret['comment'] = 'Permissions are in the desired state'
             else:
-                new_perms = _octal_lookup[six.text_type(user[_search_name]['octal'])]
+                _num = user[_search_name]['octal']
+                new_perms = '{}{}{}'.format(_octal_lookup[_num&1],
+                                            _octal_lookup[_num&2],
+                                            _octal_lookup[_num&4])
                 changes = {'new': {'acl_name': acl_name,
                                    'acl_type': acl_type,
                                    'perms': perms},
