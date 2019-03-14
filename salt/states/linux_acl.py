@@ -116,9 +116,9 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
                 ret['comment'] = 'Permissions are in the desired state'
             else:
                 _num = user[_search_name]['octal']
-                new_perms = '{}{}{}'.format(_octal_lookup[_num&1],
-                                            _octal_lookup[_num&2],
-                                            _octal_lookup[_num&4])
+                new_perms = '{}{}{}'.format(_octal_lookup[_num & 1],
+                                            _octal_lookup[_num & 2],
+                                            _octal_lookup[_num & 4])
                 changes = {'new': {'acl_name': acl_name,
                                    'acl_type': acl_type,
                                    'perms': perms},
