@@ -434,6 +434,17 @@ def _make_regex(pem_type):
     )
 
 
+def _match_minions(test, minion):
+    if '@' in test:
+        match = __salt__['publish.publish'](
+            tgt=minion,
+            fun='match.compound',
+            arg=test)
+        return match.get(minion, False)
+    else:
+        return __salt__['match.glob'](test, minion)
+
+
 def get_pem_entry(text, pem_type=None):
     '''
     Returns a properly formatted PEM string from the input text fixing
@@ -1064,11 +1075,7 @@ def sign_remote_certificate(argdic, **kwargs):
     if 'minions' in signing_policy:
         if '__pub_id' not in kwargs:
             return 'minion sending this request could not be identified'
-        matcher = 'match.glob'
-        if '@' in signing_policy['minions']:
-            matcher = 'match.compound'
-        if not __salt__[matcher](
-                signing_policy['minions'], kwargs['__pub_id']):
+        if not _match_minions(signing_policy['minions'], kwargs['__pub_id']):
             return '{0} not permitted to use signing policy {1}'.format(
                 kwargs['__pub_id'], argdic['signing_policy'])
 
@@ -1329,6 +1336,19 @@ def create_certificate(
         ``minions`` key is included in the signing policy, only minions
         matching that pattern (see match.glob and match.compound) will be
         permitted to remotely request certificates from that policy.
+        In order to ``match.compound`` to work salt master must peers permit
+        peers to call it.
+
+        Example:
+
+        /etc/salt/master.d/peer.conf
+
+        .. code-block:: yaml
+
+            peer:
+              .*:
+                - match.compound
+
 
         Example:
 
