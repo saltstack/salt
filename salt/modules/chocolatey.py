@@ -18,7 +18,7 @@ import salt.utils.data
 import salt.utils.platform
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError, \
-    SaltInvocationError
+    SaltInvocationError, MinionError
 
 
 log = logging.getLogger(__name__)
@@ -26,6 +26,8 @@ log = logging.getLogger(__name__)
 __func_alias__ = {
     'list_': 'list'
 }
+
+__virtualname__ = 'chocolatey'
 
 
 def __virtual__():
@@ -45,7 +47,7 @@ def __virtual__():
         return (False, 'Cannot load module chocolatey: Chocolatey requires '
                        'Windows Vista or later')
 
-    return 'chocolatey'
+    return __virtualname__
 
 
 def _clear_context(context):
@@ -109,6 +111,10 @@ def _find_chocolatey(context, salt):
     return choc_path
 
 
+def _dotnet_versions():
+    return __utils__['dotnet.versions_list']()
+
+
 def chocolatey_version():
     '''
     Returns the version of Chocolatey installed on the minion.
@@ -130,7 +136,7 @@ def chocolatey_version():
     return __context__['chocolatey._version']
 
 
-def bootstrap(force=False):
+def bootstrap(force=False, source=None):
     '''
     Download and install the latest version of the Chocolatey package manager
     via the official bootstrap.
@@ -161,41 +167,52 @@ def bootstrap(force=False):
     if choc_path and not force:
         return 'Chocolatey found at {0}'.format(choc_path)
 
-    # The following lookup tables are required to determine the correct
-    # download required to install PowerShell. That's right, there's more
-    # than one! You're welcome.
-    ps_downloads = {
-        ('Vista', 'x86'): 'http://download.microsoft.com/download/A/7/5/A75BC017-63CE-47D6-8FA4-AFB5C21BAC54/Windows6.0-KB968930-x86.msu',
-        ('Vista', 'AMD64'): 'http://download.microsoft.com/download/3/C/8/3C8CF51E-1D9D-4DAA-AAEA-5C48D1CD055C/Windows6.0-KB968930-x64.msu',
-        ('2008Server', 'x86'): 'http://download.microsoft.com/download/F/9/E/F9EF6ACB-2BA8-4845-9C10-85FC4A69B207/Windows6.0-KB968930-x86.msu',
-        ('2008Server', 'AMD64'): 'http://download.microsoft.com/download/2/8/6/28686477-3242-4E96-9009-30B16BED89AF/Windows6.0-KB968930-x64.msu'
-    }
-
-    # It took until .NET v4.0 for Microsoft got the hang of making installers,
-    # this should work under any version of Windows
-    net4_url = 'http://download.microsoft.com/download/1/B/E/1BE39E79-7E39-46A3-96FF-047F95396215/dotNetFx40_Full_setup.exe'
+    # Make sure powershell is on the System if we're passing source
+    powershell_info = __salt__['cmd.shell_info']('powershell')
+    if not powershell_info['installed'] and source:
+        raise CommandExecutionError('PowerShell is required to bootstrap Chocolatey')
 
     temp_dir = tempfile.gettempdir()
 
-    # Check if PowerShell is installed. This should be the case for every
-    # Windows release following Server 2008.
-    ps_path = 'C:\\Windows\\SYSTEM32\\WindowsPowerShell\\v1.0\\powershell.exe'
-
     if not __salt__['cmd.has_exec'](ps_path):
+        # It took until .NET v4.0 for Microsoft got the hang of making installers,
+        # this should work under any version of Windows
+        net4_url = 'http://download.microsoft.com/download/1/B/E/1BE39E79-7E39-46A3-96FF-047F95396215/dotNetFx40_Full_setup.exe'
+
+        # Check if PowerShell is installed. This should be the case for every
+        # Windows release following Server 2008.
+        ps_path = 'C:\\Windows\\SYSTEM32\\WindowsPowerShell\\v1.0\\powershell.exe'
+
+        # PowerShell needs to be installed on older systems (Vista, 2008Server)
         if (__grains__['osrelease'], __grains__['cpuarch']) in ps_downloads:
+            # The following lookup tables are required to determine the correct
+            # download required to install PowerShell. That's right, there's more
+            # than one! You're welcome.
+            ps_downloads = {
+                ('Vista', 'x86'): 'http://download.microsoft.com/download/A/7/5/A75BC017-63CE-47D6-8FA4-AFB5C21BAC54/Windows6.0-KB968930-x86.msu',
+                ('Vista', 'AMD64'): 'http://download.microsoft.com/download/3/C/8/3C8CF51E-1D9D-4DAA-AAEA-5C48D1CD055C/Windows6.0-KB968930-x64.msu',
+                ('2008Server', 'x86'): 'http://download.microsoft.com/download/F/9/E/F9EF6ACB-2BA8-4845-9C10-85FC4A69B207/Windows6.0-KB968930-x86.msu',
+                ('2008Server', 'AMD64'): 'http://download.microsoft.com/download/2/8/6/28686477-3242-4E96-9009-30B16BED89AF/Windows6.0-KB968930-x64.msu'
+            }
+
             # Install the appropriate release of PowerShell v2.0
             url = ps_downloads[(__grains__['osrelease'], __grains__['cpuarch'])]
             dest = os.path.join(temp_dir, 'powershell.exe')
-            __salt__['cp.get_url'](url, dest)
+            # Download the KB
+            try:
+                __salt__['cp.get_url'](url, dest)
+            except MinionError:
+                err = 'Failed to download PowerShell KB'
+                raise CommandExecutionError(err)
+            # Install the KB
             cmd = [dest, '/quiet', '/norestart']
             result = __salt__['cmd.run_all'](cmd, python_shell=False)
             if result['retcode'] != 0:
-                err = ('Installing Windows PowerShell failed. Please run the '
-                       'installer GUI on the host to get a more specific '
-                       'reason.')
+                err = 'Failed to install PowerShell KB. For more information ' \
+                      'run the installer manually on the host'
                 raise CommandExecutionError(err)
         else:
-            err = 'Windows PowerShell not found'
+            err = 'Windows PowerShell Installation not available'
             raise CommandNotFoundError(err)
 
     # Run the .NET Framework 4 web installer
