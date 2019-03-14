@@ -24,6 +24,9 @@ state modules
     at
     augeas
     aws_sqs
+    azurearm_compute
+    azurearm_network
+    azurearm_resource
     beacon
     bigip
     blockdev
