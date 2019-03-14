@@ -700,7 +700,7 @@ def _check_directory(name,
                      user=None,
                      group=None,
                      recurse=False,
-                     mode=None,
+                     dir_mode=None,
                      file_mode=None,
                      clean=False,
                      require=False,
@@ -730,7 +730,7 @@ def _check_directory(name,
         if 'group' not in recurse_set:
             group = None
         if 'mode' not in recurse_set:
-            mode = None
+            dir_mode = None
             file_mode = None
 
         check_files = 'ignore_files' not in recurse_set
@@ -754,11 +754,11 @@ def _check_directory(name,
             if check_dirs:
                 for name_ in dirs:
                     path = os.path.join(root, name_)
-                    fchange = _check_dir_meta(path, user, group, mode, follow_symlinks)
+                    fchange = _check_dir_meta(path, user, group, dir_mode, follow_symlinks)
                     if fchange:
                         changes[path] = fchange
     # Recurse skips root (we always do dirs, not root), so always check root:
-    fchange = _check_dir_meta(name, user, group, mode, follow_symlinks)
+    fchange = _check_dir_meta(name, user, group, dir_mode, follow_symlinks)
     if fchange:
         changes[name] = fchange
     if clean:
