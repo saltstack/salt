@@ -65,8 +65,9 @@ def _install_requirements(session, *extra_requirements):
     # Install requirements
     distro_requirements = None
     for distro_key in distro_keys:
-        distro_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', '{}.txt'.format(distro_key))
-        if os.path.exists(distro_requirements):
+        _distro_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', '{}.txt'.format(distro_key))
+        if os.path.exists(_distro_requirements):
+            distro_requirements = _distro_requirements
             break
     if distro_requirements is not None:
         _requirements_files = [distro_requirements]
