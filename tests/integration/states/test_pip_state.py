@@ -120,6 +120,22 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pip.removed', name=name, bin_env=venv_dir)
             self.assertSaltTrueReturn(ret)
 
+    def test_pip_installed_user_install_true(self):
+        venv_dir = os.path.join(
+            RUNTIME_VARS.TMP, 'pip_install_user_install'
+        )
+        with VirtualEnv(self, venv_dir):
+            pkg = 'pycurl'
+            self.run_state('pip.installed', user_install=True, name=pkg)
+            user_packages = self.run_function('pip.list', user_install=True)
+            system_packages = self.run_function('pip.list', user_install=False)
+
+            print(user_packages, system_packages)
+
+            self.assertTrue(pkg in user_packages and pkg not in system_packages)
+
+
+
     def test_pip_installed_errors(self):
         venv_dir = os.path.join(
             RUNTIME_VARS.TMP, 'pip-installed-errors'
