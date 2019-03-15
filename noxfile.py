@@ -151,7 +151,6 @@ def runtests(session, coverage):
     _create_ci_directories()
 
     cmd_args = [
-        '-v',
         '--tests-logfile={}'.format(
             os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
         )
@@ -178,7 +177,7 @@ def pytest(session, coverage):
         ),
         '--no-print-logs',
         '-ra',
-        '-sv'
+        '-s'
     ] + session.posargs
 
     if coverage is True:
