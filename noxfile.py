@@ -10,6 +10,7 @@ Nox configuration script
 import os
 import sys
 import json
+import pprint
 
 if __name__ == '__main__':
     sys.stderr.write('Do not execute this file directly. Use nox instead, it will know how to handle this file\n')
@@ -51,42 +52,43 @@ def _create_ci_directories():
             os.makedirs(path)
 
 
-def _install_requirements_overrides(session, *extra_requirements):
+def _install_requirements(session, *extra_requirements):
     session.install('distro')
     output = session.run('distro', '-j', silent=True)
-    distro_data = json.loads(output.strip())
-
-    requirements_overrides = REQUIREMENTS_OVERRIDES[None]
-    requirements_overrides.extend(
-        REQUIREMENTS_OVERRIDES.get(
-            '{id}-{version}'.format(**distro_data),
-            []
-        )
-    )
-    if requirements_overrides:
-        for requirement in requirements_overrides:
-            session.install(requirement)
-
-
-def _install_requirements(session, *extra_requirements):
-    _install_requirements_overrides(session)
-    # Install requirements
-    _requirements_files = [
-        os.path.join(REPO_ROOT, 'requirements', 'pytest.txt')
+    distro = json.loads(output.strip())
+    session.log('Distro information:\n%s', pprint.pformat(distro))
+    distro_keys = [
+        '{id}-{version}'.format(**distro),
+        '{id}-{version_parts[major]}'.format(**distro)
     ]
-    if sys.platform.startswith('linux'):
-        requirements_files = [
-            os.path.join(REPO_ROOT, 'requirements', 'tests.txt')
+
+    # Install requirements
+    distro_requirements = None
+    for distro_key in distro_keys:
+        _distro_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', '{}.txt'.format(distro_key))
+        if os.path.exists(_distro_requirements):
+            distro_requirements = _distro_requirements
+            break
+    if distro_requirements is not None:
+        _requirements_files = [distro_requirements]
+        requirements_files = []
+    else:
+        _requirements_files = [
+            os.path.join(REPO_ROOT, 'requirements', 'pytest.txt')
         ]
-    elif sys.platform.startswith('win'):
-        requirements_files = [
-            os.path.join(REPO_ROOT, 'pkg', 'windows', 'req.txt'),
-        ]
-    elif sys.platform.startswith('darwin'):
-        requirements_files = [
-            os.path.join(REPO_ROOT, 'pkg', 'osx', 'req.txt'),
-            os.path.join(REPO_ROOT, 'pkg', 'osx', 'req_ext.txt'),
-        ]
+        if sys.platform.startswith('linux'):
+            requirements_files = [
+                os.path.join(REPO_ROOT, 'requirements', 'tests.txt')
+            ]
+        elif sys.platform.startswith('win'):
+            requirements_files = [
+                os.path.join(REPO_ROOT, 'pkg', 'windows', 'req.txt'),
+            ]
+        elif sys.platform.startswith('darwin'):
+            requirements_files = [
+                os.path.join(REPO_ROOT, 'pkg', 'osx', 'req.txt'),
+                os.path.join(REPO_ROOT, 'pkg', 'osx', 'req_ext.txt'),
+            ]
 
     while True:
         if not requirements_files:
