@@ -7665,7 +7665,7 @@ def get(policy_class=None, return_full_policy_names=True,
                 vals_key_name = policy_name
                 if 'Registry' in _pol:
                     # get value from registry
-                    class_vals[policy_name] = __salt__['reg.read_value'](
+                    class_vals[policy_name] = __utils__['reg.read_value'](
                         _pol['Registry']['Hive'],
                         _pol['Registry']['Path'],
                         _pol['Registry']['Value'])['vdata']
@@ -8099,19 +8099,19 @@ def set_(computer_policy=None,
                         log.debug('%s is a Registry policy', regedit)
                         # if the value setting is None or "(value not set)", we will delete the value from the registry
                         if _regedits[regedit]['value'] is not None and _regedits[regedit]['value'] != '(value not set)':
-                            _ret = __salt__['reg.set_value'](
+                            _ret = __utils__['reg.set_value'](
                                     _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'],
                                     _regedits[regedit]['value'],
                                     _regedits[regedit]['policy']['Registry']['Type'])
                         else:
-                            _ret = __salt__['reg.read_value'](
+                            _ret = __utils__['reg.read_value'](
                                     _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'])
                             if _ret['success'] and _ret['vdata'] != '(value not set)':
-                                _ret = __salt__['reg.delete_value'](
+                                _ret = __utils__['reg.delete_value'](
                                         _regedits[regedit]['policy']['Registry']['Hive'],
                                         _regedits[regedit]['policy']['Registry']['Path'],
                                         _regedits[regedit]['policy']['Registry']['Value'])

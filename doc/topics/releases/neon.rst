@@ -269,6 +269,16 @@ Module Changes
   module now supports perstant changes with ``persist=True`` by calling the
   :py:func:`selinux.fcontext_add_policy <salt.modules.selinux.fcontext_add_policy>` module.
 
+- The :py:func:`yumpkg <salt.modules.yumpkg>` module has been updated to support
+  VMWare's Photon OS, which uses tdnf (a C implementation of dnf).
+
+Runner Changes
+==============
+
+- The :py:func:`saltutil.sync_auth <salt.runners.saltutil.sync_auth>` function
+  has been added to sync loadable auth modules. :py:func:`saltutil.sync_all <salt.runners.saltutil.sync_all>`
+  will also include these modules.
+
 Enhancements to Engines
 =======================
 
@@ -400,6 +410,12 @@ Module Deprecations
       removed. Please use the :py:func:`test.random_hash <salt.modules.test.random_hash>`
       function instead.
 
+- The hipchat module has been removed due to the service being retired.
+  :py:func:`Google Chat <salt.modules.google_chat>`,
+  :py:func:`MS Teams <salt.modules.msteams>`, or
+  :py:func:`Slack <salt.modules.slack_notify>` may be suitable replacements.
+
+
 State Deprecations
 ------------------
 
@@ -415,3 +431,20 @@ State Deprecations
     - Support for the ``force`` kwarg has been removed from the
       :py:func:`win_servermanager.installed <salt.states.win_servermanager.installed>`
       function. Please use ``recurse`` instead.
+
+- The hipchat state has been removed due to the service being retired.
+  :py:func:`MS Teams <salt.states.msteams>` or
+  :py:func:`Slack <salt.states.slack>` may be suitable replacements.
+
+Engine Removal
+--------------
+
+- The hipchat engine has been removed due to the service being retired. For users migrating
+  to Slack, the :py:func:`slack <salt.engines.slack>` engine may be a suitable replacement.
+
+Returner Removal
+----------------
+
+- The hipchat returner has been removed due to the service being retired. For users migrating
+  to Slack, the :py:func:`slack <salt.returners.slack_returner>` returner may be a suitable
+  replacement.
