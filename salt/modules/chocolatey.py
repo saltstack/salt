@@ -332,7 +332,8 @@ def unbootstrap():
                                        val=False,
                                        false_unsets=True,
                                        permanent='HKCU')
-            os.environ.pop(env_var)
+            if os.environ.get(env_var, False):
+                os.environ.pop(env_var)
             removed.append('Removed Environment Var: {0}'.format(env_var))
 
     # Remove Chocolatey from the path:
