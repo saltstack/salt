@@ -16,7 +16,7 @@ import tempfile
 # Import salt libs
 import salt.utils.data
 import salt.utils.platform
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError, \
     SaltInvocationError, MinionError
 
@@ -65,7 +65,7 @@ def _yes(context):
     '''
     if 'chocolatey._yes' in __context__:
         return context['chocolatey._yes']
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion('0.9.9'):
+    if LooseVersion(chocolatey_version()) >= LooseVersion('0.9.9'):
         answer = ['--yes']
     else:
         answer = []
@@ -80,7 +80,7 @@ def _no_progress(context):
     '''
     if 'chocolatey._no_progress' in __context__:
         return context['chocolatey._no_progress']
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion('0.10.4'):
+    if LooseVersion(chocolatey_version()) >= LooseVersion('0.10.4'):
         answer = ['--no-progress']
     else:
         log.warning('--no-progress unsupported in choco < 0.10.4')
@@ -130,7 +130,7 @@ def chocolatey_version():
 
     cmd = [_find_chocolatey(__context__, __salt__)]
     cmd.append('-v')
-    out = __salt__['cmd.run'](cmd, python_shell=False)
+    out = __salt__['cmd.run'](cmd=cmd, python_shell=False)
     __context__['chocolatey._version'] = out
 
     return __context__['chocolatey._version']
@@ -167,46 +167,43 @@ def bootstrap(force=False, source=None):
     if choc_path and not force:
         return 'Chocolatey found at {0}'.format(choc_path)
 
-    # Make sure powershell is on the System if we're passing source
-    powershell_info = __salt__['cmd.shell_info']('powershell')
-    if not powershell_info['installed'] and source:
-        raise CommandExecutionError('PowerShell is required to bootstrap Chocolatey')
-
     temp_dir = tempfile.gettempdir()
 
-    if not __salt__['cmd.has_exec'](ps_path):
-        # It took until .NET v4.0 for Microsoft got the hang of making installers,
-        # this should work under any version of Windows
-        net4_url = 'http://download.microsoft.com/download/1/B/E/1BE39E79-7E39-46A3-96FF-047F95396215/dotNetFx40_Full_setup.exe'
-
-        # Check if PowerShell is installed. This should be the case for every
-        # Windows release following Server 2008.
-        ps_path = 'C:\\Windows\\SYSTEM32\\WindowsPowerShell\\v1.0\\powershell.exe'
+    # Make sure powershell is on the System if we're passing source
+    # Vista and Windows Server 2008 do not have Powershell installed
+    powershell_info = __salt__['cmd.shell_info'](shell='powershell')
+    if not powershell_info['installed']:
+        # The following lookup tables are required to determine the correct
+        # download required to install PowerShell. That's right, there's more
+        # than one! You're welcome.
+        ps_downloads = {
+            ('Vista', 'x86'): 'http://download.microsoft.com/download/A/7/5/A75BC017-63CE-47D6-8FA4-AFB5C21BAC54/Windows6.0-KB968930-x86.msu',
+            ('Vista', 'AMD64'): 'http://download.microsoft.com/download/3/C/8/3C8CF51E-1D9D-4DAA-AAEA-5C48D1CD055C/Windows6.0-KB968930-x64.msu',
+            ('2008Server', 'x86'): 'http://download.microsoft.com/download/F/9/E/F9EF6ACB-2BA8-4845-9C10-85FC4A69B207/Windows6.0-KB968930-x86.msu',
+            ('2008Server', 'AMD64'): 'http://download.microsoft.com/download/2/8/6/28686477-3242-4E96-9009-30B16BED89AF/Windows6.0-KB968930-x64.msu'
+        }
 
         # PowerShell needs to be installed on older systems (Vista, 2008Server)
         if (__grains__['osrelease'], __grains__['cpuarch']) in ps_downloads:
-            # The following lookup tables are required to determine the correct
-            # download required to install PowerShell. That's right, there's more
-            # than one! You're welcome.
-            ps_downloads = {
-                ('Vista', 'x86'): 'http://download.microsoft.com/download/A/7/5/A75BC017-63CE-47D6-8FA4-AFB5C21BAC54/Windows6.0-KB968930-x86.msu',
-                ('Vista', 'AMD64'): 'http://download.microsoft.com/download/3/C/8/3C8CF51E-1D9D-4DAA-AAEA-5C48D1CD055C/Windows6.0-KB968930-x64.msu',
-                ('2008Server', 'x86'): 'http://download.microsoft.com/download/F/9/E/F9EF6ACB-2BA8-4845-9C10-85FC4A69B207/Windows6.0-KB968930-x86.msu',
-                ('2008Server', 'AMD64'): 'http://download.microsoft.com/download/2/8/6/28686477-3242-4E96-9009-30B16BED89AF/Windows6.0-KB968930-x64.msu'
-            }
 
             # Install the appropriate release of PowerShell v2.0
             url = ps_downloads[(__grains__['osrelease'], __grains__['cpuarch'])]
-            dest = os.path.join(temp_dir, 'powershell.exe')
+            dest = os.path.join(temp_dir, os.path.basename(url))
             # Download the KB
             try:
-                __salt__['cp.get_url'](url, dest)
+                log.debug('Downloading PowerShell...')
+                __salt__['cp.get_url'](path=url, dest=dest)
             except MinionError:
-                err = 'Failed to download PowerShell KB'
+                err = 'Failed to download PowerShell KB for {0}' \
+                      ''.format(__grains__['osrelease'])
+                if source:
+                    err = '{0}: PowerShell is required to bootstrap ' \
+                          'Chocolatey with Source'.format(err)
                 raise CommandExecutionError(err)
             # Install the KB
             cmd = [dest, '/quiet', '/norestart']
-            result = __salt__['cmd.run_all'](cmd, python_shell=False)
+            log.debug('Installing PowerShell...')
+            result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
             if result['retcode'] != 0:
                 err = 'Failed to install PowerShell KB. For more information ' \
                       'run the installer manually on the host'
@@ -215,32 +212,127 @@ def bootstrap(force=False, source=None):
             err = 'Windows PowerShell Installation not available'
             raise CommandNotFoundError(err)
 
-    # Run the .NET Framework 4 web installer
-    dest = os.path.join(temp_dir, 'dotnet4.exe')
-    __salt__['cp.get_url'](net4_url, dest)
-    cmd = [dest, '/q', '/norestart']
-    result = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if result['retcode'] != 0:
-        err = ('Installing .NET v4.0 failed. Please run the installer GUI on '
-               'the host to get a more specific reason.')
+    # Check that .NET v4.0+ is installed
+    # Windows 7 / Windows Server 2008 R2 and below do not come with at least
+    # .NET v4.0 installed
+    if not __utils__['dotnet.version_atleast'](version='4'):
+        # It took until .NET v4.0 for Microsoft got the hang of making
+        # installers, this should work under any version of Windows
+        url = 'http://download.microsoft.com/download/1/B/E/1BE39E79-7E39-46A3-96FF-047F95396215/dotNetFx40_Full_setup.exe'
+        dest = os.path.join(temp_dir, os.path.basename(url))
+        # Download the .NET Framework 4 web installer
+        try:
+            log.debug('Downloading .NET v4.0...')
+            __salt__['cp.get_url'](path=url, dest=dest)
+        except MinionError:
+            err = 'Failed to download .NET v4.0 Web Installer'
+            if source:
+                err = '{0}: .NET v4.0+ is required to bootstrap ' \
+                      'Chocolatey with Source'.format(err)
+            raise CommandExecutionError(err)
+
+        # Run the .NET Framework 4 web installer
+        cmd = [dest, '/q', '/norestart']
+        log.debug('Installing .NET v4.0...')
+        result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
+        if result['retcode'] != 0:
+            err = 'Failed to install .NET v4.0 failed. For more information ' \
+                  'run the installer manually on the host'
+            raise CommandExecutionError(err)
+
+    # Define target / destination
+    if source:
+        url = source
+    else:
+        url = 'https://chocolatey.org/install.ps1'
+    dest = os.path.join(temp_dir, os.path.basename(url))
+
+    # Download Chocolatey installer
+    try:
+        log.debug('Downloading Chocolatey: {0}'.format(os.path.basename(url)))
+        script = __salt__['cp.get_url'](path=url, dest=dest)
+        log.debug('Script: {0}'.format(script))
+    except MinionError:
+        err = 'Failed to download Chocolatey Installer'
+        if source:
+            err = '{0} from source'
         raise CommandExecutionError(err)
 
-    # Run the Chocolatey bootstrap.
-    cmd = (
-        '{0} -NoProfile -ExecutionPolicy unrestricted '
-        '-Command "iex ((new-object net.webclient).'
-        'DownloadString(\'https://chocolatey.org/install.ps1\'))" '
-        '&& SET PATH=%PATH%;%systemdrive%\\chocolatey\\bin'
-        .format(ps_path)
-    )
-    result = __salt__['cmd.run_all'](cmd, python_shell=True)
+    # If this is a nupkg download we need to unzip it first
+    if os.path.splitext(os.path.basename(dest))[1] == '.nupkg':
+        log.debug('Unzipping Chocolatey: {0}'.format(dest))
+        __salt__['archive.unzip'](zip_file=dest,
+                                  dest=os.path.join(os.path.dirname(dest),
+                                                    'chocolatey'),
+                                  extract_perms=False)
+        script = os.path.join(os.path.dirname(dest),
+                              'chocolatey',
+                              'tools',
+                              'chocolateyInstall.ps1')
 
+    if not os.path.exists(script):
+        raise CommandExecutionError('Failed to find Chocolatey installation '
+                                    'script: {0}'.format(script))
+
+    # Run the Chocolatey bootstrap
+    log.debug('Installing Chocolatey: {0}'.format(script))
+    result = __salt__['cmd.script'](script=script,
+                                    cwd=os.path.dirname(script),
+                                    shell='powershell',
+                                    python_shell=True)
     if result['retcode'] != 0:
-        raise CommandExecutionError(
-            'Bootstrapping Chocolatey failed: {0}'.format(result['stderr'])
-        )
+        raise CommandExecutionError('Failed to bootstrap Chocolatey: {0}'
+                                    ''.format(result['stderr']))
 
     return result['stdout']
+
+
+def unbootstrap():
+
+    removed = []
+
+    # Delete the Chocolatey directory
+    choco_dir = os.environ.get('ChocolateyInstall', False)
+    if choco_dir:
+        if os.path.exists(choco_dir):
+            log.debug('Removing Chocolatey directory: {0}'.format(choco_dir))
+            __salt__['file.remove'](path=choco_dir, force=True)
+            removed.append('Removed Directory: {0}'.format(choco_dir))
+    else:
+        known_paths = [
+            os.path.join(os.environ.get('ProgramData'), 'Chocolatey'),
+            os.path.join(os.environ.get('SystemDrive'), 'Chocolatey')
+        ]
+        for path in known_paths:
+            if os.path.exists(path):
+                log.debug('Removing Chocolatey directory: {0}'.format(path))
+                __salt__['file.remove'](path=path, force=True)
+                removed.append('Removed Directory: {0}'.format(path))
+
+    # Delete all Chocolatey environment variables
+    for env_var in __salt__['environ.items']():
+        if env_var.lower().startswith('chocolatey'):
+            log.debug('Removing Chocolatey environment variable: {0}'
+                      ''.format(env_var))
+            __salt__['environ.setval'](key=env_var,
+                                       val=False,
+                                       false_unsets=True,
+                                       permanent='HKLM')
+            __salt__['environ.setval'](key=env_var,
+                                       val=False,
+                                       false_unsets=True,
+                                       permanent='HKCU')
+            removed.append('Removed Environment Var: {0}'.format(env_var))
+
+    # Remove Chocolatey from the path:
+    for path in __salt__['win_path.get_path']():
+        if 'chocolatey' in path.lower():
+            log.debug('Removing Chocolatey path item: {0}'
+                      ''.format(path))
+            __salt__['win_path.remove'](path=path, rehash=True)
+            removed.append('Removed Path Item: {0}'.format(path))
+
+    return removed
 
 
 def list_(narrow=None,
@@ -306,7 +398,7 @@ def list_(narrow=None,
     # This is needed to parse the output correctly
     cmd.append('--limit-output')
 
-    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -344,7 +436,7 @@ def list_webpi():
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
     cmd = [choc_path, 'list', '--source', 'webpi']
-    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -370,7 +462,7 @@ def list_windowsfeatures():
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
     cmd = [choc_path, 'list', '--source', 'windowsfeatures']
-    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -497,7 +589,7 @@ def install(name,
     cmd.extend(_no_progress(__context__))
     cmd.extend(_yes(__context__))
 
-    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
         raise CommandExecutionError(
@@ -606,7 +698,7 @@ def install_missing(name, version=None, source=None):
         salt '*' chocolatey.install_missing <package name> version=<package version>
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion('0.9.8.24'):
+    if LooseVersion(chocolatey_version()) >= LooseVersion('0.9.8.24'):
         log.warning('installmissing is deprecated, using install')
         return install(name, version=version)
 
@@ -618,7 +710,7 @@ def install_missing(name, version=None, source=None):
         cmd.extend(['--source', source])
     # Shouldn't need this as this code should never run on v0.9.9 and newer
     cmd.extend(_yes(__context__))
-    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -751,7 +843,7 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
     if override_args:
         cmd.extend(['--overridearguments'])
     cmd.extend(_yes(__context__))
-    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1605, 1614, 1641]:
         raise CommandExecutionError(
@@ -846,7 +938,7 @@ def upgrade(name,
     cmd.extend(_no_progress(__context__))
     cmd.extend(_yes(__context__))
 
-    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
         raise CommandExecutionError(
@@ -880,7 +972,7 @@ def update(name, source=None, pre_versions=False):
     '''
     # chocolatey helpfully only supports a single package argument
     choc_path = _find_chocolatey(__context__, __salt__)
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion('0.9.8.24'):
+    if LooseVersion(chocolatey_version()) >= LooseVersion('0.9.8.24'):
         log.warning('update is deprecated, using upgrade')
         return upgrade(name, source=source, pre_versions=pre_versions)
 
@@ -894,7 +986,7 @@ def update(name, source=None, pre_versions=False):
     cmd.extend(_no_progress(__context__))
     cmd.extend(_yes(__context__))
 
-    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
         raise CommandExecutionError(
@@ -994,7 +1086,7 @@ def add_source(name, source_location, username=None, password=None):
         cmd.extend(['--user', username])
     if password:
         cmd.extend(['--password', password])
-    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -1017,7 +1109,7 @@ def _change_source_state(name, state):
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
     cmd = [choc_path, 'source', state, '--name', name]
-    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(

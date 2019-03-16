@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt libs
 import salt.utils.platform
 import salt.utils.win_reg as win_reg
+from salt.utils.versions import LooseVersion
 
 __virtualname__ = 'dotnet'
 
@@ -102,3 +103,12 @@ def versions_list():
 
 def versions_details():
     return versions()['details']
+
+
+def version_atleast(version):
+    # Check that the system contains a version of .NET that is atleast the
+    # passed version
+    for dotnet_version in versions_list():
+        if LooseVersion(dotnet_version) >= LooseVersion(str(version)):
+            return True
+    return False
