@@ -5,7 +5,8 @@ them onto a fluent endpoint.
 
 .. versionadded:: neon
 
-:configuration:
+:Configuration:
+
 All arguments are optional
 
     Example configuration of default settings
