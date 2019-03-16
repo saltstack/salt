@@ -282,7 +282,7 @@ Runner Changes
 Enhancements to Engines
 =======================
 
-- Multiple copies of a particular Salt engine can be configured by including 
+- Multiple copies of a particular Salt engine can be configured by including
   the ``engine_module`` parameter in the engine configuration.
 
   .. code-block:: yaml
@@ -300,7 +300,8 @@ Enhancements to Engines
          engine_module: logstash
 
 
-- A new fluent engine has been added to export Salt events to fluentd.
+- A new :py:func:`fluent engine <salt.engines.salt.engines.fluent>` has been added to
+  export Salt events to fluentd.
 
   .. code-block:: yaml
 
@@ -451,4 +452,4 @@ Engine Removal
 --------------
 
 - The hipchat engine has been removed due to the service being retired. For users migrating
-  to Slack, the :py:func:`slack <salt.engines.slack>` engine may be a suitable replacement. 
+  to Slack, the :py:func:`slack <salt.engines.slack>` engine may be a suitable replacement.
