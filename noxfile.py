@@ -9,7 +9,7 @@ Nox configuration script
 # Import Python libs
 import os
 import sys
-
+import json
 
 if __name__ == '__main__':
     sys.stderr.write('Do not execute this file directly. Use nox instead, it will know how to handle this file\n')
@@ -26,6 +26,14 @@ SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, 'tests', 'support', 'coverage')
 # We can't just import salt because if this is running under a frozen nox, there
 # will be no salt to import
 IS_WINDOWS = sys.platform.lower().startswith('win')
+REQUIREMENTS_OVERRIDES = {
+    None: [
+        'jsonschema <= 2.6.0'
+    ],
+    'ubuntu-14.04': [
+        'tornado < 5.0'
+    ]
+}
 
 # Python versions to run against
 _PYTHON_VERSIONS = ('2', '2.7', '3', '3.4', '3.5', '3.6')
@@ -43,7 +51,25 @@ def _create_ci_directories():
             os.makedirs(path)
 
 
+def _install_requirements_overrides(session, *extra_requirements):
+    session.install('distro')
+    output = session.run('distro', '-j', silent=True)
+    distro_data = json.loads(output.strip())
+
+    requirements_overrides = REQUIREMENTS_OVERRIDES[None]
+    requirements_overrides.extend(
+        REQUIREMENTS_OVERRIDES.get(
+            '{id}-{version}'.format(**distro_data),
+            []
+        )
+    )
+    if requirements_overrides:
+        for requirement in requirements_overrides:
+            session.install(requirement)
+
+
 def _install_requirements(session, *extra_requirements):
+    _install_requirements_overrides(session)
     # Install requirements
     _requirements_files = [
         os.path.join(REPO_ROOT, 'requirements', 'pytest.txt')
