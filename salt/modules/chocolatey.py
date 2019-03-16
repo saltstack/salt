@@ -284,6 +284,16 @@ def bootstrap(force=False, source=None):
         raise CommandExecutionError('Failed to bootstrap Chocolatey: {0}'
                                     ''.format(result['stderr']))
 
+    # Add Environment Variables to current running salt environment
+    if not os.environ.get('ChocolateyInstall', False):
+        log.debug('Adding Chocolatey environment variable: ChocolateyInstall')
+        os.environ['ChocolateyInstall'] = os.path.join(
+            os.environ.get('ProgramData'), 'Chocolatey')
+
+    # Sync the current environment path to the system path in the registry
+    path = __salt__['win_path.get_path']
+    os.environ['PATH'] = os.pathsep.join(path)
+
     return result['stdout']
 
 
