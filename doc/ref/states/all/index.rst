@@ -24,6 +24,9 @@ state modules
     at
     augeas
     aws_sqs
+    azurearm_compute
+    azurearm_network
+    azurearm_resource
     beacon
     bigip
     blockdev
@@ -115,7 +118,6 @@ state modules
     heat
     hg
     host
-    htpasswd
     http
     icinga2
     ifttt
@@ -166,13 +168,13 @@ state modules
     lvs_service
     lxc
     mac_assistive
-    mac_defaults
+    macdefaults
     mac_keychain
-    mac_package
+    macpackage
     mac_xattr
     makeconf
     marathon_app
-    mdadm
+    mdadm_raid
     memcached
     modjk
     modjk_worker
@@ -192,7 +194,7 @@ state modules
     netsnmp
     netusers
     network
-    netyang
+    net_napalm_yang
     neutron_network
     neutron_secgroup
     neutron_secgroup_rule
@@ -293,6 +295,7 @@ state modules
     victorops
     virt
     virtualenv_mod
+    webutil
     win_certutil
     win_dacl
     win_dism

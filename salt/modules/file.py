@@ -3787,7 +3787,7 @@ def rmdir(path):
         return exc.strerror
 
 
-def remove(path):
+def remove(path, **kwargs):
     '''
     Remove the named file. If a directory is supplied, it will be recursively
     deleted.
@@ -4999,7 +4999,7 @@ def check_managed_changes(
 
         if comments:
             __clean_tmp(sfn)
-            return False, comments
+            raise CommandExecutionError(comments)
         if sfn and source and keep_mode:
             if _urlparse(source).scheme in ('salt', 'file') \
                     or source.startswith('/'):
