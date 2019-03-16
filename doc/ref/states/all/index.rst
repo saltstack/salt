@@ -117,7 +117,6 @@ state modules
     group
     heat
     hg
-    hipchat
     host
     http
     icinga2
