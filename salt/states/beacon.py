@@ -100,8 +100,11 @@ def present(name,
                 ret['comment'].append('Adding {0} to beacons'.format(name))
 
     if save:
-        result = __salt__['beacons.save']()
-        ret['comment'].append('Beacon {0} saved'.format(name))
+        if 'test' in __opts__ and __opts__['test']:
+            ret['comment'].append('Beacon {0} would be saved'.format(name))
+        else:
+            result = __salt__['beacons.save']()
+            ret['comment'].append('Beacon {0} saved'.format(name))
 
     ret['comment'] = '\n'.join(ret['comment'])
     return ret
@@ -146,8 +149,11 @@ def absent(name,
         ret['comment'].append('{0} not configured in beacons'.format(name))
 
     if save:
-        result = __salt__['beacons.save']()
-        ret['comment'].append('Beacon {0} saved'.format(name))
+        if 'test' in __opts__ and __opts__['test']:
+            ret['comment'].append('Beacon {0} would be saved'.format(name))
+        else:
+            result = __salt__['beacons.save']()
+            ret['comment'].append('Beacon {0} saved'.format(name))
 
     ret['comment'] = '\n'.join(ret['comment'])
     return ret
