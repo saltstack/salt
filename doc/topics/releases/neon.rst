@@ -441,3 +441,10 @@ Engine Removal
 
 - The hipchat engine has been removed due to the service being retired. For users migrating
   to Slack, the :py:func:`slack <salt.engines.slack>` engine may be a suitable replacement.
+
+Returner Removal
+----------------
+
+- The hipchat returner has been removed due to the service being retired. For users migrating
+  to Slack, the :py:func:`slack <salt.returners.slack_returner>` returner may be a suitable
+  replacement.
