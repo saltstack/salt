@@ -284,16 +284,6 @@ def bootstrap(force=False, source=None):
         raise CommandExecutionError('Failed to bootstrap Chocolatey: {0}'
                                     ''.format(result['stderr']))
 
-    # Add Environment Variables to current running salt environment
-    if not os.environ.get('ChocolateyInstall', False):
-        log.debug('Adding Chocolatey environment variable: ChocolateyInstall')
-        os.environ['ChocolateyInstall'] = os.path.join(
-            os.environ.get('ProgramData'), 'Chocolatey')
-
-    # Sync the current environment path to the system path in the registry
-    path = __salt__['win_path.get_path']
-    os.environ['PATH'] = os.pathsep.join(path)
-
     return result['stdout']
 
 
@@ -332,8 +322,6 @@ def unbootstrap():
                                        val=False,
                                        false_unsets=True,
                                        permanent='HKCU')
-            if os.environ.get(env_var, False):
-                os.environ.pop(env_var)
             removed.append('Removed Environment Var: {0}'.format(env_var))
 
     # Remove Chocolatey from the path:
@@ -343,10 +331,6 @@ def unbootstrap():
                       ''.format(path))
             __salt__['win_path.remove'](path=path, rehash=True)
             removed.append('Removed Path Item: {0}'.format(path))
-
-    # Sync the current environment path to the system path in the registry
-    path = __salt__['win_path.get_path']
-    os.environ['PATH'] = os.pathsep.join(path)
 
     return removed
 
