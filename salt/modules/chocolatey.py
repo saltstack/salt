@@ -332,6 +332,7 @@ def unbootstrap():
                                        val=False,
                                        false_unsets=True,
                                        permanent='HKCU')
+            os.environ.pop(env_var)
             removed.append('Removed Environment Var: {0}'.format(env_var))
 
     # Remove Chocolatey from the path:
@@ -341,6 +342,10 @@ def unbootstrap():
                       ''.format(path))
             __salt__['win_path.remove'](path=path, rehash=True)
             removed.append('Removed Path Item: {0}'.format(path))
+
+    # Sync the current environment path to the system path in the registry
+    path = __salt__['win_path.get_path']
+    os.environ['PATH'] = os.pathsep.join(path)
 
     return removed
 
