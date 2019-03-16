@@ -2,9 +2,9 @@
 '''
 Connection module for Amazon SSM
 
-:configuration: This module uses IAM roles assigned to the instance through 
-    Instance Profiles. Dynamic credentials are then automatically obtained 
-    from AWS API and no further configuration is necessary. More Information 
+:configuration: This module uses IAM roles assigned to the instance through
+    Instance Profiles. Dynamic credentials are then automatically obtained
+    from AWS API and no further configuration is necessary. More Information
     available at:
 
     .. code-block:: text
