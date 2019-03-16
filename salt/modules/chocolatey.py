@@ -130,7 +130,7 @@ def chocolatey_version():
 
     cmd = [_find_chocolatey(__context__, __salt__)]
     cmd.append('-v')
-    out = __salt__['cmd.run'](cmd=cmd, python_shell=False)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
     __context__['chocolatey._version'] = out
 
     return __context__['chocolatey._version']
@@ -203,7 +203,7 @@ def bootstrap(force=False, source=None):
             # Install the KB
             cmd = [dest, '/quiet', '/norestart']
             log.debug('Installing PowerShell...')
-            result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
+            result = __salt__['cmd.run_all'](cmd, python_shell=False)
             if result['retcode'] != 0:
                 err = 'Failed to install PowerShell KB. For more information ' \
                       'run the installer manually on the host'
@@ -234,7 +234,7 @@ def bootstrap(force=False, source=None):
         # Run the .NET Framework 4 web installer
         cmd = [dest, '/q', '/norestart']
         log.debug('Installing .NET v4.0...')
-        result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
+        result = __salt__['cmd.run_all'](cmd, python_shell=False)
         if result['retcode'] != 0:
             err = 'Failed to install .NET v4.0 failed. For more information ' \
                   'run the installer manually on the host'
@@ -276,7 +276,7 @@ def bootstrap(force=False, source=None):
 
     # Run the Chocolatey bootstrap
     log.debug('Installing Chocolatey: {0}'.format(script))
-    result = __salt__['cmd.script'](script=script,
+    result = __salt__['cmd.script'](script,
                                     cwd=os.path.dirname(script),
                                     shell='powershell',
                                     python_shell=True)
@@ -398,7 +398,7 @@ def list_(narrow=None,
     # This is needed to parse the output correctly
     cmd.append('--limit-output')
 
-    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -436,7 +436,7 @@ def list_webpi():
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
     cmd = [choc_path, 'list', '--source', 'webpi']
-    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -462,7 +462,7 @@ def list_windowsfeatures():
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
     cmd = [choc_path, 'list', '--source', 'windowsfeatures']
-    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -589,7 +589,7 @@ def install(name,
     cmd.extend(_no_progress(__context__))
     cmd.extend(_yes(__context__))
 
-    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
         raise CommandExecutionError(
@@ -710,7 +710,7 @@ def install_missing(name, version=None, source=None):
         cmd.extend(['--source', source])
     # Shouldn't need this as this code should never run on v0.9.9 and newer
     cmd.extend(_yes(__context__))
-    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -843,7 +843,7 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
     if override_args:
         cmd.extend(['--overridearguments'])
     cmd.extend(_yes(__context__))
-    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1605, 1614, 1641]:
         raise CommandExecutionError(
@@ -938,7 +938,7 @@ def upgrade(name,
     cmd.extend(_no_progress(__context__))
     cmd.extend(_yes(__context__))
 
-    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
         raise CommandExecutionError(
@@ -986,7 +986,7 @@ def update(name, source=None, pre_versions=False):
     cmd.extend(_no_progress(__context__))
     cmd.extend(_yes(__context__))
 
-    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
         raise CommandExecutionError(
@@ -1086,7 +1086,7 @@ def add_source(name, source_location, username=None, password=None):
         cmd.extend(['--user', username])
     if password:
         cmd.extend(['--password', password])
-    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -1109,7 +1109,7 @@ def _change_source_state(name, state):
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
     cmd = [choc_path, 'source', state, '--name', name]
-    result = __salt__['cmd.run_all'](cmd=cmd, python_shell=False)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
