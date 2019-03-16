@@ -169,6 +169,10 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                                                             now.day, now.hour, now.minute,
                                                             now.second, now.microsecond])
             modules_globals['win32api'] = win32api
+            win32net = types.ModuleType(str('win32net'))  # future lint: disable=blacklisted-function
+            win32net.NetServerGetInfo = MagicMock()
+            win32net.NetServerSetInfo = MagicMock()
+            modules_globals['win32net'] = win32net
 
         return {win_system: modules_globals}
 
@@ -309,13 +313,15 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
             Test to set the Windows computer description
         '''
-        mock = MagicMock(return_value=True)
-        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
-            mock = MagicMock(return_value="Salt's comp")
-            with patch.object(win_system, 'get_computer_desc', mock):
-                self.assertDictEqual(
-                    win_system.set_computer_desc("Salt's comp"),
-                    {'Computer Description': "Salt's comp"})
+        mock = MagicMock()
+        mock_get_info = MagicMock(return_value={'comment': ''})
+        mock_get_desc = MagicMock(return_value="Salt's comp")
+        with patch('salt.modules.win_system.win32net.NetServerGetInfo', mock_get_info), \
+                patch('salt.modules.win_system.win32net.NetServerSetInfo', mock), \
+                patch.object(win_system, 'get_computer_desc', mock_get_desc):
+            self.assertDictEqual(
+                win_system.set_computer_desc("Salt's comp"),
+                {'Computer Description': "Salt's comp"})
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_get_computer_desc(self):

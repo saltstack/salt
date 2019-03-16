@@ -9,7 +9,7 @@ Nox configuration script
 # Import Python libs
 import os
 import sys
-
+import json
 
 if __name__ == '__main__':
     sys.stderr.write('Do not execute this file directly. Use nox instead, it will know how to handle this file\n')
@@ -22,6 +22,18 @@ import nox
 # Global Path Definitions
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
 SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, 'tests', 'support', 'coverage')
+
+# We can't just import salt because if this is running under a frozen nox, there
+# will be no salt to import
+IS_WINDOWS = sys.platform.lower().startswith('win')
+REQUIREMENTS_OVERRIDES = {
+    None: [
+        'jsonschema <= 2.6.0'
+    ],
+    'ubuntu-14.04': [
+        'tornado < 5.0'
+    ]
+}
 
 # Python versions to run against
 _PYTHON_VERSIONS = ('2', '2.7', '3', '3.4', '3.5', '3.6')
@@ -39,9 +51,29 @@ def _create_ci_directories():
             os.makedirs(path)
 
 
+def _install_requirements_overrides(session, *extra_requirements):
+    session.install('distro')
+    output = session.run('distro', '-j', silent=True)
+    distro_data = json.loads(output.strip())
+
+    requirements_overrides = REQUIREMENTS_OVERRIDES[None]
+    requirements_overrides.extend(
+        REQUIREMENTS_OVERRIDES.get(
+            '{id}-{version}'.format(**distro_data),
+            []
+        )
+    )
+    if requirements_overrides:
+        for requirement in requirements_overrides:
+            session.install(requirement)
+
+
 def _install_requirements(session, *extra_requirements):
+    _install_requirements_overrides(session)
     # Install requirements
-    _requirements_files = []
+    _requirements_files = [
+        os.path.join(REPO_ROOT, 'requirements', 'pytest.txt')
+    ]
     if sys.platform.startswith('linux'):
         requirements_files = [
             os.path.join(REPO_ROOT, 'requirements', 'tests.txt')
@@ -49,7 +81,6 @@ def _install_requirements(session, *extra_requirements):
     elif sys.platform.startswith('win'):
         requirements_files = [
             os.path.join(REPO_ROOT, 'pkg', 'windows', 'req.txt'),
-            os.path.join(REPO_ROOT, 'pkg', 'windows', 'req_testing.txt'),
         ]
     elif sys.platform.startswith('darwin'):
         requirements_files = [
@@ -61,6 +92,10 @@ def _install_requirements(session, *extra_requirements):
         if not requirements_files:
             break
         requirements_file = requirements_files.pop(0)
+
+        if requirements_file not in _requirements_files:
+            _requirements_files.append(requirements_file)
+
         session.log('Processing {}'.format(requirements_file))
         with open(requirements_file) as rfh:  # pylint: disable=resource-leakage
             for line in rfh:
@@ -80,8 +115,14 @@ def _install_requirements(session, *extra_requirements):
     if extra_requirements:
         session.install(*extra_requirements)
 
+    if IS_WINDOWS:
+        # Windows hacks :/
+        nox_windows_setup = os.path.join(REPO_ROOT, 'tests', 'support', 'nox-windows-setup.py')
+        session.run('python', nox_windows_setup)
+
 
 def _run_with_coverage(session, *test_cmd):
+    session.install('coverage')
     session.run('coverage', 'erase')
     python_path_env_var = os.environ.get('PYTHONPATH') or None
     if python_path_env_var is None:
