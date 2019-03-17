@@ -429,7 +429,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'key': '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val).key1',
             }
         }
-        return_data  = {'key1': 'value1'}
+        return_data = {'key1': 'value1'}
         mock = MagicMock(return_value=return_data)
         with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
             self.state_obj.format_slots(cdata)
@@ -448,7 +448,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'key': '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val).key1 ~ thing~',
             }
         }
-        return_data  = {'key1': 'value1'}
+        return_data = {'key1': 'value1'}
         mock = MagicMock(return_value=return_data)
         with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
             self.state_obj.format_slots(cdata)
