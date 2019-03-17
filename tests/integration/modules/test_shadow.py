@@ -16,6 +16,7 @@ from tests.support.helpers import destructiveTest, flaky, skip_if_not_root
 
 # Import salt libs
 import salt.utils
+import salt.modules.shadow
 from salt.ext.six.moves import range
 
 
@@ -25,12 +26,6 @@ class ShadowModuleTest(ModuleCase):
     '''
     Validate the linux shadow system module
     '''
-
-    def __init__(self, arg):
-        super(self.__class__, self).__init__(arg)
-        self._test_user = self.__random_string()
-        self._no_user = self.__random_string()
-        self._password = self.run_function('shadow.gen_password', ['Password1234'])
 
     def setUp(self):
         '''
@@ -44,12 +39,9 @@ class ShadowModuleTest(ModuleCase):
                     **os_grain
                 )
             )
-
-    def tearDown(self):
-        '''
-        Reset to original settings
-        '''
-        self.run_function('user.delete', [self._test_user])
+        self._test_user = self.__random_string()
+        self._no_user = self.__random_string()
+        self._password = salt.modules.shadow.gen_password('Password1234')
 
     def __random_string(self, size=6):
         '''
@@ -65,6 +57,7 @@ class ShadowModuleTest(ModuleCase):
         '''
         Test shadow.info
         '''
+        self.addCleanup(self.run_function, 'user.delete', [self._test_user])
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
@@ -80,6 +73,7 @@ class ShadowModuleTest(ModuleCase):
         '''
         Test shadow.del_password
         '''
+        self.addCleanup(self.run_function, 'user.delete', [self._test_user])
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
@@ -95,6 +89,7 @@ class ShadowModuleTest(ModuleCase):
         '''
         Test shadow.set_password
         '''
+        self.addCleanup(self.run_function, 'user.delete', [self._test_user])
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
@@ -108,6 +103,7 @@ class ShadowModuleTest(ModuleCase):
         '''
         Test shadow.set_inactdays
         '''
+        self.addCleanup(self.run_function, 'user.delete', [self._test_user])
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
@@ -121,6 +117,7 @@ class ShadowModuleTest(ModuleCase):
         '''
         Test shadow.set_maxdays
         '''
+        self.addCleanup(self.run_function, 'user.delete', [self._test_user])
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
@@ -134,6 +131,7 @@ class ShadowModuleTest(ModuleCase):
         '''
         Test shadow.set_mindays
         '''
+        self.addCleanup(self.run_function, 'user.delete', [self._test_user])
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
@@ -148,6 +146,7 @@ class ShadowModuleTest(ModuleCase):
         '''
         Test shadow.lock_password
         '''
+        self.addCleanup(self.run_function, 'user.delete', [self._test_user])
         self.run_function('user.add', [self._test_user])
         self.run_function('shadow.set_password', [self._test_user, self._password])
 
@@ -162,6 +161,7 @@ class ShadowModuleTest(ModuleCase):
         '''
         Test shadow.lock_password
         '''
+        self.addCleanup(self.run_function, 'user.delete', [self._test_user])
         self.run_function('user.add', [self._test_user])
         self.run_function('shadow.set_password', [self._test_user, self._password])
 
@@ -176,6 +176,7 @@ class ShadowModuleTest(ModuleCase):
         '''
         Test shadow.set_warndays
         '''
+        self.addCleanup(self.run_function, 'user.delete', [self._test_user])
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
@@ -189,6 +190,7 @@ class ShadowModuleTest(ModuleCase):
         '''
         Test shadow.set_date
         '''
+        self.addCleanup(self.run_function, 'user.delete', [self._test_user])
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
@@ -202,6 +204,7 @@ class ShadowModuleTest(ModuleCase):
         '''
         Test shadow.set_exipre
         '''
+        self.addCleanup(self.run_function, 'user.delete', [self._test_user])
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
@@ -218,16 +221,19 @@ class ShadowModuleTest(ModuleCase):
         # saving shadow file
         if not os.access("/etc/shadow", os.R_OK | os.W_OK):
             self.skipTest('Could not save initial state of /etc/shadow')
-        with salt.utils.fopen('/etc/shadow', 'r') as sFile:
-            shadow = sFile.read()
+
+        def restore_shadow_file(contents):
+            # restore shadow file
+            with salt.utils.fopen('/etc/shadow', 'w') as wfh:
+                wfh.write(contents)
+
+        with salt.utils.fopen('/etc/shadow', 'r') as rfh:
+            contents = rfh.read()
+        self.addCleanup(restore_shadow_file, contents)
+
         # set root password
         self.assertTrue(self.run_function('shadow.set_password', ['root', self._password]))
-        self.assertEqual(
-            self.run_function('shadow.info', ['root'])['passwd'], self._password)
+        self.assertEqual(self.run_function('shadow.info', ['root'])['passwd'], self._password)
         # delete root password
         self.assertTrue(self.run_function('shadow.del_password', ['root']))
-        self.assertEqual(
-            self.run_function('shadow.info', ['root'])['passwd'], '')
-        # restore shadow file
-        with salt.utils.fopen('/etc/shadow', 'w') as sFile:
-            sFile.write(shadow)
+        self.assertEqual(self.run_function('shadow.info', ['root'])['passwd'], '')
