@@ -432,6 +432,12 @@ Module Deprecations
       removed. Please use the :py:func:`test.random_hash <salt.modules.test.random_hash>`
       function instead.
 
+- The hipchat module has been removed due to the service being retired.
+  :py:func:`Google Chat <salt.modules.google_chat>`,
+  :py:func:`MS Teams <salt.modules.msteams>`, or
+  :py:func:`Slack <salt.modules.slack_notify>` may be suitable replacements.
+
+
 State Deprecations
 ------------------
 
@@ -448,8 +454,19 @@ State Deprecations
       :py:func:`win_servermanager.installed <salt.states.win_servermanager.installed>`
       function. Please use ``recurse`` instead.
 
+- The hipchat state has been removed due to the service being retired.
+  :py:func:`MS Teams <salt.states.msteams>` or
+  :py:func:`Slack <salt.states.slack>` may be suitable replacements.
+
 Engine Removal
 --------------
 
 - The hipchat engine has been removed due to the service being retired. For users migrating
   to Slack, the :py:func:`slack <salt.engines.slack>` engine may be a suitable replacement.
+
+Returner Removal
+----------------
+
+- The hipchat returner has been removed due to the service being retired. For users migrating
+  to Slack, the :py:func:`slack <salt.returners.slack_returner>` returner may be a suitable
+  replacement.
