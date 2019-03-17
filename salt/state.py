@@ -2124,9 +2124,9 @@ class State(object):
         log.debug('slot_text: %s', slot_text)
         log.debug('append_data: %s', append_data)
 
-        # Support parsing slot response
-        # return_get should result in a kwargs:nested:dict path
-        # Initially get everything after first closing paren: )
+        # Support parsing slot dict response
+        # return_get should result in a kwargs.nested.dict path by getting
+        # everything after first closing paren: )
         return_get = None
         try:
             return_get = slot_text[slot_text.rindex(')')+1:]
@@ -2136,12 +2136,15 @@ class State(object):
             #remove first period
             return_get = return_get.split('.', 1)[1].strip()
             log.debug('Searching slot result %s for %s', slot_return, return_get)
-            slot_return = salt.utils.data.traverse_dict(slot_return, return_get, default=None, delimiter='.')
-            log.debug('return is now: %s', slot_return)
+            slot_return = salt.utils.data.traverse_dict(slot_return,
+                                                        return_get,
+                                                        default=None,
+                                                        delimiter='.'
+                                                       )
 
         if append_data:
             if isinstance(slot_return, six.string_types):
-                # Chop off leading ~ and append remainder of text to slot result
+                # Append text to slot string result
                 append_data = ' '.join(append_data).strip()
                 log.debug('appending to slot result: %s', append_data)
                 slot_return += append_data
