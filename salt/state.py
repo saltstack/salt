@@ -2118,28 +2118,33 @@ class State(object):
 
         # Given input  __slot__:salt:test.arg(somekey="value").not.exist ~ /appended
         # slot_text should be __slot...).not.exist
-        # slot_after should be ~ /appended
-        slot_text = fmt[2].split()[0]
-        slot_after = fmt[2].split()[1:]
+        # append_data should be ~ /appended
+        slot_text = fmt[2].split('~')[0]
+        append_data = fmt[2].split('~', 1)[1:]
+        log.debug('slot_text: %s', slot_text)
+        log.debug('append_data: %s', append_data)
 
         # Support parsing slot response
         # return_get should result in a kwargs:nested:dict path
         # Initially get everything after first closing paren: )
-        return_get = slot_text[slot_text.rindex(')')+1:]
+        return_get = None
+        try:
+            return_get = slot_text[slot_text.rindex(')')+1:]
+        except ValueError:
+            pass
         if return_get:
-            #remove first period, then replace . with : for parsing
-            return_get = return_get.split('.', 1)[1]
-            return_get = return_get.replace(".", ":")
-            log.debug('Searching slot result for %s', return_get)
-            slot_return = salt.utils.data.traverse_dict(slot_return, return_get, default=None)
+            #remove first period
+            return_get = return_get.split('.', 1)[1].strip()
+            log.debug('Searching slot result %s for %s', slot_return, return_get)
+            slot_return = salt.utils.data.traverse_dict(slot_return, return_get, default=None, delimiter='.')
+            log.debug('return is now: %s', slot_return)
 
-        if slot_after:
+        if append_data:
             if isinstance(slot_return, six.string_types):
                 # Chop off leading ~ and append remainder of text to slot result
-                slot_after = ' '.join(slot_after)
-                append_text = slot_after.replace('~', '', 1).strip()
-                log.debug('appending to slot result: %s', slot_after)
-                slot_return += append_text
+                append_data = ' '.join(append_data).strip()
+                log.debug('appending to slot result: %s', append_data)
+                slot_return += append_data
             else:
                 log.error('Ignoring slot append, slot result is not a string')
 
