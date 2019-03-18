@@ -12,8 +12,7 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
-    patch,
-    mock_open)
+    patch)
 
 # Import Salt Libs
 import salt.states.keystore as keystore
@@ -100,12 +99,10 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(keystore.__salt__, {'x509.read_certificate': MagicMock(return_value=x509_return)}):
                 self.assertDictEqual(keystore.managed(name, passphrase, entries), state_return)
 
-
         with patch.dict(keystore.__opts__, {'test': True}):
             with patch.dict(keystore.__salt__, {'keystore.list': MagicMock(return_value=cert_return)}):
                 with patch.dict(keystore.__salt__, {'x509.read_certificate': MagicMock(return_value=x509_return)}):
                     self.assertDictEqual(keystore.managed(name, passphrase, entries), state_return)
-
 
     @patch('os.path.exists', MagicMock(return_value=True))
     def test_cert_update(self):
@@ -192,7 +189,6 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(keystore.__salt__, {'keystore.add': MagicMock(return_value=True)}):
                         self.assertDictEqual(keystore.managed(name, passphrase, entries), state_return)
 
-
     @patch('os.path.exists', MagicMock(return_value=False))
     def test_new_file(self):
         '''
@@ -235,7 +231,6 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(keystore.__salt__, {'keystore.remove': MagicMock(return_value=True)}):
             with patch.dict(keystore.__salt__, {'keystore.add': MagicMock(return_value=True)}):
                 self.assertDictEqual(keystore.managed(name, passphrase, entries), state_return)
-
 
     @patch('os.path.exists', MagicMock(return_value=True))
     def test_force_remove(self):
