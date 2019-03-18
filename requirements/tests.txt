@@ -40,3 +40,4 @@ ansible; sys.platform != 'win32' and sys.platform != 'darwin' and python_version
 pylxd>=2.2.5; sys.platform != 'win32' and sys.platform != 'darwin'
 jmespath
 yamlordereddictloader
+python-dateutil
