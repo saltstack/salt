@@ -7,10 +7,12 @@ Nox configuration script
 '''
 
 # Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import sys
 import json
 import pprint
+
 
 if __name__ == '__main__':
     sys.stderr.write('Do not execute this file directly. Use nox instead, it will know how to handle this file\n')
@@ -23,9 +25,6 @@ import nox
 # Global Path Definitions
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
 SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, 'tests', 'support', 'coverage')
-
-# We can't just import salt because if this is running under a frozen nox, there
-# will be no salt to import
 IS_WINDOWS = sys.platform.lower().startswith('win')
 REQUIREMENTS_OVERRIDES = {
     None: [
@@ -45,6 +44,7 @@ nox.options.reuse_existing_virtualenvs = True
 #  Don't fail on missing interpreters
 nox.options.error_on_missing_interpreters = False
 
+
 def _create_ci_directories():
     for dirname in ('logs', 'coverage', 'xml-unittests-output'):
         path = os.path.join(REPO_ROOT, 'artifacts', dirname)
@@ -53,22 +53,25 @@ def _create_ci_directories():
 
 
 def _install_requirements(session, *extra_requirements):
-    session.install('distro')
-    output = session.run('distro', '-j', silent=True)
-    distro = json.loads(output.strip())
-    session.log('Distro information:\n%s', pprint.pformat(distro))
-    distro_keys = [
-        '{id}-{version}'.format(**distro),
-        '{id}-{version_parts[major]}'.format(**distro)
-    ]
-
     # Install requirements
     distro_requirements = None
-    for distro_key in distro_keys:
-        _distro_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', '{}.txt'.format(distro_key))
-        if os.path.exists(_distro_requirements):
-            distro_requirements = _distro_requirements
-            break
+
+    if not IS_WINDOWS:
+        # The distro package doesn't output anything for Windows
+        session.install('distro')
+        output = session.run('distro', '-j', silent=True)
+        distro = json.loads(output.strip())
+        session.log('Distro information:\n%s', pprint.pformat(distro))
+        distro_keys = [
+            '{id}-{version}'.format(**distro),
+            '{id}-{version_parts[major]}'.format(**distro)
+        ]
+        for distro_key in distro_keys:
+            _distro_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', '{}.txt'.format(distro_key))
+            if os.path.exists(_distro_requirements):
+                distro_requirements = _distro_requirements
+                break
+
     if distro_requirements is not None:
         _requirements_files = [distro_requirements]
         requirements_files = []
@@ -151,7 +154,6 @@ def runtests(session, coverage):
     _create_ci_directories()
 
     cmd_args = [
-        '-v',
         '--tests-logfile={}'.format(
             os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
         )
@@ -178,7 +180,7 @@ def pytest(session, coverage):
         ),
         '--no-print-logs',
         '-ra',
-        '-sv'
+        '-s'
     ] + session.posargs
 
     if coverage is True:
