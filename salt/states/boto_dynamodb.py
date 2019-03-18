@@ -155,7 +155,7 @@ Setting the alarms in a pillar:
                   period: 900
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import math
 import sys
@@ -163,7 +163,7 @@ import logging
 import copy
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.dictupdate as dictupdate
 
 logging.basicConfig(
@@ -290,7 +290,8 @@ def present(name=None,
     if not table_exists:
         if __opts__['test']:
             ret['result'] = None
-            comments.append('DynamoDB table {0} is set to be created.'.format(name))
+            ret['comment'] = 'DynamoDB table {0} would be created.'.format(name)
+            return ret
         else:
             is_created = __salt__['boto_dynamodb.create_table'](
                 name,
@@ -543,7 +544,7 @@ def _update_global_secondary_indexes(ret, changes_old, changes_new, comments, ex
             existing_index_names, provisioned_gsi_config, gsi_config)
     except GsiNotUpdatableError as e:
         ret['result'] = False
-        ret['comment'] = str(e)
+        ret['comment'] = six.text_type(e)
         return
 
     if index_updates:
@@ -565,14 +566,13 @@ def _update_global_secondary_indexes(ret, changes_old, changes_new, comments, ex
 
         if success:
             comments.append(
-                'Updated GSIs with new throughputs {0}'.format(str(index_updates)))
+                'Updated GSIs with new throughputs {0}'.format(index_updates))
             for index_name in index_updates:
                 changes_old['global_indexes'][index_name] = provisioned_throughputs[index_name]
                 changes_new['global_indexes'][index_name] = index_updates[index_name]
         else:
             ret['result'] = False
-            ret['comment'] = 'Failed to update GSI throughputs {0}'.format(
-                str(index_updates))
+            ret['comment'] = 'Failed to update GSI throughputs {0}'.format(index_updates)
 
 
 def _determine_gsi_updates(existing_index_names, provisioned_gsi_config, gsi_config):
@@ -765,8 +765,7 @@ def absent(name,
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'DynamoDB table {0} is set to be deleted \
-                         '.format(name)
+        ret['comment'] = 'DynamoDB table {0} is set to be deleted'.format(name)
         ret['result'] = None
         return ret
 
@@ -776,7 +775,6 @@ def absent(name,
         ret['changes'].setdefault('old', 'Table {0} exists'.format(name))
         ret['changes'].setdefault('new', 'Table {0} deleted'.format(name))
     else:
-        ret['comment'] = 'Failed to delete DynamoDB table {0} \
-                         '.format(name)
+        ret['comment'] = 'Failed to delete DynamoDB table {0}'.format(name)
         ret['result'] = False
     return ret

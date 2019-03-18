@@ -7,12 +7,13 @@ Unit tests for the Default Job Cache (local_cache).
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import time
 import logging
 import tempfile
+import time
 
 # Import Salt Testing libs
 from tests.integration import AdaptedConfigurationTestCaseMixin
@@ -27,10 +28,12 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 import salt.utils.jid
+import salt.utils.job
+import salt.utils.platform
 import salt.returners.local_cache as local_cache
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -70,6 +73,10 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # Create temp job cache dir without files in it.
         jid_dir, jid_file = self._make_tmp_jid_dirs(create_files=False)
 
+        # File timestamps on Windows aren't as precise. Let a little time pass
+        if salt.utils.platform.is_windows():
+            time.sleep(.01)
+
         # Make sure there are no files in the directory before continuing
         self.assertEqual(jid_file, None)
 
@@ -79,7 +86,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
             # Sleep on Windows because time.time is only precise to 3 decimal
             # points, and therefore subtracting the jid_ctime from time.time
             # will result in a negative number
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 time.sleep(0.25)
             local_cache.clean_old_jobs()
 
@@ -101,7 +108,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         local_cache.clean_old_jobs()
 
         # Get the name of the JID directory that was created to test against
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             jid_dir_name = jid_dir.rpartition('\\')[2]
         else:
             jid_dir_name = jid_dir.rpartition('/')[2]
@@ -137,6 +144,10 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # Create temp job cache dir and jid file
         jid_dir, jid_file = self._make_tmp_jid_dirs()
 
+        # File timestamps on Windows aren't as precise. Let a little time pass
+        if salt.utils.platform.is_windows():
+            time.sleep(.01)
+
         # Make sure there is a jid directory
         jid_dir_name = jid_file.rpartition('/')[2]
         self.assertEqual(jid_dir_name, 'jid')
@@ -147,7 +158,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
             # Sleep on Windows because time.time is only precise to 3 decimal
             # points, and therefore subtracting the jid_ctime from time.time
             # will result in a negative number
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 time.sleep(0.25)
             local_cache.clean_old_jobs()
 
@@ -174,7 +185,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
             dir_name = '/'.join([temp_dir, 'jid'])
             os.mkdir(dir_name)
             jid_file_path = '/'.join([dir_name, 'jid'])
-            with salt.utils.fopen(jid_file_path, 'w') as jid_file:
+            with salt.utils.files.fopen(jid_file_path, 'w') as jid_file:
                 jid_file.write('this is a jid file')
 
         return temp_dir, jid_file_path
@@ -226,7 +237,7 @@ class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleM
         are either present or removed
         '''
         for content in contents:
-            log.debug('CONTENT {0}'.format(content))
+            log.debug('CONTENT %s', content)
             if status == 'present':
                 check_job_dir = os.path.exists(content)
             elif status == 'removed':
@@ -292,7 +303,7 @@ class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleM
         # This needed due to a race condition in Windows
         # `os.makedirs` hasn't released the handle before
         # `local_cache.clean_old_jobs` tries to delete the new_jid_dir
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             import time
             lock_dir = new_jid_dir + '.lckchk'
             tries = 0

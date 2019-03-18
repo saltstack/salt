@@ -30,8 +30,13 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.paths import CODE_DIR
 
 # Import salt libs
-#import salt.config
-import salt.utils
+import salt.config
+import salt.utils.event
+import salt.utils.files
+import salt.utils.functools
+import salt.utils.path
+import salt.utils.stringutils
+import salt.utils.yaml
 import salt.version
 import salt.exceptions
 import salt.utils.process
@@ -40,8 +45,7 @@ from salt.utils.immutabletypes import freeze
 from salt._compat import ElementTree as etree
 
 # Import 3rd-party libs
-import yaml
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -114,8 +118,8 @@ class AdaptedConfigurationTestCaseMixin(object):
 
         rdict['config_dir'] = conf_dir
         rdict['conf_file'] = os.path.join(conf_dir, config_for)
-        with salt.utils.fopen(rdict['conf_file'], 'w') as wfh:
-            wfh.write(yaml.dump(rdict, default_flow_style=False))
+        with salt.utils.files.fopen(rdict['conf_file'], 'w') as wfh:
+            salt.utils.yaml.safe_dump(rdict, wfh, default_flow_style=False)
         return rdict
 
     @staticmethod
@@ -247,35 +251,34 @@ class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
     def test_salt_with_git_version(self):
         if getattr(self, '_call_binary_', None) is None:
             self.skipTest('\'_call_binary_\' not defined.')
-        from salt.utils import which
         from salt.version import __version_info__, SaltStackVersion
-        git = which('git')
+        git = salt.utils.path.which('git')
         if not git:
             self.skipTest('The git binary is not available')
-
+        opts = {
+            'stdout': subprocess.PIPE,
+            'stderr': subprocess.PIPE,
+            'cwd': CODE_DIR,
+        }
+        if not salt.utils.platform.is_windows():
+            opts['close_fds'] = True
         # Let's get the output of git describe
         process = subprocess.Popen(
             [git, 'describe', '--tags', '--first-parent', '--match', 'v[0-9]*'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            close_fds=True,
-            cwd=CODE_DIR
+            **opts
         )
         out, err = process.communicate()
         if process.returncode != 0:
             process = subprocess.Popen(
                 [git, 'describe', '--tags', '--match', 'v[0-9]*'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                close_fds=True,
-                cwd=CODE_DIR
+                **opts
             )
             out, err = process.communicate()
         if not out:
             self.skipTest(
                 'Failed to get the output of \'git describe\'. '
                 'Error: \'{0}\''.format(
-                    salt.utils.to_str(err)
+                    salt.utils.stringutils.to_str(err)
                 )
             )
 
@@ -444,7 +447,7 @@ class LoaderModuleMockMixin(six.with_metaclass(_FixLoaderModuleMockMixinMroOrder
                     # used to patch above
                     import salt.utils
                     for func in minion_funcs:
-                        minion_funcs[func] = salt.utils.namespaced_function(
+                        minion_funcs[func] = salt.utils.functools.namespaced_function(
                             minion_funcs[func],
                             module_globals,
                             preserve_context=True

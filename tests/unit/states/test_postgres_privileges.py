@@ -2,7 +2,7 @@
 '''
     :codeauthor: Andrew Colin Kissa <andrew@topdog.za.net>
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase

@@ -4,7 +4,7 @@ Interact with virtual machine images via libguestfs
 
 :depends:   - libguestfs
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import os
@@ -13,7 +13,7 @@ import hashlib
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ def __virtual__():
     '''
     Only load if libguestfs python bindings are installed
     '''
-    if salt.utils.which('guestmount'):
+    if salt.utils.path.which('guestmount'):
         return 'guestfs'
     return (False, 'The guestfs execution module cannot be loaded: guestmount binary not in path.')
 
@@ -43,7 +43,7 @@ def mount(location, access='rw', root=None):
             'guest',
             location.lstrip(os.sep).replace('/', '.')
         )
-        log.debug('Using root {0}'.format(root))
+        log.debug('Using root %s', root)
     if not os.path.isdir(root):
         try:
             os.makedirs(root)
@@ -60,7 +60,7 @@ def mount(location, access='rw', root=None):
                 'guest',
                 location.lstrip(os.sep).replace('/', '.') + rand
             )
-            log.debug('Establishing new root as {0}'.format(root))
+            log.debug('Establishing new root as %s', root)
         else:
             break
     cmd = 'guestmount -i -a {0} --{1} {2}'.format(location, access, root)

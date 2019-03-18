@@ -17,10 +17,10 @@ A module used to create and manage PostgreSQL tablespaces.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import salt libs
-from salt.utils import dictupdate
+import salt.utils.dictupdate as dictupdate
 
 # Import 3rd-party libs
 from salt.ext.six import iteritems

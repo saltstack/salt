@@ -4,19 +4,20 @@ Control virtual machines via Salt
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os.path
 import logging
 
 # Import Salt libs
 import salt.client
-import salt.utils.virt
-import salt.utils.cloud
 import salt.key
+import salt.utils.cloud
+import salt.utils.files
+import salt.utils.stringutils
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -258,8 +259,8 @@ def init(
         __jid_event__.fire_event({'message': 'Minion will be preseeded'}, 'progress')
         priv_key, pub_key = salt.utils.cloud.gen_keys()
         accepted_key = os.path.join(__opts__['pki_dir'], 'minions', name)
-        with salt.utils.fopen(accepted_key, 'w') as fp_:
-            fp_.write(pub_key)
+        with salt.utils.files.fopen(accepted_key, 'w') as fp_:
+            fp_.write(salt.utils.stringutils.to_str(pub_key))
 
     client = salt.client.get_local_client(__opts__['conf_file'])
 
@@ -422,7 +423,7 @@ def purge(name, delete_key=True):
         ret.update(comp)
 
     if delete_key:
-        log.debug('Deleting key {0}'.format(name))
+        log.debug('Deleting key %s', name)
         skey = salt.key.Key(__opts__)
         skey.delete_key(name)
     __jid_event__.fire_event({'message': 'Purged VM {0}'.format(name)}, 'progress')

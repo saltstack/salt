@@ -123,16 +123,15 @@ Result
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 
 # Import salt libs
+import salt.utils.data
 from salt.exceptions import SaltInvocationError
 
 # Import third party libs
-import yaml
 import jinja2
 try:
     import ldap  # pylint: disable=W0611
@@ -169,7 +168,7 @@ def _config(name, conf):
     Return a value for 'name' from  the config file options.
     '''
     try:
-        value = conf[name]
+        value = salt.utils.data.decode(conf[name], to_str=True)
     except KeyError:
         value = None
     return value
@@ -213,7 +212,7 @@ def _result_to_dict(data, result, conf, source):
         for record in result:
             ret = {}
             record = record[1]
-            log.debug('record: {0}'.format(record))
+            log.debug('record: %s', record)
             for key in record:
                 if key in attrs:
                     for item in record.get(key):
@@ -266,11 +265,7 @@ def _do_search(conf):
         result = __salt__['ldap.search'](_filter, _dn, scope, attrs,
                                          **connargs)['results']
     except IndexError:  # we got no results for this search
-        log.debug(
-            'LDAP search returned no results for filter {0}'.format(
-                _filter
-            )
-        )
+        log.debug('LDAP search returned no results for filter %s', _filter)
         result = {}
     except Exception:
         log.critical(
@@ -299,8 +294,9 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
         # We don't have a config file
         return {}
 
+    import salt.utils.yaml
     try:
-        opts = yaml.safe_load(config_template) or {}
+        opts = salt.utils.yaml.safe_load(config_template) or {}
         opts['conf_file'] = config_file
     except Exception as err:
         import salt.log
@@ -330,7 +326,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     for source in opts['search_order']:
         config = opts[source]
         result = _do_search(config)
-        log.debug('source {0} got result {1}'.format(source, result))
+        log.debug('source %s got result %s', source, result)
         if result:
             data = _result_to_dict(data, result, config, source)
     return data

@@ -1,27 +1,31 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import datetime
 import logging
 import os
 import signal
 import subprocess
+import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, skip_if_not_root, flaky
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 import salt.states.file
 from salt.ext.six.moves import range
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
 
-@skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
+@skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
 class SystemModuleTest(ModuleCase):
     '''
     Validate the date/time functions in the system module
@@ -108,7 +112,7 @@ class SystemModuleTest(ModuleCase):
                 log.debug('Comparing hwclock to sys clock')
                 with os.fdopen(rpipeFd, "r") as rpipe:
                     with os.fdopen(wpipeFd, "w") as wpipe:
-                        with salt.utils.fopen(os.devnull, "r") as nulFd:
+                        with salt.utils.files.fopen(os.devnull, "r") as nulFd:
                             p = subprocess.Popen(args=['hwclock', '--compare'],
                                 stdin=nulFd, stdout=wpipeFd, stderr=subprocess.PIPE)
                             p.communicate()
@@ -128,7 +132,7 @@ class SystemModuleTest(ModuleCase):
                             diff = abs(hwTime - swTime)
 
                             self.assertTrue(diff <= 2.0,
-                                msg=("hwclock difference too big: " + str(timeCompStr)))
+                                msg=("hwclock difference too big: " + six.text_type(timeCompStr)))
                             break
             except CompareTimeout:
                 p.terminate()
@@ -140,14 +144,14 @@ class SystemModuleTest(ModuleCase):
 
     def _save_machine_info(self):
         if os.path.isfile('/etc/machine-info'):
-            with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+            with salt.utils.files.fopen('/etc/machine-info', 'r') as mach_info:
                 self._machine_info = mach_info.read()
         else:
             self._machine_info = False
 
     def _restore_machine_info(self):
         if self._machine_info is not False:
-            with salt.utils.fopen('/etc/machine-info', 'w') as mach_info:
+            with salt.utils.files.fopen('/etc/machine-info', 'w') as mach_info:
                 mach_info.write(self._machine_info)
         else:
             self.run_function('file.remove', ['/etc/machine-info'])
@@ -300,7 +304,7 @@ class SystemModuleTest(ModuleCase):
         '''
         res = self.run_function('system.get_computer_desc')
 
-        hostname_cmd = salt.utils.which('hostnamectl')
+        hostname_cmd = salt.utils.path.which('hostnamectl')
         if hostname_cmd:
             desc = self.run_function('cmd.run', ["hostnamectl status --pretty"])
             self.assertEqual(res, desc)
@@ -308,7 +312,7 @@ class SystemModuleTest(ModuleCase):
             if not os.path.isfile('/etc/machine-info'):
                 self.assertFalse(res)
             else:
-                with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+                with salt.utils.files.fopen('/etc/machine-info', 'r') as mach_info:
                     data = mach_info.read()
                     self.assertIn(res, data.decode('string_escape'))
 
@@ -316,12 +320,34 @@ class SystemModuleTest(ModuleCase):
     @skip_if_not_root
     def test_set_computer_desc(self):
         '''
-        Test setting the system hostname
+        Test setting the computer description
         '''
         self._save_machine_info()
         desc = "test"
         ret = self.run_function('system.set_computer_desc', [desc])
         computer_desc = self.run_function('system.get_computer_desc')
+
+        self.assertTrue(ret)
+        self.assertIn(desc, computer_desc)
+
+    @destructiveTest
+    @skip_if_not_root
+    def test_set_computer_desc_multiline(self):
+        '''
+        Test setting the computer description with a multiline string with tabs
+        and double-quotes.
+        '''
+        self._save_machine_info()
+        desc = textwrap.dedent('''\
+            'First Line
+            \tSecond Line: 'single-quoted string'
+            \t\tThird Line: "double-quoted string with unicode: питон"''')
+        ret = self.run_function('system.set_computer_desc', [desc])
+        # self.run_function returns the serialized return, we need to convert
+        # back to unicode to compare to desc. in the assertIn below.
+        computer_desc = salt.utils.stringutils.to_unicode(
+            self.run_function('system.get_computer_desc')
+        )
 
         self.assertTrue(ret)
         self.assertIn(desc, computer_desc)
@@ -336,7 +362,7 @@ class SystemModuleTest(ModuleCase):
             self.assertTrue(self._hwclock_has_compare())
 
 
-@skipIf(not salt.utils.is_windows(), 'These tests can only be run on windows')
+@skipIf(not salt.utils.platform.is_windows(), 'These tests can only be run on windows')
 class WinSystemModuleTest(ModuleCase):
     '''
     Validate the date/time functions in the win_system module
@@ -353,7 +379,7 @@ class WinSystemModuleTest(ModuleCase):
         '''
         ret = self.run_function('system.get_computer_name')
 
-        self.assertTrue(isinstance(ret, str))
+        self.assertTrue(isinstance(ret, six.text_type))
         import socket
         name = socket.gethostname()
         self.assertEqual(name, ret)
@@ -378,6 +404,7 @@ class WinSystemModuleTest(ModuleCase):
         now = datetime.datetime.now()
         self.assertEqual(now.strftime("%I:%M"), ret.rsplit(':', 1)[0])
 
+    @flaky
     @destructiveTest
     @flaky
     def test_set_system_time(self):

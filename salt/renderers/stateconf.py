@@ -27,19 +27,20 @@ A flexible renderer that takes a templating engine and a data format
 #
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import os
 import re
 import getopt
 import copy
-from os import path as ospath
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.stringutils
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 __all__ = ['render']
@@ -75,7 +76,7 @@ def __init__(opts):
     STATE_NAME = STATE_FUNC.split('.')[0]
 
 
-MOD_BASENAME = ospath.basename(__file__)
+MOD_BASENAME = os.path.basename(__file__)
 INVALID_USAGE_ERROR = SaltRenderError(
     'Invalid use of {0} renderer!\n'
     '''Usage: #!{1} [-GoSp] [<data_renderer> [options] . <template_renderer> [options]]
@@ -108,7 +109,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
     implicit_require = False
 
     def process_sls_data(data, context=None, extract=False):
-        sls_dir = ospath.dirname(sls.replace('.', ospath.sep)) if '.' in sls else sls
+        sls_dir = os.path.dirname(sls.replace('.', os.path.sep)) if '.' in sls else sls
         ctx = dict(sls_dir=sls_dir if sls_dir else '.')
 
         if context:
@@ -156,8 +157,8 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             raise
         except Exception as err:
             log.exception(
-                'Error found while pre-processing the salt file '
-                '{0}:\n{1}'.format(sls, err)
+                'Error found while pre-processing the salt file %s:\n%s',
+                sls, err
             )
             from salt.state import State
             state = State(__opts__)
@@ -206,10 +207,10 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             raise INVALID_USAGE_ERROR
 
         if isinstance(input, six.string_types):
-            with salt.utils.fopen(input, 'r') as ifile:
-                sls_templ = ifile.read()
+            with salt.utils.files.fopen(input, 'r') as ifile:
+                sls_templ = salt.utils.stringutils.to_unicode(ifile.read())
         else:  # assume file-like
-            sls_templ = input.read()
+            sls_templ = salt.utils.stringutils.to_unicode(input.read())
 
         # first pass to extract the state configuration
         match = re.search(__opts__['stateconf_end_marker'], sls_templ)
@@ -235,7 +236,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
 
     if log.isEnabledFor(logging.DEBUG):
         import pprint  # FIXME: pprint OrderedDict
-        log.debug('Rendered sls: {0}'.format(pprint.pformat(data)))
+        log.debug('Rendered sls: %s', pprint.pformat(data))
     return data
 
 

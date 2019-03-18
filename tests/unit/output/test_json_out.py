@@ -4,8 +4,7 @@ unittests for json outputter
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -14,9 +13,8 @@ from tests.support.mock import patch
 
 # Import Salt Libs
 import salt.output.json_out as json_out
-
-# Import 3rd-party libs
-import salt.ext.six as six
+import salt.utils.stringutils
+from salt.ext import six
 
 
 class JsonTestCase(TestCase, LoaderModuleMockMixin):
@@ -61,11 +59,13 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_unicode_output(self):
         with patch.dict(json_out.__opts__, {'output_indent': 'pretty'}):
-            data = {'test': '\xe1', 'example': 'one'}
-            expect = ('{"message": "\'utf8\' codec can\'t decode byte 0xe1 in position 0: unexpected end of data", '
-                      '"error": "Unable to serialize output to json"}')
-            ret = json_out.output(data)
+            decoded = {'test': 'Д', 'example': 'one'}
+            encoded = {'test': salt.utils.stringutils.to_str('Д'), 'example': 'one'}
+            # json.dumps on Python 2 adds a space before a newline while in the
+            # process of dumping a dictionary.
             if six.PY2:
-                self.assertEqual(sorted(expect), sorted(ret))
+                expected = salt.utils.stringutils.to_str('{\n    "example": "one", \n    "test": "Д"\n}')
             else:
-                self.assertEqual(json.loads(ret), data)
+                expected = '{\n    "example": "one",\n    "test": "Д"\n}'
+            self.assertEqual(json_out.output(decoded), expected)
+            self.assertEqual(json_out.output(encoded), expected)

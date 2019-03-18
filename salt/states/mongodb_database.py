@@ -1,10 +1,23 @@
 # -*- coding: utf-8 -*-
 '''
-Management of Mongodb databases
+Management of MongoDB Databases
+===============================
 
-Only deletion is supported, creation doesn't make sense
-and can be done using mongodb_user.present
+:depends:   - pymongo Python module
+
+Only deletion is supported, creation doesn't make sense and can be done using
+:py:func:`mongodb_user.present <salt.states.mongodb_user.present>`.
 '''
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Define the module's virtual name
+__virtualname__ = 'mongodb_database'
+
+
+def __virtual__():
+    if 'mongodb.db_exists' in __salt__:
+        return __virtualname__
+    return False
 
 
 def absent(name,
@@ -14,7 +27,8 @@ def absent(name,
            port=None,
            authdb=None):
     '''
-    Ensure that the named database is absent
+    Ensure that the named database is absent. Note that creation doesn't make
+    sense in MongoDB.
 
     name
         The name of the database to remove
@@ -39,7 +53,6 @@ def absent(name,
            'result': True,
            'comment': ''}
 
-    #check if database exists and remove it
     if __salt__['mongodb.db_exists'](name, user, password, host, port, authdb=authdb):
         if __opts__['test']:
             ret['result'] = None
@@ -51,7 +64,5 @@ def absent(name,
             ret['changes'][name] = 'Absent'
             return ret
 
-    # fallback
-    ret['comment'] = ('User {0} is not present, so it cannot be removed'
-            ).format(name)
+    ret['comment'] = 'Database {0} is not present'.format(name)
     return ret

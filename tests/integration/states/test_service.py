@@ -3,7 +3,7 @@
 Tests for the service state
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 # Import Salt Testing libs
@@ -12,7 +12,8 @@ from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
+import salt.utils.platform
 
 INIT_DELAY = 5
 
@@ -49,7 +50,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_function('service.enable', name=self.service_name)
             self.post_srv_disable = True
 
-        if os_family != 'Windows' and salt.utils.which(cmd_name) is None:
+        if os_family != 'Windows' and salt.utils.path.which(cmd_name) is None:
             self.skipTest('{0} is not installed'.format(cmd_name))
 
     def tearDown(self):
@@ -74,9 +75,14 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test service.running state module
         '''
-        stop_service = self.run_function('service.stop', self.service_name)
-        self.assertTrue(stop_service)
+        if self.run_function('service.status', name=self.service_name):
+            stop_service = self.run_function('service.stop', name=self.service_name)
+            self.assertTrue(stop_service)
         self.check_service_status(self.stopped)
+
+        if salt.utils.platform.is_darwin():
+            # make sure the service is enabled on macosx
+            enable = self.run_function('service.enable', name=self.service_name)
 
         start_service = self.run_state('service.running',
                                        name=self.service_name)

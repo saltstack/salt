@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-unit tests for the localfs cache
+unit tests for salt.cache
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 # import integration
@@ -17,7 +17,6 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.payload
-import salt.utils
 import salt.cache
 
 

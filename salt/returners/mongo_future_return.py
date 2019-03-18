@@ -63,7 +63,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return mongo --return_kwargs '{"db": "another-salt"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -71,7 +71,7 @@ import logging
 # Import Salt libs
 import salt.utils.jid
 import salt.returners
-import salt.ext.six as six
+from salt.ext import six
 
 # Import third party libs
 try:
@@ -226,7 +226,7 @@ def _safe_copy(dat):
         for k in dat:
             r = k.replace('%', '%25').replace('\\', '%5c').replace('$', '%24').replace('.', '%2e')
             if r != k:
-                log.debug('converting dict key from {0} to {1} for mongodb'.format(k, r))
+                log.debug('converting dict key from %s to %s for mongodb', k, r)
             ret[r] = _safe_copy(dat[k])
         return ret
 
@@ -322,7 +322,7 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
 
 
 def event_return(events):

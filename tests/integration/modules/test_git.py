@@ -8,7 +8,7 @@ the user's global .gitconfig, then these tests will set one.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from contextlib import closing
 import errno
 import logging
@@ -26,11 +26,13 @@ from tests.support.paths import TMP
 from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.files
+import salt.utils.platform
 from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +42,7 @@ def _git_version():
         git_version = subprocess.Popen(
             ['git', '--version'],
             shell=False,
-            close_fds=False if salt.utils.is_windows() else True,
+            close_fds=False if salt.utils.platform.is_windows() else True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE).communicate()[0]
     except OSError:
@@ -83,7 +85,7 @@ class GitModuleTest(ModuleCase):
         self.addCleanup(os.chdir, self.orig_cwd)
         self.repo = tempfile.mkdtemp(dir=TMP)
         self.addCleanup(shutil.rmtree, self.repo, ignore_errors=True)
-        self.files = ('foo', 'bar', 'baz')
+        self.files = ('foo', 'bar', 'baz', 'питон')
         self.dirs = ('', 'qux')
         self.branches = ('master', 'iamanewbranch')
         self.tags = ('git_testing',)
@@ -91,8 +93,10 @@ class GitModuleTest(ModuleCase):
             dir_path = os.path.join(self.repo, dirname)
             _makedirs(dir_path)
             for filename in self.files:
-                with salt.utils.fopen(os.path.join(dir_path, filename), 'w') as fp_:
-                    fp_.write('This is a test file named ' + filename + '.')
+                with salt.utils.files.fopen(os.path.join(dir_path, filename), 'wb') as fp_:
+                    fp_.write(
+                        'This is a test file named {0}.'.format(filename).encode('utf-8')
+                    )
         # Navigate to the root of the repo to init, stage, and commit
         os.chdir(self.repo)
         # Initialize a new git repository
@@ -124,8 +128,8 @@ class GitModuleTest(ModuleCase):
             ['git', 'checkout', '--quiet', '-b', self.branches[1]]
         )
         # Add a line to the file
-        with salt.utils.fopen(self.files[0], 'a') as fp_:
-            fp_.write('Added a line\n')
+        with salt.utils.files.fopen(self.files[0], 'a') as fp_:
+            fp_.write(salt.utils.stringutils.to_str('Added a line\n'))
         # Commit the updated file
         subprocess.check_call(
             ['git', 'commit', '--quiet',
@@ -135,6 +139,16 @@ class GitModuleTest(ModuleCase):
         subprocess.check_call(['git', 'checkout', '--quiet', 'master'])
         # Go back to original cwd
         os.chdir(self.orig_cwd)
+
+    def run_function(self, *args, **kwargs):
+        '''
+        Ensure that results are decoded
+
+        TODO: maybe move this behavior to ModuleCase itself?
+        '''
+        return salt.utils.data.decode(
+            super(GitModuleTest, self).run_function(*args, **kwargs)
+        )
 
     def tearDown(self):
         for key in ('orig_cwd', 'repo', 'files', 'dirs', 'branches', 'tags'):
@@ -152,14 +166,13 @@ class GitModuleTest(ModuleCase):
         files = [os.path.join(newdir_path, x) for x in self.files]
         files_relpath = [os.path.join(newdir, x) for x in self.files]
         for path in files:
-            with salt.utils.fopen(path, 'w') as fp_:
+            with salt.utils.files.fopen(path, 'wb') as fp_:
                 fp_.write(
-                    'This is a test file with relative path {0}.\n'
-                    .format(path)
+                    'This is a test file with relative path {0}.\n'.format(path).encode('utf-8')
                 )
         ret = self.run_function('git.add', [self.repo, newdir])
         res = '\n'.join(sorted(['add \'{0}\''.format(x) for x in files_relpath]))
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             res = res.replace('\\', '/')
         self.assertEqual(ret, res)
 
@@ -169,8 +182,10 @@ class GitModuleTest(ModuleCase):
         '''
         filename = 'quux'
         file_path = os.path.join(self.repo, filename)
-        with salt.utils.fopen(file_path, 'w') as fp_:
-            fp_.write('This is a test file named ' + filename + '.\n')
+        with salt.utils.files.fopen(file_path, 'w') as fp_:
+            fp_.write(salt.utils.stringutils.to_str(
+                'This is a test file named {0}.\n'.format(filename)
+            ))
         ret = self.run_function('git.add', [self.repo, filename])
         self.assertEqual(ret, 'add \'{0}\''.format(filename))
 
@@ -179,21 +194,30 @@ class GitModuleTest(ModuleCase):
         Test git.archive
         '''
         tar_archive = os.path.join(TMP, 'test_archive.tar.gz')
-        self.assertTrue(
-            self.run_function(
-                'git.archive',
-                [self.repo, tar_archive],
-                prefix='foo/'
+        try:
+            self.assertTrue(
+                self.run_function(
+                    'git.archive',
+                    [self.repo, tar_archive],
+                    prefix='foo/'
+                )
             )
-        )
-        self.assertTrue(tarfile.is_tarfile(tar_archive))
-        with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
-            self.assertEqual(
-                tar_obj.getnames(),
-                ['foo', 'foo/bar', 'foo/baz', 'foo/foo', 'foo/qux',
-                 'foo/qux/bar', 'foo/qux/baz', 'foo/qux/foo']
-            )
-        os.unlink(tar_archive)
+            self.assertTrue(tarfile.is_tarfile(tar_archive))
+            self.run_function('cmd.run', ['cp ' + tar_archive + ' /root/'])
+            with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
+                self.assertEqual(
+                    sorted(salt.utils.data.decode(tar_obj.getnames())),
+                    sorted([
+                        'foo', 'foo/bar', 'foo/baz', 'foo/foo', 'foo/питон',
+                        'foo/qux', 'foo/qux/bar', 'foo/qux/baz', 'foo/qux/foo',
+                        'foo/qux/питон'
+                    ])
+                )
+        finally:
+            try:
+                os.unlink(tar_archive)
+            except OSError:
+                pass
 
     def test_archive_subdir(self):
         '''
@@ -201,20 +225,25 @@ class GitModuleTest(ModuleCase):
         the resulting archive
         '''
         tar_archive = os.path.join(TMP, 'test_archive.tar.gz')
-        self.assertTrue(
-            self.run_function(
-                'git.archive',
-                [os.path.join(self.repo, 'qux'), tar_archive],
-                prefix='foo/'
+        try:
+            self.assertTrue(
+                self.run_function(
+                    'git.archive',
+                    [os.path.join(self.repo, 'qux'), tar_archive],
+                    prefix='foo/'
+                )
             )
-        )
-        self.assertTrue(tarfile.is_tarfile(tar_archive))
-        with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
-            self.assertEqual(
-                tar_obj.getnames(),
-                ['foo', 'foo/bar', 'foo/baz', 'foo/foo']
-            )
-        os.unlink(tar_archive)
+            self.assertTrue(tarfile.is_tarfile(tar_archive))
+            with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
+                self.assertEqual(
+                    sorted(salt.utils.data.decode(tar_obj.getnames())),
+                    sorted(['foo', 'foo/bar', 'foo/baz', 'foo/foo', 'foo/питон'])
+                )
+        finally:
+            try:
+                os.unlink(tar_archive)
+            except OSError:
+                pass
 
     def test_branch(self):
         '''
@@ -310,7 +339,7 @@ class GitModuleTest(ModuleCase):
         filename = 'foo'
         commit_re_prefix = r'^\[master [0-9a-f]+\] '
         # Add a line
-        with salt.utils.fopen(os.path.join(self.repo, filename), 'a') as fp_:
+        with salt.utils.files.fopen(os.path.join(self.repo, filename), 'a') as fp_:
             fp_.write('Added a line\n')
         # Stage the file
         self.run_function('git.add', [self.repo, filename])
@@ -320,7 +349,7 @@ class GitModuleTest(ModuleCase):
         # Make sure the expected line is in the output
         self.assertTrue(bool(re.search(commit_re_prefix + commit_msg, ret)))
         # Add another line
-        with salt.utils.fopen(os.path.join(self.repo, filename), 'a') as fp_:
+        with salt.utils.files.fopen(os.path.join(self.repo, filename), 'a') as fp_:
             fp_.write('Added another line\n')
         # Commit the second file without staging
         commit_msg = 'Add another line to ' + filename
@@ -345,7 +374,7 @@ class GitModuleTest(ModuleCase):
                 ['git', 'config', '--global', '--remove-section', 'foo']
             )
             for cmd in cmds:
-                with salt.utils.fopen(os.devnull, 'w') as devnull:
+                with salt.utils.files.fopen(os.devnull, 'w') as devnull:
                     try:
                         subprocess.check_call(cmd, stderr=devnull)
                     except subprocess.CalledProcessError:
@@ -597,7 +626,7 @@ class GitModuleTest(ModuleCase):
         # the full, unshortened name of the folder. Therefore you can't compare
         # the path returned by `tempfile.mkdtemp` and the results of `git.init`
         # exactly.
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             new_repo = new_repo.replace('\\', '/')
 
             # Get the name of the temp directory
@@ -613,8 +642,7 @@ class GitModuleTest(ModuleCase):
         else:
             self.assertEqual(
                 self.run_function('git.init', [new_repo]).lower(),
-                'Initialized empty Git repository in {0}/.git/'
-                ''.format(new_repo).lower()
+                'Initialized empty Git repository in {0}/.git/'.format(new_repo).lower()
             )
 
         shutil.rmtree(new_repo)
@@ -703,7 +731,7 @@ class GitModuleTest(ModuleCase):
         '''
         # Make a change to a different file than the one modifed in setUp
         file_path = os.path.join(self.repo, self.files[1])
-        with salt.utils.fopen(file_path, 'a') as fp_:
+        with salt.utils.files.fopen(file_path, 'a') as fp_:
             fp_.write('Added a line\n')
         # Commit the change
         self.assertTrue(
@@ -833,7 +861,7 @@ class GitModuleTest(ModuleCase):
             sorted(['rm \'' + os.path.join(entire_dir, x) + '\''
                     for x in self.files])
         )
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             expected = expected.replace('\\', '/')
         self.assertEqual(
             self.run_function('git.rm', [self.repo, entire_dir], opts='-r'),
@@ -847,7 +875,7 @@ class GitModuleTest(ModuleCase):
         # TODO: test more stash actions
         '''
         file_path = os.path.join(self.repo, self.files[0])
-        with salt.utils.fopen(file_path, 'a') as fp_:
+        with salt.utils.files.fopen(file_path, 'a') as fp_:
             fp_.write('Temp change to be stashed')
         self.assertTrue(
             'ERROR' not in self.run_function('git.stash', [self.repo])
@@ -886,11 +914,13 @@ class GitModuleTest(ModuleCase):
             'untracked': ['thisisalsoanewfile']
         }
         for filename in changes['modified']:
-            with salt.utils.fopen(os.path.join(self.repo, filename), 'a') as fp_:
+            with salt.utils.files.fopen(os.path.join(self.repo, filename), 'a') as fp_:
                 fp_.write('Added a line\n')
         for filename in changes['new']:
-            with salt.utils.fopen(os.path.join(self.repo, filename), 'w') as fp_:
-                fp_.write('This is a new file named ' + filename + '.')
+            with salt.utils.files.fopen(os.path.join(self.repo, filename), 'w') as fp_:
+                fp_.write(salt.utils.stringutils.to_str(
+                    'This is a new file named {0}.'.format(filename)
+                ))
             # Stage the new file so it shows up as a 'new' file
             self.assertTrue(
                 'ERROR' not in self.run_function(
@@ -901,8 +931,10 @@ class GitModuleTest(ModuleCase):
         for filename in changes['deleted']:
             self.run_function('git.rm', [self.repo, filename])
         for filename in changes['untracked']:
-            with salt.utils.fopen(os.path.join(self.repo, filename), 'w') as fp_:
-                fp_.write('This is a new file named ' + filename + '.')
+            with salt.utils.files.fopen(os.path.join(self.repo, filename), 'w') as fp_:
+                fp_.write(salt.utils.stringutils.to_str(
+                    'This is a new file named {0}.'.format(filename)
+                ))
         self.assertEqual(
             self.run_function('git.status', [self.repo]),
             changes
@@ -945,7 +977,7 @@ class GitModuleTest(ModuleCase):
         worktree_basename2 = os.path.basename(worktree_path2)
 
         # Even though this is Windows, git commands return a unix style path
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             worktree_path = worktree_path.replace('\\', '/')
             worktree_path2 = worktree_path2.replace('\\', '/')
 

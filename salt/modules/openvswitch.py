@@ -6,13 +6,14 @@ Suitable for setting up Openstack Neutron.
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 
 # Import salt libs
-import salt.utils
+from salt.ext import six
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ def __virtual__():
     '''
     Only load the module if Open vSwitch is installed
     '''
-    if salt.utils.which('ovs-vsctl'):
+    if salt.utils.path.which('ovs-vsctl'):
         return 'openvswitch'
     return False
 
@@ -434,7 +435,7 @@ def port_create_vxlan(br, port, id, remote, dst_port=None):
 
        salt '*' openvswitch.port_create_vxlan br0 vx1 5001 192.168.1.10 8472
     '''
-    dst_port = ' options:dst_port=' + str(dst_port) if 0 < dst_port <= 65535 else ''
+    dst_port = ' options:dst_port=' + six.text_type(dst_port) if 0 < dst_port <= 65535 else ''
     if not 0 <= id < 2**64:
         return False
     elif not __salt__['dig.check_ip'](remote):

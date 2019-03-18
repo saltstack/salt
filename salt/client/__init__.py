@@ -19,7 +19,7 @@ The data structure needs to be:
 # 4. How long do we wait for all of the replies?
 #
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import time
 import random
@@ -32,20 +32,30 @@ import salt.cache
 import salt.payload
 import salt.transport
 import salt.loader
-import salt.utils
 import salt.utils.args
 import salt.utils.event
-import salt.utils.minions
-import salt.utils.verify
+import salt.utils.files
 import salt.utils.jid
+import salt.utils.minions
+import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.user
+import salt.utils.verify
+import salt.utils.versions
+import salt.utils.zeromq
 import salt.syspaths as syspaths
 from salt.exceptions import (
-    EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError,
-    SaltClientError, PublishError
+    AuthenticationError,
+    AuthorizationError,
+    EauthAuthenticationError,
+    PublishError,
+    SaltInvocationError,
+    SaltReqTimeoutError,
+    SaltClientError
 )
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 
 # Try to import range from https://github.com/ytoolshed/range
@@ -143,14 +153,13 @@ class LocalClient(object):
         else:
             if os.path.isdir(c_path):
                 log.warning(
-                    '{0} expects a file path not a directory path({1}) to '
-                    'it\'s \'c_path\' keyword argument'.format(
-                        self.__class__.__name__, c_path
-                    )
+                    '%s expects a file path not a directory path(%s) to '
+                    'its \'c_path\' keyword argument',
+                    self.__class__.__name__, c_path
                 )
             self.opts = salt.config.client_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
-        self.salt_user = salt.utils.get_specific_user()
+        self.salt_user = salt.utils.user.get_specific_user()
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()
         self.auto_reconnect = auto_reconnect
@@ -176,21 +185,20 @@ class LocalClient(object):
                 key_user = self.opts.get('user', 'root')
         if key_user.startswith('sudo_'):
             key_user = self.opts.get('user', 'root')
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # The username may contain '\' if it is in Windows
             # 'DOMAIN\username' format. Fix this for the keyfile path.
             key_user = key_user.replace('\\', '_')
         keyfile = os.path.join(self.opts['cachedir'],
                                '.{0}_key'.format(key_user))
-        # Make sure all key parent directories are accessible
-        salt.utils.verify.check_path_traversal(self.opts['cachedir'],
-                                               key_user,
-                                               self.skip_perm_errors)
-
         try:
-            with salt.utils.fopen(keyfile, 'r') as key:
-                return key.read()
-        except (OSError, IOError):
+            # Make sure all key parent directories are accessible
+            salt.utils.verify.check_path_traversal(self.opts['cachedir'],
+                                                   key_user,
+                                                   self.skip_perm_errors)
+            with salt.utils.files.fopen(keyfile, 'r') as key:
+                return salt.utils.stringutils.to_unicode(key.read())
+        except (OSError, IOError, SaltClientError):
             # Fall back to eauth
             return ''
 
@@ -225,7 +233,7 @@ class LocalClient(object):
         '''
         Return the information about a given job
         '''
-        log.debug('Checking whether jid {0} is still running'.format(jid))
+        log.debug('Checking whether jid %s is still running', jid)
         timeout = int(kwargs.get('gather_job_timeout', self.opts['gather_job_timeout']))
 
         pub_data = self.run_job(tgt,
@@ -258,7 +266,7 @@ class LocalClient(object):
         # Failed to connect to the master and send the pub
         if 'error' in pub_data:
             print(pub_data['error'])
-            log.debug('_check_pub_data() error: {0}'.format(pub_data['error']))
+            log.debug('_check_pub_data() error: %s', pub_data['error'])
             return {}
         elif 'jid' not in pub_data:
             return {}
@@ -276,7 +284,7 @@ class LocalClient(object):
                       'No command was sent, no jid was assigned.')
                 return {}
 
-        # don't install event subscription listeners when the request is async
+        # don't install event subscription listeners when the request is asynchronous
         # and doesn't care. this is important as it will create event leaks otherwise
         if not listen:
             return pub_data
@@ -315,7 +323,7 @@ class LocalClient(object):
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -341,6 +349,10 @@ class LocalClient(object):
             raise SaltClientError(
                 'The salt master could not be contacted. Is master running?'
             )
+        except AuthenticationError as err:
+            raise AuthenticationError(err)
+        except AuthorizationError as err:
+            raise AuthorizationError(err)
         except Exception as general_exception:
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
@@ -348,7 +360,8 @@ class LocalClient(object):
         return self._check_pub_data(pub_data, listen=listen)
 
     def gather_minions(self, tgt, expr_form):
-        return salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
+        _res = salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
+        return _res['minions']
 
     @tornado.gen.coroutine
     def run_job_async(
@@ -379,7 +392,7 @@ class LocalClient(object):
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -406,6 +419,10 @@ class LocalClient(object):
             raise SaltClientError(
                 'The salt master could not be contacted. Is master running?'
             )
+        except AuthenticationError as err:
+            raise AuthenticationError(err)
+        except AuthorizationError as err:
+            raise AuthorizationError(err)
         except Exception as general_exception:
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
@@ -436,7 +453,7 @@ class LocalClient(object):
             '20131219215921857715'
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -487,7 +504,7 @@ class LocalClient(object):
             {'jerry': True}
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -551,8 +568,12 @@ class LocalClient(object):
             {'stewart': {...}}
         '''
         if 'expr_form' in kwargs:
-            import salt
-            salt.utils.warn_until(
+            # We need to re-import salt.utils.versions here
+            # even though it has already been imported.
+            # when cmd_batch is called via the NetAPI
+            # the module is unavailable.
+            import salt.utils.versions
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -568,12 +589,15 @@ class LocalClient(object):
                 'tgt_type': tgt_type,
                 'ret': ret,
                 'batch': batch,
+                'failhard': kwargs.get('failhard', False),
                 'raw': kwargs.get('raw', False)}
 
         if 'timeout' in kwargs:
             opts['timeout'] = kwargs['timeout']
         if 'gather_job_timeout' in kwargs:
             opts['gather_job_timeout'] = kwargs['gather_job_timeout']
+        if 'batch_wait' in kwargs:
+            opts['batch_wait'] = int(kwargs['batch_wait'])
 
         eauth = {}
         if 'eauth' in kwargs:
@@ -707,7 +731,7 @@ class LocalClient(object):
             function name.
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -776,7 +800,7 @@ class LocalClient(object):
         :returns: A generator
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -847,6 +871,10 @@ class LocalClient(object):
         The function signature is the same as :py:meth:`cmd` with the
         following exceptions.
 
+        Normally :py:meth:`cmd_iter` does not yield results for minions that
+        are not connected. If you want it to return results for disconnected
+        minions set `expect_minions=True` in `kwargs`.
+
         :return: A generator yielding the individual minion returns
 
         .. code-block:: python
@@ -859,7 +887,7 @@ class LocalClient(object):
             {'stewart': {'ret': True}}
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -935,7 +963,7 @@ class LocalClient(object):
             {'stewart': {'ret': True}}
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -992,7 +1020,7 @@ class LocalClient(object):
         Execute a salt command and return
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -1043,7 +1071,7 @@ class LocalClient(object):
         :returns: all of the information for the JID
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -1122,7 +1150,7 @@ class LocalClient(object):
         :returns: all of the information for the JID
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -1145,6 +1173,7 @@ class LocalClient(object):
         minion_timeouts = {}
 
         found = set()
+        missing = set()
         # Check to see if the jid is real, if not return the empty dict
         try:
             if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
@@ -1153,7 +1182,7 @@ class LocalClient(object):
                 # stop the iteration, since the jid is invalid
                 raise StopIteration()
         except Exception as exc:
-            log.warning('Returner unavailable: {exc}'.format(exc=exc))
+            log.warning('Returner unavailable: %s', exc, exc_info_on_loglevel=logging.DEBUG)
         # Wait for the hosts to check in
         last_time = False
         # iterator for this job's return
@@ -1172,9 +1201,8 @@ class LocalClient(object):
         # start as True so that we ping at least once
         minions_running = True
         log.debug(
-            'get_iter_returns for jid {0} sent to {1} will timeout at {2}'.format(
-                jid, minions, datetime.fromtimestamp(timeout_at).time()
-            )
+            'get_iter_returns for jid %s sent to %s will timeout at %s',
+            jid, minions, datetime.fromtimestamp(timeout_at).time()
         )
         while True:
             # Process events until timeout is reached or all minions have returned
@@ -1184,6 +1212,8 @@ class LocalClient(object):
                     break
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
+                    if 'missing' in raw.get('data', {}):
+                        missing.update(raw['data']['missing'])
                     continue
                 if 'return' not in raw['data']:
                     continue
@@ -1201,13 +1231,13 @@ class LocalClient(object):
                         ret[raw['data']['id']]['jid'] = raw['data']['jid']
                     if kwargs.get('_cmd_meta', False):
                         ret[raw['data']['id']].update(raw['data'])
-                    log.debug('jid {0} return from {1}'.format(jid, raw['data']['id']))
+                    log.debug('jid %s return from %s', jid, raw['data']['id'])
                     yield ret
 
             # if we have all of the returns (and we aren't a syndic), no need for anything fancy
             if len(found.intersection(minions)) >= len(minions) and not self.opts['order_masters']:
                 # All minions have returned, break out of the loop
-                log.debug('jid {0} found all minions {1}'.format(jid, found))
+                log.debug('jid %s found all minions %s', jid, found)
                 break
             elif len(found.intersection(minions)) >= len(minions) and self.opts['order_masters']:
                 if len(found) >= len(minions) and len(minions) > 0 and time.time() > gather_syndic_wait:
@@ -1251,7 +1281,7 @@ class LocalClient(object):
                     break
                 try:
                     if raw['data']['retcode'] > 0:
-                        log.error('saltutil returning errors on minion {0}'.format(raw['data']['id']))
+                        log.error('saltutil returning errors on minion %s', raw['data']['id'])
                         minions.remove(raw['data']['id'])
                         break
                 except KeyError as exc:
@@ -1332,6 +1362,16 @@ class LocalClient(object):
             for minion in list((minions - found)):
                 yield {minion: {'failed': True}}
 
+        # Filter out any minions marked as missing for which we received
+        # returns (prevents false events sent due to higher-level masters not
+        # knowing about lower-level minions).
+        missing -= found
+
+        # Report on missing minions
+        if missing:
+            for minion in missing:
+                yield {minion: {'failed': True}}
+
     def get_returns(
             self,
             jid,
@@ -1346,9 +1386,8 @@ class LocalClient(object):
         start = int(time.time())
         timeout_at = start + timeout
         log.debug(
-            'get_returns for jid {0} sent to {1} will timeout at {2}'.format(
-                jid, minions, datetime.fromtimestamp(timeout_at).time()
-            )
+            'get_returns for jid %s sent to %s will timeout at %s',
+            jid, minions, datetime.fromtimestamp(timeout_at).time()
         )
 
         found = set()
@@ -1372,19 +1411,18 @@ class LocalClient(object):
                 ret[raw['id']] = raw['return']
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
-                    log.debug('jid {0} found all minions'.format(jid))
+                    log.debug('jid %s found all minions', jid)
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
-                log.debug('jid {0} found all minions'.format(jid))
+                log.debug('jid %s found all minions', jid)
                 break
             if int(time.time()) > timeout_at:
                 log.info(
-                    'jid {0} minions {1} did not return in time'.format(
-                        jid, (minions - found)
-                    )
+                    'jid %s minions %s did not return in time',
+                    jid, (minions - found)
                 )
                 break
             time.sleep(0.01)
@@ -1411,8 +1449,8 @@ class LocalClient(object):
                                       exc))
         for minion in data:
             m_data = {}
-            if u'return' in data[minion]:
-                m_data['ret'] = data[minion].get(u'return')
+            if 'return' in data[minion]:
+                m_data['ret'] = data[minion].get('return')
             else:
                 m_data['ret'] = data[minion].get('return')
             if 'out' in data[minion]:
@@ -1460,8 +1498,8 @@ class LocalClient(object):
                                                                   exc))
         for minion in data:
             m_data = {}
-            if u'return' in data[minion]:
-                m_data['ret'] = data[minion].get(u'return')
+            if 'return' in data[minion]:
+                m_data['ret'] = data[minion].get('return')
             else:
                 m_data['ret'] = data[minion].get('return')
             if 'out' in data[minion]:
@@ -1572,7 +1610,7 @@ class LocalClient(object):
         log.trace('func get_cli_event_returns()')
 
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -1767,7 +1805,7 @@ class LocalClient(object):
                 A set, the targets that the tgt passed should match.
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -1780,8 +1818,8 @@ class LocalClient(object):
                 not os.path.exists(os.path.join(self.opts['sock_dir'],
                 'publish_pull.ipc'))):
             log.error(
-                'Unable to connect to the salt master publisher at '
-                '{0}'.format(self.opts['sock_dir'])
+                'Unable to connect to the salt master publisher at %s',
+                self.opts['sock_dir']
             )
             raise SaltClientError
 
@@ -1795,8 +1833,8 @@ class LocalClient(object):
                 timeout,
                 **kwargs)
 
-        master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
-                     ':' + str(self.opts['ret_port'])
+        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
+                     ':' + six.text_type(self.opts['ret_port'])
         channel = salt.transport.Channel.factory(self.opts,
                                                  crypt='clear',
                                                  master_uri=master_uri)
@@ -1830,6 +1868,14 @@ class LocalClient(object):
 
         error = payload.pop('error', None)
         if error is not None:
+            if isinstance(error, dict):
+                err_name = error.get('name', '')
+                err_msg = error.get('message', '')
+                if err_name == 'AuthenticationError':
+                    raise AuthenticationError(err_msg)
+                elif err_name == 'AuthorizationError':
+                    raise AuthorizationError(err_msg)
+
             raise PublishError(error)
 
         if not payload:
@@ -1875,7 +1921,7 @@ class LocalClient(object):
                 A set, the targets that the tgt passed should match.
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -1888,8 +1934,8 @@ class LocalClient(object):
                 not os.path.exists(os.path.join(self.opts['sock_dir'],
                 'publish_pull.ipc'))):
             log.error(
-                'Unable to connect to the salt master publisher at '
-                '{0}'.format(self.opts['sock_dir'])
+                'Unable to connect to the salt master publisher at %s',
+                self.opts['sock_dir']
             )
             raise SaltClientError
 
@@ -1903,8 +1949,8 @@ class LocalClient(object):
                 timeout,
                 **kwargs)
 
-        master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
-                     ':' + str(self.opts['ret_port'])
+        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
+                     ':' + six.text_type(self.opts['ret_port'])
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
                                                                 io_loop=io_loop,
                                                                 crypt='clear',
@@ -1939,6 +1985,14 @@ class LocalClient(object):
 
         error = payload.pop('error', None)
         if error is not None:
+            if isinstance(error, dict):
+                err_name = error.get('name', '')
+                err_msg = error.get('message', '')
+                if err_name == 'AuthenticationError':
+                    raise AuthenticationError(err_msg)
+                elif err_name == 'AuthorizationError':
+                    raise AuthorizationError(err_msg)
+
             raise PublishError(error)
 
         if not payload:

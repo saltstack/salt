@@ -90,9 +90,9 @@ shorthand for having to type out complicated compound expressions.
 .. code-block:: yaml
 
     nodegroups:
-      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
-      group2: 'G@os:Debian and foo.domain.com'
-      group3: 'G@os:Debian and N@group1'
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group2: 'G@os:Debian and foo.domain.com'
+      group3: 'G@os:Debian and N@group1'
 
 
 Advanced Targeting Methods

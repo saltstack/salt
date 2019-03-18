@@ -6,7 +6,7 @@ The YAMLEX data is then directly overlaid onto the minion's Pillar data
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -26,7 +26,5 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
         command = command.replace('%s', minion_id)
         return deserialize(__salt__['cmd.run']('{0}'.format(command)))
     except Exception:
-        log.critical(
-                'YAML data from {0} failed to parse'.format(command)
-                )
+        log.critical('YAML data from %s failed to parse', command)
         return {}

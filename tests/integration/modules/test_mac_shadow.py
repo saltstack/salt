@@ -3,8 +3,8 @@
 integration tests for mac_system
 '''
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import datetime
 import random
 import string
@@ -14,8 +14,9 @@ from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.path
+import salt.utils.platform
 from salt.ext.six.moves import range
 
 
@@ -34,9 +35,9 @@ NO_USER = __random_string()
 
 
 @skip_if_not_root
-@skipIf(not salt.utils.is_darwin(), 'Test only available on macOS')
-@skipIf(not salt.utils.which('dscl'), '\'dscl\' binary not found in $PATH')
-@skipIf(not salt.utils.which('pwpolicy'), '\'pwpolicy\' binary not found in $PATH')
+@skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
+@skipIf(not salt.utils.path.which('dscl'), '\'dscl\' binary not found in $PATH')
+@skipIf(not salt.utils.path.which('pwpolicy'), '\'pwpolicy\' binary not found in $PATH')
 class MacShadowModuleTest(ModuleCase):
     '''
     Validate the mac_system module

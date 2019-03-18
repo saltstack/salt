@@ -8,6 +8,9 @@ Management of Influxdb continuous queries
 (compatible with InfluxDB version 0.9+)
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 
 def __virtual__():
     '''

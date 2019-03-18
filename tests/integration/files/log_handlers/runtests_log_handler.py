@@ -23,7 +23,7 @@ from multiprocessing import Queue
 import msgpack
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.log.setup
 
 log = logging.getLogger(__name__)

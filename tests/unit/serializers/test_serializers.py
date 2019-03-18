@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from textwrap import dedent
 
 # Import Salt Testing libs
@@ -9,7 +9,8 @@ from tests.support.unit import skipIf, TestCase
 
 # Import 3rd party libs
 import jinja2
-import salt.ext.six as six
+import yaml as _yaml  # future lint: disable=blacklisted-import
+from salt.ext import six
 
 # Import salt libs
 import salt.serializers.configparser as configparser
@@ -18,6 +19,8 @@ import salt.serializers.yaml as yaml
 import salt.serializers.yamlex as yamlex
 import salt.serializers.msgpack as msgpack
 import salt.serializers.python as python
+import salt.serializers.toml as toml
+from salt.serializers.yaml import EncryptedString
 from salt.serializers import SerializationError
 from salt.utils.odict import OrderedDict
 
@@ -43,10 +46,16 @@ class TestSerializers(TestCase):
     @skipIf(not yaml.available, SKIP_MESSAGE % 'yaml')
     def test_serialize_yaml(self):
         data = {
-            "foo": "bar"
+            "foo": "bar",
+            "encrypted_data": EncryptedString("foo")
         }
+        # The C dumper produces unquoted strings when serializing an
+        # EncryptedString, while the non-C dumper produces quoted strings.
+        expected = '{encrypted_data: !encrypted foo, foo: bar}' \
+            if hasattr(_yaml, 'CSafeDumper') \
+            else "{encrypted_data: !encrypted 'foo', foo: bar}"
         serialized = yaml.serialize(data)
-        assert serialized == '{foo: bar}', serialized
+        assert serialized == expected, serialized
 
         deserialized = yaml.deserialize(serialized)
         assert deserialized == data, deserialized
@@ -336,7 +345,8 @@ class TestSerializers(TestCase):
     def test_serialize_python(self):
         data = {'foo': 'bar'}
         serialized = python.serialize(data)
-        assert serialized == '{\'foo\': \'bar\'}', serialized
+        expected = repr({'foo': 'bar'})
+        assert serialized == expected, serialized
 
     @skipIf(not configparser.available, SKIP_MESSAGE % 'configparser')
     def test_configparser(self):
@@ -346,4 +356,15 @@ class TestSerializers(TestCase):
         assert serialized == "[foo]\nbar = baz", serialized
 
         deserialized = configparser.deserialize(serialized)
+        assert deserialized == data, deserialized
+
+    @skipIf(not toml.available, SKIP_MESSAGE % 'toml')
+    def test_serialize_toml(self):
+        data = {
+            "foo": "bar"
+        }
+        serialized = toml.serialize(data)
+        assert serialized == 'foo = "bar"\n', serialized
+
+        deserialized = toml.deserialize(serialized)
         assert deserialized == data, deserialized

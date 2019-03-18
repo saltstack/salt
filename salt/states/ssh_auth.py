@@ -47,12 +47,12 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import re
 import sys
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def _present_test(user, name, enc, comment, options, source, config, fingerprint_hash_type):

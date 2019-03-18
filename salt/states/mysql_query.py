@@ -21,15 +21,16 @@ Its output may be stored in a file or in a grain.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import os.path
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.stringutils
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def __virtual__():
@@ -178,7 +179,7 @@ def run_file(name,
             mapped_results.append(mapped_line)
         query_result['results'] = mapped_results
 
-    ret['comment'] = str(query_result)
+    ret['comment'] = six.text_type(query_result)
 
     if output == 'grain':
         if grain is not None and key is None:
@@ -196,13 +197,19 @@ def run_file(name,
                                     + grain + ":" + key
     elif output is not None:
         ret['changes']['query'] = "Executed. Output into " + output
-        with salt.utils.fopen(output, 'w') as output_file:
+        with salt.utils.files.fopen(output, 'w') as output_file:
             if 'results' in query_result:
                 for res in query_result['results']:
                     for col, val in six.iteritems(res):
-                        output_file.write(col + ':' + val + '\n')
+                        output_file.write(
+                            salt.utils.stringutils.to_str(
+                                col + ':' + val + '\n'
+                            )
+                        )
             else:
-                output_file.write(str(query_result))
+                output_file.write(
+                    salt.utils.stringutils.to_str(query_result)
+                )
     else:
         ret['changes']['query'] = "Executed"
 
@@ -318,7 +325,7 @@ def run(name,
             mapped_results.append(mapped_line)
         query_result['results'] = mapped_results
 
-    ret['comment'] = str(query_result)
+    ret['comment'] = six.text_type(query_result)
 
     if output == 'grain':
         if grain is not None and key is None:
@@ -336,13 +343,27 @@ def run(name,
                                     + grain + ":" + key
     elif output is not None:
         ret['changes']['query'] = "Executed. Output into " + output
-        with salt.utils.fopen(output, 'w') as output_file:
+        with salt.utils.files.fopen(output, 'w') as output_file:
             if 'results' in query_result:
                 for res in query_result['results']:
                     for col, val in six.iteritems(res):
-                        output_file.write(col + ':' + val + '\n')
+                        output_file.write(
+                            salt.utils.stringutils.to_str(
+                                col + ':' + val + '\n'
+                            )
+                        )
             else:
-                output_file.write(str(query_result))
+                if isinstance(query_result, six.text_type):
+                    output_file.write(
+                        salt.utils.stringutils.to_str(query_result)
+                    )
+                else:
+                    for col, val in six.iteritems(query_result):
+                        output_file.write(
+                            salt.utils.stringutils.to_str(
+                                '{0}:{1}\n'.format(col, val)
+                            )
+                        )
     else:
         ret['changes']['query'] = "Executed"
 

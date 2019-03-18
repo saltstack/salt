@@ -6,12 +6,12 @@ Currently this only works when run through a proxy minion.
 
 .. versionadded:: 2015.8.2
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-import json
 import logging
-import salt.utils
 import salt.utils.http
+import salt.utils.json
+import salt.utils.platform
 from salt.exceptions import get_error_message
 
 
@@ -21,7 +21,7 @@ log = logging.getLogger(__file__)
 
 def __virtual__():
     # only valid in proxy minions for now
-    return salt.utils.is_proxy() and 'proxy' in __opts__
+    return salt.utils.platform.is_proxy() and 'proxy' in __opts__
 
 
 def _base_url():
@@ -105,7 +105,7 @@ def update_job(name, config):
     '''
     if 'name' not in config:
         config['name'] = name
-    data = json.dumps(config)
+    data = salt.utils.json.dumps(config)
     try:
         response = salt.utils.http.query(
             "{0}/scheduler/iso8601".format(_base_url()),

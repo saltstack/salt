@@ -1,28 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Direct call executor module
-
-@author: Dmitry Kuzmenko <dmitry.kuzmenko@dsr-company.com>
 '''
-from __future__ import absolute_import
-from salt.executors import ModuleExecutorBase
+from __future__ import absolute_import, print_function, unicode_literals
 
 
-def get(*args, **kwargs):
-    return DirectCallExecutor(*args, **kwargs)
-
-
-class DirectCallExecutor(ModuleExecutorBase):
+def execute(opts, data, func, args, kwargs):
     '''
     Directly calls the given function with arguments
     '''
-
-    def __init__(self, opts, data, func, args, kwargs):
-        '''
-        Constructor
-        '''
-        super(DirectCallExecutor, self).__init__()
-        self.func, self.args, self.kwargs = func, args, kwargs
-
-    def execute(self):
-        return self.func(*self.args, **self.kwargs)
+    return func(*args, **kwargs)

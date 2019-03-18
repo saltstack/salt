@@ -2,14 +2,14 @@
 '''
 Support for Linux LVM2
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os.path
 
 # Import salt libs
-import salt.utils
-import salt.ext.six as six
+import salt.utils.path
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
@@ -20,7 +20,7 @@ def __virtual__():
     '''
     Only load the module if lvm is installed
     '''
-    if salt.utils.which('lvm'):
+    if salt.utils.path.which('lvm'):
         return __virtualname__
     return (False, 'The linux_lvm execution module cannot be loaded: the lvm binary is not in the path.')
 
@@ -159,7 +159,7 @@ def vgdisplay(vgname=''):
     return ret
 
 
-def lvdisplay(lvname=''):
+def lvdisplay(lvname='', quiet=False):
     '''
     Return information about the logical volume(s)
 
@@ -174,7 +174,10 @@ def lvdisplay(lvname=''):
     cmd = ['lvdisplay', '-c']
     if lvname:
         cmd.append(lvname)
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if quiet:
+        cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='quiet')
+    else:
+        cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -236,10 +239,13 @@ def pvcreate(devices, override=True, **kwargs):
              'pvmetadatacopies', 'metadatacopies', 'metadataignore',
              'restorefile', 'norestorefile', 'labelsector',
              'setphysicalvolumesize')
+    no_parameter = ('force', 'norestorefile')
     for var in kwargs:
         if kwargs[var] and var in valid:
+            cmd.extend(['--{0}'.format(var), kwargs[var]])
+        elif kwargs[var] and var in no_parameter:
             cmd.append('--{0}'.format(var))
-            cmd.append(kwargs[var])
+
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out.get('retcode'):
         raise CommandExecutionError(out.get('stderr'))
@@ -354,6 +360,7 @@ def lvcreate(lvname,
              pv=None,
              thinvolume=False,
              thinpool=False,
+             force=False,
              **kwargs):
     '''
     Create a new logical volume, with option for which physical volume to be used
@@ -398,7 +405,7 @@ def lvcreate(lvname,
             elif k in valid:
                 extra_arguments.extend(['--{0}'.format(k), '{0}'.format(v)])
 
-    cmd = [salt.utils.which('lvcreate')]
+    cmd = [salt.utils.path.which('lvcreate')]
 
     if thinvolume:
         cmd.extend(['--thin', '-n', lvname])
@@ -427,6 +434,9 @@ def lvcreate(lvname,
         cmd.append(pv)
     if extra_arguments:
         cmd.extend(extra_arguments)
+
+    if force:
+        cmd.append('--yes')
 
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     lvdev = '/dev/{0}/{1}'.format(vgname, lvname)
@@ -478,7 +488,7 @@ def lvresize(size, lvpath):
         salt '*' lvm.lvresize +12M /dev/mapper/vg1-test
     '''
     ret = {}
-    cmd = ['lvresize', '-L', str(size), lvpath]
+    cmd = ['lvresize', '-L', six.text_type(size), lvpath]
     cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if cmd_ret['retcode'] != 0:
         return {}

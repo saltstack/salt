@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import tempfile
 import logging
@@ -9,7 +9,7 @@ import shutil
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.request import urlopen
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
@@ -21,7 +21,8 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import requires_network, skip_if_binaries_missing
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 import salt.modules.zcbuildout as buildout
 import salt.modules.cmdmod as cmd
 
@@ -47,7 +48,7 @@ log = logging.getLogger(__name__)
 
 
 def download_to(url, dest):
-    with salt.utils.fopen(dest, 'w') as fic:
+    with salt.utils.files.fopen(dest, 'w') as fic:
         fic.write(urlopen(url, timeout=10).read())
 
 
@@ -72,14 +73,14 @@ class Base(TestCase, LoaderModuleMockMixin):
         cls.rdir = tempfile.mkdtemp(dir=TMP)
         cls.tdir = os.path.join(cls.rdir, 'test')
         for idx, url in six.iteritems(buildout._URL_VERSIONS):
-            log.debug('Downloading bootstrap from {0}'.format(url))
+            log.debug('Downloading bootstrap from %s', url)
             dest = os.path.join(
                 cls.rdir, '{0}_bootstrap.py'.format(idx)
             )
             try:
                 download_to(url, dest)
             except URLError:
-                log.debug('Failed to download {0}'.format(url))
+                log.debug('Failed to download %s', url)
         # creating a new setuptools install
         cls.ppy_st = os.path.join(cls.rdir, 'psetuptools')
         cls.py_st = os.path.join(cls.ppy_st, 'bin', 'python')
@@ -87,7 +88,7 @@ class Base(TestCase, LoaderModuleMockMixin):
             '{0} --no-site-packages {1};'
             '{1}/bin/pip install -U setuptools; '
             '{1}/bin/easy_install -U distribute;').format(
-                salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
                 cls.ppy_st
             )
         )
@@ -120,8 +121,8 @@ class Base(TestCase, LoaderModuleMockMixin):
 
 
 @skipIf(True, 'These tests are not running reliably')
-@skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-        'The \'virtualenv\' packaged needs to be installed')
+@skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
+        "The 'virtualenv' packaged needs to be installed")
 @skip_if_binaries_missing(['tar'])
 class BuildoutTestCase(Base):
 
@@ -129,10 +130,10 @@ class BuildoutTestCase(Base):
     def test_onlyif_unless(self):
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.buildout(b_dir, onlyif='/bin/false')
-        self.assertTrue(ret['comment'] == 'onlyif execution failed')
+        self.assertTrue(ret['comment'] == 'onlyif condition is false')
         self.assertTrue(ret['status'] is True)
         ret = buildout.buildout(b_dir, unless='/bin/true')
-        self.assertTrue(ret['comment'] == 'unless execution succeeded')
+        self.assertTrue(ret['comment'] == 'unless condition is true')
         self.assertTrue(ret['status'] is True)
 
     @requires_network()
@@ -294,14 +295,14 @@ class BuildoutTestCase(Base):
         bpy = os.path.join(b_dir, 'bootstrap.py')
         buildout.upgrade_bootstrap(b_dir)
         time1 = os.stat(bpy).st_mtime
-        with salt.utils.fopen(bpy) as fic:
+        with salt.utils.files.fopen(bpy) as fic:
             data = fic.read()
         self.assertTrue('setdefaulttimeout(2)' in data)
         flag = os.path.join(b_dir, '.buildout', '2.updated_bootstrap')
         self.assertTrue(os.path.exists(flag))
         buildout.upgrade_bootstrap(b_dir, buildout_ver=1)
         time2 = os.stat(bpy).st_mtime
-        with salt.utils.fopen(bpy) as fic:
+        with salt.utils.files.fopen(bpy) as fic:
             data = fic.read()
         self.assertTrue('setdefaulttimeout(2)' in data)
         flag = os.path.join(b_dir, '.buildout', '1.updated_bootstrap')
@@ -312,7 +313,7 @@ class BuildoutTestCase(Base):
         self.assertEqual(time2, time3)
 
 
-@skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
+@skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         'The \'virtualenv\' packaged needs to be installed')
 @skipIf(True, 'These tests are not running reliably')
 class BuildoutOnlineTestCase(Base):
@@ -328,14 +329,14 @@ class BuildoutOnlineTestCase(Base):
         try:
             ret20 = buildout._Popen((
                 '{0} --no-site-packages --no-setuptools --no-pip {1}'.format(
-                    salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
                     cls.ppy_dis
                 )
             ))
         except buildout._BuildoutError:
             ret20 = buildout._Popen((
                 '{0} --no-site-packages {1}'.format(
-                    salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
                     cls.ppy_dis
                 ))
             )
@@ -356,14 +357,14 @@ class BuildoutOnlineTestCase(Base):
         try:
             ret3 = buildout._Popen((
                 '{0} --no-site-packages --no-setuptools --no-pip {1}'.format(
-                    salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
                     cls.ppy_blank
                 )
             ))
         except buildout._BuildoutError:
             ret3 = buildout._Popen((
                 '{0} --no-site-packages {1}'.format(
-                    salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
                     cls.ppy_blank
                 )
             ))
@@ -470,6 +471,7 @@ class BuildoutOnlineTestCase(Base):
         self.assertTrue('buildout -c buildout.cfg -n install a' in comment)
 
 
+# TODO: Is this test even still needed?
 @skipIf(True, 'These tests are not running reliably')
 class BuildoutAPITestCase(TestCase):
 

@@ -36,7 +36,7 @@
 
 # The root directory prepended to these options: pki_dir, cachedir,
 # sock_dir, log_file, autosign_file, autoreject_file, extension_modules,
-# key_logfile, pidfile:
+# key_logfile, pidfile, autosign_grains_dir:
 #root_dir: /
 
 # The path to the master's configuration file.
@@ -270,9 +270,39 @@
 # a value for you. Default is disabled.
 # ipc_write_buffer: 'dynamic'
 
+# These two batch settings, batch_safe_limit and batch_safe_size, are used to
+# automatically switch to a batch mode execution. If a command would have been
+# sent to more than <batch_safe_limit> minions, then run the command in
+# batches of <batch_safe_size>. If no batch_safe_size is specified, a default
+# of 8 will be used. If no batch_safe_limit is specified, then no automatic
+# batching will occur.
+#batch_safe_limit: 100
+#batch_safe_size: 8
+
+# Master stats enables stats events to be fired from the master at close
+# to the defined interval
+#master_stats: False
+#master_stats_event_iter: 60
+
 
 #####        Security settings       #####
 ##########################################
+# Enable passphrase protection of Master private key.  Although a string value
+# is acceptable; passwords should be stored in an external vaulting mechanism
+# and retrieved via sdb. See https://docs.saltstack.com/en/latest/topics/sdb/.
+# Passphrase protection is off by default but an example of an sdb profile and
+# query is as follows.
+# masterkeyring:
+#  driver: keyring
+#  service: system
+#
+# key_pass: sdb://masterkeyring/key_pass
+
+# Enable passphrase protection of the Master signing_key. This only applies if
+# master_sign_pubkey is set to True.  This is disabled by default.
+# master_sign_pubkey: True
+# signing_key_pass: sdb://masterkeyring/signing_pass
+
 # Enable "open mode", this mode still maintains encryption, but turns off
 # authentication, this is only intended for highly secure environments or for
 # the situation where your keys end up in a bad state. If you run in open mode
@@ -294,13 +324,19 @@
 
 # If the autosign_file is specified, incoming keys specified in the
 # autosign_file will be automatically accepted. This is insecure.  Regular
-# expressions as well as globing lines are supported.
+# expressions as well as globing lines are supported. The file must be readonly
+# except for the owner. Use permissive_pki_access to allow the group write access.
 #autosign_file: /etc/salt/autosign.conf
 
 # Works like autosign_file, but instead allows you to specify minion IDs for
 # which keys will automatically be rejected. Will override both membership in
 # the autosign_file and the auto_accept setting.
 #autoreject_file: /etc/salt/autoreject.conf
+
+# If the autosign_grains_dir is specified, incoming keys from minons with grain
+# values matching those defined in files in this directory will be accepted
+# automatically. This is insecure. Minions need to be configured to send the grains.
+#autosign_grains_dir: /etc/salt/autosign_grains
 
 # Enable permissive access to the salt keys. This allows you to run the
 # master or minion as root, but have a non-root group be given access to
@@ -421,11 +457,13 @@
 
 #####     Salt-SSH Configuration     #####
 ##########################################
+# Define the default salt-ssh roster module to use
+#roster: flat
 
-# Pass in an alternative location for the salt-ssh roster file
+# Pass in an alternative location for the salt-ssh `flat` roster file
 #roster_file: /etc/salt/roster
 
-# Define locations for roster files so they can be chosen when using Salt API.
+# Define locations for `flat` roster files so they can be chosen when using Salt API.
 # An administrator can place roster files into these locations. Then when
 # calling Salt API, parameter 'roster_file' should contain a relative path to
 # these locations. That is, "roster_file=/foo/roster" will be resolved as
@@ -482,12 +520,19 @@
 # targeted with the normal -N argument to salt-ssh.
 #ssh_list_nodegroups: {}
 
+# salt-ssh has the ability to update the flat roster file if a minion is not
+# found in the roster.  Set this to True to enable it.
+#ssh_update_roster: False
+
 #####    Master Module Management    #####
 ##########################################
 # Manage how master side modules are loaded.
 
 # Add any additional locations to look for master runners:
 #runner_dirs: []
+
+# Add any additional locations to look for master utils:
+#utils_dirs: []
 
 # Enable Cython for master side modules:
 #cython_enable: False
@@ -514,18 +559,35 @@
 # The renderer to use on the minions to render the state data
 #renderer: yaml_jinja
 
-# The Jinja renderer can strip extra carriage returns and whitespace
-# See http://jinja.pocoo.org/docs/api/#high-level-api
-#
-# If this is set to True the first newline after a Jinja block is removed
-# (block, not variable tag!). Defaults to False, corresponds to the Jinja
-# environment init variable "trim_blocks".
-#jinja_trim_blocks: False
-#
-# If this is set to True leading spaces and tabs are stripped from the start
-# of a line to a block. Defaults to False, corresponds to the Jinja
-# environment init variable "lstrip_blocks".
-#jinja_lstrip_blocks: False
+# Default Jinja environment options for all templates except sls templates
+#jinja_env:
+#  block_start_string: '{%'
+#  block_end_string: '%}'
+#  variable_start_string: '{{'
+#  variable_end_string: '}}'
+#  comment_start_string: '{#'
+#  comment_end_string: '#}'
+#  line_statement_prefix: 
+#  line_comment_prefix: 
+#  trim_blocks: False
+#  lstrip_blocks: False
+#  newline_sequence: '\n'
+#  keep_trailing_newline: False
+
+# Jinja environment options for sls templates
+#jinja_sls_env:
+#  block_start_string: '{%'
+#  block_end_string: '%}'
+#  variable_start_string: '{{'
+#  variable_end_string: '}}'
+#  comment_start_string: '{#'
+#  comment_end_string: '#}'
+#  line_statement_prefix: 
+#  line_comment_prefix: 
+#  trim_blocks: False
+#  lstrip_blocks: False
+#  newline_sequence: '\n'
+#  keep_trailing_newline: False
 
 # The failhard option tells the minions to stop immediately after the first
 # failure detected in the state execution, defaults to False
@@ -537,11 +599,12 @@
 # all data that has a result of True and no changes will be suppressed.
 #state_verbose: True
 
-# The state_output setting changes if the output is the full multi line
-# output for each changed state if set to 'full', but if set to 'terse'
-# the output will be shortened to a single line.  If set to 'mixed', the output
-# will be terse unless a state failed, in which case that output will be full.
-# If set to 'changes', the output will be full unless the state didn't change.
+# The state_output setting controls which results will be output full multi line
+# full, terse - each state will be full/terse
+# mixed - only states with errors will be full
+# changes - states with changes and errors will be full
+# full_id, mixed_id, changes_id and terse_id are also allowed;
+# when set, the state ID will be used as name in the output
 #state_output: full
 
 # The state_output_diff setting changes whether or not the output from
@@ -918,7 +981,7 @@
 #pillar_cache_ttl: 3600
 
 # If and only if a master has set `pillar_cache: True`, one of several storage providers
-# can be utililzed.
+# can be utilized.
 #
 # `disk`: The default storage backend. This caches rendered pillars to the master cache.
 #         Rendered pillars are serialized and deserialized as msgpack structures for speed.
@@ -1219,4 +1282,3 @@
 # use OS defaults, typically 75 seconds on Linux, see
 # /proc/sys/net/ipv4/tcp_keepalive_intvl.
 #tcp_keepalive_intvl: -1
-

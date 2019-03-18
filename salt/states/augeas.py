@@ -27,7 +27,7 @@ Augeas_ can be used to manage configuration files.
     known to resolve the issue.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import re
@@ -36,7 +36,10 @@ import logging
 import difflib
 
 # Import Salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.files
+import salt.utils.stringutils
+from salt.ext import six
 
 from salt.modules.augeas_cfg import METHOD_MAP
 
@@ -74,7 +77,7 @@ def _check_filepath(changes):
                 error = 'Command {0} is not supported (yet)'.format(cmd)
                 raise ValueError(error)
             method = METHOD_MAP[cmd]
-            parts = salt.utils.shlex_split(arg)
+            parts = salt.utils.args.shlex_split(arg)
             if method in ['set', 'setm', 'move', 'remove']:
                 filename_ = parts[0]
             else:
@@ -93,13 +96,13 @@ def _check_filepath(changes):
                     raise ValueError(error)
             filename = filename_
         except (ValueError, IndexError) as err:
-            log.error(str(err))
+            log.error(err)
             if 'error' not in locals():
                 error = 'Invalid formatted command, ' \
                                'see debug log for details: {0}' \
                                .format(change_)
             else:
-                error = str(err)
+                error = six.text_type(err)
             raise ValueError(error)
 
     filename = _workout_filename(filename)
@@ -200,7 +203,7 @@ def change(name, context=None, changes=None, lens=None,
 
         redis-conf:
           augeas.change:
-            - lens: redis
+            - lens: redis.lns
             - context: /files/etc/redis/redis.conf
             - changes:
               - set bind 0.0.0.0
@@ -224,21 +227,34 @@ def change(name, context=None, changes=None, lens=None,
 
         zabbix-service:
           augeas.change:
-            - lens: services
+            - lens: services.lns
             - context: /files/etc/services
             - changes:
               - ins service-name after service-name[last()]
-              - set service-name[last()] zabbix-agent
-              - set service-name[. = 'zabbix-agent']/#comment "Zabbix Agent service"
-              - set service-name[. = 'zabbix-agent']/port 10050
-              - set service-name[. = 'zabbix-agent']/protocol tcp
-              - rm service-name[. = 'im-obsolete']
+              - set service-name[last()] "zabbix-agent"
+              - set "service-name[. = 'zabbix-agent']/port" 10050
+              - set "service-name[. = 'zabbix-agent']/protocol" tcp
+              - set "service-name[. = 'zabbix-agent']/#comment" "Zabbix Agent service"
+              - rm "service-name[. = 'im-obsolete']"
             - unless: grep "zabbix-agent" /etc/services
 
     .. warning::
 
-        Don't forget the ``unless`` here, otherwise a new entry will be added
-        every time this state is run.
+        Don't forget the ``unless`` here, otherwise it will fail on next runs
+        because the service is already defined. Additionally you have to quote
+        lines containing ``service-name[. = 'zabbix-agent']`` otherwise
+        :mod:`augeas_cfg <salt.modules.augeas_cfg>` execute will fail because
+        it will receive more parameters than expected.
+
+    .. note::
+
+        Order is important when defining a service with Augeas, in this case
+        it's ``port``, ``protocol`` and ``#comment``. For more info about
+        the lens check `services lens documentation`_.
+
+    .. _services lens documentation:
+
+    http://augeas.net/docs/references/lenses/files/services-aug.html#Services.record
 
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
@@ -259,7 +275,7 @@ def change(name, context=None, changes=None, lens=None,
         try:
             filename = _check_filepath(changes)
         except ValueError as err:
-            ret['comment'] = 'Error: {0}'.format(str(err))
+            ret['comment'] = 'Error: {0}'.format(err)
             return ret
     else:
         filename = re.sub('^/files|/$', '', context)
@@ -273,10 +289,10 @@ def change(name, context=None, changes=None, lens=None,
         return ret
 
     old_file = []
-    if filename is not None:
-        if os.path.isfile(filename):
-            with salt.utils.fopen(filename, 'r') as file_:
-                old_file = file_.readlines()
+    if filename is not None and os.path.isfile(filename):
+        with salt.utils.files.fopen(filename, 'r') as file_:
+            old_file = [salt.utils.stringutils.to_unicode(x)
+                        for x in file_.readlines()]
 
     result = __salt__['augeas.execute'](
         context=context, lens=lens,
@@ -287,10 +303,12 @@ def change(name, context=None, changes=None, lens=None,
         ret['comment'] = 'Error: {0}'.format(result['error'])
         return ret
 
-    if old_file:
-        with salt.utils.fopen(filename, 'r') as file_:
+    if filename is not None and os.path.isfile(filename):
+        with salt.utils.files.fopen(filename, 'r') as file_:
+            new_file = [salt.utils.stringutils.to_unicode(x)
+                        for x in file_.readlines()]
             diff = ''.join(
-                difflib.unified_diff(old_file, file_.readlines(), n=0))
+                difflib.unified_diff(old_file, new_file, n=0))
 
         if diff:
             ret['comment'] = 'Changes have been saved'

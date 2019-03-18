@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
-
+'''
+ZMQ-specific functions
+'''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import tornado.ioloop
 from salt.exceptions import SaltSystemExit
+from salt._compat import ipaddress
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +51,11 @@ def install_zmq():
     older version still need one.
     :return:
     '''
-    if zmq and ZMQ_VERSION_INFO[0] < 17:
+    # The zmq module is mocked in Sphinx, so when we build the docs
+    # ZMQ_VERSION_INFO ends up being an empty tuple. Using a tuple comparison
+    # instead of checking the first element of ZMQ_VERSION_INFO will prevent an
+    # IndexError when this function is invoked during the docs build.
+    if zmq and ZMQ_VERSION_INFO < (17,):
         if tornado.version_info < (5,):
             zmq.eventloop.ioloop.install()
 
@@ -69,3 +76,12 @@ def check_ipc_path_max_len(uri):
                 uri, ipc_path_max_len
             )
         )
+
+
+def ip_bracket(addr):
+    '''
+    Convert IP address representation to ZMQ (URL) format. ZMQ expects
+    brackets around IPv6 literals, since they are used in URLs.
+    '''
+    addr = ipaddress.ip_address(addr)
+    return ('[{}]' if addr.version == 6 else '{}').format(addr)

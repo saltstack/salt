@@ -11,6 +11,7 @@ proxy modules
     :template: autosummary.rst.tmpl
 
     chronos
+    cimc
     cisconso
     dummy
     esxi
@@ -19,6 +20,7 @@ proxy modules
     marathon
     napalm
     nxos
+    panos
     philips_hue
     rest_sample
     ssh_sample

@@ -5,7 +5,7 @@ atomic way
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import tempfile
 import sys
@@ -13,7 +13,7 @@ import errno
 import time
 import random
 import shutil
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
 import salt.utils.win_dacl
@@ -122,11 +122,11 @@ class _AtomicWFile(object):
             return
         self._fh.close()
         if os.path.isfile(self._filename):
-            shutil.copymode(self._filename, self._tmp_filename)
             if salt.utils.win_dacl.HAS_WIN32:
-                owner = salt.utils.win_dacl.get_owner(self._filename)
-                salt.utils.win_dacl.set_owner(self._tmp_filename, owner)
+                salt.utils.win_dacl.copy_security(
+                    source=self._filename, target=self._tmp_filename)
             else:
+                shutil.copymode(self._filename, self._tmp_filename)
                 st = os.stat(self._filename)
                 os.chown(self._tmp_filename, st.st_uid, st.st_gid)
         atomic_rename(self._tmp_filename, self._filename)
@@ -158,7 +158,12 @@ def atomic_open(filename, mode='w'):
     '''
     if mode in ('r', 'rb', 'r+', 'rb+', 'a', 'ab'):
         raise TypeError('Read or append modes don\'t work with atomic_open')
-    ntf = tempfile.NamedTemporaryFile(mode, prefix='.___atomic_write',
-                                      dir=os.path.dirname(filename),
-                                      delete=False)
+    kwargs = {
+        'prefix': '.___atomic_write',
+        'dir': os.path.dirname(filename),
+        'delete': False,
+    }
+    if six.PY3 and 'b' not in mode:
+        kwargs['newline'] = ''
+    ntf = tempfile.NamedTemporaryFile(mode, **kwargs)
     return _AtomicWFile(ntf, ntf.name, filename)

@@ -7,7 +7,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from copy import deepcopy
 
 # Import Salt Testing Libs
@@ -619,6 +619,30 @@ class VMwareTestCase(ExtendedTestCase):
             call='function'
         )
 
+    def test_remove_snapshot_call(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when trying to call remove_snapshot
+        with anything other than --action or -a.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.remove_snapshot,
+            name=VM_NAME,
+            kwargs={'snapshot_name': 'mySnapshot'},
+            call='function'
+        )
+
+    def test_remove_snapshot_call_no_snapshot_name_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when name is not present in kwargs.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.remove_snapshot,
+            name=VM_NAME,
+            call='action'
+        )
+
     def test_remove_all_snapshots_call(self):
         '''
         Tests that a SaltCloudSystemExit is raised when trying to call remove_all_snapshots
@@ -627,6 +651,18 @@ class VMwareTestCase(ExtendedTestCase):
         self.assertRaises(
             SaltCloudSystemExit,
             vmware.remove_all_snapshots,
+            name=VM_NAME,
+            call='function'
+        )
+
+    def test_convert_to_template_call(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when trying to call convert_to_template
+        with anything other than --action or -a.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.convert_to_template,
             name=VM_NAME,
             call='function'
         )
@@ -1202,6 +1238,38 @@ class VMwareTestCase(ExtendedTestCase):
             vmware.create_datastore_cluster,
             kwargs={'name': 'cCD2GgJGPG1DUnPeFBoPeqtdmUxIWxDoVFbA14vIG0BPoUECkgbRMnnY6gaUPBvIDCcsZ5HU48ubgQu5c'},
             call='function')
+
+    def test__add_new_hard_disk_helper(self):
+        with patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None)):
+            with patch('salt.utils.vmware.get_mor_using_container_view', side_effect=[None, None]):
+                self.assertRaises(
+                    SaltCloudSystemExit,
+                    vmware._add_new_hard_disk_helper,
+                    disk_label='test',
+                    size_gb=100,
+                    unit_number=0,
+                    datastore='whatever'
+                    )
+            with patch('salt.utils.vmware.get_mor_using_container_view', side_effect=['Datastore', None]):
+                self.assertRaises(
+                    AttributeError,
+                    vmware._add_new_hard_disk_helper,
+                    disk_label='test',
+                    size_gb=100,
+                    unit_number=0,
+                    datastore='whatever'
+                    )
+                vmware.salt.utils.vmware.get_mor_using_container_view.assert_called_with(None, vim.Datastore, 'whatever')
+            with patch('salt.utils.vmware.get_mor_using_container_view', side_effect=[None, 'Cluster']):
+                self.assertRaises(
+                    AttributeError,
+                    vmware._add_new_hard_disk_helper,
+                    disk_label='test',
+                    size_gb=100,
+                    unit_number=0,
+                    datastore='whatever'
+                    )
+                vmware.salt.utils.vmware.get_mor_using_container_view.assert_called_with(None, vim.StoragePod, 'whatever')
 
 
 class CloneFromSnapshotTest(TestCase):

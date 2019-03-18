@@ -288,6 +288,8 @@ Junos Module Changes
   - zeroize - Remove all configuration information on the Routing Engines and reset all key values on a device.
   - file_copy - Copy file from proxy to the Junos device.
 
+.. _release-2016-11-0-network-automation-napalm:
+
 Network Automation: NAPALM
 ==========================
 
@@ -296,7 +298,9 @@ of Salt. It is based on a the `NAPALM <https://github.com/napalm-automation/napa
 library and provides facilities to manage the configuration and retrieve data
 from network devices running widely used operating systems such: JunOS, IOS-XR,
 eOS, IOS, NX-OS etc.
-- see `the complete list of supported devices <http://napalm.readthedocs.io/en/latest/support/index.html#supported-devices>`_.
+
+- see `the complete list of supported devices
+  <http://napalm.readthedocs.io/en/latest/support/index.html#supported-devices>`_.
 
 The connection is established via the :mod:`NAPALM proxy <salt.proxy.napalm>`.
 

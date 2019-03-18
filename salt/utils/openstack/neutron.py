@@ -5,11 +5,11 @@ Neutron class
 
 
 # Import python libs
-from __future__ import absolute_import, with_statement
+from __future__ import absolute_import, with_statement, unicode_literals, print_function
 import logging
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 HAS_NEUTRON = False
 try:
@@ -81,6 +81,13 @@ class SaltNeutron(NeutronShell):
         '''
         Set up neutron credentials
         '''
+        __utils__['versions.warn_until'](
+            'Neon',
+            (
+                'The neutron module has been deprecated and will be removed in {version}.  '
+                'Please update to using the neutronng module'
+            ),
+        )
         if not HAS_NEUTRON:
             return None
 

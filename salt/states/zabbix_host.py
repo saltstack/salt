@@ -6,7 +6,7 @@ Management of Zabbix hosts.
 
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from json import loads, dumps
 from copy import deepcopy
 from salt.ext import six
@@ -116,11 +116,11 @@ def present(host, groups, interfaces, **kwargs):
         for key, value in interfaces_dict.items():
             # Load interface values or default values
             interface_type = interface_ports[value['type'].lower()][0]
-            main = '1' if str(value.get('main', 'true')).lower() == 'true' else '0'
-            useip = '1' if str(value.get('useip', 'true')).lower() == 'true' else '0'
+            main = '1' if six.text_type(value.get('main', 'true')).lower() == 'true' else '0'
+            useip = '1' if six.text_type(value.get('useip', 'true')).lower() == 'true' else '0'
             interface_ip = value.get('ip')
             dns = value.get('dns', key)
-            port = str(value.get('port', interface_ports[value['type'].lower()][1]))
+            port = six.text_type(value.get('port', interface_ports[value['type'].lower()][1]))
 
             interfaces_list.append({'type': interface_type,
                                     'main': main,
@@ -235,12 +235,12 @@ def present(host, groups, interfaces, **kwargs):
 
             if update_proxy:
                 hostupdate = __salt__['zabbix.host_update'](hostid, proxy_hostid=proxy_hostid, **connection_args)
-                ret['changes']['proxy_hostid'] = str(proxy_hostid)
+                ret['changes']['proxy_hostid'] = six.text_type(proxy_hostid)
                 if 'error' in hostupdate:
                     error.append(hostupdate['error'])
             if update_hostgroups:
                 hostupdate = __salt__['zabbix.host_update'](hostid, groups=groups, **connection_args)
-                ret['changes']['groups'] = str(groups)
+                ret['changes']['groups'] = six.text_type(groups)
                 if 'error' in hostupdate:
                     error.append(hostupdate['error'])
             if update_interfaces:
@@ -264,7 +264,7 @@ def present(host, groups, interfaces, **kwargs):
                     if 'error' in updatedint:
                         error.append(updatedint['error'])
 
-                ret['changes']['interfaces'] = str(interfaces_formated)
+                ret['changes']['interfaces'] = six.text_type(interfaces_formated)
 
             ret['comment'] = comment_host_updated
 
@@ -283,13 +283,13 @@ def present(host, groups, interfaces, **kwargs):
             ret['changes'] = changes_host_created
         else:
             ret['result'] = False
-            ret['comment'] = comment_host_notcreated + str(host_create['error'])
+            ret['comment'] = comment_host_notcreated + six.text_type(host_create['error'])
 
     # error detected
     if error:
         ret['changes'] = {}
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
 
     return ret
 
@@ -359,7 +359,7 @@ def absent(name, **kwargs):
             ret['changes'] = changes_host_deleted
         else:
             ret['result'] = False
-            ret['comment'] = comment_host_notdeleted + str(host_delete['error'])
+            ret['comment'] = comment_host_notdeleted + six.text_type(host_delete['error'])
 
     return ret
 

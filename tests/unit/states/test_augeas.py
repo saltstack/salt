@@ -4,7 +4,7 @@
     :codeauthor: Andrew Colin Kissa <andrew@topdog.za.net>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
@@ -98,9 +98,10 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test handling of no context without full path
         '''
-        comt = 'Error: Changes should be prefixed with /files if no ' \
-                'context is provided, change: {0}'\
-                .format(self.changes[0])
+        comt = (
+            'Error: Changes should be prefixed with /files if no '
+            'context is provided, change: {0}'.format(self.changes[0])
+        )
         self.ret.update({'comment': comt, 'result': False})
 
         with patch.dict(augeas.__opts__, {'test': False}):
@@ -137,12 +138,12 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(augeas.__opts__, {'test': False}):
             mock_execute = MagicMock(return_value=dict(retval=True))
             mock_dict_ = {'augeas.execute': mock_execute,
-                        'augeas.method_map': self.mock_method_map}
+                          'augeas.method_map': self.mock_method_map}
             with patch.dict(augeas.__salt__, mock_dict_):
                 mock_filename = MagicMock(return_value='/etc/services')
                 with patch.object(augeas, '_workout_filename', mock_filename), \
                         patch('os.path.isfile', MagicMock(return_value=True)):
-                    with patch('salt.utils.fopen', MagicMock(mock_open)):
+                    with patch('salt.utils.files.fopen', MagicMock(mock_open)):
                         mock_diff = MagicMock(return_value=['+ zabbix-agent'])
                         with patch('difflib.unified_diff', mock_diff):
                             self.assertDictEqual(augeas.change(self.name,
@@ -193,8 +194,10 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
                    'set /files/etc/services/service-name test']
         filename = '/etc/hosts/service-name'
         filename_ = '/etc/services/service-name'
-        comt = 'Error: Changes should be made to one file at a time, ' \
-                'detected changes to {0} and {1}'.format(filename, filename_)
+        comt = (
+            'Error: Changes should be made to one file at a time, '
+            'detected changes to {0} and {1}'.format(filename, filename_)
+        )
         self.ret.update(dict(comment=comt,
                             result=False))
 
@@ -219,7 +222,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
             mock_dict_ = {'augeas.execute': mock_execute,
                         'augeas.method_map': self.mock_method_map}
             with patch.dict(augeas.__salt__, mock_dict_):
-                with patch('salt.utils.fopen', MagicMock(mock_open)):
+                with patch('salt.utils.files.fopen', MagicMock(mock_open)):
                     self.assertDictEqual(augeas.change(self.name,
                                         context=self.context,
                                         changes=self.changes),

@@ -47,14 +47,15 @@ Execution module for Amazon Elasticache using boto3
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
 # Import Salt libs
-import salt.utils.boto3
-import salt.utils.compat
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+import salt.utils.compat
+import salt.utils.versions
+
 
 log = logging.getLogger(__name__)
 
@@ -75,9 +76,7 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    if not HAS_BOTO3:
-        return (False, 'The boto3_elasticache module could not be loaded: boto3 libraries not found')
-    return True
+    return salt.utils.versions.check_boto_reqs()
 
 
 def __init__(opts):
@@ -132,8 +131,10 @@ def _delete_resource(name, name_param, desc, res_type, wait=0, status_param=None
                                   "int or boolean.".format(wait))
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if name_param in args:
-        log.info("'name: {0}' param being overridden by explicitly provided "
-                 "'{1}: {2}'".format(name, name_param, args[name_param]))
+        log.info(
+            "'name: %s' param being overridden by explicitly provided '%s: %s'",
+            name, name_param, args[name_param]
+        )
         name = args[name_param]
     else:
         args[name_param] = name
@@ -150,25 +151,25 @@ def _delete_resource(name, name_param, desc, res_type, wait=0, status_param=None
 
         f(**args)
         if not wait:
-            log.info('{0} {1} deletion requested.'.format(desc.title(), name))
+            log.info('%s %s deletion requested.', desc.title(), name)
             return True
-        log.info('Waiting up to {0} seconds for {1} {2} to be deleted.'.format(wait, desc, name))
+        log.info('Waiting up to %s seconds for %s %s to be deleted.', wait, desc, name)
         orig_wait = wait
         while wait > 0:
             r = s(name=name, conn=conn)
             if not r or not len(r) or r[0].get(status_param) == status_gone:
-                log.info('{0} {1} deleted.'.format(desc.title(), name))
+                log.info('%s %s deleted.', desc.title(), name)
                 return True
             sleep = wait if wait % 60 == wait else 60
-            log.info('Sleeping {0} seconds for {1} {2} to be deleted.'.format(sleep, desc,
-                                                                                  name))
+            log.info('Sleeping %s seconds for %s %s to be deleted.',
+                     sleep, desc, name)
             time.sleep(sleep)
             wait -= sleep
-        log.error('{0} {1} not deleted after {2} seconds!'.format(desc.title(), name, orig_wait))
+        log.error('%s %s not deleted after %s seconds!', desc.title(), name, orig_wait)
 
         return False
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to delete {0} {1}: {2}'.format(desc, name, e))
+        log.error('Failed to delete %s %s: %s', desc, name, e)
         return False
 
 
@@ -182,8 +183,10 @@ def _create_resource(name, name_param=None, desc=None, res_type=None, wait=0, st
                                   "int or boolean.".format(wait))
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if name_param in args:
-        log.info("'name: {0}' param being overridden by explicitly provided "
-                 "'{1}: {2}'".format(name, name_param, args[name_param]))
+        log.info(
+            "'name: %s' param being overridden by explicitly provided '%s: %s'",
+            name, name_param, args[name_param]
+        )
         name = args[name_param]
     else:
         args[name_param] = name
@@ -199,22 +202,23 @@ def _create_resource(name, name_param=None, desc=None, res_type=None, wait=0, st
     try:
         f(**args)
         if not wait:
-            log.info('{0} {1} created.'.format(desc.title(), name))
+            log.info('%s %s created.', desc.title(), name)
             return True
-        log.info('Waiting up to {0} seconds for {1} {2} to be become available.'.format(wait, desc,
-                                                                                        name))
+        log.info('Waiting up to %s seconds for %s %s to be become available.',
+                 wait, desc, name)
         orig_wait = wait
         while wait > 0:
             r = s(name=name, conn=conn)
             if r and r[0].get(status_param) == status_good:
-                log.info('{0} {1} created and available.'.format(desc.title(), name))
+                log.info('%s %s created and available.', desc.title(), name)
                 return True
             sleep = wait if wait % 60 == wait else 60
-            log.info('Sleeping {0} seconds for {1} {2} to become available.'.format(sleep, desc,
-                                                                                    name))
+            log.info('Sleeping %s seconds for %s %s to become available.',
+                     sleep, desc, name)
             time.sleep(sleep)
             wait -= sleep
-        log.error('{0} {1} not available after {2} seconds!'.format(desc.title(), name, orig_wait))
+        log.error('%s %s not available after %s seconds!',
+                  desc.title(), name, orig_wait)
         return False
     except botocore.exceptions.ClientError as e:
         msg = 'Failed to create {0} {1}: {2}'.format(desc, name, e)
@@ -232,8 +236,10 @@ def _modify_resource(name, name_param=None, desc=None, res_type=None, wait=0, st
                                   "int or boolean.".format(wait))
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if name_param in args:
-        log.info("'name: {0}' param being overridden by explicitly provided "
-                 "'{1}: {2}'".format(name, name_param, args[name_param]))
+        log.info(
+            "'name: %s' param being overridden by explicitly provided '%s: %s'",
+            name, name_param, args[name_param]
+        )
         name = args[name_param]
     else:
         args[name_param] = name
@@ -249,22 +255,23 @@ def _modify_resource(name, name_param=None, desc=None, res_type=None, wait=0, st
     try:
         f(**args)
         if not wait:
-            log.info('{0} {1} modification requested.'.format(desc.title(), name))
+            log.info('%s %s modification requested.', desc.title(), name)
             return True
-        log.info('Waiting up to {0} seconds for {1} {2} to be become available.'.format(wait, desc,
-                                                                                        name))
+        log.info('Waiting up to %s seconds for %s %s to be become available.',
+                 wait, desc, name)
         orig_wait = wait
         while wait > 0:
             r = s(name=name, conn=conn)
             if r and r[0].get(status_param) == status_good:
-                log.info('{0} {1} modified and available.'.format(desc.title(), name))
+                log.info('%s %s modified and available.', desc.title(), name)
                 return True
             sleep = wait if wait % 60 == wait else 60
-            log.info('Sleeping {0} seconds for {1} {2} to become available.'.format(sleep, desc,
-                                                                                    name))
+            log.info('Sleeping %s seconds for %s %s to become available.',
+                     sleep, desc, name)
             time.sleep(sleep)
             wait -= sleep
-        log.error('{0} {1} not available after {2} seconds!'.format(desc.title(), name, orig_wait))
+        log.error('%s %s not available after %s seconds!',
+                  desc.title(), name, orig_wait)
         return False
     except botocore.exceptions.ClientError as e:
         msg = 'Failed to modify {0} {1}: {2}'.format(desc, name, e)
@@ -535,8 +542,7 @@ def create_cache_subnet_group(name, subnets=None, region=None, key=None, keyid=N
 
     .. code-block:: bash
 
-        salt myminion boto3_elasticache.create_cache_subnet_group \
-                                              name=my-subnet-group \
+        salt myminion boto3_elasticache.create_cache_subnet_group name=my-subnet-group \
                                               CacheSubnetGroupDescription="description" \
                                               subnets='[myVPCSubnet1,myVPCSubnet2]'
     '''
@@ -546,20 +552,20 @@ def create_cache_subnet_group(name, subnets=None, region=None, key=None, keyid=N
         if not isinstance(subnets, list):
             subnets = [subnets]
         for subnet in subnets:
-            sn = __salt__['boto_vpc.describe_subnets'](subnet_names=subnet,
-                                                       region=region, key=key, keyid=keyid,
-                                                       profile=profile).get('subnets')
+            if subnet.startswith('subnet-'):
+                # Moderately safe assumption... :)  Will be caught further down if incorrect.
+                args['SubnetIds'] += [subnet]
+                continue
+            sn = __salt__['boto_vpc.describe_subnets'](subnet_names=subnet, region=region, key=key,
+                                                       keyid=keyid, profile=profile).get('subnets')
+            if not sn:
+                raise SaltInvocationError(
+                    'Could not resolve Subnet Name {0} to an ID.'.format(subnet))
             if len(sn) == 1:
                 args['SubnetIds'] += [sn[0]['id']]
             elif len(sn) > 1:
-                raise CommandExecutionError('Subnet Name {0} returned more than one '
-                                          'ID.'.format(subnet))
-            elif subnet.startswith('subnet-'):
-                # Moderately safe assumption... :)  Will be caught later if incorrect.
-                args['SubnetIds'] += [subnet]
-            else:
-                raise SaltInvocationError('Could not resolve Subnet Name {0} to an '
-                                          'ID.'.format(subnet))
+                raise CommandExecutionError(
+                    'Subnet Name {0} returned more than one ID.'.format(subnet))
     args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
     return _create_resource(name, name_param='CacheSubnetGroupName', desc='cache subnet group',
                             res_type='cache_subnet_group',
@@ -590,14 +596,14 @@ def modify_cache_subnet_group(name, subnets=None, region=None, key=None, keyid=N
             if len(sn) == 1:
                 args['SubnetIds'] += [sn[0]['id']]
             elif len(sn) > 1:
-                raise CommandExecutionError('Subnet Name {0} returned more than one '
-                                          'ID.'.format(subnet))
+                raise CommandExecutionError(
+                    'Subnet Name {0} returned more than one ID.'.format(subnet))
             elif subnet.startswith('subnet-'):
                 # Moderately safe assumption... :)  Will be caught later if incorrect.
                 args['SubnetIds'] += [subnet]
             else:
-                raise SaltInvocationError('Could not resolve Subnet Name {0} to an '
-                                          'ID.'.format(subnet))
+                raise SaltInvocationError(
+                    'Could not resolve Subnet Name {0} to an ID.'.format(subnet))
     args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
     return _modify_resource(name, name_param='CacheSubnetGroupName', desc='cache subnet group',
                             res_type='cache_subnet_group',
@@ -694,18 +700,22 @@ def authorize_cache_security_group_ingress(name, region=None, key=None, keyid=No
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if 'CacheSecurityGroupName' in args:
-        log.info("'name: {0}' param being overridden by explicitly provided "
-                 "'CacheSecurityGroupName: {1}'".format(name, args['CacheSecurityGroupName']))
+        log.info(
+            "'name: %s' param being overridden by explicitly provided "
+            "'CacheSecurityGroupName: %s'",
+            name, args['CacheSecurityGroupName']
+        )
         name = args['CacheSecurityGroupName']
     else:
         args['CacheSubnetGroupName'] = name
     args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
     try:
         conn.authorize_cache_security_group_ingress(**args)
-        log.info('Authorized {0} to cache security group {1}.'.format(args['EC2SecurityGroupName'], name))
+        log.info('Authorized %s to cache security group %s.',
+                 args['EC2SecurityGroupName'], name)
         return True
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to update security group {0}: {1}'.format(name, e))
+        log.error('Failed to update security group %s: %s', name, e)
         return False
 
 
@@ -725,18 +735,22 @@ def revoke_cache_security_group_ingress(name, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if 'CacheSecurityGroupName' in args:
-        log.info("'name: {0}' param being overridden by explicitly provided "
-                 "'CacheSecurityGroupName: {1}'".format(name, args['CacheSecurityGroupName']))
+        log.info(
+            "'name: %s' param being overridden by explicitly provided "
+            "'CacheSecurityGroupName: %s'",
+            name, args['CacheSecurityGroupName']
+        )
         name = args['CacheSecurityGroupName']
     else:
         args['CacheSubnetGroupName'] = name
     args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
     try:
         conn.revoke_cache_security_group_ingress(**args)
-        log.info('Revoked {0} from cache security group {1}.'.format(args['EC2SecurityGroupName'], name))
+        log.info('Revoked %s from cache security group %s.',
+                 args['EC2SecurityGroupName'], name)
         return True
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to update security group {0}: {1}'.format(name, e))
+        log.error('Failed to update security group %s: %s', name, e)
         return False
 
 
@@ -760,8 +774,10 @@ def list_tags_for_resource(name, region=None, key=None, keyid=None, profile=None
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if 'ResourceName' in args:
-        log.info("'name: {0}' param being overridden by explicitly provided "
-                 "'ResourceName: {1}'".format(name, args['ResourceName']))
+        log.info(
+            "'name: %s' param being overridden by explicitly provided "
+            "'ResourceName: %s'", name, args['ResourceName']
+        )
         name = args['ResourceName']
     else:
         args['ResourceName'] = name
@@ -772,7 +788,7 @@ def list_tags_for_resource(name, region=None, key=None, keyid=None, profile=None
             return r['TagList']
         return []
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to list tags for resource {0}: {1}'.format(name, e))
+        log.error('Failed to list tags for resource %s: %s', name, e)
         return []
 
 
@@ -797,18 +813,20 @@ def add_tags_to_resource(name, region=None, key=None, keyid=None, profile=None, 
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if 'ResourceName' in args:
-        log.info("'name: {0}' param being overridden by explicitly provided "
-                 "'ResourceName: {1}'".format(name, args['ResourceName']))
+        log.info(
+            "'name: %s' param being overridden by explicitly provided "
+            "'ResourceName: %s'", name, args['ResourceName']
+        )
         name = args['ResourceName']
     else:
         args['ResourceName'] = name
     args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
     try:
         conn.add_tags_to_resource(**args)
-        log.info('Added tags {0} to {1}.'.format(args['Tags'], name))
+        log.info('Added tags %s to %s.', args['Tags'], name)
         return True
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to add tags to {0}: {1}'.format(name, e))
+        log.error('Failed to add tags to %s: %s', name, e)
         return False
 
 
@@ -833,18 +851,20 @@ def remove_tags_from_resource(name, region=None, key=None, keyid=None, profile=N
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if 'ResourceName' in args:
-        log.info("'name: {0}' param being overridden by explicitly provided "
-                 "'ResourceName: {1}'".format(name, args['ResourceName']))
+        log.info(
+            "'name: %s' param being overridden by explicitly provided "
+            "'ResourceName: %s'", name, args['ResourceName']
+        )
         name = args['ResourceName']
     else:
         args['ResourceName'] = name
     args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
     try:
         conn.remove_tags_from_resource(**args)
-        log.info('Added tags {0} to {1}.'.format(args['Tags'], name))
+        log.info('Added tags %s to %s.', args['Tags'], name)
         return True
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to add tags to {0}: {1}'.format(name, e))
+        log.error('Failed to add tags to %s: %s', name, e)
         return False
 
 
@@ -861,18 +881,20 @@ def copy_snapshot(name, region=None, key=None, keyid=None, profile=None, **args)
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if 'SourceSnapshotName' in args:
-        log.info("'name: {0}' param being overridden by explicitly provided "
-                 "'SourceSnapshotName: {1}'".format(name, args['SourceSnapshotName']))
+        log.info(
+            "'name: %s' param being overridden by explicitly provided "
+            "'SourceSnapshotName: %s'", name, args['SourceSnapshotName']
+        )
         name = args['SourceSnapshotName']
     else:
         args['SourceSnapshotName'] = name
     args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
     try:
         conn.copy_snapshot(**args)
-        log.info('Snapshot {0} copied to {1}.'.format(name, args['TargetSnapshotName']))
+        log.info('Snapshot %s copied to %s.', name, args['TargetSnapshotName'])
         return True
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to copy snapshot {0}: {1}'.format(name, e))
+        log.error('Failed to copy snapshot %s: %s', name, e)
         return False
 
 

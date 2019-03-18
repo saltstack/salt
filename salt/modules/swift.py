@@ -45,7 +45,7 @@ Inspired by the S3 and Nova modules
 
     NOTE: For Rackspace cloud files setting keystone.auth_version = 1 is recommended.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging

@@ -4,7 +4,7 @@ Integration tests for Ruby Gem module
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -12,7 +12,7 @@ from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 # Import 3rd-party libs
 from tornado.httpclient import HTTPClient
@@ -36,7 +36,7 @@ def check_status():
 
 
 @destructiveTest
-@skipIf(not salt.utils.which('gem'), 'Gem is not available')
+@skipIf(not salt.utils.path.which('gem'), 'Gem is not available')
 class GemModuleTest(ModuleCase):
     '''
     Validate gem module

@@ -3,7 +3,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -16,6 +16,8 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.states.ini_manage as ini_manage
+
+# pylint: disable=no-member
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -40,7 +42,7 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {}}
 
         with patch.dict(ini_manage.__opts__, {'test': True}):
-            comt = 'No changes detected.'
+            comt = ''
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(ini_manage.options_present(name), ret)
 
@@ -61,7 +63,7 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
         changes = {'mysection': {'first': 'who is on',
                                  'second': 'what is on',
                                  'third': {'after': None, 'before': "I don't know"}}}
-        with patch.dict(ini_manage.__salt__, {'ini.get_section': MagicMock(return_value=original['mysection'])}):
+        with patch.dict(ini_manage.__salt__, {'ini.get_ini': MagicMock(return_value=original)}):
             with patch.dict(ini_manage.__salt__, {'ini.remove_option': MagicMock(return_value='third')}):
                 with patch.dict(ini_manage.__salt__, {'ini.get_option': MagicMock(return_value="I don't know")}):
                     with patch.dict(ini_manage.__salt__, {'ini.set_option': MagicMock(return_value=desired)}):
@@ -107,9 +109,10 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {}}
 
         with patch.dict(ini_manage.__opts__, {'test': True}):
-            comt = 'No changes detected.'
-            ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(ini_manage.sections_present(name), ret)
+            with patch.dict(ini_manage.__salt__, {'ini.get_ini': MagicMock(return_value=None)}):
+                comt = 'No changes detected.'
+                ret.update({'comment': comt, 'result': True})
+                self.assertDictEqual(ini_manage.sections_present(name), ret)
 
         changes = {'first': 'who is on',
                    'second': 'what is on',
@@ -134,9 +137,10 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {}}
 
         with patch.dict(ini_manage.__opts__, {'test': True}):
-            comt = 'No changes detected.'
-            ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(ini_manage.sections_absent(name), ret)
+            with patch.dict(ini_manage.__salt__, {'ini.get_ini': MagicMock(return_value=None)}):
+                comt = 'No changes detected.'
+                ret.update({'comment': comt, 'result': True})
+                self.assertDictEqual(ini_manage.sections_absent(name), ret)
 
         with patch.dict(ini_manage.__opts__, {'test': False}):
             comt = ('No anomaly detected')

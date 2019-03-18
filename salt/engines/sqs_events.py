@@ -74,12 +74,12 @@ Additionally you can define cross account sqs:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
-import json
 
 # Import salt libs
+import salt.utils.json
 import salt.utils.event
 
 # Import third party libs
@@ -89,7 +89,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext.six import string_types
+from salt.ext import six
 
 
 def __virtual__():
@@ -107,7 +107,7 @@ def _get_sqs_conn(profile, region=None, key=None, keyid=None):
     Get a boto connection to SQS.
     '''
     if profile:
-        if isinstance(profile, string_types):
+        if isinstance(profile, six.string_types):
             _profile = __opts__[profile]
         elif isinstance(profile, dict):
             _profile = profile
@@ -133,14 +133,16 @@ def _get_sqs_conn(profile, region=None, key=None, keyid=None):
 
 def _process_queue(q, q_name, fire_master, tag='salt/engine/sqs', owner_acct_id=None, message_format=None):
     if not q:
-        log.warning('failure connecting to queue: {0}, '
-                    'waiting 10 seconds.'.format(':'.join([_f for _f in (str(owner_acct_id), q_name) if _f])))
+        log.warning(
+            'failure connecting to queue: %s, waiting 10 seconds.',
+            ':'.join([_f for _f in (six.text_type(owner_acct_id), q_name) if _f])
+        )
         time.sleep(10)
     else:
         msgs = q.get_messages(wait_time_seconds=20)
         for msg in msgs:
             if message_format == "json":
-                fire_master(tag=tag, data={'message': json.loads(msg.get_body())})
+                fire_master(tag=tag, data={'message': salt.utils.json.loads(msg.get_body())})
             else:
                 fire_master(tag=tag, data={'message': msg.get_body()})
             msg.delete()

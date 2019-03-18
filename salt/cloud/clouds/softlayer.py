@@ -26,7 +26,7 @@ SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
@@ -34,6 +34,9 @@ import time
 import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # Attempt to import softlayer lib
 try:
@@ -275,7 +278,7 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(name))
+    log.info('Creating Cloud VM %s', name)
     conn = get_conn()
     kwargs = {
         'hostname': hostname,
@@ -296,8 +299,8 @@ def create(vm_):
         disks = vm_['disk_size']
 
         if isinstance(disks, int):
-            disks = [str(disks)]
-        elif isinstance(disks, str):
+            disks = [six.text_type(disks)]
+        elif isinstance(disks, six.string_types):
             disks = [size.strip() for size in disks.split(',')]
 
         count = 0
@@ -305,18 +308,18 @@ def create(vm_):
             # device number '1' is reserved for the SWAP disk
             if count == 1:
                 count += 1
-            block_device = {'device': str(count),
-                            'diskImage': {'capacity': str(disk)}}
+            block_device = {'device': six.text_type(count),
+                            'diskImage': {'capacity': six.text_type(disk)}}
             kwargs['blockDevices'].append(block_device)
             count += 1
 
             # Upper bound must be 5 as we're skipping '1' for the SWAP disk ID
             if count > 5:
-                log.warning('More that 5 disks were specified for {0} .'
+                log.warning('More that 5 disks were specified for %s .'
                             'The first 5 disks will be applied to the VM, '
                             'but the remaining disks will be ignored.\n'
                             'Please adjust your cloud configuration to only '
-                            'specify a maximum of 5 disks.'.format(name))
+                            'specify a maximum of 5 disks.', name)
                 break
 
     elif 'global_identifier' in vm_:
@@ -368,6 +371,12 @@ def create(vm_):
     if post_uri:
         kwargs['postInstallScriptUri'] = post_uri
 
+    dedicated_host_id = config.get_cloud_config_value(
+        'dedicated_host_id', vm_, __opts__, default=None
+    )
+    if dedicated_host_id:
+        kwargs['dedicatedHost'] = {'id': dedicated_host_id}
+
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
@@ -383,11 +392,9 @@ def create(vm_):
         response = conn.createObject(kwargs)
     except Exception as exc:
         log.error(
-            'Error creating {0} on SoftLayer\n\n'
+            'Error creating %s on SoftLayer\n\n'
             'The following exception was thrown when trying to '
-            'run the initial deployment: \n{1}'.format(
-                name, str(exc)
-            ),
+            'run the initial deployment: \n%s', name, exc,
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -542,7 +549,7 @@ def list_nodes(call=None):
         if 'primaryBackendIpAddress' in nodes[node]:
             ret[node]['private_ips'] = nodes[node]['primaryBackendIpAddress']
         if 'status' in nodes[node]:
-            ret[node]['state'] = str(nodes[node]['status']['name'])
+            ret[node]['state'] = six.text_type(nodes[node]['status']['name'])
     return ret
 
 

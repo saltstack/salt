@@ -6,11 +6,13 @@ State module to manage Elasticsearch.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import json
 
 # Import salt libs
+from salt.ext import six
+import salt.utils.json
+
 log = logging.getLogger(__name__)
 
 
@@ -40,9 +42,9 @@ def index_absent(name):
                     ret['comment'] = 'Failed to remove index {0} for unknown reasons'.format(name)
         else:
             ret['comment'] = 'Index {0} is already absent'.format(name)
-    except Exception as e:
+    except Exception as err:
         ret['result'] = False
-        ret['comment'] = str(e)
+        ret['comment'] = six.text_type(err)
 
     return ret
 
@@ -92,9 +94,9 @@ def index_present(name, definition=None):
                     ret['comment'] = 'Cannot create index {0}, {1}'.format(name, output)
         else:
             ret['comment'] = 'Index {0} is already present'.format(name)
-    except Exception as e:
+    except Exception as err:
         ret['result'] = False
-        ret['comment'] = str(e)
+        ret['comment'] = six.text_type(err)
 
     return ret
 
@@ -127,9 +129,9 @@ def alias_absent(name, index):
                     ret['comment'] = 'Failed to remove alias {0} for index {1} for unknown reasons'.format(name, index)
         else:
             ret['comment'] = 'Alias {0} for index {1} is already absent'.format(name, index)
-    except Exception as e:
+    except Exception as err:
         ret['result'] = False
-        ret['comment'] = str(e)
+        ret['comment'] = six.text_type(err)
 
     return ret
 
@@ -190,9 +192,9 @@ def alias_present(name, index, definition=None):
                     ret['comment'] = 'Cannot create alias {0} for index {1}, {2}'.format(name, index, output)
         else:
             ret['comment'] = 'Alias {0} for index {1} is already present'.format(name, index)
-    except Exception as e:
+    except Exception as err:
         ret['result'] = False
-        ret['comment'] = str(e)
+        ret['comment'] = six.text_type(err)
 
     return ret
 
@@ -223,28 +225,30 @@ def index_template_absent(name):
                     ret['comment'] = 'Failed to remove index template {0} for unknown reasons'.format(name)
         else:
             ret['comment'] = 'Index template {0} is already absent'.format(name)
-    except Exception as e:
+    except Exception as err:
         ret['result'] = False
-        ret['comment'] = str(e)
+        ret['comment'] = six.text_type(err)
 
     return ret
 
 
-def index_template_present(name, definition):
+def index_template_present(name, definition, check_definition=False):
     '''
-    Ensure that the named index templat eis present.
+    Ensure that the named index template is present.
 
     name
         Name of the index to add
     definition
         Required dict for creation parameters as per https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
+    check_definition
+        If the template already exists and the definition is up to date
 
     **Example:**
 
     .. code-block:: yaml
 
         mytestindex2_template:
-          elasticsearch_index_template.present:
+          elasticsearch.index_template_present:
             - definition:
                 template: logstash-*
                 order: 1
@@ -270,10 +274,31 @@ def index_template_present(name, definition):
                     ret['result'] = False
                     ret['comment'] = 'Cannot create index template {0}, {1}'.format(name, output)
         else:
-            ret['comment'] = 'Index template {0} is already present'.format(name)
-    except Exception as e:
+            if check_definition:
+                definition_to_diff = {'aliases': {}, 'mappings': {}, 'settings': {}}
+                definition_to_diff.update(definition)
+                current_template = __salt__['elasticsearch.index_template_get'](name=name)[name]
+                diff = __utils__['dictdiffer.deep_diff'](current_template, definition_to_diff)
+                if len(diff) != 0:
+                    if __opts__['test']:
+                        ret['comment'] = 'Index template {0} exist but need to be updated'.format(name)
+                        ret['changes'] = diff
+                        ret['result'] = None
+                    else:
+                        output = __salt__['elasticsearch.index_template_create'](name=name, body=definition)
+                        if output:
+                            ret['comment'] = 'Successfully updated index template {0}'.format(name)
+                            ret['changes'] = diff
+                        else:
+                            ret['result'] = False
+                            ret['comment'] = 'Cannot update index template {0}, {1}'.format(name, output)
+                else:
+                    ret['comment'] = 'Index template {0} is already present and up to date'.format(name)
+            else:
+                ret['comment'] = 'Index template {0} is already present'.format(name)
+    except Exception as err:
         ret['result'] = False
-        ret['comment'] = str(e)
+        ret['comment'] = six.text_type(err)
 
     return ret
 
@@ -304,9 +329,9 @@ def pipeline_absent(name):
                     ret['comment'] = 'Failed to remove pipeline {0} for unknown reasons'.format(name)
         else:
             ret['comment'] = 'Pipeline {0} is already absent'.format(name)
-    except Exception as e:
+    except Exception as err:
         ret['result'] = False
-        ret['comment'] = str(e)
+        ret['comment'] = six.text_type(err)
 
     return ret
 
@@ -363,9 +388,9 @@ def pipeline_present(name, definition):
                     ret['comment'] = 'Cannot create pipeline {0}, {1}'.format(name, output)
         else:
             ret['comment'] = 'Pipeline {0} is already present'.format(name)
-    except Exception as e:
+    except Exception as err:
         ret['result'] = False
-        ret['comment'] = str(e)
+        ret['comment'] = six.text_type(err)
 
     return ret
 
@@ -385,20 +410,20 @@ def search_template_absent(name):
         if template:
             if __opts__['test']:
                 ret['comment'] = 'Search template {0} will be removed'.format(name)
-                ret['changes']['old'] = json.loads(template["template"])
+                ret['changes']['old'] = salt.utils.json.loads(template["template"])
                 ret['result'] = None
             else:
                 ret['result'] = __salt__['elasticsearch.search_template_delete'](id=name)
                 if ret['result']:
                     ret['comment'] = 'Successfully removed search template {0}'.format(name)
-                    ret['changes']['old'] = json.loads(template["template"])
+                    ret['changes']['old'] = salt.utils.json.loads(template["template"])
                 else:
                     ret['comment'] = 'Failed to remove search template {0} for unknown reasons'.format(name)
         else:
             ret['comment'] = 'Search template {0} is already absent'.format(name)
-    except Exception as e:
+    except Exception as err:
         ret['result'] = False
-        ret['comment'] = str(e)
+        ret['comment'] = six.text_type(err)
 
     return ret
 
@@ -430,7 +455,7 @@ def search_template_present(name, definition):
 
         old = {}
         if template:
-            old = json.loads(template["template"])
+            old = salt.utils.json.loads(template["template"])
 
         ret['changes'] = __utils__['dictdiffer.deep_diff'](old, definition)
 
@@ -454,8 +479,8 @@ def search_template_present(name, definition):
                     ret['comment'] = 'Cannot create search template {0}, {1}'.format(name, output)
         else:
             ret['comment'] = 'Search template {0} is already present'.format(name)
-    except Exception as e:
+    except Exception as err:
         ret['result'] = False
-        ret['comment'] = str(e)
+        ret['comment'] = six.text_type(err)
 
     return ret

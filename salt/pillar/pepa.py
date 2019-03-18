@@ -263,7 +263,7 @@ For more examples and information see <https://github.com/mickep76/pepa>.
 '''
 
 # Import futures
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 __author__ = 'Michael Persson <michael.ake.persson@gmail.com>'
 __copyright__ = 'Copyright (c) 2013 Michael Persson'
@@ -271,19 +271,18 @@ __license__ = 'Apache License, Version 2.0'
 __version__ = '0.6.6'
 
 # Import python libs
-import logging
-import sys
 import glob
-import yaml
 import jinja2
+import logging
+import os
 import re
-from os.path import isfile, join
+import sys
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
-import salt.utils
-from salt.utils.yamlloader import SaltYamlSafeLoader
+import salt.utils.files
+import salt.utils.yaml
 
 # Import 3rd-party libs
 try:
@@ -398,7 +397,7 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
 
     for categ, info in [next(six.iteritems(s)) for s in sequence]:
         if categ not in inp:
-            log.warning("Category is not defined: {0}".format(categ))
+            log.warning("Category is not defined: %s", categ)
             continue
 
         alias = None
@@ -409,15 +408,15 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
 
         templdir = None
         if info and 'base_only' in info and info['base_only']:
-            templdir = join(roots['base'], resource, alias)
+            templdir = os.path.join(roots['base'], resource, alias)
         else:
-            templdir = join(roots[inp['environment']], resource, alias)
+            templdir = os.path.join(roots[inp['environment']], resource, alias)
 
         entries = []
         if isinstance(inp[categ], list):
             entries = inp[categ]
         elif not inp[categ]:
-            log.warning("Category has no value set: {0}".format(categ))
+            log.warning("Category has no value set: %s", categ)
             continue
         else:
             entries = [inp[categ]]
@@ -425,10 +424,10 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
         for entry in entries:
             results_jinja = None
             results = None
-            fn = join(templdir, re.sub(r'\W', '_', entry.lower()) + '.yaml')
-            if isfile(fn):
-                log.info("Loading template: {0}".format(fn))
-                with salt.utils.fopen(fn) as fhr:
+            fn = os.path.join(templdir, re.sub(r'\W', '_', entry.lower()) + '.yaml')
+            if os.path.isfile(fn):
+                log.info("Loading template: %s", fn)
+                with salt.utils.files.fopen(fn) as fhr:
                     template = jinja2.Template(fhr.read())
                 output['pepa_templates'].append(fn)
 
@@ -437,16 +436,13 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
                     data['grains'] = __grains__.copy()
                     data['pillar'] = pillar.copy()
                     results_jinja = template.render(data)
-                    results = yaml.load(
-                        results_jinja,
-                        Loader=SaltYamlSafeLoader
-                    )
+                    results = salt.utils.yaml.safe_load(results_jinja)
                 except jinja2.UndefinedError as err:
-                    log.error('Failed to parse JINJA template: {0}\n{1}'.format(fn, err))
-                except yaml.YAMLError as err:
-                    log.error('Failed to parse YAML in template: {0}\n{1}'.format(fn, err))
+                    log.error('Failed to parse JINJA template: %s\n%s', fn, err)
+                except salt.utils.yaml.YAMLError as err:
+                    log.error('Failed to parse YAML in template: %s\n%s', fn, err)
             else:
-                log.info("Template doesn't exist: {0}".format(fn))
+                log.info("Template doesn't exist: %s", fn)
                 continue
 
             if results is not None:
@@ -459,41 +455,41 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
                         operator = skey[1]
 
                     if key in immutable:
-                        log.warning('Key {0} is immutable, changes are not allowed'.format(key))
+                        log.warning('Key %s is immutable, changes are not allowed', key)
                     elif rkey in immutable:
-                        log.warning("Key {0} is immutable, changes are not allowed".format(rkey))
+                        log.warning("Key %s is immutable, changes are not allowed", rkey)
                     elif operator == 'merge()' or operator == 'imerge()':
                         if operator == 'merge()':
-                            log.debug("Merge key {0}: {1}".format(rkey, results[key]))
+                            log.debug("Merge key %s: %s", rkey, results[key])
                         else:
-                            log.debug("Set immutable and merge key {0}: {1}".format(rkey, results[key]))
+                            log.debug("Set immutable and merge key %s: %s", rkey, results[key])
                             immutable[rkey] = True
                         if rkey not in output:
-                            log.error('Cant\'t merge key {0} doesn\'t exist'.format(rkey))
+                            log.error('Cant\'t merge key %s doesn\'t exist', rkey)
                         elif not isinstance(results[key], type(output[rkey])):
-                            log.error('Can\'t merge different types for key {0}'.format(rkey))
+                            log.error('Can\'t merge different types for key %s', rkey)
                         elif isinstance(results[key], dict):
                             output[rkey].update(results[key])
                         elif isinstance(results[key], list):
                             output[rkey].extend(results[key])
                         else:
-                            log.error('Unsupported type need to be list or dict for key {0}'.format(rkey))
+                            log.error('Unsupported type need to be list or dict for key %s', rkey)
                     elif operator == 'unset()' or operator == 'iunset()':
                         if operator == 'unset()':
-                            log.debug("Unset key {0}".format(rkey))
+                            log.debug("Unset key %s", rkey)
                         else:
-                            log.debug("Set immutable and unset key {0}".format(rkey))
+                            log.debug("Set immutable and unset key %s", rkey)
                             immutable[rkey] = True
                         if rkey in output:
                             del output[rkey]
                     elif operator == 'immutable()':
-                        log.debug("Set immutable and substitute key {0}: {1}".format(rkey, results[key]))
+                        log.debug("Set immutable and substitute key %s: %s", rkey, results[key])
                         immutable[rkey] = True
                         output[rkey] = results[key]
                     elif operator is not None:
-                        log.error('Unsupported operator {0}, skipping key {1}'.format(operator, rkey))
+                        log.error('Unsupported operator %s, skipping key %s', operator, rkey)
                     else:
-                        log.debug("Substitute key {0}: {1}".format(key, results[key]))
+                        log.debug("Substitute key %s: %s", key, results[key])
                         output[key] = results[key]
 
     tree = key_value_to_tree(output)
@@ -522,28 +518,25 @@ def validate(output, resource):
 
     roots = __opts__['pepa_roots']
 
-    valdir = join(roots['base'], resource, 'validate')
+    valdir = os.path.join(roots['base'], resource, 'validate')
 
     all_schemas = {}
     pepa_schemas = []
     for fn in glob.glob(valdir + '/*.yaml'):
-        log.info("Loading schema: {0}".format(fn))
-        with salt.utils.fopen(fn) as fhr:
+        log.info("Loading schema: %s", fn)
+        with salt.utils.files.fopen(fn) as fhr:
             template = jinja2.Template(fhr.read())
         data = output
         data['grains'] = __grains__.copy()
         data['pillar'] = __pillar__.copy()
-        schema = yaml.load(
-            template.render(data),
-            Loader=SaltYamlSafeLoader
-        )
+        schema = salt.utils.yaml.safe_load(template.render(data))
         all_schemas.update(schema)
         pepa_schemas.append(fn)
 
     val = cerberus.Validator()
     if not val.validate(output['pepa_keys'], all_schemas):
         for ekey, error in six.iteritems(val.errors):
-            log.warning('Validation failed for key {0}: {1}'.format(ekey, error))
+            log.warning('Validation failed for key %s: %s', ekey, error)
 
     output['pepa_schema_keys'] = all_schemas
     output['pepa_schemas'] = pepa_schemas
@@ -552,18 +545,13 @@ def validate(output, resource):
 # Only used when called from a terminal
 if __name__ == '__main__':
     # Load configuration file
-    if not isfile(args.config):
-        log.critical("Configuration file doesn't exist: {0}".format(args.config))
+    if not os.path.isfile(args.config):
+        log.critical("Configuration file doesn't exist: %s", args.config)
         sys.exit(1)
 
     # Get configuration
-    with salt.utils.fopen(args.config) as fh_:
-        __opts__.update(
-            yaml.load(
-                fh_.read(),
-                Loader=SaltYamlSafeLoader
-            )
-        )
+    with salt.utils.files.fopen(args.config) as fh_:
+        __opts__.update(salt.utils.yaml.safe_load(fh_))
 
     loc = 0
     for name in [next(iter(list(e.keys()))) for e in __opts__['ext_pillar']]:
@@ -576,24 +564,14 @@ if __name__ == '__main__':
     if 'pepa_grains' in __opts__:
         __grains__ = __opts__['pepa_grains']
     if args.grains:
-        __grains__.update(
-            yaml.load(
-                args.grains,
-                Loader=SaltYamlSafeLoader
-            )
-        )
+        __grains__.update(salt.utils.yaml.safe_load(args.grains))
 
     # Get pillars
     __pillar__ = {}
     if 'pepa_pillar' in __opts__:
         __pillar__ = __opts__['pepa_pillar']
     if args.pillar:
-        __pillar__.update(
-            yaml.load(
-                args.pillar,
-                Loader=SaltYamlSafeLoader
-            )
-        )
+        __pillar__.update(salt.utils.yaml.safe_load(args.pillar))
 
     # Validate or not
     if args.validate:
@@ -644,19 +622,32 @@ if __name__ == '__main__':
     if __opts__['pepa_validate']:
         validate(result, __opts__['ext_pillar'][loc]['pepa']['resource'])
 
-    yaml.dumper.SafeDumper.ignore_aliases = lambda self, data: True
-    if not args.no_color:
-        try:
-            # pylint: disable=import-error
-            import pygments
-            import pygments.lexers
-            import pygments.formatters
-            # pylint: disable=no-member
-            print(pygments.highlight(yaml.safe_dump(result),
-                                     pygments.lexers.YamlLexer(),
-                                     pygments.formatters.TerminalFormatter()))
-            # pylint: enable=no-member, import-error
-        except ImportError:
-            print(yaml.safe_dump(result, indent=4, default_flow_style=False))
-    else:
-        print(yaml.safe_dump(result, indent=4, default_flow_style=False))
+    try:
+        orig_ignore = salt.utils.yaml.SafeOrderedDumper.ignore_aliases
+        salt.utils.yaml.SafeOrderedDumper.ignore_aliases = lambda x, y: True
+
+        def _print_result(result):
+            print(salt.utils.yaml.safe_dump(
+                result,
+                indent=4,
+                default_flow_style=False))
+
+        if not args.no_color:
+            try:
+                # pylint: disable=import-error
+                import pygments
+                import pygments.lexers
+                import pygments.formatters
+                # pylint: disable=no-member
+                print(pygments.highlight(
+                    salt.utils.yaml.safe_dump(result),
+                    pygments.lexers.YamlLexer(),
+                    pygments.formatters.TerminalFormatter()))
+                # pylint: enable=no-member, import-error
+            except ImportError:
+                _print_result(result)
+        else:
+            _print_result(result)
+    finally:
+        # Undo monkeypatching
+        salt.utils.yaml.SafeOrderedDumper.ignore_aliases = orig_ignore

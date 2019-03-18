@@ -59,14 +59,14 @@ Function Get-Settings {
 
         # Filenames for 64 bit Windows
         $64bitPrograms = @{
-            "Python2"   = "python-2.7.13.amd64.msi"
+            "Python2"   = "python-2.7.14.amd64.msi"
             "Python3"   = "python-3.5.3-amd64.exe"
         }
         $ini.Add("64bitPrograms", $64bitPrograms)
 
         # Filenames for 32 bit Windows
         $32bitPrograms = @{
-            "Python2"   = "python-2.7.13.msi"
+            "Python2"   = "python-2.7.14.msi"
             "Python3"   = "python-3.5.3.exe"
         }
         $ini.Add("32bitPrograms", $32bitPrograms)

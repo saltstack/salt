@@ -26,7 +26,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or ``/etc/salt/c
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import pprint
 import re
@@ -35,7 +35,7 @@ import datetime
 
 # Import Salt Libs
 import salt.config as config
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -43,9 +43,6 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit
 )
-
-# Import Salt-Cloud Libs
-import salt.utils.cloud
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -269,7 +266,7 @@ def boot(name=None, kwargs=None, call=None):
     boot_job_id = response['JobID']
 
     if not _wait_for_job(linode_id, boot_job_id):
-        log.error('Boot failed for Linode {0}.'.format(linode_item))
+        log.error('Boot failed for Linode %s.', linode_item)
         return False
 
     return True
@@ -350,7 +347,7 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(name))
+    log.info('Creating Cloud VM %s', name)
 
     data = {}
     kwargs = {'name': name}
@@ -397,14 +394,10 @@ def create(vm_):
                                    'plan_id': plan_id})
         except Exception as err:
             log.error(
-                'Error cloning \'{0}\' on Linode.\n\n'
+                'Error cloning \'%s\' on Linode.\n\n'
                 'The following exception was thrown by Linode when trying to '
-                'clone the specified machine:\n'
-                '{1}'.format(
-                    clonefrom_name,
-                    err
-                ),
-                exc_info_on_loglevel=logging.DEBUG
+                'clone the specified machine:\n%s',
+                clonefrom_name, err, exc_info_on_loglevel=logging.DEBUG
             )
             return False
     else:
@@ -418,25 +411,20 @@ def create(vm_):
             })
         except Exception as err:
             log.error(
-                'Error creating {0} on Linode\n\n'
+                'Error creating %s on Linode\n\n'
                 'The following exception was thrown by Linode when trying to '
-                'run the initial deployment:\n'
-                '{1}'.format(
-                    name,
-                    err
-                ),
-                exc_info_on_loglevel=logging.DEBUG
+                'run the initial deployment:\n%s',
+                name, err, exc_info_on_loglevel=logging.DEBUG
             )
             return False
 
     if 'ERRORARRAY' in result:
         for error_data in result['ERRORARRAY']:
-            log.error('Error creating {0} on Linode\n\n'
-                    'The Linode API returned the following: {1}\n'.format(
-                        name,
-                        error_data['ERRORMESSAGE']
-                        )
-                    )
+            log.error(
+                'Error creating %s on Linode\n\n'
+                'The Linode API returned the following: %s\n',
+                name, error_data['ERRORMESSAGE']
+            )
             return False
 
     __utils__['cloud.fire_event'](
@@ -453,14 +441,14 @@ def create(vm_):
 
     if not _wait_for_status(node_id, status=(_get_status_id_by_name('brand_new'))):
         log.error(
-            'Error creating {0} on LINODE\n\n'
-            'while waiting for initial ready status'.format(name),
-            exc_info_on_loglevel=logging.DEBUG
+            'Error creating %s on LINODE\n\n'
+            'while waiting for initial ready status',
+            name, exc_info_on_loglevel=logging.DEBUG
         )
 
     # Update the Linode's Label to reflect the given VM name
     update_linode(node_id, update_args={'Label': name})
-    log.debug('Set name for {0} - was linode{1}.'.format(name, node_id))
+    log.debug('Set name for %s - was linode%s.', name, node_id)
 
     # Add private IP address if requested
     private_ip_assignment = get_private_ip(vm_)
@@ -480,7 +468,7 @@ def create(vm_):
         config_id = get_config_id(kwargs={'linode_id': node_id})['config_id']
     else:
         # Create disks and get ids
-        log.debug('Creating disks for {0}'.format(name))
+        log.debug('Creating disks for %s', name)
         root_disk_id = create_disk_from_distro(vm_, node_id)['DiskID']
         swap_disk_id = create_swap_disk(vm_, node_id)['DiskID']
 
@@ -524,6 +512,7 @@ def create(vm_):
         'event',
         'waiting for ssh',
         'salt/cloud/{0}/waiting_for_ssh'.format(name),
+        sock_dir=__opts__['sock_dir'],
         args={'ip_address': vm_['ssh_host']},
         transport=__opts__['transport']
     )
@@ -533,12 +522,8 @@ def create(vm_):
 
     ret.update(data)
 
-    log.info('Created Cloud VM \'{0}\''.format(name))
-    log.debug(
-        '\'{0}\' VM creation details:\n{1}'.format(
-            name, pprint.pformat(data)
-        )
-    )
+    log.info('Created Cloud VM \'%s\'', name)
+    log.debug('\'%s\' VM creation details:\n%s', name, pprint.pformat(data))
 
     __utils__['cloud.fire_event'](
         'event',
@@ -903,7 +888,7 @@ def get_ips(linode_id=None):
     ret = {}
 
     for item in ips:
-        node_id = str(item['LINODEID'])
+        node_id = six.text_type(item['LINODEID'])
         if item['ISPUBLIC'] == 1:
             key = 'public_ips'
         else:
@@ -917,7 +902,7 @@ def get_ips(linode_id=None):
     # dictionary based on the linode ID as a key.
     if linode_id:
         _all_ips = {'public_ips': [], 'private_ips': []}
-        matching_id = ret.get(str(linode_id))
+        matching_id = ret.get(six.text_type(linode_id))
         if matching_id:
             _all_ips['private_ips'] = matching_id['private_ips']
             _all_ips['public_ips'] = matching_id['public_ips']
@@ -1234,7 +1219,7 @@ def list_nodes_min(call=None):
     for node in nodes:
         name = node['LABEL']
         this_node = {
-            'id': str(node['LINODEID']),
+            'id': six.text_type(node['LINODEID']),
             'state': _get_status_descr_by_id(int(node['STATUS']))
         }
 
@@ -1247,7 +1232,7 @@ def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields.
     '''
-    return salt.utils.cloud.list_nodes_select(
+    return __utils__['cloud.list_nodes_select'](
         list_nodes_full(), __opts__['query.selection'], call,
     )
 
@@ -1278,7 +1263,7 @@ def reboot(name, call=None):
     reboot_jid = data['JobID']
 
     if not _wait_for_job(node_id, reboot_jid):
-        log.error('Reboot failed for {0}.'.format(name))
+        log.error('Reboot failed for %s.', name)
         return False
 
     return data
@@ -1491,7 +1476,7 @@ def _list_linodes(full=False):
     ret = {}
     for node in nodes:
         this_node = {}
-        linode_id = str(node['LINODEID'])
+        linode_id = six.text_type(node['LINODEID'])
 
         this_node['id'] = linode_id
         this_node['image'] = node['DISTRIBUTIONVENDOR']
@@ -1557,7 +1542,7 @@ def _query(action=None,
     if LASTCALL >= now:
         time.sleep(ratelimit_sleep)
 
-    result = salt.utils.http.query(
+    result = __utils__['http.query'](
         url,
         method,
         params=args,
@@ -1571,11 +1556,7 @@ def _query(action=None,
         opts=__opts__,
     )
     LASTCALL = int(time.mktime(datetime.datetime.now().timetuple()))
-    log.debug(
-        'Linode Response Status Code: {0}'.format(
-            result['status']
-        )
-    )
+    log.debug('Linode Response Status Code: %s', result['status'])
 
     return result['dict']
 
@@ -1607,16 +1588,10 @@ def _wait_for_job(linode_id, job_id, timeout=300, quiet=True):
             return True
 
         time.sleep(interval)
-        if not quiet:
-            log.info('Still waiting on Job {0} for Linode {1}.'.format(
-                job_id,
-                linode_id)
-            )
-        else:
-            log.debug('Still waiting on Job {0} for Linode {1}.'.format(
-                job_id,
-                linode_id)
-            )
+        log.log(
+            logging.INFO if not quiet else logging.DEBUG,
+            'Still waiting on Job %s for Linode %s.', job_id, linode_id
+        )
     return False
 
 
@@ -1653,18 +1628,11 @@ def _wait_for_status(linode_id, status=None, timeout=300, quiet=True):
         status_desc_result = _get_status_descr_by_id(result['STATUS'])
 
         time.sleep(interval)
-        if quiet:
-            log.info('Status for Linode {0} is \'{1}\', waiting for \'{2}\'.'.format(
-                linode_id,
-                status_desc_result,
-                status_desc_waiting)
-            )
-        else:
-            log.debug('Status for Linode {0} is \'{1}\', waiting for \'{2}\'.'.format(
-                linode_id,
-                status_desc_result,
-                status_desc_waiting)
-            )
+        log.log(
+            logging.INFO if not quiet else logging.DEBUG,
+            'Status for Linode %s is \'%s\', waiting for \'%s\'.',
+            linode_id, status_desc_result, status_desc_waiting
+        )
 
     return False
 
@@ -1701,7 +1669,7 @@ def _validate_name(name):
     name
         The VM name to validate
     '''
-    name = str(name)
+    name = six.text_type(name)
     name_length = len(name)
     regex = re.compile(r'^[a-zA-Z0-9][A-Za-z0-9_-]*[a-zA-Z0-9]$')
 

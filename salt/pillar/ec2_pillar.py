@@ -2,26 +2,36 @@
 '''
 Retrieve EC2 instance data for minions for ec2_tags and ec2_tags_list
 
-The minion id must be the AWS instance-id or value in 'tag_match_key'.
-For example set 'tag_match_key' to 'Name', to have the minion-id matched against the
-tag 'Name'. The tag contents must be unique.  The value of tag_match_value can
-be 'uqdn' or 'asis'. if 'uqdn' strips any domain before comparison.
+The minion id must be the AWS instance-id or value in ``tag_match_key``.  For
+example set ``tag_match_key`` to ``Name`` to have the minion-id matched against
+the tag 'Name'. The tag contents must be unique. The value of
+``tag_match_value`` can be 'uqdn' or 'asis'. if 'uqdn', then the domain will be
+stripped before comparison.
 
-The option use_grain can be set to True.  This allows the use of an
-instance-id grain instead of the minion-id.  Since this is a potential
-security risk, the configuration can be further expanded to include
-a list of minions that are trusted to only allow the alternate id
-of the instances to specific hosts.  There is no glob matching at
-this time.
+Additionally, the ``use_grain`` option can be set to ``True``. This allows the
+use of an instance-id grain instead of the minion-id. Since this is a potential
+security risk, the configuration can be further expanded to include a list of
+minions that are trusted to only allow the alternate id of the instances to
+specific hosts. There is no glob matching at this time.
 
-The optional 'tag_list_key' indicates which keys should be added to
-'ec2_tags_list' and be split by tag_list_sep (default `;`). If a tag key is
-included in 'tag_list_key' it is removed from ec2_tags. If a tag does not
-exist it is still included as an empty list.
+.. note::
+    If you are using ``use_grain: True`` in the configuration for this external
+    pillar module, the minion must have :conf_minion:`metadata_server_grains`
+    enabled in the minion config file (see also :py:mod:`here
+    <salt.grains.metadata>`).
+
+    It is important to also note that enabling the ``use_grain`` option allows
+    the minion to manipulate the pillar data returned, as described above.
+
+The optional ``tag_list_key`` indicates which keys should be added to
+``ec2_tags_list`` and be split by ``tag_list_sep`` (by default ``;``). If a tag
+key is included in ``tag_list_key`` it is removed from ec2_tags. If a tag does
+not exist it is still included as an empty list.
 
 
-  Note: restart the salt-master for changes to take effect.
-
+..note::
+    As with any master configuration change, restart the salt-master daemon for
+    changes to take effect.
 
 .. code-block:: yaml
 
@@ -38,15 +48,14 @@ exist it is still included as an empty list.
             - trusted-minion-2
             - trusted-minion-3
 
-This is a very simple pillar that simply retrieves the instance data
-from AWS.  Currently the only portion implemented are EC2 tags, which
-returns a list of key/value pairs for all of the EC2 tags assigned to
-the instance.
-
+This is a very simple pillar configuration that simply retrieves the instance
+data from AWS. Currently the only portion implemented are EC2 tags, which
+returns a list of key/value pairs for all of the EC2 tags assigned to the
+instance.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 import logging
 import salt.ext.six as six
@@ -66,6 +75,7 @@ except ImportError:
 
 # Set up logging
 log = logging.getLogger(__name__)
+
 # DEBUG boto is far too verbose
 logging.getLogger('boto').setLevel(logging.WARNING)
 
@@ -115,8 +125,8 @@ def ext_pillar(minion_id,
         grain_instance_id = \
             __grains__.get('dynamic', {}).get('instance-identity', {}).get('document', {}).get('instance-id', None)
     if grain_instance_id and re.search(r'^i-([0-9a-z]{17}|[0-9a-z]{8})$', grain_instance_id) is None:
-        log.error('External pillar {0}, instance-id \'{1}\' is not valid for '
-                  '\'{2}\''.format(__name__, grain_instance_id, minion_id))
+        log.error('External pillar %s, instance-id \'%s\' is not valid for '
+                  '\'%s\'', __name__, grain_instance_id, minion_id)
         grain_instance_id = None  # invalid instance id found, remove it from use.
 
     # Check AWS Tag restrictions .i.e. letters, spaces, and numbers and + - = . _ : / @
@@ -126,16 +136,16 @@ def ext_pillar(minion_id,
         return {}
 
     if tag_match_key and tag_match_value not in valid_tag_match_value:
-        log.error('External pillar {0}, tag_match_value \'{1}\' is not valid must be one '
-                  'of {2}'.format(__name__, tag_match_value, ' '.join(valid_tag_match_value)))
+        log.error('External pillar %s, tag_value \'%s\' is not valid must be one '
+                  'of %s', __name__, tag_match_value, ' '.join(valid_tag_match_value))
         return {}
 
     if not tag_match_key:
-        base_msg = ('External pillar {0}, querying EC2 tags for minion id \'{1}\' '
-                    'against instance-id'.format(__name__, minion_id))
+        base_msg = ('External pillar %s, querying EC2 tags for minion id \'%s\' '
+                    'against instance-id', __name__, minion_id)
     else:
-        base_msg = ('External pillar {0}, querying EC2 tags for minion id \'{1}\' '
-                    'against instance-id or \'{2}\' against \'{3}\''.format(__name__, minion_id, tag_match_key, tag_match_value))
+        base_msg = ('External pillar %s, querying EC2 tags for minion id \'%s\' '
+                    'against instance-id or \'%s\' against \'%s\'', __name__, minion_id, tag_match_key, tag_match_value)
 
     log.debug(base_msg)
     find_filter = None
@@ -164,8 +174,8 @@ def ext_pillar(minion_id,
             return {}
         if minion_ids is not None and minion_id not in minion_ids:
             log.debug('Minion-id is not in AWS instance ID format, and minion_ids '
-                      'is set in the ec2_pillar configuration, but minion {0} is '
-                      'not in the list of allowed minions {1}'.format(minion_id, minion_ids))
+                      'is set in the ec2_pillar configuration, but minion %s is '
+                      'not in the list of allowed minions %s', minion_id, minion_ids)
             return {}
         find_id = grain_instance_id
 
@@ -201,7 +211,7 @@ def ext_pillar(minion_id,
             instance_data = conn.get_only_instances(filters=find_filter, dry_run=False)
 
     except boto.exception.EC2ResponseError as exc:
-        log.error('{0} failed with \'{1}\''.format(base_msg, exc))
+        log.error('%s failed with \'%s\'', base_msg, exc)
         return {}
 
     if not instance_data:
@@ -227,7 +237,7 @@ def ext_pillar(minion_id,
     if instance.tags:
         ec2_tags = instance.tags
         ec2_tags_list = {}
-        log.debug('External pillar {0}, for minion id \'{1}\', tags: {2}'.format(__name__, minion_id, instance.tags))
+        log.debug('External pillar %s, for minion id \'%s\', tags: %s', __name__, minion_id, instance.tags)
         if tag_list_key and isinstance(tag_list_key, list):
             for item in tag_list_key:
                 if item in ec2_tags:

@@ -42,7 +42,7 @@ create the table(s) and get and set values.
     get_query: "SELECT d FROM advanced WHERE a=:key"
     set_query: "INSERT OR REPLACE INTO advanced (a, d) VALUES (:key, :value)"
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -54,7 +54,7 @@ except ImportError:
     HAS_SQLITE3 = False
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import third party libs
 import msgpack

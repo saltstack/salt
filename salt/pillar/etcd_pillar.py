@@ -58,7 +58,7 @@ key with all minions but override its value for a specific minion::
     etcdctl set /salt-private/special_minion_id/mykey my_other_value
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -108,7 +108,7 @@ def ext_pillar(minion_id,
     try:
         pillar = salt.utils.etcd_util.tree(client, path)
     except KeyError:
-        log.error('No such key in etcd profile {0}: {1}'.format(profile, path))
+        log.error('No such key in etcd profile %s: %s', profile, path)
         pillar = {}
 
     return pillar

@@ -4,7 +4,7 @@ A runner module to collect and display the inline documentation from the
 various module types
 '''
 # Import Python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import itertools
 
 # Import salt libs
@@ -13,7 +13,7 @@ import salt.runner
 import salt.wheel
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltClientError
 
 

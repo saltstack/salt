@@ -66,6 +66,11 @@
 # Set to zero if the minion should shutdown and not retry.
 # retry_dns: 30
 
+# Set the number of times to attempt to resolve
+# the master hostname if name resolution fails. Defaults to None,
+# which will attempt the resolution indefinitely.
+# retry_dns_count: 3
+
 # Set the port used by the master reply and authentication server.
 #master_port: 4506
 
@@ -640,9 +645,12 @@
 # all data that has a result of True and no changes will be suppressed.
 #state_verbose: True
 
-# The state_output setting changes if the output is the full multi line
-# output for each changed state if set to 'full', but if set to 'terse'
-# the output will be shortened to a single line.
+# The state_output setting controls which results will be output full multi line
+# full, terse - each state will be full/terse
+# mixed - only states with errors will be full
+# changes - states with changes and errors will be full
+# full_id, mixed_id, changes_id and terse_id are also allowed;
+# when set, the state ID will be used as name in the output
 #state_output: full
 
 # The state_output_diff setting changes whether or not the output from
@@ -667,6 +675,12 @@
 #    keyfile: <path_to_keyfile>
 #    certfile: <path_to_certfile>
 #    ssl_version: PROTOCOL_TLSv1_2
+
+# Grains to be sent to the master on authentication to check if the minion's key
+# will be accepted automatically. Needs to be configured on the master.
+#autosign_grains:
+#  - uuid
+#  - server_id
 
 
 ######        Reactor Settings        #####
@@ -693,6 +707,12 @@
 # when processing large pillars. See https://github.com/saltstack/salt/issues/38758
 # for a full explanation.
 #multiprocessing: True
+
+# Limit the maximum amount of processes or threads created by salt-minion.
+# This is useful to avoid resource exhaustion in case the minion receives more
+# publications than it is able to handle, as it limits the number of spawned
+# processes or threads. -1 is the default and disables the limit.
+#process_count_max: -1
 
 
 #####         Logging settings       #####

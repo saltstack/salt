@@ -8,9 +8,11 @@ import textwrap
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.paths import FILES
+from tests.support.unit import skipIf
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.platform
+import salt.utils.files
 
 
 STATE_DIR = os.path.join(FILES, 'file', 'base')
@@ -25,6 +27,7 @@ class EnabledTest(ModuleCase):
            "export SALTY_VARIABLE='saltines' && echo $SALTY_VARIABLE ; "
            "echo duh &> /dev/null")
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_shell_default_enabled(self):
         '''
         ensure that python_shell defaults to True for cmd.run
@@ -33,6 +36,7 @@ class EnabledTest(ModuleCase):
         ret = self.run_function('cmd.run', [self.cmd])
         self.assertEqual(ret.strip(), enabled_ret)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_shell_disabled(self):
         '''
         test shell disabled output for cmd.run
@@ -42,6 +46,7 @@ class EnabledTest(ModuleCase):
         ret = self.run_function('cmd.run', [self.cmd], python_shell=False)
         self.assertEqual(ret, disabled_ret)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_template_shell(self):
         '''
         Test cmd.shell works correctly when using a template.
@@ -58,7 +63,7 @@ class EnabledTest(ModuleCase):
         ret_key = 'test_|-shell_enabled_|-{0}_|-configurable_test_state'.format(enabled_ret)
 
         try:
-            with salt.utils.fopen(state_file, 'w') as fp_:
+            with salt.utils.files.fopen(state_file, 'w') as fp_:
                 fp_.write(textwrap.dedent('''\
                 {{% set shell_enabled = salt['cmd.shell']("{0}").strip() %}}
 
@@ -72,6 +77,7 @@ class EnabledTest(ModuleCase):
         finally:
             os.remove(state_file)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_template_default_disabled(self):
         '''
         test shell disabled output for templates (python_shell=False is the default
@@ -87,7 +93,7 @@ class EnabledTest(ModuleCase):
         ret_key = 'test_|-shell_enabled_|-{0}_|-configurable_test_state'.format(disabled_ret)
 
         try:
-            with salt.utils.fopen(state_file, 'w') as fp_:
+            with salt.utils.files.fopen(state_file, 'w') as fp_:
                 fp_.write(textwrap.dedent('''\
                 {{% set shell_disabled = salt['cmd.run']("{0}") %}}
 

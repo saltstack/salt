@@ -8,7 +8,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import os
 import glob
@@ -22,9 +22,7 @@ except ImportError:
     HAS_PWD = False
 
 # Import Salt Testing libs
-from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
     requires_system_grains,
@@ -32,9 +30,15 @@ from tests.support.helpers import (
     skip_if_not_root,
     with_tempdir
 )
+from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
+
 # Import salt libs
-from tests.support.case import ModuleCase
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.versions
 import salt.utils.win_dacl
 import salt.utils.win_functions
 import salt.utils.win_runas
@@ -42,7 +46,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def can_runas():
@@ -50,7 +54,7 @@ def can_runas():
     Detect if we are running in a limited shell (winrm) and are un-able to use
     the runas utility method.
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         try:
             salt.utils.win_runas.runas(
                 'cmd.exe /c echo 1', 'noexistuser', 'n0existp4ss',
@@ -79,7 +83,7 @@ class VirtualEnv(object):
             shutil.rmtree(self.venv_dir, ignore_errors=True)
 
 
-@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+@skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skip_if_not_root
@@ -145,7 +149,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 shutil.rmtree(venv_dir, ignore_errors=True)
 
     @skipIf(six.PY3, 'Issue is specific to carbon module, which is PY2-only')
-    @skipIf(salt.utils.is_windows(), "Carbon does not install in Windows")
+    @skipIf(salt.utils.platform.is_windows(), "Carbon does not install in Windows")
     @requires_system_grains
     def test_pip_installed_weird_install(self, grains=None):
         # First, check to see if this is running on CentOS 5 or MacOS.
@@ -212,7 +216,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         pep8_bin = os.path.join(venv_dir, 'bin', 'pep8')
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             pep8_bin = os.path.join(venv_dir, 'Scripts', 'pep8.exe')
 
         try:
@@ -237,7 +241,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             # Let's remove the pip binary
             pip_bin = os.path.join(venv_dir, 'bin', 'pip')
             site_dir = self.run_function('virtualenv.get_distribution_path', [venv_dir, 'pip'])
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 pip_bin = os.path.join(venv_dir, 'Scripts', 'pip.exe')
                 site_dir = os.path.join(venv_dir, 'lib', 'site-packages')
             if not os.path.isfile(pip_bin):
@@ -282,7 +286,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             )
         except (AssertionError, CommandExecutionError):
             pip_version = self.run_function('pip.version', [venv_dir])
-            if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='7.0.0'):
+            if salt.utils.versions.compare(ver1=pip_version, oper='>=', ver2='7.0.0'):
                 self.skipTest('the --mirrors arg has been deprecated and removed in pip==7.0.0')
         finally:
             if os.path.isdir(venv_dir):
@@ -300,7 +304,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
         # The virtual environment needs to be in a location that is accessible
         # by both the user running the test and the runas user
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             salt.utils.win_dacl.set_permissions(temp_dir, username, 'full_control')
         else:
             uid = self.run_function('file.user_to_uid', [username])
@@ -328,12 +332,13 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             for path in glob.glob(globmatch):
                 if HAS_PWD:
                     self.assertEqual(uid, os.stat(path).st_uid)
-                elif salt.utils.is_windows():
+                elif salt.utils.platform.is_windows():
                     self.assertEqual(
                         salt.utils.win_dacl.get_owner(path), username)
 
     @destructiveTest
     @skip_if_not_root
+    @skipIf(salt.utils.platform.is_darwin(), 'Test is flaky on macosx')
     @skipIf(not CAN_RUNAS, 'Runas support required')
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
@@ -344,7 +349,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
         # The virtual environment needs to be in a location that is accessible
         # by both the user running the test and the runas user
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             salt.utils.win_dacl.set_permissions(temp_dir, username, 'full_control')
         else:
             uid = self.run_function('file.user_to_uid', [username])
@@ -360,9 +365,10 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
         # pip install using a requirements file
         req_filename = os.path.join(
-            RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt')
-        with salt.utils.fopen(req_filename, 'wb') as reqf:
-            reqf.write(b'pep8')
+            RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt'
+        )
+        with salt.utils.files.fopen(req_filename, 'wb') as reqf:
+            reqf.write(b'pep8\n')
 
         ret = self.run_state(
             'pip.installed', name='', user=username, bin_env=venv_dir,
@@ -378,7 +384,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             for path in glob.glob(globmatch):
                 if HAS_PWD:
                     self.assertEqual(uid, os.stat(path).st_uid)
-                elif salt.utils.is_windows():
+                elif salt.utils.platform.is_windows():
                     self.assertEqual(
                         salt.utils.win_dacl.get_owner(path), username)
 
@@ -451,7 +457,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         requirements_file = os.path.join(
             RUNTIME_VARS.TMP_PRODENV_STATE_TREE, 'prod-env-requirements.txt'
         )
-        with salt.utils.fopen(requirements_file, 'wb') as reqf:
+        with salt.utils.files.fopen(requirements_file, 'wb') as reqf:
             reqf.write(b'pep8\n')
 
         try:
@@ -508,7 +514,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             )
 
         false_cmd = '/bin/false'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             false_cmd = 'exit 1 >nul'
         try:
             ret = self.run_state(
@@ -521,7 +527,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 shutil.rmtree(venv_dir, ignore_errors=True)
 
     @skipIf(sys.version_info[:2] >= (3, 6), 'Old version of virtualenv too old for python3.6')
-    @skipIf(salt.utils.is_windows(), "Carbon does not install in Windows")
+    @skipIf(salt.utils.platform.is_windows(), "Carbon does not install in Windows")
     def test_46127_pip_env_vars(self):
         '''
         Test that checks if env_vars passed to pip.installed are also passed
