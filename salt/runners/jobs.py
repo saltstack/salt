@@ -19,6 +19,7 @@ import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
 from salt.exceptions import SaltClientError
+import salt.utils.master
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -31,6 +32,20 @@ except ImportError:
     DATEUTIL_SUPPORT = False
 
 log = logging.getLogger(__name__)
+
+
+def master():
+    '''
+    Return the actively executing runners for the master
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run jobs.master
+    '''
+    jobs = salt.utils.master.get_running_jobs(__opts__)
+    return jobs
 
 
 def active(display_progress=False):
