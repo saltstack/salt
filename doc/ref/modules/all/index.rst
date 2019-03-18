@@ -211,6 +211,7 @@ execution modules
     keyboard
     keystone
     keystoneng
+    keystore
     kmod
     kubernetes
     launchctl_service
