@@ -7,15 +7,25 @@ from __future__ import absolute_import, print_function, unicode_literals
 import pytest
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
+from tests.support.helpers import flaky
 
 
 @pytest.mark.windows_whitelisted
-class ManageTest(ShellCase):
-    """
-    Test the manage runner
-    """
+@skipIf(True, "SLOWTEST skip")
+class JobsTest(ShellCase):
+    '''
+    Test the jobs runner
+    '''
 
-    @skipIf(True, "SLOWTEST skip")
+    def test_master(self):
+        '''
+        jobs.master
+        '''
+        ret = self.run_run_plus('jobs.master')
+        self.assertEqual(ret['return'], [])
+        self.assertEqual(ret['out'], [])
+
+    @flaky
     def test_active(self):
         """
         jobs.active
