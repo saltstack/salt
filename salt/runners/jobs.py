@@ -15,6 +15,7 @@ import salt.payload
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.master
 import salt.minion
 import salt.returners
 
@@ -29,6 +30,20 @@ except ImportError:
     DATEUTIL_SUPPORT = False
 
 log = logging.getLogger(__name__)
+
+
+def master():
+    '''
+    Return the actively executing runners for the master
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run jobs.master
+    '''
+    jobs = salt.utils.master.get_running_jobs(__opts__)
+    return jobs
 
 
 def active(display_progress=False):

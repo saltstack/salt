@@ -12,9 +12,9 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class ManageTest(ShellCase):
+class CacheTest(ShellCase):
     '''
-    Test the manage runner
+    Test the cache runner
     '''
     def test_cache(self):
         '''

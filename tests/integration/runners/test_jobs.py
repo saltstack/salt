@@ -8,12 +8,23 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
+from tests.support.helpers import flaky
 
 
-class ManageTest(ShellCase):
+class JobsTest(ShellCase):
     '''
-    Test the manage runner
+    Test the jobs runner
     '''
+
+    def test_master(self):
+        '''
+        jobs.master
+        '''
+        ret = self.run_run_plus('jobs.master')
+        self.assertEqual(ret['return'], [])
+        self.assertEqual(ret['out'], [])
+
+    @flaky
     def test_active(self):
         '''
         jobs.active
