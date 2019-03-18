@@ -127,7 +127,7 @@ def _install_requirements(session, *extra_requirements):
 
 
 def _run_with_coverage(session, *test_cmd):
-    session.install('coverage')
+    session.install('coverage==4.5.3')
     session.run('coverage', 'erase')
     python_path_env_var = os.environ.get('PYTHONPATH') or None
     if python_path_env_var is None:
@@ -149,7 +149,7 @@ def _run_with_coverage(session, *test_cmd):
 @nox.parametrize('coverage', [False, True])
 def runtests(session, coverage):
     # Install requirements
-    _install_requirements(session, 'unittest-xml-reporting')
+    _install_requirements(session, 'unittest-xml-reporting<2.4.0')
     # Create required artifacts directories
     _create_ci_directories()
 
