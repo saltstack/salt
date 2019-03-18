@@ -310,7 +310,7 @@ Enhancements to Engines
           host: localhost
           port: 24224
 
-  .. code-block:: dtd
+  .. code-block:: none
 
     <source>
       @type forward

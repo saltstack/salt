@@ -21,7 +21,7 @@ All arguments are optional
 
     Example fluentd configuration
 
-    .. code-block:: apache
+    .. code-block:: none
 
         <source>
             @type forward
