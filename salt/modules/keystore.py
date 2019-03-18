@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'keystore'
 
 # Import third party libs
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 try:
     import jks
@@ -148,7 +148,10 @@ def add(name, keystore, passphrase, certificate, private_key=None):
         for alias, loaded_cert in keystore_object.entries.items():
             certs_list.append(loaded_cert)
 
-    cert_string = __salt__['x509.get_pem_entry'](certificate)
+    try:
+        cert_string = __salt__['x509.get_pem_entry'](certificate)
+    except SaltInvocationError:
+        raise SaltInvocationError('Invalid certificate file or string: {0}'.format(certificate))
 
     if private_key:
         # Accept PEM input format, but convert to DES for loading into new keystore

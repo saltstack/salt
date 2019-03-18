@@ -40,7 +40,7 @@ def managed(name, passphrase, entries, force_remove=False):
 
         .. code-block:: yaml
 
-            -entries:
+            - entries:
               - alias: hostname2
                 certificate: /path/to/cert.crt
                 private_key: /path/to/key.key
