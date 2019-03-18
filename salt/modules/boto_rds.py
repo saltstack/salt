@@ -113,6 +113,7 @@ boto3_param_map = {
     'preferred_maintenance_window': ('PreferredMaintenanceWindow', str),
     'promotion_tier': ('PromotionTier', int),
     'publicly_accessible': ('PubliclyAccessible', bool),
+    'source_name': ('SourceDBInstanceIdentifier', str),
     'storage_encrypted': ('StorageEncrypted', bool),
     'storage_type': ('StorageType', str),
     'tags': ('Tags', list),
@@ -334,8 +335,6 @@ def create_read_replica(name, source_name, db_instance_class=None,
 
         salt myminion boto_rds.create_read_replica replicaname source_name
     '''
-    if not backup_retention_period:
-        raise SaltInvocationError('backup_retention_period is required')
     res = __salt__['boto_rds.exists'](source_name, tags, region, key, keyid, profile)
     if not res.get('exists'):
         return {'exists': bool(res), 'message':
@@ -348,29 +347,19 @@ def create_read_replica(name, source_name, db_instance_class=None,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
         kwargs = {}
-        for key in ('OptionGroupName', 'MonitoringRoleArn'):
-            if locals()[key] is not None:
-                kwargs[key] = str(locals()[key])  # future lint: disable=blacklisted-function
+        boto_params = set(boto3_param_map.keys())
+        keys = set(locals().keys())
+        tags = _tag_doc(tags)
 
-        for key in ('MonitoringInterval', 'Iops', 'Port'):
-            if locals()[key] is not None:
-                kwargs[key] = int(locals()[key])
+        for param_key in keys.intersection(boto_params):
+            val = locals()[param_key]
+            if val is not None:
+                mapped = boto3_param_map[param_key]
+                kwargs[mapped[0]] = mapped[1](val)
 
-        for key in ('CopyTagsToSnapshot', 'AutoMinorVersionUpgrade'):
-            if locals()[key] is not None:
-                kwargs[key] = bool(locals()[key])
-
-        taglist = _tag_doc(tags)
-
-        rds_replica = conn.create_db_instance_read_replica(DBInstanceIdentifier=name,
-                                                           SourceDBInstanceIdentifier=source_name,
-                                                           DBInstanceClass=db_instance_class,
-                                                           AvailabilityZone=availability_zone,
-                                                           PubliclyAccessible=publicly_accessible,
-                                                           Tags=taglist, DBSubnetGroupName=db_subnet_group_name,
-                                                           StorageType=storage_type,
-                                                           **kwargs)
+        rds_replica = conn.create_db_instance_read_replica(**kwargs)
 
         return {'exists': bool(rds_replica)}
     except ClientError as e:
