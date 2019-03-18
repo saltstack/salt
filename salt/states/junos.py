@@ -16,10 +16,22 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+from functools import wraps
 
 log = logging.getLogger()
 
 
+def resultdecorator(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        ret = function(*args, **kwargs)
+        ret['result'] = ret['changes']['out']
+        return ret
+
+    return wrapper
+
+
+@resultdecorator
 def rpc(name, dest=None, format='xml', args=None, **kwargs):
     '''
     Executes the given rpc. The returned data can be stored in a file
@@ -71,6 +83,7 @@ def rpc(name, dest=None, format='xml', args=None, **kwargs):
     return ret
 
 
+@resultdecorator
 def set_hostname(name, **kwargs):
     '''
     Changes the hostname of the device.
@@ -104,6 +117,7 @@ def set_hostname(name, **kwargs):
     return ret
 
 
+@resultdecorator
 def commit(name, **kwargs):
     '''
     Commits the changes loaded into the candidate configuration.
@@ -147,6 +161,7 @@ def commit(name, **kwargs):
     return ret
 
 
+@resultdecorator
 def rollback(name, id, **kwargs):
     '''
     Rollbacks the committed changes.
@@ -181,6 +196,7 @@ def rollback(name, id, **kwargs):
     return ret
 
 
+@resultdecorator
 def diff(name, d_id):
     '''
     Gets the difference between the candidate and the current configuration.
@@ -202,6 +218,7 @@ def diff(name, d_id):
     return ret
 
 
+@resultdecorator
 def cli(name, **kwargs):
     '''
     Executes the CLI commands and reuturns the text output.
@@ -234,6 +251,7 @@ def cli(name, **kwargs):
     return ret
 
 
+@resultdecorator
 def shutdown(name, **kwargs):
     '''
     Shuts down the device.
@@ -260,6 +278,7 @@ def shutdown(name, **kwargs):
     return ret
 
 
+@resultdecorator
 def install_config(name, **kwargs):
     '''
     Loads and commits the configuration provided.
@@ -331,6 +350,7 @@ def install_config(name, **kwargs):
     return ret
 
 
+@resultdecorator
 def zeroize(name):
     '''
     Resets the device to default factory settings.
@@ -347,6 +367,7 @@ def zeroize(name):
     return ret
 
 
+@resultdecorator
 def install_os(name, **kwargs):
     '''
     Installs the given image on the device. After the installation is complete
@@ -382,6 +403,7 @@ def install_os(name, **kwargs):
     return ret
 
 
+@resultdecorator
 def file_copy(name, dest=None, **kwargs):
     '''
     Copies the file from the local device to the junos device.
@@ -405,6 +427,7 @@ def file_copy(name, dest=None, **kwargs):
     return ret
 
 
+@resultdecorator
 def lock(name):
     '''
     Attempts an exclusive lock on the candidate configuration. This
@@ -426,6 +449,7 @@ def lock(name):
     return ret
 
 
+@resultdecorator
 def unlock(name):
     '''
     Unlocks the candidate configuration.
@@ -441,6 +465,7 @@ def unlock(name):
     return ret
 
 
+@resultdecorator
 def load(name, **kwargs):
     '''
     Loads the configuration provided onto the junos device.
@@ -502,6 +527,7 @@ def load(name, **kwargs):
     return ret
 
 
+@resultdecorator
 def commit_check(name):
     '''
 
@@ -515,4 +541,49 @@ def commit_check(name):
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     ret['changes'] = __salt__['junos.commit_check']()
+    return ret
+
+
+@resultdecorator
+def get_table(name, table, table_file, **kwargs):
+    '''
+    Retrieve data from a Junos device using Tables/Views
+
+    name (required)
+        task definition
+
+    table (required)
+        Name of PyEZ Table
+
+    file
+        YAML file that has the table specified in table parameter
+
+    path:
+        Path of location of the YAML file.
+        defaults to op directory in jnpr.junos.op
+
+    target:
+        if command need to run on FPC, can specify fpc target
+
+    key:
+        To overwrite key provided in YAML
+
+    key_items:
+        To select only given key items
+
+    filters:
+        To select only filter for the dictionary from columns
+
+    template_args:
+        key/value pair which should render Jinja template command
+
+    .. code-block:: yaml
+
+        get route details:
+          junos.get_table:
+            - table: RouteTable
+            - file: routes.yml
+    '''
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret['changes'] = __salt__['junos.get_table'](table, table_file, **kwargs)
     return ret
