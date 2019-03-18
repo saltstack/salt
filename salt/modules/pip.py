@@ -961,7 +961,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             cmd, cmd_kwargs
         )
 
-        return __salt__['cmd.run_all'](cmd, python_shell=False, **cmd_kwargs)
+        res = __salt__['cmd.run_all'](cmd, python_shell=False, **cmd_kwargs)
+        return res
     finally:
         _clear_context(bin_env)
         for tempdir in [cr for cr in cleanup_requirements if cr is not None]:
@@ -1100,6 +1101,7 @@ def freeze(bin_env=None,
            use_vt=False,
            env_vars=None,
            user_install=False,
+           verbose=False,
            **kwargs):
     '''
     Return a list of installed packages either globally or in the specified
@@ -1171,6 +1173,7 @@ def list_(prefix=None,
           cwd=None,
           env_vars=None,
           user_install=False,
+          verbose=False,
           **kwargs):
     '''
     Filter list of installed apps from ``freeze`` and check to see if
@@ -1205,6 +1208,7 @@ def list_(prefix=None,
                        cwd=cwd,
                        env_vars=env_vars,
                        user_install=user_install,
+                       verbose=verbose,
                        **kwargs):
         if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory
@@ -1241,6 +1245,32 @@ def list_(prefix=None,
             packages[name] = version_
 
     return packages
+
+
+def list_json(prefix=None,
+              bin_env=None,
+              user=None,
+              cwd=None,
+              env_vars=None,
+              user_install=False,
+              verbose=False,
+              **kwargs):
+    '''
+    New in Sodium
+    TODO flesh this out. - Some docs, some checking and usage of arguments, etc.
+    ...
+    '''
+    cmd = _get_pip_bin(bin_env)
+    cmd.append('list')
+    cmd.extend(['--verbose', '--format', 'json'])
+    if user_install:
+        cmd.append('--user')
+    result = __salt__['cmd.run_all'](cmd)
+
+    if result['retcode']:
+        raise CommandExecutionError(result['stderr'], info=result)
+
+    return salt.utils.json.loads(result['stdout'], strict=False)
 
 
 def version(bin_env=None):
