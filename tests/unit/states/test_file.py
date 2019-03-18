@@ -1167,7 +1167,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             with patch.object(os.path, 'isabs', mock_t):
                 with patch.dict(filestate.__salt__,
-                                {'file.search': MagicMock(side_effect=[True, True, True, False, False])}):
+                                {'file.search': MagicMock(side_effect=[False, True, False, False])}):
                     comt = ('Pattern already commented')
                     ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(filestate.comment(name, regex), ret)
@@ -1177,7 +1177,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(filestate.comment(name, regex), ret)
 
                 with patch.dict(filestate.__salt__,
-                                {'file.search': MagicMock(side_effect=[False, True, False, True, True]),
+                                {'file.search': MagicMock(side_effect=[True, True, True]),
                                  'file.comment': mock_t,
                                  'file.comment_line': mock_t}):
                     with patch.dict(filestate.__opts__, {'test': True}):
@@ -1215,7 +1215,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             mock_t = MagicMock(return_value=True)
             mock_f = MagicMock(return_value=False)
-            mock = MagicMock(side_effect=[True, False, False, False, True, False,
+            mock = MagicMock(side_effect=[False, True,
+                                          False, False,
+                                          True,
                                           True, True])
             with patch.object(os.path, 'isabs', mock_f):
                 comt = ('Specified file {0} is not an absolute path'.format(name))
@@ -1928,18 +1930,23 @@ class TestFindKeepFiles(TestCase):
 
     @skipIf(not salt.utils.platform.is_windows(), 'Only run on Windows')
     def test__find_keep_files_win32(self):
+        '''
+        Test _find_keep_files. The `_find_keep_files` function is only called by
+        _clean_dir, so case doesn't matter. Should return all lower case.
+        '''
         keep = filestate._find_keep_files(
             'c:\\test\\parent_folder',
-            ['C:\\test\\parent_folder\\meh-2.txt']
+            ['C:\\test\\parent_folder\\meh-1.txt',
+             'C:\\Test\\Parent_folder\\Meh-2.txt']
         )
         expected = [
             'c:\\',
             'c:\\test',
             'c:\\test\\parent_folder',
-            'c:\\test\\parent_folder\\meh-2.txt'
-        ]
+            'c:\\test\\parent_folder\\meh-1.txt',
+            'c:\\test\\parent_folder\\meh-2.txt']
         actual = sorted(list(keep))
-        assert actual == expected, actual
+        self.assertListEqual(actual, expected)
 
 
 class TestFileTidied(TestCase):
