@@ -16,15 +16,16 @@ to see the data loaded from a jinja map, or imported using ``import_yaml`` or
 Saltcheck Updates
 =================
 
-Available since 2018.3, the saltcheck module has been enhanced to:
- * Support saltenv environments
- * Associate tests with states by naming convention
- * Adds empty and notempty assertions
- * Adds skip keyword
- * Adds print_result keyword
- * Adds assertion_section keyword
- * Use saltcheck.state_apply to run state.apply for test setup or teardown
- * Changes output to display test time
+Available since 2018.3, the :py:func:`saltcheck module <salt.modules.saltcheck>`
+has been enhanced to:
+* Support saltenv environments
+* Associate tests with states by naming convention
+* Adds empty and notempty assertions
+* Adds skip keyword
+* Adds print_result keyword
+* Adds assertion_section keyword
+* Use saltcheck.state_apply to run state.apply for test setup or teardown
+* Changes output to display test time
 
 Saltcheck provides unittest like functionality requiring only the knowledge of
 salt module execution and yaml. Saltcheck uses salt modules to return data, then
@@ -173,11 +174,62 @@ New output:
           Skipped:
               0
 
-XML Module
-==========
 
-A new state and execution module for editing XML files is now included. Currently it allows for
-editing values from an xpath query, or editing XML IDs.
+Keystore State and Module
+=========================
+
+A new :py:func:`state <salt.states.keystore>` and
+:py:func:`execution module <salt.modules.keystore>` for manaing Java
+Keystore files is now included. It allows for adding/removing/listing
+as well as managing keystore files.
+
+.. code-block:: bash
+
+  # salt-call keystore.list /path/to/keystore.jks changeit
+  local:
+    |_
+      ----------
+      alias:
+          hostname1
+      expired:
+          True
+      sha1:
+          CB:5E:DE:50:57:99:51:87:8E:2E:67:13:C5:3B:E9:38:EB:23:7E:40
+      type:
+          TrustedCertEntry
+      valid_start:
+          August 22 2012
+      valid_until:
+          August 21 2017
+
+.. code-block:: yaml
+
+  define_keystore:
+    keystore.managed:
+      - name: /tmp/statestore.jks
+      - passphrase: changeit
+      - force_remove: True
+      - entries:
+        - alias: hostname1
+          certificate: /tmp/testcert.crt
+        - alias: remotehost
+          certificate: /tmp/512.cert
+          private_key: /tmp/512.key
+        - alias: stringhost
+          certificate: |
+            -----BEGIN CERTIFICATE-----
+            MIICEjCCAX
+            Hn+GmxZA
+            -----END CERTIFICATE-----
+
+
+XML State and Module
+====================
+
+A new :py:func:`state <salt.states.xml>` and
+:py:func:`execution module <salt.modules.xml>` for editing XML files is
+now included. Currently it allows for editing values from an xpath query, or
+editing XML IDs.
 
 .. code-block:: bash
 
@@ -222,7 +274,7 @@ The slot syntax has been updated to support parsing dictionary responses and to 
       - changes: False
       - comment: __slot__:salt:test.arg(shell="/bin/bash").kwargs.shell ~ /appended
 
-.. code-block:: text
+.. code-block:: none
 
   local:
     ----------
@@ -434,6 +486,12 @@ Module Deprecations
       removed. Please use the :py:func:`test.random_hash <salt.modules.test.random_hash>`
       function instead.
 
+- The hipchat module has been removed due to the service being retired.
+  :py:func:`Google Chat <salt.modules.google_chat>`,
+  :py:func:`MS Teams <salt.modules.msteams>`, or
+  :py:func:`Slack <salt.modules.slack_notify>` may be suitable replacements.
+
+
 State Deprecations
 ------------------
 
@@ -449,3 +507,20 @@ State Deprecations
     - Support for the ``force`` kwarg has been removed from the
       :py:func:`win_servermanager.installed <salt.states.win_servermanager.installed>`
       function. Please use ``recurse`` instead.
+
+- The hipchat state has been removed due to the service being retired.
+  :py:func:`MS Teams <salt.states.msteams>` or
+  :py:func:`Slack <salt.states.slack>` may be suitable replacements.
+
+Engine Removal
+--------------
+
+- The hipchat engine has been removed due to the service being retired. For users migrating
+  to Slack, the :py:func:`slack <salt.engines.slack>` engine may be a suitable replacement.
+
+Returner Removal
+----------------
+
+- The hipchat returner has been removed due to the service being retired. For users migrating
+  to Slack, the :py:func:`slack <salt.returners.slack_returner>` returner may be a suitable
+  replacement.
