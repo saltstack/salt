@@ -1704,26 +1704,33 @@ def vpc_peering_connection_present(name, requester_vpc_id=None, requester_vpc_na
            'comment': '',
            'changes': {}
            }
+    res = request_vpc_peering_connection(name=name, requester_vpc_id=requester_vpc_id,
+                                         requester_vpc_name=requester_vpc_name,
+                                         peer_vpc_id=peer_vpc_id, peer_vpc_name=peer_vpc_name,
+                                         conn_name=conn_name, peer_owner_id=peer_owner_id,
+                                         region=region, key=key, keyid=keyid, profile=profile)
+    if not res['result']:
+        return res
+    if __salt__['boto_vpc.peering_connection_pending_from_vpc'](conn_name=conn_name,
+                                                                vpc_id=requester_vpc_id,
+                                                                vpc_name=requester_vpc_name,
+                                                                region=region, key=key,
+                                                                keyid=keyid, profile=profile):
+        res = accept_vpc_peering_connection(name=name, conn_name=conn_name,
+                                            region=region, key=key, keyid=keyid,
+                                            profile=profile)
+        if not res['result']:
+            return res
+        ret['changes'] = res['changes']
     if __salt__['boto_vpc.is_peering_connection_pending'](conn_name=conn_name, region=region,
                                                           key=key, keyid=keyid, profile=profile):
-        if __salt__['boto_vpc.peering_connection_pending_from_vpc'](conn_name=conn_name,
-                                                                    vpc_id=requester_vpc_id,
-                                                                    vpc_name=requester_vpc_name,
-                                                                    region=region, key=key,
-                                                                    keyid=keyid, profile=profile):
-            ret['comment'] = ('VPC peering {0} already requested - pending '
-                              'acceptance by {1}'.format(conn_name, peer_owner_id
-                                                         or peer_vpc_name or peer_vpc_id))
-            log.info(ret['comment'])
-            return ret
-        return accept_vpc_peering_connection(name=name, conn_name=conn_name,
-                                             region=region, key=key, keyid=keyid,
-                                             profile=profile)
-    return request_vpc_peering_connection(name=name, requester_vpc_id=requester_vpc_id,
-                                          requester_vpc_name=requester_vpc_name,
-                                          peer_vpc_id=peer_vpc_id, peer_vpc_name=peer_vpc_name,
-                                          conn_name=conn_name, peer_owner_id=peer_owner_id,
-                                          region=region, key=key, keyid=keyid, profile=profile)
+        ret['comment'] = ('VPC peering {0} already requested - pending '
+                          'acceptance by {1}'.format(conn_name, peer_owner_id
+                                                     or peer_vpc_name or peer_vpc_id))
+        log.info(ret['comment'])
+        return ret
+    ret['comment'] = 'VPC peering connection present.'
+    return ret
 
 
 def vpc_peering_connection_absent(name, conn_id=None, conn_name=None,
