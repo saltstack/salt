@@ -1247,6 +1247,8 @@ def _windows_platform_data():
         elif 'OpenStack' in systeminfo.Model:
             grains['virtual'] = 'OpenStack'
 
+        grains['domain'] = grains['windowsdomain']
+
     return grains
 
 
