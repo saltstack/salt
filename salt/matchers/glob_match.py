@@ -12,7 +12,11 @@ def match(tgt):
     '''
     Returns true if the passed glob matches the id
     '''
+    if 'minion_id' in __opts__:
+        minion_id = __opts__['minion_id']
+    else:
+        minion_id = __opts__['id']
     if not isinstance(tgt, six.string_types):
         return False
 
-    return fnmatch.fnmatch(__opts__['id'], tgt)
+    return fnmatch.fnmatch(minion_id, tgt)

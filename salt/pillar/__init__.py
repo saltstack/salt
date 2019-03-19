@@ -386,6 +386,7 @@ class Pillar(object):
         else:
             self.functions = functions
 
+        self.opts['minion_id'] = minion_id
         self.matchers = salt.loader.matchers(self.opts)
         self.rend = salt.loader.render(self.opts, self.functions)
         ext_pillar_opts = copy.deepcopy(self.opts)
