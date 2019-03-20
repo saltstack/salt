@@ -1575,7 +1575,7 @@ class Minion(MinionBase):
         if multiprocessing_enabled and not salt.utils.platform.is_windows():
             # we only want to join() immediately if we are daemonizing a process
             process.join()
-        else:
+        elif salt.utils.platform.is_windows():
             self.win_proc.append(process)
 
     def ctx(self):
