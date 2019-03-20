@@ -117,7 +117,6 @@ state modules
     group
     heat
     hg
-    hipchat
     host
     http
     icinga2
@@ -152,6 +151,7 @@ state modules
     keystone_role_grant
     keystone_service
     keystone_user
+    keystore
     kmod
     kubernetes
     layman

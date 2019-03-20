@@ -121,14 +121,15 @@ so either of the following versions for "Extract server package" is correct:
         - onchanges:
           - file: /usr/local/share/myapp.tar.xz
 
-Glog matching in requisites
+Glob matching in requisites
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 0.9.8
 
 Glob matching is supported in requisites. This is mostly useful for file
-changes. In the example below, a change in ``/etc/apache2/httpd.conf`` or
-``/etc/apache2/sites-available/default.conf`` will reload/restart the service:
+changes. In the example below, a change in ``/etc/apache2/apache2.conf`` or
+``/etc/apache2/sites-available/000-default.conf`` will reload/restart the
+service:
 
 .. code-block:: yaml
 
