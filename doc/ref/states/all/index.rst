@@ -24,6 +24,9 @@ state modules
     at
     augeas
     aws_sqs
+    azurearm_compute
+    azurearm_network
+    azurearm_resource
     beacon
     bigip
     blockdev
@@ -114,7 +117,6 @@ state modules
     group
     heat
     hg
-    hipchat
     host
     http
     icinga2
@@ -149,6 +151,7 @@ state modules
     keystone_role_grant
     keystone_service
     keystone_user
+    keystore
     kmod
     kubernetes
     layman
