@@ -132,6 +132,7 @@ MOCK_MODULES = [
     'tornado.ioloop',
     'tornado.iostream',
     'tornado.netutil',
+    'tornado.queues',
     'tornado.simple_httpclient',
     'tornado.stack_context',
     'tornado.web',
