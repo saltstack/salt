@@ -155,8 +155,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         for key in keys:
             self.assertIn(key, grains)
 
-        self.assertEqual(grains['domain'], grains['windowsdomain'])
-
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_gnu_slash_linux_in_os_name(self):
         '''
