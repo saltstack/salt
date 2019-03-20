@@ -56,7 +56,11 @@ def _install_requirements(session, *extra_requirements):
     # Install requirements
     distro_requirements = None
 
-    if not IS_WINDOWS:
+    if IS_WINDOWS:
+        _distro_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', 'windows.txt')
+        if os.path.exists(_distro_requirements):
+            distro_requirements = _distro_requirements
+    else:
         # The distro package doesn't output anything for Windows
         session.install('distro')
         output = session.run('distro', '-j', silent=True)
@@ -119,11 +123,6 @@ def _install_requirements(session, *extra_requirements):
 
     if extra_requirements:
         session.install(*extra_requirements)
-
-    if IS_WINDOWS:
-        # Windows hacks :/
-        nox_windows_setup = os.path.join(REPO_ROOT, 'tests', 'support', 'nox-windows-setup.py')
-        session.run('python', nox_windows_setup)
 
 
 def _run_with_coverage(session, *test_cmd):
