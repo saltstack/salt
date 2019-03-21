@@ -509,6 +509,7 @@ execution modules
     xapi_virt
     xbpspkg
     xfs
+    xml
     xmpp
     yumpkg
     zabbix
