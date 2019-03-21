@@ -317,6 +317,7 @@ from salt.state import get_accumulator_dir as _get_accumulator_dir
 if salt.utils.platform.is_windows():
     import salt.utils.win_dacl
     import salt.utils.win_functions
+    import salt.utils.winapi
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -1251,7 +1252,8 @@ def _shortcut_check(name,
         ), changes
 
     if os.path.isfile(name):
-        shell = win32com.client.Dispatch("WScript.Shell")
+        with salt.utils.winapi.Com():
+            shell = win32com.client.Dispatch("WScript.Shell")
         scut = shell.CreateShortcut(name)
         state_checks = [scut.TargetPath.lower() == target.lower()]
         if arguments is not None:
@@ -2002,7 +2004,9 @@ def managed(name,
         (use ~ in YAML), the file will be created as an empty file and
         the content will not be managed. This is also the case when a file
         already exists and the source is undefined; the contents of the file
-        will not be changed or managed.
+        will not be changed or managed. If source is left blank or None, please
+        also set replaced to False to make your intention explicit.
+
 
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required.
@@ -5722,19 +5726,23 @@ def append(name,
 
     if makedirs is True:
         dirname = os.path.dirname(name)
-        if not __salt__['file.directory_exists'](dirname):
-            try:
-                _makedirs(name=name)
-            except CommandExecutionError as exc:
-                return _error(ret, 'Drive {0} is not mapped'.format(exc.message))
+        if __opts__['test']:
+            ret['comment'] = 'Directory {0} is set to be updated'.format(dirname)
+            ret['result'] = None
+        else:
+            if not __salt__['file.directory_exists'](dirname):
+                try:
+                    _makedirs(name=name)
+                except CommandExecutionError as exc:
+                    return _error(ret, 'Drive {0} is not mapped'.format(exc.message))
 
-            check_res, check_msg, check_changes = _check_directory_win(dirname) \
-                if salt.utils.platform.is_windows() \
-                else _check_directory(dirname)
+                check_res, check_msg, check_changes = _check_directory_win(dirname) \
+                    if salt.utils.platform.is_windows() \
+                    else _check_directory(dirname)
 
-            if not check_res:
-                ret['changes'] = check_changes
-                return _error(ret, check_msg)
+                if not check_res:
+                    ret['changes'] = check_changes
+                    return _error(ret, check_msg)
 
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -7955,7 +7963,8 @@ def shortcut(
 
     # This will just load the shortcut if it already exists
     # It won't create the file until calling scut.Save()
-    shell = win32com.client.Dispatch("WScript.Shell")
+    with salt.utils.winapi.Com():
+        shell = win32com.client.Dispatch("WScript.Shell")
     scut = shell.CreateShortcut(name)
 
     # The shortcut target will automatically be created with its
