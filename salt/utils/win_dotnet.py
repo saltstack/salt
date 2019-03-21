@@ -26,6 +26,15 @@ def __virtual__():
 
 
 def versions():
+    '''
+    Figure out what versions of .NET are installed on the system
+
+    Returns:
+        dict: A dictionary containing two keys:
+            - versions: A list of versions installed on the system
+            - details: A dictionary with details about the versions installed on
+              the system
+    '''
     hive = 'HKLM'
     key = 'SOFTWARE\\Microsoft\\NET Framework Setup\\NDP'
     ver_keys = win_reg.list_keys(hive=hive, key=key)
@@ -98,16 +107,42 @@ def versions():
 
 
 def versions_list():
+    '''
+    Get a sorted list of .NET versions installed on the system
+
+    Returns:
+        list: A sorted list of versions installed on the system
+    '''
     return sorted(versions()['versions'])
 
 
 def versions_details():
+    '''
+    Get the details for all versions of .NET installed on a system
+
+    Returns:
+        dict: A dictionary of details for each version on the system. Contains
+        the following keys:
+            - version: The version installed
+            - service_pack: The service pack for the version installed
+            - full: The full version name including the service pack
+    '''
     return versions()['details']
 
 
 def version_atleast(version):
-    # Check that the system contains a version of .NET that is atleast the
-    # passed version
+    '''
+    Check that the system contains a vwersion of .NET that is at least the
+    passed version.
+
+    Args:
+
+        version (str): The version to check for
+
+    Returns:
+        bool: ``True`` if the system contains a version of .NET that is at least
+        the passed version, otherwise ``False``
+    '''
     for dotnet_version in versions_list():
         if LooseVersion(dotnet_version) >= LooseVersion(str(version)):
             return True
