@@ -59,6 +59,12 @@ def _install_requirements(session, *extra_requirements):
     if IS_WINDOWS:
         _distro_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', 'windows.txt')
         if os.path.exists(_distro_requirements):
+            with open(_distro_requirements) as rfh:
+                if 'ioflo' in rfh.read():
+                    # Because we still install ioflo, which requires setuptools-git, which fails with a
+                    # weird SSL certificate issue(weird because the requirements file requirements install
+                    # fine), let's previously have setuptools-git installed
+                    session.install('setuptools-git')
             distro_requirements = _distro_requirements
     else:
         # The distro package doesn't output anything for Windows
