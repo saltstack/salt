@@ -288,7 +288,22 @@ def bootstrap(force=False, source=None):
 
 
 def unbootstrap():
+    '''
+    Uninstall chocolatey from the system by doing the following:
 
+    - Delete the Chocolatey Directory
+    - Remove Chocolatey from the path
+    - Remove Chocolatey environment variables
+
+    Returns:
+        list: A list of items that were removed, otherwise an empty list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt * chocolatey.unbootstrap
+    '''
     removed = []
 
     # Delete the Chocolatey directory
