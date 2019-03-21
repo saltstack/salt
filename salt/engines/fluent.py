@@ -47,7 +47,7 @@ import salt.utils.event
 try:
     from fluent import sender, event
 except ImportError:
-    handler = None
+    sender = None
 
 log = logging.getLogger(__name__)
 
@@ -63,9 +63,16 @@ def __virtual__():
 def start(host='localhost', port=24224, app='engine'):
     '''
     Listen to salt events and forward them to fluent
-    '''
 
-    sender.setup('saltstack', host=host, port=port)
+    args:
+        host (str): Host running fluentd agent. Default is localhost
+        port (int): Port of fluentd agent. Default is 24224
+        app (str): Text sent as fluentd tag. Default is "engine". This text is appended
+                   to "saltstack." to form a fluentd tag, ex: "saltstack.engine"
+    '''
+    SENDER_NAME = 'saltstack'
+
+    sender.setup(SENDER_NAME, host=host, port=port)
 
     if __opts__.get('id').endswith('_master'):
         event_bus = salt.utils.event.get_master_event(
