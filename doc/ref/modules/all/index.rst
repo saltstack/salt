@@ -211,6 +211,7 @@ execution modules
     keyboard
     keystone
     keystoneng
+    keystore
     kmod
     kubernetes
     launchctl_service
@@ -510,6 +511,7 @@ execution modules
     xapi_virt
     xbpspkg
     xfs
+    xml
     xmpp
     yumpkg
     zabbix
