@@ -8,7 +8,7 @@ Python 2.7 Deprecation
 ======================
 
 In light of Python 2.7 reaching its End of Life (EOL) on Jan 1st 2020,
-Python 2 will be deprecated from SaltStack no earlier then the Sodium
+Python 2 will be deprecated from SaltStack no earlier than the Sodium
 release, that is either the Sodium release or a later release.
 This decision is pending further community discussion.
 
@@ -280,7 +280,7 @@ a BGP policy referenced in many places, you can do so by running:
 
 .. code-block:: bash
 
-    salt '*' net.replae_pattern OLD-POLICY-CONFIG new-policy-config
+    salt '*' net.replace_pattern OLD-POLICY-CONFIG new-policy-config
 
 Similarly, you can also replace entire configuration blocks using the
 :mod:`net.blockreplace <salt.modules.napalm_network.blockreplace>` function.
@@ -495,6 +495,18 @@ module.
     proxy:
       proxytype: docker
       name: keen_proskuriakova
+
+
+Terraform Salt-SSH Roster
+=========================
+
+You can now dynamically generate a Salt-SSH roster from the terraform resources
+defined with `terraform-provider-salt <https://github.com/dmacvicar/terraform-provider-salt>`_.
+
+This allows you to combine both terraform and Salt-SSH to provision and
+configure your hosts. See the :py:mod:`terraform roster<salt.roster.terraform>` for
+an example on how to setup and use.
+
 
 Grains Dictionary Passed into Custom Grains
 ===========================================
