@@ -155,7 +155,7 @@ def compare_lists(old=None, new=None):
 
 def decode(data, encoding=None, errors='strict', keep=False,
            normalize=False, preserve_dict_class=False, preserve_tuples=False,
-           to_str=False):
+           to_str=False, encode_bytes=False):
     '''
     Generic function which will decode whichever type is passed, if necessary.
     Optionally use to_str=True to ensure strings are str types and not unicode
@@ -182,25 +182,30 @@ def decode(data, encoding=None, errors='strict', keep=False,
     two strings above, in which "й" is represented as two code points (i.e. one
     for the base character, and one for the breve mark). Normalizing allows for
     a more reliable test case.
+    :param encode_bytes: base64 encode bytes if it cannot be decoded
     '''
     _decode_func = salt.utils.stringutils.to_unicode \
         if not to_str \
         else salt.utils.stringutils.to_str
     if isinstance(data, Mapping):
         return decode_dict(data, encoding, errors, keep, normalize,
-                           preserve_dict_class, preserve_tuples, to_str)
+                           preserve_dict_class, preserve_tuples, to_str,
+                           encode_bytes=encode_bytes)
     elif isinstance(data, list):
         return decode_list(data, encoding, errors, keep, normalize,
-                           preserve_dict_class, preserve_tuples, to_str)
+                           preserve_dict_class, preserve_tuples, to_str,
+                           encode_bytes=encode_bytes)
     elif isinstance(data, tuple):
         return decode_tuple(data, encoding, errors, keep, normalize,
-                            preserve_dict_class, to_str) \
+                            preserve_dict_class, to_str, encode_bytes=encode_bytes) \
             if preserve_tuples \
             else decode_list(data, encoding, errors, keep, normalize,
-                             preserve_dict_class, preserve_tuples, to_str)
+                             preserve_dict_class, preserve_tuples, to_str,
+                             encode_bytes=encode_bytes)
     else:
         try:
-            data = _decode_func(data, encoding, errors, normalize)
+            data = _decode_func(data, encoding, errors, normalize,
+                                encode_bytes=encode_bytes)
         except TypeError:
             # to_unicode raises a TypeError when input is not a
             # string/bytestring/bytearray. This is expected and simply means we
@@ -214,10 +219,11 @@ def decode(data, encoding=None, errors='strict', keep=False,
 
 def decode_dict(data, encoding=None, errors='strict', keep=False,
                 normalize=False, preserve_dict_class=False,
-                preserve_tuples=False, to_str=False):
+                preserve_tuples=False, to_str=False, encode_bytes=False):
     '''
     Decode all string values to Unicode. Optionally use to_str=True to ensure
     strings are str types and not unicode on Python 2.
+    :param encode_bytes: base64 encode bytes if it cannot be decoded
     '''
     _decode_func = salt.utils.stringutils.to_unicode \
         if not to_str \
@@ -227,13 +233,15 @@ def decode_dict(data, encoding=None, errors='strict', keep=False,
     for key, value in six.iteritems(data):
         if isinstance(key, tuple):
             key = decode_tuple(key, encoding, errors, keep, normalize,
-                               preserve_dict_class, to_str) \
+                               preserve_dict_class, to_str, encode_bytes=encode_bytes) \
                 if preserve_tuples \
                 else decode_list(key, encoding, errors, keep, normalize,
-                                 preserve_dict_class, preserve_tuples, to_str)
+                                 preserve_dict_class, preserve_tuples, to_str,
+                                 encode_bytes=encode_bytes)
         else:
             try:
-                key = _decode_func(key, encoding, errors, normalize)
+                key = _decode_func(key, encoding, errors, normalize,
+                                   encode_bytes=encode_bytes)
             except TypeError:
                 # to_unicode raises a TypeError when input is not a
                 # string/bytestring/bytearray. This is expected and simply
@@ -245,19 +253,23 @@ def decode_dict(data, encoding=None, errors='strict', keep=False,
 
         if isinstance(value, list):
             value = decode_list(value, encoding, errors, keep, normalize,
-                                preserve_dict_class, preserve_tuples, to_str)
+                                preserve_dict_class, preserve_tuples, to_str,
+                                encode_bytes=encode_bytes)
         elif isinstance(value, tuple):
             value = decode_tuple(value, encoding, errors, keep, normalize,
-                                 preserve_dict_class, to_str) \
+                                 preserve_dict_class, to_str, encode_bytes=encode_bytes) \
                 if preserve_tuples \
                 else decode_list(value, encoding, errors, keep, normalize,
-                                 preserve_dict_class, preserve_tuples, to_str)
+                                 preserve_dict_class, preserve_tuples, to_str,
+                                 encode_bytes=encode_bytes)
         elif isinstance(value, Mapping):
             value = decode_dict(value, encoding, errors, keep, normalize,
-                                preserve_dict_class, preserve_tuples, to_str)
+                                preserve_dict_class, preserve_tuples, to_str,
+                                encode_bytes=encode_bytes)
         else:
             try:
-                value = _decode_func(value, encoding, errors, normalize)
+                value = _decode_func(value, encoding, errors, normalize,
+                                     encode_bytes=encode_bytes)
             except TypeError:
                 # to_unicode raises a TypeError when input is not a
                 # string/bytestring/bytearray. This is expected and simply
@@ -273,10 +285,11 @@ def decode_dict(data, encoding=None, errors='strict', keep=False,
 
 def decode_list(data, encoding=None, errors='strict', keep=False,
                 normalize=False, preserve_dict_class=False,
-                preserve_tuples=False, to_str=False):
+                preserve_tuples=False, to_str=False, encode_bytes=False):
     '''
     Decode all string values to Unicode. Optionally use to_str=True to ensure
     strings are str types and not unicode on Python 2.
+    :param encode_bytes: base64 encode bytes if it cannot be decoded
     '''
     _decode_func = salt.utils.stringutils.to_unicode \
         if not to_str \
@@ -285,19 +298,23 @@ def decode_list(data, encoding=None, errors='strict', keep=False,
     for item in data:
         if isinstance(item, list):
             item = decode_list(item, encoding, errors, keep, normalize,
-                               preserve_dict_class, preserve_tuples, to_str)
+                               preserve_dict_class, preserve_tuples, to_str,
+                               encode_bytes=encode_bytes)
         elif isinstance(item, tuple):
             item = decode_tuple(item, encoding, errors, keep, normalize,
-                                preserve_dict_class, to_str) \
+                                preserve_dict_class, to_str, encode_bytes=encode_bytes) \
                 if preserve_tuples \
                 else decode_list(item, encoding, errors, keep, normalize,
-                                 preserve_dict_class, preserve_tuples, to_str)
+                                 preserve_dict_class, preserve_tuples, to_str,
+                                 encode_bytes=encode_bytes)
         elif isinstance(item, Mapping):
             item = decode_dict(item, encoding, errors, keep, normalize,
-                               preserve_dict_class, preserve_tuples, to_str)
+                               preserve_dict_class, preserve_tuples, to_str,
+                               encode_bytes=encode_bytes)
         else:
             try:
-                item = _decode_func(item, encoding, errors, normalize)
+                item = _decode_func(item, encoding, errors, normalize,
+                                    encode_bytes=encode_bytes)
             except TypeError:
                 # to_unicode raises a TypeError when input is not a
                 # string/bytestring/bytearray. This is expected and simply
@@ -312,14 +329,16 @@ def decode_list(data, encoding=None, errors='strict', keep=False,
 
 
 def decode_tuple(data, encoding=None, errors='strict', keep=False,
-                 normalize=False, preserve_dict_class=False, to_str=False):
+                 normalize=False, preserve_dict_class=False, to_str=False,
+                 encode_bytes=False):
     '''
     Decode all string values to Unicode. Optionally use to_str=True to ensure
     strings are str types and not unicode on Python 2.
+    :param encode_bytes: base64 encode bytes if it cannot be decoded
     '''
     return tuple(
         decode_list(data, encoding, errors, keep, normalize,
-                    preserve_dict_class, True, to_str)
+                    preserve_dict_class, True, to_str, encode_bytes=encode_bytes)
     )
 
 

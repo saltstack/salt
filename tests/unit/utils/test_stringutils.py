@@ -255,6 +255,107 @@ class StringutilsTestCase(TestCase):
         result = salt.utils.stringutils.to_unicode(LATIN1_BYTES, encoding=('utf-8', 'latin1'))
         assert result == LATIN1_UNICODE
 
+    def test_to_unicode_bytes_unicode_error(self):
+        '''
+        test when to_unicode can not properly decode
+        a byte and returns a base64 type when
+        encode_byte is set.
+        '''
+        ret = salt.utils.stringutils.to_unicode(b'\x80', encoding=('utf-8'),
+                                                  encode_bytes=True)
+        assert ret == 'gA=='
+
+    def test_to_unicode_bytes_unicode_error_failure(self):
+        '''
+        test when to_unicode can not properly decode
+        a byte and returns a base64 type when
+        encode_byte is not set.
+        '''
+        try:
+            ret = salt.utils.stringutils.to_unicode(b'\x80', encoding=('utf-8'))
+            assert False
+        except UnicodeDecodeError:
+            assert True
+
+
+    def test_to_unicode_bytearray_unicode_error(self):
+        '''
+        test when to_unicode can not properly decode
+        a binaryarray type and returns a base64 type when
+        encode_byte is set.
+        '''
+        ret = salt.utils.stringutils.to_unicode(bytearray(b'\x80'),
+                                                encoding=('utf-8'),
+                                                encode_bytes=True)
+        assert ret == 'gA=='
+
+    def test_to_unicode_bytearray_unicode_error_failure(self):
+        '''
+        test when to_unicode can not properly decode
+        a binaryarray type and returns a base64 type when
+        encode_byte is not set.
+        '''
+        try:
+            ret = salt.utils.stringutils.to_unicode(bytearray(b'\x80'), encoding=('utf-8'))
+            assert False
+        except UnicodeDecodeError:
+            assert True
+
+    def test_to_str_bytes_str_error(self):
+        '''
+        test when to_str can not properly decode
+        a byte and returns a base64 type when
+        encode_byte is set.
+        '''
+        ret = salt.utils.stringutils.to_str(b'\x80', encoding=('utf-8'),
+                                                     encode_bytes=True)
+        if sys.version_info > (3, 0):
+            assert ret == 'gA=='
+        else:
+            assert ret == b'\x80'
+
+    def test_to_str_bytes_str_error_failure(self):
+        '''
+        test when to_str can not properly decode
+        a byte and returns a base64 type when
+        encode_byte is not set.
+        '''
+        try:
+            ret = salt.utils.stringutils.to_str(b'\x80', encoding=('utf-8'))
+            if sys.version_info > (3, 0):
+                assert False
+            assert ret == b'\x80'
+        except UnicodeDecodeError:
+            assert True
+
+    def test_to_str_bytearray_str_error(self):
+        '''
+        test when to_str can not properly decode
+        a binaryarray type and returns a base64 type when
+        encode_byte is set.
+        '''
+        ret = salt.utils.stringutils.to_str(bytearray(b'\x80'),
+                                                encoding=('utf-8'),
+                                                encode_bytes=True)
+        if sys.version_info > (3, 0):
+            assert ret == 'gA=='
+        else:
+            assert ret == b'\x80'
+
+    def test_to_str_bytearray_str_error_failure(self):
+        '''
+        test when to_str can not properly decode
+        a binaryarray type and returns a base64 type when
+        encode_byte is not set.
+        '''
+        try:
+            ret = salt.utils.stringutils.to_str(bytearray(b'\x80'), encoding=('utf-8'))
+            if sys.version_info > (3, 0):
+                assert False
+            assert ret == b'\x80'
+        except UnicodeDecodeError:
+            assert True
+
     def test_build_whitespace_split_regex(self):
         # With 3.7+,  re.escape only escapes special characters, no longer
         # escaping all characters other than ASCII letters, numbers and

@@ -598,3 +598,175 @@ class DataTestCase(TestCase):
             salt.utils.data.stringify(['one', 'two', str('three'), 4, 5]),  # future lint: disable=blacklisted-function
             ['one', 'two', 'three', '4', '5']
         )
+
+    def test_decode_dict_encode_byte(self):
+        '''
+        test salt.utils.data.decode_dict when encode_bytes
+        is set and not set and there is data that cannot
+        be decoded
+        '''
+        #encode_bytes=True
+        test_dict = {'test': b'\x80',
+                     'test2': [b'\x81', 'blah1', 'blah2'],
+                     'test3': (b'\x82', 'tt2', 'tt3')}
+        exp_dict = {'test': 'gA==',
+                     'test2': ['gQ==', 'blah1', 'blah2'],
+                     'test3': ('gg==', 'tt2', 'tt3')}
+
+        ret = salt.utils.data.decode_dict(test_dict, encode_bytes=True,
+                                          preserve_tuples=True)
+        assert ret == exp_dict
+
+        #now test when encode bytes is not set
+        try:
+            ret = salt.utils.data.decode_dict(test_dict)
+            assert False
+        except UnicodeDecodeError:
+            assert True
+
+    def test_decode_encode_byte(self):
+        '''
+        test salt.utils.data.decode when encode_bytes
+        is set and not set and there is data that cannot
+        be decoded
+        '''
+        #encode_bytes=True
+        test_byte = b'\x80'
+
+        ret = salt.utils.data.decode(test_byte, encode_bytes=True,
+                                          preserve_tuples=True)
+        assert ret == 'gA=='
+
+        #now test when encode bytes is not set
+        try:
+            ret = salt.utils.data.decode(test_byte)
+            assert False
+        except UnicodeDecodeError:
+            assert True
+
+    def test_decode_list_encode_byte(self):
+        '''
+        test salt.utils.data.decode_list when encode_bytes
+        is set and not set and there is data that cannot
+        be decoded
+        '''
+        #encode_bytes=True
+        test_list = ['test', b'\x80',
+                     'test2', [b'\x81', 'blah1', 'blah2'],
+                     'test3', (b'\x82', 'tt2', 'tt3')]
+        exp_list = ['test', 'gA==',
+                    'test2', ['gQ==', 'blah1', 'blah2'],
+                    'test3', ('gg==', 'tt2', 'tt3')]
+
+        ret = salt.utils.data.decode_list(test_list, encode_bytes=True,
+                                          preserve_tuples=True)
+        assert ret == exp_list
+
+        #now test when encode bytes is not set
+        try:
+            ret = salt.utils.data.decode_list(test_list)
+            assert False
+        except UnicodeDecodeError:
+            assert True
+
+    def test_decode_tuple_encode_byte(self):
+        '''
+        test salt.utils.data.decode_tuple when encode_bytes
+        is set and not set and there is data that cannot
+        be decoded
+        '''
+        #encode_bytes=True
+        test_tuple = ('test', b'\x80',
+                     'test2', [b'\x81', 'blah1', 'blah2'],
+                     'test3', (b'\x82', 'tt2', 'tt3'))
+        exp_tuple = ('test', 'gA==',
+                    'test2', ['gQ==', 'blah1', 'blah2'],
+                    'test3', ('gg==', 'tt2', 'tt3'))
+
+        ret = salt.utils.data.decode_tuple(test_tuple, encode_bytes=True)
+        assert ret == exp_tuple
+
+        #now test when encode bytes is not set
+        try:
+            ret = salt.utils.data.decode_tuple(test_tuple)
+            assert False
+        except UnicodeDecodeError:
+            assert True
+
+    def test_decode_dict_encode_byte_utf8(self):
+        '''
+        test salt.utils.data.decode_dict when encode_bytes
+        is set and not set and there is utf-8 compliant data
+        '''
+        #encode_bytes=True
+        test_dict = {'test': '\x77',
+                     'test2': [b'\x78', 'blah1', 'blah2'],
+                     'test3': (b'\x79', 'tt2', 'tt3')}
+        exp_dict = {'test': 'w',
+                     'test2': ['x', 'blah1', 'blah2'],
+                     'test3': ('y', 'tt2', 'tt3')}
+
+        ret = salt.utils.data.decode_dict(test_dict, encode_bytes=True,
+                                          preserve_tuples=True)
+        assert ret == exp_dict
+
+        #now test when encode bytes is not set
+        ret = salt.utils.data.decode_dict(test_dict, preserve_tuples=True)
+        assert ret == exp_dict
+
+    def test_decode_encode_byte_utf8(self):
+        '''
+        test salt.utils.data.decode when encode_bytes
+        is set and not set and there is utf8 compiant data
+        '''
+        #encode_bytes=True
+        test_byte = b'\x79'
+
+        ret = salt.utils.data.decode(test_byte, encode_bytes=True,
+                                     preserve_tuples=True)
+        assert ret == 'y'
+
+        #now test when encode bytes is not set
+        ret = salt.utils.data.decode(test_byte)
+        assert ret == 'y'
+
+    def test_decode_list_encode_byte_utf8(self):
+        '''
+        test salt.utils.data.decode_list when encode_bytes
+        is set and not set and there is utf8 compliant data
+        '''
+        #encode_bytes=True
+        test_list = ['test', b'\x77',
+                     'test2', [b'\x78', 'blah1', 'blah2'],
+                     'test3', (b'\x79', 'tt2', 'tt3')]
+        exp_list = ['test', 'w',
+                    'test2', ['x', 'blah1', 'blah2'],
+                    'test3', ('y', 'tt2', 'tt3')]
+
+        ret = salt.utils.data.decode_list(test_list, encode_bytes=True,
+                                          preserve_tuples=True)
+        assert ret == exp_list
+
+        #now test when encode bytes is not set
+        ret = salt.utils.data.decode_list(test_list, preserve_tuples=True)
+        assert ret == exp_list
+
+    def test_decode_tuple_encode_byte_utf8(self):
+        '''
+        test salt.utils.data.decode_tuple when encode_bytes
+        is set and not set and there is utf8 compliant data
+        '''
+        #encode_bytes=True
+        test_tuple = ('test', b'\x77',
+                     'test2', [b'\x78', 'blah1', 'blah2'],
+                     'test3', (b'\x79', 'tt2', 'tt3'))
+        exp_tuple = ('test', 'w',
+                    'test2', ['x', 'blah1', 'blah2'],
+                    'test3', ('y', 'tt2', 'tt3'))
+
+        ret = salt.utils.data.decode_tuple(test_tuple, encode_bytes=True)
+        assert ret == exp_tuple
+
+        #now test when encode bytes is not set
+        ret = salt.utils.data.decode_tuple(test_tuple)
+        assert ret == exp_tuple

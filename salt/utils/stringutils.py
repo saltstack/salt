@@ -63,9 +63,11 @@ def to_bytes(s, encoding=None, errors='strict'):
         return to_str(s, encoding, errors)
 
 
-def to_str(s, encoding=None, errors='strict', normalize=False):
+def to_str(s, encoding=None, errors='strict', normalize=False,
+           encode_bytes=False):
     '''
     Given str, bytes, bytearray, or unicode (py2), return str
+    :param encode_bytes: base64 encode bytes if it cannot be decoded
     '''
     def _normalize(s):
         try:
@@ -94,6 +96,9 @@ def to_str(s, encoding=None, errors='strict', normalize=False):
                 try:
                     return _normalize(s.decode(enc, errors))
                 except UnicodeDecodeError as err:
+                    if encode_bytes:
+                        return to_unicode(base64.b64encode(s),
+                                          encode_bytes=False)
                     exc = err
                     continue
             # The only way we get this far is if a UnicodeDecodeError was
@@ -118,9 +123,11 @@ def to_str(s, encoding=None, errors='strict', normalize=False):
         raise TypeError('expected str, bytearray, or unicode')
 
 
-def to_unicode(s, encoding=None, errors='strict', normalize=False):
+def to_unicode(s, encoding=None, errors='strict', normalize=False,
+               encode_bytes=False):
     '''
     Given str or unicode, return unicode (str for python 3)
+    :param encode_bytes: base64 encode bytes if it cannot be decoded
     '''
     def _normalize(s):
         return unicodedata.normalize('NFC', s) if normalize else s
@@ -139,7 +146,14 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
         if isinstance(s, str):
             return _normalize(s)
         elif isinstance(s, (bytes, bytearray)):
-            return _normalize(to_str(s, encoding, errors))
+            try:
+                return _normalize(to_str(s, encoding, errors))
+            except UnicodeDecodeError as err:
+                if encode_bytes:
+                    return to_unicode(base64.b64encode(s),
+                                      encode_bytes=False)
+                raise err
+
         raise TypeError('expected str, bytes, or bytearray')
     else:
         # This needs to be str and not six.string_types, since if the string is
@@ -152,6 +166,9 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
                 try:
                     return _normalize(s.decode(enc, errors))
                 except UnicodeDecodeError as err:
+                    if encode_bytes:
+                        return to_unicode(base64.b64encode(s),
+                                          encode_bytes=False)
                     exc = err
                     continue
             # The only way we get this far is if a UnicodeDecodeError was

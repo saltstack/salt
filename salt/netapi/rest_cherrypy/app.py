@@ -612,6 +612,7 @@ except ImportError:
 import salt
 import salt.auth
 import salt.exceptions
+import salt.utils.data
 import salt.utils.event
 import salt.utils.json
 import salt.utils.stringutils
@@ -898,6 +899,8 @@ def hypermedia_handler(*args, **kwargs):
     # Transform the output from the handler into the requested output format
     cherrypy.response.headers['Content-Type'] = best
     out = cherrypy.response.processors[best]
+    if isinstance(ret, dict):
+        ret = salt.utils.data.decode_dict(ret, encode_bytes=True)
     try:
         response = out(ret)
         if six.PY3:
