@@ -146,18 +146,47 @@ def bootstrap(force=False, source=None):
     ensure these prerequisites are met by downloading and executing the
     appropriate installers from Microsoft.
 
-    Note that if PowerShell is installed, you may have to restart the host
-    machine for Chocolatey to work.
+    .. note::
+        If PowerShell is installed, you may have to restart the host machine for
+        Chocolatey to work.
 
-    force
-        Run the bootstrap process even if Chocolatey is found in the path.
+    .. note::
+        If you're installing offline using the source parameter, the PowerShell
+        and .NET requirements must already be met on the target. This shouldn't
+        be a problem on Windows versions 2012/8 and later
+
+    Args:
+
+        force (bool):
+            Run the bootstrap process even if Chocolatey is found in the path.
+
+        source (str):
+            The location of the ``.nupkg`` file or ``.ps1`` file to run from an
+            alternate location. This can be one of the following types of urls:
+
+            - salt://
+            - http(s)://
+            - ftp://
+            - file:// - A local file on the system
+
+            .. versionadded:: Neon
+
+    Returns:
+        str: The stdout of the Chocolatey installation script
 
     CLI Example:
 
     .. code-block:: bash
 
+        # To bootstrap Chocolatey
         salt '*' chocolatey.bootstrap
         salt '*' chocolatey.bootstrap force=True
+
+        # To bootstrap Chocolatey offline from a file on the salt master
+        salt '*' chocolatey.bootstrap source=salt://files/chocolatey.nupkg
+
+        # To bootstrap Chocolatey from a file on C:\\Temp
+        salt '*' chocolatey.bootstrap source=C:\\Temp\\chocolatey.nupkg
     '''
     # Check if Chocolatey is already present in the path
     try:
@@ -169,7 +198,7 @@ def bootstrap(force=False, source=None):
 
     temp_dir = tempfile.gettempdir()
 
-    # Make sure powershell is on the System if we're passing source
+    # Make sure PowerShell is on the System if we're passing source
     # Vista and Windows Server 2008 do not have Powershell installed
     powershell_info = __salt__['cmd.shell_info'](shell='powershell')
     if not powershell_info['installed']:

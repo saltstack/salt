@@ -323,12 +323,30 @@ Module Changes
 - The :py:func:`yumpkg <salt.modules.yumpkg>` module has been updated to support
   VMWare's Photon OS, which uses tdnf (a C implementation of dnf).
 
+- The :py:func:`chocolatey.bootstrap <salt.modules.chocolatey.bootstrap>` function
+  has been updated to support offline installation
+
+- The :py:func:`chocolatey.unbootstrap <salt.modules.chocolatey.unbootstrap>` function
+  has been added to uninstall Chocolatey
+
 Runner Changes
 ==============
 
 - The :py:func:`saltutil.sync_auth <salt.runners.saltutil.sync_auth>` function
   has been added to sync loadable auth modules. :py:func:`saltutil.sync_all <salt.runners.saltutil.sync_all>`
   will also include these modules.
+
+Util Changes
+============
+
+- The :py:func:`win_dotnet <salt.utils.win_dotnet>` salt util has been added to
+  make it easier to detect the versions of .NET installed on the system. It includes
+  the following functions:
+
+    - :py:func:`versions <salt.utils.win_dotnet.versions>`
+    - :py:func:`versions_list <salt.utils.win_dotnet.versions_list>`
+    - :py:func:`versions_details <salt.utils.win_dotnet.versions_details>`
+    - :py:func:`version_atleast <salt.utils.win_dotnet.version_atleast>`
 
 Enhancements to Engines
 =======================
