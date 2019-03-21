@@ -389,7 +389,7 @@ def replica_present(name, source, db_instance_class=None,
             ret['comment'] = 'RDS read replica {0} is set to be created '.format(name)
             ret['result'] = None
             return ret
-        created = __salt__['boto_rds.create_read_replica'](name, source,
+        r = __salt__['boto_rds.create_read_replica'](name, source,
                                                            db_instance_class,
                                                            availability_zone, port,
                                                            auto_minor_version_upgrade,
@@ -397,7 +397,7 @@ def replica_present(name, source, db_instance_class=None,
                                                            publicly_accessible,
                                                            tags, region, key,
                                                            keyid, profile)
-        if created:
+        if r.get('created'):
             ret['comment'] = 'RDS replica {0} created.'.format(name)
             ret['changes']['old'] = {'instance': None}
             ret['changes']['new'] = {
@@ -413,14 +413,15 @@ def replica_present(name, source, db_instance_class=None,
               jmespath=jmespath, region=region, key=key, keyid=keyid,
               profile=profile)
         pmg_name = pmg_name[0] if len(pmg_name) else None
-        if pmg_name != db_parameter_group_name:
-            modified = __salt__['boto_rds.modify_db_instance'](
+        if db_parameter_group_name and pmg_name != db_parameter_group_name:
+            r = __salt__['boto_rds.modify_db_instance'](
                   name=name, db_parameter_group_name=db_parameter_group_name,
                   region=region, key=key, keyid=keyid, profile=profile)
-            if not modified:
+            if not r.get('modified'):
                 ret['result'] = False
                 ret['comment'] = ('Failed to update parameter group of {0} RDS '
                                   'instance.'.format(name))
+                return ret
             ret['changes']['old'] = pmg_name
             ret['changes']['new'] = db_parameter_group_name
         ret['result'] = True

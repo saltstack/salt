@@ -361,7 +361,7 @@ def create_read_replica(name, source_name, db_instance_class=None,
 
         rds_replica = conn.create_db_instance_read_replica(**kwargs)
 
-        return {'exists': bool(rds_replica)}
+        return {'created': bool(rds_replica)}
     except ClientError as e:
         return {'error': __utils__['boto3.get_error'](e)}
 
