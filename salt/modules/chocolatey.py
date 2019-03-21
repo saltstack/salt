@@ -291,6 +291,8 @@ def unbootstrap():
     '''
     Uninstall chocolatey from the system by doing the following:
 
+    .. versionadded:: Neon
+
     - Delete the Chocolatey Directory
     - Remove Chocolatey from the path
     - Remove Chocolatey environment variables
