@@ -149,7 +149,7 @@ def _run_with_coverage(session, *test_cmd):
 @nox.parametrize('coverage', [False, True])
 def runtests(session, coverage):
     # Install requirements
-    _install_requirements(session, 'unittest-xml-reporting<2.4.0')
+    _install_requirements(session, 'unittest-xml-reporting==2.2.1')
     # Create required artifacts directories
     _create_ci_directories()
 
