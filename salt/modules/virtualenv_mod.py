@@ -22,6 +22,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six import string_types
 
 KNOWN_BINARY_NAMES = frozenset([
+    'pyvenv-{0}.{1}'.format(*sys.version_info[:2]),
     'virtualenv-{0}.{1}'.format(*sys.version_info[:2]),
     'pyvenv{0}'.format(sys.version_info[0]),
     'virtualenv{0}'.format(sys.version_info[0]),
