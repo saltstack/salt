@@ -4,7 +4,6 @@
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
-from tests.support.helpers import destructiveTest
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 from tests.support.unit import TestCase, skipIf
 
@@ -137,4 +136,3 @@ class WinDotNetTestCase(TestCase):
                 patch('salt.utils.win_reg.value_exists', self.mock_reg_exists), \
                 patch('salt.utils.win_reg.read_value', self.mock_reg_read):
             self.assertFalse(win_dotnet.version_atleast('4.7.3'))
-
