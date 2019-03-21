@@ -87,7 +87,7 @@ def versions():
             else:
                 continue
 
-            service_pack = ' SP{0}'.format(sp) if not sp == 'N/A' else ''
+            service_pack = ' SP{0}'.format(sp) if sp != 'N/A' else ''
             return_dict['versions'].append(version)
             return_dict['details'][ver_key] = {
                 'version': version,
