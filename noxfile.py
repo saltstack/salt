@@ -73,6 +73,7 @@ def _install_requirements(session, *extra_requirements):
         distro = json.loads(output.strip())
         session.log('Distro information:\n%s', pprint.pformat(distro))
         distro_keys = [
+            '{id}'.format(**distro),
             '{id}-{version}'.format(**distro),
             '{id}-{version_parts[major]}'.format(**distro)
         ]
