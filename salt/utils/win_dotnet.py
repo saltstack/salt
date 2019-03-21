@@ -87,6 +87,12 @@ def versions():
                     key='\\'.join([key, ver_key, 'Full']),
                     vname='Release'):
                 # https://docs.microsoft.com/en-us/dotnet/framework/migration-guide/how-to-determine-which-versions-are-installed#find-net-framework-versions-45-and-later-with-code
+                install = win_reg.read_value(
+                    hive=hive,
+                    key='\\'.join([key, ver_key, 'Full']),
+                    vname='Install')['vdata']
+                if not install:
+                    continue
                 version = dotnet_45_plus_versions(
                     win_reg.read_value(
                         hive=hive,
