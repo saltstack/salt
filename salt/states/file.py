@@ -110,8 +110,23 @@ declarations. Each item in the ``names`` list receives its own individual state
 ``name`` and is converted into its own low-data structure. This is a convenient
 way to manage several files with similar attributes.
 
-There is more documentation about this feature in the :ref:`Names declaration
-<names-declaration>` section of the :ref:`Highstate docs <states-highstate>`.
+.. code-block:: yaml
+
+    salt_master_conf:
+      file.managed:
+        - user: root
+        - group: root
+        - mode: '0644'
+        - names:
+          - /etc/salt/master.d/master.conf:
+            - source: salt://saltmaster/master.conf
+          - /etc/salt/minion.d/minion-99.conf:
+            - source: salt://saltmaster/minion.conf
+
+.. note::
+
+    There is more documentation about this feature in the :ref:`Names declaration
+    <names-declaration>` section of the :ref:`Highstate docs <states-highstate>`.
 
 Special files can be managed via the ``mknod`` function. This function will
 create and enforce the permissions on a special file. The function supports the
