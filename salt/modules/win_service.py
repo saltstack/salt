@@ -573,7 +573,7 @@ def info(name):
     return ret
 
 
-def start(name, timeout=90, with_deps=True, with_customers=False):
+def start(name, timeout=90, with_deps=False, with_customers=False):
     '''
     Start the specified service.
 
@@ -640,7 +640,7 @@ def start(name, timeout=90, with_deps=True, with_customers=False):
     return False not in ret
 
 
-def stop(name, timeout=90, with_deps=False, with_customers=True):
+def stop(name, timeout=90, with_deps=False, with_customers=False):
     '''
     Stop the specified service
 
