@@ -1223,10 +1223,9 @@ def get_imageid(vm_):
               'Filter.0.Name': 'name',
               'Filter.0.Value.0': image}
     # Query AWS, sort by 'creationDate' and get the last imageId
-    _t = lambda x: datetime.datetime.strptime(x['creationDate'], '%Y-%m-%dT%H:%M:%S.%fZ')
     image_id = sorted(aws.query(params, location=get_location(),
                                  provider=get_provider(), opts=__opts__, sigver='4'),
-                      lambda i, j: salt.utils.compat.cmp(_t(i), _t(j))
+                      key=lambda x: datetime.datetime.strptime(x['creationDate'], '%Y-%m-%dT%H:%M:%S.%fZ')
                       )[-1]['imageId']
     get_imageid.images[image] = image_id
     return image_id
