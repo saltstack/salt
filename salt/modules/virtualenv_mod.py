@@ -141,7 +141,7 @@ def create(path,
     if venv_bin is None:
         # Beginning in 3.6, pyenv has been deprecated
         # in favor of "python3 -m venv"
-        if sys.version_info >= (3,6):
+        if sys.version_info >= (3, 6):
             venv_bin = ['python3', '-m', 'venv']
         else:
             venv_bin = __pillar__.get('venv_bin') or __opts__.get('venv_bin')
