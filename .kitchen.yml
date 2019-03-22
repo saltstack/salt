@@ -47,6 +47,7 @@ provisioner:
     - '*.pyc'
     - .bundle
     - .tox
+    - .nox
     - .kitchen
     - artifacts
     - Gemfile.lock
