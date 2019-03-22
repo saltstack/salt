@@ -92,4 +92,3 @@ def start(host='localhost', port=24224, app='engine'):
         salt_event = event_bus.get_event_block()
         if salt_event:
             event.Event(app, salt_event)
-            
