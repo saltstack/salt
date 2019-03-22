@@ -104,20 +104,20 @@ def __virtual__():
 
 class ServiceDependencies(object):
     '''
-    Helper class which provides functionality to get all dependencies and 
+    Helper class which provides functionality to get all dependencies and
     customers of a Windows service
 
     Args:
-        name (str): The name of the service. This is not the display name. 
+        name (str): The name of the service. This is not the display name.
             Use ``get_service_name`` to find the service name.
 
-        all_services (callback): The name of the method which 
-            provides a list of all available service names as done by 
+        all_services (callback): The name of the method which
+            provides a list of all available service names as done by
             the ``win_service.get_all()`` method.
 
-        service_info (callback): The name of the method which 
-            allows to pass the service name and returns a dict with meets 
-            the requirements ``{service_name: {'Dependencies': []}}`` as 
+        service_info (callback): The name of the method which
+            allows to pass the service name and returns a dict with meets
+            the requirements ``{service_name: {'Dependencies': []}}`` as
             done by the ``win_service.info(name)`` method
     '''
 

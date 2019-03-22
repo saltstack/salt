@@ -325,7 +325,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_service_dependencies(self):
         def _all():
-                return ['Spongebob', 'Sandy', 'Patrick', 'Garry', 'Rocko', 'Heffer', 'Beverly']
+            return ['Spongebob', 'Sandy', 'Patrick', 'Garry', 'Rocko', 'Heffer', 'Beverly']
 
         def _info(name):
             data = {}
