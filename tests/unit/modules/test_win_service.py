@@ -347,7 +347,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
 
         sandy = win_service.ServiceDependencies('SANDY', _all, _info)
         self.assertListEqual(sandy.dependencies(with_indirect=False), ['Spongebob'])
-        self.assertListEqual(sandy.dependencies(with_indirect=True), ['Spongebob', 'Garry'])
+        self.assertListEqual(sandy.dependencies(with_indirect=True), ['Garry', 'Spongebob'])
         self.assertListEqual(sandy.customers(with_indirect=False), ['Patrick'])
         self.assertListEqual(sandy.customers(with_indirect=True), ['Patrick'])
 
