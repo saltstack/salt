@@ -609,7 +609,7 @@ def dead(name,
     if salt.utils.platform.is_windows():
         for arg in ['timeout', 'with_deps', 'with_customers']:
             if kwargs.get(arg, False):
-                start_kwargs.update({arg: kwargs.get(arg)})
+                stop_kwargs.update({arg: kwargs.get(arg)})
 
     func_ret = __salt__['service.stop'](name, **stop_kwargs)
     if not func_ret:

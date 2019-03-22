@@ -104,20 +104,20 @@ def __virtual__():
 
 class ServiceDependencies(object):
     '''
-    Helper class which provides functionality to get all dependencies and 
+    Helper class which provides functionality to get all dependencies and
     customers of a Windows service
 
     Args:
-        name (str): The name of the service. This is not the display name. 
+        name (str): The name of the service. This is not the display name.
             Use ``get_service_name`` to find the service name.
 
-        all_services_provider (callback): The name of the method which 
-            provides a list of all available service names as done by 
+        all_services_provider (callback): The name of the method which
+            provides a list of all available service names as done by
             the ``win_service.get_all()`` method.
 
-        service_info_provider (callback): The name of the method which 
-            allows to pass the service name and returns a dict with meets 
-            the requirements ``{service_name: {'Dependencies': []}}`` as 
+        service_info_provider (callback): The name of the method which
+            allows to pass the service name and returns a dict with meets
+            the requirements ``{service_name: {'Dependencies': []}}`` as
             done by the ``win_service.info(name)`` method
     '''
 
@@ -154,7 +154,7 @@ class ServiceDependencies(object):
         # Normalize Input
         normalized = self._normalize_multiple_name(references, difference)
         if not normalized:
-            raise ValueError("The provided name '%s' does not exist".format(difference))
+            raise ValueError("The provided name '{}' does not exist".format(difference))
         return normalized[0]
 
     def _normalize_multiple_name(self, references, *differences):
@@ -585,12 +585,12 @@ def start(name, timeout=90, with_deps=True, with_customers=False):
             .. versionadded:: 2017.7.9,2018.3.4
 
         with_deps (bool):
-            If enabled start the given service and the services the current 
+            If enabled start the given service and the services the current
             service depends on.
 
         with_customers (bool):
-            If enabled and in case other running services depend on the to be start 
-            service, this flag indicates that those other services will be started 
+            If enabled and in case other running services depend on the to be start
+            service, this flag indicates that those other services will be started
             as well.
 
     Returns:
@@ -652,10 +652,10 @@ def stop(name, timeout=90, with_deps=False, with_customers=True):
             the current service depends on.
 
         with_customers (bool):
-            If enabled and in case other running services depend on the to be stopped 
-            service, this flag indicates that those other services will be stopped 
+            If enabled and in case other running services depend on the to be stopped
+            service, this flag indicates that those other services will be stopped
             as well.
-            If disabled, the service stop will fail in case other running services 
+            If disabled, the service stop will fail in case other running services
             depend on the to be stopped service.
 
     Returns:
@@ -676,7 +676,7 @@ def stop(name, timeout=90, with_deps=False, with_customers=True):
         services.extend(dependencies.customers(with_indirect=True))
     services.append(name)
     if with_deps:
-        services.extend(dependencies.dependencies(name, with_indirect=True))
+        services.extend(dependencies.dependencies(with_indirect=True))
     log.debug("Stopping services %s", services)
     for name in services:
         try:
@@ -721,10 +721,10 @@ def restart(name, timeout=90, with_deps=False, with_customers=False):
             the current service depends on.
 
         with_customers (bool):
-            If enabled and in case other running services depend on the to be 
-            restarted service, this flag indicates that those other services 
+            If enabled and in case other running services depend on the to be
+            restarted service, this flag indicates that those other services
             will be restarted as well.
-            If disabled, the service restart will fail in case other running 
+            If disabled, the service restart will fail in case other running
             services depend on the to be restarted service.
 
     Returns:
