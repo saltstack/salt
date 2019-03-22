@@ -325,7 +325,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_service_dependencies(self):
         def _all():
-            return ['Spongebob', 'Sandy', 'Patrick', 'Garry', 'Rocko', 'Heffer', 'Beverly']
+                return ['Spongebob', 'Sandy', 'Patrick', 'Garry', 'Rocko', 'Heffer', 'Beverly']
 
         def _info(name):
             data = {}
@@ -352,7 +352,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         self.assertListEqual(sandy.customers(with_indirect=True), ['Patrick'])
 
         patrick = win_service.ServiceDependencies('Patrick', _all, _info)
-        self.assertListEqual(patrick.dependencies(with_indirect=False), ['Sandy', 'Garry'])
+        self.assertListEqual(patrick.dependencies(with_indirect=False), ['Garry', 'Sandy'])
         self.assertListEqual(patrick.dependencies(with_indirect=True), ['Garry', 'Spongebob', 'Sandy'])
         self.assertListEqual(patrick.customers(with_indirect=False), [])
         self.assertListEqual(patrick.customers(with_indirect=True), [])
@@ -361,7 +361,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         self.assertListEqual(garry.dependencies(with_indirect=False), [])
         self.assertListEqual(garry.dependencies(with_indirect=True), [])
         self.assertListEqual(garry.customers(with_indirect=False), ['Patrick', 'Spongebob'])
-        self.assertListEqual(garry.customers(with_indirect=True), ['Sandy', 'Spongebob', 'Patrick'])
+        self.assertListEqual(garry.customers(with_indirect=True), ['Patrick', 'Sandy', 'Spongebob'])
 
         rocko = win_service.ServiceDependencies('Rocko', _all, _info)
         self.assertListEqual(rocko.dependencies(with_indirect=False), [])
@@ -376,10 +376,10 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         self.assertListEqual(heffer.customers(with_indirect=True), [])
 
         beverly = win_service.ServiceDependencies('beverly', _all, _info)
-        self.assertListEqual(heffer.dependencies(with_indirect=False), [])
-        self.assertListEqual(heffer.dependencies(with_indirect=True), [])
-        self.assertListEqual(heffer.customers(with_indirect=False), [])
-        self.assertListEqual(heffer.customers(with_indirect=True), [])
+        self.assertListEqual(beverly.dependencies(with_indirect=False), [])
+        self.assertListEqual(beverly.dependencies(with_indirect=True), [])
+        self.assertListEqual(beverly.customers(with_indirect=False), [])
+        self.assertListEqual(beverly.customers(with_indirect=True), [])
 
         spunky = win_service.ServiceDependencies('Spunky', _all, _info)
         with self.assertRaises(ValueError):

@@ -104,28 +104,29 @@ def __virtual__():
 
 class ServiceDependencies(object):
     '''
-    Helper class which provides functionality to get all dependencies and
+    Helper class which provides functionality to get all dependencies and 
     customers of a Windows service
 
     Args:
-        name (str): The name of the service. This is not the display name.
+        name (str): The name of the service. This is not the display name. 
             Use ``get_service_name`` to find the service name.
 
-        all_services_provider (callback): The name of the method which
-            provides a list of all available service names as done by
+        all_services (callback): The name of the method which 
+            provides a list of all available service names as done by 
             the ``win_service.get_all()`` method.
 
-        service_info_provider (callback): The name of the method which
-            allows to pass the service name and returns a dict with meets
-            the requirements ``{service_name: {'Dependencies': []}}`` as
+        service_info (callback): The name of the method which 
+            allows to pass the service name and returns a dict with meets 
+            the requirements ``{service_name: {'Dependencies': []}}`` as 
             done by the ``win_service.info(name)`` method
     '''
 
-    def __init__(self, name, all_services_provider, service_info_provider):
+    def __init__(self, name, all_services, service_info):
         self._name = name
-        self._all_services = all_services_provider()
+        # Sort for predictable behavior
+        self._all_services = sorted(all_services())
         self._service_info = {}
-        self._service_info_provider = service_info_provider
+        self._service_info_provider = service_info
 
     def _dependencies_all(self):
         self._service_info = {}
@@ -146,7 +147,8 @@ class ServiceDependencies(object):
         if normalized not in self._service_info:
             info = self._service_info_provider(normalized)
             dependencies = info.get('Dependencies', [])
-            self._service_info[normalized] = self._normalize_multiple_name(self._all_services, *dependencies)
+            # Sort for predictable behavior
+            self._service_info[normalized] = sorted(self._normalize_multiple_name(self._all_services, *dependencies))
             log.trace("Added dependencies of %s: %s", normalized, self._service_info[normalized])
         return self._service_info[normalized]
 
@@ -202,15 +204,19 @@ class ServiceDependencies(object):
             # Using a list here to maintain order
             ret = list()
             try:
-                for service, dependencies in self._dependencies_all().items():
+                # Sort for predictable behavior
+                for service, dependencies in sorted(self._dependencies_all().items()):
                     if name in dependencies:
-                        ret.insert(0, service)
+                        if service not in ret:
+                            ret.append(service)
                         if bool(with_indirect):
                             indirect_customers = _customers_recursion(service, with_indirect=with_indirect)
                             for indirect_customer in indirect_customers:
                                 if indirect_customer in ret:
                                     ret.remove(indirect_customer)
-                                ret.insert(0, indirect_customer)
+                                # Order shall represent hierarchy
+                                position = ret.index(service)
+                                ret.insert(position, indirect_customer)
             except Exception as e:
                 log.debug(e)
                 ret = list()
