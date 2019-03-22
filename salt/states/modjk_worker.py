@@ -18,8 +18,8 @@ Mandatory Settings:
 - The modjk load balancer must be configured as stated in the :strong:`modjk`
   execution module :mod:`documentation <salt.modules.modjk>`
 '''
-from __future__ import absolute_import
-import salt.utils
+from __future__ import absolute_import, print_function, unicode_literals
+import salt.utils.versions
 
 
 def __virtual__():
@@ -195,7 +195,7 @@ def stop(name, lbn, target, profile='default', tgt_type='glob', expr_form=None):
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -229,7 +229,7 @@ def activate(name, lbn, target, profile='default', tgt_type='glob', expr_form=No
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -264,7 +264,7 @@ def disable(name, lbn, target, profile='default', tgt_type='glob', expr_form=Non
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '

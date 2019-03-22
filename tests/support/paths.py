@@ -14,10 +14,13 @@
 # Import python libs
 from __future__ import absolute_import
 import os
+import re
 import sys
 import stat
 import logging
 import tempfile
+
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -28,6 +31,9 @@ if TESTS_DIR.startswith('//'):
 if sys.platform.startswith('win'):
     TESTS_DIR = os.path.normcase(TESTS_DIR)
 CODE_DIR = os.path.dirname(TESTS_DIR)
+if sys.platform.startswith('win'):
+    CODE_DIR = CODE_DIR.replace('\\', '\\\\')
+UNIT_TEST_DIR = os.path.join(TESTS_DIR, 'unit')
 INTEGRATION_TEST_DIR = os.path.join(TESTS_DIR, 'integration')
 
 # Let's inject CODE_DIR so salt is importable if not there already
@@ -84,9 +90,9 @@ SCRIPT_TEMPLATES = {
     ],
     'common': [
         'from salt.scripts import salt_{0}\n',
-        'from salt.utils import is_windows\n\n',
+        'import salt.utils.platform\n\n',
         'if __name__ == \'__main__\':\n',
-        '    if is_windows():\n',
+        '    if salt.utils.platform.is_windows():\n',
         '        import os.path\n',
         '        import py_compile\n',
         '        cfile = os.path.splitext(__file__)[0] + ".pyc"\n',
@@ -95,6 +101,24 @@ SCRIPT_TEMPLATES = {
         '    salt_{0}()'
     ]
 }
+
+
+def test_mods():
+    '''
+    A generator which returns all of the test files
+    '''
+    test_re = re.compile(r'^test_.+\.py$')
+    for dirname in (UNIT_TEST_DIR, INTEGRATION_TEST_DIR):
+        test_type = os.path.basename(dirname)
+        for root, _, files in salt.utils.path.os_walk(dirname):
+            parent_mod = root[len(dirname):].lstrip(os.sep).replace(os.sep, '.')
+            for filename in files:
+                if test_re.match(filename):
+                    mod_name = test_type
+                    if parent_mod:
+                        mod_name += '.' + parent_mod
+                    mod_name += '.' + filename[:-3]
+                    yield mod_name
 
 
 class ScriptPathMixin(object):
@@ -113,9 +137,9 @@ class ScriptPathMixin(object):
             log.info('Generating {0}'.format(script_path))
 
             # Late import
-            import salt.utils
+            import salt.utils.files
 
-            with salt.utils.fopen(script_path, 'w') as sfh:
+            with salt.utils.files.fopen(script_path, 'w') as sfh:
                 script_template = SCRIPT_TEMPLATES.get(script_name, None)
                 if script_template is None:
                     script_template = SCRIPT_TEMPLATES.get('common', None)

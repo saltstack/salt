@@ -5,7 +5,7 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import Salt Testing libs
@@ -16,14 +16,14 @@ from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
-import salt.utils
 import salt.modules.cmdmod as cmd
+import salt.utils.path
 from salt.utils.versions import LooseVersion
 
 MAX_NPM_VERSION = '5.0.0'
 
 
-@skipIf(salt.utils.which('npm') is None, 'npm not installed')
+@skipIf(salt.utils.path.which('npm') is None, 'npm not installed')
 class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_network()
@@ -69,15 +69,15 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         Basic test to determine if NPM module successfully installs multiple
         packages.
         '''
-        ret = self.run_state('npm.installed', name=None, pkgs=['pm2@2.10.4', 'grunt@1.0.2'], registry="http://registry.npmjs.org/")
+        ret = self.run_state('npm.installed', name='unused', pkgs=['pm2@2.10.4', 'grunt@1.0.2'], registry="http://registry.npmjs.org/")
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.which('npm') and LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION),
+    @skipIf(salt.utils.path.which('npm') and LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION),
             'Skip with npm >= 5.0.0 until #41770 is fixed')
     @destructiveTest
     def test_npm_cache_clean(self):
         '''
         Basic test to determine if NPM successfully cleans its cached packages.
         '''
-        ret = self.run_state('npm.cache_cleaned', name=None, force=True)
+        ret = self.run_state('npm.cache_cleaned', name='unused', force=True)
         self.assertSaltTrueReturn(ret)

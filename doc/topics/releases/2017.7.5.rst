@@ -15,6 +15,23 @@ Statistics
 - Contributors: **52** (`Ch3LL`_, `DmitryKuzmenko`_, `GwiYeong`_, `L4rS6`_, `SteffenKockel`_, `The-Loeki`_, `amendlik`_, `andreaspe`_, `angeloudy`_, `aphor`_, `bdrung`_, `cebe`_, `ciiqr`_, `damon-atkins`_, `danlsgiga`_, `ddoh94`_, `dmurphy18`_, `dwoz`_, `eliasp`_, `frogunder`_, `garethgreenaway`_, `gclinch`_, `gtmanfred`_, `jfindlay`_, `kstreee`_, `marccardinal`_, `mcalmer`_, `mchugh19`_, `meaksh`_, `michelsen`_, `nullify005`_, `oarmstrong`_, `oeuftete`_, `philpep`_, `racker-markh`_, `rallytime`_, `redbaron4`_, `roaldnefs`_, `rongshengfang`_, `rongzeng54`_, `rrroo`_, `samilaine`_, `samodid`_, `skizunov`_, `terminalmage`_, `tintoy`_, `twangboy`_, `viktordaniel`_, `vutny`_, `while0pass`_, `whytewolf`_, `zer0def`_)
 
 
+Changes to :py:func:`file.blockreplace <salt.states.file.blockreplace>` State
+=============================================================================
+
+The ``append_newline`` argument was added to this state. Additionally, to
+improve idempotence, if the string represented by ``marker_end`` is found in
+the middle of the line, the content preceding the marker will be removed when
+the block is replaced. This allows one to remove ``append_newline: False`` from
+the SLS and have the block properly replaced if the end of the content block is
+immediately followed by the ``marker_end`` (i.e. no newline before the marker).
+
+.. note::
+    This will require changes to your SLS if your ``marker_end`` does not
+    include the very beginning of the content you want to keep.
+
+See the :py:func:`file.blockreplace <salt.states.file.blockreplace>` state
+documentation for further information.
+
 Changelog for v2017.7.4..v2017.7.5
 ==================================
 

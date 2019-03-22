@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 
-from salt.utils import parsers
+import salt.utils.parsers
 from salt.utils.verify import check_user, verify_log
 
 
-class SaltKey(parsers.SaltKeyOptionParser):
+class SaltKey(salt.utils.parsers.SaltKeyOptionParser):
     '''
     Initialize the Salt key manager
     '''

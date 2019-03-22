@@ -59,16 +59,18 @@ default gateway using the ``gateway`` parameter:
           - 10.2.3.4/24
         - gateway: 10.2.3.1
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-# Import python libs
+# Import Python libs
 import logging
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.data
+import salt.utils.platform
 import salt.utils.validate.net
 from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -84,7 +86,7 @@ def __virtual__():
     Confine this module to Windows systems with the required execution module
     available.
     '''
-    if salt.utils.is_windows() and 'ip.get_interface' in __salt__:
+    if salt.utils.platform.is_windows() and 'ip.get_interface' in __salt__:
         return __virtualname__
     return False
 
@@ -277,8 +279,8 @@ def managed(name,
         'comment': 'Interface \'{0}\' is up to date'.format(name)
     }
 
-    dns_proto = str(dns_proto).lower()
-    ip_proto = str(ip_proto).lower()
+    dns_proto = six.text_type(dns_proto).lower()
+    ip_proto = six.text_type(ip_proto).lower()
 
     errors = []
     if dns_proto not in __VALID_PROTO:
@@ -429,7 +431,7 @@ def managed(name,
                     )
 
         new = __salt__['ip.get_interface'](name)
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+        ret['changes'] = salt.utils.data.compare_dicts(old, new)
         if _changes(new, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
             ret['result'] = False
             ret['comment'] = ('Failed to set desired configuration settings '

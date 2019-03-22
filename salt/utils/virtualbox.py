@@ -8,23 +8,24 @@ This code assumes vboxapi.py from VirtualBox distribution
 being in PYTHONPATH, or installed system-wide
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import re
 import time
 
 # Import salt libs
+import salt.utils.compat
+import salt.utils.data
 from salt.utils.timeout import wait_for
 import salt.ext.six as six
 
-# Workaround for 'reload' builtin of py2.7
-if six.PY3:
-    from importlib import reload  # pylint: disable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
 # Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves import range
+
 # Import virtualbox libs
 HAS_LIBS = False
 try:
@@ -137,7 +138,7 @@ def vb_get_manager():
     '''
     global _virtualboxManager
     if _virtualboxManager is None and HAS_LIBS:
-        reload(vboxapi)
+        salt.utils.compat.reload(vboxapi)
         _virtualboxManager = vboxapi.VirtualBoxManager(None, None)
 
     return _virtualboxManager
@@ -298,14 +299,14 @@ def vb_get_network_addresses(machine_name=None, machine=None, wait_for_pattern=N
         #wait on an arbitrary named property
         #for instance use a dhcp client script to set a property via VBoxControl guestproperty set dhcp_done 1
         if wait_for_pattern and not machine.getGuestPropertyValue(wait_for_pattern):
-            log.debug("waiting for pattern:{}:".format(wait_for_pattern))
+            log.debug("waiting for pattern:%s:", wait_for_pattern)
             return None
 
         _total_slots = machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/Count')
 
         #upon dhcp the net count drops to 0 and it takes some seconds for it to be set again
         if not _total_slots:
-            log.debug("waiting for net count:{}:".format(wait_for_pattern))
+            log.debug("waiting for net count:%s:", wait_for_pattern)
             return None
 
         try:
@@ -321,7 +322,7 @@ def vb_get_network_addresses(machine_name=None, machine=None, wait_for_pattern=N
             log.debug(e.message)
             return None
 
-    log.debug("returning ip_addresses:{}:".format(ip_addresses))
+    log.debug("returning ip_addresses:%s:", ip_addresses)
     return ip_addresses
 
 
@@ -547,7 +548,7 @@ def vb_xpcom_to_attribute_dict(xpcom,
     '''
     # Check the interface
     if interface_name:
-        m = re.search(r'XPCOM.+implementing {0}'.format(interface_name), str(xpcom))
+        m = re.search(r'XPCOM.+implementing {0}'.format(interface_name), six.text_type(xpcom))
         if not m:
             # TODO maybe raise error here?
             log.warning('Interface %s is unknown and cannot be converted to dict', interface_name)
@@ -632,11 +633,12 @@ def vb_machinestate_to_tuple(machinestate):
     @rtype: tuple(<name>, <description>)
     '''
     if isinstance(machinestate, int):
-        return MACHINE_STATES_ENUM.get(machinestate, UNKNOWN_MACHINE_STATE)
-    elif isinstance(machinestate, str):
-        return MACHINE_STATES.get(machinestate, UNKNOWN_MACHINE_STATE)
+        ret = MACHINE_STATES_ENUM.get(machinestate, UNKNOWN_MACHINE_STATE)
+    elif isinstance(machinestate, six.string_types):
+        ret = MACHINE_STATES.get(machinestate, UNKNOWN_MACHINE_STATE)
     else:
-        return UNKNOWN_MACHINE_STATE
+        ret = UNKNOWN_MACHINE_STATE
+    return salt.utils.data.decode(ret, preserve_tuples=True)
 
 
 def machine_get_machinestate_tuple(machinedict):
@@ -660,9 +662,9 @@ def vb_machine_exists(name):
         vbox.findMachine(name)
         return True
     except Exception as e:
-        if isinstance(e.message, str):
+        if isinstance(e.message, six.string_types):
             message = e.message
-        elif hasattr(e, 'msg') and isinstance(getattr(e, 'msg'), str):
+        elif hasattr(e, 'msg') and isinstance(getattr(e, 'msg'), six.string_types):
             message = getattr(e, 'msg')
         else:
             message = ''

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -9,7 +9,8 @@ from tests.support.helpers import destructiveTest, flaky
 from tests.support.unit import skipIf
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.systemd
 
 
@@ -34,13 +35,13 @@ class ServiceModuleTest(ModuleCase):
             self.service_name = 'org.ntp.ntpd'
             if int(os_release.split('.')[1]) >= 13:
                 self.service_name = 'com.apple.AirPlayXPCHelper'
-        elif salt.utils.is_windows():
+        elif salt.utils.platform.is_windows():
             self.service_name = 'Spooler'
 
         self.pre_srv_status = self.run_function('service.status', [self.service_name])
         self.pre_srv_enabled = True if self.service_name in self.run_function('service.get_enabled') else False
 
-        if salt.utils.which(cmd_name) is None and not salt.utils.is_windows():
+        if salt.utils.path.which(cmd_name) is None and not salt.utils.platform.is_windows():
             self.skipTest('{0} is not installed'.format(cmd_name))
 
     def tearDown(self):
@@ -66,8 +67,7 @@ class ServiceModuleTest(ModuleCase):
         test service.status execution module
         when service is running
         '''
-        start_service = self.run_function('service.start', [self.service_name])
-
+        self.run_function('service.start', [self.service_name])
         check_service = self.run_function('service.status', [self.service_name])
         self.assertTrue(check_service)
 
@@ -76,8 +76,7 @@ class ServiceModuleTest(ModuleCase):
         test service.status execution module
         when service is dead
         '''
-        stop_service = self.run_function('service.stop', [self.service_name])
-
+        self.run_function('service.stop', [self.service_name])
         check_service = self.run_function('service.status', [self.service_name])
         self.assertFalse(check_service)
 
@@ -105,7 +104,7 @@ class ServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function('service.enable', [self.service_name]))
 
         self.assertTrue(self.run_function('service.disable', [self.service_name]))
-        if salt.utils.is_darwin():
+        if salt.utils.platform.is_darwin():
             self.assertTrue(self.run_function('service.disabled', [self.service_name]))
         else:
             self.assertIn(self.service_name, self.run_function('service.get_disabled'))
@@ -142,12 +141,12 @@ class ServiceModuleTest(ModuleCase):
             except AssertionError:
                 self.assertTrue('error' in disable.lower())
 
-        if salt.utils.is_darwin():
+        if salt.utils.platform.is_darwin():
             self.assertFalse(self.run_function('service.disabled', [srv_name]))
         else:
             self.assertNotIn(srv_name, self.run_function('service.get_disabled'))
 
-    @skipIf(not salt.utils.is_windows(), 'Windows Only Test')
+    @skipIf(not salt.utils.platform.is_windows(), 'Windows Only Test')
     def test_service_get_service_name(self):
         '''
         test service.get_service_name

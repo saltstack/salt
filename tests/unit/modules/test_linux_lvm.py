@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os.path
 
 # Import Salt Testing Libs
@@ -252,6 +252,21 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
             with patch.object(linux_lvm, 'lvdisplay', return_value={}):
                 self.assertDictEqual(linux_lvm.lvcreate(None, None, None, 1),
+                                     {'Output from lvcreate': 'A'})
+
+    def test_lvcreate_with_force(self):
+        '''
+        Test create a new logical volume, with option
+        for which physical volume to be used
+        '''
+        mock = MagicMock(return_value='A\nB')
+        with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
+            with patch.object(linux_lvm, 'lvdisplay', return_value={}):
+                self.assertDictEqual(linux_lvm.lvcreate(None,
+                                                        None,
+                                                        None,
+                                                        1,
+                                                        force=True),
                                      {'Output from lvcreate': 'A'})
 
     def test_vgremove(self):

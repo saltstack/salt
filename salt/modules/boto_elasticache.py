@@ -44,16 +44,17 @@ Connection module for Amazon Elasticache
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
 import time
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltInvocationError
 import salt.utils.odict as odict
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -74,10 +75,13 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The modle boto_elasticache could not be loaded: boto libraries not found')
-    __utils__['boto.assign_funcs'](__name__, 'elasticache', pack=__salt__)
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(
+        check_boto3=False
+    )
+    if has_boto_reqs is True:
+        __utils__['boto.assign_funcs'](__name__, 'elasticache', pack=__salt__)
+
+    return has_boto_reqs
 
 
 def exists(name, region=None, key=None, keyid=None, profile=None):
@@ -134,7 +138,7 @@ def create_replication_group(name, primary_cluster_id, replication_group_descrip
         cc = conn.create_replication_group(name, primary_cluster_id,
                                            replication_group_description)
         if not wait:
-            log.info('Created cache cluster {0}.'.format(name))
+            log.info('Created cache cluster %s.', name)
             return True
         while True:
             time.sleep(3)
@@ -446,7 +450,7 @@ def create_subnet_group(name, description, subnet_ids=None, subnet_names=None, t
                                                      region=region, key=key,
                                                      keyid=keyid, profile=profile)
             if 'id' not in r:
-                log.error('Couldn\'t resolve subnet name {0} to an ID.'.format(subnet_name))
+                log.error('Couldn\'t resolve subnet name %s to an ID.', subnet_name)
                 return False
             subnet_ids += [r['id']]
     try:
@@ -455,7 +459,7 @@ def create_subnet_group(name, description, subnet_ids=None, subnet_names=None, t
             msg = 'Failed to create ElastiCache subnet group {0}'.format(name)
             log.error(msg)
             return False
-        log.info('Created ElastiCache subnet group {0}'.format(name))
+        log.info('Created ElastiCache subnet group %s', name)
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -560,7 +564,7 @@ def create(name, num_cache_nodes=None, engine=None, cache_node_type=None,
             preferred_maintenance_window, port, notification_topic_arn,
             auto_minor_version_upgrade)
         if not wait:
-            log.info('Created cache cluster {0}.'.format(name))
+            log.info('Created cache cluster %s.', name)
             return True
         while True:
             time.sleep(3)
@@ -569,7 +573,7 @@ def create(name, num_cache_nodes=None, engine=None, cache_node_type=None,
                 return True
             if config['cache_cluster_status'] == 'available':
                 return True
-        log.info('Created cache cluster {0}.'.format(name))
+        log.info('Created cache cluster %s.', name)
     except boto.exception.BotoServerError as e:
         msg = 'Failed to create cache cluster {0}.'.format(name)
         log.error(msg)
@@ -590,7 +594,7 @@ def delete(name, wait=False, region=None, key=None, keyid=None, profile=None):
     try:
         conn.delete_cache_cluster(name)
         if not wait:
-            log.info('Deleted cache cluster {0}.'.format(name))
+            log.info('Deleted cache cluster %s.', name)
             return True
         while True:
             config = get_config(name, region, key, keyid, profile)
@@ -599,7 +603,7 @@ def delete(name, wait=False, region=None, key=None, keyid=None, profile=None):
             if config['cache_cluster_status'] == 'deleting':
                 return True
             time.sleep(2)
-        log.info('Deleted cache cluster {0}.'.format(name))
+        log.info('Deleted cache cluster %s.', name)
         return True
     except boto.exception.BotoServerError as e:
         msg = 'Failed to delete cache cluster {0}.'.format(name)
@@ -621,7 +625,7 @@ def create_cache_security_group(name, description, region=None, key=None,
 
     created = conn.create_cache_security_group(name, description)
     if created:
-        log.info('Created cache security group {0}.'.format(name))
+        log.info('Created cache security group %s.', name)
         return True
     else:
         msg = 'Failed to create cache security group {0}.'.format(name)
@@ -642,7 +646,7 @@ def delete_cache_security_group(name, region=None, key=None, keyid=None,
 
     deleted = conn.delete_cache_security_group(name)
     if deleted:
-        log.info('Deleted cache security group {0}.'.format(name))
+        log.info('Deleted cache security group %s.', name)
         return True
     else:
         msg = 'Failed to delete cache security group {0}.'.format(name)

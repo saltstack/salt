@@ -9,13 +9,14 @@ import pprint
 import optparse
 
 # Import Salt libs
-from salt.utils import get_colors
+import salt.utils.color
+import salt.utils.files
+import salt.utils.yaml
 
 # Import 3rd-party libs
-import yaml
-import salt.ext.six as six
+from salt.ext import six
 
-colors = get_colors()
+colors = salt.utils.color.get_colors()
 
 
 def parse():
@@ -45,7 +46,8 @@ def run(command):
     '''
     cmd = r'salt \* {0} --yaml-out -t 500 > high'.format(command)
     subprocess.call(cmd, shell=True)
-    data = yaml.load(open('high'))
+    with salt.utils.files.fopen('high') as fp_:
+        data = salt.utils.yaml.safe_load(fp_)
     hashes = set()
     for key, val in six.iteritems(data):
         has = hashlib.md5(str(val)).hexdigest()

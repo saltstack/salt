@@ -142,17 +142,17 @@ Optionally, the following keyword arguments can be passed to the ext_pillar for 
             part of the pillar regardless of this setting.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 
 # Import salt libs
-from salt.utils import dictupdate
+import salt.utils.dictupdate as dictupdate
 import salt.utils.vmware
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     from pyVmomi import vim
     from pyVim.connect import Disconnect
@@ -364,21 +364,21 @@ def ext_pillar(minion_id,
         return vmware_pillar
     else:
         host = kwargs['host']
-        log.debug('vmware_pillar -- host = {0}'.format(host))
+        log.debug('vmware_pillar -- host = %s', host)
 
     if 'username' not in kwargs:
         log.error('VMWare external pillar requested but username is not specified in ext_pillar configuration.')
         return vmware_pillar
     else:
         username = kwargs['username']
-        log.debug('vmware_pillar -- username = {0}'.format(username))
+        log.debug('vmware_pillar -- username = %s', username)
 
     if 'password' not in kwargs:
         log.error('VMWare external pillar requested but password is not specified in ext_pillar configuration.')
         return vmware_pillar
     else:
         password = kwargs['password']
-        log.debug('vmware_pillar -- password = {0}'.format(password))
+        log.debug('vmware_pillar -- password = %s', password)
 
     if 'replace_default_attributes' in kwargs:
         replace_default_attributes = kwargs['replace_default_attributes']
@@ -398,21 +398,21 @@ def ext_pillar(minion_id,
                 property_types.append(getattr(vim, prop_type))
     else:
         property_types = [vim.VirtualMachine]
-    log.debug('vmware_pillar -- property_types = {0}'.format(property_types))
+    log.debug('vmware_pillar -- property_types = %s', property_types)
 
     if 'property_name' in kwargs:
         property_name = kwargs['property_name']
     else:
         property_name = 'name'
-    log.debug('vmware_pillar -- property_name = {0}'.format(property_name))
+    log.debug('vmware_pillar -- property_name = %s', property_name)
 
     if 'protocol' in kwargs:
         protocol = kwargs['protocol']
-        log.debug('vmware_pillar -- protocol = {0}'.format(protocol))
+        log.debug('vmware_pillar -- protocol = %s', protocol)
 
     if 'port' in kwargs:
         port = kwargs['port']
-        log.debug('vmware_pillar -- port = {0}'.format(port))
+        log.debug('vmware_pillar -- port = %s', port)
 
     virtualgrain = None
     osgrain = None
@@ -456,8 +456,9 @@ def ext_pillar(minion_id,
                 Disconnect(_conn)
             else:
                 log.error(
-                    'Unable to obtain a connection with {0}, please verify your vmware ext_pillar configuration'.format(
-                        host))
+                    'Unable to obtain a connection with %s, please verify '
+                    'your vmware ext_pillar configuration', host
+                )
         except RuntimeError:
             log.error(('A runtime error occurred in the vmware_pillar, '
                        'this is likely caused by an infinite recursion in '

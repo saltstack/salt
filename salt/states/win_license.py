@@ -10,13 +10,12 @@ Install and activate windows licenses
     XXXXX-XXXXX-XXXXX-XXXXX-XXXXX:
       license.activate
 '''
-
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'license'
@@ -26,7 +25,7 @@ def __virtual__():
     '''
     Only work on Windows
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return __virtualname__
     return False
 

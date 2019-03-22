@@ -3,11 +3,12 @@
 Compendium of generic DNS utilities.
 The 'dig' command line tool must be installed in order to use this module.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
-import salt.utils
 import salt.utils.network
+import salt.utils.path
+from salt.ext import six
 
 # Import python libs
 import logging
@@ -22,7 +23,7 @@ def __virtual__():
     '''
     Only load module if dig binary is present
     '''
-    if salt.utils.which('dig'):
+    if salt.utils.path.which('dig'):
         return __virtualname__
     return (False, 'The dig execution module cannot be loaded: '
             'the dig binary is not in the path.')
@@ -83,7 +84,7 @@ def A(host, nameserver=None):
 
         salt ns1 dig.A www.google.com
     '''
-    dig = ['dig', '+short', str(host), 'A']
+    dig = ['dig', '+short', six.text_type(host), 'A']
 
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
@@ -115,7 +116,7 @@ def AAAA(host, nameserver=None):
 
         salt ns1 dig.AAAA www.google.com
     '''
-    dig = ['dig', '+short', str(host), 'AAAA']
+    dig = ['dig', '+short', six.text_type(host), 'AAAA']
 
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
@@ -147,7 +148,7 @@ def NS(domain, resolve=True, nameserver=None):
 
         salt ns1 dig.NS google.com
     '''
-    dig = ['dig', '+short', str(domain), 'NS']
+    dig = ['dig', '+short', six.text_type(domain), 'NS']
 
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
@@ -188,7 +189,7 @@ def SPF(domain, record='SPF', nameserver=None):
         salt ns1 dig.SPF google.com
     '''
     spf_re = re.compile(r'(?:\+|~)?(ip[46]|include):(.+)')
-    cmd = ['dig', '+short', str(domain), record]
+    cmd = ['dig', '+short', six.text_type(domain), record]
 
     if nameserver is not None:
         cmd.append('@{0}'.format(nameserver))
@@ -245,7 +246,7 @@ def MX(domain, resolve=False, nameserver=None):
 
         salt ns1 dig.MX google.com
     '''
-    dig = ['dig', '+short', str(domain), 'MX']
+    dig = ['dig', '+short', six.text_type(domain), 'MX']
 
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
@@ -283,7 +284,7 @@ def TXT(host, nameserver=None):
 
         salt ns1 dig.TXT google.com
     '''
-    dig = ['dig', '+short', str(host), 'TXT']
+    dig = ['dig', '+short', six.text_type(host), 'TXT']
 
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))

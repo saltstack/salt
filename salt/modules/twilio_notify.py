@@ -16,16 +16,29 @@ Module for notifications via Twilio
             twilio.account_sid: AC32a3c83990934481addd5ce1659f04d2
             twilio.auth_token: mytoken
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
+
+# import 3rd party libs
+from salt.ext import six
 
 HAS_LIBS = False
 try:
-    from twilio.rest import TwilioRestClient
-    from twilio import TwilioRestException
+    import twilio
+    # Grab version, ensure elements are ints
+    twilio_version = tuple([int(x) for x in twilio.__version_info__])
+    if twilio_version > (5, ):
+        TWILIO_5 = False
+        from twilio.rest import Client as TwilioRestClient
+        from twilio.rest import TwilioException as TwilioRestException
+    else:
+        TWILIO_5 = True
+        from twilio.rest import TwilioRestClient
+        from twilio import TwilioRestException
     HAS_LIBS = True
 except ImportError:
     pass
+
 
 log = logging.getLogger(__name__)
 
@@ -67,13 +80,16 @@ def send_sms(profile, body, to, from_):
     ret['message']['sid'] = None
     client = _get_twilio(profile)
     try:
-        message = client.sms.messages.create(body=body, to=to, from_=from_)
+        if TWILIO_5:
+            message = client.sms.messages.create(body=body, to=to, from_=from_)
+        else:
+            message = client.messages.create(body=body, to=to, from_=from_)
     except TwilioRestException as exc:
         ret['_error'] = {}
         ret['_error']['code'] = exc.code
         ret['_error']['msg'] = exc.msg
         ret['_error']['status'] = exc.status
-        log.debug('Could not send sms. Error: {0}'.format(ret))
+        log.debug('Could not send sms. Error: %s', ret)
         return ret
     ret['message'] = {}
     ret['message']['sid'] = message.sid
@@ -82,7 +98,7 @@ def send_sms(profile, body, to, from_):
     ret['message']['status'] = message.status
     ret['message']['num_segments'] = message.num_segments
     ret['message']['body'] = message.body
-    ret['message']['date_sent'] = str(message.date_sent)
-    ret['message']['date_created'] = str(message.date_created)
+    ret['message']['date_sent'] = six.text_type(message.date_sent)
+    ret['message']['date_created'] = six.text_type(message.date_created)
     log.info(ret)
     return ret

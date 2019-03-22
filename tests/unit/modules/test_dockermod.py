@@ -4,7 +4,7 @@ Unit tests for the docker module
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -16,8 +16,12 @@ from tests.support.mock import (
     NO_MOCK_REASON,
     patch
 )
+import logging
+log = logging.getLogger(__name__)
 
 # Import Salt Libs
+import salt.config
+import salt.loader
 from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
 import salt.modules.dockermod as docker_mod
@@ -39,7 +43,13 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
     Validate docker module
     '''
     def setup_loader_modules(self):
-        return {docker_mod: {'__context__': {'docker.docker_version': ''}}}
+        utils = salt.loader.utils(
+            salt.config.DEFAULT_MINION_OPTS,
+            whitelist=['args', 'docker', 'json', 'state', 'thin',
+                       'systemd', 'path', 'platform']
+        )
+        return {docker_mod: {'__context__': {'docker.docker_version': ''},
+                             '__utils__': utils}}
 
     try:
         docker_version = docker_mod.docker.version_info
@@ -51,6 +61,26 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         Ensure we aren't persisting context dunders between tests
         '''
         docker_mod.__context__.pop('docker.client', None)
+
+    def test_failed_login(self):
+        '''
+        Check that when docker.login failed a retcode other then 0
+        is part of the return.
+        '''
+        client = Mock()
+        get_client_mock = MagicMock(return_value=client)
+        ref_out = {
+            'stdout': '',
+            'stderr': 'login failed',
+            'retcode': 1
+        }
+        with patch.dict(docker_mod.__pillar__, {'docker-registries': {'portus.example.com:5000':
+                {'username': 'admin', 'password': 'linux12345', 'email': 'tux@example.com'}}}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
+                with patch.dict(docker_mod.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
+                    ret = docker_mod.login('portus.example.com:5000')
+                    self.assertIn('retcode', ret)
+                    self.assertNotEqual(ret['retcode'], 0)
 
     def test_ps_with_host_true(self):
         '''
@@ -123,7 +153,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                                        ('kill', ()),
                                        ('pause', ()),
                                        ('signal_', ('KILL',)),
-                                       ('start', ()),
+                                       ('start_', ()),
                                        ('stop', ()),
                                        ('unpause', ()),
                                        ('_run', ('command',)),
@@ -196,8 +226,12 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         host_config = {}
         client = Mock()
         client.api_version = '1.21'
+        client.networks = Mock(return_value=[
+            {'Name': 'foo',
+             'Id': '01234',
+             'Containers': {}}
+        ])
         get_client_mock = MagicMock(return_value=client)
-
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
             with patch.object(docker_mod, '_get_client', get_client_mock):
@@ -222,8 +256,25 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
             with patch.object(docker_mod, '_get_client', get_client_mock):
-                docker_mod.create_network('foo', driver='bridge')
-        client.create_network.assert_called_once_with('foo', driver='bridge')
+                docker_mod.create_network('foo',
+                                          driver='bridge',
+                                          driver_opts={},
+                                          gateway='192.168.0.1',
+                                          ip_range='192.168.0.128/25',
+                                          subnet='192.168.0.0/24'
+                                          )
+        client.create_network.assert_called_once_with('foo',
+                                                      driver='bridge',
+                                                      options={},
+                                                      ipam={
+                                                          'Config': [{
+                                                              'Gateway': '192.168.0.1',
+                                                              'IPRange': '192.168.0.128/25',
+                                                              'Subnet': '192.168.0.0/24'
+                                                          }],
+                                                          'Driver': 'default',
+                                                      },
+                                                      check_duplicate=True)
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
@@ -290,7 +341,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(docker_mod, '_get_client', get_client_mock):
                     docker_mod.connect_container_to_network('container', 'foo')
         client.connect_container_to_network.assert_called_once_with(
-            'container', 'foo', None)
+            'container', 'foo')
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
@@ -560,24 +611,21 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             })
 
         ret = None
-        with patch.object(docker_mod, 'start', docker_start_mock):
-            with patch.object(docker_mod, 'create', docker_create_mock):
-                with patch.object(docker_mod, 'stop', docker_stop_mock):
-                    with patch.object(docker_mod, 'commit', docker_commit_mock):
-                        with patch.object(docker_mod, 'sls', docker_sls_mock):
-                            with patch.object(docker_mod, 'rm_', docker_rm_mock):
-                                ret = docker_mod.sls_build(
-                                    'foo',
-                                    mods='foo',
-                                )
+        with patch.object(docker_mod, 'start_', docker_start_mock), \
+                patch.object(docker_mod, 'create', docker_create_mock), \
+                patch.object(docker_mod, 'stop', docker_stop_mock), \
+                patch.object(docker_mod, 'commit', docker_commit_mock), \
+                patch.object(docker_mod, 'sls', docker_sls_mock), \
+                patch.object(docker_mod, 'rm_', docker_rm_mock):
+            ret = docker_mod.sls_build('foo', mods='foo')
         docker_create_mock.assert_called_once_with(
             cmd='sleep infinity',
             image='opensuse/python', interactive=True, tty=True)
         docker_start_mock.assert_called_once_with('ID')
-        docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
+        docker_sls_mock.assert_called_once_with('ID', 'foo')
         docker_stop_mock.assert_called_once_with('ID')
         docker_rm_mock.assert_called_once_with('ID')
-        docker_commit_mock.assert_called_once_with('ID', 'foo')
+        docker_commit_mock.assert_called_once_with('ID', 'foo', tag='latest')
         self.assertEqual(
             {'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42}, ret)
 
@@ -618,21 +666,17 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             })
 
         ret = None
-        with patch.object(docker_mod, 'start', docker_start_mock):
-            with patch.object(docker_mod, 'create', docker_create_mock):
-                with patch.object(docker_mod, 'stop', docker_stop_mock):
-                    with patch.object(docker_mod, 'rm_', docker_rm_mock):
-                        with patch.object(docker_mod, 'sls', docker_sls_mock):
-                            ret = docker_mod.sls_build(
-                                'foo',
-                                mods='foo',
-                                dryrun=True
-                            )
+        with patch.object(docker_mod, 'start_', docker_start_mock), \
+                patch.object(docker_mod, 'create', docker_create_mock), \
+                patch.object(docker_mod, 'stop', docker_stop_mock), \
+                patch.object(docker_mod, 'rm_', docker_rm_mock), \
+                patch.object(docker_mod, 'sls', docker_sls_mock):
+            ret = docker_mod.sls_build('foo', mods='foo', dryrun=True)
         docker_create_mock.assert_called_once_with(
             cmd='sleep infinity',
             image='opensuse/python', interactive=True, tty=True)
         docker_start_mock.assert_called_once_with('ID')
-        docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
+        docker_sls_mock.assert_called_once_with('ID', 'foo')
         docker_stop_mock.assert_called_once_with('ID')
         docker_rm_mock.assert_called_once_with('ID')
         self.assertEqual(
@@ -683,37 +727,40 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         context = {'docker.exec_driver': 'docker-exec'}
         salt_dunder = {'config.option': docker_config_mock}
 
-        with patch.object(docker_mod, 'run_all', docker_run_all_mock):
-            with patch.object(docker_mod, 'copy_to', docker_copy_to_mock):
-                with patch.object(docker_mod, '_get_client', get_client_mock):
-                    with patch.dict(docker_mod.__opts__, {'cachedir': '/tmp'}):
-                        with patch.dict(docker_mod.__salt__, salt_dunder):
-                            with patch.dict(docker_mod.__context__, context):
-                                # call twice to verify tmp path later
-                                for i in range(2):
-                                    ret = docker_mod.call(
-                                        'ID',
-                                        'test.arg',
-                                        1, 2,
-                                        arg1='val1')
+        with patch.object(docker_mod, 'run_all', docker_run_all_mock), \
+                patch.object(docker_mod, 'copy_to', docker_copy_to_mock), \
+                patch.object(docker_mod, '_get_client', get_client_mock), \
+                patch.dict(docker_mod.__opts__, {'cachedir': '/tmp'}), \
+                patch.dict(docker_mod.__salt__, salt_dunder), \
+                patch.dict(docker_mod.__context__, context):
+            # call twice to verify tmp path later
+            for i in range(2):
+                ret = docker_mod.call('ID', 'test.arg', 1, 2, arg1='val1')
 
         # Check that the directory is different each time
         # [ call(name, [args]), ...
+        self.maxDiff = None
         self.assertIn('mkdir', docker_run_all_mock.mock_calls[0][1][1])
-        self.assertIn('mkdir', docker_run_all_mock.mock_calls[3][1][1])
+        self.assertIn('mkdir', docker_run_all_mock.mock_calls[4][1][1])
         self.assertNotEqual(docker_run_all_mock.mock_calls[0][1][1],
-                            docker_run_all_mock.mock_calls[3][1][1])
-
-        self.assertIn('salt-call', docker_run_all_mock.mock_calls[1][1][1])
-        self.assertIn('salt-call', docker_run_all_mock.mock_calls[4][1][1])
-        self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
                             docker_run_all_mock.mock_calls[4][1][1])
 
-        # check directory cleanup
-        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[2][1][1])
-        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[5][1][1])
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[2][1][1])
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[6][1][1])
         self.assertNotEqual(docker_run_all_mock.mock_calls[2][1][1],
+                            docker_run_all_mock.mock_calls[6][1][1])
+
+        # check thin untar
+        self.assertIn('tarfile', docker_run_all_mock.mock_calls[1][1][1])
+        self.assertIn('tarfile', docker_run_all_mock.mock_calls[5][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
                             docker_run_all_mock.mock_calls[5][1][1])
+
+        # check directory cleanup
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[3][1][1])
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[7][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[3][1][1],
+                            docker_run_all_mock.mock_calls[7][1][1])
 
         self.assertEqual({"retcode": 0, "comment": "container cmd"}, ret)
 
@@ -761,7 +808,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
             with patch.object(docker_mod, 'inspect_image', inspect_image_mock):
-                ret = docker_mod.compare_container('container1', 'container2')
+                ret = docker_mod.compare_containers('container1', 'container2')
                 self.assertEqual(ret, {})
 
     def test_compare_container_ulimits_order(self):
@@ -774,15 +821,44 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 'container1': {'Config': {},
                                'HostConfig': {
                                    'Ulimits': [
-                                       {u'Hard': -1, u'Soft': -1, u'Name': u'core'},
-                                       {u'Hard': 65536, u'Soft': 65536, u'Name': u'nofile'}
+                                       {'Hard': -1, 'Soft': -1, 'Name': 'core'},
+                                       {'Hard': 65536, 'Soft': 65536, 'Name': 'nofile'}
                                    ]
                                }},
                 'container2': {'Config': {},
                                'HostConfig': {
                                    'Ulimits': [
-                                       {u'Hard': 65536, u'Soft': 65536, u'Name': u'nofile'},
-                                       {u'Hard': -1, u'Soft': -1, u'Name': u'core'}
+                                       {'Hard': 65536, 'Soft': 65536, 'Name': 'nofile'},
+                                       {'Hard': -1, 'Soft': -1, 'Name': 'core'}
+                                   ]
+                               }},
+            }[id_]
+
+        inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
+
+        with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
+            ret = docker_mod.compare_container('container1', 'container2')
+            self.assertEqual(ret, {})
+
+    def test_compare_container_env_order(self):
+        '''
+        Test comparing two containers when the order of the Env HostConfig
+        values are different, but the values are the same.
+        '''
+        def _inspect_container_effect(id_):
+            return {
+                'container1': {'Config': {},
+                               'HostConfig': {
+                                   'Env': [
+                                       'FOO=bar',
+                                       'HELLO=world',
+                                   ]
+                               }},
+                'container2': {'Config': {},
+                               'HostConfig': {
+                                   'Env': [
+                                       'HELLO=world',
+                                       'FOO=bar',
                                    ]
                                }},
             }[id_]
@@ -795,21 +871,28 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_resolve_tag(self):
         '''
-        Test the resolve_tag function
+        Test the resolve_tag function. It runs docker.insect_image on the image
+        name passed and then looks for the RepoTags key in the result
         '''
-        with_prefix = 'docker.io/foo:latest'
-        no_prefix = 'bar:latest'
-        with patch.object(docker_mod,
-                          'list_tags',
-                          MagicMock(return_value=[with_prefix])):
-            self.assertEqual(docker_mod.resolve_tag('foo'), with_prefix)
-            self.assertEqual(docker_mod.resolve_tag('foo:latest'), with_prefix)
-            self.assertEqual(docker_mod.resolve_tag(with_prefix), with_prefix)
-            self.assertEqual(docker_mod.resolve_tag('foo:bar'), False)
+        id_ = 'sha256:6ad733544a6317992a6fac4eb19fe1df577d4dec7529efec28a5bd0edad0fd30'
+        tags = ['foo:latest', 'foo:bar']
+        mock_tagged = MagicMock(return_value={'Id': id_, 'RepoTags': tags})
+        mock_untagged = MagicMock(return_value={'Id': id_, 'RepoTags': []})
+        mock_unexpected = MagicMock(return_value={'Id': id_})
+        mock_not_found = MagicMock(side_effect=CommandExecutionError())
 
-        with patch.object(docker_mod,
-                          'list_tags',
-                          MagicMock(return_value=[no_prefix])):
-            self.assertEqual(docker_mod.resolve_tag('bar'), no_prefix)
-            self.assertEqual(docker_mod.resolve_tag(no_prefix), no_prefix)
-            self.assertEqual(docker_mod.resolve_tag('bar:baz'), False)
+        with patch.object(docker_mod, 'inspect_image', mock_tagged):
+            self.assertEqual(docker_mod.resolve_tag('foo'), tags[0])
+            self.assertEqual(docker_mod.resolve_tag('foo', all=True), tags)
+
+        with patch.object(docker_mod, 'inspect_image', mock_untagged):
+            self.assertEqual(docker_mod.resolve_tag('foo'), id_)
+            self.assertEqual(docker_mod.resolve_tag('foo', all=True), [id_])
+
+        with patch.object(docker_mod, 'inspect_image', mock_unexpected):
+            self.assertEqual(docker_mod.resolve_tag('foo'), id_)
+            self.assertEqual(docker_mod.resolve_tag('foo', all=True), [id_])
+
+        with patch.object(docker_mod, 'inspect_image', mock_not_found):
+            self.assertIs(docker_mod.resolve_tag('foo'), False)
+            self.assertIs(docker_mod.resolve_tag('foo', all=True), False)

@@ -70,10 +70,10 @@ Output
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def _get_values(data):
@@ -98,7 +98,7 @@ def _one_level_values(data):
 
 
 def _string_list(a_list):
-    return [str(item) for item in a_list]
+    return [six.text_type(item) for item in a_list]
 
 
 def output(data, **kwargs):  # pylint: disable=unused-argument

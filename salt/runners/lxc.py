@@ -6,7 +6,7 @@ Control Linux Containers via Salt
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 import os
 import copy
@@ -14,14 +14,16 @@ import logging
 
 # Import Salt libs
 import salt.client
-import salt.utils
-import salt.utils.virt
+import salt.utils.args
 import salt.utils.cloud
+import salt.utils.files
+import salt.utils.stringutils
+import salt.utils.virt
 import salt.key
 from salt.utils.odict import OrderedDict as _OrderedDict
 
 # Import 3rd-party lib
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -266,16 +268,16 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     for host, containers in six.iteritems(data):
         for name in names:
             if name in sum(six.itervalues(containers), []):
-                log.info('Container \'{0}\' already exists'
-                         ' on host \'{1}\','
-                         ' init can be a NO-OP'.format(
-                             name, host))
+                log.info(
+                    'Container \'%s\' already exists on host \'%s\', init '
+                    'can be a NO-OP', name, host
+                )
     if host not in data:
         ret['comment'] = 'Host \'{0}\' was not found'.format(host)
         ret['result'] = False
         return ret
 
-    kw = salt.utils.clean_kwargs(**kwargs)
+    kw = salt.utils.args.clean_kwargs(**kwargs)
     pub_key = kw.get('pub_key', None)
     priv_key = kw.get('priv_key', None)
     explicit_auth = pub_key and priv_key
@@ -302,13 +304,12 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                 ret['result'] = False
                 return ret
 
-    log.info('Creating container(s) \'{0}\''
-             ' on host \'{1}\''.format(names, host))
+    log.info('Creating container(s) \'%s\' on host \'%s\'', names, host)
 
     cmds = []
     for name in names:
         args = [name]
-        kw = salt.utils.clean_kwargs(**kwargs)
+        kw = salt.utils.args.clean_kwargs(**kwargs)
         if saltcloud_mode:
             kw = copy.deepcopy(kw)
             kw['name'] = name
@@ -372,11 +373,12 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         if explicit_auth:
             fcontent = ''
             if os.path.exists(key):
-                with salt.utils.fopen(key) as fic:
-                    fcontent = fic.read().strip()
+                with salt.utils.files.fopen(key) as fic:
+                    fcontent = salt.utils.stringutils.to_unicode(fic.read()).strip()
+            pub_key = salt.utils.stringutils.to_unicode(pub_key)
             if pub_key.strip() != fcontent:
-                with salt.utils.fopen(key, 'w') as fic:
-                    fic.write(pub_key)
+                with salt.utils.files.fopen(key, 'w') as fic:
+                    fic.write(salt.utils.stringutils.to_str(pub_key))
                     fic.flush()
         mid = j_ret.get('mid', None)
         if not mid:

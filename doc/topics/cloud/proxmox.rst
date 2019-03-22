@@ -156,6 +156,10 @@ with their default settings listed.
     # Network interfaces, netX
     net0: name=eth0,bridge=vmbr0,ip=dhcp
 
+    # Public key to add to /root/.ssh/authorized_keys.
+    pubkey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABA...'
+
+
 QEMU
 ====
 

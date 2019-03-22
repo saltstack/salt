@@ -7,7 +7,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import shutil
@@ -20,11 +20,13 @@ from tests.support.paths import TMP
 from tests.support.helpers import skip_if_not_root
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
-@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+@skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipModuleTest(ModuleCase):
 
     def setUp(self):
@@ -39,6 +41,20 @@ class PipModuleTest(ModuleCase):
         if not os.path.isdir(self.pip_temp):
             os.makedirs(self.pip_temp)
         os.environ['PIP_SOURCE_DIR'] = os.environ['PIP_BUILD_DIR'] = ''
+
+    def tearDown(self):
+        super(PipModuleTest, self).tearDown()
+        if os.path.isdir(self.venv_test_dir):
+            shutil.rmtree(self.venv_test_dir, ignore_errors=True)
+        if os.path.isdir(self.pip_temp):
+            shutil.rmtree(self.pip_temp, ignore_errors=True)
+        del self.venv_dir
+        del self.venv_test_dir
+        del self.pip_temp
+        if 'PIP_SOURCE_DIR' in os.environ:
+            os.environ.pop('PIP_SOURCE_DIR')
+        if 'PIP_BUILD_DIR' in os.environ:
+            os.environ.pop('PIP_BUILD_DIR')
 
     def _check_download_error(self, ret):
         '''
@@ -73,7 +89,7 @@ class PipModuleTest(ModuleCase):
         # Let's remove the pip binary
         pip_bin = os.path.join(self.venv_dir, 'bin', 'pip')
         site_dir = self.run_function('virtualenv.get_distribution_path', [self.venv_dir, 'pip'])
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             pip_bin = os.path.join(self.venv_dir, 'Scripts', 'pip.exe')
             site_dir = os.path.join(self.venv_dir, 'lib', 'site-packages')
         if not os.path.isfile(pip_bin):
@@ -108,13 +124,13 @@ class PipModuleTest(ModuleCase):
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
         req2b_filename = os.path.join(self.venv_dir, 'requirements2b.txt')
 
-        with salt.utils.fopen(req1_filename, 'w') as f:
+        with salt.utils.files.fopen(req1_filename, 'w') as f:
             f.write('-r requirements1b.txt\n')
-        with salt.utils.fopen(req1b_filename, 'w') as f:
+        with salt.utils.files.fopen(req1b_filename, 'w') as f:
             f.write('irc3-plugins-test\n')
-        with salt.utils.fopen(req2_filename, 'w') as f:
+        with salt.utils.files.fopen(req2_filename, 'w') as f:
             f.write('-r requirements2b.txt\n')
-        with salt.utils.fopen(req2b_filename, 'w') as f:
+        with salt.utils.files.fopen(req2b_filename, 'w') as f:
             f.write('pep8\n')
 
         requirements_list = [req1_filename, req2_filename]
@@ -145,13 +161,13 @@ class PipModuleTest(ModuleCase):
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
         req2b_filename = os.path.join(self.venv_dir, 'requirements2b.txt')
 
-        with salt.utils.fopen(req1_filename, 'w') as f:
+        with salt.utils.files.fopen(req1_filename, 'w') as f:
             f.write('-r requirements1b.txt\n')
-        with salt.utils.fopen(req1b_filename, 'w') as f:
+        with salt.utils.files.fopen(req1b_filename, 'w') as f:
             f.write('irc3-plugins-test\n')
-        with salt.utils.fopen(req2_filename, 'w') as f:
+        with salt.utils.files.fopen(req2_filename, 'w') as f:
             f.write('-r requirements2b.txt\n')
-        with salt.utils.fopen(req2b_filename, 'w') as f:
+        with salt.utils.files.fopen(req2b_filename, 'w') as f:
             f.write('pep8\n')
 
         requirements_list = [req1_filename, req2_filename]
@@ -178,9 +194,9 @@ class PipModuleTest(ModuleCase):
         req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
 
-        with salt.utils.fopen(req1_filename, 'w') as f:
+        with salt.utils.files.fopen(req1_filename, 'w') as f:
             f.write('irc3-plugins-test\n')
-        with salt.utils.fopen(req2_filename, 'w') as f:
+        with salt.utils.files.fopen(req2_filename, 'w') as f:
             f.write('pep8\n')
 
         requirements_list = [req1_filename, req2_filename]
@@ -213,9 +229,9 @@ class PipModuleTest(ModuleCase):
         req1_filepath = os.path.join(req_cwd, req1_filename)
         req2_filepath = os.path.join(req_cwd, req2_filename)
 
-        with salt.utils.fopen(req1_filepath, 'w') as f:
+        with salt.utils.files.fopen(req1_filepath, 'w') as f:
             f.write('irc3-plugins-test\n')
-        with salt.utils.fopen(req2_filepath, 'w') as f:
+        with salt.utils.files.fopen(req2_filepath, 'w') as f:
             f.write('pep8\n')
 
         requirements_list = [req1_filename, req2_filename]
@@ -244,9 +260,9 @@ class PipModuleTest(ModuleCase):
         req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
 
-        with salt.utils.fopen(req1_filename, 'w') as f:
+        with salt.utils.files.fopen(req1_filename, 'w') as f:
             f.write('-r requirements2.txt')
-        with salt.utils.fopen(req2_filename, 'w') as f:
+        with salt.utils.files.fopen(req2_filename, 'w') as f:
             f.write('pep8')
 
         ret = self.run_function(
@@ -273,9 +289,9 @@ class PipModuleTest(ModuleCase):
         req1_file = os.path.join(self.venv_dir, req1_filename)
         req2_file = os.path.join(self.venv_dir, req2_filename)
 
-        with salt.utils.fopen(req1_file, 'w') as f:
+        with salt.utils.files.fopen(req1_file, 'w') as f:
             f.write('-r requirements2.txt')
-        with salt.utils.fopen(req2_file, 'w') as f:
+        with salt.utils.files.fopen(req2_file, 'w') as f:
             f.write('pep8')
 
         ret = self.run_function(
@@ -297,13 +313,13 @@ class PipModuleTest(ModuleCase):
         # Create a requirements file that depends on another one.
         req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
-        with salt.utils.fopen(req1_filename, 'w') as f:
+        with salt.utils.files.fopen(req1_filename, 'w') as f:
             f.write('-r requirements2.txt')
-        with salt.utils.fopen(req2_filename, 'w') as f:
+        with salt.utils.files.fopen(req2_filename, 'w') as f:
             f.write('pep8')
 
         ret = self.run_function(
-            'pip.install', requirements=req1_filename, bin_env=self.venv_dir)
+            'pip.install', requirements=req1_filename, bin_env=self.venv_dir, timeout=300)
         if self._check_download_error(ret['stdout']):
             self.skipTest('Test skipped due to pip download error')
         try:
@@ -430,7 +446,7 @@ class PipModuleTest(ModuleCase):
             raise
 
     @skipIf(not os.path.isfile('pip3'), 'test where pip3 is installed')
-    @skipIf(salt.utils.is_windows(), 'test specific for linux usage of /bin/python')
+    @skipIf(salt.utils.platform.is_windows(), 'test specific for linux usage of /bin/python')
     def test_system_pip3(self):
         self.run_function('pip.install', pkgs=['lazyimport==0.0.1'], bin_env='/bin/pip3')
         ret1 = self.run_function('cmd.run', '/bin/pip3 freeze | grep lazyimport')
@@ -438,13 +454,3 @@ class PipModuleTest(ModuleCase):
         ret2 = self.run_function('cmd.run', '/bin/pip3 freeze | grep lazyimport')
         assert 'lazyimport==0.0.1' in ret1
         assert ret2 == ''
-
-    def tearDown(self):
-        super(PipModuleTest, self).tearDown()
-        if os.path.isdir(self.venv_test_dir):
-            shutil.rmtree(self.venv_test_dir, ignore_errors=True)
-        if os.path.isdir(self.pip_temp):
-            shutil.rmtree(self.pip_temp, ignore_errors=True)
-        del self.venv_dir
-        del self.venv_test_dir
-        del self.pip_temp

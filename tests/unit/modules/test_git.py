@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 import os
@@ -193,7 +193,7 @@ class GitTestCase(TestCase, LoaderModuleMockMixin):
                                            'ssh.key_is_encrypted': mock_false}):
 
             # Non-windows
-            with patch('salt.utils.is_windows', mock_false), \
+            with patch('salt.utils.platform.is_windows', mock_false), \
                     patch.object(git_mod, '_path_is_executable_others',
                                  mock_true):
 
@@ -207,7 +207,7 @@ class GitTestCase(TestCase, LoaderModuleMockMixin):
                 file_remove_mock.assert_not_called()
 
             file_remove_mock.reset_mock()
-            with patch('salt.utils.is_windows', mock_true), \
+            with patch('salt.utils.platform.is_windows', mock_true), \
                     patch.object(git_mod, '_find_ssh_exe',
                                  MagicMock(return_value=r'C:\Git\ssh.exe')):
                 # Command doesn't really matter here since we're mocking

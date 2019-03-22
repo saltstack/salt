@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
-#
-# Copyright (C) 2014 SUSE LLC
-
 '''
 Run-time utilities
 '''
+#
+# Copyright (C) 2014 SUSE LLC
+
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import re
 import os
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -28,10 +28,10 @@ def _verify_run(out, cmd=None):
     '''
     if out.get('retcode', 0) and out['stderr']:
         if cmd:
-            log.debug('Command: \'{0}\''.format(cmd))
+            log.debug('Command: \'%s\'', cmd)
 
-        log.debug('Return code: {0}'.format(out.get('retcode')))
-        log.debug('Error output:\n{0}'.format(out.get('stderr', 'N/A')))
+        log.debug('Return code: %s', out.get('retcode'))
+        log.debug('Error output:\n%s', out.get('stderr', 'N/A'))
 
         raise CommandExecutionError(out['stderr'])
 
@@ -41,8 +41,9 @@ def _get_mounts(fs_type=None):
     List mounted filesystems.
     '''
     mounts = {}
-    with salt.utils.fopen("/proc/mounts") as fhr:
+    with salt.utils.files.fopen('/proc/mounts') as fhr:
         for line in fhr.readlines():
+            line = salt.utils.stringutils.to_unicode(line)
             device, mntpnt, fstype, options, fs_freq, fs_passno = line.strip().split(" ")
             if fs_type and fstype != fs_type:
                 continue

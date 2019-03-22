@@ -4,7 +4,7 @@ GNOME implementations
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 import logging
 try:
@@ -13,14 +13,15 @@ try:
 except ImportError:
     HAS_PWD = False
 
+# Import Salt libs
+import salt.utils.path
+
 # Import 3rd-party libs
 try:
     from gi.repository import Gio, GLib  # pylint: disable=W0611
     HAS_GLIB = True
 except ImportError:
     HAS_GLIB = False
-
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ class _GSettings(object):
         '''
         return the command to run the gsettings binary
         '''
-        if salt.utils.which_bin(['dbus-run-session']):
+        if salt.utils.path.which_bin(['dbus-run-session']):
             cmd = ['dbus-run-session', '--', 'gsettings']
         else:
             cmd = ['dbus-launch', '--exit-with-session', 'gsettings']
@@ -102,7 +103,7 @@ class _GSettings(object):
             result['stdout'] = 'User {0} does not exist'.format(user)
             return result
 
-        cmd = self.gsetting_command + ['set', str(self.SCHEMA), str(self.KEY), str(value)]
+        cmd = self.gsetting_command + ['set', self.SCHEMA, self.KEY, value]
         environ = {}
         environ['XDG_RUNTIME_DIR'] = '/run/user/{0}'.format(uid)
         result = __salt__['cmd.run_all'](cmd, runas=user, env=environ, python_shell=False)

@@ -2,6 +2,7 @@
 
 mock>=2.0.0
 SaltPyLint>=v2017.3.6
+testinfra>=1.7.0,!=1.17.0
 
 # httpretty Needs to be here for now even though it's a dependency of boto.
 # A pip install on a fresh system will decide to target httpretty 0.8.10 to

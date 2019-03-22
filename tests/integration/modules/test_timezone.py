@@ -6,7 +6,7 @@ Linux and Solaris are supported
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     import tzlocal  # pylint: disable=unused-import
@@ -20,7 +20,7 @@ from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 # Import salt libs
-import salt.utils
+import salt.utils.platform
 
 
 class TimezoneLinuxModuleTest(ModuleCase):
@@ -55,7 +55,7 @@ class TimezoneSolarisModuleTest(ModuleCase):
         self.assertIn(ret, timescale)
 
 
-@skipIf(not salt.utils.is_windows(), 'windows test only')
+@skipIf(not salt.utils.platform.is_windows(), 'windows test only')
 class TimezoneWindowsModuleTest(ModuleCase):
     def setUp(self):
         self.pre = self.run_function('timezone.get_zone')

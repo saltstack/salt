@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 import random
@@ -18,7 +18,7 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.loader
 from salt.utils.versions import LooseVersion
 import salt.modules.boto_elasticsearch_domain as boto_elasticsearch_domain
@@ -89,7 +89,10 @@ class BotoElasticsearchDomainTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.opts = salt.config.DEFAULT_MINION_OPTS
-        utils = salt.loader.utils(self.opts, whitelist=['boto3'], context={})
+        utils = salt.loader.utils(
+            self.opts,
+            whitelist=['boto3', 'args', 'systemd', 'path', 'platform'],
+            context={})
         return {boto_elasticsearch_domain: {'__utils__': utils}}
 
     def setUp(self):

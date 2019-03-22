@@ -4,7 +4,7 @@ Integration tests for functions located in the salt.cloud.__init__.py file.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import random
 import string
@@ -28,6 +28,7 @@ def __random_name(size=6):
         for x in range(size)
     )
 
+
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = __random_name()
 
@@ -40,11 +41,11 @@ class CloudClientTestCase(ShellCase):
     @expensiveTest
     def setUp(self):
         self.config_file = os.path.join(RUNTIME_VARS.TMP_CONF_CLOUD_PROVIDER_INCLUDES,
-                                        'digital_ocean.conf')
+                                        'digitalocean.conf')
         self.provider_name = 'digitalocean-config'
         self.image_name = '14.04.5 x64'
 
-        # Use a --list-images salt-cloud call to see if the Digital Ocean provider is
+        # Use a --list-images salt-cloud call to see if the DigitalOcean provider is
         # configured correctly before running any tests.
         images = self.run_cloud('--list-images {0}'.format(self.provider_name))
 

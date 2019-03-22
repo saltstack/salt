@@ -2,11 +2,15 @@
 '''
 Utility functions for use with or in SLS files
 '''
-from __future__ import absolute_import
 
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
+
+# Import Salt libs
 import salt.exceptions
 import salt.loader
 import salt.template
+import salt.utils.args
 import salt.utils.dictupdate
 
 
@@ -54,11 +58,16 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
     '''
     Parse a string or file through Salt's renderer system
 
+    .. versionchanged:: 2018.3.0
+       Add support for Salt fileserver URIs.
+
     This is an open-ended function and can be used for a variety of tasks. It
     makes use of Salt's "renderer pipes" system to run a string or file through
     a pipe of any of the loaded renderer modules.
 
-    :param path: The path to a file on the filesystem.
+    :param path: The path to a file on Salt's fileserver (any URIs supported by
+        :py:func:`cp.get_url <salt.modules.cp.get_url>`) or on the local file
+        system.
     :param string: An inline string to be used as the file to send through the
         renderer system. Note, not all renderer modules can work with strings;
         the 'py' renderer requires a file, for example.
@@ -109,6 +118,7 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
 
     .. code-block:: bash
 
+        salt '*' slsutil.renderer salt://path/to/file
         salt '*' slsutil.renderer /path/to/file
         salt '*' slsutil.renderer /path/to/file.jinja 'jinja'
         salt '*' slsutil.renderer /path/to/file.sls 'jinja|yaml'
@@ -122,7 +132,7 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
     renderers = salt.loader.render(__opts__, __salt__)
 
     if path:
-        path_or_string = path
+        path_or_string = __salt__['cp.get_url'](path)
     elif string:
         path_or_string = ':string:'
         kwargs['input_data'] = string
@@ -136,3 +146,67 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
         **kwargs
     )
     return ret.read() if __utils__['stringio.is_readable'](ret) else ret
+
+
+def _get_serialize_fn(serializer, fn_name):
+    serializers = salt.loader.serializers(__opts__)
+    fns = getattr(serializers, serializer, None)
+    fn = getattr(fns, fn_name, None)
+
+    if not fns:
+        raise salt.exceptions.CommandExecutionError(
+            "Serializer '{0}' not found.".format(serializer))
+
+    if not fn:
+        raise salt.exceptions.CommandExecutionError(
+            "Serializer '{0}' does not implement {1}.".format(serializer,
+                fn_name))
+
+    return fn
+
+
+def serialize(serializer, obj, **mod_kwargs):
+    '''
+    Serialize a Python object using a :py:mod:`serializer module
+    <salt.serializers>`
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' --no-parse=obj slsutil.serialize 'json' obj="{'foo': 'Foo!'}
+
+    Jinja Example:
+
+    .. code-block:: jinja
+
+        {% set json_string = salt.slsutil.serialize('json',
+            {'foo': 'Foo!'}) %}
+    '''
+    kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
+    return _get_serialize_fn(serializer, 'serialize')(obj, **kwargs)
+
+
+def deserialize(serializer, stream_or_string, **mod_kwargs):
+    '''
+    Deserialize a Python object using a :py:mod:`serializer module
+    <salt.serializers>`
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' slsutil.deserialize 'json' '{"foo": "Foo!"}'
+        salt '*' --no-parse=stream_or_string slsutil.deserialize 'json' \\
+            stream_or_string='{"foo": "Foo!"}'
+
+    Jinja Example:
+
+    .. code-block:: jinja
+
+        {% set python_object = salt.slsutil.deserialize('json',
+            '{"foo": "Foo!"}') %}
+    '''
+    kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
+    return _get_serialize_fn(serializer, 'deserialize')(stream_or_string,
+            **kwargs)

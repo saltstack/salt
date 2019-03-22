@@ -168,6 +168,10 @@ they are being loaded for the correct proxytype, example below:
 
         return False
 
+.. note::
+    ``salt.utils.is_proxy()`` has been renamed to
+    ``salt.utils.platform.is_proxy`` as of the Oxygen release.
+
 The try/except block above exists because grains are processed very early
 in the proxy minion startup process, sometimes earlier than the proxy
 key in the ``__opts__`` dictionary is populated.

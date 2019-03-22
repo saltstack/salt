@@ -94,10 +94,10 @@ can be approximated with sqlite3's module functions and module.run:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     import sqlite3
@@ -182,7 +182,7 @@ def row_absent(name, db, table, where_sql, where_args=None):
 
     except Exception as e:
         changes['result'] = False
-        changes['comment'] = str(e)
+        changes['comment'] = six.text_type(e)
 
     finally:
         if conn:
@@ -322,7 +322,7 @@ def row_present(name,
 
     except Exception as e:
         changes['result'] = False
-        changes['comment'] = str(e)
+        changes['comment'] = six.text_type(e)
 
     finally:
         if conn:
@@ -371,7 +371,7 @@ def table_absent(name, db):
 
     except Exception as e:
         changes['result'] = False
-        changes['comment'] = str(e)
+        changes['comment'] = six.text_type(e)
 
     finally:
         if conn:
@@ -411,7 +411,7 @@ def table_present(name, db, schema, force=False):
 
         if len(tables) == 1:
             sql = None
-            if isinstance(schema, str):
+            if isinstance(schema, six.string_types):
                 sql = schema.strip()
             else:
                 sql = _get_sql_from_schema(name, schema)
@@ -442,7 +442,7 @@ def table_present(name, db, schema, force=False):
         elif len(tables) == 0:
             # Create the table
             sql = None
-            if isinstance(schema, str):
+            if isinstance(schema, six.string_types):
                 sql = schema
             else:
                 sql = _get_sql_from_schema(name, schema)

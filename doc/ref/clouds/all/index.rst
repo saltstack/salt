@@ -13,7 +13,7 @@ cloud modules
     aliyun
     azurearm
     cloudstack
-    digital_ocean
+    digitalocean
     dimensiondata
     ec2
     gce
@@ -23,6 +23,7 @@ cloud modules
     lxc
     msazure
     nova
+    oneandone
     opennebula
     openstack
     parallels
@@ -34,6 +35,8 @@ cloud modules
     scaleway
     softlayer
     softlayer_hw
+    vagrant
     virtualbox
     vmware
     vultrpy
+    xen

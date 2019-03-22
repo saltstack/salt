@@ -1,14 +1,29 @@
+.. _event-system:
+
 ============
 Event System
 ============
 
 The Salt Event System is used to fire off events enabling third party
 applications or external processes to react to behavior within Salt.
+The event system uses a publish-subscribe pattern, otherwise know as pub/sub.
 
-The event system is comprised of a two primary components:
+Event Bus
+=========
 
-    * The event sockets which publishes events.
-    * The event library which can listen to events and send events into the salt system.
+The event system is comprised of a two primary components, which make up the
+concept of an Event Bus:
+
+- The event sockets, which publish events
+- The event library, which can listen to events and send events into the salt system
+
+Events are published onto the event bus and event bus subscribers listen for the
+published events.
+
+The event bus is used for both inter-process communication as well as network transport
+in Salt. Inter-process communication is provided through UNIX domain sockets (UDX).
+
+The Salt Master and each Salt Minion has their own event bus.
 
 Event types
 ===========
@@ -21,7 +36,7 @@ Event types
 Listening for Events
 ====================
 
-Salt's Event Bus is used heavily within Salt and it is also written to
+Salt's event system is used heavily within Salt and it is also written to
 integrate heavily with existing tooling and scripts. There is a variety of
 ways to consume it.
 

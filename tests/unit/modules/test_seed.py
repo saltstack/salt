@@ -3,7 +3,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import shutil
 import uuid
@@ -19,7 +19,7 @@ from tests.support.mock import (
 
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.files
 import salt.utils.odict
 import salt.modules.seed as seed
 
@@ -39,7 +39,7 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
             ddd['b'] = 'b'
             ddd['a'] = 'b'
             data = seed.mkconfig(ddd, approve_key=False)
-            with salt.utils.fopen(data['config']) as fic:
+            with salt.utils.files.fopen(data['config']) as fic:
                 fdata = fic.read()
                 self.assertEqual(fdata, 'b: b\na: b\nmaster: foo\n')
 

@@ -75,17 +75,15 @@ Connection module for Amazon Elasticsearch Service
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import json
 
 # Import Salt libs
-import salt.ext.six as six
-import salt.utils.boto3
+from salt.ext import six
 import salt.utils.compat
-import salt.utils
+import salt.utils.json
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -111,22 +109,13 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto_version = '2.8.0'
-    required_boto3_version = '1.4.0'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    if not HAS_BOTO:
-        return (False, 'The boto_lambda module could not be loaded: '
-                'boto libraries not found')
-    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return (False, 'The boto_lambda module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto_version))
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_lambda module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto3_version))
-    else:
-        return True
+    return salt.utils.versions.check_boto_reqs(
+        boto_ver='2.8.0',
+        boto3_ver='1.4.0'
+    )
 
 
 def __init__(opts):
@@ -158,7 +147,7 @@ def exists(DomainName,
     except ClientError as e:
         if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
             return {'exists': False}
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def status(DomainName,
@@ -189,7 +178,7 @@ def status(DomainName,
         else:
             return {'domain': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def describe(DomainName,
@@ -218,7 +207,7 @@ def describe(DomainName,
         else:
             return {'domain': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
@@ -257,14 +246,14 @@ def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
                 val = locals()[k]
                 if isinstance(val, six.string_types):
                     try:
-                        val = json.loads(val)
+                        val = salt.utils.json.loads(val)
                     except ValueError as e:
                         return {'updated': False, 'error': 'Error parsing {0}: {1}'.format(k, e.message)}
                 kwargs[k] = val
         if 'AccessPolicies' in kwargs:
-            kwargs['AccessPolicies'] = json.dumps(kwargs['AccessPolicies'])
+            kwargs['AccessPolicies'] = salt.utils.json.dumps(kwargs['AccessPolicies'])
         if 'ElasticsearchVersion' in kwargs:
-            kwargs['ElasticsearchVersion'] = str(kwargs['ElasticsearchVersion'])
+            kwargs['ElasticsearchVersion'] = six.text_type(kwargs['ElasticsearchVersion'])
         domain = conn.create_elasticsearch_domain(DomainName=DomainName, **kwargs)
         if domain and 'DomainStatus' in domain:
             return {'created': True}
@@ -272,7 +261,7 @@ def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
             log.warning('Domain was not created')
             return {'created': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'created': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def delete(DomainName, region=None, key=None, keyid=None, profile=None):
@@ -295,7 +284,7 @@ def delete(DomainName, region=None, key=None, keyid=None, profile=None):
         conn.delete_elasticsearch_domain(DomainName=DomainName)
         return {'deleted': True}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
@@ -331,12 +320,12 @@ def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
             val = locals()[k]
             if isinstance(val, six.string_types):
                 try:
-                    val = json.loads(val)
+                    val = salt.utils.json.loads(val)
                 except ValueError as e:
                     return {'updated': False, 'error': 'Error parsing {0}: {1}'.format(k, e.message)}
             call_args[k] = val
     if 'AccessPolicies' in call_args:
-        call_args['AccessPolicies'] = json.dumps(call_args['AccessPolicies'])
+        call_args['AccessPolicies'] = salt.utils.json.dumps(call_args['AccessPolicies'])
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         domain = conn.update_elasticsearch_domain_config(DomainName=DomainName, **call_args)
@@ -345,7 +334,7 @@ def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
             return {'updated': False}
         return {'updated': True}
     except ClientError as e:
-        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'updated': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def add_tags(DomainName=None, ARN=None,
@@ -368,9 +357,9 @@ def add_tags(DomainName=None, ARN=None,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
         for k, v in six.iteritems(kwargs):
-            if str(k).startswith('__'):
+            if six.text_type(k).startswith('__'):
                 continue
-            tagslist.append({'Key': str(k), 'Value': str(v)})
+            tagslist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
         if ARN is None:
             if DomainName is None:
                 raise SaltInvocationError('One (but not both) of ARN or '
@@ -388,7 +377,7 @@ def add_tags(DomainName=None, ARN=None,
         conn.add_tags(ARN=ARN, TagList=tagslist)
         return {'tagged': True}
     except ClientError as e:
-        return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'tagged': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def remove_tags(TagKeys, DomainName=None, ARN=None,
@@ -427,7 +416,7 @@ def remove_tags(TagKeys, DomainName=None, ARN=None,
                          TagKeys=TagKeys)
         return {'tagged': True}
     except ClientError as e:
-        return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'tagged': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def list_tags(DomainName=None, ARN=None,
@@ -472,4 +461,4 @@ def list_tags(DomainName=None, ARN=None,
             tagdict[tag.get('Key')] = tag.get('Value')
         return {'tags': tagdict}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}

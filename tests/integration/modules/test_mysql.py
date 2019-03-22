@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Testing libs
@@ -11,11 +11,11 @@ from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 from salt.modules import mysql as mysqlmod
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ try:
 except Exception:
     NO_MYSQL = True
 
-if not salt.utils.which('mysqladmin'):
+if not salt.utils.path.which('mysqladmin'):
     NO_MYSQL = True
 
 
@@ -413,11 +413,11 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                     tblname=mysqlmod.quote_identifier(tablename)
             ))
             for x in range(100):
-                insert_query += "('foo"+str(x)+"'),"
+                insert_query += "('foo"+six.text_type(x)+"'),"
             insert_query += "('bar');"
 
             # populate database
-            log.info('Adding table \'{0}\''.format(tablename,))
+            log.info('Adding table \'%s\'', tablename)
             ret = self.run_function(
               'mysql.query',
               database=dbname,
@@ -434,7 +434,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                     )
                 )
             self.assertEqual(ret['rows affected'], 0)
-            log.info('Populating table \'{0}\''.format(tablename,))
+            log.info('Populating table \'%s\'', tablename)
             ret = self.run_function(
               'mysql.query',
               database=dbname,
@@ -451,7 +451,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                     )
                 )
             self.assertEqual(ret['rows affected'], 101)
-            log.info('Removing some rows on table\'{0}\''.format(tablename,))
+            log.info('Removing some rows on table\'%s\'', tablename)
             ret = self.run_function(
               'mysql.query',
               database=dbname,
@@ -1357,7 +1357,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             tblname=mysqlmod.quote_identifier(self.table1),
             engine='MYISAM',
         ))
-        log.info('Adding table \'{0}\''.format(self.table1,))
+        log.info('Adding table \'%s\'', self.table1)
         self.run_function(
             'mysql.query',
             database=self.testdb2,
@@ -1371,7 +1371,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             tblname=mysqlmod.quote_identifier(self.table2),
             engine='MYISAM',
         ))
-        log.info('Adding table \'{0}\''.format(self.table2,))
+        log.info('Adding table \'%s\'', self.table2)
         self.run_function(
             'mysql.query',
             database=self.testdb2,

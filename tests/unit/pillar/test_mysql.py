@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
@@ -12,7 +12,7 @@ import salt.pillar.mysql as mysql
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(not mysql.HAS_MYSQL, 'Install MySQL bindings before running MySQL unit tests.')
+@skipIf(not mysql.HAS_MYSQL, 'MySQL-python module not installed')
 class MysqlPillarTestCase(TestCase):
     maxDiff = None
 

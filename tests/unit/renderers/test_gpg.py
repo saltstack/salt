@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -32,10 +32,10 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         '''
         gpg_exec = '/bin/gpg'
 
-        with patch('salt.utils.which', MagicMock(return_value=gpg_exec)):
+        with patch('salt.utils.path.which', MagicMock(return_value=gpg_exec)):
             self.assertEqual(gpg._get_gpg_exec(), gpg_exec)
 
-        with patch('salt.utils.which', MagicMock(return_value=False)):
+        with patch('salt.utils.path.which', MagicMock(return_value=False)):
             self.assertRaises(SaltRenderError, gpg._get_gpg_exec)
 
     def test__decrypt_ciphertext(self):
@@ -55,7 +55,7 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
                 return [None, 'decrypt error']
 
         with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)), \
-                patch('salt.utils.which', MagicMock()):
+                patch('salt.utils.path.which', MagicMock()):
             with patch('salt.renderers.gpg.Popen', MagicMock(return_value=GPGDecrypt())):
                 self.assertEqual(gpg._decrypt_ciphertext(crypted), secret)
             with patch('salt.renderers.gpg.Popen', MagicMock(return_value=GPGNotDecrypt())):

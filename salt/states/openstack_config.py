@@ -10,9 +10,10 @@ Manage OpenStack configuration file settings.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 
@@ -73,8 +74,8 @@ def present(name, filename, section, value, parameter=None):
             )
             return ret
 
-    except CommandExecutionError as e:
-        if not str(e).lower().startswith('parameter not found:'):
+    except CommandExecutionError as err:
+        if not six.text_type(err).lower().startswith('parameter not found:'):
             raise
 
     __salt__['openstack_config.set'](filename=filename,
@@ -116,8 +117,8 @@ def absent(name, filename, section, parameter=None):
         old_value = __salt__['openstack_config.get'](filename=filename,
                                                      section=section,
                                                      parameter=parameter)
-    except CommandExecutionError as e:
-        if str(e).lower().startswith('parameter not found:'):
+    except CommandExecutionError as err:
+        if six.text_type(err).lower().startswith('parameter not found:'):
             ret['result'] = True
             ret['comment'] = 'The value is already absent'
             return ret

@@ -41,7 +41,7 @@ Configuring the Mongo Tops Subsystem
 Module Documentation
 ====================
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -103,17 +103,17 @@ def top(**kwargs):
     states_field = __opts__['master_tops']['mongo'].get('states_field', 'states')
     environment_field = __opts__['master_tops']['mongo'].get('environment_field', 'environment')
 
-    log.info('connecting to {0}:{1} for mongo ext_tops'.format(host, port))
+    log.info('connecting to %s:%s for mongo ext_tops', host, port)
     conn = pymongo.MongoClient(host, port)
 
-    log.debug('using database \'{0}\''.format(__opts__['mongo.db']))
+    log.debug('using database \'%s\'', __opts__['mongo.db'])
     mdb = conn[__opts__['mongo.db']]
 
     user = __opts__.get('mongo.user')
     password = __opts__.get('mongo.password')
 
     if user and password:
-        log.debug('authenticating as \'{0}\''.format(user))
+        log.debug('authenticating as \'%s\'', user)
         mdb.authenticate(user, password)
 
     # Do the regex string replacement on the minion id
@@ -122,10 +122,8 @@ def top(**kwargs):
         minion_id = re.sub(re_pattern, re_replace, minion_id)
 
     log.info(
-        'ext_tops.mongo: looking up tops def for {{\'{0}\': \'{1}\'}} '
-        'in mongo'.format(
-            id_field, minion_id
-        )
+        'ext_tops.mongo: looking up tops def for {\'%s\': \'%s\'} in mongo',
+        id_field, minion_id
     )
 
     result = mdb[collection].find_one({id_field: minion_id}, projection=[states_field, environment_field])
@@ -139,9 +137,5 @@ def top(**kwargs):
     else:
         # If we can't find the minion the database it's not necessarily an
         # error.
-        log.debug(
-            'ext_tops.mongo: no document found in collection {0}'.format(
-                collection
-            )
-        )
+        log.debug('ext_tops.mongo: no document found in collection %s', collection)
         return {}

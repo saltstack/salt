@@ -16,9 +16,11 @@ from __future__ import absolute_import, print_function
 import os
 import re
 import sys
-import json
 import shutil
 import warnings
+
+# Import Salt libs
+import salt.utils.json
 
 # Import salt testing libs
 from tests.support.parser import SaltTestingParser
@@ -42,7 +44,7 @@ try:
         coverage_object.save()
 
     def multiprocessing_start(obj):
-        coverage_options = json.loads(os.environ.get('COVERAGE_OPTIONS', '{}'))
+        coverage_options = salt.utils.json.loads(os.environ.get('COVERAGE_OPTIONS', '{}'))
         if not coverage_options:
             return
 
@@ -176,7 +178,7 @@ class SaltCoverageTestingParser(SaltTestingParser):
             # included in the report
             coverage_options['data_suffix'] = True
             os.environ['COVERAGE_PROCESS_START'] = ''
-            os.environ['COVERAGE_OPTIONS'] = json.dumps(coverage_options)
+            os.environ['COVERAGE_OPTIONS'] = salt.utils.json.dumps(coverage_options)
 
         # Setup coverage
         self.code_coverage = coverage.coverage(**coverage_options)

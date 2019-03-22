@@ -9,10 +9,11 @@ Support for hadoop
 
 
 '''
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 __authorized_modules__ = ['version', 'namenode', 'dfsadmin', 'dfs', 'fs']
 
@@ -21,7 +22,7 @@ def __virtual__():
     '''
     Check if hadoop is present, then load the module
     '''
-    if salt.utils.which('hadoop') or salt.utils.which('hdfs'):
+    if salt.utils.path.which('hadoop') or salt.utils.path.which('hdfs'):
         return 'hadoop'
     return (False, 'The hadoop execution module cannot be loaded: hadoop or hdfs binary not in path.')
 
@@ -40,7 +41,7 @@ def _hadoop_cmd(module, command, *args):
        E.g.: hadoop dfs -ls /
     '''
     tool = 'hadoop'
-    if salt.utils.which('hdfs'):
+    if salt.utils.path.which('hdfs'):
         tool = 'hdfs'
 
     out = None

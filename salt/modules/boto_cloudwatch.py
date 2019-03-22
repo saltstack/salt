@@ -44,14 +44,17 @@ Connection module for Amazon CloudWatch
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
-import json
-import yaml
+import yaml  # pylint: disable=blacklisted-import
 
+# Import Salt libs
+from salt.ext import six
+import salt.utils.json
 import salt.utils.odict as odict
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -66,19 +69,17 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext.six import string_types
-
 
 def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The boto_cloudwatch module cannot be loaded: boto libraries are unavailable.')
-    __utils__['boto.assign_funcs'](__name__, 'cloudwatch',
-                                   module='ec2.cloudwatch',
-                                   pack=__salt__)
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(check_boto3=False)
+    if has_boto_reqs is True:
+        __utils__['boto.assign_funcs'](__name__, 'cloudwatch',
+                                       module='ec2.cloudwatch',
+                                       pack=__salt__)
+    return has_boto_reqs
 
 
 def get_alarm(name, region=None, key=None, keyid=None, profile=None):
@@ -95,36 +96,32 @@ def get_alarm(name, region=None, key=None, keyid=None, profile=None):
     if len(alarms) == 0:
         return None
     if len(alarms) > 1:
-        log.error("multiple alarms matched name '{0}'".format(name))
+        log.error("multiple alarms matched name '%s'", name)
     return _metric_alarm_to_dict(alarms[0])
 
 
 def _safe_dump(data):
-    ###########################################
-    # this presenter magic makes yaml.safe_dump
-    # work with the objects returned from
-    # boto.describe_alarms()
-    ###########################################
-    def ordered_dict_presenter(dumper, data):
-        return dumper.represent_dict(list(data.items()))
-
-    yaml.add_representer(odict.OrderedDict, ordered_dict_presenter,
-                         Dumper=yaml.dumper.SafeDumper)
+    '''
+    this presenter magic makes yaml.safe_dump
+    work with the objects returned from
+    boto.describe_alarms()
+    '''
+    custom_dumper = __utils__['yaml.get_dumper']('SafeOrderedDumper')
 
     def boto_listelement_presenter(dumper, data):
         return dumper.represent_list(list(data))
 
     yaml.add_representer(boto.ec2.cloudwatch.listelement.ListElement,
                          boto_listelement_presenter,
-                         Dumper=yaml.dumper.SafeDumper)
+                         Dumper=custom_dumper)
 
     def dimension_presenter(dumper, data):
         return dumper.represent_dict(dict(data))
 
     yaml.add_representer(boto.ec2.cloudwatch.dimension.Dimension,
-                         dimension_presenter, Dumper=yaml.dumper.SafeDumper)
+                         dimension_presenter, Dumper=custom_dumper)
 
-    return yaml.safe_dump(data)
+    return __utils__['yaml.dump'](data, Dumper=custom_dumper)
 
 
 def get_all_alarms(region=None, prefix=None, key=None, keyid=None,
@@ -220,16 +217,16 @@ def create_or_update_alarm(
         period = int(period)
     if evaluation_periods:
         evaluation_periods = int(evaluation_periods)
-    if isinstance(dimensions, string_types):
-        dimensions = json.loads(dimensions)
+    if isinstance(dimensions, six.string_types):
+        dimensions = salt.utils.json.loads(dimensions)
         if not isinstance(dimensions, dict):
-            log.error("could not parse dimensions argument: must be json encoding of a dict: '{0}'".format(dimensions))
+            log.error("could not parse dimensions argument: must be json encoding of a dict: '%s'", dimensions)
             return False
-    if isinstance(alarm_actions, string_types):
+    if isinstance(alarm_actions, six.string_types):
         alarm_actions = alarm_actions.split(",")
-    if isinstance(insufficient_data_actions, string_types):
+    if isinstance(insufficient_data_actions, six.string_types):
         insufficient_data_actions = insufficient_data_actions.split(",")
-    if isinstance(ok_actions, string_types):
+    if isinstance(ok_actions, six.string_types):
         ok_actions = ok_actions.split(",")
 
     # convert provided action names into ARN's
@@ -272,7 +269,7 @@ def create_or_update_alarm(
         ok_actions=ok_actions
     )
     conn.create_alarm(alarm)
-    log.info('Created/updated alarm {0}'.format(name))
+    log.info('Created/updated alarm %s', name)
     return True
 
 
@@ -295,7 +292,7 @@ def convert_to_arn(arns, region=None, key=None, keyid=None, profile=None):
             if policy_arn:
                 results.append(policy_arn)
             else:
-                log.error('Could not convert: {0}'.format(arn))
+                log.error('Could not convert: %s', arn)
         else:
             results.append(arn)
     return results
@@ -312,7 +309,7 @@ def delete_alarm(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     conn.delete_alarms([name])
-    log.info('Deleted alarm {0}'.format(name))
+    log.info('Deleted alarm %s', name)
     return True
 
 

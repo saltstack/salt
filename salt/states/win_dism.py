@@ -13,14 +13,15 @@ Install windows features/capabilties with DISM
     NetFx3:
       dism.feature_installed
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-# Import python libs
+# Import Python libs
 import logging
 import os
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.data
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = "dism"
@@ -30,7 +31,7 @@ def __virtual__():
     '''
     Only work on Windows where the DISM module is available
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Module only available on Windows'
 
     return __virtualname__
@@ -90,7 +91,7 @@ def capability_installed(name,
         ret['result'] = False
 
     new = __salt__['dism.installed_capabilities']()
-    changes = salt.utils.compare_lists(old, new)
+    changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
         ret['comment'] = 'Installed {0}'.format(name)
@@ -146,7 +147,7 @@ def capability_removed(name, image=None, restart=False):
         ret['result'] = False
 
     new = __salt__['dism.installed_capabilities']()
-    changes = salt.utils.compare_lists(old, new)
+    changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
         ret['comment'] = 'Removed {0}'.format(name)
@@ -217,7 +218,7 @@ def feature_installed(name,
         ret['result'] = False
 
     new = __salt__['dism.installed_features']()
-    changes = salt.utils.compare_lists(old, new)
+    changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
         ret['comment'] = 'Installed {0}'.format(name)
@@ -277,7 +278,7 @@ def feature_removed(name, remove_payload=False, image=None, restart=False):
         ret['result'] = False
 
     new = __salt__['dism.installed_features']()
-    changes = salt.utils.compare_lists(old, new)
+    changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
         ret['comment'] = 'Removed {0}'.format(name)
@@ -354,7 +355,7 @@ def package_installed(name,
         ret['result'] = False
 
     new = __salt__['dism.installed_packages']()
-    changes = salt.utils.compare_lists(old, new)
+    changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
         ret['comment'] = 'Installed {0}'.format(name)
@@ -432,7 +433,7 @@ def package_removed(name, image=None, restart=False):
         ret['result'] = False
 
     new = __salt__['dism.installed_packages']()
-    changes = salt.utils.compare_lists(old, new)
+    changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
         ret['comment'] = 'Removed {0}'.format(name)

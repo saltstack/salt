@@ -13,18 +13,16 @@ Module for sending messages to MS Teams
     msteams:
       hook_url: https://outlook.office.com/webhook/837
 '''
-
-
 # Import Python libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six.moves.http_client
-
+# Import Salt libs
+import salt.utils.json
 from salt.exceptions import SaltInvocationError
+
+# Import 3rd-party libs
+import salt.ext.six.moves.http_client  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -81,10 +79,13 @@ def post_card(message,
     payload = {
         "text": message,
         "title": title,
-        "theme_color": theme_color
+        "themeColor": theme_color
     }
 
-    result = salt.utils.http.query(hook_url, method='POST', data=json.dumps(payload), status=True)
+    result = salt.utils.http.query(hook_url,
+                                   method='POST',
+                                   data=salt.utils.json.dumps(payload),
+                                   status=True)
 
     if result['status'] <= 201:
         return True

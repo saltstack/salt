@@ -10,20 +10,22 @@ Package support for pkgin based systems, inspired from freebsdpkg module
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 import os
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.functools
+import salt.utils.path
 import salt.utils.pkg
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, MinionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 VERSION_MATCH = re.compile(r'pkgin(?:[\s]+)([\d.]+)(?:[\s]+)(?:.*)')
 log = logging.getLogger(__name__)
@@ -37,7 +39,7 @@ def _check_pkgin():
     '''
     Looks to see if pkgin is present on the system, return full path
     '''
-    ppath = salt.utils.which('pkgin')
+    ppath = salt.utils.path.which('pkgin')
     if ppath is None:
         # pkgin was not found in $PATH, try to find it via LOCALBASE
         try:
@@ -59,10 +61,9 @@ def _get_version():
     '''
     Get the pkgin version
     '''
-    ppath = _check_pkgin()
     version_string = __salt__['cmd.run'](
-        '{0} -v'.format(ppath), output_loglevel='trace'
-    )
+        [_check_pkgin(), '-v'],
+        output_loglevel='trace')
     if version_string is None:
         # Dunno why it would, but...
         return False
@@ -79,8 +80,15 @@ def _supports_regex():
     '''
     Check support of regexp
     '''
-
     return tuple([int(i) for i in _get_version()]) > (0, 5)
+
+
+@decorators.memoize
+def _supports_parsing():
+    '''
+    Check support of parsing
+    '''
+    return tuple([int(i) for i in _get_version()]) > (0, 6)
 
 
 def __virtual__():
@@ -96,6 +104,9 @@ def __virtual__():
 
 
 def _splitpkg(name):
+    '''
+    Split package name from versioned string
+    '''
     # name is in the format foobar-1.0nb1, already space-splitted
     if name[0].isalnum() and name != 'No':  # avoid < > = and 'No result'
         return name.split(';', 1)[0].rsplit('-', 1)
@@ -121,7 +132,7 @@ def search(pkg_name):
         pkg_name = '^{0}$'.format(pkg_name)
 
     out = __salt__['cmd.run'](
-        '{0} se {1}'.format(pkgin, pkg_name),
+        [pkgin, 'se', pkg_name],
         output_loglevel='trace'
     )
     for line in out.splitlines():
@@ -151,7 +162,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> ...
     '''
 
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
     pkglist = {}
     pkgin = _check_pkgin()
@@ -162,18 +173,18 @@ def latest_version(*names, **kwargs):
     if refresh:
         refresh_db()
 
+    cmd_prefix = [pkgin, 'se']
+    if _supports_parsing():
+        cmd_prefix.insert(1, '-p')
     for name in names:
-        if _supports_regex():
-            name = '^{0}$'.format(name)
-        out = __salt__['cmd.run'](
-            '{0} se {1}'.format(pkgin, name),
-            output_loglevel='trace'
-        )
+        cmd = copy.deepcopy(cmd_prefix)
+        cmd.append('^{0}$'.format(name) if _supports_regex() else name)
+
+        out = __salt__['cmd.run'](cmd, output_loglevel='trace')
         for line in out.splitlines():
-            if _supports_regex():  # split on ;
-                p = line.split(';')
-            else:
-                p = line.split()  # pkgname-version status
+            if line.startswith('No results found for'):
+                return pkglist
+            p = line.split(';' if _supports_parsing() else None)
 
             if p and p[0] in ('=:', '<:', '>:', ''):
                 # These are explanation comments
@@ -182,19 +193,20 @@ def latest_version(*names, **kwargs):
                 s = _splitpkg(p[0])
                 if s:
                     if not s[0] in pkglist:
-                        if len(p) > 1 and p[1] == '<':
+                        if len(p) > 1 and p[1] in ('<', '', '='):
                             pkglist[s[0]] = s[1]
                         else:
                             pkglist[s[0]] = ''
 
-    if len(names) == 1 and pkglist:
-        return pkglist[names[0]]
-
-    return pkglist
+    if pkglist and len(names) == 1:
+        if names[0] in pkglist:
+            return pkglist[names[0]]
+    else:
+        return pkglist
 
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def version(*names, **kwargs):
@@ -213,9 +225,15 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def refresh_db():
+def refresh_db(force=False):
     '''
     Use pkg update to get latest pkg_summary
+
+    force
+        Pass -f so that the cache is always refreshed.
+
+        .. versionadded:: 2018.3.0
+
 
     CLI Example:
 
@@ -228,16 +246,17 @@ def refresh_db():
     pkgin = _check_pkgin()
 
     if pkgin:
-        call = __salt__['cmd.run_all']('{0} up'.format(pkgin), output_loglevel='trace')
+        cmd = [pkgin, 'up']
+        if force:
+            cmd.insert(1, '-f')
+        call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
         if call['retcode'] != 0:
             comment = ''
             if 'stderr' in call:
                 comment += call['stderr']
 
-            raise CommandExecutionError(
-                '{0}'.format(comment)
-            )
+            raise CommandExecutionError(comment)
 
     return True
 
@@ -256,9 +275,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -271,14 +290,12 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     pkgin = _check_pkgin()
-    if pkgin:
-        pkg_command = '{0} ls'.format(pkgin)
-    else:
-        pkg_command = 'pkg_info'
-
     ret = {}
 
-    out = __salt__['cmd.run'](pkg_command, output_loglevel='trace')
+    out = __salt__['cmd.run'](
+        [pkgin, 'ls'] if pkgin else ['pkg_info'],
+        output_loglevel='trace')
+
     for line in out.splitlines():
         try:
             # Some versions of pkgin check isatty unfortunately
@@ -293,6 +310,30 @@ def list_pkgs(versions_as_list=False, **kwargs):
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
+
+
+def list_upgrades(refresh=True, **kwargs):
+    '''
+    List all available package upgrades.
+
+    .. versionadded:: 2018.3.0
+
+    refresh
+        Whether or not to refresh the package database before installing.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_upgrades
+    '''
+    pkgs = {}
+    for pkg in sorted(list_pkgs(refresh=refresh).keys()):
+        # NOTE: we already optionally refreshed in de list_pkg call
+        pkg_upgrade = latest_version(pkg, refresh=False)
+        if pkg_upgrade:
+            pkgs[pkg] = pkg_upgrade
+    return pkgs
 
 
 def install(name=None, refresh=False, fromrepo=None,
@@ -365,12 +406,12 @@ def install(name=None, refresh=False, fromrepo=None,
     if pkgin:
         cmd = pkgin
         if fromrepo:
-            log.info('Setting PKG_REPOS={0}'.format(fromrepo))
+            log.info('Setting PKG_REPOS=%s', fromrepo)
             env.append(('PKG_REPOS', fromrepo))
     else:
         cmd = 'pkg_add'
         if fromrepo:
-            log.info('Setting PKG_PATH={0}'.format(fromrepo))
+            log.info('Setting PKG_PATH=%s', fromrepo)
             env.append(('PKG_PATH', fromrepo))
 
     if pkg_type == 'file':
@@ -381,15 +422,12 @@ def install(name=None, refresh=False, fromrepo=None,
                 args.append('-f')  # update repo db
             args.extend(('-y', 'in'))  # Assume yes when asked
 
+    args.insert(0, cmd)
     args.extend(pkg_params)
 
     old = list_pkgs()
 
-    out = __salt__['cmd.run_all'](
-        '{0} {1}'.format(cmd, ' '.join(args)),
-        env=env,
-        output_loglevel='trace'
-    )
+    out = __salt__['cmd.run_all'](args, env=env, output_loglevel='trace')
 
     if out['retcode'] != 0 and out['stderr']:
         errors = [out['stderr']]
@@ -398,7 +436,7 @@ def install(name=None, refresh=False, fromrepo=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -410,9 +448,24 @@ def install(name=None, refresh=False, fromrepo=None,
     return ret
 
 
-def upgrade():
+def upgrade(refresh=True, pkgs=None, **kwargs):
     '''
     Run pkg upgrade, if pkgin used. Otherwise do nothing
+
+    refresh
+        Whether or not to refresh the package database before installing.
+
+    Multiple Package Upgrade Options:
+
+    pkgs
+        A list of packages to upgrade from a software repository. Must be
+        passed as a python list.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade pkgs='["foo","bar"]'
 
     Returns a dictionary containing the changes:
 
@@ -433,15 +486,31 @@ def upgrade():
         # There is not easy way to upgrade packages with old package system
         return {}
 
+    if salt.utils.data.is_true(refresh):
+        refresh_db()
+
     old = list_pkgs()
 
-    cmd = [pkgin, '-y', 'fug']
-    result = __salt__['cmd.run_all'](cmd,
-                                     output_loglevel='trace',
-                                     python_shell=False)
+    cmds = []
+    if not pkgs:
+        cmds.append([pkgin, '-y', 'full-upgrade'])
+    elif salt.utils.data.is_list(pkgs):
+        for pkg in pkgs:
+            cmds.append([pkgin, '-y', 'install', pkg])
+    else:
+        result = {'retcode': 1, 'reason': 'Ignoring the parameter `pkgs` because it is not a list!'}
+        log.error(result['reason'])
+
+    for cmd in cmds:
+        result = __salt__['cmd.run_all'](cmd,
+                                         output_loglevel='trace',
+                                         python_shell=False)
+        if result['retcode'] != 0:
+            break
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -502,18 +571,11 @@ def remove(name=None, pkgs=None, **kwargs):
     if not args:
         return {}
 
-    for_remove = ' '.join(args)
-
     pkgin = _check_pkgin()
-    if pkgin:
-        cmd = '{0} -y remove {1}'.format(pkgin, for_remove)
-    else:
-        cmd = 'pkg_remove {0}'.format(for_remove)
+    cmd = [pkgin, '-y', 'remove'] if pkgin else ['pkg_remove']
+    cmd.extend(args)
 
-    out = __salt__['cmd.run_all'](
-        cmd,
-        output_loglevel='trace'
-    )
+    out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
     if out['retcode'] != 0 and out['stderr']:
         errors = [out['stderr']]
@@ -522,7 +584,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -610,9 +672,8 @@ def file_dict(*packages):
     files = {}
 
     for package in packages:
-        cmd = 'pkg_info -qL {0}'.format(package)
+        cmd = ['pkg_info', '-qL', package]
         ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
-
         files[package] = []
         for line in ret['stderr'].splitlines():
             errors.append(line)
@@ -624,7 +685,7 @@ def file_dict(*packages):
                 continue  # unexpected string
 
     ret = {'errors': errors, 'files': files}
-    for field in ret:
+    for field in list(ret):
         if not ret[field] or ret[field] == '':
             del ret[field]
     return ret

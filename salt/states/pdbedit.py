@@ -21,13 +21,13 @@ Manage accounts in Samba's passdb using pdbedit
         - drive: 'X:'
         - homedir: '\\\\serenity\\mechanic\\profile'
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ def absent(name):
            'result': True,
            'comment': ''}
 
-    ## remove if needed
+    # remove if needed
     if name in __salt__['pdbedit.list'](False):
         res = __salt__['pdbedit.delete'](name)
         if res[name] in ['deleted']:  # check if we need to update changes
@@ -123,19 +123,19 @@ def managed(name, **kwargs):
            'result': True,
            'comment': ''}
 
-    ## save state
+    # save state
     saved = __salt__['pdbedit.list'](hashes=True)
     saved = saved[name] if name in saved else {}
 
-    ## call pdbedit.modify
+    # call pdbedit.modify
     kwargs['login'] = name
     res = __salt__['pdbedit.modify'](**kwargs)
 
-    ## calculate changes
+    # calculate changes
     if res[name] in ['created']:
         ret['changes'] = res
     elif res[name] in ['updated']:
-        ret['changes'][name] = salt.utils.compare_dicts(
+        ret['changes'][name] = salt.utils.data.compare_dicts(
             saved,
             __salt__['pdbedit.list'](hashes=True)[name],
         )

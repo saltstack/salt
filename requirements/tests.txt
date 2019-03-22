@@ -34,3 +34,5 @@ dnspython
 SaltTesting==2017.6.1
 junos-eznc
 jxmlease
+croniter
+kazoo

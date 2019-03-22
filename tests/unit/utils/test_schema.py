@@ -4,16 +4,18 @@
 # pylint: disable=abstract-method
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
-import json
-import yaml
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
-from salt.utils import schema
+import salt.utils.json
+import salt.utils.stringutils
+import salt.utils.yaml
+import salt.utils.schema as schema
+from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
@@ -136,7 +138,7 @@ class ConfigTestCase(TestCase):
 
     def test_optional_requirements_config(self):
         class BaseRequirements(schema.Schema):
-            driver = schema.StringItem(default='digital_ocean', format='hidden')
+            driver = schema.StringItem(default='digitalocean', format='hidden')
 
         class SSHKeyFileSchema(schema.Schema):
             ssh_key_file = schema.StringItem(
@@ -149,13 +151,13 @@ class ConfigTestCase(TestCase):
             ssh_key_names = schema.StringItem(
                 title='SSH Key Names',
                 description='The names of an SSH key being managed on '
-                            'Digital Ocean account which will be used to '
+                            'DigitalOcean account which will be used to '
                             'authenticate on the deployed VMs',
                 )
 
         class Requirements(BaseRequirements):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             personal_access_token = schema.StringItem(
                 title='Personal Access Token',
@@ -174,12 +176,12 @@ class ConfigTestCase(TestCase):
 
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
-            'title': 'Digital Ocean',
-            'description': 'Digital Ocean Cloud VM configuration requirements.',
+            'title': 'DigitalOcean',
+            'description': 'DigitalOcean Cloud VM configuration requirements.',
             'type': 'object',
             'properties': {
                 'driver': {
-                    'default': 'digital_ocean',
+                    'default': 'digitalocean',
                     'format': 'hidden',
                     'type': 'string',
                     'title': 'driver'
@@ -198,9 +200,8 @@ class ConfigTestCase(TestCase):
                 },
                 'ssh_key_names': {
                     'type': 'string',
-                    'description': 'The names of an SSH key being managed on Digital '
-                                   'Ocean account which will be used to authenticate '
-                                   'on the deployed VMs',
+                    'description': 'The names of an SSH key being managed on DigitalOcean '
+                                   'account which will be used to authenticate on the deployed VMs',
                     'title': 'SSH Key Names'
                 }
             },
@@ -222,8 +223,8 @@ class ConfigTestCase(TestCase):
         self.assertDictEqual(expected, Requirements.serialize())
 
         class Requirements2(BaseRequirements):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             personal_access_token = schema.StringItem(
                 title='Personal Access Token',
@@ -239,7 +240,7 @@ class ConfigTestCase(TestCase):
             ssh_key_names = schema.StringItem(
                 title='SSH Key Names',
                 description='The names of an SSH key being managed on '
-                            'Digital Ocean account which will be used to '
+                            'DigitalOcean account which will be used to '
                             'authenticate on the deployed VMs')
 
             requirements_definition = schema.AnyOfItem(
@@ -251,12 +252,12 @@ class ConfigTestCase(TestCase):
 
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
-            'title': 'Digital Ocean',
-            'description': 'Digital Ocean Cloud VM configuration requirements.',
+            'title': 'DigitalOcean',
+            'description': 'DigitalOcean Cloud VM configuration requirements.',
             'type': 'object',
             'properties': {
                 'driver': {
-                    'default': 'digital_ocean',
+                    'default': 'digitalocean',
                     'format': 'hidden',
                     'type': 'string',
                     'title': 'driver'
@@ -275,9 +276,8 @@ class ConfigTestCase(TestCase):
                 },
                 'ssh_key_names': {
                     'type': 'string',
-                    'description': 'The names of an SSH key being managed on Digital '
-                                   'Ocean account which will be used to authenticate '
-                                   'on the deployed VMs',
+                    'description': 'The names of an SSH key being managed on DigitalOcean '
+                                   'account which will be used to authenticate on the deployed VMs',
                     'title': 'SSH Key Names'
                 }
             },
@@ -299,19 +299,19 @@ class ConfigTestCase(TestCase):
         self.assertDictContainsSubset(expected, Requirements2.serialize())
 
         class Requirements3(schema.Schema):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             merge_reqs = Requirements(flatten=True)
 
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
-            'title': 'Digital Ocean',
-            'description': 'Digital Ocean Cloud VM configuration requirements.',
+            'title': 'DigitalOcean',
+            'description': 'DigitalOcean Cloud VM configuration requirements.',
             'type': 'object',
             'properties': {
                 'driver': {
-                    'default': 'digital_ocean',
+                    'default': 'digitalocean',
                     'format': 'hidden',
                     'type': 'string',
                     'title': 'driver'
@@ -330,9 +330,8 @@ class ConfigTestCase(TestCase):
                 },
                 'ssh_key_names': {
                     'type': 'string',
-                    'description': 'The names of an SSH key being managed on Digital '
-                                   'Ocean account which will be used to authenticate '
-                                   'on the deployed VMs',
+                    'description': 'The names of an SSH key being managed on DigitalOcean '
+                                   'account which will be used to authenticate on the deployed VMs',
                     'title': 'SSH Key Names'
                 }
             },
@@ -354,8 +353,8 @@ class ConfigTestCase(TestCase):
         self.assertDictContainsSubset(expected, Requirements3.serialize())
 
         class Requirements4(schema.Schema):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             merge_reqs = Requirements(flatten=True)
 
@@ -367,7 +366,7 @@ class ConfigTestCase(TestCase):
             ssh_key_names_2 = schema.StringItem(
                 title='SSH Key Names',
                 description='The names of an SSH key being managed on '
-                            'Digital Ocean account which will be used to '
+                            'DigitalOcean account which will be used to '
                             'authenticate on the deployed VMs')
 
             requirements_definition_2 = schema.AnyOfItem(
@@ -379,12 +378,12 @@ class ConfigTestCase(TestCase):
 
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
-            'title': 'Digital Ocean',
-            'description': 'Digital Ocean Cloud VM configuration requirements.',
+            'title': 'DigitalOcean',
+            'description': 'DigitalOcean Cloud VM configuration requirements.',
             'type': 'object',
             'properties': {
                 'driver': {
-                    'default': 'digital_ocean',
+                    'default': 'digitalocean',
                     'format': 'hidden',
                     'type': 'string',
                     'title': 'driver'
@@ -403,9 +402,8 @@ class ConfigTestCase(TestCase):
                 },
                 'ssh_key_names': {
                     'type': 'string',
-                    'description': 'The names of an SSH key being managed on Digital '
-                                   'Ocean account which will be used to authenticate '
-                                   'on the deployed VMs',
+                    'description': 'The names of an SSH key being managed on DigitalOcean '
+                                   'account which will be used to authenticate on the deployed VMs',
                     'title': 'SSH Key Names'
                 },
                 'ssh_key_file_2': {
@@ -416,9 +414,8 @@ class ConfigTestCase(TestCase):
                 },
                 'ssh_key_names_2': {
                     'type': 'string',
-                    'description': 'The names of an SSH key being managed on Digital '
-                                   'Ocean account which will be used to authenticate '
-                                   'on the deployed VMs',
+                    'description': 'The names of an SSH key being managed on DigitalOcean '
+                                   'account which will be used to authenticate on the deployed VMs',
                     'title': 'SSH Key Names'
                 }
             },
@@ -446,7 +443,7 @@ class ConfigTestCase(TestCase):
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_optional_requirements_config_validation(self):
         class BaseRequirements(schema.Schema):
-            driver = schema.StringItem(default='digital_ocean', format='hidden')
+            driver = schema.StringItem(default='digitalocean', format='hidden')
 
         class SSHKeyFileSchema(schema.Schema):
             ssh_key_file = schema.StringItem(
@@ -462,8 +459,8 @@ class ConfigTestCase(TestCase):
                             'authenticate on the deployed VMs')
 
         class Requirements(BaseRequirements):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             personal_access_token = schema.StringItem(
                 title='Personal Access Token',
@@ -781,8 +778,10 @@ class ConfigTestCase(TestCase):
             item = schema.IPv6Item(title='Item', description='Item description')
 
         try:
-            jsonschema.validate({'item': '::1'}, TestConf.serialize(),
-                                format_checker=jsonschema.FormatChecker())
+            jsonschema.validate(
+                {'item': salt.utils.stringutils.to_str('::1')},
+                TestConf.serialize(),
+                format_checker=jsonschema.FormatChecker())
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
@@ -2117,7 +2116,7 @@ class ComplexSchemaTestCase(TestCase):
         self.assertDictEqual(complex_obj.get_definition(), expected_def)
 
     def test_complex_definition_schema(self):
-        serialized = yaml.safe_load(json.dumps(self.schema.serialize()))
+        serialized = salt.utils.yaml.safe_load(salt.utils.json.dumps(self.schema.serialize()))
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
             'title': 'Test Complex Definition Schema',
@@ -2139,7 +2138,7 @@ class ComplexSchemaTestCase(TestCase):
         self.assertDictEqual(serialized, expected)
 
     def test_one_of_complex_definition_schema(self):
-        serialized = yaml.safe_load(json.dumps(self.one_of_schema.serialize()))
+        serialized = salt.utils.yaml.safe_load(salt.utils.json.dumps(self.one_of_schema.serialize()))
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
             'title': 'Test OneOf Complex Definitions Schema',
@@ -2162,7 +2161,7 @@ class ComplexSchemaTestCase(TestCase):
         self.assertDictEqual(serialized, expected)
 
     def test_array_complex_definition_schema(self):
-        serialized = yaml.safe_load(json.dumps(self.array_schema.serialize()))
+        serialized = salt.utils.yaml.safe_load(salt.utils.json.dumps(self.array_schema.serialize()))
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
             'title': 'Test Array Complex Definitions Schema',
@@ -2186,7 +2185,7 @@ class ComplexSchemaTestCase(TestCase):
         self.assertDictEqual(serialized, expected)
 
     def test_dict_complex_definition_schema(self):
-        serialized = yaml.safe_load(json.dumps(self.dict_schema.serialize()))
+        serialized = salt.utils.yaml.safe_load(salt.utils.json.dumps(self.dict_schema.serialize()))
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
             'title': 'Test Dict Complex Definitions Schema',
@@ -2215,8 +2214,9 @@ class ComplexSchemaTestCase(TestCase):
         self.assertDictEqual(serialized, expected)
 
     def test_complex_complex_definition_schema(self):
-        serialized = yaml.safe_load(json.dumps(
-            self.complex_schema.serialize()))
+        serialized = salt.utils.yaml.safe_load(salt.utils.json.dumps(
+            self.complex_schema.serialize()
+        ))
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
             'title': 'Test Complex Complex Definition Schema',
@@ -2266,8 +2266,9 @@ class ComplexSchemaTestCase(TestCase):
                 as excinfo:
             jsonschema.validate({'complex_item': {'thirsty': 'Foo'}},
                                 serialized)
-        self.assertIn('\'Foo\' is not of type \'boolean\'',
-                      excinfo.exception.message)
+        expected = "u'Foo' is not of type u'boolean'" if six.PY2 \
+            else "'Foo' is not of type 'boolean'"
+        self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_complex_schema_item_hungry_valid(self):
@@ -2297,8 +2298,9 @@ class ComplexSchemaTestCase(TestCase):
                 as excinfo:
             jsonschema.validate({'complex_complex_item': {'hungry': 'Foo'}},
                                 serialized)
-        self.assertIn('\'Foo\' is not of type \'boolean\'',
-                      excinfo.exception.message)
+        expected = "u'Foo' is not of type u'boolean'" if six.PY2 \
+            else "'Foo' is not of type 'boolean'"
+        self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_complex_schema_item_inner_thirsty_invalid(self):
@@ -2310,8 +2312,9 @@ class ComplexSchemaTestCase(TestCase):
                 {'complex_complex_item': {'hungry': True,
                                           'complex_item': {'thirsty': 'Bar'}}},
                 serialized)
-        self.assertIn('\'Bar\' is not of type \'boolean\'',
-                      excinfo.exception.message)
+        expected = "u'Bar' is not of type u'boolean'" if six.PY2 \
+            else "'Bar' is not of type 'boolean'"
+        self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_complex_schema_item_missing_required_hungry(self):

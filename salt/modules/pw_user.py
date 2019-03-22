@@ -34,7 +34,7 @@ Manage users with the pw command
 # someuser:*:1001:1001::0:0:SomeUser Name:/home/someuser:/bin/sh
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import copy
 import logging
 try:
@@ -44,12 +44,14 @@ except ImportError:
     HAS_PWD = False
 
 # Import 3rd party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.data
+import salt.utils.locales
+import salt.utils.user
 from salt.exceptions import CommandExecutionError
-from salt.utils import locales
 
 log = logging.getLogger(__name__)
 
@@ -82,10 +84,10 @@ def _get_gecos(name):
         # Assign empty strings for any unspecified trailing GECOS fields
         while len(gecos_field) < 4:
             gecos_field.append('')
-        return {'fullname': locales.sdecode(gecos_field[0]),
-                'roomnumber': locales.sdecode(gecos_field[1]),
-                'workphone': locales.sdecode(gecos_field[2]),
-                'homephone': locales.sdecode(gecos_field[3])}
+        return {'fullname': salt.utils.locales.sdecode(gecos_field[0]),
+                'roomnumber': salt.utils.locales.sdecode(gecos_field[1]),
+                'workphone': salt.utils.locales.sdecode(gecos_field[2]),
+                'homephone': salt.utils.locales.sdecode(gecos_field[3])}
 
 
 def _build_gecos(gecos_dict):
@@ -104,7 +106,7 @@ def _update_gecos(name, key, value):
     Common code to change a user's GECOS information
     '''
     if not isinstance(value, six.string_types):
-        value = str(value)
+        value = six.text_type(value)
     pre_info = _get_gecos(name)
     if not pre_info:
         return False
@@ -141,8 +143,8 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
-    if salt.utils.is_true(kwargs.pop('system', False)):
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    if salt.utils.data.is_true(kwargs.pop('system', False)):
         log.warning('pw_user module does not support the \'system\' argument')
     if kwargs:
         log.warning('Invalid kwargs passed to user.add')
@@ -164,7 +166,7 @@ def add(name,
         cmd.extend(['-L', loginclass])
     if shell:
         cmd.extend(['-s', shell])
-    if not salt.utils.is_true(unique):
+    if not salt.utils.data.is_true(unique):
         cmd.append('-o')
     gecos_field = _build_gecos({'fullname': fullname,
                                 'roomnumber': roomnumber,
@@ -185,7 +187,7 @@ def delete(name, remove=False, force=False):
 
         salt '*' user.delete name remove=True force=True
     '''
-    if salt.utils.is_true(force):
+    if salt.utils.data.is_true(force):
         log.error('pw userdel does not support force-deleting user while '
                   'user is logged in')
     cmd = ['pw', 'userdel']
@@ -488,7 +490,7 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    return salt.utils.get_group_list(name)
+    return salt.utils.user.get_group_list(name)
 
 
 def list_users():

@@ -3,7 +3,7 @@
 Application Kinds of Salt apps.
 These are used to indicate what kind of Application is using RAET
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 from collections import namedtuple
 from salt.utils.odict import OrderedDict
 

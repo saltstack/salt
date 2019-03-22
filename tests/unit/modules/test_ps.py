@@ -4,14 +4,16 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 from collections import namedtuple
+import time
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, call, Mock
 
 # Import Salt libs
+import salt.utils.data
 import salt.modules.ps as ps
 
 HAS_PSUTIL_VERSION = False
@@ -63,6 +65,48 @@ def _get_proc_pid(proc):
     return proc.pid
 
 
+class DummyProcess(object):
+    '''
+    Dummy class to emulate psutil.Process. This ensures that _any_ string
+    values used for any of the options passed in are converted to str types on
+    both Python 2 and Python 3.
+    '''
+    def __init__(self, cmdline=None, create_time=None, name=None, status=None,
+                 username=None, pid=None):
+        self._cmdline = salt.utils.data.decode(
+            cmdline if cmdline is not None else [],
+            to_str=True)
+        self._create_time = salt.utils.data.decode(
+            create_time if create_time is not None else time.time(),
+            to_str=True)
+        self._name = salt.utils.data.decode(
+            name if name is not None else [],
+            to_str=True)
+        self._status = salt.utils.data.decode(status, to_str=True)
+        self._username = salt.utils.data.decode(username, to_str=True)
+        self._pid = salt.utils.data.decode(
+            pid if pid is not None else 12345,
+            to_str=True)
+
+    def cmdline(self):
+        return self._cmdline
+
+    def create_time(self):
+        return self._create_time
+
+    def name(self):
+        return self._name
+
+    def status(self):
+        return self._status
+
+    def username(self):
+        return self._username
+
+    def pid(self):
+        return self._pid
+
+
 class PsTestCase(TestCase):
     def setUp(self):
         self.mocked_proc = mocked_proc = MagicMock('salt.utils.psutil_compat.Process')
@@ -72,6 +116,12 @@ class PsTestCase(TestCase):
         else:
             self.mocked_proc.name = 'test_mock_proc'
             self.mocked_proc.pid = 9999999999
+
+    @skipIf(not ps.PSUTIL2, 'Only run for psutil 2.x')
+    def test__get_proc_cmdline(self):
+        cmdline = ['echo', 'питон']
+        ret = ps._get_proc_cmdline(DummyProcess(cmdline=cmdline))
+        assert ret == cmdline, ret
 
     def test_get_pid_list(self):
         with patch('salt.utils.psutil_compat.pids',
@@ -142,17 +192,6 @@ class PsTestCase(TestCase):
                  'fstype': 'hfs'},
                 ps.disk_partitions()[0])
 
-    ## Should only be tested in integration
-    # def test_total_physical_memory(self):
-    #     pass
-
-    ## Should only be tested in integration
-    # def test_num_cpus(self):
-    #     pass
-
-    ## Should only be tested in integration
-    # def test_boot_time(self):
-    #     pass
     def test_network_io_counters(self):
         with patch('salt.utils.psutil_compat.net_io_counters',
                    MagicMock(return_value=STUB_NETWORK_IO)):

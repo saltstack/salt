@@ -113,18 +113,18 @@ xcopy /Q /Y "%SrcDir%\conf\master" "%CnfDir%\"
 xcopy /Q /Y "%SrcDir%\conf\minion" "%CnfDir%\"
 @echo.
 
-@echo Copying NSSM to buildenv
+@echo Copying SSM to buildenv
 @echo ----------------------------------------------------------------------
 
-:: Set the location of the nssm to download
-Set Url64="https://repo.saltstack.com/windows/dependencies/64/nssm-2.24-101-g897c7ad.exe"
-Set Url32="https://repo.saltstack.com/windows/dependencies/32/nssm-2.24-101-g897c7ad.exe"
+:: Set the location of the ssm to download
+Set Url64="https://repo.saltstack.com/windows/dependencies/64/ssm-2.24-103-gdee49fc.exe"
+Set Url32="https://repo.saltstack.com/windows/dependencies/32/ssm-2.24-103-gdee49fc.exe"
 
 :: Check for 64 bit by finding the Program Files (x86) directory
 If Defined ProgramFiles(x86) (
-    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%BldDir%\nssm.exe"
+    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%BinDir%\ssm.exe"
 ) Else (
-    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%BldDir%\nssm.exe"
+    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%BinDir%\ssm.exe"
 )
 @echo.
 
@@ -495,8 +495,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\modules\xfs.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\xfs.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\yumpkg.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\yum.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\modules\zabbix.py"^
-    del /Q "%BinDir%\Lib\site-packages\salt\modules\zabbix.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\zfs.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\zfs.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\znc.py"^
@@ -601,8 +599,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\states\vbox_guest.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\vbox_guest.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\virt.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\virt.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\states\zabbix*"^
-    del /Q "%BinDir%\Lib\site-packages\salt\states\zabbix*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\zfs.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\zfs.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\zpool.py"^

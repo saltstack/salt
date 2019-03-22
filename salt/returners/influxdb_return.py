@@ -50,10 +50,9 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return influxdb --return_kwargs '{"db": "another-salt"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import json
 import logging
 import requests
 
@@ -113,7 +112,10 @@ def _get_version(host, port, user, password):
         if influxDBVersionHeader in result.headers:
             version = result.headers[influxDBVersionHeader]
     except Exception as ex:
-        log.critical('Failed to query InfluxDB version from HTTP API within InfluxDB returner: {0}'.format(ex))
+        log.critical(
+            'Failed to query InfluxDB version from HTTP API within InfluxDB '
+            'returner: %s', ex
+        )
     return version
 
 
@@ -152,9 +154,9 @@ def returner(ret):
     serv = _get_serv(ret)
 
     # strip the 'return' key to avoid data duplication in the database
-    json_return = json.dumps(ret['return'])
+    json_return = salt.utils.json.dumps(ret['return'])
     del ret['return']
-    json_full_ret = json.dumps(ret)
+    json_full_ret = salt.utils.json.dumps(ret)
 
     # create legacy request in case an InfluxDB 0.8.x version is used
     if "influxdb08" in serv.__module__:
@@ -187,7 +189,7 @@ def returner(ret):
     try:
         serv.write_points(req)
     except Exception as ex:
-        log.critical('Failed to store return with InfluxDB returner: {0}'.format(ex))
+        log.critical('Failed to store return with InfluxDB returner: %s', ex)
 
 
 def save_load(jid, load, minions=None):
@@ -203,7 +205,7 @@ def save_load(jid, load, minions=None):
                 'name': 'jids',
                 'columns': ['jid', 'load'],
                 'points': [
-                    [jid, json.dumps(load)]
+                    [jid, salt.utils.json.dumps(load)]
                 ],
             }
         ]
@@ -216,7 +218,7 @@ def save_load(jid, load, minions=None):
                     'jid': jid
                 },
                 'fields': {
-                    'load': json.dumps(load)
+                    'load': salt.utils.json.dumps(load)
                 }
             }
         ]
@@ -224,7 +226,7 @@ def save_load(jid, load, minions=None):
     try:
         serv.write_points(req)
     except Exception as ex:
-        log.critical('Failed to store load with InfluxDB returner: {0}'.format(ex))
+        log.critical('Failed to store load with InfluxDB returner: %s', ex)
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
@@ -241,9 +243,9 @@ def get_load(jid):
     serv = _get_serv(ret=None)
     sql = "select load from jids where jid = '{0}'".format(jid)
 
-    log.debug(">> Now in get_load {0}".format(jid))
+    log.debug(">> Now in get_load %s", jid)
     data = serv.query(sql)
-    log.debug(">> Now Data: {0}".format(data))
+    log.debug(">> Now Data: %s", data)
     if data:
         return data
     return {}
@@ -262,7 +264,7 @@ def get_jid(jid):
     if data:
         points = data[0]['points']
         for point in points:
-            ret[point[3]] = json.loads(point[2])
+            ret[point[3]] = salt.utils.json.loads(point[2])
 
     return ret
 
@@ -284,7 +286,7 @@ def get_fun(fun):
     if data:
         points = data[0]['points']
         for point in points:
-            ret[point[1]] = json.loads(point[2])
+            ret[point[1]] = salt.utils.json.loads(point[2])
 
     return ret
 
@@ -304,7 +306,7 @@ def get_jids():
     ret = {}
     if data:
         for _, jid, load in data[0]['points']:
-            ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
+            ret[jid] = salt.utils.jid.format_jid_instance(jid, salt.utils.json.loads(load))
     return ret
 
 
@@ -328,4 +330,4 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

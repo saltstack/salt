@@ -21,6 +21,8 @@ import time
 import logging
 
 # Import Salt Libs
+import salt.utils.files
+import salt.utils.fsutils
 import salt.utils.network
 from salt.modules.inspectlib.exceptions import (InspectorQueryException, SIException)
 from salt.modules.inspectlib import EnvLoader
@@ -214,7 +216,7 @@ class Query(EnvLoader):
         '''
         users = dict()
         path = '/etc/passwd'
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             for line in fp_:
                 line = line.strip()
                 if ':' not in line:
@@ -239,7 +241,7 @@ class Query(EnvLoader):
         '''
         groups = dict()
         path = '/etc/group'
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             for line in fp_:
                 line = line.strip()
                 if ':' not in line:

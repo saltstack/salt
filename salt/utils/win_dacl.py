@@ -128,13 +128,13 @@ should match what you see when you look at the properties for an object.
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six.moves import range
-import salt.ext.six as six
+from salt.ext import six
 
 # Import 3rd-party libs
 HAS_WIN32 = False
@@ -602,7 +602,7 @@ def dacl(obj_name=None, obj_type='file'):
                     raise SaltInvocationError(
                         'Invalid access mode: {0}'.format(access_mode))
             except Exception as exc:
-                return False, 'Error: {0}'.format(str(exc))
+                return False, 'Error: {0}'.format(exc)
 
             return True
 
@@ -1291,9 +1291,8 @@ def set_owner(obj_name, principal, obj_type='file'):
             sid,
             None, None, None)
     except pywintypes.error as exc:
-        log.debug('Failed to make {0} the owner: {1}'.format(principal, exc.strerror))
-        raise CommandExecutionError(
-            'Failed to set owner: {0}'.format(exc.strerror))
+        log.debug('Failed to make %s the owner: %s', principal, exc)
+        raise CommandExecutionError('Failed to set owner: {0}'.format(exc))
 
     return True
 
@@ -1364,11 +1363,8 @@ def set_primary_group(obj_name, principal, obj_type='file'):
             obj_flags.element['group'],
             None, gid, None, None)
     except pywintypes.error as exc:
-        log.debug(
-            'Failed to make {0} the primary group: {1}'
-            ''.format(principal, exc.strerror))
-        raise CommandExecutionError(
-            'Failed to set primary group: {0}'.format(exc.strerror))
+        log.debug('Failed to make %s the primary group: %s', principal, exc)
+        raise CommandExecutionError('Failed to set primary group: {0}'.format(exc))
 
     return True
 
@@ -1693,3 +1689,171 @@ def get_inheritance(obj_name, obj_type='file'):
             return True
 
     return False
+
+
+def copy_security(source,
+                  target,
+                  obj_type='file',
+                  copy_owner=True,
+                  copy_group=True,
+                  copy_dacl=True,
+                  copy_sacl=True):
+    r'''
+    Copy the security descriptor of the Source to the Target. You can specify a
+    specific portion of the security descriptor to copy using one of the
+    `copy_*` parameters.
+
+    .. note::
+        At least one `copy_*` parameter must be ``True``
+
+    .. note::
+        The user account running this command must have the following
+        privileges:
+
+        - SeTakeOwnershipPrivilege
+        - SeRestorePrivilege
+        - SeSecurityPrivilege
+
+    Args:
+
+        source (str):
+            The full path to the source. This is where the security info will be
+            copied from
+
+        target (str):
+            The full path to the target. This is where the security info will be
+            applied
+
+        obj_type (str): file
+            The type of object to query. This value changes the format of the
+            ``obj_name`` parameter as follows:
+            - file: indicates a file or directory
+                - a relative path, such as ``FileName.txt`` or ``..\FileName``
+                - an absolute path, such as ``C:\DirName\FileName.txt``
+                - A UNC name, such as ``\\ServerName\ShareName\FileName.txt``
+            - service: indicates the name of a Windows service
+            - printer: indicates the name of a printer
+            - registry: indicates a registry key
+                - Uses the following literal strings to denote the hive:
+                    - HKEY_LOCAL_MACHINE
+                    - MACHINE
+                    - HKLM
+                    - HKEY_USERS
+                    - USERS
+                    - HKU
+                    - HKEY_CURRENT_USER
+                    - CURRENT_USER
+                    - HKCU
+                    - HKEY_CLASSES_ROOT
+                    - CLASSES_ROOT
+                    - HKCR
+                - Should be in the format of ``HIVE\Path\To\Key``. For example,
+                    ``HKLM\SOFTWARE\Windows``
+            - registry32: indicates a registry key under WOW64. Formatting is
+                the same as it is for ``registry``
+            - share: indicates a network share
+
+        copy_owner (bool): True
+            ``True`` copies owner information. Default is ``True``
+
+        copy_group (bool): True
+            ``True`` copies group information. Default is ``True``
+
+        copy_dacl (bool): True
+            ``True`` copies the DACL. Default is ``True``
+
+        copy_sacl (bool): True
+            ``True`` copies the SACL. Default is ``True``
+
+    Returns:
+        bool: ``True`` if successful
+
+    Raises:
+        SaltInvocationError: When parameters are invalid
+        CommandExecutionError: On failure to set security
+
+    Usage:
+
+    .. code-block:: python
+
+        salt.utils.win_dacl.copy_security(
+            source='C:\\temp\\source_file.txt',
+            target='C:\\temp\\target_file.txt',
+            obj_type='file')
+
+        salt.utils.win_dacl.copy_security(
+            source='HKLM\\SOFTWARE\\salt\\test_source',
+            target='HKLM\\SOFTWARE\\salt\\test_target',
+            obj_type='registry',
+            copy_owner=False)
+    '''
+    obj_dacl = dacl(obj_type=obj_type)
+    if 'registry' in obj_type.lower():
+        source = obj_dacl.get_reg_name(source)
+        log.info('Source converted to: %s', source)
+        target = obj_dacl.get_reg_name(target)
+        log.info('Target converted to: %s', target)
+
+    # Set flags
+    try:
+        obj_type_flag = flags().obj_type[obj_type.lower()]
+    except KeyError:
+        raise SaltInvocationError(
+            'Invalid "obj_type" passed: {0}'.format(obj_type))
+
+    security_flags = 0
+    if copy_owner:
+        security_flags |= win32security.OWNER_SECURITY_INFORMATION
+    if copy_group:
+        security_flags |= win32security.GROUP_SECURITY_INFORMATION
+    if copy_dacl:
+        security_flags |= win32security.DACL_SECURITY_INFORMATION
+    if copy_sacl:
+        security_flags |= win32security.SACL_SECURITY_INFORMATION
+
+    if not security_flags:
+        raise SaltInvocationError(
+            'One of copy_owner, copy_group, copy_dacl, or copy_sacl must be '
+            'True')
+
+    # To set the owner to something other than the logged in user requires
+    # SE_TAKE_OWNERSHIP_NAME and SE_RESTORE_NAME privileges
+    # Enable them for the logged in user
+    # Setup the privilege set
+    new_privs = set()
+    luid = win32security.LookupPrivilegeValue('', 'SeTakeOwnershipPrivilege')
+    new_privs.add((luid, win32con.SE_PRIVILEGE_ENABLED))
+    luid = win32security.LookupPrivilegeValue('', 'SeRestorePrivilege')
+    new_privs.add((luid, win32con.SE_PRIVILEGE_ENABLED))
+    luid = win32security.LookupPrivilegeValue('', 'SeSecurityPrivilege')
+    new_privs.add((luid, win32con.SE_PRIVILEGE_ENABLED))
+
+    # Get the current token
+    p_handle = win32api.GetCurrentProcess()
+    t_handle = win32security.OpenProcessToken(
+        p_handle,
+        win32security.TOKEN_ALL_ACCESS | win32con.TOKEN_ADJUST_PRIVILEGES)
+
+    # Enable the privileges
+    win32security.AdjustTokenPrivileges(t_handle, 0, new_privs)
+
+    # Load object Security Info from the Source
+    sec = win32security.GetNamedSecurityInfo(
+        source, obj_type_flag, security_flags)
+
+    # The following return None if the corresponding flag is not set
+    sd_sid = sec.GetSecurityDescriptorOwner()
+    sd_gid = sec.GetSecurityDescriptorGroup()
+    sd_dacl = sec.GetSecurityDescriptorDacl()
+    sd_sacl = sec.GetSecurityDescriptorSacl()
+
+    # Set Security info on the target
+    try:
+        win32security.SetNamedSecurityInfo(
+            target, obj_type_flag, security_flags, sd_sid, sd_gid, sd_dacl,
+            sd_sacl)
+    except pywintypes.error as exc:
+        raise CommandExecutionError(
+            'Failed to set security info: {0}'.format(exc.strerror))
+
+    return True

@@ -89,15 +89,15 @@ work since the return from values() changes if a ManyToMany is present.
 Module Documentation
 ====================
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import sys
 
 import salt.exceptions
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.stringutils
 
 HAS_VIRTUALENV = False
 
@@ -153,13 +153,12 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     '''
 
     if not os.path.isdir(project_path):
-        log.error('Django project dir: \'{0}\' not a directory!'.format(
-            project_path))
+        log.error('Django project dir: \'%s\' not a directory!', project_path)
         return {}
     if HAS_VIRTUALENV and env is not None and os.path.isdir(env):
         for path in virtualenv.path_locations(env):
             if not os.path.isdir(path):
-                log.error('Virtualenv {0} not a directory!'.format(path))
+                log.error('Virtualenv %s not a directory!', path)
                 return {}
         # load the virtualenv first
         sys.path.insert(0,
@@ -178,20 +177,18 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
         base_env = {}
         proc = subprocess.Popen(['bash', '-c', 'env'], stdout=subprocess.PIPE)
         for line in proc.stdout:
-            (key, _, value) = salt.utils.to_str(line).partition('=')
+            (key, _, value) = salt.utils.stringutils.to_str(line).partition('=')
             base_env[key] = value
 
         command = ['bash', '-c', 'source {0} && env'.format(env_file)]
         proc = subprocess.Popen(command, stdout=subprocess.PIPE)
 
         for line in proc.stdout:
-            (key, _, value) = salt.utils.to_str(line).partition('=')
+            (key, _, value) = salt.utils.stringutils.to_str(line).partition('=')
             # only add a key if it is different or doesn't already exist
             if key not in base_env or base_env[key] != value:
                 os.environ[key] = value.rstrip('\n')
-                log.debug('Adding {0} = {1} to Django environment'.format(
-                            key,
-                            value.rstrip('\n')))
+                log.debug('Adding %s = %s to Django environment', key, value.rstrip('\n'))
 
     try:
         from django.db.models.loading import get_model
@@ -238,9 +235,9 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
 
         return {pillar_name: django_pillar}
     except ImportError as e:
-        log.error('Failed to import library: {0}'.format(str(e)))
+        log.error('Failed to import library: %s', e)
         return {}
     except Exception as e:
-        log.error('Failed on Error: {0}'.format(str(e)))
+        log.error('Failed on Error: %s', e)
         log.debug('django_orm traceback', exc_info=True)
         return {}

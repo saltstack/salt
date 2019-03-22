@@ -5,7 +5,12 @@
 
     .. versionadded:: 0.17.0
 
-    This module provides a `Sentry`_ logging handler.
+    This module provides a `Sentry`_ logging handler. Sentry is an open source
+    error tracking platform that provides deep context about exceptions that
+    happen in production. Details about stack traces along with the context
+    variables available at the time of the exeption are easily browsable and
+    filterable from the online interface. For more details please see
+    `Sentry`_.
 
     .. admonition:: Note
 
@@ -41,6 +46,11 @@
             - cpuarch
             - ec2.tags.environment
 
+    .. admonition:: Note
+
+        The ``public_key`` and ``secret_key`` variables are not supported with
+        Sentry > 3.0. The `DSN`_ key should be used instead.
+
     All the client configuration keys are supported, please see the
     `Raven client documentation`_.
 
@@ -75,7 +85,7 @@
     .. _`Raven`: https://raven.readthedocs.io
     .. _`Raven client documentation`: https://raven.readthedocs.io/en/latest/config/index.html#client-arguments
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -102,13 +112,16 @@ __virtualname__ = 'sentry'
 
 def __virtual__():
     if HAS_RAVEN is True:
-        __grains__ = salt.loader.grains(__opts__)
-        __salt__ = salt.loader.minion_mods(__opts__)
         return __virtualname__
     return False
 
 
 def setup_handlers():
+    '''
+    sets up the sentry handler
+    '''
+    __grains__ = salt.loader.grains(__opts__)
+    __salt__ = salt.loader.minion_mods(__opts__)
     if 'sentry_handler' not in __opts__:
         log.debug('No \'sentry_handler\' key was found in the configuration')
         return False
@@ -123,36 +136,24 @@ def setup_handlers():
             url = urlparse(dsn)
             if not transport_registry.supported_scheme(url.scheme):
                 raise ValueError('Unsupported Sentry DSN scheme: {0}'.format(url.scheme))
-            dsn_config = {}
-            if (hasattr(transport_registry, 'compute_scope') and
-                    callable(transport_registry.compute_scope)):
-                conf_extras = transport_registry.compute_scope(url, dsn_config)
-                dsn_config.update(conf_extras)
-                options.update({
-                    'project': dsn_config['SENTRY_PROJECT'],
-                    'servers': dsn_config['SENTRY_SERVERS'],
-                    'public_key': dsn_config['SENTRY_PUBLIC_KEY'],
-                    'secret_key': dsn_config['SENTRY_SECRET_KEY']
-                })
         except ValueError as exc:
             log.info(
-                'Raven failed to parse the configuration provided '
-                'DSN: {0}'.format(exc)
+                'Raven failed to parse the configuration provided DSN: %s', exc
             )
 
-    # Allow options to be overridden if previously parsed, or define them
-    for key in ('project', 'servers', 'public_key', 'secret_key'):
-        config_value = get_config_value(key)
-        if config_value is None and key not in options:
-            log.debug(
-                'The required \'sentry_handler\' configuration key, '
-                '\'{0}\', is not properly configured. Not configuring '
-                'the sentry logging handler.'.format(key)
-            )
-            return
-        elif config_value is None:
-            continue
-        options[key] = config_value
+    if not dsn:
+        for key in ('project', 'servers', 'public_key', 'secret_key'):
+            config_value = get_config_value(key)
+            if config_value is None and key not in options:
+                log.debug(
+                    'The required \'sentry_handler\' configuration key, '
+                    '\'%s\', is not properly configured. Not configuring '
+                    'the sentry logging handler.', key
+                )
+                return
+            elif config_value is None:
+                continue
+            options[key] = config_value
 
     # site: An optional, arbitrary string to identify this client installation.
     options.update({
@@ -203,7 +204,11 @@ def setup_handlers():
     context_dict = {}
     if context is not None:
         for tag in context:
-            tag_value = __salt__['grains.get'](tag)
+            try:
+                tag_value = __grains__[tag]
+            except KeyError:
+                log.debug('Sentry tag \'%s\' not found in grains.', tag)
+                continue
             if len(tag_value) > 0:
                 context_dict[tag] = tag_value
         if len(context_dict) > 0:
@@ -213,11 +218,11 @@ def setup_handlers():
         handler.setLevel(LOG_LEVELS[get_config_value('log_level', 'error')])
         return handler
     except ValueError as exc:
-        log.debug(
-            'Failed to setup the sentry logging handler: {0}'.format(exc),
-            exc_info=exc
-        )
+        log.debug('Failed to setup the sentry logging handler', exc_info=True)
 
 
 def get_config_value(name, default=None):
+    '''
+    returns a configuration option for the sentry_handler
+    '''
     return __opts__['sentry_handler'].get(name, default)

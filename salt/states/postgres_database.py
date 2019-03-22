@@ -11,7 +11,7 @@ Databases can be set as either absent or present
     frank:
       postgres_database.present
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 
 def __virtual__():

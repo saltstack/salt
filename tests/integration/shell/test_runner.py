@@ -4,7 +4,7 @@
 Tests for the salt-run command
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
 import shutil
@@ -15,12 +15,13 @@ from tests.support.case import ShellCase
 from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import skip_if_not_root
+from tests.support.unit import skipIf
 
-# Import 3rd-party libs
-import yaml
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.yaml
 
-# Import salt libs
-import salt.utils
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
@@ -41,7 +42,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         try:
             add_user = self.run_call('user.add {0} createhome=False'.format(USERA))
             add_pwd = self.run_call('shadow.set_password {0} \'{1}\''.format(USERA,
-                                    USERA_PWD if salt.utils.is_darwin() else HASHED_USERA_PWD))
+                                    USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD))
             self.assertTrue(add_user)
             self.assertTrue(add_pwd)
             user_list = self.run_call('user.list_users')
@@ -91,7 +92,11 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         data = self.run_run('-d virt.list foo', catch_stderr=True)
         self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_issue_7754(self):
+        '''
+        Skip on windows because syslog not available
+        '''
         old_cwd = os.getcwd()
         config_dir = os.path.join(TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
@@ -100,13 +105,11 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         os.chdir(config_dir)
 
         config_file_name = 'master'
-        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
-            config = yaml.load(fhr.read())
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+            config = salt.utils.yaml.safe_load(fhr)
             config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
-                fhw.write(
-                    yaml.dump(config, default_flow_style=False)
-                )
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
         ret = self.run_script(
             self._call_binary_,
             '--config-dir {0} -d'.format(
@@ -117,7 +120,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
             with_retcode=True
         )
         try:
-            self.assertIn("'doc.runner:'", ret[0])
+            self.assertIn('doc.runner:', ret[0])
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
         except AssertionError:
             if os.path.exists('/dev/log') and ret[2] != 2:
@@ -211,5 +214,5 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         '''
         run_cmd = self.run_run('-a wrongeauth --username {0} --password {1}\
                                test.arg arg kwarg=kwarg1'.format(USERA, USERA_PWD))
-        expect = ['The specified external authentication system "wrongeauth" is not available']
-        self.assertEqual(expect, run_cmd)
+        expect = r"^The specified external authentication system \"wrongeauth\" is not available\tAvailable eauth types: auto, .*"
+        self.assertRegex("\t".join(run_cmd), expect)
