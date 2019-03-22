@@ -21,6 +21,7 @@ if __name__ == '__main__':
 
 # Import 3rd-party libs
 import nox
+from nox.command import CommandFailed
 
 # Global Path Definitions
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -56,13 +57,24 @@ def _install_requirements(session, *extra_requirements):
     # Install requirements
     distro_requirements = None
 
-    if not IS_WINDOWS:
+    if IS_WINDOWS:
+        _distro_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', 'windows.txt')
+        if os.path.exists(_distro_requirements):
+            with open(_distro_requirements) as rfh:
+                if 'ioflo' in rfh.read():
+                    # Because we still install ioflo, which requires setuptools-git, which fails with a
+                    # weird SSL certificate issue(weird because the requirements file requirements install
+                    # fine), let's previously have setuptools-git installed
+                    session.install('setuptools-git')
+            distro_requirements = _distro_requirements
+    else:
         # The distro package doesn't output anything for Windows
         session.install('distro')
         output = session.run('distro', '-j', silent=True)
         distro = json.loads(output.strip())
         session.log('Distro information:\n%s', pprint.pformat(distro))
         distro_keys = [
+            '{id}'.format(**distro),
             '{id}-{version}'.format(**distro),
             '{id}-{version_parts[major]}'.format(**distro)
         ]
@@ -120,11 +132,6 @@ def _install_requirements(session, *extra_requirements):
     if extra_requirements:
         session.install(*extra_requirements)
 
-    if IS_WINDOWS:
-        # Windows hacks :/
-        nox_windows_setup = os.path.join(REPO_ROOT, 'tests', 'support', 'nox-windows-setup.py')
-        session.run('python', nox_windows_setup)
-
 
 def _run_with_coverage(session, *test_cmd):
     session.install('coverage==4.5.3')
@@ -149,7 +156,7 @@ def _run_with_coverage(session, *test_cmd):
 @nox.parametrize('coverage', [False, True])
 def runtests(session, coverage):
     # Install requirements
-    _install_requirements(session, 'unittest-xml-reporting<2.4.0')
+    _install_requirements(session, 'unittest-xml-reporting==2.2.1')
     # Create required artifacts directories
     _create_ci_directories()
 
@@ -159,10 +166,46 @@ def runtests(session, coverage):
         )
     ] + session.posargs
 
-    if coverage is True:
-        _run_with_coverage(session, 'coverage', 'run', '-m', 'tests.runtests', *cmd_args)
-    else:
-        session.run('python', os.path.join('tests', 'runtests.py'), *cmd_args)
+    try:
+        if coverage is True:
+            _run_with_coverage(session, 'coverage', 'run', '-m', 'tests.runtests', *cmd_args)
+        else:
+            session.run('python', os.path.join('tests', 'runtests.py'), *cmd_args)
+    except CommandFailed:
+        session.log('Re-running failed tests if possible')
+        names_file_path = os.path.join('artifacts', 'failed-tests.txt')
+        session.install('xunitparser==1.3.3')
+        session.run(
+            'python',
+            os.path.join('tests', 'support', 'generate-names-file-from-failed-test-reports.py'),
+            names_file_path
+        )
+        if not os.path.exists(names_file_path):
+            session.error('No names file was generated to re-run tests')
+
+        with open(names_file_path) as rfh:
+            failed_tests_count = len(rfh.read().splitlines())
+            if failed_tests_count > 500:
+                # 500 test failures?! Something else must have gone wrong, don't even bother
+                session.error(
+                    'Total failed tests({}) > 500. No point on re-running the failed tests'.format(
+                        failed_tests_count
+                    )
+                )
+
+        for idx, flag in enumerate(cmd_args[:]):
+            if '--names-file=' in flag:
+                cmd_args.pop(idx)
+                break
+            elif flag == '--names-file':
+                cmd_args.pop(idx)  # pop --names-file
+                cmd_args.pop(idx)  # pop the actual names file
+                break
+        cmd_args.append('--names-file={}'.format(names_file_path))
+        if coverage is True:
+            _run_with_coverage(session, 'coverage', 'run', '-m', 'tests.runtests', *cmd_args)
+        else:
+            session.run('python', os.path.join('tests', 'runtests.py'), *cmd_args)
 
 
 @nox.session(python=_PYTHON_VERSIONS)
@@ -183,7 +226,16 @@ def pytest(session, coverage):
         '-s'
     ] + session.posargs
 
-    if coverage is True:
-        _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
-    else:
-        session.run('py.test', *cmd_args)
+    try:
+        if coverage is True:
+            _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
+        else:
+            session.run('py.test', *cmd_args)
+    except CommandFailed:
+        # Re-run failed tests
+        session.log('Re-running failed tests')
+        cmd_args.append('--lf')
+        if coverage is True:
+            _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
+        else:
+            session.run('py.test', *cmd_args)
