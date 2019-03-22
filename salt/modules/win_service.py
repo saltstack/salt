@@ -102,6 +102,128 @@ def __virtual__():
     return __virtualname__
 
 
+class ServiceDependencies(object):
+    '''
+    Helper class which provides functionality to get all dependencies and 
+    customers of a Windows service
+
+    Args:
+        name (str): The name of the service. This is not the display name. 
+            Use ``get_service_name`` to find the service name.
+
+        all_services_provider (callback): The name of the method which 
+            provides a list of all available service names as done by 
+            the ``win_service.get_all()`` method.
+
+        service_info_provider (callback): The name of the method which 
+            allows to pass the service name and returns a dict with meets 
+            the requirements ``{service_name: {'Dependencies': []}}`` as 
+            done by the ``win_service.info(name)`` method
+    '''
+
+    def __init__(self, name, all_services_provider, service_info_provider):
+        self._name = name
+        self._all_services = all_services_provider()
+        self._service_info = {}
+        self._service_info_provider = service_info_provider
+
+    def _dependencies_all(self):
+        self._service_info = {}
+        for name in self._all_services:
+            self._dependencies(name)
+        return self._service_info
+
+    def _dependencies(self, name):
+        def _sanitize_lower_list(list_):
+            ret = set()
+            for entry in list_:
+                if entry and str(entry):
+                    # Lower case as Windows does not consider casing of the service names
+                    ret.add(str(entry).lower())
+            return list(ret)
+
+        normalized = self._normalize_name(self._all_services, name)
+        if normalized not in self._service_info:
+            info = self._service_info_provider(normalized)
+            dependencies = info.get('Dependencies', [])
+            self._service_info[normalized] = self._normalize_multiple_name(self._all_services, *dependencies)
+            log.trace("Added dependencies of %s: %s", normalized, self._service_info[normalized])
+        return self._service_info[normalized]
+
+    def _normalize_name(self, references, difference):
+        # Normalize Input
+        normalized = self._normalize_multiple_name(references, difference)
+        if not normalized:
+            raise ValueError("The provided name '%s' does not exist".format(difference))
+        return normalized[0]
+
+    def _normalize_multiple_name(self, references, *differences):
+        ret = list()
+        for difference in differences:
+            difference_str = str(difference)
+            for reference in references:
+                reference_str = str(reference)
+                if reference_str.lower() == difference_str.lower() and reference_str not in ret:
+                    ret.append(reference_str)
+                    break
+        return ret
+
+    def dependencies(self, with_indirect=True):
+        def _dependencies_recursion(name, with_indirect=True):
+            # Using a list here to maintain order
+            ret = list()
+            try:
+                dependencies = self._dependencies(name)
+                if bool(with_indirect):
+                    for dependency in dependencies:
+                        indirect_dependencies = _dependencies_recursion(dependency, with_indirect=with_indirect)
+                        for indirect_dependency in indirect_dependencies:
+                            if indirect_dependency not in ret:
+                                ret.append(indirect_dependency)
+                # This brings in an order, first elements in the list have itself no dependency
+                for dependency in dependencies:
+                    if str(dependency) not in ret:
+                        # Ensure string
+                        ret.append(str(dependency))
+            except Exception as e:
+                log.debug(e)
+                ret = list()
+            # Filter duplicates
+            return ret
+
+        normalized = self._normalize_name(self._all_services, self._name)
+        # Walk dependencies downstream
+        ret = _dependencies_recursion(normalized, with_indirect=with_indirect)
+        log.trace("Dependencies of '%s': '%s'", normalized, ret)
+        return ret
+
+    def customers(self, with_indirect=True):
+        def _customers_recursion(name, with_indirect=True):
+            # Using a list here to maintain order
+            ret = list()
+            try:
+                for service, dependencies in self._dependencies_all().items():
+                    if name in dependencies:
+                        ret.insert(0, service)
+                        if bool(with_indirect):
+                            indirect_customers = _customers_recursion(service, with_indirect=with_indirect)
+                            for indirect_customer in indirect_customers:
+                                if indirect_customer in ret:
+                                    ret.remove(indirect_customer)
+                                ret.insert(0, indirect_customer)
+            except Exception as e:
+                log.debug(e)
+                ret = list()
+            # Filter duplicates
+            return ret
+
+        normalized = self._normalize_name(self._all_services, self._name)
+        # Walk dependencies upstream
+        ret = _customers_recursion(normalized, with_indirect=with_indirect)
+        log.trace("Customers of '%s': '%s'", normalized, ret)
+        return ret
+
+
 def _status_wait(service_name, end_time, service_states):
     '''
     Helper function that will wait for the status of the service to match the
@@ -445,7 +567,7 @@ def info(name):
     return ret
 
 
-def start(name, timeout=90):
+def start(name, timeout=90, with_deps=True, with_customers=False):
     '''
     Start the specified service.
 
@@ -462,6 +584,15 @@ def start(name, timeout=90):
 
             .. versionadded:: 2017.7.9,2018.3.4
 
+        with_deps (bool):
+            If enabled start the given service and the services the current 
+            service depends on.
+
+        with_customers (bool):
+            If enabled and in case other running services depend on the to be start 
+            service, this flag indicates that those other services will be started 
+            as well.
+
     Returns:
         bool: ``True`` if successful, otherwise ``False``. Also returns ``True``
             if the service is already started
@@ -476,22 +607,34 @@ def start(name, timeout=90):
     if disabled(name):
         modify(name, start_type='Manual')
 
-    try:
-        win32serviceutil.StartService(name)
-    except pywintypes.error as exc:
-        if exc.winerror != 1056:
-            raise CommandExecutionError(
-                'Failed To Start {0}: {1}'.format(name, exc.strerror))
-        log.debug('Service "%s" is running', name)
+    ret = set()
 
-    srv_status = _status_wait(service_name=name,
-                              end_time=time.time() + int(timeout),
-                              service_states=['Start Pending', 'Stopped'])
+    # Using a list here to maintain order
+    services = list()
+    dependencies = ServiceDependencies(name, get_all, info)
+    if with_deps:
+        services.extend(dependencies.dependencies(with_indirect=True))
+    services.append(name)
+    if with_customers:
+        services.extend(dependencies.customers(with_indirect=True))
+    log.debug("Starting services %s", services)
+    for name in services:
+        try:
+            win32serviceutil.StartService(name)
+        except pywintypes.error as exc:
+            if exc.winerror != 1056:
+                raise CommandExecutionError(
+                    'Failed To Start {0}: {1}'.format(name, exc.strerror))
+            log.debug('Service "%s" is running', name)
 
-    return srv_status['Status'] == 'Running'
+        srv_status = _status_wait(service_name=name,
+                                  end_time=time.time() + int(timeout),
+                                  service_states=['Start Pending', 'Stopped'])
+        ret.add(srv_status['Status'] == 'Running')
+    return False not in ret
 
 
-def stop(name, timeout=90):
+def stop(name, timeout=90, with_deps=False, with_customers=True):
     '''
     Stop the specified service
 
@@ -504,6 +647,17 @@ def stop(name, timeout=90):
 
             .. versionadded:: 2017.7.9,2018.3.4
 
+        with_deps (bool):
+            If enabled stop the given service and the services
+            the current service depends on.
+
+        with_customers (bool):
+            If enabled and in case other running services depend on the to be stopped 
+            service, this flag indicates that those other services will be stopped 
+            as well.
+            If disabled, the service stop will fail in case other running services 
+            depend on the to be stopped service.
+
     Returns:
         bool: ``True`` if successful, otherwise ``False``. Also returns ``True``
             if the service is already stopped
@@ -514,22 +668,33 @@ def stop(name, timeout=90):
 
         salt '*' service.stop <service name>
     '''
-    try:
-        win32serviceutil.StopService(name)
-    except pywintypes.error as exc:
-        if exc.winerror != 1062:
-            raise CommandExecutionError(
-                'Failed To Stop {0}: {1}'.format(name, exc.strerror))
-        log.debug('Service "%s" is not running', name)
+    ret = set()
 
-    srv_status = _status_wait(service_name=name,
-                              end_time=time.time() + int(timeout),
-                              service_states=['Running', 'Stop Pending'])
+    services = list()
+    dependencies = ServiceDependencies(name, get_all, info)
+    if with_customers:
+        services.extend(dependencies.customers(with_indirect=True))
+    services.append(name)
+    if with_deps:
+        services.extend(dependencies.dependencies(name, with_indirect=True))
+    log.debug("Stopping services %s", services)
+    for name in services:
+        try:
+            win32serviceutil.StopService(name)
+        except pywintypes.error as exc:
+            if exc.winerror != 1062:
+                raise CommandExecutionError(
+                    'Failed To Stop {0}: {1}'.format(name, exc.strerror))
+            log.debug('Service "%s" is not running', name)
 
-    return srv_status['Status'] == 'Stopped'
+        srv_status = _status_wait(service_name=name,
+                                  end_time=time.time() + int(timeout),
+                                  service_states=['Running', 'Stop Pending'])
+        ret.add(srv_status['Status'] == 'Stopped')
+    return False not in ret
 
 
-def restart(name, timeout=90):
+def restart(name, timeout=90, with_deps=False, with_customers=False):
     '''
     Restart the named service. This issues a stop command followed by a start.
 
@@ -551,6 +716,17 @@ def restart(name, timeout=90):
 
             .. versionadded:: 2017.7.9,2018.3.4
 
+        with_deps (bool):
+            If enabled restart the given service and the services
+            the current service depends on.
+
+        with_customers (bool):
+            If enabled and in case other running services depend on the to be 
+            restarted service, this flag indicates that those other services 
+            will be restarted as well.
+            If disabled, the service restart will fail in case other running 
+            services depend on the to be restarted service.
+
     Returns:
         bool: ``True`` if successful, otherwise ``False``
 
@@ -564,8 +740,10 @@ def restart(name, timeout=90):
         create_win_salt_restart_task()
         return execute_salt_restart_task()
 
-    return stop(name=name, timeout=timeout) and \
-           start(name=name, timeout=timeout)
+    ret = set()
+    ret.add(stop(name=name, timeout=timeout, with_deps=with_deps, with_customers=with_customers))
+    ret.add(start(name=name, timeout=timeout, with_deps=with_deps, with_customers=with_customers))
+    return False not in ret
 
 
 def create_win_salt_restart_task():
@@ -814,17 +992,17 @@ def modify(name,
             service_type = SERVICE_TYPE[service_type.lower()]
             if run_interactive:
                 service_type = service_type | \
-                               win32service.SERVICE_INTERACTIVE_PROCESS
+                    win32service.SERVICE_INTERACTIVE_PROCESS
         else:
             raise CommandExecutionError(
                 'Invalid Service Type: {0}'.format(service_type))
     else:
         if run_interactive is True:
             service_type = config_info[0] | \
-                           win32service.SERVICE_INTERACTIVE_PROCESS
+                win32service.SERVICE_INTERACTIVE_PROCESS
         elif run_interactive is False:
             service_type = config_info[0] ^ \
-                           win32service.SERVICE_INTERACTIVE_PROCESS
+                win32service.SERVICE_INTERACTIVE_PROCESS
         else:
             service_type = win32service.SERVICE_NO_CHANGE
 
@@ -1135,7 +1313,7 @@ def create(name,
         service_type = SERVICE_TYPE[service_type.lower()]
         if run_interactive:
             service_type = service_type | \
-                           win32service.SERVICE_INTERACTIVE_PROCESS
+                win32service.SERVICE_INTERACTIVE_PROCESS
     else:
         raise CommandExecutionError(
             'Invalid Service Type: {0}'.format(service_type))
