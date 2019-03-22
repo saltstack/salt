@@ -97,7 +97,7 @@ def to_str(s, encoding=None, errors='strict', normalize=False,
                     return _normalize(s.decode(enc, errors))
                 except UnicodeDecodeError as err:
                     if encode_bytes:
-                        return to_unicode(base64.b64encode(s),
+                        return to_str(base64.b64encode(s),
                                           encode_bytes=False)
                     exc = err
                     continue
