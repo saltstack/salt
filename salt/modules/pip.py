@@ -1101,7 +1101,6 @@ def freeze(bin_env=None,
            use_vt=False,
            env_vars=None,
            user_install=False,
-           verbose=False,
            **kwargs):
     '''
     Return a list of installed packages either globally or in the specified
@@ -1247,8 +1246,7 @@ def list_(prefix=None,
     return packages
 
 
-def list_json(prefix=None,
-              bin_env=None,
+def list_json(bin_env=None,
               user=None,
               cwd=None,
               env_vars=None,
@@ -1256,15 +1254,67 @@ def list_json(prefix=None,
               verbose=False,
               **kwargs):
     '''
-    New in Sodium
-    TODO flesh this out. - Some docs, some checking and usage of arguments, etc.
+    New in Sodium!
+
+    Return a list of installed packages either globally or in the specified
+    virtualenv with specific json output format.
+
+    bin_env
+        Path to pip (or to a virtualenv). This can be used to specify the path
+        to the pip to use when more than one Python release is installed (e.g.
+        ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
+        specified, it is assumed to be a virtualenv.
+
+    user
+        The user under which to run pip
+
+    cwd
+        Directory from which to run pip
+
+    user_install
+        Enable output to show inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
+
+    .. note::
+        If the version of pip available is older than 8.0.3, the list will not
+        include the packages ``pip``, ``wheel``, ``setuptools``, or
+        ``distribute`` even if they are installed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pip.list_json bin_env=/home/code/path/to/virtualenv
     ...
     '''
     cmd = _get_pip_bin(bin_env)
     cmd.append('list')
-    cmd.extend(['--verbose', '--format', 'json'])
+    cmd.extend(['--format', 'json'])
+
+    # Include pip, setuptools, distribute, wheel
+    min_version = '8.0.3'
+    cur_version = version(bin_env)
+    if salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version):
+        logger.warning(
+            'The version of pip installed is %s, which is older than %s. '
+            'The packages pip, wheel, setuptools, and distribute will not be '
+            'included in the output of pip.freeze', cur_version, min_version
+        )
+
+    if verbose:
+        cmd.append('--verbose')
+
     if user_install:
         cmd.append('--user')
+
+    cmd_kwargs = dict(runas=user, cwd=cwd, python_shell=False)
+    if kwargs:
+        cmd_kwargs.update(**kwargs)
+    if bin_env and os.path.isdir(bin_env):
+        cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+    if env_vars:
+        cmd_kwargs.setdefault('env', {}).update(_format_env_vars(env_vars))
+
     result = __salt__['cmd.run_all'](cmd)
 
     if result['retcode']:
