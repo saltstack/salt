@@ -98,7 +98,10 @@ def to_str(s, encoding=None, errors='strict', normalize=False,
                 except UnicodeDecodeError as err:
                     if encode_bytes:
                         return to_str(base64.b64encode(s),
-                                          encode_bytes=False)
+                                      encoding=encoding,
+                                      errors=errors,
+                                      normalize=normalize,
+                                      encode_bytes=False)
                     exc = err
                     continue
             # The only way we get this far is if a UnicodeDecodeError was
@@ -151,6 +154,9 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False,
             except UnicodeDecodeError as err:
                 if encode_bytes:
                     return to_unicode(base64.b64encode(s),
+                                      encoding=encoding,
+                                      errors=errors,
+                                      normalize=normalize,
                                       encode_bytes=False)
                 raise err
 
@@ -168,6 +174,9 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False,
                 except UnicodeDecodeError as err:
                     if encode_bytes:
                         return to_unicode(base64.b64encode(s),
+                                          encoding=encoding,
+                                          errors=errors,
+                                          normalize=normalize,
                                           encode_bytes=False)
                     exc = err
                     continue

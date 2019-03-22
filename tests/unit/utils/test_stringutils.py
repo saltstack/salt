@@ -277,7 +277,6 @@ class StringutilsTestCase(TestCase):
         except UnicodeDecodeError:
             assert True
 
-
     def test_to_unicode_bytearray_unicode_error(self):
         '''
         test when to_unicode can not properly decode
