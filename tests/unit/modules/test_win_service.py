@@ -360,7 +360,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         garry = win_service.ServiceDependencies('gARRy', _all, _info)
         self.assertListEqual(garry.dependencies(with_indirect=False), [])
         self.assertListEqual(garry.dependencies(with_indirect=True), [])
-        self.assertListEqual(garry.customers(with_indirect=False), ['Spongebob', 'Patrick'])
+        self.assertListEqual(garry.customers(with_indirect=False), ['Patrick', 'Spongebob'])
         self.assertListEqual(garry.customers(with_indirect=True), ['Sandy', 'Spongebob', 'Patrick'])
 
         rocko = win_service.ServiceDependencies('Rocko', _all, _info)
