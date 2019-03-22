@@ -598,3 +598,8 @@ class DataTestCase(TestCase):
             salt.utils.data.stringify(['one', 'two', str('three'), 4, 5]),  # future lint: disable=blacklisted-function
             ['one', 'two', 'three', '4', '5']
         )
+
+    def test_decode_dict_with_keep_pillar_and_binary_data_should_keep_binary_data(self):
+        data = {'pillar': b'\x8b'}
+        decoded_data = salt.utils.data.decode_dict(data, keep_pillar=True)
+        self.assertEqual(decoded_data, data)
