@@ -111,10 +111,6 @@ def _find_chocolatey(context, salt):
     return choc_path
 
 
-def _dotnet_versions():
-    return __utils__['dotnet.versions_list']()
-
-
 def chocolatey_version():
     '''
     Returns the version of Chocolatey installed on the minion.
@@ -162,7 +158,7 @@ def bootstrap(force=False, source=None):
 
         source (str):
             The location of the ``.nupkg`` file or ``.ps1`` file to run from an
-            alternate location. This can be one of the following types of urls:
+            alternate location. This can be one of the following types of URLs:
 
             - salt://
             - http(s)://
@@ -226,8 +222,9 @@ def bootstrap(force=False, source=None):
                 err = 'Failed to download PowerShell KB for {0}' \
                       ''.format(__grains__['osrelease'])
                 if source:
-                    err = '{0}: PowerShell is required to bootstrap ' \
-                          'Chocolatey with Source'.format(err)
+                    raise CommandExecutionError(
+                        '{0}: PowerShell is required to bootstrap Chocolatey '
+                        'with Source'.format(err))
                 raise CommandExecutionError(err)
             # Install the KB
             cmd = [dest, '/quiet', '/norestart']
@@ -244,7 +241,7 @@ def bootstrap(force=False, source=None):
     # Check that .NET v4.0+ is installed
     # Windows 7 / Windows Server 2008 R2 and below do not come with at least
     # .NET v4.0 installed
-    if not __utils__['dotnet.version_atleast'](version='4'):
+    if not __utils__['dotnet.version_at_least'](version='4'):
         # It took until .NET v4.0 for Microsoft got the hang of making
         # installers, this should work under any version of Windows
         url = 'http://download.microsoft.com/download/1/B/E/1BE39E79-7E39-46A3-96FF-047F95396215/dotNetFx40_Full_setup.exe'

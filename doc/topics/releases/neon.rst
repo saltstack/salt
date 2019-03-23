@@ -324,10 +324,10 @@ Module Changes
   VMWare's Photon OS, which uses tdnf (a C implementation of dnf).
 
 - The :py:func:`chocolatey.bootstrap <salt.modules.chocolatey.bootstrap>` function
-  has been updated to support offline installation
+  has been updated to support offline installation.
 
 - The :py:func:`chocolatey.unbootstrap <salt.modules.chocolatey.unbootstrap>` function
-  has been added to uninstall Chocolatey
+  has been added to uninstall Chocolatey.
 
 Runner Changes
 ==============
@@ -339,14 +339,14 @@ Runner Changes
 Util Changes
 ============
 
-- The :py:func:`win_dotnet <salt.utils.win_dotnet>` salt util has been added to
+- The :py:func:`win_dotnet <salt.utils.win_dotnet>` Salt util has been added to
   make it easier to detect the versions of .NET installed on the system. It includes
   the following functions:
 
     - :py:func:`versions <salt.utils.win_dotnet.versions>`
     - :py:func:`versions_list <salt.utils.win_dotnet.versions_list>`
     - :py:func:`versions_details <salt.utils.win_dotnet.versions_details>`
-    - :py:func:`version_atleast <salt.utils.win_dotnet.version_atleast>`
+    - :py:func:`version_at_least <salt.utils.win_dotnet.version_at_least>`
 
 Enhancements to Engines
 =======================

@@ -117,22 +117,22 @@ class WinDotNetTestCase(TestCase):
         with patch('salt.utils.win_reg.list_keys', self.mock_reg_list), \
                 patch('salt.utils.win_reg.value_exists', self.mock_reg_exists), \
                 patch('salt.utils.win_reg.read_value', self.mock_reg_read):
-            self.assertTrue(win_dotnet.version_atleast('3.5'))
+            self.assertTrue(win_dotnet.version_at_least('3.5'))
 
     def test_version_atleast_47(self):
         with patch('salt.utils.win_reg.list_keys', self.mock_reg_list), \
                 patch('salt.utils.win_reg.value_exists', self.mock_reg_exists), \
                 patch('salt.utils.win_reg.read_value', self.mock_reg_read):
-            self.assertTrue(win_dotnet.version_atleast('4.7'))
+            self.assertTrue(win_dotnet.version_at_least('4.7'))
 
     def test_version_atleast_472(self):
         with patch('salt.utils.win_reg.list_keys', self.mock_reg_list), \
                 patch('salt.utils.win_reg.value_exists', self.mock_reg_exists), \
                 patch('salt.utils.win_reg.read_value', self.mock_reg_read):
-            self.assertTrue(win_dotnet.version_atleast('4.7.2'))
+            self.assertTrue(win_dotnet.version_at_least('4.7.2'))
 
     def test_version_not_atleast_473(self):
         with patch('salt.utils.win_reg.list_keys', self.mock_reg_list), \
                 patch('salt.utils.win_reg.value_exists', self.mock_reg_exists), \
                 patch('salt.utils.win_reg.read_value', self.mock_reg_read):
-            self.assertFalse(win_dotnet.version_atleast('4.7.3'))
+            self.assertFalse(win_dotnet.version_at_least('4.7.3'))
