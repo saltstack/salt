@@ -140,7 +140,7 @@ def versions_details():
 
 def version_at_least(version):
     '''
-    Check that the system contains a vwersion of .NET that is at least the
+    Check that the system contains a version of .NET that is at least the
     passed version.
 
     Args:
