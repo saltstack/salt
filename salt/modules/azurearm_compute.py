@@ -20,7 +20,7 @@ Azure (ARM) Compute Execution Module
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as keyword arguments
-to every function in order to work properly.
+    to every function in order to work properly.
 
     Required provider parameters:
 
@@ -37,7 +37,7 @@ to every function in order to work properly.
 
     Optional provider parameters:
 
-    **cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
+**cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
     Possible values:
       * ``AZURE_PUBLIC_CLOUD`` (default)
       * ``AZURE_CHINA_CLOUD``
@@ -125,7 +125,7 @@ def availability_set_create_or_update(name, resource_group, **kwargs):  # pylint
     try:
         setmodel = __utils__['azurearm.create_object_model']('compute', 'AvailabilitySet', **kwargs)
     except TypeError as exc:
-        result = {'error': 'The object model could not be built. ({1})'.format(str(exc))}
+        result = {'error': 'The object model could not be built. ({0})'.format(str(exc))}
         return result
 
     try:

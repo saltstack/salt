@@ -178,7 +178,8 @@ Supported assertions
 * assertGreaterEqual
 * assertLess
 * assertLessEqual
-* assertEmptyassertNotEmpty
+* assertEmpty
+* assertNotEmpty
 
 .. warning::
 
