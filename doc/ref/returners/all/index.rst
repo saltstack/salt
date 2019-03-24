@@ -19,7 +19,6 @@ returner modules
     elasticsearch_return
     etcd_return
     highstate_return
-    hipchat_return
     influxdb_return
     kafka_return
     librato_return
@@ -31,7 +30,7 @@ returner modules
     mongo_return
     multi_returner
     mysql
-    nagios_return
+    nagios_nrdp_return
     odbc
     pgjsonb
     postgres

@@ -1256,9 +1256,9 @@ def edit_team(name,
         parameters = {}
         if name is not None:
             parameters['name'] = name
-        if 'description' is not None:
+        if description is not None:
             parameters['description'] = description
-        if 'privacy' is not None:
+        if privacy is not None:
             parameters['privacy'] = privacy
         if permission is not None:
             parameters['permission'] = permission

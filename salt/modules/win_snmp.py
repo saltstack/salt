@@ -48,7 +48,7 @@ def __virtual__():
     if not salt.utils.platform.is_windows():
         return False, 'Module win_snmp: Requires Windows'
 
-    if not __salt__['reg.key_exists'](_HKEY, _SNMP_KEY):
+    if not __utils__['reg.key_exists'](_HKEY, _SNMP_KEY):
         return False, 'Module win_snmp: SNMP not installed'
 
     return __virtualname__
@@ -116,13 +116,13 @@ def get_agent_settings():
     sorted_types = sorted(_SERVICE_TYPES.items(), key=lambda x: (-x[1], x[0]))
 
     ret['services'] = list()
-    ret['contact'] = (__salt__['reg.read_value'](
+    ret['contact'] = (__utils__['reg.read_value'](
         _HKEY, _AGENT_KEY, 'sysContact'))['vdata']
 
-    ret['location'] = (__salt__['reg.read_value'](
+    ret['location'] = (__utils__['reg.read_value'](
         _HKEY, _AGENT_KEY, 'sysLocation'))['vdata']
 
-    current_bitmask = (__salt__['reg.read_value'](
+    current_bitmask = (__utils__['reg.read_value'](
         _HKEY, _AGENT_KEY, 'sysServices'))['vdata']
 
     if current_bitmask == 0:
@@ -191,12 +191,12 @@ def set_agent_settings(contact=None, location=None, services=None):
 
     if contact is not None:
         if contact != current_settings['contact']:
-            __salt__['reg.set_value'](
+            __utils__['reg.set_value'](
                 _HKEY, _AGENT_KEY, 'sysContact', contact, 'REG_SZ')
 
     if location is not None:
         if location != current_settings['location']:
-            __salt__['reg.set_value'](
+            __utils__['reg.set_value'](
                 _HKEY, _AGENT_KEY, 'sysLocation', location, 'REG_SZ')
 
     if services is not None:
@@ -207,7 +207,7 @@ def set_agent_settings(contact=None, location=None, services=None):
 
             _LOG.debug('Setting sysServices vdata to: %s', vdata)
 
-            __salt__['reg.set_value'](
+            __utils__['reg.set_value'](
                 _HKEY, _AGENT_KEY, 'sysServices', vdata, 'REG_DWORD')
 
     # Get the fields post-change so that we can verify tht all values
@@ -241,7 +241,7 @@ def get_auth_traps_enabled():
 
         salt '*' win_snmp.get_auth_traps_enabled
     '''
-    reg_ret = __salt__['reg.read_value'](
+    reg_ret = __utils__['reg.read_value'](
         _HKEY, _SNMP_KEY, 'EnableAuthenticationTraps')
 
     if reg_ret['vdata'] == '(value not set)':
@@ -273,7 +273,7 @@ def set_auth_traps_enabled(status=True):
         return True
 
     vdata = int(status)
-    __salt__['reg.set_value'](_HKEY, _SNMP_KEY, vname, vdata, 'REG_DWORD')
+    __utils__['reg.set_value'](_HKEY, _SNMP_KEY, vname, vdata, 'REG_DWORD')
 
     new_status = get_auth_traps_enabled()
 
@@ -315,11 +315,11 @@ def get_community_names():
     ret = dict()
 
     # Look in GPO settings first
-    if __salt__['reg.key_exists'](_HKEY, _COMMUNITIES_GPO_KEY):
+    if __utils__['reg.key_exists'](_HKEY, _COMMUNITIES_GPO_KEY):
 
         _LOG.debug('Loading communities from Group Policy settings')
 
-        current_values = __salt__['reg.list_values'](
+        current_values = __utils__['reg.list_values'](
             _HKEY, _COMMUNITIES_GPO_KEY, include_default=False)
 
         # GPO settings are different in that they do not designate permissions
@@ -347,7 +347,7 @@ def get_community_names():
 
         _LOG.debug('Loading communities from SNMP settings')
 
-        current_values = __salt__['reg.list_values'](
+        current_values = __utils__['reg.list_values'](
             _HKEY, _COMMUNITIES_KEY, include_default=False)
 
         # The communities are stored as the community name with a numeric
@@ -411,7 +411,7 @@ def set_community_names(communities):
     '''
     values = dict()
 
-    if __salt__['reg.key_exists'](_HKEY, _COMMUNITIES_GPO_KEY):
+    if __utils__['reg.key_exists'](_HKEY, _COMMUNITIES_GPO_KEY):
         _LOG.debug('Communities on this system are managed by Group Policy')
         raise CommandExecutionError(
             'Communities on this system are managed by Group Policy')
@@ -439,18 +439,18 @@ def set_community_names(communities):
         if current_vname in values:
             # Modify existing communities that have a different permission value.
             if current_communities[current_vname] != values[current_vname]:
-                __salt__['reg.set_value'](
+                __utils__['reg.set_value'](
                     _HKEY, _COMMUNITIES_KEY, current_vname,
                     values[current_vname], 'REG_DWORD')
         else:
             # Remove current communities that weren't provided.
-            __salt__['reg.delete_value'](
+            __utils__['reg.delete_value'](
                 _HKEY, _COMMUNITIES_KEY, current_vname)
 
     # Create any new communities.
     for vname in values:
         if vname not in current_communities:
-            __salt__['reg.set_value'](
+            __utils__['reg.set_value'](
                 _HKEY, _COMMUNITIES_KEY, vname, values[vname], 'REG_DWORD')
 
     # Get the fields post-change so that we can verify tht all values

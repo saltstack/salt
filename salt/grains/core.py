@@ -2357,6 +2357,13 @@ def get_machine_id():
             return {'machine_id': machineid.read().strip()}
 
 
+def cwd():
+    '''
+    Current working directory
+    '''
+    return {'cwd': os.getcwd()}
+
+
 def path():
     '''
     Return the path
