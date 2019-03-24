@@ -3,7 +3,7 @@ boto3
 boto>=2.46.0
 dmidecode
 dnspython
-docker==2.7.0
+docker
 jsonschema<=2.6.0
 keyring==5.7.1
 kubernetes<=4.0
