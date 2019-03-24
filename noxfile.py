@@ -53,19 +53,27 @@ def _create_ci_directories():
             os.makedirs(path)
 
 
-def _install_requirements(session, *extra_requirements):
+def _install_requirements(session, transport, *extra_requirements):
     # Install requirements
     distro_requirements = None
 
+    if session.python.startswith('2'):
+        pydir = 'py2'
+    else:
+        pydir = 'py3'
+
     if IS_WINDOWS:
-        _distro_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', 'windows.txt')
+        _distro_requirements = os.path.join(REPO_ROOT,
+                                            'requirements',
+                                            'static',
+                                            pydir,
+                                            '{}-windows.txt'.format(transport))
         if os.path.exists(_distro_requirements):
-            with open(_distro_requirements) as rfh:
-                if 'ioflo' in rfh.read():
-                    # Because we still install ioflo, which requires setuptools-git, which fails with a
-                    # weird SSL certificate issue(weird because the requirements file requirements install
-                    # fine), let's previously have setuptools-git installed
-                    session.install('setuptools-git')
+            if transport == 'raet':
+                # Because we still install ioflo, which requires setuptools-git, which fails with a
+                # weird SSL certificate issue(weird because the requirements file requirements install
+                # fine), let's previously have setuptools-git installed
+                session.install('setuptools-git')
             distro_requirements = _distro_requirements
     else:
         # The distro package doesn't output anything for Windows
@@ -79,7 +87,11 @@ def _install_requirements(session, *extra_requirements):
             '{id}-{version_parts[major]}'.format(**distro)
         ]
         for distro_key in distro_keys:
-            _distro_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', '{}.txt'.format(distro_key))
+            _distro_requirements = os.path.join(REPO_ROOT,
+                                                'requirements',
+                                                'static',
+                                                pydir,
+                                                '{}-{}.txt'.format(transport, distro_key))
             if os.path.exists(_distro_requirements):
                 distro_requirements = _distro_requirements
                 break
@@ -156,7 +168,7 @@ def _run_with_coverage(session, *test_cmd):
 @nox.parametrize('coverage', [False, True])
 def runtests(session, coverage):
     # Install requirements
-    _install_requirements(session, 'unittest-xml-reporting==2.2.1')
+    _install_requirements(session, 'zeromq', 'unittest-xml-reporting==2.2.1')
     # Create required artifacts directories
     _create_ci_directories()
 
@@ -212,7 +224,7 @@ def runtests(session, coverage):
 @nox.parametrize('coverage', [False, True])
 def pytest(session, coverage):
     # Install requirements
-    _install_requirements(session)
+    _install_requirements(session, 'zeromq')
     # Create required artifacts directories
     _create_ci_directories()
 
