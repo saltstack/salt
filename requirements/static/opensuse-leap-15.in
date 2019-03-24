@@ -12,7 +12,7 @@ GitPython
 hgtools
 jsonschema<=2.6.0
 keyring==5.7.1
-kubernetes<4.0
+kubernetes<=4.0
 mock<1.1.0
 more-itertools==5.0.0
 moto
