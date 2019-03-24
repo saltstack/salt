@@ -8,7 +8,6 @@ dnspython
 docker
 futures>=2.0; python_version < '3.0'
 GitPython
-ioflo
 jsonschema<=2.6.0
 keyring==5.7.1
 kubernetes<4.0

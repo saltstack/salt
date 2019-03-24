@@ -4,7 +4,6 @@ boto>=2.46.0
 dmidecode
 dnspython
 docker==2.7.0
-ioflo
 jsonschema<=2.6.0
 keyring==5.7.1
 kubernetes<4.0
@@ -18,6 +17,7 @@ pyopenssl
 python-etcd==0.4.2
 python-gnupg
 pyvmomi
+pywin32==223
 rfc3987
 salttesting==2017.6.1
 sed
@@ -27,11 +27,4 @@ supervisor; python_version < '3'
 timelib
 tornado<5.0
 virtualenv
-
-# If running under windows, please uncomment the following 2 requirements before running
-#  pip-compile -o requirements/static/windows.txt requirements/zeromq.txt requirements/raet.txt requirements/pytest.txt requirements/static/windows.in
-#
-# On non windows, please copy the following 2 requirements to the generated windows.txt, un-commented
-
-#pywin32==223
-#wmi==1.4.9
+wmi==1.4.9
