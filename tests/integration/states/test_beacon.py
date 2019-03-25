@@ -23,21 +23,24 @@ class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         '''
         '''
-        self.run_function('beacons.reset')
+        self.run_function('beacons.reset', f_timeout=300)
 
     def tearDown(self):
-        self.run_function('beacons.reset')
+        self.run_function('beacons.reset', f_timeout=300)
 
     def test_present_absent(self):
         kwargs = {'/': '38%', 'interval': 5}
         ret = self.run_state(
             'beacon.present',
             name='diskusage',
+            timeout=300,
             **kwargs
         )
         self.assertSaltTrueReturn(ret)
 
-        ret = self.run_function('beacons.list', return_yaml=False)
+        ret = self.run_function('beacons.list',
+                                return_yaml=False,
+                                f_timeout=300)
         self.assertTrue('diskusage' in ret)
         self.assertTrue({'interval': 5} in ret['diskusage'])
         self.assertTrue({'/': '38%'} in ret['diskusage'])
@@ -48,5 +51,7 @@ class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
 
-        ret = self.run_function('beacons.list', return_yaml=False)
+        ret = self.run_function('beacons.list',
+                                return_yaml=False,
+                                f_timeout=300)
         self.assertEqual(ret, {'beacons': {}})
