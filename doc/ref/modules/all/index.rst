@@ -213,7 +213,7 @@ execution modules
     keystoneng
     keystore
     kmod
-    kubernetes
+    kubernetesmod
     launchctl_service
     layman
     ldap3
