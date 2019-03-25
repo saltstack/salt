@@ -164,22 +164,9 @@ def _run_with_coverage(session, *test_cmd):
     session.run('coverage', 'xml', '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'coverage.xml'))
 
 
-@nox.session(python=_PYTHON_VERSIONS)
-@nox.parametrize('coverage', [False, True])
-@nox.parametrize('transport', ['zeromq', 'raet'])
-def runtests(session, coverage, transport):
-    # Install requirements
-    _install_requirements(session, transport, 'unittest-xml-reporting==2.2.1')
+def _runtests(session, coverage, transport, cmd_args):
     # Create required artifacts directories
     _create_ci_directories()
-
-    cmd_args = [
-        '--tests-logfile={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
-        '--transport={}'.format(transport)
-    ] + session.posargs
-
     try:
         if coverage is True:
             _run_with_coverage(session, 'coverage', 'run', '-m', 'tests.runtests', *cmd_args)
@@ -225,11 +212,58 @@ def runtests(session, coverage, transport):
 @nox.session(python=_PYTHON_VERSIONS)
 @nox.parametrize('coverage', [False, True])
 @nox.parametrize('transport', ['zeromq', 'raet'])
+def runtests(session, coverage, transport):
+    # Install requirements
+    _install_requirements(session, transport, 'unittest-xml-reporting==2.2.1')
+
+    cmd_args = [
+        '--tests-logfile={}'.format(
+            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
+        ),
+        '--transport={}'.format(transport)
+    ] + session.posargs
+    _runtests(session, coverage, transport, cmd_args)
+
+
+def _runtests_crypto(session, coverage, transport, crypto):
+    # Install requirements
+    _install_requirements(session, transport, 'unittest-xml-reporting==2.2.1')
+
+    if crypto == 'm2crypto':
+        session.run('pip', 'uninstall', '-y', 'pycrypto', 'pycryptodome', 'pycryptodomex', silent=True)
+    else:
+        session.run('pip', 'uninstall', '-y', 'm2crypto', silent=True)
+    session.install(crypto)
+
+    cmd_args = [
+        '--tests-logfile={}'.format(
+            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
+        ),
+        '--transport={}'.format(transport)
+    ] + session.posargs
+    _runtests(session, coverage, transport, cmd_args)
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-m2crypto')
+@nox.parametrize('coverage', [False, True])
+@nox.parametrize('transport', ['zeromq', 'raet'])
+def runtests_m2crypto(session, coverage, transport):
+    _runtests_crypto(session, coverage, transport, 'm2crypto')
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-pycryptodomex')
+@nox.parametrize('coverage', [False, True])
+@nox.parametrize('transport', ['zeromq', 'raet'])
+def runtests_pycryptodomex(session, coverage, transport):
+    _runtests_crypto(session, coverage, transport, 'pycryptodomex')
+
+
+@nox.session(python=_PYTHON_VERSIONS)
+@nox.parametrize('coverage', [False, True])
+@nox.parametrize('transport', ['zeromq', 'raet'])
 def pytest(session, coverage, transport):
     # Install requirements
     _install_requirements(session, transport)
-    # Create required artifacts directories
-    _create_ci_directories()
 
     cmd_args = [
         '--rootdir', REPO_ROOT,
@@ -241,6 +275,49 @@ def pytest(session, coverage, transport):
         '-s',
         '--transport={}'.format(transport)
     ] + session.posargs
+    _pytest(session, coverage, transport, cmd_args)
+
+
+def _pytest_crypto(session, coverage, transport, crypto):
+    # Install requirements
+    _install_requirements(session, transport)
+
+    if crypto == 'm2crypto':
+        session.run('pip', 'uninstall', '-y', 'pycrypto', 'pycryptodome', 'pycryptodomex', silent=True)
+    else:
+        session.run('pip', 'uninstall', '-y', 'm2crypto', silent=True)
+    session.install(crypto)
+
+    cmd_args = [
+        '--rootdir', REPO_ROOT,
+        '--log-file={}'.format(
+            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
+        ),
+        '--no-print-logs',
+        '-ra',
+        '-s',
+        '--transport={}'.format(transport)
+    ] + session.posargs
+    _pytest(session, coverage, transport, cmd_args)
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-m2crypto')
+@nox.parametrize('coverage', [False, True])
+@nox.parametrize('transport', ['zeromq', 'raet'])
+def pytest_m2crypto(session, coverage, transport):
+    _pytest_crypto(session, coverage, transport, 'm2crypto')
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-pycryptodomex')
+@nox.parametrize('coverage', [False, True])
+@nox.parametrize('transport', ['zeromq', 'raet'])
+def pytest_pycryptodomex(session, coverage, transport):
+    _pytest_crypto(session, coverage, transport, 'pycryptodomex')
+
+
+def _pytest(session, coverage, transport, cmd_args):
+    # Create required artifacts directories
+    _create_ci_directories()
 
     try:
         if coverage is True:
