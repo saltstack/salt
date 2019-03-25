@@ -58,6 +58,7 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
             self.assertRaises(
                 CommandExecutionError, win_file.check_perms, self.FAKE_PATH)
 
+
 @destructiveTest
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.platform.is_windows(), 'Requires Pywin32 libraries')
