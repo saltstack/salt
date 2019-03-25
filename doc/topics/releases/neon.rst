@@ -18,6 +18,7 @@ Saltcheck Updates
 
 Available since 2018.3, the :py:func:`saltcheck module <salt.modules.saltcheck>`
 has been enhanced to:
+
 * Support saltenv environments
 * Associate tests with states by naming convention
 * Adds empty and notempty assertions
