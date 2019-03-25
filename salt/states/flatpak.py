@@ -85,7 +85,7 @@ def uninstalled(name):
         ret['comment'] = 'Package {0} is not installed'.format(name)
         ret['result'] = True
         return ret
-    else
+    else:
         if __opts__['test']:
             ret['comment'] = 'Package {0} would have been uninstalled'.format(name)
             ret['changes']['old'] = old[0]['version']
