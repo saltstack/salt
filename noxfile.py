@@ -209,12 +209,20 @@ def _runtests(session, coverage, transport, cmd_args):
             session.run('python', os.path.join('tests', 'runtests.py'), *cmd_args)
 
 
-@nox.session(python=_PYTHON_VERSIONS)
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-parametrized')
 @nox.parametrize('coverage', [False, True])
 @nox.parametrize('transport', ['zeromq', 'raet'])
-def runtests(session, coverage, transport):
+@nox.parametrize('crypto', [None, 'm2crypto', 'pycryptodomex'])
+def runtests_parametrized(session, coverage, transport, crypto):
     # Install requirements
     _install_requirements(session, transport, 'unittest-xml-reporting==2.2.1')
+
+    if crypto:
+        if crypto == 'm2crypto':
+            session.run('pip', 'uninstall', '-y', 'pycrypto', 'pycryptodome', 'pycryptodomex', silent=True)
+        else:
+            session.run('pip', 'uninstall', '-y', 'm2crypto', silent=True)
+        session.install(crypto)
 
     cmd_args = [
         '--tests-logfile={}'.format(
@@ -225,94 +233,284 @@ def runtests(session, coverage, transport):
     _runtests(session, coverage, transport, cmd_args)
 
 
-def _runtests_crypto(session, coverage, transport, crypto):
-    # Install requirements
-    _install_requirements(session, transport, 'unittest-xml-reporting==2.2.1')
+@nox.session(python=_PYTHON_VERSIONS)
+@nox.parametrize('coverage', [False, True])
+def runtests(session, coverage):
+    '''
+    runtests.py session with zeromq transport and default crypto
+    '''
+    session.notify(
+        'runtests-parametrized-{}(coverage={}, crypto=None, transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
 
-    if crypto == 'm2crypto':
-        session.run('pip', 'uninstall', '-y', 'pycrypto', 'pycryptodome', 'pycryptodomex', silent=True)
-    else:
-        session.run('pip', 'uninstall', '-y', 'm2crypto', silent=True)
-    session.install(crypto)
 
-    cmd_args = [
-        '--tests-logfile={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
-        '--transport={}'.format(transport)
-    ] + session.posargs
-    _runtests(session, coverage, transport, cmd_args)
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-zeromq')
+@nox.parametrize('coverage', [False, True])
+def runtests_zeromq(session, coverage):
+    '''
+    runtests.py session with zeromq transport and default crypto
+    '''
+    session.notify(
+        'runtests-parametrized-{}(coverage={}, crypto=None, transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-raet')
+@nox.parametrize('coverage', [False, True])
+def runtests_raet(session, coverage):
+    '''
+    runtests.py session with raet transport and default crypto
+    '''
+    session.notify(
+        'runtests-parametrized-{}(coverage={}, crypto=None, transport=\'raet\')'.format(
+            session.python,
+            coverage
+        )
+    )
 
 
 @nox.session(python=_PYTHON_VERSIONS, name='runtests-m2crypto')
 @nox.parametrize('coverage', [False, True])
-@nox.parametrize('transport', ['zeromq', 'raet'])
-def runtests_m2crypto(session, coverage, transport):
-    _runtests_crypto(session, coverage, transport, 'm2crypto')
+def runtests_m2crypto(session, coverage):
+    '''
+    runtests.py session with zeromq transport and m2crypto
+    '''
+    session.notify(
+        'runtests-parametrized-{}(coverage={}, crypto=\'m2crypto\', transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-zeromq-m2crypto')
+@nox.parametrize('coverage', [False, True])
+def runtests_zeromq_m2crypto(session, coverage):
+    '''
+    runtests.py session with zeromq transport and m2crypto
+    '''
+    session.notify(
+        'runtests-parametrized-{}(coverage={}, crypto=\'m2crypto\', transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-raet-m2crypto')
+@nox.parametrize('coverage', [False, True])
+def runtests_raet_m2crypto(session, coverage):
+    '''
+    runtests.py session with raet transport and m2crypto
+    '''
+    session.notify(
+        'runtests-parametrized-{}(coverage={}, crypto=\'m2crypto\', transport=\'raet\')'.format(
+            session.python,
+            coverage
+        )
+    )
 
 
 @nox.session(python=_PYTHON_VERSIONS, name='runtests-pycryptodomex')
 @nox.parametrize('coverage', [False, True])
+def runtests_pycryptodomex(session, coverage):
+    '''
+    runtests.py session with zeromq transport and pycryptodomex
+    '''
+    session.notify(
+        'runtests-parametrized-{}(coverage={}, crypto=\'pycryptodomex\', transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-zeromq-pycryptodomex')
+@nox.parametrize('coverage', [False, True])
+def runtests_zeromq_pycryptodomex(session, coverage):
+    '''
+    runtests.py session with zeromq transport and pycryptodomex
+    '''
+    session.notify(
+        'runtests-parametrized-{}(coverage={}, crypto=\'pycryptodomex\', transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-raet-pycryptodomex')
+@nox.parametrize('coverage', [False, True])
+def runtests_raet_pycryptodomex(session, coverage):
+    '''
+    runtests.py session with raet transport and pycryptodomex
+    '''
+    session.notify(
+        'runtests-parametrized-{}(coverage={}, crypto=\'pycryptodomex\', transport=\'raet\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-parametrized')
+@nox.parametrize('coverage', [False, True])
 @nox.parametrize('transport', ['zeromq', 'raet'])
-def runtests_pycryptodomex(session, coverage, transport):
-    _runtests_crypto(session, coverage, transport, 'pycryptodomex')
+@nox.parametrize('crypto', [None, 'm2crypto', 'pycryptodomex'])
+def pytest_parametrized(session, coverage, transport, crypto):
+    # Install requirements
+    _install_requirements(session, transport)
+
+    if crypto:
+        if crypto == 'm2crypto':
+            session.run('pip', 'uninstall', '-y', 'pycrypto', 'pycryptodome', 'pycryptodomex', silent=True)
+        else:
+            session.run('pip', 'uninstall', '-y', 'm2crypto', silent=True)
+        session.install(crypto)
+
+    cmd_args = [
+        '--rootdir', REPO_ROOT,
+        '--log-file={}'.format(
+            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
+        ),
+        '--no-print-logs',
+        '-ra',
+        '-s',
+        '--transport={}'.format(transport)
+    ] + session.posargs
+    _pytest(session, coverage, transport, cmd_args)
 
 
 @nox.session(python=_PYTHON_VERSIONS)
 @nox.parametrize('coverage', [False, True])
-@nox.parametrize('transport', ['zeromq', 'raet'])
-def pytest(session, coverage, transport):
-    # Install requirements
-    _install_requirements(session, transport)
-
-    cmd_args = [
-        '--rootdir', REPO_ROOT,
-        '--log-file={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
-        '--no-print-logs',
-        '-ra',
-        '-s',
-        '--transport={}'.format(transport)
-    ] + session.posargs
-    _pytest(session, coverage, transport, cmd_args)
+def pytest(session, coverage):
+    '''
+    pytest session with zeromq transport and default crypto
+    '''
+    session.notify(
+        'pytest-parametrized-{}(coverage={}, crypto=None, transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
 
 
-def _pytest_crypto(session, coverage, transport, crypto):
-    # Install requirements
-    _install_requirements(session, transport)
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-zeromq')
+@nox.parametrize('coverage', [False, True])
+def pytest_zeromq(session, coverage):
+    '''
+    pytest session with zeromq transport and default crypto
+    '''
+    session.notify(
+        'pytest-parametrized-{}(coverage={}, crypto=None, transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
 
-    if crypto == 'm2crypto':
-        session.run('pip', 'uninstall', '-y', 'pycrypto', 'pycryptodome', 'pycryptodomex', silent=True)
-    else:
-        session.run('pip', 'uninstall', '-y', 'm2crypto', silent=True)
-    session.install(crypto)
 
-    cmd_args = [
-        '--rootdir', REPO_ROOT,
-        '--log-file={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
-        '--no-print-logs',
-        '-ra',
-        '-s',
-        '--transport={}'.format(transport)
-    ] + session.posargs
-    _pytest(session, coverage, transport, cmd_args)
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-raet')
+@nox.parametrize('coverage', [False, True])
+def pytest_raet(session, coverage):
+    '''
+    pytest session with raet transport and default crypto
+    '''
+    session.notify(
+        'pytest-parametrized-{}(coverage={}, crypto=None, transport=\'raet\')'.format(
+            session.python,
+            coverage
+        )
+    )
 
 
 @nox.session(python=_PYTHON_VERSIONS, name='pytest-m2crypto')
 @nox.parametrize('coverage', [False, True])
-@nox.parametrize('transport', ['zeromq', 'raet'])
-def pytest_m2crypto(session, coverage, transport):
-    _pytest_crypto(session, coverage, transport, 'm2crypto')
+def pytest_m2crypto(session, coverage):
+    '''
+    pytest session with zeromq transport and m2crypto
+    '''
+    session.notify(
+        'pytest-parametrized-{}(coverage={}, crypto=\'m2crypto\', transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-zeromq-m2crypto')
+@nox.parametrize('coverage', [False, True])
+def pytest_zeromq_m2crypto(session, coverage):
+    '''
+    pytest session with zeromq transport and m2crypto
+    '''
+    session.notify(
+        'pytest-parametrized-{}(coverage={}, crypto=\'m2crypto\', transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-raet-m2crypto')
+@nox.parametrize('coverage', [False, True])
+def pytest_raet_m2crypto(session, coverage):
+    '''
+    pytest session with raet transport and m2crypto
+    '''
+    session.notify(
+        'pytest-parametrized-{}(coverage={}, crypto=\'m2crypto\', transport=\'raet\')'.format(
+            session.python,
+            coverage
+        )
+    )
 
 
 @nox.session(python=_PYTHON_VERSIONS, name='pytest-pycryptodomex')
 @nox.parametrize('coverage', [False, True])
-@nox.parametrize('transport', ['zeromq', 'raet'])
-def pytest_pycryptodomex(session, coverage, transport):
-    _pytest_crypto(session, coverage, transport, 'pycryptodomex')
+def pytest_pycryptodomex(session, coverage):
+    '''
+    pytest session with zeromq transport and pycryptodomex
+    '''
+    session.notify(
+        'pytest-parametrized-{}(coverage={}, crypto=\'pycryptodomex\', transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-zeromq-pycryptodomex')
+@nox.parametrize('coverage', [False, True])
+def pytest_zeromq_pycryptodomex(session, coverage):
+    '''
+    pytest session with zeromq transport and pycryptodomex
+    '''
+    session.notify(
+        'pytest-parametrized-{}(coverage={}, crypto=\'pycryptodomex\', transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-raet-pycryptodomex')
+@nox.parametrize('coverage', [False, True])
+def pytest_raet_pycryptodomex(session, coverage):
+    '''
+    pytest session with raet transport and pycryptodomex
+    '''
+    session.notify(
+        'pytest-parametrized-{}(coverage={}, crypto=\'pycryptodomex\', transport=\'raet\')'.format(
+            session.python,
+            coverage
+        )
+    )
 
 
 def _pytest(session, coverage, transport, cmd_args):
