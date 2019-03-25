@@ -166,16 +166,18 @@ def _run_with_coverage(session, *test_cmd):
 
 @nox.session(python=_PYTHON_VERSIONS)
 @nox.parametrize('coverage', [False, True])
-def runtests(session, coverage):
+@nox.parametrize('transport', ['zeromq', 'raet'])
+def runtests(session, coverage, transport):
     # Install requirements
-    _install_requirements(session, 'zeromq', 'unittest-xml-reporting==2.2.1')
+    _install_requirements(session, transport, 'unittest-xml-reporting==2.2.1')
     # Create required artifacts directories
     _create_ci_directories()
 
     cmd_args = [
         '--tests-logfile={}'.format(
             os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        )
+        ),
+        '--transport={}'.format(transport)
     ] + session.posargs
 
     try:
@@ -222,9 +224,10 @@ def runtests(session, coverage):
 
 @nox.session(python=_PYTHON_VERSIONS)
 @nox.parametrize('coverage', [False, True])
-def pytest(session, coverage):
+@nox.parametrize('transport', ['zeromq', 'raet'])
+def pytest(session, coverage, transport):
     # Install requirements
-    _install_requirements(session, 'zeromq')
+    _install_requirements(session, transport)
     # Create required artifacts directories
     _create_ci_directories()
 
@@ -235,7 +238,8 @@ def pytest(session, coverage):
         ),
         '--no-print-logs',
         '-ra',
-        '-s'
+        '-s',
+        '--transport={}'.format(transport)
     ] + session.posargs
 
     try:
