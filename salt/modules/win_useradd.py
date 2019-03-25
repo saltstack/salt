@@ -24,6 +24,7 @@ Module for managing Windows Users
 '''
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
+
 import logging
 import time
 from datetime import datetime
@@ -54,6 +55,7 @@ try:
     import win32profile
     import win32security
     import win32ts
+
     HAS_WIN32NET_MODS = True
 except ImportError:
     HAS_WIN32NET_MODS = False
@@ -229,6 +231,7 @@ def update(name,
            expired=None,
            account_disabled=None,
            lock_account=None,
+           unlock_account=None,
            password_never_expires=None,
            disallow_change_password=None):
     # pylint: disable=anomalous-backslash-in-string
@@ -269,8 +272,13 @@ def update(name,
         account_disabled (bool, optional): True disables the account. False
             enables the account.
 
-        lock_account (bool, optional): True locks a locked user account.
+        lock_account (bool, optional): True locks an unlocked user account.
             False unlocks the account.
+
+        unlock_account (bool, optional): True unlocks a locked user account.
+            False is ignored
+
+            .. deprecated:: Neon
 
         password_never_expires (bool, optional): True sets the password to never
             expire. False allows the password to expire.
@@ -345,6 +353,13 @@ def update(name,
             user_info['flags'] |= win32netcon.UF_ACCOUNTDISABLE
         else:
             user_info['flags'] &= ~win32netcon.UF_ACCOUNTDISABLE
+    if unlock_account is not None:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'unlock_account\' argument has been deprecated and replaced with lock_account'
+        )
+        if unlock_account:
+            user_info['flags'] &= ~win32netcon.UF_LOCKOUT
     if lock_account is not None:
         if lock_account:
             user_info['flags'] |= win32netcon.UF_LOCKOUT
@@ -823,9 +838,9 @@ def info(name):
         if items['last_logon'] == 0:
             ret['last_logon'] = 'Never'
         else:
-            ret['last_logon'] = datetime.fromtimestamp(items['last_logon']).\
+            ret['last_logon'] = datetime.fromtimestamp(items['last_logon']). \
                 strftime('%Y-%m-%d %H:%M:%S')
-        ret['expiration_date'] = datetime.fromtimestamp(items['acct_expires']).\
+        ret['expiration_date'] = datetime.fromtimestamp(items['acct_expires']). \
             strftime('%Y-%m-%d %H:%M:%S')
         ret['expired'] = items['password_expired'] == 1
         if not ret['profile']:
@@ -1052,7 +1067,7 @@ def rename(name, new_name):
                       10: 'Internal error'}
         raise CommandExecutionError(
             'There was an error renaming \'{0}\' to \'{1}\'. Error: {2}'
-            .format(name, new_name, error_dict[result])
+                .format(name, new_name, error_dict[result])
         )
 
     return info(new_name).get('name') == new_name
