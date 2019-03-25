@@ -139,7 +139,7 @@ def create(path,
         salt '*' virtualenv.create /path/to/new/virtualenv
     '''
     if venv_bin is None:
-        # Beginning in 3.6, pyenv has been deprecated
+        # Beginning in 3.6, pyvenv has been deprecated
         # in favor of "python3 -m venv"
         if sys.version_info >= (3, 6):
             venv_bin = ['python3', '-m', 'venv']
