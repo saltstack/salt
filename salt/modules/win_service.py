@@ -122,35 +122,44 @@ class ServiceDependencies(object):
     '''
 
     def __init__(self, name, all_services, service_info):
-        self._name = name
         # Sort for predictable behavior
         self._all_services = sorted(all_services())
-        self._service_info = {}
-        self._service_info_provider = service_info
+        self._name = self._normalize_name(self._all_services, name)
+        self._service_info = self._populate_service_info(self._all_services, service_info)
 
-    def _dependencies_all(self):
-        self._service_info = {}
-        for name in self._all_services:
-            self._dependencies(name)
-        return self._service_info
+    def _populate_service_info(self, all_services, service_info):
+        ret = {}
+        for name in all_services:
+            dependencies = service_info(name).get('Dependencies', [])
+            # Sort for predictable behavior
+            ret[name] = sorted(self._normalize_multiple_name(all_services, *dependencies))
+            log.trace("Added dependencies of %s: %s", name, ret[name])
+        return ret
 
     def _dependencies(self, name):
-        def _sanitize_lower_list(list_):
-            ret = set()
-            for entry in list_:
-                if entry and str(entry):
-                    # Lower case as Windows does not consider casing of the service names
-                    ret.add(str(entry).lower())
-            return list(ret)
+        dependencies = self._service_info.get(name, [])
+        # Sort for predictable behavior
+        ret = sorted(self._normalize_multiple_name(self._all_services, *dependencies))
+        log.trace("Added dependencies of %s: %s", name, ret)
+        return ret
 
-        normalized = self._normalize_name(self._all_services, name)
-        if normalized not in self._service_info:
-            info = self._service_info_provider(normalized)
-            dependencies = info.get('Dependencies', [])
-            # Sort for predictable behavior
-            self._service_info[normalized] = sorted(self._normalize_multiple_name(self._all_services, *dependencies))
-            log.trace("Added dependencies of %s: %s", normalized, self._service_info[normalized])
-        return self._service_info[normalized]
+    def _dependencies_recursion(self, name):
+        # Using a list here to maintain order
+        ret = list()
+        try:
+            dependencies = self._dependencies(name)
+            for dependency in dependencies:
+                indirect_dependencies = self._dependencies_recursion(dependency)
+                for indirect_dependency in indirect_dependencies:
+                    if indirect_dependency not in ret:
+                        ret.append(indirect_dependency)
+            for dependency in dependencies:
+                if dependency not in ret:
+                    ret.append(dependency)
+        except Exception as e:
+            log.debug(e)
+            ret = list()
+        return ret
 
     def _normalize_name(self, references, difference):
         # Normalize Input
@@ -160,6 +169,7 @@ class ServiceDependencies(object):
         return normalized[0]
 
     def _normalize_multiple_name(self, references, *differences):
+        # Normalize Input
         ret = list()
         for difference in differences:
             difference_str = str(difference)
@@ -170,64 +180,72 @@ class ServiceDependencies(object):
                     break
         return ret
 
-    def dependencies(self, with_indirect=True):
-        def _dependencies_recursion(name, with_indirect=True):
-            # Using a list here to maintain order
-            ret = list()
-            try:
-                dependencies = self._dependencies(name)
-                if bool(with_indirect):
-                    for dependency in dependencies:
-                        indirect_dependencies = _dependencies_recursion(dependency, with_indirect=with_indirect)
-                        for indirect_dependency in indirect_dependencies:
-                            if indirect_dependency not in ret:
-                                ret.append(indirect_dependency)
-                # This brings in an order, first elements in the list have itself no dependency
-                for dependency in dependencies:
-                    if str(dependency) not in ret:
-                        # Ensure string
-                        ret.append(str(dependency))
-            except Exception as e:
-                log.debug(e)
-                ret = list()
-            # Filter duplicates
-            return ret
-
+    def dependencies(self, with_indirect=False):
         normalized = self._normalize_name(self._all_services, self._name)
-        # Walk dependencies downstream
-        ret = _dependencies_recursion(normalized, with_indirect=with_indirect)
+        if bool(with_indirect):
+            ret = self._dependencies_recursion(normalized)
+        else:
+            ret = self._dependencies(normalized)
         log.trace("Dependencies of '%s': '%s'", normalized, ret)
         return ret
 
-    def customers(self, with_indirect=True):
-        def _customers_recursion(name, with_indirect=True):
-            # Using a list here to maintain order
+    def _customers(self, name):
+        # Using a list here to maintain order
+        ret = list()
+        try:
+            # Sort for predictable behavior
+            for service, dependencies in sorted(self._service_info.items()):
+                if name in dependencies:
+                    if service in ret:
+                        ret.remove(service)
+                    ret.append(service)
+        except Exception as e:
+            log.debug(e)
             ret = list()
-            try:
-                # Sort for predictable behavior
-                for service, dependencies in sorted(self._dependencies_all().items()):
-                    if name in dependencies:
-                        if service not in ret:
-                            ret.append(service)
-                        if bool(with_indirect):
-                            indirect_customers = _customers_recursion(service, with_indirect=with_indirect)
-                            for indirect_customer in indirect_customers:
-                                if indirect_customer in ret:
-                                    ret.remove(indirect_customer)
-                                # Order shall represent hierarchy
-                                position = ret.index(service)
-                                ret.insert(position, indirect_customer)
-            except Exception as e:
-                log.debug(e)
-                ret = list()
-            # Filter duplicates
-            return ret
+        return ret
 
+    def _customers_recursion(self, name):
+        # Using a list here to maintain order
+        ret = list()
+        try:
+            customers = self._customers(name)
+            for customer in customers:
+                if customer not in ret:
+                    ret.append(customer)
+            for customer in customers:
+                indirect_customers = self._customers_recursion(customer)
+                for indirect_customer in indirect_customers:
+                    if indirect_customer in ret:
+                        ret.remove(indirect_customer)
+                    ret.append(indirect_customer)
+        except Exception as e:
+            log.debug(e)
+            ret = list()
+        return ret
+
+    def customers(self, with_indirect=False):
         normalized = self._normalize_name(self._all_services, self._name)
-        # Walk dependencies upstream
-        ret = _customers_recursion(normalized, with_indirect=with_indirect)
+        if bool(with_indirect):
+            ret = self._customers_recursion(normalized)
+        else:
+            ret = self._customers(normalized)
         log.trace("Customers of '%s': '%s'", normalized, ret)
         return ret
+
+    def start_order(self, with_deps=False, with_customers=False):
+        ret = []
+        if with_deps:
+            ret.extend(self.dependencies(with_indirect=True))
+        normalized = self._normalize_name(self._all_services, self._name)
+        ret.append(normalized)
+        if with_customers:
+            ret.extend(self.customers(with_indirect=True))
+        return ret
+
+    def stop_order(self, with_deps=False, with_customers=False):
+        order = self.start_order(with_deps=with_deps, with_customers=with_customers)
+        order.reverse()
+        return order
 
 
 def _status_wait(service_name, end_time, service_states):
@@ -616,15 +634,10 @@ def start(name, timeout=90, with_deps=False, with_customers=False):
     ret = set()
 
     # Using a list here to maintain order
-    services = list()
-    dependencies = ServiceDependencies(name, get_all, info)
-    if with_deps:
-        services.extend(dependencies.dependencies(with_indirect=True))
-    services.append(name)
-    if with_customers:
-        services.extend(dependencies.customers(with_indirect=True))
-    log.debug("Starting services %s", services)
-    for name in services:
+    services = ServiceDependencies(name, get_all, info)
+    start = services.start_order(with_deps=with_deps, with_customers=with_customers)
+    log.debug("Starting services %s", start)
+    for name in start:
         try:
             win32serviceutil.StartService(name)
         except pywintypes.error as exc:
@@ -676,15 +689,10 @@ def stop(name, timeout=90, with_deps=False, with_customers=False):
     '''
     ret = set()
 
-    services = list()
-    dependencies = ServiceDependencies(name, get_all, info)
-    if with_customers:
-        services.extend(dependencies.customers(with_indirect=True))
-    services.append(name)
-    if with_deps:
-        services.extend(dependencies.dependencies(with_indirect=True))
-    log.debug("Stopping services %s", services)
-    for name in services:
+    services = ServiceDependencies(name, get_all, info)
+    stop = services.stop_order(with_deps=with_deps, with_customers=with_customers)
+    log.debug("Stopping services %s", stop)
+    for name in stop:
         try:
             win32serviceutil.StopService(name)
         except pywintypes.error as exc:
