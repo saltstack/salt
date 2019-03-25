@@ -90,6 +90,28 @@ _PRIVILEGES_MAP = {
     'd': 'DELETE',
     '*': 'GRANT',
 }
+_DEFAULT_PRIVILEGES_MAP = {
+    'a': 'INSERT',
+    'C': 'CREATE',
+    'D': 'TRUNCATE',
+    't': 'TRIGGER',
+    'r': 'SELECT',
+    'U': 'USAGE',
+    'w': 'UPDATE',
+    'X': 'EXECUTE',
+    'x': 'REFERENCES',
+    'd': 'DELETE',
+    '*': 'GRANT',
+}
+_DEFAULT_PRIVILEGES_OBJECTS = frozenset(
+    (
+    'schema',
+    'sequence',
+    'table',
+    'group',
+    'function',
+    )
+)
 _PRIVILEGES_OBJECTS = frozenset(
     (
     'schema',
@@ -109,6 +131,12 @@ _PRIVILEGE_TYPE_MAP = {
     'sequence': 'rwU',
     'schema': 'UC',
     'database': 'CTc',
+    'function': 'X',
+}
+_DEFAULT_PRIVILEGE_TYPE_MAP = {
+    'table': 'arwdDxt',
+    'sequence': 'rwU',
+    'schema': 'UC',
     'function': 'X',
 }
 
@@ -2389,6 +2417,69 @@ def language_remove(name,
     return ret['retcode'] == 0
 
 
+def _make_default_privileges_list_query(name, object_type, prepend):
+    '''
+    Generate the SQL required for specific object type
+    '''
+    if object_type == 'table':
+        query = (' '.join([
+            'SELECT defacl.defaclacl AS name',
+            'FROM pg_default_acl defacl',
+            'JOIN pg_authid aid',
+            'ON defacl.defaclrole = aid.oid ',
+            'JOIN pg_namespace nsp ',
+            'ON nsp.oid = defacl.defaclnamespace',
+            "WHERE nsp.nspname = '{0}'",
+            "AND defaclobjtype ='r'",
+            'ORDER BY nspname',
+        ])).format(prepend)
+    elif object_type == 'sequence':
+        query = (' '.join([
+            'SELECT defacl.defaclacl AS name',
+            'FROM pg_default_acl defacl',
+            'JOIN pg_authid aid',
+            'ON defacl.defaclrole = aid.oid ',
+            'JOIN pg_namespace nsp ',
+            'ON nsp.oid = defacl.defaclnamespace',
+            "WHERE nsp.nspname = '{0}'",
+            "AND defaclobjtype ='S'",
+            'ORDER BY nspname',
+        ])).format(prepend, name)
+    elif object_type == 'schema':
+        query = (' '.join([
+            'SELECT nspacl AS name',
+            'FROM pg_catalog.pg_namespace',
+            "WHERE nspname = '{0}'",
+            'ORDER BY nspname',
+        ])).format(name)
+    elif object_type == 'function':
+        query = (' '.join([
+            'SELECT defacl.defaclacl AS name',
+            'FROM pg_default_acl defacl',
+            'JOIN pg_authid aid',
+            'ON defacl.defaclrole = aid.oid ',
+            'JOIN pg_namespace nsp ',
+            'ON nsp.oid = defacl.defaclnamespace',
+            "WHERE nsp.nspname = '{0}'",
+            "AND defaclobjtype ='f'",
+            'ORDER BY nspname',
+        ])).format(prepend, name)
+    elif object_type == 'group':
+        query = (' '.join([
+            'SELECT rolname, admin_option',
+            'FROM pg_catalog.pg_auth_members m',
+            'JOIN pg_catalog.pg_roles r',
+            'ON m.member=r.oid',
+            'WHERE m.roleid IN',
+            '(SELECT oid',
+            'FROM pg_catalog.pg_roles',
+            "WHERE rolname='{0}')",
+            'ORDER BY rolname',
+        ])).format(name)
+
+    return query
+
+
 def _make_privileges_list_query(name, object_type, prepend):
     '''
     Generate the SQL required for specific object type
@@ -2510,7 +2601,7 @@ def _get_object_owner(name,
         ])).format(name)
     elif object_type == 'function':
         query = (' '.join([
-            'SELECT rolname AS name',
+            'SELECT proname AS name',
             'FROM pg_catalog.pg_proc p',
             'JOIN pg_catalog.pg_namespace n',
             'ON n.oid = p.pronamespace',
@@ -2557,6 +2648,60 @@ def _get_object_owner(name,
         ret = None
 
     return ret
+
+
+def _validate_default_privileges(object_type, defprivs, defprivileges):
+    '''
+    Validate the supplied privileges
+    '''
+    if object_type != 'group':
+        _defperms = [_DEFAULT_PRIVILEGES_MAP[defperm]
+                for defperm in _DEFAULT_PRIVILEGE_TYPE_MAP[object_type]]
+        _defperms.append('ALL')
+
+        if object_type not in _DEFAULT_PRIVILEGES_OBJECTS:
+            raise SaltInvocationError(
+                'Invalid object_type: {0} provided'.format(object_type))
+
+        if not set(defprivs).issubset(set(_defperms)):
+            raise SaltInvocationError(
+                'Invalid default privilege(s): {0} provided for object {1}'.format(
+                defprivileges, object_type))
+    else:
+        if defprivileges:
+            raise SaltInvocationError(
+                'The default privileges option should not '
+                'be set for object_type group')
+
+
+def _mod_defpriv_opts(object_type, defprivileges):
+    '''
+    Format options
+    '''
+    object_type = object_type.lower()
+    defprivileges = '' if defprivileges is None else defprivileges
+    _defprivs = re.split(r'\s?,\s?', defprivileges.upper())
+
+    return object_type, defprivileges, _defprivs
+
+
+def _process_defpriv_part(defperms):
+    '''
+    Process part
+    '''
+    _tmp = {}
+    previous = None
+    for defperm in defperms:
+        if previous is None:
+            _tmp[_DEFAULT_PRIVILEGES_MAP[defperm]] = False
+            previous = _DEFAULT_PRIVILEGES_MAP[defperm]
+        else:
+            if defperm == '*':
+                _tmp[previous] = True
+            else:
+                _tmp[_DEFAULT_PRIVILEGES_MAP[defperm]] = False
+                previous = _DEFAULT_PRIVILEGES_MAP[defperm]
+    return _tmp
 
 
 def _validate_privileges(object_type, privs, privileges):
@@ -2611,6 +2756,102 @@ def _process_priv_part(perms):
                 _tmp[_PRIVILEGES_MAP[perm]] = False
                 previous = _PRIVILEGES_MAP[perm]
     return _tmp
+
+
+def default_privileges_list(
+        name,
+        object_type,
+        prepend='public',
+        maintenance_db=None,
+        user=None,
+        host=None,
+        port=None,
+        password=None,
+        runas=None):
+    '''
+    .. versionadded:: 2019.0.0
+
+    Return a list of default privileges for the specified object.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.default_privileges_list table_name table maintenance_db=db_name
+
+    name
+       Name of the object for which the permissions should be returned
+
+    object_type
+       The object type, which can be one of the following:
+
+       - table
+       - sequence
+       - schema
+       - group
+       - function
+
+    prepend
+        Table and Sequence object types live under a schema so this should be
+        provided if the object is not under the default `public` schema
+
+    maintenance_db
+        The database to connect to
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+    '''
+    object_type = object_type.lower()
+    query = _make_default_privileges_list_query(name, object_type, prepend)
+
+    if object_type not in _DEFAULT_PRIVILEGES_OBJECTS:
+        raise SaltInvocationError(
+            'Invalid object_type: {0} provided'.format(object_type))
+
+    rows = psql_query(
+        query,
+        runas=runas,
+        host=host,
+        user=user,
+        port=port,
+        maintenance_db=maintenance_db,
+        password=password)
+
+    ret = {}
+
+    for row in rows:
+        if object_type != 'group':
+            result = row['name']
+            result = result.strip('{}')
+            parts = result.split(',')
+            for part in parts:
+                perms_part, _ = part.split('/')
+                rolename, defperms = perms_part.split('=')
+                if rolename == '':
+                    rolename = 'public'
+                _tmp = _process_defpriv_part(defperms)
+                ret[rolename] = _tmp
+        else:
+            if row['admin_option'] == 't':
+                admin_option = True
+            else:
+                admin_option = False
+
+            ret[row['rolname']] = admin_option
+
+    return ret
 
 
 def privileges_list(
@@ -2710,6 +2951,124 @@ def privileges_list(
             ret[row['rolname']] = admin_option
 
     return ret
+
+
+def has_default_privileges(name,
+        object_name,
+        object_type,
+        defprivileges=None,
+        grant_option=None,
+        prepend='public',
+        maintenance_db=None,
+        user=None,
+        host=None,
+        port=None,
+        password=None,
+        runas=None):
+    '''
+    .. versionadded:: 2019.0.0
+
+    Check if a role has the specified privileges on an object
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.has_default_privileges user_name table_name table \\
+        SELECT,INSERT maintenance_db=db_name
+
+    name
+       Name of the role whose privileges should be checked on object_type
+
+    object_name
+       Name of the object on which the check is to be performed
+
+    object_type
+       The object type, which can be one of the following:
+
+       - table
+       - sequence
+       - schema
+       - group
+       - function
+
+    privileges
+       Comma separated list of privileges to check, from the list below:
+
+       - INSERT
+       - CREATE
+       - TRUNCATE
+       - TRIGGER
+       - SELECT
+       - USAGE
+       - UPDATE
+       - EXECUTE
+       - REFERENCES
+       - DELETE
+       - ALL
+
+    grant_option
+        If grant_option is set to True, the grant option check is performed
+
+    prepend
+        Table and Sequence object types live under a schema so this should be
+        provided if the object is not under the default `public` schema
+
+    maintenance_db
+        The database to connect to
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+    '''
+    object_type, defprivileges, _defprivs = _mod_defpriv_opts(object_type, defprivileges)
+
+    _validate_default_privileges(object_type, _defprivs, defprivileges)
+
+    if object_type != 'group':
+        owner = _get_object_owner(object_name, object_type, prepend=prepend,
+            maintenance_db=maintenance_db, user=user, host=host, port=port,
+            password=password, runas=runas)
+        if owner is not None and name == owner:
+            return True
+
+    _defprivileges = default_privileges_list(object_name, object_type, prepend=prepend,
+        maintenance_db=maintenance_db, user=user, host=host, port=port,
+        password=password, runas=runas)
+
+    if name in _defprivileges:
+        if object_type == 'group':
+            if grant_option:
+                retval = _defprivileges[name]
+            else:
+                retval = True
+            return retval
+        else:
+            _defperms = _DEFAULT_PRIVILEGE_TYPE_MAP[object_type]
+            if grant_option:
+                defperms = dict((_DEFAULT_PRIVILEGES_MAP[defperm], True) for defperm in _defperms)
+                retval = defperms == _defprivileges[name]
+            else:
+                defperms = [_DEFAULT_PRIVILEGES_MAP[defperm] for defperm in _defperms]
+                if 'ALL' in _defprivs:
+                    retval = sorted(defperms) == sorted(_defprivileges[name].keys())
+                else:
+                    retval = set(_defprivs).issubset(
+                        set(_defprivileges[name].keys()))
+            return retval
+
+    return False
 
 
 def has_privileges(name,
@@ -2826,13 +3185,253 @@ def has_privileges(name,
             else:
                 perms = [_PRIVILEGES_MAP[perm] for perm in _perms]
                 if 'ALL' in _privs:
-                    retval = perms.sort() == _privileges[name].keys().sort()
+                    retval = sorted(perms) == sorted(_privileges[name].keys())
                 else:
                     retval = set(_privs).issubset(
                         set(_privileges[name].keys()))
             return retval
 
     return False
+
+
+def default_privileges_grant(name,
+        object_name,
+        object_type,
+        defprivileges=None,
+        grant_option=None,
+        prepend='public',
+        maintenance_db=None,
+        user=None,
+        host=None,
+        port=None,
+        password=None,
+        runas=None):
+    '''
+    .. versionadded:: 2019.0.0
+
+    Grant default privileges on a postgres object
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.default_privileges_grant user_name table_name table \\
+        SELECT,UPDATE maintenance_db=db_name
+
+    name
+       Name of the role to which default privileges should be granted
+
+    object_name
+       Name of the object on which the grant is to be performed
+
+    object_type
+       The object type, which can be one of the following:
+
+       - table
+       - sequence
+       - schema
+       - group
+       - function
+
+    privileges
+       Comma separated list of privileges to grant, from the list below:
+
+       - INSERT
+       - CREATE
+       - TRUNCATE
+       - TRIGGER
+       - SELECT
+       - USAGE
+       - UPDATE
+       - EXECUTE
+       - REFERENCES
+       - DELETE
+       - ALL
+
+    grant_option
+        If grant_option is set to True, the recipient of the default privilege can
+        in turn grant it to others
+
+    prepend
+        Table and Sequence object types live under a schema so this should be
+        provided if the object is not under the default `public` schema
+
+    maintenance_db
+        The database to connect to
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+    '''
+    object_type, pdefrivileges, _defprivs = _mod_defpriv_opts(object_type, defprivileges)
+
+    _validate_default_privileges(object_type, _defprivs, defprivileges)
+
+    if has_default_privileges(name, object_name, object_type, defprivileges,
+        prepend=prepend, maintenance_db=maintenance_db, user=user,
+            host=host, port=port, password=password, runas=runas):
+        log.info('The object: %s of type: %s already has default privileges: %s set',
+            object_name, object_type, defprivileges)
+        return False
+
+    _grants = ','.join(_defprivs)
+
+    if object_type in ['table', 'sequence']:
+        on_part = '{0}."{1}"'.format(prepend, object_name)
+    elif object_type == 'function':
+        on_part = '{0}'.format(object_name)
+    else:
+        on_part = '"{0}"'.format(object_name)
+
+    if grant_option:
+        if object_type == 'group':
+            query = ' ALTER DEFAULT PRIVILEGES GRANT {0} TO "{1}" WITH ADMIN OPTION'.format(
+                object_name, name)
+        elif (object_type in ('table', 'sequence', 'function') and
+                object_name.upper() == 'ALL'):
+            query = 'ALTER DEFAULT PRIVILEGES IN SCHEMA {2} GRANT {0} ON {1}S  TO ' \
+                    '"{3}" WITH GRANT OPTION'.format(
+                _grants, object_type.upper(), prepend, name)
+        else:
+            query = 'ALTER DEFAULT PRIVILEGES IN SCHEMA {2} GRANT {0} ON {1}S  TO "{3}" WITH GRANT OPTION'.format(
+                _grants, object_type.upper(), on_part, name)
+    else:
+        if object_type == 'group':
+            query = 'ALTER DEFAULT PRIVILEGES GRANT {0} TO "{1}"'.format(object_name, name)
+        elif (object_type in ('table', 'sequence') and
+                object_name.upper() == 'ALL'):
+            query = 'ALTER DEFAULT PRIVILEGES IN SCHEMA {2} GRANT {0} ON  {1}S  TO "{3}"'.format(
+                _grants, object_type.upper(), prepend, name)
+        else:
+            query = ' ALTER DEFAULT PRIVILEGES IN SCHEMA {2} GRANT {0} ON {1}S TO "{3}"'.format(
+                _grants, object_type.upper(), prepend, name)
+
+    ret = _psql_prepare_and_run(['-c', query],
+                                user=user,
+                                host=host,
+                                port=port,
+                                maintenance_db=maintenance_db,
+                                password=password,
+                                runas=runas)
+
+    return ret['retcode'] == 0
+
+
+def default_privileges_revoke(name,
+        object_name,
+        object_type,
+        defprivileges=None,
+        prepend='public',
+        maintenance_db=None,
+        user=None,
+        host=None,
+        port=None,
+        password=None,
+        runas=None):
+    '''
+    .. versionadded:: 2019.0.0
+
+    Revoke default privileges on a postgres object
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.default_privileges_revoke user_name table_name table \\
+        SELECT,UPDATE maintenance_db=db_name
+
+    name
+       Name of the role whose default privileges should be revoked
+
+    object_name
+       Name of the object on which the revoke is to be performed
+
+    object_type
+       The object type, which can be one of the following:
+
+       - table
+       - sequence
+       - schema
+       - group
+       - function
+
+    privileges
+       Comma separated list of privileges to revoke, from the list below:
+
+       - INSERT
+       - CREATE
+       - TRUNCATE
+       - TRIGGER
+       - SELECT
+       - USAGE
+       - UPDATE
+       - EXECUTE
+       - REFERENCES
+       - DELETE
+       - ALL
+
+    maintenance_db
+        The database to connect to
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+    '''
+    object_type, defprivileges, _defprivs = _mod_defpriv_opts(object_type, defprivileges)
+
+    _validate_default_privileges(object_type, _defprivs, defprivileges)
+
+    if not has_default_privileges(name, object_name, object_type, defprivileges,
+        prepend=prepend, maintenance_db=maintenance_db, user=user,
+            host=host, port=port, password=password, runas=runas):
+        log.info('The object: %s of type: %s does not'
+            ' have default privileges: %s set', object_name, object_type, defprivileges)
+        return False
+
+    _grants = ','.join(_defprivs)
+
+    if object_type in ['table', 'sequence']:
+        on_part = '{0}.{1}'.format(prepend, object_name)
+    else:
+        on_part = object_name
+
+    if object_type == 'group':
+        query = 'ALTER DEFAULT PRIVILEGES REVOKE {0} FROM {1}'.format(object_name, name)
+    else:
+        query = 'ALTER DEFAULT PRIVILEGES IN SCHEMA {2} REVOKE {0} ON {1}S FROM {3}'.format(
+            _grants, object_type.upper(), prepend, name)
+
+    ret = _psql_prepare_and_run(['-c', query],
+                                user=user,
+                                host=host,
+                                port=port,
+                                maintenance_db=maintenance_db,
+                                password=password,
+                                runas=runas)
+
+    return ret['retcode'] == 0
 
 
 def privileges_grant(name,

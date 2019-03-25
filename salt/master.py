@@ -31,6 +31,7 @@ import tornado.gen  # pylint: disable=F0401
 
 # Import salt libs
 import salt.crypt
+import salt.cli.batch_async
 import salt.client
 import salt.client.ssh.client
 import salt.exceptions
@@ -233,6 +234,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
+                salt.daemons.masterapi.clean_proc_dir(self.opts)
             self.handle_git_pillar()
             self.handle_schedule()
             self.handle_key_cache()
@@ -675,7 +677,7 @@ class Master(SMaster):
             pub_channels = []
             log.info('Creating master publisher process')
             log_queue = salt.log.setup.get_multiprocessing_logging_queue()
-            for transport, opts in iter_transport_opts(self.opts):
+            for _, opts in iter_transport_opts(self.opts):
                 chan = salt.transport.server.PubServerChannel.factory(opts)
                 chan.pre_fork(self.process_manager, kwargs={'log_queue': log_queue})
                 pub_channels.append(chan)
@@ -2034,6 +2036,27 @@ class ClearFuncs(object):
             return False
         return self.loadauth.get_tok(clear_load['token'])
 
+    def publish_batch(self, clear_load, minions, missing):
+        batch_load = {}
+        batch_load.update(clear_load)
+        import salt.cli.batch_async
+        batch = salt.cli.batch_async.BatchAsync(
+            self.local.opts,
+            functools.partial(self._prep_jid, clear_load, {}),
+            batch_load
+        )
+        ioloop = tornado.ioloop.IOLoop.current()
+        ioloop.add_callback(batch.start)
+
+        return {
+            'enc': 'clear',
+            'load': {
+                'jid': batch.batch_jid,
+                'minions': minions,
+                'missing': missing
+            }
+        }
+
     def publish(self, clear_load):
         '''
         This method sends out publications to the minions, it can only be used
@@ -2125,6 +2148,9 @@ class ClearFuncs(object):
                         'error': 'Master could not resolve minions for target {0}'.format(clear_load['tgt'])
                     }
                 }
+        if extra.get('batch', None):
+            return self.publish_batch(clear_load, minions, missing)
+
         jid = self._prep_jid(clear_load, extra)
         if jid is None:
             return {'enc': 'clear',

@@ -276,6 +276,15 @@ class GitProvider(object):
                 )
                 failhard(self.role)
 
+            if self.role == 'git_pillar' \
+                    and self.branch != '__env__' and 'base' in per_remote_conf:
+                log.critical(
+                    'Invalid per-remote configuration for %s remote \'%s\'. '
+                    'base can only be specified if __env__ is specified as the branch name.',
+                    self.role, self.id
+                )
+                failhard(self.role)
+
             per_remote_errors = False
             for param in (x for x in per_remote_conf
                           if x not in valid_per_remote_params):
@@ -1410,6 +1419,19 @@ class Pygit2(GitProvider):
             override_params, cache_root, role
         )
 
+    def peel(self, obj):
+        '''
+        Compatibility function for pygit2.Reference objects. Older versions of
+        pygit2 use .get_object() to return the object to which the reference
+        points, while newer versions use .peel(). In pygit2 0.27.4,
+        .get_object() was removed. This function will try .peel() first and
+        fall back to .get_object().
+        '''
+        try:
+            return obj.peel()
+        except AttributeError:
+            return obj.get_object()
+
     def checkout(self):
         '''
         Checkout the configured branch/tag
@@ -1428,7 +1450,7 @@ class Pygit2(GitProvider):
             return None
 
         try:
-            head_sha = local_head.get_object().hex
+            head_sha = self.peel(local_head).hex
         except AttributeError:
             # Shouldn't happen, but just in case a future pygit2 API change
             # breaks things, avoid a traceback and log an error.
@@ -1477,7 +1499,7 @@ class Pygit2(GitProvider):
         try:
             if remote_ref in refs:
                 # Get commit id for the remote ref
-                oid = self.repo.lookup_reference(remote_ref).get_object().id
+                oid = self.peel(self.repo.lookup_reference(remote_ref)).id
                 if local_ref not in refs:
                     # No local branch for this remote, so create one and point
                     # it at the commit id of the remote ref
@@ -1485,7 +1507,7 @@ class Pygit2(GitProvider):
 
                 try:
                     target_sha = \
-                        self.repo.lookup_reference(remote_ref).get_object().hex
+                        self.peel(self.repo.lookup_reference(remote_ref)).hex
                 except KeyError:
                     log.error(
                         'pygit2 was unable to get SHA for %s in %s remote '
@@ -1662,7 +1684,7 @@ class Pygit2(GitProvider):
                 blobs.append(
                     salt.utils.path.join(prefix, entry.name, use_posixpath=True)
                 )
-                if len(blob):
+                if blob:
                     _traverse(
                         blob, blobs, salt.utils.path.join(
                             prefix, entry.name, use_posixpath=True)
@@ -1684,7 +1706,7 @@ class Pygit2(GitProvider):
         else:
             relpath = lambda path: path
         blobs = []
-        if len(tree):
+        if tree:
             _traverse(tree, blobs, self.root(tgt_env))
         add_mountpoint = lambda path: salt.utils.path.join(
             self.mountpoint(tgt_env), path, use_posixpath=True)
@@ -1814,7 +1836,7 @@ class Pygit2(GitProvider):
         else:
             relpath = lambda path: path
         blobs = {}
-        if len(tree):
+        if tree:
             _traverse(tree, blobs, self.root(tgt_env))
         add_mountpoint = lambda path: salt.utils.path.join(
             self.mountpoint(tgt_env), path, use_posixpath=True)
@@ -1870,8 +1892,8 @@ class Pygit2(GitProvider):
         refs/remotes/origin/
         '''
         try:
-            return self.repo.lookup_reference(
-                'refs/remotes/origin/{0}'.format(ref)).get_object().tree
+            return self.peel(self.repo.lookup_reference(
+                'refs/remotes/origin/{0}'.format(ref))).tree
         except KeyError:
             return None
 
@@ -1880,8 +1902,8 @@ class Pygit2(GitProvider):
         Return a pygit2.Tree object matching a tag ref fetched into refs/tags/
         '''
         try:
-            return self.repo.lookup_reference(
-                'refs/tags/{0}'.format(ref)).get_object().tree
+            return self.peel(self.repo.lookup_reference(
+                'refs/tags/{0}'.format(ref))).tree
         except KeyError:
             return None
 
@@ -3007,7 +3029,11 @@ class GitPillar(GitBase):
                 elif repo.env:
                     env = repo.env
                 else:
-                    env = 'base' if repo.branch == repo.base else repo.get_checkout_target()
+                    if repo.branch == repo.base:
+                        env = 'base'
+                    else:
+                        tgt = repo.get_checkout_target()
+                        env = 'base' if tgt == repo.base else tgt
                 if repo._mountpoint:
                     if self.link_mountpoint(repo):
                         self.pillar_dirs[repo.linkdir] = env

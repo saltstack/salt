@@ -24,6 +24,9 @@ state modules
     at
     augeas
     aws_sqs
+    azurearm_compute
+    azurearm_network
+    azurearm_resource
     beacon
     bigip
     blockdev
@@ -114,9 +117,7 @@ state modules
     group
     heat
     hg
-    hipchat
     host
-    htpasswd
     http
     icinga2
     ifttt
@@ -150,6 +151,7 @@ state modules
     keystone_role_grant
     keystone_service
     keystone_user
+    keystore
     kmod
     kubernetes
     layman
@@ -167,13 +169,13 @@ state modules
     lvs_service
     lxc
     mac_assistive
-    mac_defaults
+    macdefaults
     mac_keychain
-    mac_package
+    macpackage
     mac_xattr
     makeconf
     marathon_app
-    mdadm
+    mdadm_raid
     memcached
     modjk
     modjk_worker
@@ -193,7 +195,7 @@ state modules
     netsnmp
     netusers
     network
-    netyang
+    net_napalm_yang
     neutron_network
     neutron_secgroup
     neutron_secgroup_rule
@@ -262,6 +264,7 @@ state modules
     slack
     smartos
     smtp
+    snap
     snapper
     solrcloud
     splunk
@@ -293,6 +296,7 @@ state modules
     victorops
     virt
     virtualenv_mod
+    webutil
     win_certutil
     win_dacl
     win_dism
@@ -312,6 +316,7 @@ state modules
     win_wua
     winrepo
     x509
+    xml
     xmpp
     zabbix_action
     zabbix_host

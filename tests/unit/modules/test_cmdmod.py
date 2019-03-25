@@ -20,7 +20,7 @@ from salt.ext.six.moves import builtins  # pylint: disable=import-error
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import (
     mock_open,
     Mock,
@@ -344,6 +344,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         else:
             raise RuntimeError
 
+    @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
     def test_run_cwd_in_combination_with_runas(self):
         '''
         cmd.run executes command in the cwd directory
@@ -365,7 +366,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         /dev/stdout.
         '''
         # Since we're using unicode_literals, read the random bytes from a file
-        rand_bytes_file = os.path.join(FILES, 'file', 'base', 'random_bytes')
+        rand_bytes_file = os.path.join(RUNTIME_VARS.BASE_FILES, 'random_bytes')
         with salt.utils.files.fopen(rand_bytes_file, 'rb') as fp_:
             stdout_bytes = fp_.read()
 

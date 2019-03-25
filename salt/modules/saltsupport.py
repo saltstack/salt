@@ -57,7 +57,7 @@ class LogCollector(object):
 
     class MessagesList(list):
         def append(self, obj):
-            list.append(self, '{} - {}'.format(datetime.datetime.utcnow().strftime('%T.%f')[:-3], obj))
+            list.append(self, '{} - {}'.format(datetime.datetime.utcnow().strftime('%H:%M:%S.%f')[:-3], obj))
         __call__ = append
 
     def __init__(self):
@@ -274,7 +274,7 @@ class SaltSupportModule(SaltSupport):
             os.write(tfh, salt.utils.stringutils.to_bytes(os.path.basename(name)))
             os.write(tfh, salt.utils.stringutils.to_bytes(os.linesep))
             processed_archives.append(name)
-            log.debug('Syncing {filename} to {uri}'.format(filename=name, uri=uri))
+            log.debug('Syncing %s to %s', name, uri)
         os.close(tfh)
 
         if not processed_archives:
@@ -285,7 +285,7 @@ class SaltSupportModule(SaltSupport):
         for name in processed_archives:
             if move:
                 salt.utils.dictupdate.update(ret, self.delete_archives(name))
-                log.debug('Deleting {filename}'.format(filename=name))
+                log.debug('Deleting %s', name)
                 ret['files'][name] = 'moved'
             else:
                 ret['files'][name] = 'copied'
@@ -293,7 +293,7 @@ class SaltSupportModule(SaltSupport):
         try:
             os.unlink(tfn)
         except (OSError, IOError) as err:
-            log.error('Cannot remove temporary rsync file {fn}: {err}'.format(fn=tfn, err=err))
+            log.error('Cannot remove temporary rsync file %s: %s', tfn, err)
 
         return self.format_sync_stats(ret)
 

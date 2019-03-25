@@ -35,6 +35,7 @@ import salt.transport.server
 import salt.transport.mixins.auth
 from salt.ext import six
 from salt.exceptions import SaltReqTimeoutError
+from salt._compat import ipaddress
 
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO, LIBZMQ_VERSION_INFO
 import zmq.error
@@ -73,33 +74,38 @@ def _get_master_uri(master_ip,
     '''
     Return the ZeroMQ URI to connect the Minion to the Master.
     It supports different source IP / port, given the ZeroMQ syntax:
-
     // Connecting using a IP address and bind to an IP address
     rc = zmq_connect(socket, "tcp://192.168.1.17:5555;192.168.1.1:5555"); assert (rc == 0);
-
     Source: http://api.zeromq.org/4-1:zmq-tcp
     '''
-    if LIBZMQ_VERSION_INFO >= (4, 1, 6) and ZMQ_VERSION_INFO >= (16, 0, 1):
-        # The source:port syntax for ZeroMQ has been added in libzmq 4.1.6
-        # which is included in the pyzmq wheels starting with 16.0.1.
-        if source_ip or source_port:
-            if source_ip and source_port:
-                return 'tcp://{source_ip}:{source_port};{master_ip}:{master_port}'.format(
-                        source_ip=source_ip, source_port=source_port,
-                        master_ip=master_ip, master_port=master_port)
-            elif source_ip and not source_port:
-                return 'tcp://{source_ip}:0;{master_ip}:{master_port}'.format(
-                        source_ip=source_ip,
-                        master_ip=master_ip, master_port=master_port)
-            elif not source_ip and source_port:
-                return 'tcp://0.0.0.0:{source_port};{master_ip}:{master_port}'.format(
-                        source_port=source_port,
-                        master_ip=master_ip, master_port=master_port)
+    from salt.utils.zeromq import ip_bracket
+
+    master_uri = 'tcp://{master_ip}:{master_port}'.format(
+                  master_ip=ip_bracket(master_ip), master_port=master_port)
+
     if source_ip or source_port:
-        log.warning('Unable to connect to the Master using a specific source IP / port')
-        log.warning('Consider upgrading to pyzmq >= 16.0.1 and libzmq >= 4.1.6')
-    return 'tcp://{master_ip}:{master_port}'.format(
-                master_ip=master_ip, master_port=master_port)
+        if LIBZMQ_VERSION_INFO >= (4, 1, 6) and ZMQ_VERSION_INFO >= (16, 0, 1):
+            # The source:port syntax for ZeroMQ has been added in libzmq 4.1.6
+            # which is included in the pyzmq wheels starting with 16.0.1.
+            if source_ip and source_port:
+                master_uri = 'tcp://{source_ip}:{source_port};{master_ip}:{master_port}'.format(
+                             source_ip=ip_bracket(source_ip), source_port=source_port,
+                             master_ip=ip_bracket(master_ip), master_port=master_port)
+            elif source_ip and not source_port:
+                master_uri = 'tcp://{source_ip}:0;{master_ip}:{master_port}'.format(
+                             source_ip=ip_bracket(source_ip),
+                             master_ip=ip_bracket(master_ip), master_port=master_port)
+            elif source_port and not source_ip:
+                ip_any = '0.0.0.0' if ipaddress.ip_address(master_ip).version == 4 else ip_bracket('::')
+                master_uri = 'tcp://{ip_any}:{source_port};{master_ip}:{master_port}'.format(
+                             ip_any=ip_any, source_port=source_port,
+                             master_ip=ip_bracket(master_ip), master_port=master_port)
+        else:
+            log.warning('Unable to connect to the Master using a specific source IP / port')
+            log.warning('Consider upgrading to pyzmq >= 16.0.1 and libzmq >= 4.1.6')
+            log.warning('Specific source IP / port for connecting to master returner port: configuraion ignored')
+
+    return master_uri
 
 
 class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
@@ -228,8 +234,6 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         self._closing = True
         if hasattr(self, 'message_client'):
             self.message_client.close()
-        else:
-            log.debug('No message_client attr for AsyncZeroMQReqChannel found. Not destroying sockets.')
 
         # Remove the entry from the instance map so that a closed entry may not
         # be reused.
@@ -1188,7 +1192,7 @@ class AsyncReqMessageClient(object):
 
     @tornado.gen.coroutine
     def _internal_send_recv(self):
-        while len(self.send_queue) > 0:
+        while self.send_queue:
             message = self.send_queue[0]
             future = self.send_future_map.get(message, None)
             if future is None:
@@ -1274,7 +1278,7 @@ class AsyncReqMessageClient(object):
             send_timeout = self.io_loop.call_later(timeout, self.timeout_message, message)
             self.send_timeout_map[message] = send_timeout
 
-        if len(self.send_queue) == 0:
+        if not self.send_queue:
             self.io_loop.spawn_callback(self._internal_send_recv)
 
         self.send_queue.append(message)

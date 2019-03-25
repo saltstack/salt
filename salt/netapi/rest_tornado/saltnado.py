@@ -368,7 +368,7 @@ class EventListener(object):
         if not future.done():
             future.set_exception(TimeoutException())
             self.tag_map[(tag, matcher)].remove(future)
-        if len(self.tag_map[(tag, matcher)]) == 0:
+        if not self.tag_map[(tag, matcher)]:
             del self.tag_map[(tag, matcher)]
 
     def _handle_event_socket_recv(self, raw):
@@ -745,17 +745,22 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         try:
             eauth = self.application.opts['external_auth'][token['eauth']]
             # Get sum of '*' perms, user-specific perms, and group-specific perms
-            perms = eauth.get(token['name'], [])
-            perms.extend(eauth.get('*', []))
+            _perms = eauth.get(token['name'], [])
+            _perms.extend(eauth.get('*', []))
 
             if 'groups' in token and token['groups']:
                 user_groups = set(token['groups'])
                 eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
 
                 for group in user_groups & eauth_groups:
-                    perms.extend(eauth['{0}%'.format(group)])
+                    _perms.extend(eauth['{0}%'.format(group)])
 
-            perms = sorted(list(set(perms)))
+            # dedup. perm can be a complex dict, so we cant use set
+            perms = []
+            for perm in _perms:
+                if perm not in perms:
+                    perms.append(perm)
+
         # If we can't find the creds, then they aren't authorized
         except KeyError:
             self.send_error(401)
@@ -946,6 +951,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         Dispatch local client commands
         '''
         # Generate jid and find all minions before triggering a job to subscribe all returns from minions
+        full_return = chunk.pop('full_return', False)
         chunk['jid'] = salt.utils.jid.gen_jid(self.application.opts) if not chunk.get('jid', None) else chunk['jid']
         minions = set(self.ckminions.check_minions(chunk['tgt'], chunk.get('tgt_type', 'glob')))
 
@@ -1052,7 +1058,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                         if minion_id not in minions:
                             minions[minion_id] = False
                 else:
-                    chunk_ret[f_result['data']['id']] = f_result['data']['return']
+                    chunk_ret[f_result['data']['id']] = f_result if full_return else f_result['data']['return']
                     # clear finished event future
                     minions[f_result['data']['id']] = True
                     # if there are no more minions to wait for, then we are done

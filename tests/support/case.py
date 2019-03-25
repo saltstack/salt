@@ -18,7 +18,6 @@ import os
 import re
 import sys
 import time
-import stat
 import errno
 import signal
 import textwrap
@@ -34,7 +33,8 @@ from tests.support.helpers import (
 )
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTestCaseMixin
-from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
+from tests.support.paths import INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
+from tests.support.cli_scripts import ScriptPathMixin
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -44,73 +44,14 @@ STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
     r'(?P<pid>[\d]+) and was started at (?P<date>.*) with jid (?P<jid>[\d]+)'
 )
-SCRIPT_TEMPLATES = {
-    'salt': [
-        'from salt.scripts import salt_main\n',
-        'if __name__ == \'__main__\':'
-        '    salt_main()'
-    ],
-    'salt-api': [
-        'import salt.cli\n',
-        'def main():',
-        '    sapi = salt.cli.SaltAPI()',
-        '    sapi.run()\n',
-        'if __name__ == \'__main__\':',
-        '    main()'
-    ],
-    'common': [
-        'from salt.scripts import salt_{0}\n',
-        'if __name__ == \'__main__\':',
-        '    salt_{0}()'
-    ]
-}
 
 log = logging.getLogger(__name__)
 
 
-class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
+class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
     '''
     Execute a test for a shell command
     '''
-
-    def get_script_path(self, script_name):
-        '''
-        Return the path to a testing runtime script
-        '''
-        if not os.path.isdir(RUNTIME_VARS.TMP_SCRIPT_DIR):
-            os.makedirs(RUNTIME_VARS.TMP_SCRIPT_DIR)
-
-        script_path = os.path.join(RUNTIME_VARS.TMP_SCRIPT_DIR, script_name)
-        if not os.path.isfile(script_path):
-            log.debug('Generating {0}'.format(script_path))
-
-            # Late import
-            import salt.utils.files
-
-            with salt.utils.files.fopen(script_path, 'w') as sfh:
-                script_template = SCRIPT_TEMPLATES.get(script_name, None)
-                if script_template is None:
-                    script_template = SCRIPT_TEMPLATES.get('common', None)
-                if script_template is None:
-                    raise RuntimeError(
-                        '{0} does not know how to handle the {1} script'.format(
-                            self.__class__.__name__,
-                            script_name
-                        )
-                    )
-                contents = (
-                    '#!{0}\n'.format(sys.executable) +
-                    '\n'.join(script_template).format(script_name.replace('salt-', ''))
-                )
-                sfh.write(contents)
-                log.debug(
-                    'Wrote the following contents to temp script %s:\n%s',
-                    script_path, contents
-                )
-            st = os.stat(script_path)
-            os.chmod(script_path, st.st_mode | stat.S_IEXEC)
-
-        return script_path
 
     def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=15):
         r'''
@@ -183,6 +124,10 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         opts = salt.config.master_config(
             self.get_config_file_path('master')
         )
+
+        if 'asynchronous' in kwargs:
+            opts['async'] = True
+            kwargs.pop('asynchronous')
 
         opts_arg = list(arg)
         if kwargs:
@@ -267,9 +212,18 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         script_path = self.get_script_path(script)
         if not os.path.isfile(script_path):
             return False
+        popen_kwargs = popen_kwargs or {}
 
         if salt.utils.platform.is_windows():
             cmd = 'python '
+            if 'cwd' not in popen_kwargs:
+                popen_kwargs['cwd'] = os.getcwd()
+            if 'env' not in popen_kwargs:
+                popen_kwargs['env'] = os.environ.copy()
+                if sys.version_info[0] < 3:
+                    popen_kwargs['env'][b'PYTHONPATH'] = CODE_DIR.encode()
+                else:
+                    popen_kwargs['env']['PYTHONPATH'] = CODE_DIR
         else:
             cmd = 'PYTHONPATH='
             python_path = os.environ.get('PYTHONPATH', None)
@@ -286,7 +240,6 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         tmp_file = tempfile.SpooledTemporaryFile()
 
-        popen_kwargs = popen_kwargs or {}
         popen_kwargs = dict({
             'shell': True,
             'stdout': tmp_file,
@@ -568,6 +521,11 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         opts = {}
         opts.update(self.get_config('client_config', from_scratch=from_scratch))
         opts_arg = list(arg)
+
+        if 'asynchronous' in kwargs:
+            opts['async'] = True
+            kwargs.pop('asynchronous')
+
         if kwargs:
             opts_arg.append({'__kwarg__': True})
             opts_arg[-1].update(kwargs)
@@ -792,9 +750,14 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        know_to_return_none = (
-            'file.chown', 'file.chgrp', 'ssh.recv_known_host_entries'
+        known_to_return_none = (
+            'file.chown',
+            'file.chgrp',
+            'ssh.recv_known_host_entries',
+            'pkg.refresh_db'  # At least on CentOS
         )
+        if minion_tgt == 'sub_minion':
+            known_to_return_none += ('mine.update',)
         if 'f_arg' in kwargs:
             kwargs['arg'] = kwargs.pop('f_arg')
         if 'f_timeout' in kwargs:
@@ -812,7 +775,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                     minion_tgt, orig
                 )
             )
-        elif orig[minion_tgt] is None and function not in know_to_return_none:
+        elif orig[minion_tgt] is None and function not in known_to_return_none:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
                 'the minion \'{1}\'. Command output: {2}'.format(

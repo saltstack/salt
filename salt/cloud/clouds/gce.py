@@ -53,7 +53,6 @@ import sys
 import re
 import pprint
 import logging
-import msgpack
 from ast import literal_eval
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -91,6 +90,7 @@ from salt.ext import six
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.http
+import salt.utils.msgpack
 import salt.config as config
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import (
@@ -460,7 +460,7 @@ def __get_host(node, vm_):
         ip_address = node.public_ips[0]
         log.info('Salt node data. Public_ip: %s', ip_address)
 
-    if len(ip_address) > 0:
+    if ip_address:
         return ip_address
 
     return node.name
@@ -556,7 +556,7 @@ def _parse_allow(allow):
                 seen_protos[pairs[0]].append(pairs[1])
     for k in seen_protos:
         d = {'IPProtocol': k}
-        if len(seen_protos[k]) > 0:
+        if seen_protos[k]:
             d['ports'] = seen_protos[k]
         allow_dict.append(d)
     log.debug("firewall allowed protocols/ports: %s", allow_dict)
@@ -1281,7 +1281,7 @@ def create_address(kwargs=None, call=None):
         transport=__opts__['transport']
     )
 
-    log.info('Created GCE Address '+name)
+    log.info('Created GCE Address %s', name)
 
     return _expand_address(addy)
 
@@ -1351,7 +1351,7 @@ def delete_address(kwargs=None, call=None):
         transport=__opts__['transport']
     )
 
-    log.info('Deleted GCE Address ' + name)
+    log.info('Deleted GCE Address %s', name)
 
     return result
 
@@ -1835,7 +1835,7 @@ def create_disk(kwargs=None, call=None):
         )
         return False
 
-    if 'size' is None and 'image' is None and 'snapshot' is None:
+    if size is None and image is None and snapshot is None:
         log.error(
             'Must specify image, snapshot, or size.'
         )
@@ -2521,6 +2521,27 @@ def request_instance(vm_):
                 '\'pd-standard\', \'pd-ssd\''
             )
 
+    # GCE accelerator options are only supported as of libcloud >= 2.3.0
+    # and Python 3+ is required so that libcloud will detect a type of
+    # 'string' rather than 'unicode'
+    if LIBCLOUD_VERSION_INFO >= (2, 3, 0) and isinstance(u'test', str):
+
+        kwargs.update({
+            'ex_accelerator_type': config.get_cloud_config_value(
+                'ex_accelerator_type', vm_, __opts__, default=None),
+            'ex_accelerator_count': config.get_cloud_config_value(
+                'ex_accelerator_count', vm_, __opts__, default=None)
+        })
+        if kwargs.get('ex_accelerator_type'):
+            log.warning(
+                'An accelerator is being attached to this instance, '
+                'the ex_on_host_maintenance setting is being set to '
+                '\'TERMINATE\' as a result'
+            )
+            kwargs.update({
+                'ex_on_host_maintenance': 'TERMINATE'
+            })
+
     log.info(
         'Creating GCE instance %s in %s',
         vm_['name'], kwargs['location'].name
@@ -2642,7 +2663,7 @@ def update_pricing(kwargs=None, call=None):
         __opts__['cachedir'], 'gce-pricing.p'
     )
     with salt.utils.files.fopen(outfile, 'w') as fho:
-        msgpack.dump(price_json['dict'], fho)
+        salt.utils.msgpack.dump(price_json['dict'], fho)
 
     return True
 
@@ -2681,7 +2702,7 @@ def show_pricing(kwargs=None, call=None):
         update_pricing()
 
     with salt.utils.files.fopen(pricefile, 'r') as fho:
-        sizes = msgpack.load(fho)
+        sizes = salt.utils.msgpack.load(fho)
 
     per_hour = float(sizes['gcp_price_list'][size][region])
 

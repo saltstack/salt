@@ -11,7 +11,7 @@ import sys
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
-from tests.support.paths import TESTS_DIR
+from tests.support.runtests import RUNTIME_VARS
 
 
 # Import Salt libs
@@ -28,7 +28,7 @@ from tests.unit.modules.test_boto_vpc import BotoVpcTestCaseMixin
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 try:
     import boto
-    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     import boto3
     from boto.exception import BotoServerError
 

@@ -20,7 +20,7 @@ Azure (ARM) Network Execution Module
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as keyword arguments
-to every function in order to work properly.
+    to every function in order to work properly.
 
     Required provider parameters:
 
@@ -37,7 +37,7 @@ to every function in order to work properly.
 
     Optional provider parameters:
 
-    **cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
+**cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
     Possible values:
       * ``AZURE_PUBLIC_CLOUD`` (default)
       * ``AZURE_CHINA_CLOUD``
@@ -193,9 +193,7 @@ def default_security_rule_get(name, security_group, resource_group, **kwargs):
                 'error': 'Unable to find {0} in {1}!'.format(name, security_group)
             }
     except KeyError as exc:
-        log.error(
-            'Unable to find {0} in {1}!'.format(name, security_group)
-        )
+        log.error('Unable to find %s in %s!', name, security_group)
         result = {'error': str(exc)}
 
     return result
@@ -233,9 +231,7 @@ def default_security_rules_list(security_group, resource_group, **kwargs):
     try:
         result = secgroup['default_security_rules']
     except KeyError as exc:
-        log.error(
-            'No default security rules found for {0}!'.format(security_group)
-        )
+        log.error('No default security rules found for %s!', security_group)
         result = {'error': str(exc)}
 
     return result
@@ -357,7 +353,8 @@ def security_rule_create_or_update(name, access, direction, priority, protocol, 
         # pylint: disable=eval-used
         if not eval(params[0]) and not eval(params[1]):
             log.error(
-                'Either the {0} or {1} parameter must be provided!'.format(params[0], params[1])
+                'Either the %s or %s parameter must be provided!',
+                params[0], params[1]
             )
             return False
         # pylint: disable=eval-used

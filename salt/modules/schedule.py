@@ -132,6 +132,9 @@ def list_(show_all=False,
             if item not in SCHEDULE_CONF:
                 del schedule[job][item]
                 continue
+            if schedule[job][item] is None:
+                del schedule[job][item]
+                continue
             if schedule[job][item] == 'true':
                 schedule[job][item] = True
             if schedule[job][item] == 'false':
@@ -912,7 +915,7 @@ def move(name, target, **kwargs):
         if not response:
             ret['comment'] = 'no servers answered the published schedule.add command'
             return ret
-        elif len(errors) > 0:
+        elif errors:
             ret['comment'] = 'the following minions return False'
             ret['minions'] = errors
             return ret
@@ -976,7 +979,7 @@ def copy(name, target, **kwargs):
         if not response:
             ret['comment'] = 'no servers answered the published schedule.add command'
             return ret
-        elif len(errors) > 0:
+        elif errors:
             ret['comment'] = 'the following minions return False'
             ret['minions'] = errors
             return ret

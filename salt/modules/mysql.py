@@ -58,7 +58,7 @@ try:
     import MySQLdb.cursors
     import MySQLdb.converters
     from MySQLdb.constants import FIELD_TYPE, FLAG
-    from MySQLdb.connections import OperationalError
+    from MySQLdb import OperationalError
 except ImportError:
     try:
         # MySQLdb import failed, try to import PyMySQL
@@ -68,7 +68,7 @@ except ImportError:
         import MySQLdb.cursors
         import MySQLdb.converters
         from MySQLdb.constants import FIELD_TYPE, FLAG
-        from MySQLdb.err import OperationalError
+        from MySQLdb import OperationalError
     except ImportError:
         MySQLdb = None
 
@@ -81,7 +81,11 @@ __grants__ = [
     'ALL PRIVILEGES',
     'ALTER',
     'ALTER ROUTINE',
+    'BACKUP_ADMIN',
+    'BINLOG_ADMIN',
+    'CONNECTION_ADMIN',
     'CREATE',
+    'CREATE ROLE',
     'CREATE ROUTINE',
     'CREATE TABLESPACE',
     'CREATE TEMPORARY TABLES',
@@ -89,26 +93,37 @@ __grants__ = [
     'CREATE VIEW',
     'DELETE',
     'DROP',
+    'DROP ROLE',
+    'ENCRYPTION_KEY_ADMIN',
     'EVENT',
     'EXECUTE',
     'FILE',
     'GRANT OPTION',
+    'GROUP_REPLICATION_ADMIN',
     'INDEX',
     'INSERT',
     'LOCK TABLES',
+    'PERSIST_RO_VARIABLES_ADMIN',
     'PROCESS',
     'REFERENCES',
     'RELOAD',
     'REPLICATION CLIENT',
     'REPLICATION SLAVE',
+    'REPLICATION_SLAVE_ADMIN',
+    'RESOURCE_GROUP_ADMIN',
+    'RESOURCE_GROUP_USER',
+    'ROLE_ADMIN',
     'SELECT',
+    'SET_USER_ID',
     'SHOW DATABASES',
     'SHOW VIEW',
     'SHUTDOWN',
     'SUPER',
+    'SYSTEM_VARIABLES_ADMIN',
     'TRIGGER',
     'UPDATE',
-    'USAGE'
+    'USAGE',
+    'XA_RECOVER_ADMIN'
 ]
 
 __ssl_options_parameterized__ = [
@@ -119,6 +134,52 @@ __ssl_options_parameterized__ = [
 __ssl_options__ = __ssl_options_parameterized__ + [
     'SSL',
     'X509'
+]
+
+__all_privileges__ = [
+    'ALTER',
+    'ALTER ROUTINE',
+    'BACKUP_ADMIN',
+    'BINLOG_ADMIN',
+    'CONNECTION_ADMIN',
+    'CREATE',
+    'CREATE ROLE',
+    'CREATE ROUTINE',
+    'CREATE TABLESPACE',
+    'CREATE TEMPORARY TABLES',
+    'CREATE USER',
+    'CREATE VIEW',
+    'DELETE',
+    'DROP',
+    'DROP ROLE',
+    'ENCRYPTION_KEY_ADMIN',
+    'EVENT',
+    'EXECUTE',
+    'FILE',
+    'GROUP_REPLICATION_ADMIN',
+    'INDEX',
+    'INSERT',
+    'LOCK TABLES',
+    'PERSIST_RO_VARIABLES_ADMIN',
+    'PROCESS',
+    'REFERENCES',
+    'RELOAD',
+    'REPLICATION CLIENT',
+    'REPLICATION SLAVE',
+    'REPLICATION_SLAVE_ADMIN',
+    'RESOURCE_GROUP_ADMIN',
+    'RESOURCE_GROUP_USER',
+    'ROLE_ADMIN',
+    'SELECT',
+    'SET_USER_ID',
+    'SHOW DATABASES',
+    'SHOW VIEW',
+    'SHUTDOWN',
+    'SUPER',
+    'SYSTEM_VARIABLES_ADMIN',
+    'TRIGGER',
+    'UPDATE',
+    'XA_RECOVER_ADMIN'
 ]
 
 r'''
@@ -521,7 +582,7 @@ def quote_identifier(identifier, for_grants=False):
     '''
     if for_grants:
         return '`' + identifier.replace('`', '``').replace('_', r'\_') \
-            .replace('%', r'\%%') + '`'
+            .replace('%', r'%%') + '`'
     else:
         return '`' + identifier.replace('`', '``').replace('%', '%%') + '`'
 
@@ -808,7 +869,7 @@ def version(**connection_args):
         return ''
 
     try:
-        return cur.fetchone()[0]
+        return salt.utils.data.decode(cur.fetchone()[0])
     except IndexError:
         return ''
 
@@ -1203,6 +1264,7 @@ def user_exists(user,
     '''
     run_verify = False
     server_version = version(**connection_args)
+    compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
     # Its password might have previously change with the same command/state
@@ -1234,7 +1296,7 @@ def user_exists(user,
         else:
             qry += ' AND ' + password_column + ' = \'\''
     elif password:
-        if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
             run_verify = True
         else:
             _password = password
@@ -1341,6 +1403,7 @@ def user_create(user,
         salt '*' mysql.user_create 'username' 'hostname' allow_passwordless=True
     '''
     server_version = version(**connection_args)
+    compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
     if user_exists(user, host, **connection_args):
         log.info('User \'%s\'@\'%s\' already exists', user, host)
         return False
@@ -1361,7 +1424,7 @@ def user_create(user,
         qry += ' IDENTIFIED BY %(password)s'
         args['password'] = six.text_type(password)
     elif password_hash is not None:
-        if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
             qry += ' IDENTIFIED BY %(password)s'
         else:
             qry += ' IDENTIFIED BY PASSWORD %(password)s'
@@ -1445,9 +1508,10 @@ def user_chpass(user,
         salt '*' mysql.user_chpass frank localhost allow_passwordless=True
     '''
     server_version = version(**connection_args)
+    compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
     args = {}
     if password is not None:
-        if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
             password_sql = '%(password)s'
         else:
             password_sql = 'PASSWORD(%(password)s)'
@@ -1470,28 +1534,23 @@ def user_chpass(user,
         password_column = __password_column(**connection_args)
 
     cur = dbc.cursor()
-    if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
-        qry = ("ALTER USER '" + user + "'@'" + host + "'"
-               " IDENTIFIED BY '" + password + "';")
-        args = {}
+    args['user'] = user
+    args['host'] = host
+    if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
+        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
     else:
-        qry = ('UPDATE mysql.user SET ' + password_column + '='
-               + password_sql +
+        qry = ('UPDATE mysql.user SET ' + password_column + '=' + password_sql +
                ' WHERE User=%(user)s AND Host = %(host)s;')
-        args['user'] = user
-        args['host'] = host
     if salt.utils.data.is_true(allow_passwordless) and \
             salt.utils.data.is_true(unix_socket):
         if host == 'localhost':
-            if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
-                qry = ("ALTER USER '" + user + "'@'" + host + "'"
-                       " IDENTIFIED BY '" + password + "';")
-                args = {}
+            args['unix_socket'] = 'auth_socket'
+            if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
+                qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(unix_socket)s AS %(user)s;"
             else:
                 qry = ('UPDATE mysql.user SET ' + password_column + '='
                        + password_sql + ', plugin=%(unix_socket)s' +
                        ' WHERE User=%(user)s AND Host = %(host)s;')
-                args['unix_socket'] = 'unix_socket'
         else:
             log.error('Auth via unix_socket can be set only for host=localhost')
     try:
@@ -1502,7 +1561,7 @@ def user_chpass(user,
         log.error(err)
         return False
 
-    if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+    if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
         _execute(cur, 'FLUSH PRIVILEGES;')
         log.info(
             'Password for user \'%s\'@\'%s\' has been %s',
@@ -1736,7 +1795,7 @@ def __grant_generate(grant,
     args = {}
     args['user'] = user
     args['host'] = host
-    if isinstance(ssl_option, list) and len(ssl_option):
+    if ssl_option and isinstance(ssl_option, list):
         qry += __ssl_option_sanitize(ssl_option)
     if salt.utils.data.is_true(grant_option):
         qry += ' WITH GRANT OPTION'
@@ -1787,12 +1846,12 @@ def user_grants(user,
 
 
 def grant_exists(grant,
-                database,
-                user,
-                host='localhost',
-                grant_option=False,
-                escape=True,
-                **connection_args):
+                 database,
+                 user,
+                 host='localhost',
+                 grant_option=False,
+                 escape=True,
+                 **connection_args):
     '''
     Checks to see if a grant exists in the database
 
@@ -1803,6 +1862,15 @@ def grant_exists(grant,
         salt '*' mysql.grant_exists \
              'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
+
+    server_version = version(**connection_args)
+    if 'ALL' in grant:
+        if salt.utils.versions.version_cmp(server_version, '8.0') >= 0 and \
+           'MariaDB' not in server_version:
+            grant = ','.join([i for i in __all_privileges__])
+        else:
+            grant = 'ALL PRIVILEGES'
+
     try:
         target = __grant_generate(
             grant, database, user, host, grant_option, escape
@@ -1818,15 +1886,27 @@ def grant_exists(grant,
                   'this could also indicate a connection error. Check your configuration.')
         return False
 
-    target_tokens = None
+    # Combine grants that match the same database
+    _grants = {}
     for grant in grants:
-        try:
-            if not target_tokens:  # Avoid the overhead of re-calc in loop
-                target_tokens = _grant_to_tokens(target)
-            grant_tokens = _grant_to_tokens(grant)
+        grant_token = _grant_to_tokens(grant)
+        if grant_token['database'] not in _grants:
+            _grants[grant_token['database']] = {'user': grant_token['user'],
+                                                'database': grant_token['database'],
+                                                'host': grant_token['host'],
+                                                'grant': grant_token['grant']}
+        else:
+            _grants[grant_token['database']]['grant'].extend(grant_token['grant'])
 
+    target_tokens = _grant_to_tokens(target)
+    for database, grant_tokens in _grants.items():
+        try:
             _grant_tokens = {}
             _target_tokens = {}
+
+            _grant_matches = [True if i in grant_tokens['grant']
+                              else False for i in target_tokens['grant']]
+
             for item in ['user', 'database', 'host']:
                 _grant_tokens[item] = grant_tokens[item].replace('"', '').replace('\\', '').replace('`', '')
                 _target_tokens[item] = target_tokens[item].replace('"', '').replace('\\', '').replace('`', '')
@@ -1834,7 +1914,7 @@ def grant_exists(grant,
             if _grant_tokens['user'] == _target_tokens['user'] and \
                     _grant_tokens['database'] == _target_tokens['database'] and \
                     _grant_tokens['host'] == _target_tokens['host'] and \
-                    set(grant_tokens['grant']) >= set(target_tokens['grant']):
+                    all(_grant_matches):
                 return True
             else:
                 log.debug('grants mismatch \'%s\'<>\'%s\'', grant_tokens, target_tokens)
@@ -2100,7 +2180,7 @@ def get_master_status(**connection_args):
     conn.close()
 
     # check for if this minion is not a master
-    if len(rtnv) == 0:
+    if not rtnv:
         rtnv.append([])
 
     log.debug('%s-->%s', mod, len(rtnv[0]))
@@ -2170,7 +2250,7 @@ def get_slave_status(**connection_args):
     conn.close()
 
     # check for if this minion is not a slave
-    if len(rtnv) == 0:
+    if not rtnv:
         rtnv.append([])
 
     log.debug('%s-->%s', mod, len(rtnv[0]))
@@ -2198,7 +2278,7 @@ def showvariables(**connection_args):
         return []
     rtnv = __do_query_into_hash(conn, "SHOW VARIABLES")
     conn.close()
-    if len(rtnv) == 0:
+    if not rtnv:
         rtnv.append([])
 
     log.debug('%s-->%s', mod, len(rtnv[0]))
@@ -2226,7 +2306,7 @@ def showglobal(**connection_args):
         return []
     rtnv = __do_query_into_hash(conn, "SHOW GLOBAL VARIABLES")
     conn.close()
-    if len(rtnv) == 0:
+    if not rtnv:
         rtnv.append([])
 
     log.debug('%s-->%s', mod, len(rtnv[0]))

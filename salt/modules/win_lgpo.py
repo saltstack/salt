@@ -39,12 +39,14 @@ Current known limitations
 '''
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
+import csv
 import io
 import os
 import logging
 import re
 import locale
 import ctypes
+import tempfile
 import uuid
 
 # Import Salt libs
@@ -280,6 +282,19 @@ class _policy_info(object):
     netsh advfirewall>set help
     netsh advfirewall>set domain help
 
+    AdvAudit Mechanism
+    ------------------
+
+    The Advanced Audit Policies are configured using a combination of the
+    auditpol command-line utility and modifying the audit.csv file in two
+    locations. The value of this key is a dict with the following make-up:
+
+    ======  ===================================
+    Key     Value
+    ======  ===================================
+    Option  The Advanced Audit Policy to modify
+    ======  ===================================
+
     Transforms
     ----------
 
@@ -309,6 +324,13 @@ class _policy_info(object):
             3: 'Success, Failure',
             'Not Defined': 'Not Defined',
             None: 'Not Defined',
+        }
+        self.advanced_audit_lookup = {
+            0: 'No Auditing',
+            1: 'Success',
+            2: 'Failure',
+            3: 'Success and Failure',
+            None: 'Not Configured',
         }
         self.sc_removal_lookup = {
             0: 'No Action',
@@ -372,6 +394,18 @@ class _policy_info(object):
                 'value_lookup': True,
             },
         }
+        self.advanced_audit_transform = {
+            'Get': '_dict_lookup',
+            'Put': '_dict_lookup',
+            'GetArgs': {
+                'lookup': self.advanced_audit_lookup,
+                'value_lookup': False,
+            },
+            'PutArgs': {
+                'lookup': self.advanced_audit_lookup,
+                'value_lookup': True,
+            },
+        }
         self.enabled_one_disabled_zero_strings = {
             '0': 'Disabled',
             '1': 'Enabled',
@@ -417,6 +451,13 @@ class _policy_info(object):
             'Security Settings',
             'Local Policies',
             'Audit Policy'
+        ]
+        self.advanced_audit_policy_gpedit_path = [
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Advanced Audit Policy Configuration',
+            'System Audit Policies - Local Group Policy Object'
         ]
         self.account_lockout_policy_gpedit_path = [
             'Computer Configuration',
@@ -2603,6 +2644,11 @@ class _policy_info(object):
                             'Put': '_minutes_to_seconds'
                         },
                     },
+                    ########## LEGACY AUDIT POLICIES ##########
+                    # To use these set the following policy to DISABLED
+                    # "Audit: Force audit policy subcategory settings (Windows Vista or later) to override audit policy category settings"
+                    # or it's alias...
+                    # SceNoApplyLegacyAuditPolicy
                     'AuditAccountLogon': {
                         'Policy': 'Audit account logon events',
                         'lgpo_section': self.audit_policy_gpedit_path,
@@ -2693,6 +2739,557 @@ class _policy_info(object):
                         },
                         'Transform': self.audit_transform,
                     },
+                    ########## END OF LEGACY AUDIT POLICIES ##########
+                    ########## ADVANCED AUDIT POLICIES ##########
+                    # Advanced Audit Policies
+                    # To use these set the following policy to ENABLED
+                    # "Audit: Force audit policy subcategory settings (Windows
+                    # Vista or later) to override audit policy category
+                    # settings"
+                    # or it's alias...
+                    # SceNoApplyLegacyAuditPolicy
+
+                    # Account Logon Section
+                    'AuditCredentialValidation': {
+                        'Policy': 'Audit Credential Validation',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Credential Validation',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditKerberosAuthenticationService': {
+                        'Policy': 'Audit Kerberos Authentication Service',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Kerberos Authentication Service',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditKerberosServiceTicketOperations': {
+                        'Policy': 'Audit Kerberos Service Ticket Operations',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Kerberos Service Ticket Operations',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditOtherAccountLogonEvents': {
+                        'Policy': 'Audit Other Account Logon Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Other Account Logon Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # Account Management Section
+                    'AuditApplicationGroupManagement': {
+                        'Policy': 'Audit Application Group Management',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Application Group Management',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditComputerAccountManagement': {
+                        'Policy': 'Audit Computer Account Management',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Computer Account Management',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditDistributionGroupManagement': {
+                        'Policy': 'Audit Distribution Group Management',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Distribution Group Management',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditOtherAccountManagementEvents': {
+                        'Policy': 'Audit Other Account Management Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Other Account Management Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditSecurityGroupManagement': {
+                        'Policy': 'Audit Security Group Management',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Security Group Management',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditUserAccountManagement': {
+                        'Policy': 'Audit User Account Management',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit User Account Management',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # Detailed Tracking Settings
+                    'AuditDPAPIActivity': {
+                        'Policy': 'Audit DPAPI Activity',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit DPAPI Activity',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditPNPActivity': {
+                        'Policy': 'Audit PNP Activity',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit PNP Activity',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditProcessCreation': {
+                        'Policy': 'Audit Process Creation',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Process Creation',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditProcessTermination': {
+                        'Policy': 'Audit Process Termination',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Process Termination',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditRPCEvents': {
+                        'Policy': 'Audit RPC Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit RPC Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditTokenRightAdjusted': {
+                        'Policy': 'Audit Token Right Adjusted',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Token Right Adjusted',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # DS Access Section
+                    'AuditDetailedDirectoryServiceReplication': {
+                        'Policy': 'Audit Detailed Directory Service Replication',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Detailed Directory Service Replication',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditDirectoryServiceAccess': {
+                        'Policy': 'Audit Directory Service Access',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Directory Service Access',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditDirectoryServiceChanges': {
+                        'Policy': 'Audit Directory Service Changes',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Directory Service Changes',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditDirectoryServiceReplication': {
+                        'Policy': 'Audit Directory Service Replication',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Directory Service Replication',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # Logon/Logoff Section
+                    'AuditAccountLockout': {
+                        'Policy': 'Audit Account Lockout',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Account Lockout',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditUserDeviceClaims': {
+                        'Policy': 'Audit User / Device Claims',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit User / Device Claims',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditGroupMembership': {
+                        'Policy': 'Audit Group Membership',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Group Membership',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditIPsecExtendedMode': {
+                        'Policy': 'Audit IPsec Extended Mode',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit IPsec Extended Mode',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditIPsecMainMode': {
+                        'Policy': 'Audit IPsec Main Mode',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit IPsec Main Mode',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditIPsecQuickMode': {
+                        'Policy': 'Audit IPsec Quick Mode',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit IPsec Quick Mode',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditLogoff': {
+                        'Policy': 'Audit Logoff',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Logoff',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditLogon': {
+                        'Policy': 'Audit Logon',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Logon',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditNetworkPolicyServer': {
+                        'Policy': 'Audit Network Policy Server',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Network Policy Server',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditOtherLogonLogoffEvents': {
+                        'Policy': 'Audit Other Logon/Logoff Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Other Logon/Logoff Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditSpecialLogon': {
+                        'Policy': 'Audit Special Logon',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Special Logon',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # Object Access Section
+                    'AuditApplicationGenerated': {
+                        'Policy': 'Audit Application Generated',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Application Generated',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditCertificationServices': {
+                        'Policy': 'Audit Certification Services',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Certification Services',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditDetailedFileShare': {
+                        'Policy': 'Audit Detailed File Share',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Detailed File Share',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditFileShare': {
+                        'Policy': 'Audit File Share',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit File Share',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditFileSystem': {
+                        'Policy': 'Audit File System',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit File System',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditFilteringPlatformConnection': {
+                        'Policy': 'Audit Filtering Platform Connection',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Filtering Platform Connection',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditFilteringPlatformPacketDrop': {
+                        'Policy': 'Audit Filtering Platform Packet Drop',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Filtering Platform Packet Drop',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditHandleManipulation': {
+                        'Policy': 'Audit Handle Manipulation',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Handle Manipulation',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditKernelObject': {
+                        'Policy': 'Audit Kernel Object',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Kernel Object',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditOtherObjectAccessEvents': {
+                        'Policy': 'Audit Other Object Access Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Other Object Access Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditRegistry': {
+                        'Policy': 'Audit Registry',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Registry',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditRemovableStorage': {
+                        'Policy': 'Audit Removable Storage',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Removable Storage',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditSAM': {
+                        'Policy': 'Audit SAM',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit SAM',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditCentralAccessPolicyStaging': {
+                        'Policy': 'Audit Central Access Policy Staging',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Central Access Policy Staging',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # Policy Change Section
+                    'AuditAuditPolicyChange': {
+                        'Policy': 'Audit Audit Policy Change',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Audit Policy Change',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditAuthenticationPolicyChange': {
+                        'Policy': 'Audit Authentication Policy Change',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Authentication Policy Change',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditAuthorizationPolicyChange': {
+                        'Policy': 'Audit Authorization Policy Change',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Authorization Policy Change',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditFilteringPlatformPolicyChange': {
+                        'Policy': 'Audit Filtering Platform Policy Change',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Filtering Platform Policy Change',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditMPSSVCRuleLevelPolicyChange': {
+                        'Policy': 'Audit MPSSVC Rule-Level Policy Change',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit MPSSVC Rule-Level Policy Change',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditOtherPolicyChangeEvents': {
+                        'Policy': 'Audit Other Policy Change Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Other Policy Change Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # Privilege Use Section
+                    'AuditNonSensitivePrivilegeUse': {
+                        'Policy': 'Audit Non Sensitive Privilege Use',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Non Sensitive Privilege Use',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditOtherPrivilegeUseEvents': {
+                        'Policy': 'Audit Other Privilege Use Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Other Privilege Use Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditSensitivePrivilegeUse': {
+                        'Policy': 'Audit Sensitive Privilege Use',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Sensitive Privilege Use',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # System Section
+                    'AuditIPsecDriver': {
+                        'Policy': 'Audit IPsec Driver',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit IPsec Driver',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditOtherSystemEvents': {
+                        'Policy': 'Audit Other System Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Other System Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditSecurityStateChange': {
+                        'Policy': 'Audit Security State Change',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Security State Change',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditSecuritySystemExtension': {
+                        'Policy': 'Audit Security System Extension',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Security System Extension',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditSystemIntegrity': {
+                        'Policy': 'Audit System Integrity',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit System Integrity',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    ########## END OF ADVANCED AUDIT POLICIES ##########
                     'SeTrustedCredManAccessPrivilege': {
                         'Policy': 'Access Credential Manager as a trusted '
                                   'caller',
@@ -4373,17 +4970,307 @@ def _buildElementNsmap(using_elements):
     return thisMap
 
 
+def _get_audit_defaults(option=None):
+    '''
+    Loads audit.csv defaults into a dict in __context__ called
+    'lgpo.audit_defaults'. The dictionary includes fieldnames and all
+    configurable policies as keys. The values are used to create/modify the
+    ``audit.csv`` file. The first entry is `fieldnames` used to create the
+    header for the csv file. The rest of the entries are the audit policy names.
+    Sample data follows:
+
+    {
+        'fieldnames': ['Machine Name',
+                       'Policy Target',
+                       'Subcategory',
+                       'Subcategory GUID',
+                       'Inclusion Setting',
+                       'Exclusion Setting',
+                       'Setting Value'],
+        'Audit Sensitive Privilege Use': {'Auditpol Name': 'Sensitive Privilege Use',
+                                          'Exclusion Setting': '',
+                                          'Inclusion Setting': 'No Auditing',
+                                          'Machine Name': 'WIN-8FGT3E045SE',
+                                          'Policy Target': 'System',
+                                          'Setting Value': '0',
+                                          'Subcategory': u'Audit Sensitive Privilege Use',
+                                          'Subcategory GUID': '{0CCE9228-69AE-11D9-BED3-505054503030}'},
+        'Audit Special Logon': {'Auditpol Name': 'Special Logon',
+                                'Exclusion Setting': '',
+                                'Inclusion Setting': 'No Auditing',
+                                'Machine Name': 'WIN-8FGT3E045SE',
+                                'Policy Target': 'System',
+                                'Setting Value': '0',
+                                'Subcategory': u'Audit Special Logon',
+                                'Subcategory GUID': '{0CCE921B-69AE-11D9-BED3-505054503030}'},
+        'Audit System Integrity': {'Auditpol Name': 'System Integrity',
+                                   'Exclusion Setting': '',
+                                   'Inclusion Setting': 'No Auditing',
+                                   'Machine Name': 'WIN-8FGT3E045SE',
+                                   'Policy Target': 'System',
+                                   'Setting Value': '0',
+                                   'Subcategory': u'Audit System Integrity',
+                                   'Subcategory GUID': '{0CCE9212-69AE-11D9-BED3-505054503030}'},
+        ...
+    }
+
+    .. note::
+        `Auditpol Name` designates the value to use when setting the value with
+        the auditpol command
+
+    Args:
+        option (str): The item from the dictionary to return. If ``None`` the
+            entire dictionary is returned. Default is ``None``
+
+    Returns:
+        dict: If ``None`` or one of the audit settings is passed
+        list: If ``fieldnames`` is passed
+    '''
+    if 'lgpo.audit_defaults' not in __context__:
+        # Get available setting names and GUIDs
+        # This is used to get the fieldnames and GUIDs for individual policies
+        log.debug('Loading auditpol defaults into __context__')
+        dump = __utils__['auditpol.get_auditpol_dump']()
+        reader = csv.DictReader(dump)
+        audit_defaults = {'fieldnames': reader.fieldnames}
+        for row in reader:
+            row['Machine Name'] = ''
+            row['Auditpol Name'] = row['Subcategory']
+            # Special handling for snowflake scenarios where the audit.csv names
+            # don't match the auditpol names
+            if row['Subcategory'] == 'Central Policy Staging':
+                row['Subcategory'] = 'Audit Central Access Policy Staging'
+            elif row['Subcategory'] == 'Plug and Play Events':
+                row['Subcategory'] = 'Audit PNP Activity'
+            elif row['Subcategory'] == 'Token Right Adjusted Events':
+                row['Subcategory'] = 'Audit Token Right Adjusted'
+            else:
+                row['Subcategory'] = 'Audit {0}'.format(row['Subcategory'])
+            audit_defaults[row['Subcategory']] = row
+
+        __context__['lgpo.audit_defaults'] = audit_defaults
+
+    if option:
+        return __context__['lgpo.audit_defaults'][option]
+    else:
+        return __context__['lgpo.audit_defaults']
+
+
+def _findOptionValueAdvAudit(option):
+    '''
+    Get the Advanced Auditing policy as configured in
+    ``C:\\Windows\\Security\\Audit\\audit.csv``
+
+    Args:
+        option (str): The name of the setting as it appears in audit.csv
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+    '''
+    if 'lgpo.adv_audit_data' not in __context__:
+        system_root = os.environ.get('SystemRoot', 'C:\\Windows')
+        f_audit = os.path.join(system_root, 'security', 'audit', 'audit.csv')
+        f_audit_gpo = os.path.join(system_root, 'System32', 'GroupPolicy',
+                                   'Machine', 'Microsoft', 'Windows NT',
+                                   'Audit', 'audit.csv')
+
+        # Make sure there is an existing audit.csv file on the machine
+        if not __salt__['file.file_exists'](f_audit):
+            if __salt__['file.file_exists'](f_audit_gpo):
+                # If the GPO audit.csv exists, we'll use that one
+                __salt__['file.copy'](f_audit_gpo, f_audit)
+            else:
+                field_names = _get_audit_defaults('fieldnames')
+                # If the file doesn't exist anywhere, create it with default
+                # fieldnames
+                __salt__['file.makedirs'](f_audit)
+                __salt__['file.write'](f_audit, ','.join(field_names))
+
+        audit_settings = {}
+        with salt.utils.files.fopen(f_audit, mode='r') as csv_file:
+            reader = csv.DictReader(csv_file)
+
+            for row in reader:
+                audit_settings.update(
+                    {row['Subcategory']: row['Setting Value']})
+
+        __context__['lgpo.adv_audit_data'] = audit_settings
+
+    return __context__['lgpo.adv_audit_data'].get(option, None)
+
+
+def _set_audit_file_data(option, value):
+    '''
+    Helper function that sets the Advanced Audit settings in the two .csv files
+    on Windows. Those files are located at:
+    C:\\Windows\\Security\\Audit\\audit.csv
+    C:\\Windows\\System32\\GroupPolicy\\Machine\\Microsoft\\Windows NT\\Audit\\audit.csv
+
+    Args:
+        option (str): The name of the option to set
+        value (str): The value to set. ['None', '0', '1', '2', '3']
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+    '''
+    # Set up some paths here
+    system_root = os.environ.get('SystemRoot', 'C:\\Windows')
+    f_audit = os.path.join(system_root, 'security', 'audit', 'audit.csv')
+    f_audit_gpo = os.path.join(system_root, 'System32', 'GroupPolicy',
+                               'Machine', 'Microsoft', 'Windows NT',
+                               'Audit', 'audit.csv')
+    f_temp = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv',
+                                         prefix='audit')
+
+    # Lookup dict for "Inclusion Setting" field
+    auditpol_values = {'None': 'No Auditing',
+                       '0': 'No Auditing',
+                       '1': 'Success',
+                       '2': 'Failure',
+                       '3': 'Success and Failure'}
+
+    try:
+        # Open the existing audit.csv and load the csv `reader`
+        with salt.utils.files.fopen(f_audit, mode='r') as csv_file:
+            reader = csv.DictReader(csv_file)
+
+            # Open the temporary .csv and load the csv `writer`
+            with salt.utils.files.fopen(f_temp.name, mode='w') as tmp_file:
+                writer = csv.DictWriter(tmp_file, fieldnames=reader.fieldnames)
+
+                # Write the header values (labels)
+                writer.writeheader()
+
+                value_written = False
+                # Loop through the current audit.csv and write the changes to
+                # the temp csv file for existing settings
+                for row in reader:
+                    # If the row matches the value we're setting, update it with
+                    # the new value
+                    if row['Subcategory'] == option:
+                        if not value == 'None':
+                            # The value is not None, make the change
+                            row['Inclusion Setting'] = auditpol_values[value]
+                            row['Setting Value'] = value
+                            log.debug('LGPO: Setting {0} to {1}'
+                                      ''.format(option, value))
+                            writer.writerow(row)
+                        else:
+                            # value is None, remove it by not writing it to the
+                            # temp file
+                            log.debug('LGPO: Removing {0}'.format(option))
+                        value_written = True
+                    # If it's not the value we're setting, just write it
+                    else:
+                        writer.writerow(row)
+
+                # If a value was not written, it is a new setting not found in
+                # the existing audit.cvs file. Add the new setting with values
+                # from the defaults
+                if not value_written:
+                    if not value == 'None':
+                        # value is not None, write the new value
+                        log.debug('LGPO: Setting {0} to {1}'
+                                  ''.format(option, value))
+                        defaults = _get_audit_defaults(option)
+                        writer.writerow({
+                            'Machine Name': defaults['Machine Name'],
+                            'Policy Target': defaults['Policy Target'],
+                            'Subcategory': defaults['Subcategory'],
+                            'Subcategory GUID': defaults['Subcategory GUID'],
+                            'Inclusion Setting': auditpol_values[value],
+                            'Exclusion Setting': defaults['Exclusion Setting'],
+                            'Setting Value': value})
+                    value_written = True
+
+        if value_written:
+            # Copy the temporary csv file over the existing audit.csv in both
+            # locations if a value was written
+            __salt__['file.copy'](f_temp.name, f_audit, remove_existing=True)
+            __salt__['file.makedirs'](f_audit_gpo)
+            __salt__['file.copy'](f_temp.name, f_audit_gpo, remove_existing=True)
+    finally:
+        f_temp.close()
+        __salt__['file.remove'](f_temp.name)
+
+    return value_written
+
+
+def _set_auditpol_data(option, value):
+    '''
+    Helper function that updates the current applied settings to match what has
+    just been set in the audit.csv files. We're doing it this way instead of
+    running `gpupdate`
+
+    Args:
+        option (str): The name of the option to set
+        value (str): The value to set. ['None', '0', '1', '2', '3']
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+    '''
+    auditpol_values = {'None': 'No Auditing',
+                       '0': 'No Auditing',
+                       '1': 'Success',
+                       '2': 'Failure',
+                       '3': 'Success and Failure'}
+    defaults = _get_audit_defaults(option)
+    return __utils__['auditpol.set_setting'](
+        name=defaults['Auditpol Name'],
+        value=auditpol_values[value])
+
+
+def _setOptionValueAdvAudit(option, value):
+    '''
+    Helper function to update the Advanced Audit policy on the machine. This
+    function modifies the two ``audit.csv`` files in the following locations:
+
+    C:\\Windows\\Security\\Audit\\audit.csv
+    C:\\Windows\\System32\\GroupPolicy\\Machine\\Microsoft\\Windows NT\\Audit\\audit.csv
+
+    Then it applies those settings using ``auditpol``
+
+    After that, it updates ``__context__`` with the new setting
+
+    Args:
+        option (str): The name of the option to set
+        value (str): The value to set. ['None', '0', '1', '2', '3']
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+    '''
+    # Set the values in both audit.csv files
+    if not _set_audit_file_data(option=option, value=value):
+        raise CommandExecutionError('Failed to set audit.csv option: {0}'
+                                    ''.format(option))
+    # Apply the settings locally
+    if not _set_auditpol_data(option=option, value=value):
+        # Only log this error, it will be in effect the next time the machine
+        # updates its policy
+        log.debug('Failed to apply audit setting: {0}'.format(option))
+
+    # Update __context__
+    if value is None:
+        log.debug('LGPO: Removing Advanced Audit data: {0}'.format(option))
+        __context__['lgpo.adv_audit_data'].pop(option)
+    else:
+        log.debug('LGPO: Updating Advanced Audit data: {0}: {1}'
+                  ''.format(option, value))
+        __context__['lgpo.adv_audit_data'][option] = value
+
+    return True
+
+
 def _findOptionValueNetSH(profile, option):
     if 'lgpo.netsh_data' not in __context__:
         __context__['lgpo.netsh_data'] = {}
 
     if profile not in __context__['lgpo.netsh_data']:
-        log.debug('LGPO: Loading netsh data for {0} profile'.format(profile))
+        log.debug('LGPO: Loading netsh data for %s profile', profile)
         settings = salt.utils.win_lgpo_netsh.get_all_settings(profile=profile,
                                                               store='lgpo')
         __context__['lgpo.netsh_data'].update({profile: settings})
-    log.debug('LGPO: netsh returning value: {0}'
-              ''.format(__context__['lgpo.netsh_data'][profile][option]))
+    log.debug('LGPO: netsh returning value: %s', __context__['lgpo.netsh_data'][profile][option])
     return __context__['lgpo.netsh_data'][profile][option]
 
 
@@ -4391,10 +5278,11 @@ def _setOptionValueNetSH(profile, section, option, value):
     if section not in ('firewallpolicy', 'settings', 'logging', 'state'):
         raise ValueError('LGPO: Invalid section: {0}'.format(section))
     log.debug('LGPO: Setting the following\n'
-              'Profile: {0}\n'
-              'Section: {1}\n'
-              'Option: {2}\n'
-              'Value: {3}'.format(profile, section, option, value))
+              'Profile: %s\n'
+              'Section: %s\n'
+              'Option: %s\n'
+              'Value: %s',
+              profile, section, option, value)
     if section == 'firewallpolicy':
         salt.utils.win_lgpo_netsh.set_firewall_settings(
             profile=profile,
@@ -4416,7 +5304,7 @@ def _setOptionValueNetSH(profile, section, option, value):
             option = option[3:]
         salt.utils.win_lgpo_netsh.set_logging_settings(
             profile=profile, setting=option, value=value, store='lgpo')
-    log.debug('LGPO: Clearing netsh data for {0} profile'.format(profile))
+    log.debug('LGPO: Clearing netsh data for %s profile', profile)
     __context__['lgpo.netsh_data'].pop(profile)
     return True
 
@@ -4527,7 +5415,7 @@ def _validateSetting(value, policy):
         True
     if the Policy has 'Children', we'll validate their settings too
     '''
-    log.debug('validating {0} for policy {1}'.format(value, policy))
+    log.debug('validating %s for policy %s', value, policy)
     if 'Settings' in policy:
         if policy['Settings']:
             if isinstance(policy['Settings'], list):
@@ -4717,7 +5605,7 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
                                                        )
                                         ].split(encoded_semicolon)
                 if len(pol_entry) >= 2:
-                    valueName = pol_entry[1]
+                    valueName = pol_entry[1].decode('utf-16-le').rstrip(chr(0))
                 if len(pol_entry) >= 5:
                     value = pol_entry[4]
                     if vtype == 'REG_DWORD' or vtype == 'REG_QWORD':
@@ -4969,7 +5857,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                 check_deleted = True
             if not check_deleted:
                 this_vtype = 'REG_DWORD'
-            this_element_value = chr(1).encode('utf-16-le')
+            this_element_value = struct.pack('I', 1)
             standard_element_expected_string = False
         elif etree.QName(element).localname == 'decimal':
             # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
@@ -5035,18 +5923,18 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                          ']'.encode('utf-16-le')])
             if 'expandable' in element.attrib:
                 this_vtype = 'REG_EXPAND_SZ'
-            if 'explicitValue' in element.attrib and element.attrib['explicitValue'].lower() == 'true':
+            if element.attrib.get('explicitValue', 'false').lower() == 'true':
                 if this_element_value is not None:
-                    element_valuenames = this_element_value.keys()
-                    element_values = this_element_value.values()
-            if 'valuePrefix' in element.attrib:
+                    element_valuenames = [str(k) for k in this_element_value.keys()]
+                    element_values = [str(v) for v in this_element_value.values()]
+            elif 'valuePrefix' in element.attrib:
                 # if the valuePrefix attribute exists, the valuenames are <prefix><number>
                 # most prefixes attributes are empty in the admx files, so the valuenames
                 # end up being just numbers
                 if element.attrib['valuePrefix'] != '':
                     if this_element_value is not None:
-                        element_valuenames = ['{0}{1}'.format(element.attrib['valuePrefix'],
-                                                              k) for k in element_valuenames]
+                        element_valuenames = ['{0}{1}'.format(
+                            element.attrib['valuePrefix'], k) for k in element_valuenames]
             else:
                 # if there is no valuePrefix attribute, the valuename is the value
                 if element_values is not None:
@@ -5180,7 +6068,7 @@ def _checkAllAdmxPolicies(policy_class,
     admx_policy_definitions = _get_policy_definitions(language=adml_language)
     adml_policy_resources = _get_policy_resources(language=adml_language)
     if policy_file_data:
-        log.debug('POLICY CLASS {0} has file data'.format(policy_class))
+        log.debug('POLICY CLASS %s has file data', policy_class)
         policy_filedata_split = re.sub(
             salt.utils.stringutils.to_bytes(r'\]{0}$'.format(chr(0))),
             b'',
@@ -5527,12 +6415,12 @@ def _checkAllAdmxPolicies(policy_class,
                                                             policy_file_data):
                                     configured_elements[this_element_name] = "Disabled"
                                     policy_disabled_elements = policy_disabled_elements + 1
-                                    log.debug('element {0} is disabled'.format(child_item.attrib['id']))
+                                    log.debug('element %s is disabled', child_item.attrib['id'])
                     if element_only_enabled_disabled:
-                        if len(required_elements.keys()) > 0 \
-                                    and len(configured_elements.keys()) == len(required_elements.keys()):
-                            if policy_disabled_elements == len(required_elements.keys()):
-                                log.debug('{0} is disabled by all enum elements'.format(this_policyname))
+                        if required_elements \
+                                    and len(configured_elements) == len(required_elements):
+                            if policy_disabled_elements == len(required_elements):
+                                log.debug('%s is disabled by all enum elements', this_policyname)
                                 if this_policynamespace not in policy_vals:
                                     policy_vals[this_policynamespace] = {}
                                 policy_vals[this_policynamespace][this_policyname] = 'Disabled'
@@ -5540,7 +6428,7 @@ def _checkAllAdmxPolicies(policy_class,
                                 if this_policynamespace not in policy_vals:
                                     policy_vals[this_policynamespace] = {}
                                 policy_vals[this_policynamespace][this_policyname] = configured_elements
-                                log.debug('{0} is enabled by enum elements'.format(this_policyname))
+                                log.debug('%s is enabled by enum elements', this_policyname)
                     else:
                         if this_policy_setting == 'Enabled':
                             if this_policynamespace not in policy_vals:
@@ -6116,7 +7004,7 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                                                                       TRUE_LIST_XPATH,
                                                                                       None,
                                                                                       test_items=False)
-                                                        log.debug('working with trueList portion of {0}'.format(admPolicy))
+                                                        log.debug('working with trueList portion of %s', admPolicy)
                                                     else:
                                                         list_strings = _checkListItem(child_item,
                                                                                       admPolicy,
@@ -6435,8 +7323,8 @@ def _lookup_admin_template(policy_name,
                             display_name=display_name_searchval,
                             registry_class=policy_class)
                 if admx_search_results:
-                    log.debug('processing admx_search_results of {0}'.format(admx_search_results))
-                    log.debug('multiple_adml_entries is {0}'.format(multiple_adml_entries))
+                    log.debug('processing admx_search_results of %s', admx_search_results)
+                    log.debug('multiple_adml_entries is %s', multiple_adml_entries)
                     if (len(admx_search_results) == 1 or hierarchy) and not multiple_adml_entries:
                         found = False
                         for search_result in admx_search_results:
@@ -6777,7 +7665,7 @@ def get(policy_class=None, return_full_policy_names=True,
                 vals_key_name = policy_name
                 if 'Registry' in _pol:
                     # get value from registry
-                    class_vals[policy_name] = __salt__['reg.read_value'](
+                    class_vals[policy_name] = __utils__['reg.read_value'](
                         _pol['Registry']['Hive'],
                         _pol['Registry']['Path'],
                         _pol['Registry']['Value'])['vdata']
@@ -6794,7 +7682,10 @@ def get(policy_class=None, return_full_policy_names=True,
                     class_vals[policy_name] = _findOptionValueNetSH(
                         profile=_pol['NetSH']['Profile'],
                         option=_pol['NetSH']['Option'])
-
+                elif 'AdvAudit' in _pol:
+                    # get value from auditpol
+                    class_vals[policy_name] = _findOptionValueAdvAudit(
+                        option=_pol['AdvAudit']['Option'])
                 elif 'NetUserModal' in _pol:
                     # get value from UserNetMod
                     if _pol['NetUserModal']['Modal'] not in modal_returns:
@@ -7021,6 +7912,7 @@ def set_(computer_policy=None,
         for p_class in policies:
             _secedits = {}
             _netshs = {}
+            _advaudits = {}
             _modal_sets = {}
             _admTemplateData = {}
             _regedits = {}
@@ -7068,6 +7960,12 @@ def set_(computer_policy=None,
                                 'profile': _pol['NetSH']['Profile'],
                                 'section': _pol['NetSH']['Section'],
                                 'option': _pol['NetSH']['Option'],
+                                'value': six.text_type(_value)
+                            })
+                        elif 'AdvAudit' in _pol:
+                            # set value with advaudit
+                            _advaudits.setdefault(policy_name, {
+                                'option': _pol['AdvAudit']['Option'],
                                 'value': six.text_type(_value)
                             })
                         elif 'NetUserModal' in _pol:
@@ -7201,19 +8099,19 @@ def set_(computer_policy=None,
                         log.debug('%s is a Registry policy', regedit)
                         # if the value setting is None or "(value not set)", we will delete the value from the registry
                         if _regedits[regedit]['value'] is not None and _regedits[regedit]['value'] != '(value not set)':
-                            _ret = __salt__['reg.set_value'](
+                            _ret = __utils__['reg.set_value'](
                                     _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'],
                                     _regedits[regedit]['value'],
                                     _regedits[regedit]['policy']['Registry']['Type'])
                         else:
-                            _ret = __salt__['reg.read_value'](
+                            _ret = __utils__['reg.read_value'](
                                     _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'])
                             if _ret['success'] and _ret['vdata'] != '(value not set)':
-                                _ret = __salt__['reg.delete_value'](
+                                _ret = __utils__['reg.delete_value'](
                                         _regedits[regedit]['policy']['Registry']['Hive'],
                                         _regedits[regedit]['policy']['Registry']['Path'],
                                         _regedits[regedit]['policy']['Registry']['Value'])
@@ -7263,9 +8161,16 @@ def set_(computer_policy=None,
                 if _netshs:
                     # we've got netsh settings to make
                     for setting in _netshs:
-                        log.debug('Setting firewall policy: {0}'.format(setting))
+                        log.debug('Setting firewall policy: %s', setting)
                         log.debug(_netshs[setting])
                         _setOptionValueNetSH(**_netshs[setting])
+
+                if _advaudits:
+                    # We've got AdvAudit settings to make
+                    for setting in _advaudits:
+                        log.debug('Setting Advanced Audit policy: {0}'.format(setting))
+                        log.debug(_advaudits[setting])
+                        _setOptionValueAdvAudit(**_advaudits[setting])
 
                 if _modal_sets:
                     # we've got modalsets to make

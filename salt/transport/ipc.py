@@ -226,7 +226,12 @@ class IPCServer(object):
             self.sock.close()
 
     def __del__(self):
-        self.close()
+        try:
+            self.close()
+        except TypeError:
+            # This is raised when Python's GC has collected objects which
+            # would be needed when calling self.close()
+            pass
 
 
 class IPCClient(object):
@@ -367,16 +372,21 @@ class IPCClient(object):
                 yield tornado.gen.sleep(1)
 
     def __del__(self):
-        with self._refcount_lock:
-            # Make sure we actually close no matter if something
-            # went wrong with our ref counting
-            self._refcount = 1
         try:
-            self.close()
-        except socket.error as exc:
-            if exc.errno != errno.EBADF:
-                # If its not a bad file descriptor error, raise
-                raise
+            with self._refcount_lock:
+                # Make sure we actually close no matter if something
+                # went wrong with our ref counting
+                self._refcount = 1
+            try:
+                self.close()
+            except socket.error as exc:
+                if exc.errno != errno.EBADF:
+                    # If its not a bad file descriptor error, raise
+                    raise
+        except TypeError:
+            # This is raised when Python's GC has collected objects which
+            # would be needed when calling self.close()
+            pass
 
     def close(self):
         '''
@@ -574,7 +584,7 @@ class IPCMessagePublisher(object):
         '''
         Send message to all connected sockets
         '''
-        if not len(self.streams):
+        if not self.streams:
             return
 
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
@@ -619,7 +629,12 @@ class IPCMessagePublisher(object):
             self.sock.close()
 
     def __del__(self):
-        self.close()
+        try:
+            self.close()
+        except TypeError:
+            # This is raised when Python's GC has collected objects which
+            # would be needed when calling self.close()
+            pass
 
 
 class IPCMessageSubscriber(IPCClient):
@@ -663,6 +678,8 @@ class IPCMessageSubscriber(IPCClient):
         self._sync_ioloop_running = False
         self.saved_data = []
         self._sync_read_in_progress = Semaphore()
+        self.callbacks = set()
+        self.reading = False
 
     @tornado.gen.coroutine
     def _read_sync(self, timeout):
@@ -750,6 +767,7 @@ class IPCMessageSubscriber(IPCClient):
         while not self.stream.closed():
             try:
                 self._read_stream_future = self.stream.read_bytes(4096, partial=True)
+                self.reading = True
                 wire_bytes = yield self._read_stream_future
                 self._read_stream_future = None
                 self.unpacker.feed(wire_bytes)
@@ -762,8 +780,12 @@ class IPCMessageSubscriber(IPCClient):
             except Exception as exc:
                 log.error('Exception occurred while Subscriber handling stream: %s', exc)
 
+    def __run_callbacks(self, raw):
+        for callback in self.callbacks:
+            self.io_loop.spawn_callback(callback, raw)
+
     @tornado.gen.coroutine
-    def read_async(self, callback):
+    def read_async(self):
         '''
         Asynchronously read messages and invoke a callback when they are ready.
 
@@ -778,7 +800,7 @@ class IPCMessageSubscriber(IPCClient):
             except Exception as exc:
                 log.error('Exception occurred while Subscriber connecting: %s', exc)
                 yield tornado.gen.sleep(1)
-        yield self._read_async(callback)
+        yield self._read_async(self.__run_callbacks)
 
     def close(self):
         '''

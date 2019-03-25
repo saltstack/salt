@@ -533,11 +533,11 @@ def _cmp_attrs(path, attrs):
         return None
 
     old = [chr for chr in lattrs if chr not in attrs]
-    if len(old) > 0:
+    if old:
         diff[1] = ''.join(old)
 
     new = [chr for chr in attrs if chr not in lattrs]
-    if len(new) > 0:
+    if new:
         diff[0] = ''.join(new)
 
     return diff
@@ -1942,7 +1942,7 @@ def line(path, content=None, match=None, mode=None, location=None,
     match = _regex_to_static(body, match)
 
     if os.stat(path).st_size == 0 and mode in ('delete', 'replace'):
-        log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
+        log.warning('Cannot find text to %s. File \'%s\' is empty.', mode, path)
         body = []
     elif mode == 'delete' and match:
         body = [line for line in body if line != match[0]]
@@ -2375,7 +2375,7 @@ def replace(path,
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
-            if 0 != len(new_file):
+            if new_file:
                 if not new_file[-1].endswith(salt.utils.stringutils.to_bytes(os.linesep)):
                     new_file[-1] += salt.utils.stringutils.to_bytes(os.linesep)
             new_file.append(not_found_content + salt.utils.stringutils.to_bytes(os.linesep))
@@ -3224,6 +3224,69 @@ def touch(name, atime=None, mtime=None):
     return os.path.exists(name)
 
 
+def tail(path, lines):
+    '''
+    .. versionadded:: Neon
+
+    Read the last n lines from a file
+
+    path
+        path to file
+
+    lines
+        number of lines to read
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.tail /path/to/file 10
+    '''
+    path = os.path.expanduser(path)
+    lines_found = []
+    buffer_size = 4098
+
+    if not os.path.isfile(path):
+        raise SaltInvocationError('File not found: {0}'.format(path))
+
+    if not __utils__['files.is_text'](path):
+        raise SaltInvocationError(
+            'Cannot tail a binary file: {0}'.format(path))
+
+    try:
+        lines = int(lines)
+    except ValueError:
+        raise SaltInvocationError('file.tail: \'lines\' value must be an integer')
+
+    try:
+        with salt.utils.fopen(path) as tail_fh:
+            blk_cnt = 1
+            size = os.stat(path).st_size
+
+            if size > buffer_size:
+                tail_fh.seek(-buffer_size * blk_cnt, os.SEEK_END)
+            data = string.split(tail_fh.read(buffer_size), os.linesep)
+
+            for i in range(lines):
+                while len(data) == 1 and ((blk_cnt * buffer_size) < size):
+                    blk_cnt += 1
+                    line = data[0]
+                    try:
+                        tail_fh.seek(-buffer_size * blk_cnt, os.SEEK_END)
+                        data = string.split(tail_fh.read(buffer_size) + line, os.linesep)
+                    except IOError:
+                        tail_fh.seek(0)
+                        data = string.split(tail_fh.read(size - (buffer_size * (blk_cnt - 1))) + line, os.linesep)
+
+                line = data[-1]
+                data.pop()
+                lines_found.append(line)
+
+        return lines_found[-lines:]
+    except (OSError, IOError):
+        raise CommandExecutionError('Could not tail \'{0}\''.format(path))
+
+
 def seek_read(path, size, offset):
     '''
     .. versionadded:: 2014.1.0
@@ -3724,7 +3787,7 @@ def rmdir(path):
         return exc.strerror
 
 
-def remove(path):
+def remove(path, **kwargs):
     '''
     Remove the named file. If a directory is supplied, it will be recursively
     deleted.
@@ -4691,8 +4754,10 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
         selinux_error = False
         try:
             current_seuser, current_serole, current_setype, current_serange = get_selinux_context(name).split(':')
-            log.debug('Current selinux context user:{0} role:{1} type:{2} range:{3}'.format(
-                current_seuser, current_serole, current_setype, current_serange))
+            log.debug(
+                'Current selinux context user:%s role:%s type:%s range:%s',
+                current_seuser, current_serole, current_setype, current_serange
+            )
         except ValueError:
             log.error('Unable to get current selinux attributes')
             ret['result'] = False
@@ -4745,7 +4810,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
                             requested_setype = current_setype
                         result = set_selinux_context(name, user=requested_seuser, role=requested_serole,
                                                      type=requested_setype, range=requested_serange, persist=True)
-                        log.debug("selinux set result: {0}".format(result))
+                        log.debug('selinux set result: %s', result)
                         current_seuser, current_serole, current_setype, current_serange = result.split(':')
                     except ValueError:
                         log.error('Unable to set current selinux attributes')
@@ -4934,7 +4999,7 @@ def check_managed_changes(
 
         if comments:
             __clean_tmp(sfn)
-            return False, comments
+            raise CommandExecutionError(comments)
         if sfn and source and keep_mode:
             if _urlparse(source).scheme in ('salt', 'file') \
                     or source.startswith('/'):
@@ -5077,7 +5142,7 @@ def check_file_meta(
         try:
             differences = get_diff(name, tmp, show_filenames=False)
         except CommandExecutionError as exc:
-            log.error('Failed to diff files: {0}'.format(exc))
+            log.error('Failed to diff files: %s', exc)
             differences = exc.strerror
         __clean_tmp(tmp)
         if differences:
@@ -5117,10 +5182,10 @@ def check_file_meta(
         if seuser or serole or setype or serange:
             try:
                 current_seuser, current_serole, current_setype, current_serange = get_selinux_context(name).split(':')
-                log.debug('Current selinux context user:{0} role:{1} type:{2} range:{3}'.format(current_seuser,
-                                                                                                current_serole,
-                                                                                                current_setype,
-                                                                                                current_serange))
+                log.debug(
+                    'Current selinux context user:%s role:%s type:%s range:%s',
+                    current_seuser, current_serole, current_setype, current_serange
+                )
             except ValueError as exc:
                 log.error('Unable to get current selinux attributes')
                 changes['selinux'] = exc.strerror
@@ -5979,8 +6044,8 @@ def mknod_chrdev(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug('Creating character device name:{0} major:{1} minor:{2} mode:{3}'
-              .format(name, major, minor, mode))
+    log.debug('Creating character device name:%s major:%s minor:%s mode:%s',
+              name, major, minor, mode)
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Character device {0} created.'.format(name)}
@@ -6054,8 +6119,8 @@ def mknod_blkdev(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug('Creating block device name:{0} major:{1} minor:{2} mode:{3}'
-              .format(name, major, minor, mode))
+    log.debug('Creating block device name:%s major:%s minor:%s mode:%s',
+              name, major, minor, mode)
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Block device {0} created.'.format(name)}
@@ -6127,7 +6192,7 @@ def mknod_fifo(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug('Creating FIFO name: {0}'.format(name))
+    log.debug('Creating FIFO name: %s', name)
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}

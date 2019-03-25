@@ -149,7 +149,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
             # No compound operators found in nodegroup definition. Check for
             # group type specifiers
             group_type_re = re.compile('^[A-Z]@')
-            regex_chars = ['(', '[', '{', '\\', '?''}])']
+            regex_chars = ['(', '[', '{', '\\', '?', '}', ']', ')']
             if not [x for x in ret if '*' in x or group_type_re.match(x)]:
                 # No group type specifiers and no wildcards.
                 # Treat this as an expression.
@@ -888,7 +888,7 @@ class CkMinions(object):
         # if we take out all the allowed minions, and there are any left, then
         # the target includes minions that are not allowed by eauth
         # so we can give up here.
-        if len(minions - allowed_minions_from_auth_list) > 0:
+        if minions - allowed_minions_from_auth_list:
             return False
 
         try:

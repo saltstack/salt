@@ -55,7 +55,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         _splitlines_preserving_trailing_newline, restore_backup,
         access, copy, readdir, read, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
-        RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
+        RE_FLAG_TABLE, blockreplace, prepend, tail, seek_read, seek_write, rename,
         lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
         comment, uncomment, _add_flags, comment_line, _regex_to_static,
         _set_line_indent, apply_template_on_contents, dirname, basename,
@@ -114,7 +114,7 @@ def __virtual__():
             global access, copy, readdir, read, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global _splitlines_preserving_trailing_newline
-            global blockreplace, prepend, seek_read, seek_write, rename, lstat
+            global blockreplace, prepend, tail, seek_read, seek_write, rename, lstat
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
             global _regex_to_static, _set_line_indent, dirname, basename
@@ -163,6 +163,7 @@ def __virtual__():
             truncate = _namespaced_function(truncate, globals())
             blockreplace = _namespaced_function(blockreplace, globals())
             prepend = _namespaced_function(prepend, globals())
+            tail = _namespaced_function(tail, globals())
             seek_read = _namespaced_function(seek_read, globals())
             seek_write = _namespaced_function(seek_write, globals())
             rename = _namespaced_function(rename, globals())
@@ -1071,7 +1072,7 @@ def remove(path, force=False):
         raise SaltInvocationError('File path must be absolute: {0}'.format(path))
 
     # Does the file/folder exists
-    if not os.path.exists(path):
+    if not os.path.exists(path) and not is_link(path):
         raise CommandExecutionError('Path not found: {0}'.format(path))
 
     # Remove ReadOnly Attribute
