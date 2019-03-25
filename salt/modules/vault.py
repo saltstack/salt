@@ -17,7 +17,7 @@ Functions to interact with Hashicorp Vault.
 :configuration: The salt-master must be configured to allow peer-runner
     configuration, as well as configuration for the module.
 
-    Add this segment to the master configuration file, or
+    Add this segment to pillars, the master configuration file, or
     /etc/salt/master.d/vault.conf:
 
     .. code-block:: yaml

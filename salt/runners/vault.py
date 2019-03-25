@@ -18,11 +18,34 @@ import requests
 # Import Salt libs
 import salt.crypt
 import salt.exceptions
+import salt.pillar
+import salt.utils.minion
 
 # Import 3rd-party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
+
+
+def vault_config():
+    '''
+    Generates vault config dict based on pillar data first. If pillar data is
+    not available, the config will default back to looking for it in __opts__.
+    '''
+    saltenv = __salt__['config.get']('saltenv')
+    minion_id = __salt__['config.get']('grains:fqdn')
+    opts = __opts__
+    grains = __salt__['config.get']('grains')
+    pillar = salt.pillar.Pillar(opts, grains, minion_id, saltenv)
+    compiled_pillar = pillar.compile_pillar()
+    if 'vault' in compiled_pillar.keys():
+        config = compiled_pillar['vault']
+        log.info('Config successfully rendered from vault pillar data')
+        log.debug('Vault config set to: %s', config)
+        return config
+    else:
+        config = __opts__.get('vault')
+        return config
 
 
 def generate_token(minion_id, signature, impersonated_by_master=False):
@@ -47,7 +70,7 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
     _validate_signature(minion_id, signature, impersonated_by_master)
 
     try:
-        config = __opts__['vault']
+        config = vault_config()
         verify = config.get('verify', None)
 
         if config['auth']['method'] == 'approle':
@@ -119,7 +142,7 @@ def unseal():
 
         salt-run vault.unseal
     '''
-    for key in __opts__['vault']['keys']:
+    for key in vault_config()['keys']:
         ret = __utils__['vault.make_request']('PUT', 'v1/sys/unseal', data=json.dumps({'key': key})).json()
         if ret['sealed'] is False:
             return True
@@ -139,7 +162,7 @@ def show_policies(minion_id):
 
         salt-run vault.show_policies myminion
     '''
-    config = __opts__['vault']
+    config = vault_config()
     return _get_policies(minion_id, config)
 
 
@@ -244,11 +267,11 @@ def _selftoken_expired():
     Validate the current token exists and is still valid
     '''
     try:
-        verify = __opts__['vault'].get('verify', None)
-        url = '{0}/v1/auth/token/lookup-self'.format(__opts__['vault']['url'])
-        if 'token' not in __opts__['vault']['auth']:
+        verify = vault_config().get('verify', None)
+        url = '{0}/v1/auth/token/lookup-self'.format(vault_config()['url'])
+        if 'token' not in vault_config()['auth']:
             return True
-        headers = {'X-Vault-Token': __opts__['vault']['auth']['token']}
+        headers = {'X-Vault-Token': vault_config()['auth']['token']}
         response = requests.get(url, headers=headers, verify=verify)
         if response.status_code != 200:
             return True
