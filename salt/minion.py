@@ -2975,7 +2975,13 @@ class Syndic(Minion):
         data['to'] = int(data.get('to', self.opts['timeout'])) - 1
         # Only forward the command if it didn't originate from ourselves
         if data.get('master_id', 0) != self.opts.get('master_id', 1):
-            self.syndic_cmd(data)
+            jid = data['jid']
+            # Don't rebroadcast duplicate jobs
+            if jid not in self.jid_queue:
+                self.syndic_cmd(data)
+                self.jid_queue.append(jid)
+                if len(self.jid_queue) > self.opts['minion_jid_queue_hwm']:
+                    self.jid_queue.pop(0)
 
     def syndic_cmd(self, data):
         '''
@@ -3122,6 +3128,7 @@ class SyndicManager(MinionBase):
 
         self._has_master = threading.Event()
         self.jid_forward_cache = set()
+        self.jid_queue = []
 
         if io_loop is None:
             install_zmq()
@@ -3179,6 +3186,7 @@ class SyndicManager(MinionBase):
                                 timeout=self.SYNDIC_CONNECT_TIMEOUT,
                                 safe=False,
                                 io_loop=self.io_loop,
+                                jid_queue=self.jid_queue,
                                 )
                 yield syndic.connect_master(failed=failed)
                 # set up the syndic to handle publishes (specifically not event forwarding)
