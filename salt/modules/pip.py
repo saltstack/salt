@@ -622,16 +622,14 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
           pip.installed:
             - name: pandas
             - pip_future:
-              - --latest-pip-kwarg:
-                - param1
-                - param2
+              - --latest-pip-kwarg: param
               - --latest-pip-arg
 
     Will be translated into the following pip command:
 
     .. code-block:: bash
 
-        pip install pandas --latest-pip-kwarg param1 --latest-pip-kwarg parm2 --latest-pip-arg
+        pip install pandas --latest-pip-kwarg param --latest-pip-arg
 
     CLI Example:
 
@@ -924,20 +922,12 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             if isinstance(arg, dict):
                 # There will only ever be one item in this dictionary
                 key, val = arg.popitem()
-                # There are multiple definitions for this keyword. I.E.
-                # - --keyword:
-                #   - param1
-                #   - param2
-                # Break it into "--keyword param1 --keyword param2"
-                if isinstance(val, list):
-                    for list_arg in val:
-                        cmd.append((key, list_arg))
                 # Don't allow any recursion into keyword arg definitions
-                elif isinstance(val, dict):
-                    raise RecursionError("Too many levels in arg: {}".format(arg))
+                # Don't allow multiple definitions of a keyword
+                if isinstance(val, (dict, list)):
+                    raise TypeError("Too many levels in: {}".format(key))
                 # This is a a normal one-to-one keyword argument
-                else:
-                    cmd.extend(arg.items())
+                cmd.extend([key, val])
             # It is a positional argument, append it to the list
             else:
                 cmd.append(arg)

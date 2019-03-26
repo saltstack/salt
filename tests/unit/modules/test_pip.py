@@ -808,14 +808,12 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install(pkg, pip_future=[
-                {"--latest-pip-kwarg": ["param1", "param2"]},
+                {"--latest-pip-kwarg": "param"},
                 "--latest-pip-arg"
             ])
             expected = [
                 sys.executable, '-m', 'pip', 'install', pkg,
-                ("--latest-pip-kwarg", "param1"),
-                ("--latest-pip-kwarg", "param2"),
-                "--latest-pip-arg"
+                "--latest-pip-kwarg", "param", "--latest-pip-arg"
             ]
             mock.assert_called_with(
                 expected,
@@ -824,6 +822,23 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 use_vt=False,
                 python_shell=False,
             )
+
+    def test_install_pip_future_arguments_recursion_error(self):
+        pkg = 'pep8'
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+
+            with self.subTest(params="Multiple arg Definition"):
+                self.assertRaises(TypeError, lambda: pip.install(
+                    pkg, pip_future=[
+                        {"--latest-pip-kwarg": ["param1", "param2"]},
+                    ]))
+
+            with self.subTest(params="Arg Recursion too deep"):
+                self.assertRaises(TypeError, lambda: pip.install(
+                    pkg, pip_future=[
+                        {"--latest-pip-kwarg": [{"--too-deep": dict()}]},
+                    ]))
 
     def test_uninstall_multiple_requirements_arguments_in_resulting_command(self):
         with patch('salt.modules.pip._get_cached_requirements') as get_cached_requirements:
