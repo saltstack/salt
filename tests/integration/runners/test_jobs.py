@@ -7,7 +7,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import pytest
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
-from tests.support.helpers import flaky
 
 
 @pytest.mark.windows_whitelisted
@@ -22,17 +21,16 @@ class JobsTest(ShellCase):
         jobs.master
         '''
         ret = self.run_run_plus('jobs.master')
-        self.assertEqual(ret['return'], [])
-        self.assertEqual(ret['out'], [])
+        res = any(ele for ele in ret['return'] if val['fun'] == 'runner.jobs.master')
+        self.assertTrue(res)
 
-    @flaky
     def test_active(self):
         """
         jobs.active
         """
-        ret = self.run_run_plus("jobs.active")
-        self.assertEqual(ret["return"], {})
-        self.assertEqual(ret["out"], [])
+        ret = self.run_run_plus('jobs.active')
+        res = any(ele for ele, val in ret['return'].iteritems() if val['Function'] == 'runner.jobs.active')
+        self.assertTrue()
 
     @skipIf(True, "SLOWTEST skip")
     def test_lookup_jid(self):
