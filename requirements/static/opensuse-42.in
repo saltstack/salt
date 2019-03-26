@@ -18,7 +18,6 @@ more-itertools==5.0.0
 moto
 msgpack-python >= 0.4.2, != 0.5.5
 psutil
-pycrypto>=2.6.1
 pyinotify
 pyopenssl
 python-etcd==0.4.2
