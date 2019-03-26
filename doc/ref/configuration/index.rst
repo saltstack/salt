@@ -222,7 +222,8 @@ similar way:
    delta:
        2018.3.4
 
-Each of the Minions should send a ``True`` response as shown above.
+Each of the Minions should send a ``2018.3.4`` response as shown above, 
+or any other salt version installed.
 
 What's Next?
 ============
