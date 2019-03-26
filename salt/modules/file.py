@@ -1729,47 +1729,21 @@ def _mkstemp_copy(path,
 
     return temp_file
 
-
-def _starts_till(src, probe, strip_comments=True):
+def _starts_till(src, probe):
     '''
-    Returns True if src and probe at least matches at the beginning till some point.
+    Returns True if the line matches the probe
     '''
-    def _strip_comments(txt):
-        '''
-        Strip possible comments.
-        Usually comments are one or two symbols at the beginning of the line, separated with space
-        '''
-        buff = txt.split(" ", 1)
-        return len(buff) == 2 and len(buff[0]) < 2 and buff[1] or txt
-
-    def _to_words(txt):
-        '''
-        Split by words
-        '''
-        return txt and [w for w in txt.strip().split(" ") if w.strip()] or txt
-
+    
     no_match = -1
     equal = 0
+
     if not src or not probe:
         return no_match
 
-    src = src.rstrip('\n\r')
-    probe = probe.rstrip('\n\r')
-    if src == probe:
+    if probe == src:
         return equal
-
-    src = _to_words(strip_comments and _strip_comments(src) or src)
-    probe = _to_words(strip_comments and _strip_comments(probe) or probe)
-
-    a_buff, b_buff = len(src) < len(probe) and (src, probe) or (probe, src)
-    b_buff = ' '.join(b_buff)
-    for idx in range(len(a_buff)):
-        prb = ' '.join(a_buff[:-(idx + 1)])
-        if prb and b_buff.startswith(prb):
-            return idx
-
+    
     return no_match
-
 
 def _regex_to_static(src, regex):
     '''
