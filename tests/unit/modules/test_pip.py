@@ -828,17 +828,15 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
 
-            with self.subTest(params="Multiple arg Definition"):
-                self.assertRaises(TypeError, lambda: pip.install(
-                    pkg, pip_future=[
-                        {"--latest-pip-kwarg": ["param1", "param2"]},
-                    ]))
+            self.assertRaises(TypeError, lambda: pip.install(
+                pkg, pip_future=[
+                    {"--latest-pip-kwarg": ["param1", "param2"]},
+                ]))
 
-            with self.subTest(params="Arg Recursion too deep"):
-                self.assertRaises(TypeError, lambda: pip.install(
-                    pkg, pip_future=[
-                        {"--latest-pip-kwarg": [{"--too-deep": dict()}]},
-                    ]))
+            self.assertRaises(TypeError, lambda: pip.install(
+                pkg, pip_future=[
+                    {"--latest-pip-kwarg": [{"--too-deep": dict()}]},
+                ]))
 
     def test_uninstall_multiple_requirements_arguments_in_resulting_command(self):
         with patch('salt.modules.pip._get_cached_requirements') as get_cached_requirements:
