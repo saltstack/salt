@@ -96,7 +96,6 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(win_file.__opts__, {'test': True}):
             expected = {'comment': '',
-                        'changes': {},
                         'changes': {'owner': 'Administrators'},
                         'name': self.temp_file.name,
                         'result': None}
@@ -110,7 +109,6 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test setting the owner of a file
         '''
         expected = {'comment': '',
-                    'changes': {},
                     'changes': {'owner': 'Administrators'},
                     'name': self.temp_file.name,
                     'result': True}
@@ -128,7 +126,6 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                         'changes': {
                             'deny_perms': {
                                 'Users': {'perms': 'read_execute'}}},
-                        'changes': {'deny_perms': {}},
                         'name': self.temp_file.name,
                         'result': None}
             ret = win_file.check_perms(
@@ -144,7 +141,6 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test setting deny perms on a file
         '''
         expected = {'comment': '',
-                    'changes': {'deny_perms': {}},
                     'changes': {
                         'deny_perms': {
                             'Users': {'perms': 'read_execute'}}},
@@ -166,7 +162,6 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                         'changes': {
                             'grant_perms': {
                                 'Users': {'perms': 'read_execute'}}},
-                        'changes': {'grant_perms': {}},
                         'name': self.temp_file.name,
                         'result': None}
             ret = win_file.check_perms(
@@ -182,7 +177,6 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test setting grant perms on a file
         '''
         expected = {'comment': '',
-                    'changes': {'grant_perms': {}},
                     'changes': {
                         'grant_perms': {
                             'Users': {'perms': 'read_execute'}}},
@@ -202,7 +196,6 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_file.__opts__, {'test': True}):
             expected = {'comment': '',
                         'changes': {'inheritance': False},
-                        'changes': {},
                         'name': self.temp_file.name,
                         'result': None}
             ret = win_file.check_perms(path=self.temp_file.name,
@@ -214,7 +207,6 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test setting inheritance to False
         '''
         expected = {'comment': '',
-                    'changes': {},
                     'changes': {'inheritance': False},
                     'name': self.temp_file.name,
                     'result': True}
@@ -227,7 +219,6 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test setting inheritance to true when it's already true (default)
         '''
         expected = {'comment': '',
-                    'changes': {},
                     'changes': {},
                     'name': self.temp_file.name,
                     'result': True}
@@ -261,7 +252,6 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                     'grant_perms': {
                         'Administrators': {'perms': 'full_control'},
                         'Users': {'perms': 'read_execute'}}},
-                'changes': {'grant_perms': {}},
                 'name': self.temp_file.name,
                 'result': None}
             ret = win_file.check_perms(path=self.temp_file.name,
@@ -288,7 +278,6 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                                             permissions='full_control')
         expected = {
             'comment': '',
-            'changes': {'grant_perms': {}},
             'changes': {
                 'remove_perms': {
                     'Administrator': {
