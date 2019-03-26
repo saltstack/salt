@@ -9,6 +9,7 @@ import base64
 import fnmatch
 import functools
 import glob
+import locale
 import logging
 import os
 import re
@@ -583,20 +584,26 @@ def _run(
         if not salt.utils.platform.is_windows():
             # Default to C!
             # Salt only knows how to parse English words
-            # Don't override if the user has passed LC_ALL
-            env.setdefault("LC_CTYPE", "C")
-            env.setdefault("LC_NUMERIC", "C")
-            env.setdefault("LC_TIME", "C")
-            env.setdefault("LC_COLLATE", "C")
-            env.setdefault("LC_MONETARY", "C")
-            env.setdefault("LC_MESSAGES", "C")
-            env.setdefault("LC_PAPER", "C")
-            env.setdefault("LC_NAME", "C")
-            env.setdefault("LC_ADDRESS", "C")
-            env.setdefault("LC_TELEPHONE", "C")
-            env.setdefault("LC_MEASUREMENT", "C")
-            env.setdefault("LC_IDENTIFICATION", "C")
-            env.setdefault("LANGUAGE", "C")
+            lang, encoding = locale.getlocale()
+            new_locale = "C" if encoding is None else "C." + encoding
+            env.setdefault("LC_ALL", new_locale)
+            env.setdefault("LC_CTYPE", new_locale)
+            env.setdefault("LC_NUMERIC", new_locale)
+            env.setdefault("LC_TIME", new_locale)
+            env.setdefault("LC_COLLATE", new_locale)
+            env.setdefault("LC_MONETARY", new_locale)
+            env.setdefault("LC_MESSAGES", new_locale)
+            env.setdefault("LC_PAPER", new_locale)
+            env.setdefault("LC_NAME", new_locale)
+            env.setdefault("LC_ADDRESS", new_locale)
+            env.setdefault("LC_TELEPHONE", new_locale)
+            env.setdefault("LC_MEASUREMENT", new_locale)
+            env.setdefault("LC_IDENTIFICATION", new_locale)
+            env.setdefault("LANGUAGE", new_locale)
+        else:
+            # On Windows set the codepage to US English.
+            if python_shell:
+                cmd = 'chcp 437 > nul & ' + cmd
 
     if clean_env:
         run_env = env
