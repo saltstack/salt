@@ -803,6 +803,28 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    def test_install_pip_future_arguments_in_resulting_command(self):
+        pkg = 'pep8'
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(pkg, pip_future=[
+                {"--latest-pip-kwarg": ["param1", "param2"]},
+                "--latest-pip-arg"
+            ])
+            expected = [
+                sys.executable, '-m', 'pip', 'install', pkg,
+                ("--latest-pip-kwarg", "param1"),
+                ("--latest-pip-kwarg", "param2"),
+                "--latest-pip-arg"
+            ]
+            mock.assert_called_with(
+                expected,
+                saltenv='base',
+                runas=None,
+                use_vt=False,
+                python_shell=False,
+            )
+
     def test_uninstall_multiple_requirements_arguments_in_resulting_command(self):
         with patch('salt.modules.pip._get_cached_requirements') as get_cached_requirements:
             cached_reqs = [

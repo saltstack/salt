@@ -441,6 +441,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             no_cache_dir=False,
             cache_dir=None,
             no_binary=None,
+            pip_future=None,
             **kwargs):
     '''
     Install packages with pip
@@ -611,6 +612,26 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     no_cache_dir
         Disable the cache.
+
+    pip_future
+        pip keyword and positional arguments not yet implemented in salt
+
+    .. code-block:: yaml
+
+        pandas:
+          pip.installed:
+            - name: pandas
+            - pip_future:
+              - --latest-pip-kwarg:
+                - param1
+                - param2
+              - --latest-pip-arg
+
+    Will be translated into the following pip command:
+
+    .. code-block:: bash
+
+        pip install pandas --latest-pip-kwarg param1 --latest-pip-kwarg parm2 --latest-pip-arg
 
     CLI Example:
 
@@ -894,6 +915,32 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if trusted_host:
         cmd.extend(['--trusted-host', trusted_host])
+
+    if pip_future:
+        # These are arguments from the latest version of pip that
+        # have not yet been implemented in salt
+        for arg in pip_future:
+            # It is a keyword argument
+            if isinstance(arg, dict):
+                # There will only ever be one item in this dictionary
+                key, val = arg.popitem()
+                # There are multiple definitions for this keyword. I.E.
+                # - --keyword:
+                #   - param1
+                #   - param2
+                # Break it into "--keyword param1 --keyword param2"
+                if isinstance(val, list):
+                    for list_arg in val:
+                        cmd.append((key, list_arg))
+                # Don't allow any recursion into keyword arg definitions
+                elif isinstance(val, dict):
+                    raise RecursionError("Too many levels in arg: {}".format(arg))
+                # This is a a normal one-to-one keyword argument
+                else:
+                    cmd.extend(arg.items())
+            # It is a positional argument, append it to the list
+            else:
+                cmd.append(arg)
 
     cmd_kwargs = dict(saltenv=saltenv, use_vt=use_vt, runas=user)
 
