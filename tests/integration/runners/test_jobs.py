@@ -5,6 +5,9 @@ Tests for the salt-run command
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+# pylint: disable=3rd-party-module-not-gated
+from salt.ext import six
+
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
@@ -20,7 +23,7 @@ class JobsTest(ShellCase):
         jobs.master
         '''
         ret = self.run_run_plus('jobs.master')
-        res = any(ele for ele in ret['return'] if val['fun'] == 'runner.jobs.master')
+        res = any(ele for ele in ret['return'] if ele['fun'] == 'runner.jobs.master')
         self.assertTrue(res)
 
     def test_active(self):
@@ -28,8 +31,8 @@ class JobsTest(ShellCase):
         jobs.active
         '''
         ret = self.run_run_plus('jobs.active')
-        res = any(ele for ele, val in ret['return'].iteritems() if val['Function'] == 'runner.jobs.active')
-        self.assertTrue()
+        res = any(ele for ele, val in six.iteritems(ret['return']) if val['Function'] == 'runner.jobs.active')
+        self.assertTrue(res)
 
     def test_lookup_jid(self):
         '''
@@ -83,7 +86,7 @@ class LocalCacheTargetTest(ShellCase):
         ret = self.run_run_plus('jobs.list_jobs')
         for item in ret['return'].values():
             if item['Function'] == 'test.echo' and \
-                item['Arguments'][0] == 'target_info_test':
+               item['Arguments'][0] == 'target_info_test':
                 job_ret = item
         tgt = job_ret['Target']
         tgt_type = job_ret['Target-type']
