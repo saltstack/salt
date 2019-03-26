@@ -22,7 +22,6 @@ pyopenssl
 python-etcd==0.4.2
 python-gnupg
 pyvmomi
-pyzmq
 requests
 rfc3987
 salttesting==2017.6.1
