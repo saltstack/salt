@@ -1195,7 +1195,7 @@ def _windows_platform_data():
                 if re.match(r'^R\d+$', item):
                     release = item
             os_release = '{0}Server{1}'.format(version, release)
-        elif 'Embedded' in osinfo.Caption:
+        elif 'Windows Embedded Standard' in osinfo.Caption:
             os_release = platform.release()
         else:
             for item in osinfo.Caption.split(' '):
