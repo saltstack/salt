@@ -2278,11 +2278,11 @@ class Minion(MinionBase):
                  'disable_job': ('disable_job', (name, persist)),
                  'postpone_job': ('postpone_job', (name, data)),
                  'skip_job': ('skip_job', (name, data)),
-                 'reload': ('reload', (schedule)),
-                 'list': ('list', (where)),
+                 'reload': ('reload', (schedule,)),
+                 'list': ('list', (where,)),
                  'save_schedule': ('save_schedule', ()),
                  'get_next_fire_time': ('get_next_fire_time',
-                                        (name))}
+                                        (name,))}
 
         # Call the appropriate schedule function
         try:
