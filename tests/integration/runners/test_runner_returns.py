@@ -79,7 +79,7 @@ class RunnerReturnsTest(ShellCase):
     @skipIf(True, "SLOWTEST skip")
     def test_runner_returns_disabled(self):
         """
-        Test with runner_returns enabled
+        Test with runner_returns disabled
         """
         self.write_conf({"runner_returns": False})
         ret = self.run_run_plus(
