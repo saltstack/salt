@@ -2,16 +2,9 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import random
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
-from tests.support.unit import skipIf
-
-# Import Salt libs
-from salt.ext import six
-import salt.utils.platform
 
 import logging
 log = logging.getLogger(__name__)
