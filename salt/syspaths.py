@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
     salt.syspaths
     ~~~~~~~~~~~~~
 
@@ -21,8 +18,10 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import os.path
+import logging
 
 __PLATFORM = sys.platform.lower()
+log = logging.getLogger(__name__)
 svl = ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR', # svl = salt variable list
 	'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'HOME_DIR',
 	'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
@@ -44,7 +43,8 @@ else:
 	if hasattr(__generated_syspaths, key):
 	    continue
 	else:
-	    setattr(__generated_syspaths, key, None)
+	    log.warning('variable ' + key + ' was missing from _syspaths.py file, value defaulted to "None"')
+	    setattr(__generated_syspaths, key, None) # missing variables defaulted to None
 
 # Let's find out the path of this module
 if 'SETUP_DIRNAME' in globals():
