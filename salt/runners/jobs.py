@@ -44,8 +44,7 @@ def master():
 
         salt-run jobs.master
     '''
-    jobs = salt.utils.master.get_running_jobs(__opts__)
-    return jobs
+    return salt.utils.master.get_running_jobs(__opts__)
 
 
 def active(display_progress=False):
