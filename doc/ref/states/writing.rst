@@ -20,7 +20,7 @@ illustrate:
 
 .. code-block:: yaml
 
-    /etc/salt/master: # maps to "name"
+    /etc/salt/master: # maps to "name", unless a "name" argument is specified below
       file.managed: # maps to <filename>.<function> - e.g. "managed" in https://github.com/saltstack/salt/tree/develop/salt/states/file.py
         - user: root # one of many options passed to the manage function
         - group: root
@@ -50,22 +50,118 @@ directly define the user interface.
     .. _here: https://github.com/saltstack/salt/blob/v0.16.2/salt/states/pkgrepo.py#L163-183
 
 
+Best Practices
+==============
+
+A well-written state function will follow these steps:
+
+.. note::
+    This is an extremely simplified example. Feel free to browse the `source
+    code`_ for Salt's state modules to see other examples.
+
+    .. _`source code`: https://github.com/saltstack/salt/tree/develop/salt/states
+
+1. Set up the return dictionary and perform any necessary input validation
+   (type checking, looking for use of mutually-exclusive arguments, etc.).
+
+   .. code-block:: python
+
+       ret = {'name': name,
+              'result': False,
+              'changes': {},
+              'comment': ''}
+
+       if foo and bar:
+           ret['comment'] = 'Only one of foo and bar is permitted'
+           return ret
+
+2. Check if changes need to be made. This is best done with an
+   information-gathering function in an accompanying :ref:`execution module
+   <writing-execution-modules>`. The state should be able to use the return
+   from this function to tell whether or not the minion is already in the
+   desired state.
+
+   .. code-block:: python
+
+       result = __salt__['modname.check'](name)
+
+3. If step 2 found that the minion is already in the desired state, then exit
+   immediately with a ``True`` result and without making any changes.
+
+   .. code-block:: python
+
+       if result:
+           ret['result'] = True
+           ret['comment'] = '{0} is already installed'.format(name)
+           return ret
+
+4. If step 2 found that changes *do* need to be made, then check to see if the
+   state was being run in test mode (i.e. with ``test=True``). If so, then exit
+   with a ``None`` result, a relevant comment, and (if possible) a ``changes``
+   entry describing what changes would be made.
+
+   .. code-block:: python
+
+       if __opts__['test']:
+           ret['result'] = None
+           ret['comment'] = '{0} would be installed'.format(name)
+           ret['changes'] = result
+           return ret
+
+5. Make the desired changes. This should again be done using a function from an
+   accompanying execution module. If the result of that function is enough to
+   tell you whether or not an error occurred, then you can exit with a
+   ``False`` result and a relevant comment to explain what happened.
+
+   .. code-block:: python
+
+       result = __salt__['modname.install'](name)
+
+6. Perform the same check from step 2 again to confirm whether or not the
+   minion is in the desired state. Just as in step 2, this function should be
+   able to tell you by its return data whether or not changes need to be made.
+
+   .. code-block:: python
+
+       ret['changes'] = __salt__['modname.check'](name)
+
+   As you can see here, we are setting the ``changes`` key in the return
+   dictionary to the result of the ``modname.check`` function (just as we did
+   in step 4). The assumption here is that the information-gathering function
+   will return a dictionary explaining what changes need to be made. This may
+   or may not fit your use case.
+
+7. Set the return data and return!
+
+   .. code-block:: python
+
+       if ret['changes']:
+           ret['comment'] = '{0} failed to install'.format(name)
+       else:
+           ret['result'] = True
+           ret['comment'] = '{0} was installed'.format(name)
+
+       return ret
+
 Using Custom State Modules
 ==========================
 
-Place your custom state modules inside a ``_states`` directory within the
-:conf_master:`file_roots` specified by the master config file. These custom
-state modules can then be distributed in a number of ways. Custom state modules
-are distributed when :py:func:`state.apply <salt.modules.state.apply_>` is run,
-or by executing the :mod:`saltutil.sync_states
+Before the state module can be used, it must be distributed to minions. This
+can be done by placing them into ``salt://_states/``. They can then be
+distributed manually to minions by running :mod:`saltutil.sync_states
 <salt.modules.saltutil.sync_states>` or :mod:`saltutil.sync_all
-<salt.modules.saltutil.sync_all>` functions.
+<salt.modules.saltutil.sync_all>`. Alternatively, when running a
+:ref:`highstate <running-highstate>` custom types will automatically be synced.
 
-Any custom states which have been synced to a minion, that are named the
-same as one of Salt's default set of states, will take the place of the default
-state with the same name. Note that a state's default name is its filename
-(i.e. ``foo.py`` becomes state ``foo``), but that its name can be overridden
-by using a :ref:`__virtual__ function <virtual-modules>`.
+NOTE: Writing state modules with hyphens in the filename will cause issues
+with !pyobjects routines.  Best practice to stick to underscores.
+
+Any custom states which have been synced to a minion, that are named the same
+as one of Salt's default set of states, will take the place of the default
+state with the same name. Note that a state module's name defaults to one based
+on its filename (i.e. ``foo.py`` becomes state module ``foo``), but that its
+name can be overridden by using a :ref:`__virtual__ function
+<virtual-modules>`.
 
 Cross Calling Execution Modules from States
 ===========================================
@@ -97,11 +193,12 @@ functions available in other state modules.
 The variable ``__states__`` is packed into the modules after they are loaded into
 the Salt minion.
 
-The ``__states__`` variable is a :ref:`Python dictionary <python2:typesmapping>`
-containing all of the state modules. Dictionary keys are strings representing the
-names of the modules and the values are the functions themselves.
+The ``__states__`` variable is a :ref:`Python dictionary <python:typesmapping>`
+containing all of the state modules. Dictionary keys are strings representing
+the names of the modules and the values are the functions themselves.
 
-Salt state modules can be cross-called by accessing the value in the ``__states__`` dict:
+Salt state modules can be cross-called by accessing the value in the
+``__states__`` dict:
 
 .. code-block:: python
 
@@ -156,15 +253,11 @@ A State Module must return a dict containing the following keys/values:
       in test mode without applying the change, ``False`` can be returned.
 
 - **comment:** A list of strings or a single string summarizing the result.
-  Note that support for lists of strings is available as of Salt Oxygen.
+  Note that support for lists of strings is available as of Salt 2018.3.0.
   Lists of strings will be joined with newlines to form the final comment;
   this is useful to allow multiple comments from subparts of a state.
   Prefer to keep line lengths short (use multiple lines as needed),
   and end with punctuation (e.g. a period) to delimit multiple comments.
-
-The return data can also, include the **pchanges** key, this stands for
-`predictive changes`. The **pchanges** key informs the State system what
-changes are predicted to occur.
 
 .. note::
 
@@ -351,7 +444,6 @@ Example state module
             'changes': {},
             'result': False,
             'comment': '',
-            'pchanges': {},
             }
 
         # Start with basic error-checking. Do all the passed parameters make sense
@@ -372,7 +464,7 @@ Example state module
         # in ``test=true`` mode.
         if __opts__['test'] == True:
             ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
-            ret['pchanges'] = {
+            ret['changes'] = {
                 'old': current_state,
                 'new': 'Description, diff, whatever of the new state',
             }

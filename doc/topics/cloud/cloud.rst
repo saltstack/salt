@@ -35,7 +35,7 @@ https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/msazure.py
 
 The get_configured_provider() Function
 --------------------------------------
-This function uses ``config.is_provider_configured()`` to determine wither
+This function uses ``config.is_provider_configured()`` to determine whether
 all required information for this driver has been configured. The last value
 in the list of required settings should be followed by a comma.
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
@@ -378,7 +378,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(rabbitmq.list_queues_vhost('consumers'), {'saltstack': ['0'],
                                                                            'celeryev.234-234': ['10']})
 
-    # 'list_policies' function tests: 1
+    # 'list_policies' function tests: 3
 
     def test_list_policies(self):
         '''
@@ -386,7 +386,31 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         and name based on the data returned from rabbitmqctl list_policies.
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
+        mock_pkg = MagicMock(return_value='3.7')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
+             patch.dict(rabbitmq.__grains__, {'os_family': ''}):
+            self.assertDictEqual(rabbitmq.list_policies(), {})
+
+    def test_list_policies_freebsd(self):
+        '''
+        Test if it return a dictionary of policies nested by vhost
+        and name based on the data returned from rabbitmqctl list_policies.
+        '''
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
+        mock_pkg = MagicMock(return_value='3.7')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
+             patch.dict(rabbitmq.__grains__, {'os_family': 'FreeBSD'}):
+            self.assertDictEqual(rabbitmq.list_policies(), {})
+
+    def test_list_policies_old_version(self):
+        '''
+        Test if it return a dictionary of policies nested by vhost
+        and name based on the data returned from rabbitmqctl list_policies.
+        '''
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
+        mock_pkg = MagicMock(return_value='3.0')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
+             patch.dict(rabbitmq.__grains__, {'os_family': ''}):
             self.assertDictEqual(rabbitmq.list_policies(), {})
 
     # 'set_policy' function tests: 1
@@ -420,7 +444,9 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         based on rabbitmqctl list_policies.
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
+        mock_pkg = MagicMock(return_value='3.0')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
+             patch.dict(rabbitmq.__grains__, {'os_family': ''}):
             self.assertFalse(rabbitmq.policy_exists('/', 'HA'))
 
     # 'list_available_plugins' function tests: 2

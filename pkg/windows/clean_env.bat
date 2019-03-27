@@ -37,6 +37,10 @@ goto CheckPython3
     MsiExec.exe /X {0398A685-FD8D-46B3-9816-C47319B0CF5E} /QN
     echo %0 :: - 2.7.14 (64 bit)
     MsiExec.exe /X {0398A685-FD8D-46B3-9816-C47319B0CF5F} /QN
+    echo %0 :: - 2.7.15 (32 bit)
+    MsiExec.exe /X {16CD92A4-0152-4CB7-8FD6-9788D3363616} /QN
+    echo %0 :: - 2.7.15 (64 bit)
+    MsiExec.exe /X {16CD92A4-0152-4CB7-8FD6-9788D3363617} /QN
 
     echo.
 
@@ -50,8 +54,6 @@ goto CheckPython3
         echo Failed, please remove manually
     )
 
-    goto eof
-
 :CheckPython3
 if exist "\Python35" goto RemovePython3
 
@@ -63,13 +65,21 @@ goto eof
     :: 64 bit
     if exist "%LOCALAPPDATA%\Package Cache\{b94f45d6-8461-440c-aa4d-bf197b2c2499}" (
         echo %0 :: - 3.5.3 64bit
-        "%LOCALAPPDATA%\Package Cache\{b94f45d6-8461-440c-aa4d-bf197b2c2499}\python-3.5.3-amd64.exe" /uninstall /passive
+        "%LOCALAPPDATA%\Package Cache\{b94f45d6-8461-440c-aa4d-bf197b2c2499}\python-3.5.3-amd64.exe" /uninstall /quiet
+    )
+    if exist "%LOCALAPPDATA%\Package Cache\{5d57524f-af24-49a7-b90b-92138880481e}" (
+        echo %0 :: - 3.5.4 64bit
+        "%LOCALAPPDATA%\Package Cache\{5d57524f-af24-49a7-b90b-92138880481e}\python-3.5.4-amd64.exe" /uninstall /quiet
     )
 
     :: 32 bit
     if exist "%LOCALAPPDATA%\Package Cache\{a10037e1-4247-47c9-935b-c5ca049d0299}" (
         echo %0 :: - 3.5.3 32bit
-        "%LOCALAPPDATA%\Package Cache\{a10037e1-4247-47c9-935b-c5ca049d0299}\python-3.5.3" /uninstall /passive
+        "%LOCALAPPDATA%\Package Cache\{a10037e1-4247-47c9-935b-c5ca049d0299}\python-3.5.3" /uninstall /quiet
+    )
+    if exist "%LOCALAPPDATA%\Package Cache\{06e841fa-ca3b-4886-a820-cd32c614b0c1}" (
+        echo %0 :: - 3.5.4 32bit
+        "%LOCALAPPDATA%\Package Cache\{06e841fa-ca3b-4886-a820-cd32c614b0c1}\python-3.5.4" /uninstall /quiet
     )
 
     rem wipe the Python directory

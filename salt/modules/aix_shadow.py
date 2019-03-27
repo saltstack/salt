@@ -2,7 +2,7 @@
 '''
 Manage account locks on AIX systems
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: none
 '''

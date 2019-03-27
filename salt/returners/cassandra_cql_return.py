@@ -32,10 +32,11 @@ Return data to a cassandra server
           port: 9042
           username: salt
           password: salt
+          keyspace: salt
 
     Use the following cassandra database schema:
 
-    .. code-block:: sql
+    .. code-block:: text
 
         CREATE KEYSPACE IF NOT EXISTS salt
             WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1};
@@ -181,30 +182,35 @@ def __virtual__():
     return True
 
 
+def _get_keyspace():
+    '''
+    Return keyspace if it is specified at opts, if not, use default keyspace 'salt'.
+    '''
+    return (__opts__.get('cassandra', {}) or {}).get('keyspace', 'salt')
+
+
 def returner(ret):
     '''
     Return data to one of potentially many clustered cassandra nodes
     '''
-    query = '''INSERT INTO salt.salt_returns (
+    query = '''INSERT INTO {keyspace}.salt_returns (
                  jid, minion_id, fun, alter_time, full_ret, return, success
-               ) VALUES (?, ?, ?, ?, ?, ?, ?)'''
+               ) VALUES (?, ?, ?, ?, ?, ?, ?)'''.format(keyspace=_get_keyspace())
 
-    statement_arguments = []
-
-    statement_arguments.append('{0}'.format(ret['jid']))
-    statement_arguments.append('{0}'.format(ret['id']))
-    statement_arguments.append('{0}'.format(ret['fun']))
-    statement_arguments.append(int(time.time() * 1000))
-    statement_arguments.append(salt.utils.json.dumps(ret).replace("'", "''"))
-    statement_arguments.append(salt.utils.json.dumps(ret['return']).replace("'", "''"))
-    statement_arguments.append(ret.get('success', False))
+    statement_arguments = ['{0}'.format(ret['jid']),
+                           '{0}'.format(ret['id']),
+                           '{0}'.format(ret['fun']),
+                           int(time.time() * 1000),
+                           salt.utils.json.dumps(ret).replace("'", "''"),
+                           salt.utils.json.dumps(ret['return']).replace("'", "''"),
+                           ret.get('success', False)]
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
     try:
         __salt__['cassandra_cql.cql_query_with_prepare'](query,
                                                          'returner_return',
                                                          tuple(statement_arguments),
-                                                         async=True)
+                                                         asynchronous=True)
     except CommandExecutionError:
         log.critical('Could not insert into salt_returns with Cassandra returner.')
         raise
@@ -214,21 +220,18 @@ def returner(ret):
 
     # Store the last function called by the minion
     # The data in salt.minions will be used by get_fun and get_minions
-    query = '''INSERT INTO salt.minions (
+    query = '''INSERT INTO {keyspace}.minions (
                  minion_id, last_fun
-               ) VALUES (?, ?)'''
+               ) VALUES (?, ?)'''.format(keyspace=_get_keyspace())
 
-    statement_arguments = []
-
-    statement_arguments.append('{0}'.format(ret['id']))
-    statement_arguments.append('{0}'.format(ret['fun']))
+    statement_arguments = ['{0}'.format(ret['id']), '{0}'.format(ret['fun'])]
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
     try:
         __salt__['cassandra_cql.cql_query_with_prepare'](query,
                                                          'returner_minion',
                                                          tuple(statement_arguments),
-                                                         async=True)
+                                                         asynchronous=True)
     except CommandExecutionError:
         log.critical('Could not store minion ID with Cassandra returner.')
         raise
@@ -255,11 +258,11 @@ def event_return(events):
     for event in events:
         tag = event.get('tag', '')
         data = event.get('data', '')
-        query = '''INSERT INTO salt.salt_events (
+        query = '''INSERT INTO {keyspace}.salt_events (
                      id, alter_time, data, master_id, tag
                    ) VALUES (
                      ?, ?, ?, ?, ?)
-                 '''
+                 '''.format(keyspace=_get_keyspace())
         statement_arguments = [six.text_type(uuid.uuid1()),
                                int(time.time() * 1000),
                                salt.utils.json.dumps(data).replace("'", "''"),
@@ -270,7 +273,7 @@ def event_return(events):
         try:
             __salt__['cassandra_cql.cql_query_with_prepare'](query, 'salt_events',
                                                              statement_arguments,
-                                                             async=True)
+                                                             asynchronous=True)
         except CommandExecutionError:
             log.critical('Could not store events with Cassandra returner.')
             raise
@@ -287,9 +290,9 @@ def save_load(jid, load, minions=None):
     # Load is being stored as a text datatype. Single quotes are used in the
     # VALUES list. Therefore, all single quotes contained in the results from
     # salt.utils.json.dumps(load) must be escaped Cassandra style.
-    query = '''INSERT INTO salt.jids (
+    query = '''INSERT INTO {keyspace}.jids (
                  jid, load
-               ) VALUES (?, ?)'''
+               ) VALUES (?, ?)'''.format(keyspace=_get_keyspace())
 
     statement_arguments = [
         jid,
@@ -300,7 +303,7 @@ def save_load(jid, load, minions=None):
     try:
         __salt__['cassandra_cql.cql_query_with_prepare'](query, 'save_load',
                                                          statement_arguments,
-                                                         async=True)
+                                                         asynchronous=True)
     except CommandExecutionError:
         log.critical('Could not save load in jids table.')
         raise
@@ -321,7 +324,8 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    query = '''SELECT load FROM salt.jids WHERE jid = ?;'''
+    query = '''SELECT load FROM {keyspace}.jids
+               WHERE jid = ?;'''.format(keyspace=_get_keyspace())
 
     ret = {}
 
@@ -347,7 +351,8 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    query = '''SELECT minion_id, full_ret FROM salt.salt_returns WHERE jid = ?;'''
+    query = '''SELECT minion_id, full_ret FROM {keyspace}.salt_returns
+               WHERE jid = ?;'''.format(keyspace=_get_keyspace())
 
     ret = {}
 
@@ -376,7 +381,8 @@ def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
     '''
-    query = '''SELECT minion_id, last_fun FROM salt.minions where last_fun = ?;'''
+    query = '''SELECT minion_id, last_fun FROM {keyspace}.minions
+               WHERE last_fun = ?;'''.format(keyspace=_get_keyspace())
 
     ret = {}
 
@@ -405,7 +411,7 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    query = '''SELECT jid, load FROM salt.jids;'''
+    query = '''SELECT jid, load FROM {keyspace}.jids;'''.format(keyspace=_get_keyspace())
 
     ret = {}
 
@@ -436,7 +442,8 @@ def get_minions():
     '''
     Return a list of minions
     '''
-    query = '''SELECT DISTINCT minion_id FROM salt.minions;'''
+    query = '''SELECT DISTINCT minion_id
+               FROM {keyspace}.minions;'''.format(keyspace=_get_keyspace())
 
     ret = []
 

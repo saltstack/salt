@@ -1,0 +1,16 @@
+========================================
+In Progress: Salt 2017.7.9 Release Notes
+========================================
+
+Version 2017.7.9 is an **unreleased** bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
+This release is still in progress and has not been released yet.
+
+Salt Cloud Features
+===================
+
+GCE Driver
+----------
+The GCE salt cloud driver can now be used with GCE instance credentials by
+setting the configuration paramaters ``service_account_private_key`` and
+``service_account_private_email`` to an empty string.
+

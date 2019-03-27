@@ -116,8 +116,11 @@ class BotoCognitoIdentityTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
     def setup_loader_modules(self):
-        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
-        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['boto3', 'args', 'systemd', 'path', 'platform'],
+            context={})
         return {boto_cognitoidentity: {'__utils__': utils}}
 
     def setUp(self):

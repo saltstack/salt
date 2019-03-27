@@ -47,8 +47,6 @@ You can find the source code for Salt on my GitHub page, I have also set up a
 few wiki pages explaining how to use and set up Salt. If you are using Arch
 Linux there is a package available in the Arch Linux AUR.
 
-Salt 0.6.0 Source: :download:`salt-0.6.0.tar.gz`
-
 GitHub page: |saltrepo|
 
 Wiki: https://github.com/saltstack/salt/wiki

@@ -202,57 +202,62 @@ def set_channel_access(channel=14, access_update_mode='non_volatile',
 
     :param alerting:
         PEF Alerting Enable/Disable
-            - True  = enable PEF Alerting
-            - False = disable PEF Alerting on this channel
-            (Alert Immediate command can still be used to generate alerts)
+
+        - True  = enable PEF Alerting
+        - False = disable PEF Alerting on this channel
+          (Alert Immediate command can still be used to generate alerts)
 
     :param per_msg_auth:
         Per-message Authentication
-            - True  = enable
-            - False = disable Per-message Authentication. [Authentication required to
-              activate any session on this channel, but authentication not
-              used on subsequent packets for the session.]
+
+        - True  = enable
+        - False = disable Per-message Authentication. [Authentication required to
+          activate any session on this channel, but authentication not
+          used on subsequent packets for the session.]
 
     :param user_level_auth:
-        User Level Authentication Enable/Disable.
-            - True  = enable User Level Authentication. All User Level commands are
-              to be authenticated per the Authentication Type that was
-              negotiated when the session was activated.
-            - False = disable User Level Authentication. Allow User Level commands to
-              be executed without being authenticated.
-              If the option to disable User Level Command authentication is
-              accepted, the BMC will accept packets with Authentication Type
-              set to None if they contain user level commands.
-              For outgoing packets, the BMC returns responses with the same
-              Authentication Type that was used for the request.
+        User Level Authentication Enable/Disable
+
+        - True  = enable User Level Authentication. All User Level commands are
+          to be authenticated per the Authentication Type that was
+          negotiated when the session was activated.
+        - False = disable User Level Authentication. Allow User Level commands to
+          be executed without being authenticated.
+          If the option to disable User Level Command authentication is
+          accepted, the BMC will accept packets with Authentication Type
+          set to None if they contain user level commands.
+          For outgoing packets, the BMC returns responses with the same
+          Authentication Type that was used for the request.
 
     :param access_mode:
-        Access Mode for IPMI messaging
-        (PEF Alerting is enabled/disabled separately from IPMI messaging)
-            - disabled = disabled for IPMI messaging
-            - pre_boot = pre-boot only channel only available when system is
-              in a powered down state or in BIOS prior to start of boot.
-            - always   = channel always available regardless of system mode.
-              BIOS typically dedicates the serial connection to the BMC.
-            - shared   = same as always available, but BIOS typically leaves the
-              serial port available for software use.
+        Access Mode for IPMI messaging (PEF Alerting is enabled/disabled
+        separately from IPMI messaging)
+
+        - disabled = disabled for IPMI messaging
+        - pre_boot = pre-boot only channel only available when system is
+          in a powered down state or in BIOS prior to start of boot.
+        - always   = channel always available regardless of system mode.
+          BIOS typically dedicates the serial connection to the BMC.
+        - shared   = same as always available, but BIOS typically leaves the
+          serial port available for software use.
 
     :param privilege_update_mode:
-        Channel Privilege Level Limit.
-        This value sets the maximum privilege level
-        that can be accepted on the specified channel.
-            - dont_change  = don't set or change channel Privilege Level Limit
-            - non_volatile = non-volatile Privilege Level Limit according
-            - volatile     = volatile setting of Privilege Level Limit
+        Channel Privilege Level Limit. This value sets the maximum privilege
+        level that can be accepted on the specified channel.
+
+        - dont_change  = don't set or change channel Privilege Level Limit
+        - non_volatile = non-volatile Privilege Level Limit according
+        - volatile     = volatile setting of Privilege Level Limit
 
     :param privilege_level:
         Channel Privilege Level Limit
-            - reserved      = unused
-            - callback
-            - user
-            - operator
-            - administrator
-            - proprietary   = used by OEM
+
+        - reserved      = unused
+        - callback
+        - user
+        - operator
+        - administrator
+        - proprietary   = used by OEM
 
     :param kwargs:
         - api_host=127.0.0.1
@@ -277,9 +282,11 @@ def get_channel_access(channel=14, read_mode='non_volatile', **kwargs):
     :param kwargs:api_host='127.0.0.1' api_user='admin' api_pass='example' api_port=623
 
     :param channel: number [1:7]
+
     :param read_mode:
         - non_volatile  = get non-volatile Channel Access
         - volatile      = get present volatile (active) setting of Channel Access
+
     :param kwargs:
         - api_host=127.0.0.1
         - api_user=admin
@@ -287,7 +294,8 @@ def get_channel_access(channel=14, read_mode='non_volatile', **kwargs):
         - api_port=623
         - api_kg=None
 
-    return
+    Return Data
+
         A Python dict with the following keys/values:
 
         .. code-block:: python
@@ -333,8 +341,8 @@ def get_channel_info(channel=14, **kwargs):
         - api_port=623
         - api_kg=None
 
-    return
-        channel session supports:
+    Return Data
+        channel session supports
 
         .. code-block:: none
 
@@ -366,24 +374,23 @@ def set_user_access(uid, channel=14, callback=True, link_auth=True, ipmi_msg=Tru
 
     :param callback:
         User Restricted to Callback
-            - False = User Privilege Limit is determined by the User Privilege Limit
-              parameter, below, for both callback and non-callback connections.
-            - True  = User Privilege Limit is determined by the User Privilege Limit
-              parameter for callback connections, but is restricted to Callback
-              level for non-callback connections. Thus, a user can only initiate
-              a Callback when they 'call in' to the BMC, but once the callback
-              connection has been made, the user could potentially establish a
-              session as an Operator.
 
-    :param link_auth: User Link authentication
-        enable/disable (used to enable whether this
-        user's name and password information will be used for link
+        - False = User Privilege Limit is determined by the User Privilege Limit
+          parameter, below, for both callback and non-callback connections.
+        - True  = User Privilege Limit is determined by the User Privilege Limit
+          parameter for callback connections, but is restricted to Callback
+          level for non-callback connections. Thus, a user can only initiate
+          a Callback when they 'call in' to the BMC, but once the callback
+          connection has been made, the user could potentially establish a
+          session as an Operator.
+
+    :param link_auth: User Link authentication enable/disable (used to enable
+        whether this user's name and password information will be used for link
         authentication, e.g. PPP CHAP) for the given channel. Link
         authentication itself is a global setting for the channel and is
         enabled/disabled via the serial/modem configuration parameters.
 
-    :param ipmi_msg: User IPMI Messaging:
-        (used to enable/disable whether
+    :param ipmi_msg: User IPMI Messaging: (used to enable/disable whether
         this user's name and password information will be used for IPMI
         Messaging. In this case, 'IPMI Messaging' refers to the ability to
         execute generic IPMI commands that are not associated with a
@@ -397,12 +404,13 @@ def set_user_access(uid, channel=14, callback=True, link_auth=True, ipmi_msg=Tru
     :param privilege_level:
         User Privilege Limit. (Determines the maximum privilege level that the
         user is allowed to switch to on the specified channel.)
-            - callback
-            - user
-            - operator
-            - administrator
-            - proprietary
-            - no_access
+
+        - callback
+        - user
+        - operator
+        - administrator
+        - proprietary
+        - no_access
 
     :param kwargs:
         - api_host=127.0.0.1
@@ -434,20 +442,20 @@ def get_user_access(uid, channel=14, **kwargs):
         - api_port=623
         - api_kg=None
 
-    return
+    Return Data
 
-        .. code-block:: none
+    .. code-block:: none
 
-            channel_info:
-                - max_user_count = maximum number of user IDs on this channel
-                - enabled_users = count of User ID slots presently in use
-                - users_with_fixed_names = count of user IDs with fixed names
-            access:
-                - callback
-                - link_auth
-                - ipmi_msg
-                - privilege_level: [reserved, callback, user, operator
-                                   administrator, proprietary, no_access]
+        channel_info:
+            - max_user_count = maximum number of user IDs on this channel
+            - enabled_users = count of User ID slots presently in use
+            - users_with_fixed_names = count of user IDs with fixed names
+        access:
+            - callback
+            - link_auth
+            - ipmi_msg
+            - privilege_level: [reserved, callback, user, operator
+                               administrator, proprietary, no_access]
 
     CLI Examples:
 
@@ -792,19 +800,19 @@ def get_user(uid, channel=14, **kwargs):
         - api_port=623
         - api_kg=None
 
-    return
+    Return Data
 
-        .. code-block:: none
+    .. code-block:: none
 
-            name: (str)
-            uid: (int)
-            channel: (int)
-            access:
-                - callback (bool)
-                - link_auth (bool)
-                - ipmi_msg (bool)
-                - privilege_level: (str)[callback, user, operatorm administrator,
-                                        proprietary, no_access]
+        name: (str)
+        uid: (int)
+        channel: (int)
+        access:
+            - callback (bool)
+            - link_auth (bool)
+            - ipmi_msg (bool)
+            - privilege_level: (str)[callback, user, operatorm administrator,
+                                    proprietary, no_access]
 
     CLI Examples:
 

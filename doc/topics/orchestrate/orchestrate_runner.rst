@@ -235,7 +235,7 @@ To get a more dynamic state, use jinja variables together with
 Using the same example but passing on pillar data, the state would be like
 this.
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # /srv/salt/orch/deploy.sls
     {% set servers = salt['pillar.get']('servers', 'test') %}
@@ -263,16 +263,16 @@ To execute with pillar data.
 Return Codes in Runner/Wheel Jobs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 State (``salt.state``) jobs are able to report failure via the :ref:`state
 return dictionary <state-return-data>`. Remote execution (``salt.function``)
 jobs are able to report failure by setting a ``retcode`` key in the
 ``__context__`` dictionary. However, runner (``salt.runner``) and wheel
 (``salt.wheel``) jobs would only report a ``False`` result when the
-runner/wheel function raised an exception. As of the Oxygen release, it is now
-possible to set a retcode in runner and wheel functions just as you can do in
-remote execution functions. Here is some example pseudocode:
+runner/wheel function raised an exception. As of the 2018.3.0 release, it is
+now possible to set a retcode in runner and wheel functions just as you can do
+in remote execution functions. Here is some example pseudocode:
 
 .. code-block:: python
 
@@ -332,15 +332,14 @@ Given the above setup, the orchestration will be carried out as follows:
 3. Finally, the ``ceph`` SLS target will be executed on all minions which have
    a grain called ``role`` with a value of ``storage``.
 
-
 .. note::
 
-    Remember, salt-run is always executed on the master.
+    Remember, salt-run is *always* executed on the master.
 
 .. _orchestrate-runner-parsing-results-programatically:
 
-Parsing Results Programatically
--------------------------------
+Parsing Results Programmatically
+--------------------------------
 
 Orchestration jobs return output in a specific data structure. That data
 structure is represented differently depending on the outputter used. With the
@@ -591,11 +590,11 @@ loadable and parsable format:
     }
 
 
-The Oxygen release includes a couple fixes to make parsing this data easier and
+The 2018.3.0 release includes a couple fixes to make parsing this data easier and
 more accurate. The first is the ability to set a :ref:`return code
 <orchestrate-runner-return-codes-runner-wheel>` in a custom runner or wheel
 function, as noted above. The second is a change to how failures are included
-in the return data. Prior to the Oxygen release, minions that failed a
+in the return data. Prior to the 2018.3.0 release, minions that failed a
 ``salt.state`` orchestration job would show up in the ``comment`` field of the
 return data, in a human-readable string that was not easily parsed. They are
 now included in the ``changes`` dictionary alongside the minions that
@@ -603,3 +602,32 @@ succeeded. In addition, ``salt.function`` jobs which failed because the
 :ref:`fail function <orchestrate-runner-fail-functions>` returned ``False``
 used to handle their failures in the same way ``salt.state`` jobs did, and this
 has likewise been corrected.
+
+
+Running States on the Master without a Minion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The orchestrate runner can be used to execute states on the master without
+using a minion. For example, assume that ``salt://foo.sls`` contains the
+following SLS:
+
+.. code-block:: yaml
+
+    /etc/foo.conf:
+      file.managed:
+        - source: salt://files/foo.conf
+        - mode: 0600
+
+In this case, running ``salt-run state.orchestrate foo`` would be the
+equivalent of running a ``state.sls foo``, but it would execute on the master
+only, and would not require a minion daemon to be running on the master.
+
+This is not technically orchestration, but it can be useful in certain use
+cases.
+
+Limitations
+^^^^^^^^^^^
+
+Only one SLS target can be run at a time using this method, while using
+:py:func:`state.sls <salt.modules.state.sls>` allows for multiple SLS files to
+be passed in a comma-separated list.

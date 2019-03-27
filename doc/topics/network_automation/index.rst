@@ -21,8 +21,8 @@ New in Carbon (2016.11)
 -----------------------
 
 The methodologies for network automation have been introduced in
-:ref:`Carbon <release-2016-11-0.network-automation-napalm>` based on proxy
-minions:
+:ref:`2016.11.0 <release-2016-11-0-network-automation-napalm>`. Network
+automation support is based on proxy minions.
 
 - :mod:`NAPALM proxy <salt.proxy.napalm>`
 - :mod:`Junos proxy<salt.proxy.junos>`
@@ -35,8 +35,8 @@ NAPALM
 NAPALM (Network Automation and Programmability Abstraction Layer with
 Multivendor support) is an opensourced Python library that implements a set of
 functions to interact with different router vendor devices using a unified API.
-Begin vendor-agnostic simplifies the operations, as the configuration
-and the interaction with the network device does not rely on a particular vendor.
+Being vendor-agnostic simplifies operations, as the configuration and
+interaction with the network device does not rely on a particular vendor.
 
 .. image:: /_static/napalm_logo.png
 
@@ -119,8 +119,8 @@ in :conf_master:`pillar_roots`, pattern your files after the following examples:
       router2:
         - router2
       switch1:
-        - swtich1
-      swtich2:
+        - switch1
+      switch2:
         - switch2
       cpe1:
         - cpe1
@@ -334,8 +334,8 @@ network devices, we can add the following line inside the ``top.sls`` file:
       router2:
         - router2
       switch1:
-        - swtich1
-      swtich2:
+        - switch1
+      switch2:
         - switch2
       cpe1:
         - cpe1
@@ -354,8 +354,8 @@ Or include only where needed:
         - router2
         - ntp
       switch1:
-        - swtich1
-      swtich2:
+        - switch1
+      switch2:
         - switch2
       cpe1:
         - cpe1

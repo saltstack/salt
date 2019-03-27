@@ -773,7 +773,7 @@ def find(addr, best=True, display=_DEFAULT_DISPLAY):
         when the saerching pattern is a valid IP Address or Network.
 
     display: ``True``
-        Display on the screen or return structured object? Default: ``True``(return on the CLI).
+        Display on the screen or return structured object? Default: ``True`` (return on the CLI).
 
     CLI Example:
 

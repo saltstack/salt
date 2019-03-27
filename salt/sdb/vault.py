@@ -27,7 +27,7 @@ Once configured you can access data using a URL such as:
 
 .. code-block:: yaml
 
-    password: sdb://myvault/secret/passwords?mypassword
+    password: sdb://myvault/secret/passwords/mypassword
 
 In this URL, ``myvault`` refers to the configuration profile,
 ``secret/passwords`` is the path where the data resides, and ``mypassword`` is
@@ -56,9 +56,17 @@ def set_(key, value, profile=None):
     '''
     Set a key/value pair in the vault service
     '''
-    comps = key.split('?')
-    path = comps[0]
-    key = comps[1]
+    if '?' in key:
+        __utils__['versions.warn_until'](
+            'Neon',
+            (
+                'Using ? to seperate between the path and key for vault has been deprecated '
+                'and will be removed in {version}.  Please just use a /.'
+            ),
+        )
+        path, key = key.split('?')
+    else:
+        path, key = key.rsplit('/', 1)
 
     try:
         url = 'v1/{0}'.format(path)
@@ -81,9 +89,17 @@ def get(key, profile=None):
     '''
     Get a value from the vault service
     '''
-    comps = key.split('?')
-    path = comps[0]
-    key = comps[1]
+    if '?' in key:
+        __utils__['versions.warn_until'](
+            'Neon',
+            (
+                'Using ? to seperate between the path and key for vault has been deprecated '
+                'and will be removed in {version}.  Please just use a /.'
+            ),
+        )
+        path, key = key.split('?')
+    else:
+        path, key = key.rsplit('/', 1)
 
     try:
         url = 'v1/{0}'.format(path)

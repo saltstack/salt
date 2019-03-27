@@ -120,7 +120,7 @@ try:
     import profitbricks
     from profitbricks.client import (
         ProfitBricksService, Server,
-        NIC, Volume, FirewallRule,
+        NIC, Volume, FirewallRule, IPBlock,
         Datacenter, LoadBalancer, LAN,
         PBNotFoundError, PBError
     )
@@ -348,7 +348,8 @@ def get_size(vm_):
         return sizes['Small Instance']
 
     for size in sizes:
-        if vm_size and six.text_type(vm_size) in (six.text_type(sizes[size]['id']), six.text_type(size)):
+        combinations = (six.text_type(sizes[size]['id']), six.text_type(size))
+        if vm_size and six.text_type(vm_size) in combinations:
             return sizes[size]
     raise SaltCloudNotFound(
         'The specified size, \'{0}\', could not be found.'.format(vm_size)
@@ -371,8 +372,7 @@ def get_datacenter_id():
     try:
         conn.get_datacenter(datacenter_id=datacenter_id)
     except PBNotFoundError:
-        log.error('Failed to get datacenter: {0}'.format(
-                  datacenter_id))
+        log.error('Failed to get datacenter: %s', datacenter_id)
         raise
 
     return datacenter_id
@@ -568,7 +568,8 @@ def list_nodes(conn=None, call=None):
     try:
         nodes = conn.list_servers(datacenter_id=datacenter_id)
     except PBNotFoundError:
-        log.error('Failed to get nodes list from datacenter: %s', datacenter_id)
+        log.error('Failed to get nodes list '
+                  'from datacenter: %s', datacenter_id)
         raise
 
     for item in nodes['items']:
@@ -605,7 +606,7 @@ def list_nodes_full(conn=None, call=None):
         node['private_ips'] = []
         if item['entities']['nics']['items'] > 0:
             for nic in item['entities']['nics']['items']:
-                if len(nic['properties']['ips']) > 0:
+                if nic['properties']['ips']:
                     pass
                 ip_address = nic['properties']['ips'][0]
                 if salt.utils.cloud.is_public_ip(ip_address):
@@ -620,6 +621,39 @@ def list_nodes_full(conn=None, call=None):
         __active_provider_name__.split(':')[0],
         __opts__
     )
+
+    return ret
+
+
+def reserve_ipblock(call=None, kwargs=None):
+    '''
+    Reserve the IP Block
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The reserve_ipblock function must be called with -f or '
+            '--function.'
+        )
+
+    conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
+
+    ret = {}
+    ret['ips'] = []
+
+    if kwargs.get('location') is None:
+        raise SaltCloudExecutionFailure('The "location" parameter is required')
+    location = kwargs.get('location')
+
+    size = 1
+    if kwargs.get('size') is not None:
+        size = kwargs.get('size')
+
+    block = conn.reserve_ipblock(IPBlock(size=size, location=location))
+    for item in block['properties']['ips']:
+        ret['ips'].append(item)
 
     return ret
 
@@ -675,12 +709,14 @@ def _get_nics(vm_):
         firewall_rules = []
         # Set LAN to public if it already exists, otherwise create a new
         # public LAN.
-        lan_id = set_public_lan(int(vm_['public_lan']))
         if 'public_firewall_rules' in vm_:
             firewall_rules = _get_firewall_rules(vm_['public_firewall_rules'])
-        nics.append(NIC(lan=lan_id,
-                        name='public',
-                        firewall_rules=firewall_rules))
+        nic = NIC(lan=set_public_lan(int(vm_['public_lan'])),
+                  name='public',
+                  firewall_rules=firewall_rules)
+        if 'public_ips' in vm_:
+            nic.ips = _get_ip_addresses(vm_['public_ips'])
+        nics.append(nic)
 
     if 'private_lan' in vm_:
         firewall_rules = []
@@ -689,7 +725,9 @@ def _get_nics(vm_):
         nic = NIC(lan=int(vm_['private_lan']),
                   name='private',
                   firewall_rules=firewall_rules)
-        if 'nat' in vm_:
+        if 'private_ips' in vm_:
+            nic.ips = _get_ip_addresses(vm_['private_ips'])
+        if 'nat' in vm_ and 'private_ips' not in vm_:
             nic.nat = vm_['nat']
         nics.append(nic)
     return nics
@@ -838,11 +876,8 @@ def create(vm_):
         return False
     except Exception as exc:  # pylint: disable=W0703
         log.error(
-            'Error creating {0} \n\n'
-            'Error: \n{1}'.format(
-                vm_['name'], exc
-            ),
-            exc_info_on_loglevel=logging.DEBUG
+            'Error creating %s \n\nError: \n%s',
+            vm_['name'], exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -969,12 +1004,12 @@ def destroy(name, call=None):
     # The server is deleted and now is safe to delete the volumes
     if delete_volumes:
         for vol in attached_volumes['items']:
-            log.debug('Deleting volume {0}'.format(vol['id']))
+            log.debug('Deleting volume %s', vol['id'])
             conn.delete_volume(
                 datacenter_id=datacenter_id,
                 volume_id=vol['id']
             )
-            log.debug('Deleted volume {0}'.format(vol['id']))
+            log.debug('Deleted volume %s', vol['id'])
 
     __utils__['cloud.fire_event'](
         'event',
@@ -1112,8 +1147,6 @@ def _get_system_volume(vm_):
     '''
     Construct VM system volume list from cloud profile config
     '''
-    # Retrieve list of SSH public keys
-    ssh_keys = get_public_keys(vm_)
 
     # Override system volume size if 'disk_size' is defined in cloud profile
     disk_size = get_size(vm_)['disk']
@@ -1124,9 +1157,16 @@ def _get_system_volume(vm_):
     volume = Volume(
         name='{0} Storage'.format(vm_['name']),
         size=disk_size,
-        disk_type=get_disk_type(vm_),
-        ssh_keys=ssh_keys
+        disk_type=get_disk_type(vm_)
     )
+
+    if 'image_password' in vm_:
+        image_password = vm_['image_password']
+        volume.image_password = image_password
+
+    # Retrieve list of SSH public keys
+    ssh_keys = get_public_keys(vm_)
+    volume.ssh_keys = ssh_keys
 
     if 'image_alias' in vm_.keys():
         volume.image_alias = vm_['image_alias']
@@ -1169,6 +1209,17 @@ def _get_data_volumes(vm_):
             volume.availability_zone = volumes[key]['disk_availability_zone']
 
         ret.append(volume)
+
+    return ret
+
+
+def _get_ip_addresses(ip_addresses):
+    '''
+    Construct a list of ip address
+    '''
+    ret = []
+    for item in ip_addresses:
+        ret.append(item)
 
     return ret
 
@@ -1224,7 +1275,7 @@ def _wait_for_completion(conn, promise, wait_timeout, msg):
             )
 
     raise Exception(
-        'Timed out waiting for async operation {0} "{1}" to complete.'.format(
+        'Timed out waiting for asynchronous operation {0} "{1}" to complete.'.format(
             msg, six.text_type(promise['requestId'])
         )
     )

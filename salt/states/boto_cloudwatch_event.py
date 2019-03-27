@@ -92,7 +92,7 @@ def present(name, Name=None,
         not provided.
 
     ScheduleExpression
-        The scheduling expression. For example, "cron(0 20 * * ? *)",
+        The scheduling expression. For example, ``cron(0 20 * * ? *)``,
         "rate(5 minutes)"
 
     EventPattern

@@ -20,13 +20,13 @@ import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minions
+import salt.utils.msgpack
 import salt.utils.stringutils
 import salt.exceptions
 
 # Import 3rd-party libs
-import msgpack
 from salt.ext import six
-
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +76,9 @@ def _walk_through(job_dir):
                     job = serial.load(rfh)
                 except Exception:
                     log.exception('Failed to deserialize %s', load_path)
+                    continue
+                if not job:
+                    log.error('Deserialization of job succeded but there is no data in %s', load_path)
                     continue
                 jid = job['jid']
                 yield jid, job, t_path, final
@@ -296,8 +299,19 @@ def get_load(jid):
         return {}
     serial = salt.payload.Serial(__opts__)
     ret = {}
-    with salt.utils.files.fopen(os.path.join(jid_dir, LOAD_P), 'rb') as rfh:
-        ret = serial.load(rfh)
+    load_p = os.path.join(jid_dir, LOAD_P)
+    num_tries = 5
+    for index in range(1, num_tries + 1):
+        with salt.utils.files.fopen(load_p, 'rb') as rfh:
+            try:
+                ret = serial.load(rfh)
+                break
+            except Exception as exc:
+                if index == num_tries:
+                    time.sleep(0.25)
+    else:
+        log.critical('Failed to unpack %s', load_p)
+        raise exc
     if ret is None:
         ret = {}
     minions_cache = [os.path.join(jid_dir, MINIONS_P)]
@@ -430,10 +444,13 @@ def clean_old_jobs():
                     shutil.rmtree(f_path)
                 elif os.path.isfile(jid_file):
                     jid_ctime = os.stat(jid_file).st_ctime
-                    hours_difference = (time.time()- jid_ctime) / 3600.0
+                    hours_difference = (time.time() - jid_ctime) / 3600.0
                     if hours_difference > __opts__['keep_jobs'] and os.path.exists(t_path):
                         # Remove the entire f_path from the original JID dir
-                        shutil.rmtree(f_path)
+                        try:
+                            shutil.rmtree(f_path)
+                        except OSError as err:
+                            log.error('Unable to remove %s: %s', f_path, err)
 
         # Remove empty JID dirs from job cache, if they're old enough.
         # JID dirs may be empty either from a previous cache-clean with the bug
@@ -503,8 +520,8 @@ def save_reg(data):
             raise
     try:
         with salt.utils.files.fopen(regfile, 'a') as fh_:
-            msgpack.dump(data, fh_)
-    except:
+            salt.utils.msgpack.dump(data, fh_)
+    except Exception:
         log.error('Could not write to msgpack file %s', __opts__['outdir'])
         raise
 
@@ -517,7 +534,7 @@ def load_reg():
     regfile = os.path.join(reg_dir, 'register')
     try:
         with salt.utils.files.fopen(regfile, 'r') as fh_:
-            return msgpack.load(fh_)
-    except:
+            return salt.utils.msgpack.load(fh_)
+    except Exception:
         log.error('Could not write to msgpack file %s', __opts__['outdir'])
         raise

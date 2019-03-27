@@ -4,41 +4,70 @@
 Renderers
 =========
 
-The Salt state system operates by gathering information from common data
-types such as lists, dictionaries, and strings that would be familiar
-to any developer.
+The Salt state system operates by gathering information from common data types
+such as lists, dictionaries, and strings that would be familiar to any
+developer.
 
-SLS files are translated from whatever data templating format they are written
-in back into Python data types to be consumed by Salt.
+Salt Renderers translate input from the format in which it is written into
+Python data structures.
 
-By default SLS files are rendered as Jinja templates and then parsed as YAML
-documents. But since the only thing the state system cares about is raw data,
-the SLS files can be any structured format that can be dreamed up.
+The default renderer is set in the master/minion configuration file using the
+:conf_master:`renderer` config option, which defaults to ``jinja|yaml``.
 
-Currently there is support for ``Jinja + YAML``, ``Mako + YAML``,
-``Wempy + YAML``, ``Jinja + json``, ``Mako + json`` and ``Wempy + json``.
 
-Renderers can be written to support any template type. This means that the
-Salt states could be managed by XML files, HTML files, Puppet files, or any
-format that can be translated into the Pythonic data structure used by the state
-system.
+Two Kinds of Renderers
+----------------------
 
-Multiple Renderers
-------------------
+Renderers fall into one of two categories, based on what they output: text or
+data. The one exception to this would be the :mod:`pure python
+<salt.renderers.py>` renderer, which can be used in either capacity.
 
-A default renderer is selected in the master configuration file by providing
-a value to the ``renderer`` key.
+Text Renderers
+**************
 
-When evaluating an SLS, more than one renderer can be used.
+A text renderer returns text. These include templating engines such as
+:mod:`jinja <salt.renderers.jinja>`, :mod:`mako <salt.renderers.mako>`, and
+:mod:`genshi <salt.renderers.genshi>`, as well as the :mod:`gpg
+<salt.renderers.gpg>` renderer. The following are all text renderers:
 
-When rendering SLS files, Salt checks for the presence of a Salt-specific
-shebang line.
+- :mod:`aws_kms <salt.renderers.aws_kms>`
+- :mod:`cheetah <salt.renderers.cheetah>`
+- :mod:`genshi <salt.renderers.genshi>`
+- :mod:`gpg <salt.renderers.gpg>`
+- :mod:`jinja <salt.renderers.jinja>`
+- :mod:`mako <salt.renderers.mako>`
+- :mod:`nacl <salt.renderers.nacl>`
+- :mod:`pass <salt.renderers.pass>`
+- :mod:`py <salt.renderers.py>`
+- :mod:`wempy <salt.renderers.wempy>`
 
-The shebang line directly calls the name of the renderer as it is specified
-within Salt. One of the most common reasons to use multiple renderers is to
-use the Python or ``py`` renderer.
+Data Renderers
+**************
 
-Below, the first line is a shebang that references the ``py`` renderer.
+A data renderer returns a Python data structure (typically a dictionary). The
+following are all data renderers:
+
+- :mod:`dson <salt.renderers.dson>`
+- :mod:`hjson <salt.renderers.hjson>`
+- :mod:`json5 <salt.renderers.json5>`
+- :mod:`json <salt.renderers.json>`
+- :mod:`pydsl <salt.renderers.pydsl>`
+- :mod:`pyobjects <salt.renderers.pyobjects>`
+- :mod:`py <salt.renderers.py>`
+- :mod:`stateconf <salt.renderers.stateconf>`
+- :mod:`yamlex <salt.renderers.yamlex>`
+- :mod:`yaml <salt.renderers.yaml>`
+
+
+Overriding the Default Renderer
+-------------------------------
+
+It can sometimes be beneficial to write an SLS file using a renderer other than
+the default one. This can be done by using a "shebang"-like syntax on the first
+line of the SLS file:
+
+Here is an example of using the :mod:`pure python <salt.renderers.py>` renderer
+to install a package:
 
 .. code-block:: python
 
@@ -46,38 +75,59 @@ Below, the first line is a shebang that references the ``py`` renderer.
 
     def run():
         '''
-        Install the python-mako package
+        Install version 1.5-1.el7 of package "python-foo"
         '''
-        return {'include': ['python'],
-                'python-mako': {'pkg': ['installed']}}
+        return {
+            'include': ['python'],
+            'python-foo': {
+                'pkg.installed': [
+                    {'version': '1.5-1.el7'},
+                ]
+            }
+        }
 
+This would be equivalent to the following:
+
+.. code-block:: yaml
+
+    include:
+      - python
+
+    python-foo:
+      pkg.installed:
+        - version: '1.5-1.el7'
 
 .. _renderers-composing:
 
-Composing Renderers
--------------------
-A renderer can be composed from other renderers by connecting them in a series
-of pipes(``|``).
+Composing Renderers (a.k.a. The "Render Pipeline")
+--------------------------------------------------
 
-In fact, the default ``Jinja + YAML`` renderer is implemented by connecting a YAML
-renderer to a Jinja renderer. Such renderer configuration is specified as: ``jinja | yaml``.
+A render pipeline can be composed from other renderers by connecting them in a
+series of "pipes" (i.e. ``|``). The renderers will be evaluated from left to
+right, with each renderer receiving the result of the previous renderer's
+execution.
 
-Other renderer combinations are possible:
+Take for example the default renderer (``jinja|yaml``). The file is evaluated
+first a jinja template, and the result of that template is evaluated as a YAML
+document.
+
+Other render pipeline combinations include:
 
   ``yaml``
-      i.e, just YAML, no templating.
+      Just YAML, no templating.
 
-  ``mako | yaml``
-      pass the input to the ``mako`` renderer, whose output is then fed into the
-      ``yaml`` renderer.
+  ``mako|yaml``
+      This passes the input to the ``mako`` renderer, with its output fed into
+      the ``yaml`` renderer.
 
-  ``jinja | mako | yaml``
+  ``jinja|mako|yaml``
       This one allows you to use both jinja and mako templating syntax in the
       input and then parse the final rendered output as YAML.
 
-The following is a contrived example SLS file using the ``jinja | mako | yaml`` renderer:
+The following is a contrived example SLS file using the ``jinja|mako|yaml``
+render pipeline:
 
-.. code-block:: python
+.. code-block:: text
 
     #!jinja|mako|yaml
 
@@ -91,36 +141,59 @@ The following is a contrived example SLS file using the ``jinja | mako | yaml`` 
     <%doc> ${...} is Mako's notation, and so is this comment. </%doc>
     {#     Similarly, {{...}} is Jinja's notation, and so is this comment. #}
 
-For backward compatibility, ``jinja | yaml`` can also be written as
-``yaml_jinja``, and similarly, the ``yaml_mako``, ``yaml_wempy``,
-``json_jinja``, ``json_mako``, and ``json_wempy`` renderers are all supported.
+.. important::
+    Keep in mind that not all renderers can be used alone or with any other
+    renderers. For example, text renderers shouldn't be used alone as their
+    outputs are just strings, which still need to be parsed by another renderer
+    to turn them into Python data structures.
 
-Keep in mind that not all renderers can be used alone or with any other renderers.
-For example, the template renderers shouldn't be used alone as their outputs are
-just strings, which still need to be parsed by another renderer to turn them into
-highstate data structures.
+    For example, it would not make sense to use ``yaml|jinja`` because the
+    output of the :mod:`yaml <salt.renderers.yaml>` renderer is a Python data
+    structure, and the :mod:`jinja <salt.renderers.jinja>` renderer only
+    accepts text as input.
 
-For example, it doesn't make sense to specify ``yaml | jinja`` because the
-output of the YAML renderer is a highstate data structure (a dict in Python), which
-cannot be used as the input to a template renderer. Therefore, when combining
-renderers, you should know what each renderer accepts as input and what it returns
-as output.
+    Therefore, when combining renderers, you should know what each renderer
+    accepts as input and what it returns as output. One way of thinking about
+    it is that you can chain together multiple text renderers, but the pipeline
+    *must* end in a data renderer. Similarly, since the text renderers in Salt
+    don't accept data structures as input, a text renderer should usually not
+    come after a data renderer. It's technically *possible* to write a renderer
+    that takes a data structure as input and returns a string, but no such
+    renderer is distributed with Salt.
+
 
 Writing Renderers
 -----------------
 
-A custom renderer must be a Python module placed in the renderers directory and the
-module implement the ``render`` function.
+A custom renderer must be a Python module which implements a ``render``
+function. This function must implement three positional arguments:
 
-The ``render`` function will be passed the path of the SLS file as an argument.
+1. ``data`` - Can be called whatever you like. This is the input to be
+   rendered.
+2. ``saltenv``
+3. ``sls``
 
-The purpose of the ``render`` function is to parse the passed file and to return
-the Python data structure derived from the file.
+The first is the important one, and the 2nd and 3rd must be included since Salt
+needs to pass this info to each render, even though it is only used by template
+renderers.
 
-Custom renderers must be placed in a ``_renderers`` directory within the
-:conf_master:`file_roots` specified by the master config file.
+Renderers should be written so that the ``data`` argument can accept either
+strings or file-like objects as input. For example:
 
-Custom renderers are distributed when any of the following are run:
+.. code-block:: python
+
+    import mycoolmodule
+    from salt.ext import six
+
+    def render(data, saltenv='base', sls='', **kwargs):
+        if not isinstance(data, six.string_types):
+            # Read from file-like object
+            data = data.read()
+
+        return mycoolmodule.do_something(data)
+
+Custom renderers should be placed within ``salt://_renderers/``, so that they
+can be synced to minions. They are synced when any of the following are run:
 
 - :py:func:`state.apply <salt.modules.state.apply_>`
 - :py:func:`saltutil.sync_renderers <salt.modules.saltutil.sync_renderers>`
@@ -129,6 +202,12 @@ Custom renderers are distributed when any of the following are run:
 Any custom renderers which have been synced to a minion, that are named the
 same as one of Salt's default set of renderers, will take the place of the
 default renderer with the same name.
+
+.. note::
+    Renderers can also be synced from ``salt://_renderers/`` to the Master
+    using either the :py:func:`saltutil.sync_renderers
+    <salt.runners.saltutil.sync_renderers>` or :py:func:`saltutil.sync_all
+    <salt.runners.saltutil.sync_all>` runner function.
 
 
 Examples

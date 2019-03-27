@@ -6,15 +6,16 @@ import logging
 from copy import deepcopy
 import pkg_resources
 import os.path
+import sys
 
-# imprt salt paths
-from tests.support.paths import TESTS_DIR
+# Import test support libs
+from tests.support.runtests import RUNTIME_VARS
 
 # import Python Third Party Libs
 # pylint: disable=import-error
 try:
     import boto
-    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     import boto.ec2.elb
     HAS_BOTO = True
 except ImportError:
@@ -103,8 +104,10 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        opts = salt.config.DEFAULT_MASTER_OPTS
-        utils = salt.loader.utils(opts, whitelist=['boto'])
+        opts = salt.config.DEFAULT_MASTER_OPTS.copy()
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['boto', 'args', 'systemd', 'path', 'platform'])
         funcs = salt.loader.minion_mods(opts, utils=utils)
         return {
             boto_elb: {
@@ -121,6 +124,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_register_instances_valid_id_result_true(self):
         '''
         tests that given a valid instance id and valid ELB that
@@ -140,6 +144,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_register_instances_valid_id_string(self):
         '''
         tests that given a string containing a instance id and valid ELB that
@@ -163,6 +168,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_deregister_instances_valid_id_result_true(self):
         '''
         tests that given an valid id the boto_elb deregister_instances method
@@ -184,6 +190,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_deregister_instances_valid_id_string(self):
         '''
         tests that given an valid id the boto_elb deregister_instances method
@@ -210,6 +217,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_deregister_instances_valid_id_list(self):
         '''
         tests that given an valid ids in the form of a list that the boto_elb

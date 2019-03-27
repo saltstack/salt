@@ -209,12 +209,15 @@ def present(name=None,
     table creation.
 
     Global secondary indexes (GSIs) are managed with some exceptions:
-    * If a GSI deletion is detected, a failure will occur (deletes should be
+
+    - If a GSI deletion is detected, a failure will occur (deletes should be
       done manually in the AWS console).
-    * If multiple GSIs are added in a single Salt call, a failure will occur
+
+    - If multiple GSIs are added in a single Salt call, a failure will occur
       (boto supports one creation at a time). Note that this only applies after
       table creation; multiple GSIs can be created during table creation.
-    * Updates to existing GSIs are limited to read/write capacity only
+
+    - Updates to existing GSIs are limited to read/write capacity only
       (DynamoDB limitation).
 
     name

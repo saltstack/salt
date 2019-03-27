@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Marek Skrobacki <skrobul@skrobul.com>`
+    :codeauthor: Marek Skrobacki <skrobul@skrobul.com>
 '''
 
 # Import Python Libs

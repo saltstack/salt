@@ -13,6 +13,7 @@ state modules
     acme
     alias
     alternatives
+    ansiblegate
     apache
     apache_conf
     apache_module
@@ -23,9 +24,13 @@ state modules
     at
     augeas
     aws_sqs
+    azurearm_compute
+    azurearm_network
+    azurearm_resource
     beacon
     bigip
     blockdev
+    bluecoat_sslv
     boto3_elasticache
     boto3_route53
     boto_apigateway
@@ -68,6 +73,7 @@ state modules
     cloud
     cmd
     composer
+    consul
     cron
     csf
     cyg
@@ -75,7 +81,6 @@ state modules
     debconfmod
     dellchassis
     disk
-    docker
     docker_container
     docker_image
     docker_network
@@ -97,6 +102,7 @@ state modules
     git
     github
     glance
+    glance_image
     glusterfs
     gnomedesktop
     gpg
@@ -111,9 +117,7 @@ state modules
     group
     heat
     hg
-    hipchat
     host
-    htpasswd
     http
     icinga2
     ifttt
@@ -124,7 +128,10 @@ state modules
     influxdb_database
     influxdb_retention_policy
     influxdb_user
-    infoblox
+    infoblox_a
+    infoblox_cname
+    infoblox_host_record
+    infoblox_range
     ini_manage
     ipmi
     ipset
@@ -132,11 +139,19 @@ state modules
     jboss7
     jenkins
     junos
-    k8s
     kapacitor
     kernelpkg
     keyboard
     keystone
+    keystone_domain
+    keystone_endpoint
+    keystone_group
+    keystone_project
+    keystone_role
+    keystone_role_grant
+    keystone_service
+    keystone_user
+    keystore
     kmod
     kubernetes
     layman
@@ -154,13 +169,13 @@ state modules
     lvs_service
     lxc
     mac_assistive
-    mac_defaults
+    macdefaults
     mac_keychain
-    mac_package
+    macpackage
     mac_xattr
     makeconf
     marathon_app
-    mdadm
+    mdadm_raid
     memcached
     modjk
     modjk_worker
@@ -180,7 +195,11 @@ state modules
     netsnmp
     netusers
     network
-    netyang
+    net_napalm_yang
+    neutron_network
+    neutron_secgroup
+    neutron_secgroup_rule
+    neutron_subnet
     nfs_export
     nftables
     npm
@@ -245,6 +264,7 @@ state modules
     slack
     smartos
     smtp
+    snap
     snapper
     solrcloud
     splunk
@@ -276,6 +296,7 @@ state modules
     victorops
     virt
     virtualenv_mod
+    webutil
     win_certutil
     win_dacl
     win_dism
@@ -292,19 +313,23 @@ state modules
     win_smtp_server
     win_snmp
     win_system
-    win_update
     win_wua
     winrepo
     x509
+    xml
     xmpp
+    zabbix_action
     zabbix_host
     zabbix_hostgroup
     zabbix_mediatype
+    zabbix_template
     zabbix_user
     zabbix_usergroup
+    zabbix_valuemap
     zcbuildout
     zenoss
     zk_concurrency
     zfs
     zone
+    zookeeper
     zpool

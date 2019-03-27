@@ -13,17 +13,17 @@
 
 _salt_get_grains(){
     if [ "$1" = 'local' ] ; then
-        salt-call --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
+        salt-call --log-level=error --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
     else
-      salt '*' --timeout 2 --hide-timeout --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
+      salt '*' --timeout 2 --hide-timeout --log-level=error --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
     fi
 }
 
 _salt_get_grain_values(){
     if [ "$1" = 'local' ] ; then
-        salt-call --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
+        salt-call --log-level=error --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
     else
-        salt '*' --timeout 2 --hide-timeout --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
+        salt '*' --timeout 2 --hide-timeout --log-level=error --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
     fi
 }
 
@@ -34,14 +34,41 @@ _salt_get_keys(){
     done
 }
 
-_salt(){
-    CACHE_DIR="$HOME/.cache/salt-comp-cache_functions"
+_salt_list_functions(){
+    # salt-call: get all functions on this minion
+    # salt: get all functions on all minions
+    # sed: remove all array overhead and convert to newline separated list
+    # sort: chop out doubled entries, so overhead is minimal later during actual completion
+    if [ "$1" = 'local' ] ; then
+        salt-call --log-level=quiet --out=txt -- sys.list_functions \
+          | sed "s/^.*\[//;s/[],']\|u'//g;s/ /\n/g" \
+          | sort -u
+    else
+        salt '*' --timeout 2 --hide-timeout --log-level=quiet --out=txt -- sys.list_functions \
+          | sed "s/^.*\[//;s/[],']\|u'//g;s/ /\n/g" \
+          | sort -u
+    fi
+}
+
+_salt_get_coms() {
+    CACHE_DIR="$HOME/.cache/salt-${1}-comp-cache_functions"
     local _salt_cache_functions=${SALT_COMP_CACHE_FUNCTIONS:=$CACHE_DIR}
     local _salt_cache_timeout=${SALT_COMP_CACHE_TIMEOUT:='last hour'}
 
     if [ ! -d "$(dirname ${_salt_cache_functions})" ]; then
         mkdir -p "$(dirname ${_salt_cache_functions})"
     fi
+
+    # Regenerate cache if timed out
+    if [[ "$(stat --format=%Z ${_salt_cache_functions} 2>/dev/null)" -lt "$(date --date="${_salt_cache_timeout}" +%s)" ]]; then
+	_salt_list_functions $1 > "${_salt_cache_functions}"
+    fi
+
+    # filter results, to only print the part to next dot (or end of function)
+    sed 's/^\('${cur}'\(\.\|[^.]*\)\)\?.*/\1/' "${_salt_cache_functions}" | sort -u
+}
+
+_salt(){
 
     local cur prev opts _salt_grains _salt_coms pprev ppprev
     COMPREPLY=()
@@ -129,22 +156,10 @@ _salt(){
      ;;
     esac
 
-    # Regenerate cache if timed out
-    if [[ "$(stat --format=%Z ${_salt_cache_functions} 2>/dev/null)" -lt "$(date --date="${_salt_cache_timeout}" +%s)" ]]; then
-        # salt: get all functions on all minions
-        # sed: remove all array overhead and convert to newline separated list
-        # sort: chop out doubled entries, so overhead is minimal later during actual completion
-        salt '*' --timeout 2 --hide-timeout --out=txt -- sys.list_functions \
-          | sed "s/^.*\[//;s/[],']//g;s/ /\n/g" \
-          | sort -u \
-          > "${_salt_cache_functions}"
-    fi
-
-    # filter results, to only print the part to next dot (or end of function)
-    _salt_coms="$(sed 's/^\('${cur}'\(\.\|[^.]*\)\)\?.*/\1/' "${_salt_cache_functions}" | sort -u)"
+    _salt_coms=$(_salt_get_coms remote)
 
     # If there are still dots in the suggestion, do not append space
-    grep "^${cur}.*\." "${_salt_cache_functions}" &>/dev/null && compopt -o nospace
+    grep "^${cur}.*\." "${_salt_coms}" &>/dev/null && compopt -o nospace
 
     all="${opts} ${_salt_coms}"
     COMPREPLY=( $(compgen -W "${all}" -- ${cur}) )
@@ -276,7 +291,11 @@ _saltcall(){
                 ;;
     esac
 
-    _salt_coms="$(salt-call --out=txt -- sys.list_functions|sed 's/^.*\[//' | tr -d ",']"  )"
+    _salt_coms=$(_salt_get_coms local)
+
+    # If there are still dots in the suggestion, do not append space
+    grep "^${cur}.*\." "${_salt_coms}" &>/dev/null && compopt -o nospace
+
     COMPREPLY=( $(compgen -W "${opts} ${_salt_coms}" -- ${cur} ))
     return 0
 }

@@ -12,6 +12,8 @@ This is an alternative to the ``ldap`` interface provided by the
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
+import sys
 
 available_backends = set()
 try:
@@ -22,9 +24,9 @@ try:
     available_backends.add('ldap')
 except ImportError:
     pass
-import logging
+
+import salt.utils.data
 from salt.ext import six
-import sys
 
 log = logging.getLogger(__name__)
 
@@ -400,14 +402,14 @@ def add(connect_spec, dn, attributes):
     # convert the "iterable of values" to lists in case that's what
     # addModlist() expects (also to ensure that the caller's objects
     # are not modified)
-    attributes = dict(((attr, list(vals))
+    attributes = dict(((attr, salt.utils.data.encode(list(vals)))
                        for attr, vals in six.iteritems(attributes)))
     log.info('adding entry: dn: %s attributes: %s', repr(dn), repr(attributes))
 
     if 'unicodePwd' in attributes:
         attributes['unicodePwd'] = [_format_unicode_password(x) for x in attributes['unicodePwd']]
 
-    modlist = ldap.modlist.addModlist(attributes)
+    modlist = ldap.modlist.addModlist(attributes),
     try:
         l.c.add_s(dn, modlist)
     except ldap.LDAPError as e:
@@ -507,6 +509,7 @@ def modify(connect_spec, dn, directives):
             modlist[idx] = (mod[0], mod[1],
                 [_format_unicode_password(x) for x in mod[2]])
 
+    modlist = salt.utils.data.decode(modlist, to_str=True, preserve_tuples=True)
     try:
         l.c.modify_s(dn, modlist)
     except ldap.LDAPError as e:
@@ -565,15 +568,16 @@ def change(connect_spec, dn, before, after):
     # convert the "iterable of values" to lists in case that's what
     # modifyModlist() expects (also to ensure that the caller's dicts
     # are not modified)
-    before = dict(((attr, list(vals))
+    before = dict(((attr, salt.utils.data.encode(list(vals)))
                    for attr, vals in six.iteritems(before)))
-    after = dict(((attr, list(vals))
+    after = dict(((attr, salt.utils.data.encode(list(vals)))
                   for attr, vals in six.iteritems(after)))
 
     if 'unicodePwd' in after:
         after['unicodePwd'] = [_format_unicode_password(x) for x in after['unicodePwd']]
 
     modlist = ldap.modlist.modifyModlist(before, after)
+
     try:
         l.c.modify_s(dn, modlist)
     except ldap.LDAPError as e:

@@ -11,12 +11,11 @@ engine modules
     :template: autosummary.rst.tmpl
 
     docker_events
-    hipchat
     http_logstash
     ircbot
     junos_syslog
     logentries
-    logstash
+    logstash_engine
     napalm_syslog
     reactor
     redis_sentinel

@@ -8,7 +8,7 @@ of supported clouds, see http://libcloud.readthedocs.io/en/latest/loadbalancer/s
 
 Clouds include Amazon ELB, ALB, Google, Aliyun, CloudStack, Softlayer
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :configuration:
     This module uses a configuration profile for one or multiple Storage providers
@@ -375,7 +375,7 @@ def balancer_detach_member(balancer_id, member_id, profile, **libcloud_kwargs):
     match = [member for member in members if member.id == member_id]
     if len(match) > 1:
         raise ValueError("Ambiguous argument, found mulitple records")
-    elif len(match) == 0:
+    elif not match:
         raise ValueError("Bad argument, found no records")
     else:
         member = match[0]

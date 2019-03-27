@@ -3,7 +3,7 @@
 Manage S3 Resources
 =================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Manage S3 resources. Be aware that this interacts with Amazon's services,
 and so may incur charges.
@@ -282,7 +282,7 @@ def object_present(
         ret['result'] = None
         ret['comment'] = 'S3 object {0} set to be {1}d.'.format(name, action)
         ret['comment'] += '\nChanges:\n{0}'.format(changes_diff)
-        ret['pchanges'] = {'diff': changes_diff}
+        ret['changes'] = {'diff': changes_diff}
         return ret
 
     r = __salt__['boto_s3.upload_file'](

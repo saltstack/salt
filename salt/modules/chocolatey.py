@@ -430,9 +430,10 @@ def install(name,
             .. versionadded:: 2017.7.0
 
         execution_timeout (str):
-        Chocolatey execution timeout value you want to pass to the installation process. Default is None.
+            Chocolatey execution timeout value you want to pass to the
+            installation process. Default is None.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
     Returns:
         str: The output of the ``chocolatey`` command
@@ -919,6 +920,7 @@ def version(name, check_remote=False, source=None, pre_versions=False):
         salt "*" chocolatey.version <package name> check_remote=True
     '''
     installed = list_(narrow=name, local_only=True)
+    installed = {k.lower(): v for k, v in installed.items()}
 
     packages = {}
     lower_name = name.lower()
@@ -928,10 +930,17 @@ def version(name, check_remote=False, source=None, pre_versions=False):
 
     if check_remote:
         available = list_(narrow=name, pre_versions=pre_versions, source=source)
+        available = {k.lower(): v for k, v in available.items()}
 
         for pkg in packages:
-            packages[pkg] = {'installed': installed[pkg],
-                             'available': available[pkg]}
+            # Grab the current version from the package that was installed
+            packages[pkg] = {'installed': installed[pkg]}
+
+            # If there's a remote package available, then also include that
+            # in the dictionary that we return.
+            if pkg in available:
+                packages[pkg]['available'] = available[pkg]
+            continue
 
     return packages
 

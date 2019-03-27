@@ -67,14 +67,12 @@ _su_cmd() {
 
 
 _get_pid() {
-    netstat -n $NS_NOTRIM -ap --protocol=unix 2>$ERROR_TO_DEVNULL \
-        | sed -r -e "\|\s${SOCK_DIR}/minion_event_${MINION_ID_HASH}_pub\.ipc$|"'!d; s|/.*||; s/.*\s//;' \
-        | uniq
+    cat $PID_FILE 2>/dev/null
 }
 
 
 _is_running() {
-    [ -n "$(_get_pid)" ]
+    [ -n "$(_get_pid)" ] && ps wwwaxu | grep '[s]alt-minion' | awk '{print $2}' | grep -qi "\b$(_get_pid)\b"
 }
 
 
@@ -219,7 +217,7 @@ status() {
     local retval=0
     local pid="$(_get_pid)"
 
-    if [ -n "$pid" ]; then
+    if _is_running; then
         # Unquote $pid here to display multiple PIDs in one line
         echo "$SERVICE:$MINION_USER:$MINION_ID is running:" $pid
     else

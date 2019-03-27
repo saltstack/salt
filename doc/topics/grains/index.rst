@@ -41,6 +41,11 @@ Grains data can be listed by using the 'grains.items' module:
 
 .. _static-custom-grains:
 
+Using grains in a state
+=======================
+
+To use a grain in a state you can access it via `{{ grains['key'] }}`.
+
 Grains in the Minion Config
 ===========================
 
@@ -58,8 +63,7 @@ Just add the option :conf_minion:`grains` and pass options to it:
       cab_u: 14-15
 
 Then status data specific to your servers can be retrieved via Salt, or used
-inside of the State system for matching. It also makes targeting, in the case
-of the example above, simply based on specific data about your deployment.
+inside of the State system for matching. It also makes it possible to target based on specific data about your deployment, as in the example above.
 
 
 Grains in /etc/salt/grains
@@ -124,8 +128,8 @@ Writing Grains
 The grains are derived by executing all of the "public" functions (i.e. those
 which do not begin with an underscore) found in the modules located in the
 Salt's core grains code, followed by those in any custom grains modules. The
-functions in a grains module must return a Python :ref:`dict
-<python2:typesmapping>`, where the dictionary keys are the names of grains, and
+functions in a grains module must return a :ref:`Python dictionary
+<python:typesmapping>`, where the dictionary keys are the names of grains, and
 each key's value is that value for that grain.
 
 Custom grains modules should be placed in a subdirectory named ``_grains``
@@ -269,6 +273,11 @@ grain will override that core grain. Similarly, grains from
 ``/etc/salt/minion`` override both core grains and custom grain modules, and
 grains in ``_grains`` will override *any* grains of the same name.
 
+For custom grains, if the function takes an argument ``grains``, then the
+previously rendered grains will be passed in.  Because the rest of the grains
+could be rendered in any order, the only grains that can be relied upon to be
+passed in are ``core`` grains. This was added in the 2019.2.0 release.
+
 
 Examples of Grains
 ==================
@@ -282,7 +291,7 @@ the Salt minion and provides the principal example of how to write grains:
 Syncing Grains
 ==============
 
-Syncing grains can be done a number of ways, they are automatically synced when
+Syncing grains can be done a number of ways. They are automatically synced when
 :mod:`state.highstate <salt.modules.state.highstate>` is called, or (as noted
 above) the grains can be manually synced and reloaded by calling the
 :mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or

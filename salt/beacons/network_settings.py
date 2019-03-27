@@ -58,14 +58,18 @@ def validate(config):
         _config = {}
         list(map(_config.update, config))
 
-        for item in _config.get('interfaces', {}):
+        interfaces = _config.get('interfaces', {})
+        if isinstance(interfaces, list):
+            #Old syntax
+            return False, ('interfaces section for network_settings beacon'
+                           ' must be a dictionary.')
+
+        for item in interfaces:
             if not isinstance(_config['interfaces'][item], dict):
-                return False, ('Configuration for network_settings beacon '
-                               ' must be a list of dictionaries.')
-            else:
-                if not all(j in ATTRS for j in _config['interfaces'][item]):
-                    return False, ('Invalid configuration item in Beacon '
-                                   'configuration.')
+                return False, ('Interface attributes for network_settings beacon'
+                               ' must be a dictionary.')
+            if not all(j in ATTRS for j in _config['interfaces'][item]):
+                return False, ('Invalid attributes in beacon configuration.')
     return True, 'Valid beacon configuration'
 
 
@@ -103,12 +107,12 @@ def beacon(config):
         beacons:
           network_settings:
             - interfaces:
-                - eth0:
-                    ipaddr:
-                    promiscuity:
-                      onvalue: 1
-                - eth1:
-                    linkmode:
+                eth0:
+                  ipaddr:
+                  promiscuity:
+                    onvalue: 1
+                eth1:
+                  linkmode:
 
     The config above will check for value changes on eth0 ipaddr and eth1 linkmode. It will also
     emit if the promiscuity value changes to 1.
@@ -125,9 +129,9 @@ def beacon(config):
           network_settings:
             - coalesce: True
             - interfaces:
-                - eth0:
-                    ipaddr:
-                    promiscuity:
+                eth0:
+                  ipaddr:
+                  promiscuity:
 
     '''
     _config = {}

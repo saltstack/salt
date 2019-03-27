@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :copyright: Copyright 2016 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
 
@@ -19,10 +19,8 @@ import logging
 import threading
 from multiprocessing import Queue
 
-# Import 3rd-party libs
-import msgpack
-
 # Import Salt libs
+import salt.utils.msgpack
 from salt.ext import six
 import salt.log.setup
 
@@ -85,7 +83,8 @@ def process_queue(port, queue):
                 break
             # Just log everything, filtering will happen on the main process
             # logging handlers
-            sock.sendall(msgpack.dumps(record.__dict__, encoding='utf-8'))
+            sock.sendall(salt.utils.msgpack.dumps(record.__dict__,
+                                                  encoding='utf-8'))
         except (IOError, EOFError, KeyboardInterrupt, SystemExit):
             sock.shutdown(socket.SHUT_RDWR)
             sock.close()

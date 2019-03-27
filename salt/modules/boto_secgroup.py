@@ -473,6 +473,9 @@ def authorize(name=None, source_group_name=None,
                 log.error(msg)
                 return False
         except boto.exception.EC2ResponseError as e:
+            # if we are trying to add the same rule then we are already in the desired state, return true
+            if e.error_code == 'InvalidPermission.Duplicate':
+                return True
             msg = ('Failed to add rule to security group {0} with id {1}.'
                    .format(group.name, group.id))
             log.error(msg)

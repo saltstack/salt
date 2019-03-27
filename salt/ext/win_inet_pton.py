@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import socket
 import ctypes
 import os
-import ipaddress
+from salt._compat import ipaddress
 import salt.ext.six as six
 
 
@@ -37,7 +37,7 @@ def inet_pton(address_family, ip_string):
     # This will catch IP Addresses such as 10.1.2
     if address_family == socket.AF_INET:
         try:
-            ipaddress.ip_address(six.u(ip_string))
+            ipaddress.ip_address(six.text_type(ip_string))
         except ValueError:
             raise socket.error('illegal IP address string passed to inet_pton')
         return socket.inet_aton(ip_string)
@@ -56,7 +56,7 @@ def inet_pton(address_family, ip_string):
     addr_size = ctypes.c_int(ctypes.sizeof(addr))
 
     if WSAStringToAddressA(
-            ip_string,
+            ip_string.encode('ascii'),
             address_family,
             None,
             ctypes.byref(addr),

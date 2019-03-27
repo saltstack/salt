@@ -42,6 +42,11 @@ class NetapiClient(object):
         Note, this will return an invalid success if the master crashed or was
         not shut down cleanly.
         '''
+        # Windows doesn't have IPC. Assume the master is running.
+        # At worse, it will error 500.
+        if salt.utils.platform.is_windows():
+            return True
+
         if self.opts['transport'] == 'tcp':
             ipc_file = 'publish_pull.ipc'
         else:
@@ -83,7 +88,8 @@ class NetapiClient(object):
         :return: job ID
         '''
         local = salt.client.get_local_client(mopts=self.opts)
-        return local.run_job(*args, **kwargs)
+        ret = local.run_job(*args, **kwargs)
+        return ret
 
     def local(self, *args, **kwargs):
         '''
@@ -198,6 +204,7 @@ class NetapiClient(object):
         kwargs['fun'] = fun
         wheel = salt.wheel.WheelClient(self.opts)
         return wheel.cmd_async(kwargs)
+
 
 CLIENTS = [
     name for name, _

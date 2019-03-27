@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
+    :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 '''
 
 # Import Python Libs
@@ -39,6 +39,7 @@ def _test_hashlib():
         return False
     else:
         return True
+
 
 SUPPORTED_HASHLIB = _test_hashlib()
 

@@ -13,7 +13,6 @@ from subprocess import Popen, PIPE
 
 # Import Salt libs
 from salt.ext import six
-from salt.client import Caller
 
 
 ArgumentParser = object
@@ -105,8 +104,7 @@ def xccdf(params):
         success = _OSCAP_EXIT_CODES_MAP[proc.returncode]
         returncode = proc.returncode
         if success:
-            caller = Caller()
-            caller.cmd('cp.push_dir', tempdir)
+            __salt__['cp.push_dir'](tempdir)
             shutil.rmtree(tempdir, ignore_errors=True)
             upload_dir = tempdir
 

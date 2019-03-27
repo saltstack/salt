@@ -2,7 +2,7 @@
 '''
 This state downloads artifacts from Nexus 3.x.
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
 
 # Import python libs

@@ -28,13 +28,17 @@ def _load_libcrypto():
     Load OpenSSL libcrypto
     '''
     if sys.platform.startswith('win'):
-        return cdll.LoadLibrary('libeay32')
+        # cdll.LoadLibrary on windows requires an 'str' argument
+        return cdll.LoadLibrary(str('libeay32'))  # future lint: disable=blacklisted-function
     elif getattr(sys, 'frozen', False) and salt.utils.platform.is_smartos():
         return cdll.LoadLibrary(glob.glob(os.path.join(
             os.path.dirname(sys.executable),
             'libcrypto.so*'))[0])
     else:
         lib = find_library('crypto')
+        if not lib and sys.platform.startswith('sunos5'):
+            # ctypes.util.find_library defaults to 32 bit library path on sunos5, test for 64 bit python execution
+            lib = find_library('crypto', sys.maxsize > 2**32)
         if not lib and salt.utils.platform.is_sunos():
             # Solaris-like distribution that use pkgsrc have
             # libraries in a non standard location.
@@ -43,7 +47,7 @@ def _load_libcrypto():
             # or /opt/local/lib (non-Global Zone), thus the
             # two checks below
             lib = glob.glob('/opt/local/lib/libcrypto.so*') + glob.glob('/opt/tools/lib/libcrypto.so*')
-            lib = lib[0] if len(lib) > 0 else None
+            lib = lib[0] if lib else None
         if lib:
             return cdll.LoadLibrary(lib)
         raise OSError('Cannot locate OpenSSL libcrypto')
@@ -70,10 +74,7 @@ def _init_libcrypto():
     libcrypto.RSA_public_decrypt.argtypes = (c_int, c_char_p, c_char_p, c_void_p, c_int)
 
     try:
-        if libcrypto.OPENSSL_init_crypto(OPENSSL_INIT_NO_LOAD_CONFIG |
-                                         OPENSSL_INIT_ADD_ALL_CIPHERS |
-                                         OPENSSL_INIT_ADD_ALL_DIGESTS, None) != 1:
-            raise OSError("Failed to initialize OpenSSL library (OPENSSL_init_crypto failed)")
+        libcrypto.OPENSSL_init_crypto()
     except AttributeError:
         # Support for OpenSSL < 1.1 (OPENSSL_API_COMPAT < 0x10100000L)
         libcrypto.OPENSSL_no_config()

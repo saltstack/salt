@@ -14,7 +14,8 @@ from tests.support.mock import (
     Mock,
     NO_MOCK,
     NO_MOCK_REASON,
-    patch
+    patch,
+    call
 )
 import logging
 log = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ log = logging.getLogger(__name__)
 import salt.config
 import salt.loader
 from salt.ext.six.moves import range
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.modules.dockermod as docker_mod
 
 
@@ -45,11 +46,9 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         utils = salt.loader.utils(
             salt.config.DEFAULT_MINION_OPTS,
-            whitelist=['state']
+            whitelist=['args', 'docker', 'json', 'state', 'thin',
+                       'systemd', 'path', 'platform']
         )
-        # Force the LazyDict to populate its references. Otherwise the lookup
-        # will fail inside the unit tests.
-        list(utils)
         return {docker_mod: {'__context__': {'docker.docker_version': ''},
                              '__utils__': utils}}
 
@@ -63,6 +62,26 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         Ensure we aren't persisting context dunders between tests
         '''
         docker_mod.__context__.pop('docker.client', None)
+
+    def test_failed_login(self):
+        '''
+        Check that when docker.login failed a retcode other then 0
+        is part of the return.
+        '''
+        client = Mock()
+        get_client_mock = MagicMock(return_value=client)
+        ref_out = {
+            'stdout': '',
+            'stderr': 'login failed',
+            'retcode': 1
+        }
+        with patch.dict(docker_mod.__pillar__, {'docker-registries': {'portus.example.com:5000':
+                {'username': 'admin', 'password': 'linux12345', 'email': 'tux@example.com'}}}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
+                with patch.dict(docker_mod.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
+                    ret = docker_mod.login('portus.example.com:5000')
+                    self.assertIn('retcode', ret)
+                    self.assertNotEqual(ret['retcode'], 0)
 
     def test_ps_with_host_true(self):
         '''
@@ -148,6 +167,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(docker_mod.__salt__,
                                 {'mine.send': mine_send,
                                  'container_resource.run': MagicMock(),
+                                 'config.get': MagicMock(return_value=True),
                                  'cp.cache_file': MagicMock(return_value=False)}):
                     with patch.dict(docker_mod.__utils__,
                                     {'docker.get_client_args': client_args_mock}):
@@ -155,6 +175,44 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                             command('container', *args)
                 mine_send.assert_called_with('docker.ps', verbose=True, all=True,
                                              host=True)
+
+    def test_update_mine(self):
+        '''
+        Test the docker.update_mine config option
+        '''
+        def config_get_disabled(val, default):
+            return {'base_url': docker_mod.NOTSET,
+                    'version': docker_mod.NOTSET,
+                    'docker.url': docker_mod.NOTSET,
+                    'docker.version': docker_mod.NOTSET,
+                    'docker.machine': docker_mod.NOTSET,
+                    'docker.update_mine': False}[val]
+
+        def config_get_enabled(val, default):
+            return {'base_url': docker_mod.NOTSET,
+                    'version': docker_mod.NOTSET,
+                    'docker.url': docker_mod.NOTSET,
+                    'docker.version': docker_mod.NOTSET,
+                    'docker.machine': docker_mod.NOTSET,
+                    'docker.update_mine': True}[val]
+
+        mine_mock = Mock()
+        dunder_salt = {
+            'config.get': MagicMock(side_effect=config_get_disabled),
+            'mine.send': mine_mock,
+        }
+        with patch.dict(docker_mod.__salt__, dunder_salt), \
+                patch.dict(docker_mod.__context__, {'docker.client': Mock()}), \
+                patch.object(docker_mod, 'state', MagicMock(return_value='stopped')):
+            docker_mod.stop('foo', timeout=1)
+            mine_mock.assert_not_called()
+
+        with patch.dict(docker_mod.__salt__, dunder_salt), \
+                patch.dict(docker_mod.__context__, {'docker.client': Mock()}), \
+                patch.object(docker_mod, 'state', MagicMock(return_value='stopped')):
+            dunder_salt['config.get'].side_effect = config_get_enabled
+            docker_mod.stop('foo', timeout=1)
+            self.assert_called_once(mine_mock)
 
     @skipIf(_docker_py_version() < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
@@ -754,6 +812,64 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 ret = docker_mod.compare_containers('container1', 'container2')
                 self.assertEqual(ret, {})
 
+    def test_compare_container_ulimits_order(self):
+        '''
+        Test comparing two containers when the order of the Ulimits HostConfig
+        values are different, but the values are the same.
+        '''
+        def _inspect_container_effect(id_):
+            return {
+                'container1': {'Config': {},
+                               'HostConfig': {
+                                   'Ulimits': [
+                                       {'Hard': -1, 'Soft': -1, 'Name': 'core'},
+                                       {'Hard': 65536, 'Soft': 65536, 'Name': 'nofile'}
+                                   ]
+                               }},
+                'container2': {'Config': {},
+                               'HostConfig': {
+                                   'Ulimits': [
+                                       {'Hard': 65536, 'Soft': 65536, 'Name': 'nofile'},
+                                       {'Hard': -1, 'Soft': -1, 'Name': 'core'}
+                                   ]
+                               }},
+            }[id_]
+
+        inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
+
+        with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
+            ret = docker_mod.compare_container('container1', 'container2')
+            self.assertEqual(ret, {})
+
+    def test_compare_container_env_order(self):
+        '''
+        Test comparing two containers when the order of the Env HostConfig
+        values are different, but the values are the same.
+        '''
+        def _inspect_container_effect(id_):
+            return {
+                'container1': {'Config': {},
+                               'HostConfig': {
+                                   'Env': [
+                                       'FOO=bar',
+                                       'HELLO=world',
+                                   ]
+                               }},
+                'container2': {'Config': {},
+                               'HostConfig': {
+                                   'Env': [
+                                       'HELLO=world',
+                                       'FOO=bar',
+                                   ]
+                               }},
+            }[id_]
+
+        inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
+
+        with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
+            ret = docker_mod.compare_container('container1', 'container2')
+            self.assertEqual(ret, {})
+
     def test_resolve_tag(self):
         '''
         Test the resolve_tag function. It runs docker.insect_image on the image
@@ -781,3 +897,326 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(docker_mod, 'inspect_image', mock_not_found):
             self.assertIs(docker_mod.resolve_tag('foo'), False)
             self.assertIs(docker_mod.resolve_tag('foo', all=True), False)
+
+    def test_prune(self):
+        '''
+        Test the prune function
+        '''
+        def _run(**kwargs):
+            side_effect = kwargs.pop('side_effect', None)
+            # No arguments passed, we should be pruning everything but volumes
+            client = Mock()
+            if side_effect is not None:
+                client.side_effect = side_effect
+            with patch.object(docker_mod, '_client_wrapper', client):
+                docker_mod.prune(**kwargs)
+            return client
+
+        # Containers only, no filters
+        client = _run(containers=True)
+        client.assert_called_once_with(
+            'prune_containers',
+            filters={}
+        )
+
+        # Containers only, with filters
+        client = _run(containers=True, until='24h', label='foo,bar=baz')
+        client.assert_called_once_with(
+            'prune_containers',
+            filters={'until': ['24h'], 'label': ['foo', 'bar=baz']}
+        )
+
+        # Images only, no filters
+        client = _run(images=True)
+        client.assert_called_once_with(
+            'prune_images',
+            filters={}
+        )
+
+        # Images only, with filters
+        client = _run(images=True, dangling=True,
+                      until='24h', label='foo,bar=baz')
+        client.assert_called_once_with(
+            'prune_images',
+            filters={'dangling': True,
+                     'until': ['24h'],
+                     'label': ['foo', 'bar=baz']}
+        )
+
+        # Networks only, no filters
+        client = _run(networks=True)
+        client.assert_called_once_with('prune_networks', filters={})
+
+        # Networks only, with filters
+        client = _run(networks=True, until='24h', label='foo,bar=baz')
+        client.assert_called_once_with(
+            'prune_networks',
+            filters={'until': ['24h'], 'label': ['foo', 'bar=baz']}
+        )
+
+        # Volumes only, no filters
+        client = _run(system=False, volumes=True)
+        client.assert_called_once_with('prune_volumes', filters={})
+
+        # Volumes only, with filters
+        client = _run(system=False, volumes=True, label='foo,bar=baz')
+        client.assert_called_once_with(
+            'prune_volumes',
+            filters={'label': ['foo', 'bar=baz']}
+        )
+
+        # Containers and images, no filters
+        client = _run(containers=True, images=True)
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={}),
+                call('prune_images', filters={}),
+            ]
+        )
+
+        # Containers and images, with filters
+        client = _run(containers=True, images=True,
+                      until='24h', label='foo,bar=baz')
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers',
+                     filters={'until': ['24h'], 'label': ['foo', 'bar=baz']}),
+                call('prune_images',
+                     filters={'until': ['24h'], 'label': ['foo', 'bar=baz']}),
+            ]
+        )
+
+        # System, no volumes, no filters, assuming prune_build in docker-py
+        client = _run(system=True)
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={}),
+                call('prune_images', filters={}),
+                call('prune_networks', filters={}),
+                call('prune_build', filters={}),
+            ]
+        )
+
+        # System, no volumes, no filters, assuming prune_build not in docker-py
+        client = _run(
+            system=True,
+            side_effect=[None, None, None, SaltInvocationError(),
+                         None, None, None]
+        )
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={}),
+                call('prune_images', filters={}),
+                call('prune_networks', filters={}),
+                call('prune_build', filters={}),
+                call('_url', '/build/prune'),
+                call('_post', None),
+                call('_result', None, True),
+            ]
+        )
+
+        # System, no volumes, with filters, assuming prune_build in docker-py
+        client = _run(system=True, label='foo,bar=baz')
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_images', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_networks', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_build', filters={'label': ['foo', 'bar=baz']}),
+            ]
+        )
+
+        # System, no volumes, with filters, assuming prune_build not in docker-py
+        client = _run(
+            system=True,
+            label='foo,bar=baz',
+            side_effect=[None, None, None, SaltInvocationError(),
+                         None, None, None]
+        )
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_images', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_networks', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_build', filters={'label': ['foo', 'bar=baz']}),
+                call('_url', '/build/prune'),
+                call('_post', None),
+                call('_result', None, True),
+            ]
+        )
+
+        # System and volumes, no filters, assuming prune_build in docker-py
+        client = _run(system=True, volumes=True)
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={}),
+                call('prune_images', filters={}),
+                call('prune_networks', filters={}),
+                call('prune_build', filters={}),
+                call('prune_volumes', filters={}),
+            ]
+        )
+
+        # System and volumes, no filters, assuming prune_build not in docker-py
+        client = _run(
+            system=True,
+            volumes=True,
+            side_effect=[None, None, None, SaltInvocationError(),
+                         None, None, None, None]
+        )
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={}),
+                call('prune_images', filters={}),
+                call('prune_networks', filters={}),
+                call('prune_build', filters={}),
+                call('_url', '/build/prune'),
+                call('_post', None),
+                call('_result', None, True),
+                call('prune_volumes', filters={}),
+            ]
+        )
+
+        # System and volumes with filters, assuming prune_build in docker-py
+        client = _run(system=True, volumes=True, label='foo,bar=baz')
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_images', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_networks', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_build', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_volumes', filters={'label': ['foo', 'bar=baz']}),
+            ]
+        )
+
+        # System and volumes, with filters, assuming prune_build not in docker-py
+        client = _run(
+            system=True,
+            volumes=True,
+            label='foo,bar=baz',
+            side_effect=[None, None, None, SaltInvocationError(),
+                         None, None, None, None]
+        )
+        self.assertEqual(
+            client.call_args_list,
+            [
+                call('prune_containers', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_images', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_networks', filters={'label': ['foo', 'bar=baz']}),
+                call('prune_build', filters={'label': ['foo', 'bar=baz']}),
+                call('_url', '/build/prune'),
+                call('_post', None),
+                call('_result', None, True),
+                call('prune_volumes', filters={'label': ['foo', 'bar=baz']}),
+            ]
+        )
+
+    def test_port(self):
+        '''
+        Test docker.port function. Note that this test case does not test what
+        happens when a specific container name is passed and that container
+        does not exist. When that happens, the Docker API will just raise a 404
+        error. Since we're using as side_effect to mock
+        docker.inspect_container, it would be meaningless to code raising an
+        exception into it and then test that we raised that exception.
+        '''
+        ports = {
+            'foo': {
+                '5555/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32768'}
+                ],
+                '6666/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32769'}
+                ],
+            },
+            'bar': {
+                '4444/udp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32767'}
+                ],
+                '5555/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32768'}
+                ],
+                '6666/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32769'}
+                ],
+            },
+            'baz': {
+                '5555/tcp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32768'}
+                ],
+                '6666/udp': [
+                    {'HostIp': '0.0.0.0', 'HostPort': '32769'}
+                ],
+            },
+        }
+        list_mock = MagicMock(return_value=['bar', 'baz', 'foo'])
+        inspect_mock = MagicMock(
+            side_effect=lambda x: {'NetworkSettings': {'Ports': ports.get(x)}}
+        )
+        with patch.object(docker_mod, 'list_containers', list_mock), \
+                patch.object(docker_mod, 'inspect_container', inspect_mock):
+
+            # Test with specific container name
+            ret = docker_mod.port('foo')
+            self.assertEqual(ret, ports['foo'])
+
+            # Test with specific container name and filtering on port
+            ret = docker_mod.port('foo', private_port='5555/tcp')
+            self.assertEqual(ret, {'5555/tcp': ports['foo']['5555/tcp']})
+
+            # Test using pattern expression
+            ret = docker_mod.port('ba*')
+            self.assertEqual(ret, {'bar': ports['bar'], 'baz': ports['baz']})
+            ret = docker_mod.port('ba?')
+            self.assertEqual(ret, {'bar': ports['bar'], 'baz': ports['baz']})
+            ret = docker_mod.port('ba[rz]')
+            self.assertEqual(ret, {'bar': ports['bar'], 'baz': ports['baz']})
+
+            # Test using pattern expression and port filtering
+            ret = docker_mod.port('ba*', private_port='6666/tcp')
+            self.assertEqual(
+                ret,
+                {'bar': {'6666/tcp': ports['bar']['6666/tcp']}, 'baz': {}}
+            )
+            ret = docker_mod.port('ba?', private_port='6666/tcp')
+            self.assertEqual(
+                ret,
+                {'bar': {'6666/tcp': ports['bar']['6666/tcp']}, 'baz': {}}
+            )
+            ret = docker_mod.port('ba[rz]', private_port='6666/tcp')
+            self.assertEqual(
+                ret,
+                {'bar': {'6666/tcp': ports['bar']['6666/tcp']}, 'baz': {}}
+            )
+            ret = docker_mod.port('*')
+            self.assertEqual(ret, ports)
+            ret = docker_mod.port('*', private_port='5555/tcp')
+            self.assertEqual(
+                ret,
+                {'foo': {'5555/tcp': ports['foo']['5555/tcp']},
+                 'bar': {'5555/tcp': ports['bar']['5555/tcp']},
+                 'baz': {'5555/tcp': ports['baz']['5555/tcp']}}
+            )
+            ret = docker_mod.port('*', private_port=6666)
+            self.assertEqual(
+                ret,
+                {'foo': {'6666/tcp': ports['foo']['6666/tcp']},
+                 'bar': {'6666/tcp': ports['bar']['6666/tcp']},
+                 'baz': {'6666/udp': ports['baz']['6666/udp']}}
+            )
+            ret = docker_mod.port('*', private_port='6666/tcp')
+            self.assertEqual(
+                ret,
+                {'foo': {'6666/tcp': ports['foo']['6666/tcp']},
+                 'bar': {'6666/tcp': ports['bar']['6666/tcp']},
+                 'baz': {}}
+            )

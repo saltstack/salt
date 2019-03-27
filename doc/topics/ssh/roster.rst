@@ -53,6 +53,7 @@ The information which can be stored in a roster ``target`` is the following:
         priv:        # File path to ssh private key, defaults to salt-ssh.rsa
                      # The priv can also be set to agent-forwarding to not specify
                      # a key, but use ssh agent forwarding
+        priv_passwd: # Passphrase for ssh private key
         timeout:     # Number of seconds to wait for response when establishing
                      # an SSH connection
         minion_opts: # Dictionary of minion opts

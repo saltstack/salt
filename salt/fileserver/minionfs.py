@@ -17,8 +17,8 @@ allowed to push files to the Master), and ``minionfs`` must be added to the
       - minionfs
 
 .. note::
-    ``minion`` also works here. Prior to the Oxygen release, *only* ``minion``
-    would work.
+    ``minion`` also works here. Prior to the 2018.3.0 release, *only*
+    ``minion`` would work.
 
 Other minionfs settings include: :conf_master:`minionfs_whitelist`,
 :conf_master:`minionfs_blacklist`, :conf_master:`minionfs_mountpoint`, and

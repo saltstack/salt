@@ -37,6 +37,7 @@ authenticated against.  This defaults to `login`
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
 from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
 from ctypes.util import find_library
@@ -48,15 +49,23 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 # Import 3rd-party libs
 from salt.ext import six
 
-LIBC = CDLL(find_library('c'))
+log = logging.getLogger(__name__)
 
-CALLOC = LIBC.calloc
-CALLOC.restype = c_void_p
-CALLOC.argtypes = [c_uint, c_uint]
+try:
+    LIBC = CDLL(find_library('c'))
 
-STRDUP = LIBC.strdup
-STRDUP.argstypes = [c_char_p]
-STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
+    CALLOC = LIBC.calloc
+    CALLOC.restype = c_void_p
+    CALLOC.argtypes = [c_uint, c_uint]
+
+    STRDUP = LIBC.strdup
+    STRDUP.argstypes = [c_char_p]
+    STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
+except Exception:  # pylint: disable=broad-except
+    log.trace('Failed to load libc using ctypes', exc_info=True)
+    HAS_LIBC = False
+else:
+    HAS_LIBC = True
 
 # Various constants
 PAM_PROMPT_ECHO_OFF = 1
@@ -104,9 +113,12 @@ class PamResponse(Structure):
         return '<PamResponse {0} \'{1}\'>'.format(self.resp_retcode, self.resp)
 
 
-CONV_FUNC = CFUNCTYPE(c_int,
-        c_int, POINTER(POINTER(PamMessage)),
-               POINTER(POINTER(PamResponse)), c_void_p)
+CONV_FUNC = CFUNCTYPE(
+        c_int,
+        c_int,
+        POINTER(POINTER(PamMessage)),
+        POINTER(POINTER(PamResponse)),
+        c_void_p)
 
 
 class PamConv(Structure):
@@ -123,8 +135,10 @@ try:
     LIBPAM = CDLL(find_library('pam'))
     PAM_START = LIBPAM.pam_start
     PAM_START.restype = c_int
-    PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv),
-            POINTER(PamHandle)]
+    PAM_START.argtypes = [c_char_p,
+                          c_char_p,
+                          POINTER(PamConv),
+                          POINTER(PamHandle)]
 
     PAM_AUTHENTICATE = LIBPAM.pam_authenticate
     PAM_AUTHENTICATE.restype = c_int
@@ -137,7 +151,8 @@ try:
     PAM_END = LIBPAM.pam_end
     PAM_END.restype = c_int
     PAM_END.argtypes = [PamHandle, c_int]
-except Exception:
+except Exception:  # pylint: disable=broad-except
+    log.trace('Failed to load pam using ctypes', exc_info=True)
     HAS_PAM = False
 else:
     HAS_PAM = True
@@ -147,7 +162,7 @@ def __virtual__():
     '''
     Only load on Linux systems
     '''
-    return HAS_PAM
+    return HAS_LIBC and HAS_PAM
 
 
 def authenticate(username, password):

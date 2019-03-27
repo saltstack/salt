@@ -2,17 +2,19 @@
 '''
 Keystone module for interacting with OpenStack Keystone
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends:shade
 
 Example configuration
 
 .. code-block:: yaml
+
     keystone:
       cloud: default
 
 .. code-block:: yaml
+
     keystone:
       auth:
         username: admin

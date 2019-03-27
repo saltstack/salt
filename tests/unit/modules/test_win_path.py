@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
+    :codeauthor: Rahul Handay <rahulha@saltstack.com>
 '''
 
 # Import Python Libs
@@ -22,43 +22,13 @@ import salt.modules.win_path as win_path
 import salt.utils.stringutils
 
 
-class MockWin32API(object):
-    '''
-        Mock class for win32api
-    '''
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def SendMessage(*args):
-        '''
-            Mock method for SendMessage
-        '''
-        return [args[0]]
-
-
-class MockWin32Con(object):
-    '''
-        Mock class for win32con
-    '''
-    HWND_BROADCAST = 1
-    WM_SETTINGCHANGE = 1
-
-    def __init__(self):
-        pass
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinPathTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.win_path
     '''
     def setup_loader_modules(self):
-        return {win_path: {'win32api': MockWin32API,
-                           'win32con': MockWin32Con,
-                           'SendMessage': MagicMock,
-                           'HWND_BROADCAST': MagicMock,
-                           'WM_SETTINGCHANGE': MagicMock}}
+        return {win_path: {}}
 
     def __init__(self, *args, **kwargs):
         super(WinPathTestCase, self).__init__(*args, **kwargs)
@@ -79,18 +49,12 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             salt.utils.stringutils.to_str(self.pathsep.join(new_path))
         )
 
-    def test_rehash(self):
-        '''
-        Test to rehash the Environment variables
-        '''
-        self.assertTrue(win_path.rehash())
-
     def test_get_path(self):
         '''
         Test to Returns the system path
         '''
         mock = MagicMock(return_value={'vdata': 'C:\\Salt'})
-        with patch.dict(win_path.__salt__, {'reg.read_value': mock}):
+        with patch.dict(win_path.__utils__, {'reg.read_value': mock}):
             self.assertListEqual(win_path.get_path(), ['C:\\Salt'])
 
     def test_exists(self):
@@ -126,7 +90,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(win_path, 'PATHSEP', self.pathsep), \
                     patch.object(win_path, 'get_path', mock_get), \
                     patch.object(os, 'environ', env), \
-                    patch.dict(win_path.__salt__, {'reg.set_value': mock_set}), \
+                    patch.dict(win_path.__utils__, {'reg.set_value': mock_set}), \
                     patch.object(win_path, 'rehash', MagicMock(return_value=True)):
                 return win_path.add(name, index), env, mock_set
 
@@ -149,6 +113,13 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         # Test adding with a custom index
         ret, env, mock_set = _run('c:\\salt', index=1, retval=True)
         new_path = ('C:\\Foo', 'c:\\salt', 'C:\\Bar')
+        self.assertTrue(ret)
+        self.assert_call_matches(mock_set, new_path)
+        self.assert_path_matches(env, new_path)
+
+        # Test adding with a custom index of 0
+        ret, env, mock_set = _run('c:\\salt', index=0, retval=True)
+        new_path = ('c:\\salt', 'C:\\Foo', 'C:\\Bar')
         self.assertTrue(ret)
         self.assert_call_matches(mock_set, new_path)
         self.assert_path_matches(env, new_path)
@@ -239,7 +210,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(win_path, 'PATHSEP', self.pathsep), \
                     patch.object(win_path, 'get_path', mock_get), \
                     patch.object(os, 'environ', env), \
-                    patch.dict(win_path.__salt__, {'reg.set_value': mock_set}), \
+                    patch.dict(win_path.__utils__, {'reg.set_value': mock_set}), \
                     patch.object(win_path, 'rehash', MagicMock(return_value=True)):
                 return win_path.remove(name), env, mock_set
 

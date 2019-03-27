@@ -35,6 +35,7 @@ from salt.utils.napalm import proxy_napalm_wrap
 __virtualname__ = 'bgp'
 __proxyenabled__ = ['napalm']
 # uses NAPALM-based proxy to interact with network devices
+__virtual_aliases__ = ('napalm_bgp',)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
@@ -64,9 +65,11 @@ def config(group=None, neighbor=None, **kwargs):
 
     :param group: Name of the group selected to display the configuration.
     :param neighbor: IP Address of the neighbor to display the configuration.
-    If the group parameter is not specified, the neighbor setting will be ignored.
-    :return: A dictionary containing the BGP configuration from the network device.
-    The keys of the main dictionary are the group names.
+        If the group parameter is not specified, the neighbor setting will be
+        ignored.
+
+    :return: A dictionary containing the BGP configuration from the network
+        device. The keys of the main dictionary are the group names.
 
     Each group has the following properties:
 
@@ -174,45 +177,46 @@ def neighbors(neighbor=None, **kwargs):
     Provides details regarding the BGP sessions configured on the network device.
 
     :param neighbor: IP Address of a specific neighbor.
-    :return: A dictionary with the statistics of the all/selected BGP neighbors.
-    Outer dictionary keys represent the VRF name.
-    Keys of inner dictionary represent the AS numbers, while the values are lists of dictionaries,
-    having the following keys:
 
-        * up (True/False)
-        * local_as (int)
-        * remote_as (int)
-        * local_address (string)
-        * routing_table (string)
-        * local_address_configured (True/False)
-        * local_port (int)
-        * remote_address (string)
-        * remote_port (int)
-        * multihop (True/False)
-        * multipath (True/False)
-        * remove_private_as (True/False)
-        * import_policy (string)
-        * export_policy (string)
-        * input_messages (int)
-        * output_messages (int)
-        * input_updates (int)
-        * output_updates (int)
-        * messages_queued_out (int)
-        * connection_state (string)
-        * previous_connection_state (string)
-        * last_event (string)
-        * suppress_4byte_as (True/False)
-        * local_as_prepend (True/False)
-        * holdtime (int)
-        * configured_holdtime (int)
-        * keepalive (int)
-        * configured_keepalive (int)
-        * active_prefix_count (int)
-        * received_prefix_count (int)
-        * accepted_prefix_count (int)
-        * suppressed_prefix_count (int)
-        * advertised_prefix_count (int)
-        * flap_count (int)
+    :return: A dictionary with the statistics of the all/selected BGP
+        neighbors. Outer dictionary keys represent the VRF name.  Keys of inner
+        dictionary represent the AS numbers, while the values are lists of
+        dictionaries, having the following keys:
+
+        - up (True/False)
+        - local_as (int)
+        - remote_as (int)
+        - local_address (string)
+        - routing_table (string)
+        - local_address_configured (True/False)
+        - local_port (int)
+        - remote_address (string)
+        - remote_port (int)
+        - multihop (True/False)
+        - multipath (True/False)
+        - remove_private_as (True/False)
+        - import_policy (string)
+        - export_policy (string)
+        - input_messages (int)
+        - output_messages (int)
+        - input_updates (int)
+        - output_updates (int)
+        - messages_queued_out (int)
+        - connection_state (string)
+        - previous_connection_state (string)
+        - last_event (string)
+        - suppress_4byte_as (True/False)
+        - local_as_prepend (True/False)
+        - holdtime (int)
+        - configured_holdtime (int)
+        - keepalive (int)
+        - configured_keepalive (int)
+        - active_prefix_count (int)
+        - received_prefix_count (int)
+        - accepted_prefix_count (int)
+        - suppressed_prefix_count (int)
+        - advertised_prefix_count (int)
+        - flap_count (int)
 
     CLI Example:
 

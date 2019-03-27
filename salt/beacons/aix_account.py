@@ -2,7 +2,7 @@
 '''
 Beacon to fire event when we notice a AIX user is locked due to many failed login attempts.
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: none
 '''

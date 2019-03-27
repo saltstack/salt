@@ -11,6 +11,7 @@ import logging
 import weakref
 import traceback
 import collections
+import os
 import copy as pycopy
 
 # Import Salt libs
@@ -28,8 +29,13 @@ import salt.utils.process
 import salt.utils.state
 import salt.utils.user
 import salt.utils.versions
-import salt.transport
+import salt.utils.files
+import salt.serializers.json
+import salt.transport.client
 import salt.log.setup
+import salt.output
+import salt.utils.text
+
 from salt.ext import six
 
 # Import 3rd-party libs
@@ -49,7 +55,9 @@ CLIENT_INTERNAL_KEYWORDS = frozenset([
     '__tag__',
     '__user__',
     'username',
-    'password'
+    'password',
+    'full_return',
+    'print_event'
 ])
 
 
@@ -134,10 +142,13 @@ class SyncClientMixin(object):
         '''
         load = kwargs
         load['cmd'] = self.client
-        channel = salt.transport.Channel.factory(self.opts,
-                                                 crypt='clear',
-                                                 usage='master_call')
-        ret = channel.send(load)
+        channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           usage='master_call')
+        try:
+            ret = channel.send(load)
+        finally:
+            channel.close()
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:
                 salt.utils.error.raise_error(**ret['error'])
@@ -243,23 +254,6 @@ class SyncClientMixin(object):
             self._mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
         return self._mminion
 
-    def low(self, fun, low, print_event=True, full_return=False):
-        '''
-        Check for deprecated usage and allow until Salt Fluorine.
-        '''
-        msg = []
-        if 'args' in low:
-            msg.append('call with arg instead')
-            low['arg'] = low.pop('args')
-        if 'kwargs' in low:
-            msg.append('call with kwarg instead')
-            low['kwarg'] = low.pop('kwargs')
-
-        if msg:
-            salt.utils.versions.warn_until('Fluorine', ' '.join(msg))
-
-        return self._low(fun, low, print_event=print_event, full_return=full_return)
-
     @property
     def store_job(self):
         '''
@@ -282,7 +276,7 @@ class SyncClientMixin(object):
             # just return True.
             return True
 
-    def _low(self, fun, low, print_event=True, full_return=False):
+    def low(self, fun, low, print_event=True, full_return=False):
         '''
         Execute a function from low data
         Low data includes:
@@ -329,7 +323,7 @@ class SyncClientMixin(object):
             print_func=print_func
         )
 
-        # TODO: document these, and test that they exist
+        # TODO: test that they exist
         # TODO: Other things to inject??
         func_globals = {'__jid__': jid,
                         '__user__': data['user'],
@@ -382,9 +376,23 @@ class SyncClientMixin(object):
             data['fun_args'] = list(args) + ([kwargs] if kwargs else [])
             func_globals['__jid_event__'].fire_event(data, 'new')
 
+            # Track the job locally so we know what is running on the master
+            serial = salt.payload.Serial(self.opts)
+            jid_proc_file = os.path.join(*[self.opts['cachedir'], 'proc', jid])
+            data['pid'] = os.getpid()
+            with salt.utils.files.fopen(jid_proc_file, 'w+b') as fp_:
+                fp_.write(serial.dumps(data))
+
             # Initialize a context for executing the method.
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):
-                data['return'] = self.functions[fun](*args, **kwargs)
+                func = self.functions[fun]
+                try:
+                    data['return'] = func(*args, **kwargs)
+                except TypeError as exc:
+                    data['return'] = salt.utils.text.cli_info('Error: {exc}\nUsage:\n{doc}'.format(
+                        exc=exc, doc=func.__doc__), 'Passed invalid arguments')
+                except Exception as exc:
+                    data['return'] = salt.utils.text.cli_info(six.text_type(exc), 'General error occurred')
                 try:
                     data['success'] = self.context.get('retcode', 0) == 0
                 except AttributeError:
@@ -397,12 +405,15 @@ class SyncClientMixin(object):
             if isinstance(ex, salt.exceptions.NotImplemented):
                 data['return'] = six.text_type(ex)
             else:
-                data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
-                    self.client,
-                    fun,
-                    traceback.format_exc(),
-                    )
+                data['return'] = 'Exception occurred in {client} {fun}: {tb}'.format(
+                    client=self.client, fun=fun, tb=traceback.format_exc())
             data['success'] = False
+        finally:
+            # Job has finished or issue found, so let's clean up after ourselves
+            try:
+                os.remove(jid_proc_file)
+            except OSError as err:
+                log.error("Error attempting to remove master job tracker: %s", err)
 
         if self.store_job:
             try:
@@ -458,7 +469,7 @@ class SyncClientMixin(object):
 
 class AsyncClientMixin(object):
     '''
-    A mixin for *Client interfaces to enable easy async function execution
+    A mixin for *Client interfaces to enable easy asynchronous function execution
     '''
     client = None
     tag_prefix = None
@@ -510,7 +521,7 @@ class AsyncClientMixin(object):
         tag = salt.utils.event.tagify(jid, prefix=self.tag_prefix)
         return {'tag': tag, 'jid': jid}
 
-    def async(self, fun, low, user='UNKNOWN', pub=None):
+    def asynchronous(self, fun, low, user='UNKNOWN', pub=None):
         '''
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return

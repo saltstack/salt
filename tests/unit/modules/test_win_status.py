@@ -146,11 +146,7 @@ class TestProcsWMIGetOwnerErrorsAreLogged(TestProcsBase):
     def test_error_logged_if_process_get_owner_fails(self):
         with patch('salt.modules.win_status.log') as log:
             self.call_procs()
-        log.warning.assert_called_once_with(ANY)
-        self.assertIn(
-            str(self.expected_error_code),
-            log.warning.call_args[0][0]
-        )
+        log.warning.assert_called_once_with(ANY, ANY, self.expected_error_code)
 
 
 class TestEmptyCommandLine(TestProcsBase):

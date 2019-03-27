@@ -2,16 +2,23 @@
         <name>{{ name }}</name>
         <vcpu>{{ cpu }}</vcpu>
         <memory unit='KiB'>{{ mem }}</memory>
+        <currentMemory unit='KiB'>{{ mem }}</currentMemory>
         <os>
-                <type>hvm</type>
+                <type arch='{{ arch }}'>{{ os_type }}</type>
+                {% if kernel %}<kernel>{{ kernel }}</kernel>{% endif %}
                 {% for dev in boot_dev %}
                 <boot dev='{{ dev }}' />
                 {% endfor %}
+		{% if loader %}
+		<loader {{ loader.get('_attributes') }}>{{ loader.get('path') }}</loader>
+		{% endif %}
         </os>
         <devices>
-                {% for diskname, disk in disks.items() %}
-                <disk type='file' device='disk'>
+                {% for disk in disks %}
+                <disk type='file' device='{{ disk.device }}'>
+                        {% if 'source_file' in disk %}
                         <source file='{{ disk.source_file }}' />
+                        {% endif %}
                         <target dev='{{ disk.target_dev }}' bus='{{ disk.disk_bus }}' />
                         {% if disk.address -%}
                         <address type='drive' controller='0' bus='0' target='0' unit='{{ disk.index }}' />
@@ -30,11 +37,26 @@
                 <interface type='{{ nic.type }}'>
                     <source {{ nic.type }}='{{ nic.source }}'/>
                     <mac address='{{ nic.mac }}'/>
-                    <model type='{{ nic.model }}'/>
+                    {% if nic.model %}<model type='{{ nic.model }}'/>{% endif %}
                 </interface>
                 {% endfor %}
-                {% if enable_vnc %}
-                <graphics type='vnc' listen='0.0.0.0' autoport='yes' />
+                {% if graphics %}
+                <graphics type='{{ graphics.type }}'
+                          {% if graphics.listen.address %}
+                          listen='{{ graphics.listen.address }}'
+                          {% endif %}
+                          {% if graphics.port %}
+                          port='{{ graphics.port }}'
+                          {% endif %}
+                          {% if graphics.type == 'spice' and graphics.tls_port %}
+                          tlsPort='{{ graphics.tls_port }}'
+                          {% endif %}
+                          autoport='{{ 'no' if graphics.port or graphics.tls_port else 'yes' }}'>
+                    <listen type='{{ graphics.listen.type }}'
+                            {% if graphics.listen.address %}
+                            address='{{ graphics.listen.address }}'
+                            {% endif %}/>
+                </graphics>
                 {% endif %}
                 {% if serial_type == 'pty' %}
                 <serial type='pty'>

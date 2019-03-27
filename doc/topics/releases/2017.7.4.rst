@@ -1,0 +1,133 @@
+===========================
+Salt 2017.7.4 Release Notes
+===========================
+
+Version 2017.7.4 is a bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
+
+
+Statistics
+==========
+
+- Total Merges: **8**
+- Total Issue References: **4**
+- Total PR References: **11**
+
+- Contributors: **6** (`Ch3LL`_, `garethgreenaway`_, `gtmanfred`_, `marccardinal`_, `rallytime`_, `terminalmage`_)
+
+
+Changelog for v2017.7.3..v2017.7.4
+==================================
+
+*Generated at: 2018-05-26 21:48:28 UTC*
+
+* **PR** `#46074`_: (`Ch3LL`_) Update 2017.7.4 Release Notes with new fixes
+  @ *2018-02-16 16:47:56 UTC*
+
+  * b5b083fd26 Merge pull request `#46074`_ from Ch3LL/update-7.4
+
+  * 8d0eeeb059 Update 2017.7.4 Release Notes with new fixes
+
+* **ISSUE** `#45790`_: (`bdarnell`_) Test with Tornado 5.0b1 (refs: `#46066`_)
+
+* **PR** `#46066`_: (`rallytime`_) Pin tornado version in requirements file
+  @ *2018-02-16 16:40:05 UTC*
+
+  * 32f3d00e44 Merge pull request `#46066`_ from rallytime/pin-tornado
+
+  * 6dc1a3b9dc Pin tornado version in requirements file
+
+* **PR** `#46036`_: (`terminalmage`_) git.latest: Fix regression with identity file usage
+  @ *2018-02-16 13:57:23 UTC*
+
+  * 85761ee650 Merge pull request `#46036`_ from terminalmage/issue43769
+
+  * e2140d9a84 Mock the ssh.key_is_encrypted utils func
+
+  * 169924b3fe Move ssh.key_is_encrypted to a utils module temporarily
+
+  * 54f4d78f7a Only keep ssh.py in the Windows installer
+
+  * 5f04531e1b Keep ssh state and execution modules in the installer
+
+  * f2b69f703d git.latest: Fix regression with identity file usage
+
+* **PR** `#46009`_: (`Ch3LL`_) Add 2017.7.4 Release Notes with PRs
+  @ *2018-02-13 16:40:30 UTC*
+
+  * 6d534c6e7e Merge pull request `#46009`_ from Ch3LL/rn_7.4
+
+  * ac0baf4b34 Add 2017.7.4 Release Notes with PRs
+
+* **ISSUE** `#45976`_: (`ghost`_) 6a5e0f9 introduces regression that breaks Vault module for salt masterless (refs: `#45981`_)
+
+* **PR** `#45981`_: (`gtmanfred`_) use local config for vault when masterless
+  @ *2018-02-13 15:22:01 UTC*
+
+  * ca76a0b328 Merge pull request `#45981`_ from gtmanfred/2017.7.3
+
+  * 0d448457dc apparently local is not set by default
+
+  * 2a92f4bc16 use local config for vault when masterless
+
+* **ISSUE** `#45915`_: (`MatthiasKuehneEllerhold`_) 2017.7.3: Salt-SSH & Vault Pillar: Permission denied "minion.pem" (refs: `#45928`_)
+
+* **PR** `#45953`_: (`rallytime`_) Back-port `#45928`_ to 2017.7.3
+  @ *2018-02-09 22:29:10 UTC*
+
+  * **PR** `#45928`_: (`garethgreenaway`_) [2017.7] Fixing vault when used with pillar over salt-ssh (refs: `#45953`_)
+
+  * 6530649dbc Merge pull request `#45953`_ from rallytime/bp-45928-2017.7.3
+
+  * 85363189d1 Fixing vault when used with pillar over salt-ssh
+
+* **ISSUE** `#45893`_: (`CrackerJackMack`_) archive.extracted ValueError "No path specified" in 2017.7.3 (refs: `#45902`_)
+
+* **PR** `#45934`_: (`rallytime`_) Back-port `#45902`_ to 2017.7.3
+  @ *2018-02-09 16:31:08 UTC*
+
+  * **PR** `#45902`_: (`terminalmage`_) Check the effective saltenv for cached archive (refs: `#45934`_)
+
+  * fb378cebb0 Merge pull request `#45934`_ from rallytime/bp-45902
+
+  * bb83e8b345 Add regression test for issue 45893
+
+  * cdda66d759 Remove duplicated section in docstring and fix example
+
+  * 4b6351cda6 Check the effective saltenv for cached archive
+
+* **PR** `#45935`_: (`rallytime`_) Back-port `#45742`_ to 2017.7.3
+  @ *2018-02-09 14:02:26 UTC*
+
+  * **PR** `#45742`_: (`marccardinal`_) list.copy() is not compatible with python 2.7 (refs: `#45935`_)
+
+  * 0d74151c71 Merge pull request `#45935`_ from rallytime/bp-45742
+
+  * 6a0b5f7af3 Removed the chained copy
+
+  * ad1150fad4 list.copy() is not compatible with python 2.7
+
+.. _`#45742`: https://github.com/saltstack/salt/pull/45742
+.. _`#45790`: https://github.com/saltstack/salt/issues/45790
+.. _`#45893`: https://github.com/saltstack/salt/issues/45893
+.. _`#45902`: https://github.com/saltstack/salt/pull/45902
+.. _`#45915`: https://github.com/saltstack/salt/issues/45915
+.. _`#45928`: https://github.com/saltstack/salt/pull/45928
+.. _`#45934`: https://github.com/saltstack/salt/pull/45934
+.. _`#45935`: https://github.com/saltstack/salt/pull/45935
+.. _`#45953`: https://github.com/saltstack/salt/pull/45953
+.. _`#45976`: https://github.com/saltstack/salt/issues/45976
+.. _`#45981`: https://github.com/saltstack/salt/pull/45981
+.. _`#46009`: https://github.com/saltstack/salt/pull/46009
+.. _`#46036`: https://github.com/saltstack/salt/pull/46036
+.. _`#46066`: https://github.com/saltstack/salt/pull/46066
+.. _`#46074`: https://github.com/saltstack/salt/pull/46074
+.. _`Ch3LL`: https://github.com/Ch3LL
+.. _`CrackerJackMack`: https://github.com/CrackerJackMack
+.. _`MatthiasKuehneEllerhold`: https://github.com/MatthiasKuehneEllerhold
+.. _`bdarnell`: https://github.com/bdarnell
+.. _`garethgreenaway`: https://github.com/garethgreenaway
+.. _`ghost`: https://github.com/ghost
+.. _`gtmanfred`: https://github.com/gtmanfred
+.. _`marccardinal`: https://github.com/marccardinal
+.. _`rallytime`: https://github.com/rallytime
+.. _`terminalmage`: https://github.com/terminalmage

@@ -6,7 +6,7 @@ and the set of routes for a particular VM is called its routing table.
 For each packet leaving a virtual machine, the system searches that machine's
 routing table for a single best matching route.
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 This module will create a route to send traffic destined to the Internet
 through your gateway instance.

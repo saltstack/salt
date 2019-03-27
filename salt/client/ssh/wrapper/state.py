@@ -36,6 +36,59 @@ __func_alias__ = {
 log = logging.getLogger(__name__)
 
 
+def _ssh_state(chunks, st_kwargs,
+              kwargs, test=False):
+    '''
+    Function to run a state with the given chunk via salt-ssh
+    '''
+    file_refs = salt.client.ssh.state.lowstate_file_refs(
+            chunks,
+            _merge_extra_filerefs(
+                kwargs.get('extra_filerefs', ''),
+                __opts__.get('extra_filerefs', '')
+                )
+            )
+    # Create the tar containing the state pkg and relevant files.
+    trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __context__['fileclient'],
+            chunks,
+            file_refs,
+            __pillar__,
+            st_kwargs['id_'])
+    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__['hash_type'])
+    cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
+            __opts__['thin_dir'],
+            test,
+            trans_tar_sum,
+            __opts__['hash_type'])
+    single = salt.client.ssh.Single(
+            __opts__,
+            cmd,
+            fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
+            **st_kwargs)
+    single.shell.send(
+            trans_tar,
+            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
+    stdout, stderr, _ = single.cmd_block()
+
+    # Clean up our tar
+    try:
+        os.remove(trans_tar)
+    except (OSError, IOError):
+        pass
+
+    # Read in the JSON data and return the data structure
+    try:
+        return salt.utils.data.decode(salt.utils.json.loads(stdout, object_hook=salt.utils.data.encode_dict))
+    except Exception as e:
+        log.error("JSON Render failed for: %s\n%s", stdout, stderr)
+        log.error(str(e))
+
+    # If for some reason the json load fails, return the stdout
+    return salt.utils.data.decode(stdout)
+
+
 def _set_retcode(ret, highstate=None):
     '''
     Set the return code based on the data back from the state system
@@ -114,6 +167,16 @@ def _cleanup_slsmod_high_data(high_data):
                 stateconf_data['slsmod'] = None
 
 
+def _parse_mods(mods):
+    '''
+    Parse modules.
+    '''
+    if isinstance(mods, six.string_types):
+        mods = [item.strip() for item in mods.split(',') if item.strip()]
+
+    return mods
+
+
 def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
     '''
     Create the seed file for a state.sls run
@@ -128,8 +191,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
             __salt__,
             __context__['fileclient'])
     st_.push_active()
-    if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+    mods = _parse_mods(mods)
     high_data, errors = st_.render_highstate({saltenv: mods})
     if exclude:
         if isinstance(exclude, six.string_types):
@@ -165,7 +227,6 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
     # Create the tar containing the state pkg and relevant files.
     _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            opts,
             __context__['fileclient'],
             chunks,
             file_refs,
@@ -197,7 +258,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
@@ -310,7 +371,6 @@ def low(data, **kwargs):
 
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
@@ -341,7 +401,7 @@ def low(data, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
@@ -401,7 +461,6 @@ def high(data, **kwargs):
     # Create the tar containing the state pkg and relevant files.
     _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            opts,
             __context__['fileclient'],
             chunks,
             file_refs,
@@ -432,7 +491,7 @@ def high(data, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
@@ -491,17 +550,18 @@ def request(mods=None,
             'kwargs': kwargs
             }
         })
-    cumask = os.umask(0o77)
-    try:
-        if salt.utils.platform.is_windows():
-            # Make sure cache file isn't read-only
-            __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-        with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
-            serial.dump(req, fp_)
-    except (IOError, OSError):
-        msg = 'Unable to write state request file {0}. Check permission.'
-        log.error(msg.format(notify_path))
-    os.umask(cumask)
+    with salt.utils.files.set_umask(0o077):
+        try:
+            if salt.utils.platform.is_windows():
+                # Make sure cache file isn't read-only
+                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+            with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
+                serial.dump(req, fp_)
+        except (IOError, OSError):
+            log.error(
+                'Unable to write state request file %s. Check permission.',
+                notify_path
+            )
     return ret
 
 
@@ -557,17 +617,18 @@ def clear_request(name=None):
             req.pop(name)
         else:
             return False
-        cumask = os.umask(0o77)
-        try:
-            if salt.utils.platform.is_windows():
-                # Make sure cache file isn't read-only
-                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-            with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
-                serial.dump(req, fp_)
-        except (IOError, OSError):
-            msg = 'Unable to write state request file {0}. Check permission.'
-            log.error(msg.format(notify_path))
-        os.umask(cumask)
+        with salt.utils.files.set_umask(0o077):
+            try:
+                if salt.utils.platform.is_windows():
+                    # Make sure cache file isn't read-only
+                    __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+                with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
+                    serial.dump(req, fp_)
+            except (IOError, OSError):
+                log.error(
+                    'Unable to write state request file %s. Check permission.',
+                    notify_path
+                )
     return True
 
 
@@ -645,7 +706,6 @@ def highstate(test=None, **kwargs):
     # Create the tar containing the state pkg and relevant files.
     _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            opts,
             __context__['fileclient'],
             chunks,
             file_refs,
@@ -677,7 +737,7 @@ def highstate(test=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
@@ -728,7 +788,6 @@ def top(topfn, test=None, **kwargs):
     # Create the tar containing the state pkg and relevant files.
     _cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            opts,
             __context__['fileclient'],
             chunks,
             file_refs,
@@ -760,7 +819,7 @@ def top(topfn, test=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
@@ -847,6 +906,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
 
         salt '*' state.sls_id my_state my_module,a_common_module
     '''
+    st_kwargs = __salt__.kwargs
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
@@ -859,13 +919,11 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     if opts['saltenv'] is None:
         opts['saltenv'] = 'base'
 
-    try:
-        st_ = salt.state.HighState(opts,
-                                   proxy=__proxy__,
-                                   initial_pillar=_get_initial_pillar(opts))
-    except NameError:
-        st_ = salt.state.HighState(opts,
-                                   initial_pillar=_get_initial_pillar(opts))
+    st_ = salt.client.ssh.state.SSHHighState(
+            __opts__,
+            __pillar__,
+            __salt__,
+            __context__['fileclient'])
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -873,13 +931,9 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         err += __pillar__['_errors']
         return err
 
-    if isinstance(mods, six.string_types):
-        split_mods = mods.split(',')
+    split_mods = _parse_mods(mods)
     st_.push_active()
-    try:
-        high_, errors = st_.render_highstate({opts['saltenv']: split_mods})
-    finally:
-        st_.pop_active()
+    high_, errors = st_.render_highstate({opts['saltenv']: split_mods})
     errors += st_.state.verify_high(high_)
     # Apply requisites to high data
     high_, req_in_errors = st_.state.requisite_in(high_)
@@ -891,17 +945,22 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         __context__['retcode'] = 1
         return errors
     chunks = st_.state.compile_high_data(high_)
-    ret = {}
-    for chunk in chunks:
-        if chunk.get('__id__', '') == id_:
-            ret.update(st_.state.call_chunk(chunk, {}, chunks))
+    chunk = [x for x in chunks if x.get('__id__', '') == id_]
 
-    _set_retcode(ret, highstate=highstate)
-    if not ret:
+    if not chunk:
         raise SaltInvocationError(
             'No matches for ID \'{0}\' found in SLS \'{1}\' within saltenv '
             '\'{2}\''.format(id_, mods, opts['saltenv'])
         )
+
+    ret = _ssh_state(chunk,
+                     st_kwargs,
+                     kwargs,
+                     test=test)
+    _set_retcode(ret, highstate=highstate)
+    # Work around Windows multiprocessing bug, set __opts__['test'] back to
+    # value from before this function was run.
+    __opts__['test'] = orig_test
     return ret
 
 
@@ -929,8 +988,7 @@ def show_sls(mods, saltenv='base', test=None, **kwargs):
             __salt__,
             __context__['fileclient'])
     st_.push_active()
-    if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+    mods = _parse_mods(mods)
     high_data, errors = st_.render_highstate({saltenv: mods})
     high_data, ext_errors = st_.state.reconcile_extend(high_data)
     errors += ext_errors
@@ -974,8 +1032,7 @@ def show_low_sls(mods, saltenv='base', test=None, **kwargs):
             __salt__,
             __context__['fileclient'])
     st_.push_active()
-    if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+    mods = _parse_mods(mods)
     high_data, errors = st_.render_highstate({saltenv: mods})
     high_data, ext_errors = st_.state.reconcile_extend(high_data)
     errors += ext_errors
@@ -1091,7 +1148,6 @@ def single(fun, name, test=None, **kwargs):
 
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            opts,
             __context__['fileclient'],
             chunks,
             file_refs,
@@ -1133,7 +1189,7 @@ def single(fun, name, test=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return salt.utils.json.loads(stdout, object_hook=salt.utils.data.decode_dict)
+        return salt.utils.json.loads(stdout)
     except Exception as e:
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.integration.shell.master
@@ -19,19 +19,21 @@ import salt.utils.yaml
 
 # Import salt test libs
 import tests.integration.utils
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
-from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.unit import skipIf
 from tests.integration.utils import testprogram
 
 
+@skipIf(True, 'This test file should be in an isolated test space.')
 class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-master'
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
-        config_dir = os.path.join(TMP, 'issue-7754')
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
@@ -101,7 +103,7 @@ class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         finally:
             # Although the start-up should fail, call shutdown() to set the
             # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exeptions and respective traceback
+            # cause timeout exceptions and respective traceback
             master.shutdown()
 
     # pylint: disable=invalid-name
@@ -131,7 +133,7 @@ class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         finally:
             # Although the start-up should fail, call shutdown() to set the
             # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exeptions and respective traceback
+            # cause timeout exceptions and respective traceback
             master.shutdown()
 
     def test_exit_status_correct_usage(self):

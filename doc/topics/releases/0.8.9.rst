@@ -17,11 +17,7 @@ date has been filled in.
 Download!
 ---------
 
-The Salt source can be downloaded from the salt GitHub site:
-
-:download:`salt-0.8.9.tar.gz`
-
-Or from PyPI:
+The Salt source can be downloaded from PyPI:
 
 https://pypi.python.org/packages/source/s/salt/salt-0.8.9.tar.gz
 

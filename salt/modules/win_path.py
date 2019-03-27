@@ -11,19 +11,17 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Python libs
 import logging
 import os
-import re
 
 # Import Salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.win_functions
 
 # Import 3rd-party libs
 from salt.ext.six.moves import map
 try:
-    from win32con import HWND_BROADCAST, WM_SETTINGCHANGE
-    from win32api import SendMessage
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
@@ -51,13 +49,20 @@ def _normalize_dir(string_):
     '''
     Normalize the directory to make comparison possible
     '''
-    return re.sub(r'\\$', '', salt.utils.stringutils.to_unicode(string_))
+    return os.path.normpath(salt.utils.stringutils.to_unicode(string_))
 
 
 def rehash():
     '''
     Send a WM_SETTINGCHANGE Broadcast to Windows to refresh the Environment
-    variables
+    variables for new processes.
+
+    .. note::
+        This will only affect new processes that aren't launched by services. To
+        apply changes to the path to services, the host must be restarted. The
+        ``salt-minion``, if running as a service, will not see changes to the
+        environment until the system is restarted. See
+        `MSDN Documentation <https://support.microsoft.com/en-us/help/821761/changes-that-you-make-to-environment-variables-do-not-affect-services>`_
 
     CLI Example:
 
@@ -65,7 +70,7 @@ def rehash():
 
         salt '*' win_path.rehash
     '''
-    return bool(SendMessage(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 'Environment'))
+    return salt.utils.win_functions.broadcast_setting_change('Environment')
 
 
 def get_path():
@@ -79,7 +84,7 @@ def get_path():
         salt '*' win_path.get_path
     '''
     ret = salt.utils.stringutils.to_unicode(
-        __salt__['reg.read_value'](
+        __utils__['reg.read_value'](
             'HKEY_LOCAL_MACHINE',
             'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
             'PATH')['vdata']
@@ -194,7 +199,7 @@ def add(path, index=None, **kwargs):
             elif index <= -num_dirs:
                 # Negative index is too large, shift index to beginning of list
                 index = pos = 0
-            elif index <= 0:
+            elif index < 0:
                 # Negative indexes (other than -1 which is handled above) must
                 # be inserted at index + 1 for the item  to end up in the
                 # position you want, since list.insert() inserts before the
@@ -265,7 +270,7 @@ def add(path, index=None, **kwargs):
         return True
 
     # Move forward with registry update
-    result = __salt__['reg.set_value'](
+    result = __utils__['reg.set_value'](
         HIVE,
         KEY,
         VNAME,
@@ -341,7 +346,7 @@ def remove(path, **kwargs):
         # No changes necessary
         return True
 
-    result = __salt__['reg.set_value'](
+    result = __utils__['reg.set_value'](
         HIVE,
         KEY,
         VNAME,

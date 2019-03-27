@@ -12,7 +12,7 @@ import salt.pillar.mysql as mysql
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(not mysql.HAS_MYSQL, 'MySQL-python module not installed')
+@skipIf(mysql.MySQLdb is None, 'MySQL-python module not installed')
 class MysqlPillarTestCase(TestCase):
     maxDiff = None
 
@@ -520,6 +520,21 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_301_process_results_with_lists(self):
+        '''
+        Validates the following results:
+
+          {'a': [
+                {'c': [
+                    {'e': 1},
+                    {'g': 2}
+                    ]
+                },
+                {'h': [
+                    {'j': 3, 'k': 4}
+                    ]
+                }
+          ]}
+        '''
         return_data = mysql.MySQLExtPillar()
         return_data.as_list = False
         return_data.with_lists = [1, 3]
@@ -529,22 +544,49 @@ class MysqlPillarTestCase(TestCase):
                                      ['a', 'b', 'c', 'f', 'g', 2],
                                      ['a', 'z', 'h', 'y', 'j', 3],
                                      ['a', 'z', 'h', 'y', 'k', 4]])
-        self.assertEqual(
-            {'a': [
-                  {'c': [
-                      {'e': 1},
-                      {'g': 2}
-                      ]
-                  },
-                  {'h': [
-                      {'j': 3, 'k': 4}
-                      ]
-                  }
-            ]},
-             return_data.result
-        )
+        assert 'a' in return_data.result
+        for x in return_data.result['a']:
+            if 'c' in x:
+                assert list(x.keys()) == ['c'], x.keys()
+                for y in x['c']:
+                    if 'e' in y:
+                        assert list(y.keys()) == ['e']
+                        assert y['e'] == 1
+                    elif 'g' in y:
+                        assert list(y.keys()) == ['g']
+                        assert y['g'] == 2
+                    else:
+                        raise ValueError("Unexpected value {0}".format(y))
+            elif 'h' in x:
+                assert len(x['h']) == 1
+                for y in x['h']:
+                    if 'j' in y:
+                        assert len(y.keys()) == 2
+                        assert y['j'] == 3
+                    elif 'h' in y:
+                        assert len(y.keys()) == 2
+                        assert y['k'] == 4
+                    else:
+                        raise ValueError("Unexpected value {0}".format(y))
+            else:
+                raise ValueError("Unexpected value {0}".format(x))
 
     def test_302_process_results_with_lists_consecutive(self):
+        '''
+        Validates the following results:
+
+          {'a': [
+                [[
+                    {'e': 1},
+                    {'g': 2}
+                    ]
+                ],
+                [[
+                    {'j': 3, 'k': 4}
+                    ]
+                ]
+          ]}
+        '''
         return_data = mysql.MySQLExtPillar()
         return_data.as_list = False
         return_data.with_lists = [1, 2, 3]
@@ -554,17 +596,31 @@ class MysqlPillarTestCase(TestCase):
                                      ['a', 'b', 'c', 'f', 'g', 2],
                                      ['a', 'z', 'h', 'y', 'j', 3],
                                      ['a', 'z', 'h', 'y', 'k', 4]])
-        self.assertEqual(
-            {'a': [
-                  [[
-                      {'e': 1},
-                      {'g': 2}
-                      ]
-                  ],
-                  [[
-                      {'j': 3, 'k': 4}
-                      ]
-                  ]
-            ]},
-             return_data.result
-        )
+
+        assert 'a' in return_data.result
+        for x in return_data.result['a']:
+            assert len(x) == 1
+            if len(x[0][0]) == 1:
+                for y in x[0]:
+                    if 'e' in y:
+                        assert list(y.keys()) == ['e']
+                        assert y['e'] == 1
+                    elif 'g' in y:
+                        assert list(y.keys()) == ['g']
+                        assert y['g'] == 2
+                    else:
+                        raise ValueError("Unexpected value {0}".format(y))
+            elif len(x[0][0]) == 2:
+                for y in x[0]:
+                    if 'j' in y:
+                        assert len(y.keys()) == 2
+                        assert y['j'] == 3
+                    elif 'k' in y:
+                        assert len(y.keys()) == 2
+                        assert y['k'] == 4
+                    else:
+                        raise ValueError(
+                            "Unexpected value {0}".format(len(x[0][0]))
+                        )
+            else:
+                raise ValueError("Unexpected value {0}".format(x))

@@ -210,6 +210,7 @@ def _set_labels(node, apiserver_url, labels):
 def get_labels(node=None, apiserver_url=None):
     '''
     .. versionadded:: 2016.3.0
+
     Get labels from the current node
 
     CLI Example:
@@ -755,7 +756,7 @@ def create_secret(namespace, name, sources, apiserver_url=None, force=False, upd
                     return ret
             data[sname] = encoded
 
-    log.trace("secret data is: {0}".format(data))
+    log.trace('secret data is: %s', data)
 
     if secret and update:
         if not data:

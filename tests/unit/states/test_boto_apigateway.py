@@ -384,7 +384,7 @@ class TempSwaggerFile(object):
             self.swaggerdict['invalid_key'] = 'invalid'
             # remove one of the required keys 'schemes'
             self.swaggerdict.pop('schemes', None)
-            # set swagger version to an unsupported verison 3.0
+            # set swagger version to an unsupported version 3.0
             self.swaggerdict['swagger'] = '3.0'
             # missing info object
             self.swaggerdict.pop('info', None)
@@ -397,7 +397,7 @@ class BotoApiGatewayStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     @classmethod
@@ -406,7 +406,10 @@ class BotoApiGatewayStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         context = {}
-        utils = salt.loader.utils(self.opts, whitelist=['boto', 'boto3'], context=context)
+        utils = salt.loader.utils(
+            self.opts,
+            whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform'],
+            context=context)
         serializers = salt.loader.serializers(self.opts)
         self.funcs = salt.loader.minion_mods(self.opts, context=context, utils=utils, whitelist=['boto_apigateway'])
         self.salt_states = salt.loader.states(opts=self.opts, functions=self.funcs, utils=utils, whitelist=['boto_apigateway'], serializers=serializers)

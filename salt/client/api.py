@@ -93,7 +93,7 @@ class APIClient(object):
 
         The cmd dict items are as follows:
 
-        mode: either 'sync' or 'async'. Defaults to 'async' if missing
+        mode: either 'sync' or 'asynchronous'. Defaults to 'asynchronous' if missing
         fun: required. If the function is to be run on the master using either
             a wheel or runner client then the fun: includes either
             'wheel.' or 'runner.' as a prefix and has three parts separated by '.'.
@@ -120,7 +120,7 @@ class APIClient(object):
         '''
         cmd = dict(cmd)  # make copy
         client = 'minion'  # default to local minion client
-        mode = cmd.get('mode', 'async')  # default to 'async'
+        mode = cmd.get('mode', 'async')
 
         # check for wheel or runner prefix to fun name to use wheel or runner client
         funparts = cmd.get('fun', '').split('.')
@@ -162,7 +162,7 @@ class APIClient(object):
         '''
         return self.runnerClient.master_call(**kwargs)
 
-    runner_sync = runner_async  # always runner async, so works in either mode
+    runner_sync = runner_async  # always runner asynchronous, so works in either mode
 
     def wheel_sync(self, **kwargs):
         '''

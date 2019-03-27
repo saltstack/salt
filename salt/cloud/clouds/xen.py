@@ -238,7 +238,7 @@ def get_vm_ip(name=None, session=None, call=None):
     vifs = session.xenapi.VM.get_VIFs(vm)
     if vifs is not None:
         for vif in vifs:
-            if len(session.xenapi.VIF.get_ipv4_addresses(vif)) != 0:
+            if session.xenapi.VIF.get_ipv4_addresses(vif):
                 cidr = session.xenapi.VIF.get_ipv4_addresses(vif).pop()
                 ret, subnet = cidr.split('/')
                 log.debug(
@@ -430,7 +430,7 @@ def avail_locations(session=None, call=None):
 
 def avail_sizes(session=None, call=None):
     '''
-    Return a list of Xen templat definitions
+    Return a list of Xen template definitions
 
     .. code-block:: bash
 
@@ -520,7 +520,7 @@ def _determine_resource_pool(session, vm_):
         resource_pool = _get_pool(vm_['resource_pool'], session)
     else:
         pool = session.xenapi.pool.get_all()
-        if len(pool) <= 0:
+        if not pool:
             resource_pool = None
         else:
             first_pool = session.xenapi.pool.get_all()[0]
@@ -564,11 +564,6 @@ def create(vm_):
     name = vm_['name']
     record = {}
     ret = {}
-
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
 
     # fire creating event
     __utils__['cloud.fire_event'](
@@ -674,6 +669,7 @@ def _deploy_salt_minion(name, session, vm_):
     vm_['ssh_host'] = get_vm_ip(name, session)
     vm_['user'] = vm_.get('user', 'root')
     vm_['password'] = vm_.get('password', 'p@ssw0rd!')
+    vm_['provider'] = vm_.get('provider', 'xen')
     log.debug('%s has IP of %s', name, vm_['ssh_host'])
     # Bootstrap Salt minion!
     if vm_['ssh_host'] is not None:
@@ -717,14 +713,14 @@ def _wait_for_ip(name, session):
             delta.seconds, name
         )
         if delta.seconds > 180:
-            log.warn('Timeout getting IP address')
+            log.warning('Timeout getting IP address')
             break
         time.sleep(5)
 
 
 def _run_async_task(task=None, session=None):
     '''
-    Run  XenAPI task in async mode to prevent timeouts
+    Run  XenAPI task in asynchronous mode to prevent timeouts
     '''
     if task is None or session is None:
         return None
@@ -1027,7 +1023,7 @@ def destroy(name=None, call=None):
     if vm:
         # get vm
         record = session.xenapi.VM.get_record(vm)
-        log.debug('power_state: ' + record['power_state'])
+        log.debug('power_state: %s', record['power_state'])
         # shut down
         if record['power_state'] != 'Halted':
             task = session.xenapi.Async.VM.hard_shutdown(vm)
@@ -1291,3 +1287,55 @@ def destroy_template(name=None, call=None, kwargs=None):
     if not found:
         ret[name] = {'status': 'not found'}
     return ret
+
+
+def get_pv_args(name, session=None, call=None):
+    '''
+    Get PV arguments for a VM
+
+    .. code-block:: bash
+
+        salt-cloud -a get_pv_args xenvm01
+
+    '''
+    if call == 'function':
+        raise SaltCloudException(
+            'This function must be called with -a or --action.'
+        )
+    if session is None:
+        log.debug('New session being created')
+        session = _get_session()
+    vm = _get_vm(name, session=session)
+    pv_args = session.xenapi.VM.get_PV_args(vm)
+    if pv_args:
+        return pv_args
+    return None
+
+
+def set_pv_args(name, kwargs=None, session=None, call=None):
+    '''
+    Set PV arguments for a VM
+
+    .. code-block:: bash
+
+        salt-cloud -a set_pv_args xenvm01 pv_args="utf-8 graphical"
+
+    '''
+    if call == 'function':
+        raise SaltCloudException(
+            'This function must be called with -a or --action.'
+        )
+    if session is None:
+        log.debug('New session being created')
+        session = _get_session()
+    vm = _get_vm(name, session=session)
+    try:
+        log.debug('Setting PV Args: %s', kwargs['pv_args'])
+        session.xenapi.VM.set_PV_args(vm, str(kwargs['pv_args']))
+    except KeyError:
+        log.error('No pv_args parameter found.')
+        return False
+    except XenAPI.Failure:
+        log.info('Setting PV Args failed.')
+        return False
+    return True

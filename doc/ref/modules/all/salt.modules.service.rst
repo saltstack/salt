@@ -33,7 +33,3 @@ Execution Module                       Used for
 :py:mod:`~salt.modules.win_service`    Windows
 ====================================== ========================================
 
-|
-
-.. automodule:: salt.modules.service
-    :members:

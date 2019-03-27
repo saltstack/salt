@@ -31,6 +31,26 @@ Set up the cloud profile at ``/etc/salt/cloud.profiles`` or
       size: 95
       enable_private_network: True
 
+This driver also supports Vultr's `startup script` feature.  You can list startup
+scripts in your account with
+
+.. code-block:: bash
+
+    salt-cloud -f list_scripts <name of vultr provider>
+
+That list will include the IDs of the scripts in your account.  Thus, if you
+have a script called 'setup-networking' with an ID of 493234 you can specify
+that startup script in a profile like so:
+
+.. code-block:: yaml
+
+    nyc-2gb-1cpu-ubuntu-17-04:
+      location: 1
+      provider: my-vultr-config
+      image: 223
+      size: 13
+      startup_script_id: 493234
+
 '''
 
 # Import python libs
@@ -107,6 +127,20 @@ def avail_locations(conn=None):
     return available datacenter locations
     '''
     return _query('regions/list')
+
+
+def avail_scripts(conn=None):
+    '''
+    return available startup scripts
+    '''
+    return _query('startupscript/list')
+
+
+def list_scripts(conn=None, call=None):
+    '''
+    return list of Startup Scripts
+    '''
+    return avail_scripts()
 
 
 def avail_sizes(conn=None):
@@ -215,6 +249,9 @@ def show_instance(name, call=None):
 
 
 def _lookup_vultrid(which_key, availkey, keyname):
+    '''
+    Helper function to retrieve a Vultr ID
+    '''
     if DETAILS == {}:
         _cache_provider_details()
 
@@ -235,6 +272,14 @@ def create(vm_):
     private_networking = config.get_cloud_config_value(
         'enable_private_network', vm_, __opts__, search_global=False, default=False,
     )
+
+    startup_script = config.get_cloud_config_value(
+        'startup_script_id', vm_, __opts__, search_global=False, default=None,
+    )
+
+    if startup_script and str(startup_script) not in avail_scripts():
+        log.error('Your Vultr account does not have a startup script with ID %s', str(startup_script))
+        return False
 
     if private_networking is not None:
         if not isinstance(private_networking, bool):
@@ -276,6 +321,8 @@ def create(vm_):
         'hostname': vm_['name'],
         'enable_private_network': enable_private_network,
     }
+    if startup_script:
+        kwargs['SCRIPTID'] = startup_script
 
     log.info('Creating Cloud VM %s', vm_['name'])
 

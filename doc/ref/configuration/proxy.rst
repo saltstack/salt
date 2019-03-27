@@ -108,7 +108,7 @@ The frequency of keepalive checks, in minutes. It requires the
 
 Default: ``True``
 
-Wheter the proxy should maintain the connection with the remote
+Whether the proxy should maintain the connection with the remote
 device. Similarly to :conf_proxy:`proxy_keep_alive`, this option
 is very specific to the design of the proxy module.
 When :conf_proxy:`proxy_always_alive` is set to ``False``,
@@ -126,7 +126,7 @@ has to be closed after every command.
 
 Default: ``False``.
 
-Wheter the pillar data to be merged into the proxy configuration options.
+Whether the pillar data to be merged into the proxy configuration options.
 As multiple proxies can run on the same server, we may need different
 configuration options for each, while there's one single configuration file.
 The solution is merging the pillar data of each proxy minion into the opts.

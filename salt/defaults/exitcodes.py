@@ -9,6 +9,10 @@ prefix or in `sysexits.h`).
 # else is more appropriate.
 EX_GENERIC = 1
 
+EX_STATE_COMPILER_ERROR = 1
+EX_STATE_FAILURE = 2
+EX_PILLAR_FAILURE = 5
+
 # Salt SSH "Thin" deployment failures
 EX_THIN_PYTHON_INVALID = 10
 EX_THIN_DEPLOY = 11

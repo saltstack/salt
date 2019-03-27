@@ -1,0 +1,144 @@
+===========================
+Salt 2018.3.2 Release Notes
+===========================
+
+Version 2018.3.2 is a bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
+
+The ``2018.3.2`` release contains only a small number of fixes, which are detailed
+below.
+
+This release fixes two critical issues.
+
+The first is Issue `#48038`_, which is a critical bug that occurs in a multi-syndic
+setup where the same job is run multiple times on a minion.
+
+The second issue is `#48130`_. This bug appears in certain setups where the Master
+reports a Minion time-out, even though the job is still running on the Minion.
+
+Both of these issues have been fixed with this release.
+
+Statistics
+==========
+
+- Total Merges: **7**
+- Total Issue References: **2**
+- Total PR References: **10**
+
+- Contributors: **4** (`cro`_, `garethgreenaway`_, `gtmanfred`_, `rallytime`_)
+
+.. warning::
+    If you are using Jinja to dump lists or dictionaries in your SLS files,
+    this will now cause errors in Python 2 since Jinja does not produce
+    YAML-compatible output when strings in the data structures contain unicode
+    types. The dictionary must be passed through a Jinja filter to produce
+    YAML-compatible strings.
+
+    The below is an example of invalid SLS:
+
+    .. code-block:: yaml
+
+      /etc/foo.conf:
+        file.mangaged:
+          - source: salt://foo.conf
+          - template: jinja
+          - defaults: {{ mydict }}
+
+    To make it valid, use either one of Salt's own ``json`` or ``yaml``
+    filters:
+
+    .. code-block:: yaml
+
+      /etc/foo.conf:
+        file.mangaged:
+          - source: salt://foo.conf
+          - template: jinja
+          - defaults: {{ mydict | json }}
+
+Changelog for v2018.3.1..v2018.3.2
+==================================
+
+*Generated at: 2018-06-17 19:17:16 UTC*
+
+* **ISSUE** `#48130`_: (`rmarchei`_) Minion timeouts with 2018.3.1 (refs: `#48158`_)
+
+* **PR** `#48158`_: (`gtmanfred`_) always listen when gathering job info
+  @ *2018-06-17 19:04:03 UTC*
+
+  * 521e926458 Merge pull request `#48158`_ from gtmanfred/2018.3.2
+
+  * cecf564433 always listen when gathering job info
+
+* **PR** `#48138`_: (`rallytime`_) Update man pages for 2018.3.2
+  @ *2018-06-14 21:22:34 UTC*
+
+  * f154545aff Merge pull request `#48138`_ from rallytime/man-pages-2018.3.2
+
+  * 8c340134f5 Update man pages for 2018.3.2
+
+* **PR** `#48137`_: (`gtmanfred`_) [2018.3.2] bootstrap kitchen branch tests with 2017.7.6
+  @ *2018-06-14 21:20:28 UTC*
+
+  * b49271b76d Merge pull request `#48137`_ from gtmanfred/2018.3.2
+
+  * 6128519e8b bootstrap kitchen branch tests with 2017.7.6
+
+* **PR** `#48129`_: (`rallytime`_) Add release notes for 2018.3.2
+  @ *2018-06-14 15:48:36 UTC*
+
+  * 21aaf1cbc4 Merge pull request `#48129`_ from rallytime/release-notes-2018.3.2
+
+  * 0b13be0111 Add release notes for 2018.3.2
+
+* **PR** `#48100`_: (`rallytime`_) Back-port `#48014`_ to 2018.3.2
+  @ *2018-06-14 12:54:52 UTC*
+
+  * **PR** `#48014`_: (`cro`_) Find job pause (refs: `#48100`_)
+
+  * 36b99ae80a Merge pull request `#48100`_ from rallytime/bp-48014
+
+  * 77feccc5c4 Lint: Add blank line
+
+  * 159b052962 One more case where returner doesn't respond
+
+  * 91b45b4cc4 Catch two cases when a returner is not able to be contacted--these would throw a stacktrace.
+
+* **PR** `#48099`_: (`rallytime`_) Back-port `#47915`_ to 2018.3.2
+  @ *2018-06-14 12:54:23 UTC*
+
+  * **PR** `#47915`_: (`garethgreenaway`_) [2018.3] state runner pause resume kill (refs: `#48099`_)
+
+  * 40c1bfdec9 Merge pull request `#48099`_ from rallytime/bp-47915
+
+  * 3556850058 fixing typo in alias_function call.
+
+  * 4b0ff496fa Some fixes to the set_pause and rm_pause function in the state runner, renaming to in line with the functions in the state module.  Including aliases to previous names for back-ward compatibility.  Including a soft_kill function to kill running orchestration states.  A new test to test soft_kill functionality.
+
+* **ISSUE** `#48038`_: (`austinpapp`_) jobs are not dedup'ing minion side (refs: `#48075`_)
+
+* **PR** `#48097`_: (`rallytime`_) Back-port `#48075`_ to 2018.3.2
+  @ *2018-06-14 12:52:44 UTC*
+
+  * **PR** `#48075`_: (`garethgreenaway`_) [2017.7] Ensure that the shared list of jids is passed (refs: `#48097`_)
+
+  * 074a97dcfa Merge pull request `#48097`_ from rallytime/bp-48075
+
+  * e4c719b55f Ensure that the shared list of jids is passed when creating the Minion.  Fixes an issue when minions are pointed at multiple syndics.
+
+.. _`#47915`: https://github.com/saltstack/salt/pull/47915
+.. _`#48014`: https://github.com/saltstack/salt/pull/48014
+.. _`#48038`: https://github.com/saltstack/salt/issues/48038
+.. _`#48075`: https://github.com/saltstack/salt/pull/48075
+.. _`#48097`: https://github.com/saltstack/salt/pull/48097
+.. _`#48099`: https://github.com/saltstack/salt/pull/48099
+.. _`#48100`: https://github.com/saltstack/salt/pull/48100
+.. _`#48129`: https://github.com/saltstack/salt/pull/48129
+.. _`#48130`: https://github.com/saltstack/salt/issues/48130
+.. _`#48137`: https://github.com/saltstack/salt/pull/48137
+.. _`#48138`: https://github.com/saltstack/salt/pull/48138
+.. _`#48158`: https://github.com/saltstack/salt/pull/48158
+.. _`austinpapp`: https://github.com/austinpapp
+.. _`cro`: https://github.com/cro
+.. _`garethgreenaway`: https://github.com/garethgreenaway
+.. _`gtmanfred`: https://github.com/gtmanfred
+.. _`rallytime`: https://github.com/rallytime
+.. _`rmarchei`: https://github.com/rmarchei

@@ -2,3 +2,4 @@
   file:
     - managed
     - source: salt://testfile
+    - makedirs: true

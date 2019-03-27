@@ -7,18 +7,19 @@ Connection module for Telemetry
 https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
 
 :configuration: This module accepts explicit telemetry credentials or
-    can also read api key credentials from a pillar. More Information available at::
+    can also read api key credentials from a pillar. More Information available
+    here__.
 
-    https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
+.. __: https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
 
-    In the minion's config file:
+In the minion's config file:
 
-    .. code-block:: yaml
+.. code-block:: yaml
 
-       telemetry.telemetry_api_keys:
-         - abc123  # Key 1
-         - efg321  # Backup Key 1
-       telemetry_api_base_url: https://telemetry-api.mongolab.com/v0
+   telemetry.telemetry_api_keys:
+     - abc123  # Key 1
+     - efg321  # Backup Key 1
+   telemetry_api_base_url: https://telemetry-api.mongolab.com/v0
 
 :depends: requests
 
@@ -224,7 +225,7 @@ def get_alarms(deployment_id, profile="telemetry"):
     if response.status_code == 200:
         alarms = response.json()
 
-        if len(alarms) > 0:
+        if alarms:
             return alarms
 
         return 'No alarms defined for deployment: {0}'.format(deployment_id)
@@ -361,7 +362,7 @@ def delete_alarms(deployment_id, alert_id=None, metric_name=None, api_key=None, 
     else:
         alert_ids = [alert_id]
 
-    if len(alert_ids) == 0:
+    if not alert_ids:
         return False, "failed to find alert associated with deployment: {0}".format(deployment_id)
 
     failed_to_delete = []
@@ -381,7 +382,7 @@ def delete_alarms(deployment_id, alert_id=None, metric_name=None, api_key=None, 
         if response.status_code != 200:
             failed_to_delete.append(id)
 
-    if len(failed_to_delete) > 0:
+    if failed_to_delete:
         return False, "Failed to delete {0} alarms in deployment: {1}" .format(', '.join(failed_to_delete), deployment_id)
 
     return True, "Successfully deleted {0} alerts in deployment: {1}".format(', '.join(alert_ids), deployment_id)

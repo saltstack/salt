@@ -23,3 +23,7 @@ tcp_master_workers: 54515
 
 # Syndic Settings
 order_masters: True
+
+# enable using ssh minions and regular minions
+enable_ssh_minions: True
+ignore_host_keys: True

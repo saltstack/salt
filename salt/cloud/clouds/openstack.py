@@ -3,7 +3,7 @@
 Openstack Cloud Driver
 ======================
 
-:depends: `shade <https://pypi.python.org/pypi/shade>`_
+:depends: `shade>=1.19.0 <https://pypi.python.org/pypi/shade>`_
 
 OpenStack is an open source project that is in use by a number a cloud
 providers, each of which have their own ways of using it.
@@ -72,6 +72,7 @@ Or if you need to use a profile to setup some extra stuff, it can be passed as a
         username: rackusername
         api_key: myapikey
       region_name: ORD
+      auth_type: rackspace_apikey
 
 And this will pull in the profile for rackspace and setup all the correct
 options for the auth_url and different api versions for services.
@@ -100,6 +101,23 @@ The salt specific ones are:
       ssh_key_file: /root/.ssh/id_rsa
 
 This is the minimum setup required.
+
+If metadata is set to make sure that the host has finished setting up the
+`wait_for_metadata` can be set.
+
+.. code-block:: yaml
+
+    centos:
+      provider: myopenstack
+      image: CentOS 7
+      size: ds1G
+      ssh_key_name: mykey
+      ssh_key_file: /root/.ssh/id_rsa
+      meta:
+        build_config: rack_user_only
+      wait_for_metadata:
+        rax_service_level_automation: Complete
+        rackconnect_automation_status: DEPLOYED
 
 Anything else from the create_server_ docs can be passed through here.
 
@@ -200,7 +218,7 @@ import pprint
 import socket
 
 # Import Salt Libs
-import salt.utils.json
+import salt.utils.versions
 import salt.config as config
 from salt.ext import six
 from salt.exceptions import (
@@ -212,12 +230,16 @@ from salt.exceptions import (
 
 # Import 3rd-Party Libs
 try:
+    import shade
     import shade.openstackcloud
     import shade.exc
     import os_client_config
-    HAS_SHADE = True
+    HAS_SHADE = (
+        salt.utils.versions._LooseVersion(shade.__version__) >= salt.utils.versions._LooseVersion('1.19.0'),
+        'Please install newer version of shade: >= 1.19.0'
+    )
 except ImportError:
-    HAS_SHADE = False
+    HAS_SHADE = (False, 'Install pypi module shade >= 1.19.0')
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'openstack'
@@ -230,7 +252,7 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
     if get_dependencies() is False:
-        return False
+        return HAS_SHADE
     return __virtualname__
 
 
@@ -252,8 +274,8 @@ def get_dependencies():
     Warn if dependencies aren't met.
     '''
     deps = {
-        'shade': HAS_SHADE,
-        'os_client_config': HAS_SHADE,
+        'shade': shade[0],
+        'os_client_config': shade[0],
     }
     return config.check_driver_dependencies(
         __virtualname__,
@@ -355,7 +377,7 @@ def _get_ips(node, addr_type='public'):
     ret = []
     for _, interface in node.addresses.items():
         for addr in interface:
-            if addr_type in ('floating', 'fixed') and addr_type == addr['OS-EXT-IPS:type']:
+            if addr_type in ('floating', 'fixed') and addr_type == addr.get('OS-EXT-IPS:type'):
                 ret.append(addr['addr'])
             elif addr_type == 'public' and __utils__['cloud.is_public_ip'](addr['addr']):
                 ret.append(addr['addr'])
@@ -448,7 +470,10 @@ def show_instance(name, conn=None, call=None):
     ret['public_ips'] = _get_ips(node, 'public')
     ret['floating_ips'] = _get_ips(node, 'floating')
     ret['fixed_ips'] = _get_ips(node, 'fixed')
-    ret['image'] = conn.get_image(node.image.id).name
+    if isinstance(node.image, six.string_types):
+        ret['image'] = node.image
+    else:
+        ret['image'] = conn.get_image(node.image.id).name
     return ret
 
 
@@ -524,7 +549,7 @@ def list_subnets(conn=None, call=None, kwargs=None):
     network
         network to list subnets of
 
-    .. code-block::
+    .. code-block:: bash
 
         salt-cloud -f list_subnets myopenstack network=salt-net
 
@@ -579,6 +604,7 @@ def _clean_create_kwargs(**kwargs):
         'volume_size': int,
         'nat_destination': six.string_types,
         'group': six.string_types,
+        'userdata': six.string_types,
     }
     extra = kwargs.pop('extra', {})
     for key, value in six.iteritems(kwargs.copy()):
@@ -671,20 +697,26 @@ def create(vm_):
                     __opts__
                 )
             )
-        data = show_instance(vm_['instance_id'], conn=conn, call='action')
     else:
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
-        data = request_instance(conn=conn, call='action', vm_=vm_)
+        request_instance(conn=conn, call='action', vm_=vm_)
+    data = show_instance(vm_.get('instance_id', vm_['name']), conn=conn, call='action')
     log.debug('VM is now running')
 
-    def __query_node_ip(vm_):
+    def __query_node(vm_):
         data = show_instance(vm_['name'], conn=conn, call='action')
+        if 'wait_for_metadata' in vm_:
+            for key, value in six.iteritems(vm_.get('wait_for_metadata', {})):
+                log.debug('Waiting for metadata: %s=%s', key, value)
+                if data['metadata'].get(key, None) != value:
+                    log.debug('Metadata is not ready: %s=%s', key, data['metadata'].get(key))
+                    return False
         return preferred_ip(vm_, data[ssh_interface(vm_)])
     try:
-        ip_address = __utils__['cloud.wait_for_ip'](
-            __query_node_ip,
-            update_args=(vm_,)
+        ip_address = __utils__['cloud.wait_for_fun'](
+            __query_node,
+            vm_=vm_
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
@@ -816,7 +848,7 @@ def call(conn=None, call=None, kwargs=None):
     func = kwargs.pop('func')
     for key, value in kwargs.items():
         try:
-            kwargs[key] = salt.utils.json.loads(value)
+            kwargs[key] = __utils__['json.loads'](value)
         except ValueError:
             continue
     try:

@@ -85,15 +85,28 @@ def serialize(obj, **options):
         raise SerializationError(error)
 
 
-def _read_dict(configparser, dictionary):
+def _is_defaultsect(section_name):
+    if six.PY3:
+        return section_name == configparser.DEFAULTSECT
+    else:  # in py2 the check is done against lowercased section name
+        return section_name.upper() == configparser.DEFAULTSECT
+
+
+def _read_dict(cp, dictionary):
     '''
     Cribbed from python3's ConfigParser.read_dict function.
     '''
     for section, keys in dictionary.items():
         section = six.text_type(section)
-        configparser.add_section(section)
+
+        if _is_defaultsect(section):
+            if six.PY2:
+                section = configparser.DEFAULTSECT
+        else:
+            cp.add_section(section)
+
         for key, value in keys.items():
-            key = configparser.optionxform(six.text_type(key))
+            key = cp.optionxform(six.text_type(key))
             if value is not None:
                 value = six.text_type(value)
-            configparser.set(section, key, value)
+            cp.set(section, key, value)

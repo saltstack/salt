@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon S3 using boto3
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :configuration: This module accepts explicit AWS credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles or

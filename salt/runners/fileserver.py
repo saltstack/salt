@@ -164,6 +164,20 @@ def file_list(saltenv='base', backend=None):
 
         .. versionadded:: 2015.5.0
 
+    .. note:
+        Keep in mind that executing this function spawns a new process,
+        separate from the master. This means that if the fileserver
+        configuration has been changed in some way since the master has been
+        restarted (e.g. if :conf_master:`fileserver_backend`,
+        :conf_master:`gitfs_remotes`, :conf_master:`hgfs_remotes`, etc. have
+        been updated), then the results of this runner will not accurately
+        reflect what files are available to minions.
+
+        When in doubt, use :py:func:`cp.list_master
+        <salt.modules.cp.list_master>` to see what files the minion can see,
+        and always remember to restart the salt-master daemon when updating
+        the fileserver configuration.
+
     CLI Examples:
 
     .. code-block:: bash
@@ -196,6 +210,20 @@ def symlink_list(saltenv='base', backend=None):
 
         .. versionadded:: 2015.5.0
 
+    .. note:
+        Keep in mind that executing this function spawns a new process,
+        separate from the master. This means that if the fileserver
+        configuration has been changed in some way since the master has been
+        restarted (e.g. if :conf_master:`fileserver_backend`,
+        :conf_master:`gitfs_remotes`, :conf_master:`hgfs_remotes`, etc. have
+        been updated), then the results of this runner will not accurately
+        reflect what symlinks are available to minions.
+
+        When in doubt, use :py:func:`cp.list_master_symlinks
+        <salt.modules.cp.list_master_symlinks>` to see what symlinks the minion
+        can see, and always remember to restart the salt-master daemon when
+        updating the fileserver configuration.
+
     CLI Example:
 
     .. code-block:: bash
@@ -227,6 +255,20 @@ def dir_list(saltenv='base', backend=None):
         be disregarded.
 
         .. versionadded:: 2015.5.0
+
+    .. note:
+        Keep in mind that executing this function spawns a new process,
+        separate from the master. This means that if the fileserver
+        configuration has been changed in some way since the master has been
+        restarted (e.g. if :conf_master:`fileserver_backend`,
+        :conf_master:`gitfs_remotes`, :conf_master:`hgfs_remotes`, etc. have
+        been updated), then the results of this runner will not accurately
+        reflect what dirs are available to minions.
+
+        When in doubt, use :py:func:`cp.list_master_dirs
+        <salt.modules.cp.list_master_dirs>` to see what dirs the minion can see,
+        and always remember to restart the salt-master daemon when updating
+        the fileserver configuration.
 
     CLI Example:
 

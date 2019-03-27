@@ -227,8 +227,8 @@ def set_config(name='root', **kwargs):
 
         salt '*' snapper.set_config SYNC_ACL=True
 
-    Keys are case insensitive as they will be always uppercased to
-    snapper convention. The above example is equivalent to:
+    Keys are case insensitive as they will be always uppercased to snapper
+    convention. The above example is equivalent to:
 
     .. code-block:: bash
 
@@ -412,7 +412,7 @@ def create_snapshot(config='root', snapshot_type='single', pre_number=None,
                                                 cleanup_algorithm, userdata)
         else:
             raise CommandExecutionError(
-                "Invalid snapshot type '{0}'", format(snapshot_type))
+                "Invalid snapshot type '{0}'".format(snapshot_type))
     except dbus.DBusException as exc:
         raise CommandExecutionError(
             'Error encountered while listing changed files: {0}'

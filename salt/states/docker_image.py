@@ -77,7 +77,7 @@ def present(name,
             pillar=None,
             **kwargs):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The ``tag`` argument has been added. It is now required unless pulling
         from a registry.
 
@@ -101,7 +101,7 @@ def present(name,
         Tag name for the image. Required when using ``build``, ``load``, or
         ``sls`` to create the image, but optional if pulling from a repository.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     build
         Path to directory on the Minion containing a Dockerfile
@@ -124,7 +124,7 @@ def present(name,
         will be applied to it.
 
         .. versionadded:: 2016.11.0
-        .. versionchanged: Oxygen
+        .. versionchanged:: 2018.3.0
             The ``tag`` must be manually specified using the ``tag`` argument.
 
     load
@@ -139,7 +139,7 @@ def present(name,
                 - load: salt://path/to/image.tar
                 - tag: mytag
 
-        .. versionchanged: Oxygen
+        .. versionchanged:: 2018.3.0
             The ``tag`` must be manually specified using the ``tag`` argument.
 
     force : False
@@ -173,7 +173,7 @@ def present(name,
                 - saltenv: base
 
         .. versionadded: 2017.7.0
-        .. versionchanged: Oxygen
+        .. versionchanged:: 2018.3.0
             The ``tag`` must be manually specified using the ``tag`` argument.
 
     base
@@ -187,7 +187,7 @@ def present(name,
         `mods` parameter.
 
         .. versionadded:: 2017.7.0
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             Now uses the effective saltenv if not explicitly passed. In earlier
             versions, ``base`` was assumed as a default.
 
@@ -198,7 +198,7 @@ def present(name,
         :conf_minion:`pillarenv` minion config option nor this CLI argument is
         used, all Pillar environments will be merged together.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     pillar
         Custom Pillar values, passed as a dictionary of key-value pairs
@@ -207,7 +207,7 @@ def present(name,
             Values passed this way will override Pillar values set via
             ``pillar_roots`` or an external Pillar source.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
     '''
     ret = {'name': name,
            'changes': {},
@@ -275,7 +275,7 @@ def present(name,
         argspec = salt.utils.args.get_function_argspec(__salt__['docker.build'])
         # Map any if existing args from kwargs into the build_args dictionary
         build_args = dict(list(zip(argspec.args, argspec.defaults)))
-        for k, v in build_args.items():
+        for k in build_args:
             if k in kwargs.get('kwargs', {}):
                 build_args[k] = kwargs.get('kwargs', {}).get(k)
         try:
@@ -349,9 +349,10 @@ def present(name,
             # Only add to the changes dict if layers were pulled
             ret['changes'] = image_update
 
+    error = False
+
     try:
         __salt__['docker.inspect_image'](full_image)
-        error = False
     except CommandExecutionError as exc:
         msg = exc.__str__()
         if '404' not in msg:
@@ -502,6 +503,15 @@ def absent(name=None, images=None, force=False):
 
 
 def mod_watch(name, sfun=None, **kwargs):
+    '''
+    The docker_image  watcher, called to invoke the watch command.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
+    '''
     if sfun == 'present':
         # Force image to be updated
         kwargs['force'] = True

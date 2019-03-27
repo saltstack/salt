@@ -7,9 +7,11 @@ sys.modules['pkg_resources'] = None
 import os
 
 # Import Salt libs
+import salt.defaults.exitcodes
 import salt.utils.job
 import salt.utils.parsers
 import salt.utils.stringutils
+import salt.log
 from salt.utils.args import yamlify_arg
 from salt.utils.verify import verify_log
 from salt.exceptions import (
@@ -38,9 +40,10 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         import salt.client
         self.parse_args()
 
-        # Setup file logging!
-        self.setup_logfile_logger()
-        verify_log(self.config)
+        if self.config['log_level'] not in ('quiet', ):
+            # Setup file logging!
+            self.setup_logfile_logger()
+            verify_log(self.config)
 
         try:
             # We don't need to bail on config file permission errors
@@ -82,7 +85,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         if 'token' in self.config:
             import salt.utils.files
             try:
-                with salt.utils.files.fopen(os.path.join(self.config['key_dir'], '.root_key'), 'r') as fp_:
+                with salt.utils.files.fopen(os.path.join(self.config['cachedir'], '.root_key'), 'r') as fp_:
                     kwargs['key'] = fp_.readline()
             except IOError:
                 kwargs['token'] = self.config['token']
@@ -208,9 +211,9 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             # returned 'ok' with a retcode of 0.
             # This is the final point before the 'salt' cmd returns,
             # which is why we set the retcode here.
-            if retcodes.count(0) < len(retcodes):
+            if not all(exit_code == salt.defaults.exitcodes.EX_OK for exit_code in retcodes):
                 sys.stderr.write('ERROR: Minions returned with non-zero exit code\n')
-                sys.exit(11)
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
         except (AuthenticationError,
                 AuthorizationError,
@@ -399,6 +402,8 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         retcode = 0
         # if there is a dict with retcode, use that
         if isinstance(ret, dict) and ret.get('retcode', 0) != 0:
+            if isinstance(ret.get('retcode', 0), dict):
+                return max(six.itervalues(ret.get('retcode', {0: 0})))
             return ret['retcode']
         # if its a boolean, False means 1
         elif isinstance(ret, bool) and not ret:

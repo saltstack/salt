@@ -32,12 +32,12 @@ Connection module for Amazon Cloud Formation
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 # Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
+from salt.ext import six
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -72,7 +72,9 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if a stack exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cfn.exists mystack region=us-east-1
     '''
@@ -94,7 +96,9 @@ def describe(name, region=None, key=None, keyid=None, profile=None):
 
     .. versionadded:: 2015.8.0
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cfn.describe mystack region=us-east-1
     '''
@@ -135,7 +139,9 @@ def create(name, template_body=None, template_url=None, parameters=None, notific
     '''
     Create a CFN stack.
 
-    CLI example to create a stack::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cfn.create mystack template_url='https://s3.amazonaws.com/bucket/template.cft' \
         region=us-east-1
@@ -161,7 +167,9 @@ def update_stack(name, template_body=None, template_url=None, parameters=None, n
 
     .. versionadded:: 2015.8.0
 
-    CLI example to update a stack::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cfn.update_stack mystack template_url='https://s3.amazonaws.com/bucket/template.cft' \
         region=us-east-1
@@ -186,7 +194,9 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete a CFN stack.
 
-    CLI example to delete a stack::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cfn.delete mystack region=us-east-1
     '''
@@ -205,7 +215,9 @@ def get_template(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if attributes are set on a CFN stack.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cfn.get_template mystack
     '''
@@ -228,7 +240,9 @@ def validate_template(template_body=None, template_url=None, region=None, key=No
 
     .. versionadded:: 2015.8.0
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cfn.validate_template mystack-template
     '''

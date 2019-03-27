@@ -188,7 +188,7 @@ def query(params=None):
     log.debug(request.url)
 
     content = request.text
-    result = salt.utils.json.loads(content, object_hook=salt.utils.data.encode_dict)
+    result = salt.utils.json.loads(content)
 
     # print('response:')
     # pprint.pprint(result)
@@ -356,7 +356,7 @@ def show_image(kwargs, call=None):
 
     items = query(params=params)
 
-    if len(items['image_set']) == 0:
+    if not items['image_set']:
         raise SaltCloudNotFound('The specified image could not be found.')
 
     result = {}

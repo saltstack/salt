@@ -80,7 +80,6 @@ import logging
 
 # Import Salt libs
 from salt.ext import six
-import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
@@ -148,7 +147,7 @@ def exists(DomainName,
     except ClientError as e:
         if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
             return {'exists': False}
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def status(DomainName,
@@ -179,7 +178,7 @@ def status(DomainName,
         else:
             return {'domain': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def describe(DomainName,
@@ -208,7 +207,7 @@ def describe(DomainName,
         else:
             return {'domain': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
@@ -262,7 +261,7 @@ def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
             log.warning('Domain was not created')
             return {'created': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'created': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def delete(DomainName, region=None, key=None, keyid=None, profile=None):
@@ -285,7 +284,7 @@ def delete(DomainName, region=None, key=None, keyid=None, profile=None):
         conn.delete_elasticsearch_domain(DomainName=DomainName)
         return {'deleted': True}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
@@ -335,7 +334,7 @@ def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
             return {'updated': False}
         return {'updated': True}
     except ClientError as e:
-        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'updated': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def add_tags(DomainName=None, ARN=None,
@@ -378,7 +377,7 @@ def add_tags(DomainName=None, ARN=None,
         conn.add_tags(ARN=ARN, TagList=tagslist)
         return {'tagged': True}
     except ClientError as e:
-        return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'tagged': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def remove_tags(TagKeys, DomainName=None, ARN=None,
@@ -417,7 +416,7 @@ def remove_tags(TagKeys, DomainName=None, ARN=None,
                          TagKeys=TagKeys)
         return {'tagged': True}
     except ClientError as e:
-        return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'tagged': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def list_tags(DomainName=None, ARN=None,
@@ -462,4 +461,4 @@ def list_tags(DomainName=None, ARN=None,
             tagdict[tag.get('Key')] = tag.get('Value')
         return {'tags': tagdict}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}

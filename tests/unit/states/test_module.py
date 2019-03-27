@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas (nicole@saltstack.com)`
+    :codeauthor: Nicole Thomas (nicole@saltstack.com)
 '''
 
 # Import Python Libs
@@ -24,6 +24,57 @@ from tests.support.mock import (
 log = logging.getLogger(__name__)
 
 CMD = 'foo.bar'
+
+STATE_APPLY_RET = {
+    'module_|-test2_|-state.apply_|-run': {
+        'comment': 'Module function state.apply executed',
+        'name': 'state.apply',
+        'start_time': '16:11:48.818932',
+        'result': False,
+        'duration': 179.439,
+        '__run_num__': 0,
+        'changes': {
+            'ret': {
+                'module_|-test3_|-state.apply_|-run': {
+                    'comment': 'Module function state.apply executed',
+                    'name': 'state.apply',
+                    'start_time': '16:11:48.904796',
+                    'result': True,
+                    'duration': 89.522,
+                    '__run_num__': 0,
+                    'changes': {
+                        'ret': {
+                            'module_|-test4_|-cmd.run_|-run': {
+                                'comment': 'Module function cmd.run executed',
+                                'name': 'cmd.run',
+                                'start_time': '16:11:48.988574',
+                                'result': True,
+                                'duration': 4.543,
+                                '__run_num__': 0,
+                                'changes': {
+                                    'ret': 'Wed Mar  7 16:11:48 CET 2018'
+                                },
+                                '__id__': 'test4'
+                            }
+                        }
+                    },
+                    '__id__': 'test3'
+                },
+                'module_|-test3_fail_|-test3_fail_|-run': {
+                    'comment': 'Module function test3_fail is not available',
+                    'name': 'test3_fail',
+                    'start_time': '16:11:48.994607',
+                    'result': False,
+                    'duration': 0.466,
+                    '__run_num__': 1,
+                    'changes': {},
+                    '__id__': 'test3_fail'
+                }
+            }
+        },
+        '__id__': 'test2'
+    }
+}
 
 
 def _mocked_func_named(name, names=('Fred', 'Swen',)):
@@ -139,6 +190,17 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 ret = module.run(**{CMD: ['Fred']})
                 if ret['comment'] != '{0}: Success'.format(CMD) or not ret['result']:
                     self.fail('module.run failed: {0}'.format(ret))
+
+    def test_run_state_apply_result_false(self):
+        '''
+        Tests the 'result' of module.run that calls state.apply execution module
+        :return:
+        '''
+        with patch.dict(module.__salt__, {"state.apply": MagicMock(return_value=STATE_APPLY_RET)}):
+            with patch.dict(module.__opts__, {'use_deprecated': ['module.run']}):
+                ret = module.run(**{"name": "state.apply", 'mods': 'test2'})
+                if ret['result']:
+                    self.fail('module.run did not report false result: {0}'.format(ret))
 
     def test_run_unexpected_keywords(self):
         with patch.dict(module.__salt__, {CMD: _mocked_func_args}):
@@ -262,3 +324,30 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             self.assertIn(comment, ret['comment'])
             self.assertIn('world', ret['comment'])
             self.assertIn('hello', ret['comment'])
+
+    def test_call_function_named_args(self):
+        '''
+        Test _call_function routine when params are named. Their position ordering should not matter.
+
+        :return:
+        '''
+        with patch.dict(module.__salt__,
+                        {'testfunc': lambda a, b, c, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
+            assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == (1, 2, 3, (), {})
+            assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == (1, 2, 3, (), {})
+
+        with patch.dict(module.__salt__,
+                        {'testfunc': lambda c, a, b, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
+            assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == (1, 2, 3, (), {})
+            assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == (1, 2, 3, (), {})
+
+    def test_call_function_ordered_args(self):
+        '''
+        Test _call_function routine when params are not named. Their position should matter.
+
+        :return:
+        '''
+        with patch.dict(module.__salt__,
+                        {'testfunc': lambda a, b, c, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
+            assert module._call_function('testfunc', func_args=[1, 2, 3]) == (1, 2, 3, (), {})
+            assert module._call_function('testfunc', func_args=[3, 1, 2]) == (3, 1, 2, (), {})

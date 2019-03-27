@@ -83,9 +83,10 @@ def get_configured_provider():
     Return the first configured instance.
     '''
     return config.is_provider_configured(
-        __opts__,
-        __active_provider_name__ or __virtualname__,
-        ('personal_access_token',)
+        opts=__opts__,
+        provider=__active_provider_name__ or __virtualname__,
+        aliases=__virtual_aliases__,
+        required_keys=('personal_access_token',)
     )
 
 
@@ -161,7 +162,7 @@ def avail_sizes(call=None):
             '-f or --function, or with the --list-sizes option'
         )
 
-    items = query(method='sizes')
+    items = query(method='sizes', command='?per_page=100')
     ret = {}
     for size in items['sizes']:
         ret[size['slug']] = {}
@@ -380,6 +381,15 @@ def create(vm_):
         if not isinstance(ipv6, bool):
             raise SaltCloudConfigError("'ipv6' should be a boolean value.")
         kwargs['ipv6'] = ipv6
+
+    monitoring = config.get_cloud_config_value(
+        'monitoring', vm_, __opts__, search_global=False, default=None,
+    )
+
+    if monitoring is not None:
+        if not isinstance(monitoring, bool):
+            raise SaltCloudConfigError("'monitoring' should be a boolean value.")
+        kwargs['monitoring'] = monitoring
 
     kwargs['tags'] = config.get_cloud_config_value(
         'tags', vm_, __opts__, search_global=False, default=False

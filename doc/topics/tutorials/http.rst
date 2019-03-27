@@ -74,15 +74,15 @@ be overridden with the ``method`` argument:
     salt.utils.http.query('http://example.com/delete/url', 'DELETE')
 
 When using the ``POST`` method (and others, such as ``PUT``), extra data is usually
-sent as well. This data can be sent directly, in whatever format is
-required by the remote server (XML, JSON, plain text, etc).
+sent as well. This data can be sent directly (would be URL encoded when necessary),
+or in whatever format is required by the remote server (XML, JSON, plain text, etc).
 
 .. code-block:: python
 
     salt.utils.http.query(
-        'http://example.com/delete/url',
+        'http://example.com/post/url',
         method='POST',
-        data=json.loads(mydict)
+        data=json.dumps(mydict)
     )
 
 Data Formatting and Templating
@@ -252,7 +252,7 @@ Proxy
 
 If the ``tornado`` backend is used (``tornado`` is the default), proxy
 information configured in ``proxy_host``, ``proxy_port``, ``proxy_username``,
-and ``proxy_password`` from the ``__opts__`` dictionary will be used.  Normally
+``proxy_password`` and ``no_proxy`` from the ``__opts__`` dictionary will be used.  Normally
 these are set in the minion configuration file.
 
 .. code-block:: yaml
@@ -261,6 +261,7 @@ these are set in the minion configuration file.
     proxy_port: 31337
     proxy_username: charon
     proxy_password: obolus
+    no_proxy: ['127.0.0.1', 'localhost']
 
 .. code-block:: python
 

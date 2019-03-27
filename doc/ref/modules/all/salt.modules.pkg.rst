@@ -30,7 +30,7 @@ Execution Module                       Used for
 :py:mod:`~salt.modules.solarispkg`     Solaris-based OSes using ``pkgadd(1M)``
 :py:mod:`~salt.modules.solarisips`     Solaris-based OSes using IPS ``pkg(1)``
 :py:mod:`~salt.modules.win_pkg`        Salt's :ref:`Windows Package Manager
-                                       <windows-package-manager`
+                                       <windows-package-manager>`
 :py:mod:`~salt.modules.yumpkg`         RedHat-based distros and derivatives
                                        using ``yum(8)`` or ``dnf(8)``
 :py:mod:`~salt.modules.zypper`         SUSE-based distros using ``zypper(8)``

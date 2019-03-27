@@ -8,10 +8,11 @@ import errno
 import os
 import textwrap
 import tempfile
+import time
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP_STATE_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
@@ -62,7 +63,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         self.state_name = 'run_redirect'
         state_filename = self.state_name + '.sls'
-        self.state_file = os.path.join(TMP_STATE_TREE, state_filename)
+        self.state_file = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, state_filename)
 
         # Create the testfile and release the handle
         fd, self.test_file = tempfile.mkstemp()
@@ -83,6 +84,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         super(CMDRunRedirectTest, self).setUp()
 
     def tearDown(self):
+        time.sleep(1)
         for path in (self.state_file, self.test_tmp_path, self.test_file):
             try:
                 os.remove(path)
@@ -179,7 +181,7 @@ class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         self.state_name = 'run_watch'
         state_filename = self.state_name + '.sls'
-        self.state_file = os.path.join(TMP_STATE_TREE, state_filename)
+        self.state_file = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, state_filename)
         super(CMDRunWatchTest, self).setUp()
 
     def tearDown(self):

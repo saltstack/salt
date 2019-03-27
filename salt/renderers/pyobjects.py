@@ -25,7 +25,8 @@ using the built-in Python renderer with the exception that pyobjects provides
 you with an object based interface for generating state data.
 
 Creating state data
-^^^^^^^^^^^^^^^^^^^
+-------------------
+
 Pyobjects takes care of creating an object for each of the available states on
 the minion. Each state is represented by an object that is the CamelCase
 version of its name (i.e. ``File``, ``Service``, ``User``, etc), and these
@@ -41,7 +42,8 @@ Some examples:
 * ``ssh_known_hosts`` becomes ``SshKnownHosts``
 
 Context Managers and requisites
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------------
+
 How about something a little more complex. Here we're going to get into the
 core of how to use pyobjects to write states.
 
@@ -106,7 +108,7 @@ manager to automatically have their ``watch_in`` set to
 ``Service("my-service")``.
 
 Including and Extending
-^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------
 
 To include other states use the ``include()`` function. It takes one name per
 state to include.
@@ -126,7 +128,8 @@ a state.
 
 
 Importing from other state files
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------------
+
 Like any Python project that grows you will likely reach a point where you want
 to create reusability in your state tree and share objects between state files,
 Map Data (described below) is a perfect example of this.
@@ -160,7 +163,8 @@ Caveats:
 
 
 Salt object
-^^^^^^^^^^^
+-----------
+
 In the spirit of the object interface for creating state data pyobjects also
 provides a simple object interface to the ``__salt__`` object.
 
@@ -178,7 +182,8 @@ The following lines are functionally equivalent:
     ret = __salt__['cmd.run'](bar)
 
 Pillar, grain, mine & config data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------
+
 Pyobjects provides shortcut functions for calling ``pillar.get``,
 ``grains.get``, ``mine.get`` & ``config.get`` on the ``__salt__`` object. This
 helps maintain the readability of your state files.
@@ -207,7 +212,8 @@ The following pairs of lines are functionally equivalent:
 
 
 Map Data
-^^^^^^^^
+--------
+
 When building complex states or formulas you often need a way of building up a
 map of data based on grain data. The most common use of this is tracking the
 package and service name differences between distributions.
@@ -261,9 +267,9 @@ different grain matches.
     That said, sometimes a minion may match more than one class. For instance,
     in the above example, Ubuntu minions will match both the **Debian** and
     **Ubuntu** classes, since Ubuntu has an ``os_family`` grain of **Debian**
-    an an ``os`` grain of **Ubuntu**. As of the 2017.7.0 release, the order is
+    and an ``os`` grain of **Ubuntu**. As of the 2017.7.0 release, the order is
     dictated by the order of declaration, with classes defined later overriding
-    earlier ones. Addtionally, 2017.7.0 adds support for explicitly defining
+    earlier ones. Additionally, 2017.7.0 adds support for explicitly defining
     the ordering using an optional attribute called ``priority``.
 
     Given the above example, ``os_family`` matches will be processed first,
@@ -289,10 +295,8 @@ file ``samba/map.sls``, you could do the following.
     with Pkg.installed("samba", names=[Samba.server, Samba.client]):
         Service.running("samba", name=Samba.service)
 
-TODO
-^^^^
-* Interface for working with reactor files
 '''
+# TODO: Interface for working with reactor files
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals

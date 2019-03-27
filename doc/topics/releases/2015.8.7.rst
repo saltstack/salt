@@ -2,16 +2,29 @@
 Salt 2015.8.7 Release Notes
 ===========================
 
+Version 2015.8.7 is a bugfix release for :ref:`2015.8.0 <release-2015-8-0>`.
+
 .. note::
     Salt 2015.8.4, 2015.8.5, and 2015.8.7 were all released within a short
     period due to regressions found soon after the releases of 2015.8.4 and
-    2015.8.5. These release notes contain all of the changes since 2015.8.3 to
-    make it easier to see everything that has changed recently.
+    2015.8.5. See :ref:`here <release-2015-8-4>` for the 2015.8.4 release
+    notes, and :ref:`here <release-2015-8-5>` for the 2015.8.5 release notes.
 
-Changes for v2015.8.4..v2015.8.7
---------------------------------
 
-For :py:mod:`pkg.installed <salt.states.pkg.installed>` states, on Linux
+Statistics
+==========
+
+- Total Merges: **2**
+- Total Issue References: **1**
+- Total PR References: **5**
+
+- Contributors: **4** (`gtmanfred`_, `justinta`_, `pass-by-value`_, `terminalmage`_)
+
+
+Change to Epoch Support for YUM/DNF
+===================================
+
+For :py:func:`pkg.installed <salt.states.pkg.installed>` states, on Linux
 distributions which use yum/dnf, packages which have a non-zero epoch in the
 version number now require this epoch to be included when specifying an exact
 version for a package. For example:
@@ -22,92 +35,88 @@ version for a package. For example:
       pkg.installed:
         - version: 2:7.4.160-1.el7
 
-The :py:mod:`pkg.latest_version <salt.modules.yumpkg.latest_version>` and
-:py:mod:`pkg.list_repo_pkgs <salt.modules.yumpkg.list_repo_pkgs>` functions can
-be used to get the correct version string to use, as they will now contain the
-epoch when it is non-zero.
+The :py:func:`pkg.latest_version <salt.modules.yumpkg.latest_version>` and
+:py:func:`pkg.list_repo_pkgs <salt.modules.yumpkg.list_repo_pkgs>` functions
+can be used to get the correct version string to use, as they will now contain
+the epoch when it is non-zero.
 
-Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2016-02-11T22:13:51Z*
+Changelog for v2015.8.5..v2015.8.7
+==================================
 
-Statistics:
+*Generated at: 2018-05-28 00:17:59 UTC*
 
-- Total Merges: **2**
-- Total Issue references: **0**
-- Total PR references: **3**
+* **PR** `#31111`_: (`justinta`_) Fixes failing npm test on arch.
+  @ *2016-02-10 21:51:47 UTC*
 
-Changes:
+  * 8d84c636cf Merge pull request `#31111`_ from jtand/8_4_npm_fix
 
-- **PR** `#31111`_: (*jtand*) Fixes failing npm test on arch.
-  @ *2016-02-10T21:51:47Z*
+  * b0a48e5ef2 Fixes failing npm test on arch.
 
-  * 8d84c63 Merge pull request `#31111`_ from jtand/8_4_npm_fix
-  * b0a48e5 Fixes failing npm test on arch.
+  * **PR** `#30217`_: (`pass-by-value`_) Make sure cloud actions can be called via salt run
 
-  * 733c6ab Some 3rd-party modules (e.g. gnupg) define custom log levels that emit at INFO level and above.  This patch sets the color data lookups to default to TextFormat('reset') rather than producing a stack trace every time a log message is generated from an affected module.
+* **ISSUE** `#31014`_: (`gtmanfred`_) [2015.8] pkg breaks for yum pkgs.latest if the packages has an epoch (refs: `#31031`_, `#31015`_)
 
-  * 3f71fd0 Revert `#30217`_
+* **PR** `#31092`_: (`terminalmage`_) Apply PR `#31031`_ to 2015.8.4.follow_up
+  @ *2016-02-10 20:54:37 UTC*
 
-    - **PR** `#30217`_: (*pass-by-value*) Make sure cloud actions can be called via salt run
+  * **PR** `#31031`_: (`terminalmage`_) More complete fix for `#31014`_ (refs: `#31092`_)
 
-- **PR** `#31092`_: (*terminalmage*) Apply PR `#31031`_ to 2015.8.4.follow_up
-  @ *2016-02-10T20:54:37Z*
+  * **PR** `#31015`_: (`gtmanfred`_) include possible epoch in version for rpm (refs: `#31031`_)
 
-  * 5a6a93e Merge pull request `#31092`_ from terminalmage/issue31014-2015.8.4.follow_up
-    * 2767a4e Don't handle epoch specially for dnf
+  * 5a6a93e98b Merge pull request `#31092`_ from terminalmage/issue31014-2015.8.4.follow_up
 
-    * e5dfcc0 More efficient way to add the epoch before version number
+    * 2767a4e519 Don't handle epoch specially for dnf
 
-    * ed74627 include possible epoch in version for rpm
+    * e5dfcc0ef2 More efficient way to add the epoch before version number
 
-  * 6c6b66a Comment multiprocessing line in minion config
+    * ed7462793c include possible epoch in version for rpm
 
-  * 1f7dfef Set multiprocessing to true in config.py
+  * 6c6b66aedd Comment multiprocessing line in minion config
 
-  * 433c645 Fix remove placeholder files
+  * 1f7dfefc4a Set multiprocessing to true in config.py
 
-  * 7103756 Remove placeholder files
+  * 433c645c20 Fix remove placeholder files
 
-  * 20b381f Set overwrite to off
+  * 71037560d4 Remove placeholder files
 
-  * ca50f56 Fix boto_secgroup
+  * 20b381fdf7 Set overwrite to off
 
-  * fd571d2 Fix boto test failures
+  * ca50f56d6c Fix boto_secgroup
 
-  * cfb6588 Fix regression when contents_pillar/contents_grains is a list.
+  * fd571d23de Fix boto test failures
 
-  * 881d866 utils.aws: use time lib to conver to epoch seconds
+  * cfb6588744 Fix regression when contents_pillar/contents_grains is a list.
 
-  * 3141292 The call to cp.get_url needs the saltenv, if you're using environments other than base, it will fail.
+  * 881d8669e3 utils.aws: use time lib to conver to epoch seconds
 
-  * a869401 Fix regression in git_pillar when multiple remotes are configured
+  * 31412920fc The call to cp.get_url needs the saltenv, if you're using environments other than base, it will fail.
 
-  * 2243f25 Properly set the default value for pillar_merge_lists
+  * a8694014a9 Fix regression in git_pillar when multiple remotes are configured
 
-  * c7472ff Lint
+  * 2243f25be5 Properly set the default value for pillar_merge_lists
 
-  * d868711 Fix failing boto_vpc module unit tests
+  * c7472ff6aa Lint
 
-  * ed09516 Fix failing state module tests
+  * d868711a83 Fix failing boto_vpc module unit tests
 
-  * fd0e940 Pylint fix
+  * ed09516469 Fix failing state module tests
 
-  * bc780a7 Don't use pack=pack. Just pass in pack=__salt__ always.
+  * fd0e940088 Pylint fix
 
-  * 1ae022d Pass in 'pack' variable to utils.boto.assign_funcs function from ALL boto modules.
+  * bc780a7c25 Don't use pack=pack. Just pass in pack=__salt__ always.
 
-  * 1efaff1 Remove bad symlinks in osx pkg dirs
+  * 1ae022dbfe Pass in 'pack' variable to utils.boto.assign_funcs function from ALL boto modules.
 
-  * c7db435 Fix regression in scanning for state with 'name' param
+  * 1efaff107d Remove bad symlinks in osx pkg dirs
 
 .. _`#30217`: https://github.com/saltstack/salt/pull/30217
-.. _`#31031`: https://github.com/saltstack/salt/issues/31031
+.. _`#31014`: https://github.com/saltstack/salt/issues/31014
+.. _`#31015`: https://github.com/saltstack/salt/pull/31015
+.. _`#31031`: https://github.com/saltstack/salt/pull/31031
 .. _`#31092`: https://github.com/saltstack/salt/pull/31092
 .. _`#31111`: https://github.com/saltstack/salt/pull/31111
-
---------------------------
-
-.. include:: 2015.8.4.rst
-   :start-line: 17
-
+.. _`gtmanfred`: https://github.com/gtmanfred
+.. _`justinta`: https://github.com/justinta
+.. _`pass-by-value`: https://github.com/pass-by-value
+.. _`terminalmage`: https://github.com/terminalmage

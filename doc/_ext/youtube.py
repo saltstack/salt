@@ -38,7 +38,10 @@ from __future__ import division
 import re
 from docutils import nodes
 from docutils.parsers.rst import directives
-from sphinx.util.compat import Directive
+try:
+    from sphinx.util.compat import Directive
+except ImportError:
+    from docutils.parsers.rst import Directive
 
 CONTROL_HEIGHT = 30
 

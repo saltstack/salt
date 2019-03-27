@@ -1,22 +1,32 @@
 # -*- coding: utf-8 -*-
 '''
+The ``file_tree`` external pillar allows values from all files in a directory
+tree to be imported as Pillar data.
 
-``File_tree`` is an external pillar that allows
-values from all files in a directory tree to be imported as Pillar data.
+.. note::
 
-Note this is an external pillar, and is subject to the rules and constraints
-governing external pillars detailed here: :ref:`external-pillars`.
+    This is an external pillar and is subject to the :ref:`rules and
+    constraints <external-pillars>` governing external pillars.
 
 .. versionadded:: 2015.5.0
 
-Example Configuration
----------------------
+In this pillar, data is organized by either Minion ID or Nodegroup name.  To
+setup pillar data for a specific Minion, place it in
+``<root_dir>/hosts/<minion_id>``.  To setup pillar data for an entire
+Nodegroup, place it in ``<root_dir>/nodegroups/<node_group>`` where
+``<node_group>`` is the Nodegroup's name.
+
+Example ``file_tree`` Pillar
+============================
+
+Master Configuration
+--------------------
 
 .. code-block:: yaml
 
     ext_pillar:
       - file_tree:
-          root_dir: /path/to/root/directory
+          root_dir: /srv/ext_pillar
           follow_dir_links: False
           keep_newline: True
 
@@ -29,7 +39,7 @@ will follow symbolic links to other directories.
     Be careful when using ``follow_dir_links``, as a recursive symlink chain
     will result in unexpected results.
 
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     If ``root_dir`` is a relative path, it will be treated as relative to the
     :conf_master:`pillar_roots` of the environment specified by
     :conf_minion:`pillarenv`. If an environment specifies multiple
@@ -109,74 +119,28 @@ will result in the following pillar tree for minion with ID ``test-host``:
 
     test-host:
         ----------
-        files:
+        apache:
             ----------
-            another-testdir:
+            config.d:
                 ----------
-                symlink-to-file1.txt:
-                    Contents of file #1.
-
-            testdir:
+                00_important.conf:
+                    <important_config important_setting="yes" />
+                20_bob_extra.conf:
+                    <bob_specific_cfg has_freeze_ray="yes" />
+        corporate_app:
+            ----------
+            settings:
                 ----------
-                file1.txt:
-                    Contents of file #1.
-
-                file2.txt:
-                    Contents of file #2.
+                common_settings:
+                    // This is the main settings file for the corporate
+                    // internal web app
+                    main_setting: probably
+                bob_settings:
+                    role: bob
 
 .. note::
-    Subdirectories underneath ``root_dir``/hosts/``id`` become nested
-    dictionaries, as shown above.
 
-
-Assigning Pillar Data to Entire Nodegroups
-------------------------------------------
-
-To assign Pillar data to all minions in a given nodegroup, this external pillar
-recursively iterates over ``root_dir``/nodegroups/``nodegroup`` (where
-``nodegroup`` is the name of a nodegroup), and like for individual hosts,
-compiles pillar data with each subdirectory as a dictionary key and each file
-as a value.
-
-.. important::
-    If the same Pillar key is set for a minion both by nodegroup and by
-    individual host, then the value set for the individual host will take
-    precedence.
-
-For example, the following ``root_dir`` tree:
-
-.. code-block:: text
-
-    ./nodegroups/
-    ./nodegroups/test-group/
-    ./nodegroups/test-group/files/
-    ./nodegroups/test-group/files/testdir/
-    ./nodegroups/test-group/files/testdir/file1.txt
-    ./nodegroups/test-group/files/testdir/file2.txt
-    ./nodegroups/test-group/files/another-testdir/
-    ./nodegroups/test-group/files/another-testdir/symlink-to-file1.txt
-
-will result in the following pillar data for minions in the node group
-``test-group``:
-
-.. code-block:: text
-
-    test-host:
-        ----------
-        files:
-            ----------
-            another-testdir:
-                ----------
-                symlink-to-file1.txt:
-                    Contents of file #1.
-
-            testdir:
-                ----------
-                file1.txt:
-                    Contents of file #1.
-
-                file2.txt:
-                    Contents of file #2.
+    The leaf data in the example shown is the contents of the pillar files.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -192,6 +156,7 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.path
 import salt.utils.stringio
+import salt.utils.stringutils
 import salt.template
 from salt.ext import six
 
@@ -287,7 +252,7 @@ def _construct_pillar(top_dir,
             else:
                 data = contents
                 if template is True:
-                    data = salt.template.compile_template_str(template=contents,
+                    data = salt.template.compile_template_str(template=salt.utils.stringutils.to_unicode(contents),
                                                               renderers=renderers,
                                                               default=render_default,
                                                               blacklist=renderer_blacklist,
@@ -311,7 +276,130 @@ def ext_pillar(minion_id,
                renderer_whitelist=None,
                template=False):
     '''
-    Compile pillar data for the specified minion ID
+    Compile pillar data from the given ``root_dir`` specific to Nodegroup names
+    and Minion IDs.
+
+    If a Minion's ID is not found at ``<root_dir>/host/<minion_id>`` or if it
+    is not included in any Nodegroups named at
+    ``<root_dir>/nodegroups/<node_group>``, no pillar data provided by this
+    pillar module will be available for that Minion.
+
+    .. versionchanged:: 2017.7.0
+        Templating/rendering has been added. You can now specify a default
+        render pipeline and a black- and whitelist of (dis)allowed renderers.
+
+        ``template`` must be set to ``True`` for templating to happen.
+
+        .. code-block:: yaml
+
+            ext_pillar:
+              - file_tree:
+                root_dir: /path/to/root/directory
+                render_default: jinja|yaml
+                renderer_blacklist:
+                  - gpg
+                renderer_whitelist:
+                  - jinja
+                  - yaml
+                template: True
+
+    :param minion_id:
+        The ID of the Minion whose pillar data is to be collected
+
+    :param pillar:
+        Unused by the ``file_tree`` pillar module
+
+    :param root_dir:
+        Filesystem directory used as the root for pillar data (e.g.
+        ``/srv/ext_pillar``)
+
+        .. versionchanged:: 2018.3.0
+            If ``root_dir`` is a relative path, it will be treated as relative to the
+            :conf_master:`pillar_roots` of the environment specified by
+            :conf_minion:`pillarenv`. If an environment specifies multiple
+            roots, this module will search for files relative to all of them, in order,
+            merging the results.
+
+    :param follow_dir_links:
+        Follow symbolic links to directories while collecting pillar files.
+        Defaults to ``False``.
+
+        .. warning::
+
+            Care should be exercised when enabling this option as it will
+            follow links that point outside of ``root_dir``.
+
+        .. warning::
+
+            Symbolic links that lead to infinite recursion are not filtered.
+
+    :param debug:
+        Enable debug information at log level ``debug``.  Defaults to
+        ``False``.  This option may be useful to help debug errors when setting
+        up the ``file_tree`` pillar module.
+
+    :param keep_newline:
+        Preserve the end-of-file newline in files.  Defaults to ``False``.
+        This option may either be a boolean or a list of file globs (as defined
+        by the `Python fnmatch package
+        <https://docs.python.org/library/fnmatch.html>`_) for which end-of-file
+        newlines are to be kept.
+
+        ``keep_newline`` should be turned on if the pillar data is intended to
+        be used to deploy a file using ``contents_pillar`` with a
+        :py:func:`file.managed <salt.states.file.managed>` state.
+
+        .. versionchanged:: 2015.8.4
+            The ``raw_data`` parameter has been renamed to ``keep_newline``. In
+            earlier releases, ``raw_data`` must be used. Also, this parameter
+            can now be a list of globs, allowing for more granular control over
+            which pillar values keep their end-of-file newline. The globs match
+            paths relative to the directories named for Minion IDs and
+            Nodegroup namess underneath the ``root_dir``.
+
+            .. code-block:: yaml
+
+                ext_pillar:
+                  - file_tree:
+                      root_dir: /srv/ext_pillar
+                      keep_newline:
+                        - apache/config.d/*
+                        - corporate_app/settings/*
+
+        .. note::
+            In earlier releases, this documentation incorrectly stated that
+            binary files would not affected by the ``keep_newline``.  However,
+            this module does not actually distinguish between binary and text
+            files.
+
+
+    :param render_default:
+        Override Salt's :conf_master:`default global renderer <renderer>` for
+        the ``file_tree`` pillar.
+
+        .. code-block:: yaml
+
+            render_default: jinja
+
+    :param renderer_blacklist:
+        Disallow renderers for pillar files.
+
+        .. code-block:: yaml
+
+            renderer_blacklist:
+              - json
+
+    :param renderer_whitelist:
+        Allow renderers for pillar files.
+
+        .. code-block:: yaml
+
+            renderer_whitelist:
+              - yaml
+              - jinja
+
+    :param template:
+        Enable templating of pillar files.  Defaults to ``False``.
     '''
     # Not used
     del pillar
@@ -391,10 +479,10 @@ def _ext_pillar(minion_id,
 
     ngroup_pillar = {}
     nodegroups_dir = os.path.join(root_dir, 'nodegroups')
-    if os.path.exists(nodegroups_dir) and len(__opts__['nodegroups']) > 0:
+    if os.path.exists(nodegroups_dir) and __opts__.get('nodegroups'):
         master_ngroups = __opts__['nodegroups']
         ext_pillar_dirs = os.listdir(nodegroups_dir)
-        if len(ext_pillar_dirs) > 0:
+        if ext_pillar_dirs:
             for nodegroup in ext_pillar_dirs:
                 if (os.path.isdir(nodegroups_dir) and
                         nodegroup in master_ngroups):
@@ -419,8 +507,8 @@ def _ext_pillar(minion_id,
         else:
             if debug is True:
                 log.debug(
-                    'file_tree: no nodegroups found in file tree directory '
-                    'ext_pillar_dirs, skipping...'
+                    'file_tree: no nodegroups found in file tree directory %s, skipping...',
+                    ext_pillar_dirs
                 )
     else:
         if debug is True:
@@ -428,7 +516,12 @@ def _ext_pillar(minion_id,
 
     host_dir = os.path.join(root_dir, 'hosts', minion_id)
     if not os.path.exists(host_dir):
-        # No data for host with this ID
+        if debug is True:
+            log.debug(
+                'file_tree: no pillar data for minion %s found in file tree directory %s',
+                minion_id,
+                host_dir
+            )
         return ngroup_pillar
 
     if not os.path.isdir(host_dir):

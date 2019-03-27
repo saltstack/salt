@@ -2,7 +2,7 @@
 '''
 Utility functions used for values.
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
 
 # Import Python libs

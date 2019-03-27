@@ -20,11 +20,9 @@ from salt.exceptions import SaltRenderError
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GPGTestCase(TestCase, LoaderModuleMockMixin):
-
     '''
     unit test GPG renderer
     '''
-
     def setup_loader_modules(self):
         return {gpg: {}}
 
@@ -52,12 +50,10 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         multicrypted = 'password is {0} and salt is {0}'.format(crypted)
 
         class GPGDecrypt(object):
-
             def communicate(self, *args, **kwargs):
                 return [secret, None]
 
         class GPGNotDecrypt(object):
-
             def communicate(self, *args, **kwargs):
                 return [None, 'decrypt error']
 
@@ -76,7 +72,6 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         '''
         test _decrypt_object
         '''
-
         secret = 'Use more salt.'
         crypted = '-----BEGIN PGP MESSAGE-----!@#$%^&*()_+-----END PGP MESSAGE-----'
 
@@ -97,7 +92,6 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         '''
         test render
         '''
-
         key_dir = '/etc/salt/gpgkeys'
         secret = 'Use more salt.'
         crypted = '-----BEGIN PGP MESSAGE-----!@#$%^&*()_+'

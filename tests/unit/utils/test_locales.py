@@ -10,7 +10,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 # Import 3rd-part libs
-from salt.ext import six
 from salt.ext.six.moves import reload_module
 
 
@@ -25,20 +24,6 @@ class TestLocales(TestCase):
             for enc in (__salt_system_encoding__, 'xyzzy', 'utf-8', 'latin-1'):
                 self.assertIn(enc, encodings)
         reload_module(locales)
-
-    def test_sdecode(self):
-        u = 'питон'
-        b = u.encode('utf-8')
-        if six.PY2:
-            # Under Py3, the above `b` as bytes, will never decode as anything even comparable using `ascii`
-            # but no unicode error will be raised, as such, sdecode will return the poorly decoded string
-            with patch('salt.utils.locales.get_encodings', return_value=['ascii']):
-                self.assertEqual(locales.sdecode(b), b)  # no decode
-        with patch('salt.utils.locales.get_encodings', return_value=['utf-8']):
-            self.assertEqual(locales.sdecode(b), u)
-        # Non strings are left untouched
-        with patch('salt.utils.locales.get_encodings', return_value=['utf-8']):
-            self.assertEqual(locales.sdecode(1), 1)
 
     def test_split_locale(self):
         self.assertDictEqual(

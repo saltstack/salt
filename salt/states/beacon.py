@@ -31,8 +31,50 @@ Management of the Salt beacons
               - 0.1
               - 1.0
 
+    .. versionadded:: Neon
+
+    Beginning in the Neon release, multiple copies of a beacon can be configured
+    using the ``beacon_module`` parameter.
+
+    inotify_infs:
+      beacon.present:
+        - save: True
+        - enable: True
+        - files:
+           /etc/infs.conf:
+             mask:
+               - create
+               - delete
+               - modify
+             recurse: True
+             auto_add: True
+        - interval: 10
+        - beacon_module: inotify
+        - disable_during_state_run: True
+
+    inotify_ntp:
+      beacon.present:
+        - save: True
+        - enable: True
+        - files:
+           /etc/ntp.conf:
+             mask:
+               - create
+               - delete
+               - modify
+             recurse: True
+             auto_add: True
+        - interval: 10
+        - beacon_module: inotify
+        - disable_during_state_run: True
 '''
 from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
+from salt.ext import six
+
+import logging
+log = logging.getLogger(__name__)
 
 
 def present(name,
@@ -54,7 +96,7 @@ def present(name,
            'comment': []}
 
     current_beacons = __salt__['beacons.list'](return_yaml=False)
-    beacon_data = [kwargs]
+    beacon_data = [{k: v} for k, v in six.iteritems(kwargs)]
 
     if name in current_beacons:
 

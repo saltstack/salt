@@ -79,7 +79,7 @@ def __init__(opts):
 MOD_BASENAME = os.path.basename(__file__)
 INVALID_USAGE_ERROR = SaltRenderError(
     'Invalid use of {0} renderer!\n'
-    '''Usage: #!{1} [-GoSp] [<data_renderer> [options] . <template_renderer> [options]]
+    '''Usage: #!{0} [-GoSp] [<data_renderer> [options] . <template_renderer> [options]]
 
 where an example <data_renderer> would be yaml and a <template_renderer> might
 be jinja. Each renderer can be passed its renderer specific options.
@@ -99,7 +99,7 @@ Options(for this renderer):
        in the sls will have no effect, but other features of the renderer still
        apply.
 
-  '''.format(MOD_BASENAME, MOD_BASENAME)
+  '''.format(MOD_BASENAME)
 )
 
 
@@ -363,10 +363,8 @@ def statelist(states_dict, sid_excludes=frozenset(['include', 'exclude'])):
             yield sid, states, sname, args
 
 
-REQUISITES = set([
-    'require', 'require_in', 'watch', 'watch_in', 'use', 'use_in', 'listen', 'listen_in',
-    'onchanges', 'onchanges_in', 'onfail', 'onfail_in'
-])
+REQUISITES = ('require', 'require_in', 'watch', 'watch_in', 'use', 'use_in', 'listen', 'listen_in', 'onchanges',
+              'onchanges_in', 'onfail', 'onfail_in')
 
 
 def rename_state_ids(data, sls, is_extend=False):
@@ -407,8 +405,8 @@ def rename_state_ids(data, sls, is_extend=False):
             del data[sid]
 
 
-REQUIRE = set(['require', 'watch', 'listen', 'onchanges', 'onfail'])
-REQUIRE_IN = set(['require_in', 'watch_in', 'listen_in', 'onchanges_in', 'onfail_in'])
+REQUIRE = ('require', 'watch', 'listen', 'onchanges', 'onfail')
+REQUIRE_IN = ('require_in', 'watch_in', 'listen_in', 'onchanges_in', 'onfail_in')
 EXTENDED_REQUIRE = {}
 EXTENDED_REQUIRE_IN = {}
 
@@ -490,7 +488,7 @@ def add_start_state(data, sls):
     # the start state is either the first state whose id declaration has
     # no __sls__, or it's the first state whose id declaration has a
     # __sls__ == sls.
-    non_sids = set(['include', 'exclude', 'extend'])
+    non_sids = ('include', 'exclude', 'extend')
     for sid, states in six.iteritems(data):
         if sid in non_sids or sid.startswith('__'):
             continue
@@ -512,7 +510,7 @@ def add_goal_state(data):
     else:
         reqlist = []
         for sid, states, state, _ in \
-                statelist(data, set(['include', 'exclude', 'extend'])):
+                statelist(data, ('include', 'exclude', 'extend')):
             if '__sls__' in states:
                 # Then id declaration must have been included from a
                 # rendered sls. Currently, this is only possible with

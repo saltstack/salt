@@ -4,13 +4,13 @@
 Slots
 =====
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 .. note:: This functionality is under development and could be changed in the
     future releases
 
 Many times it is useful to store the results of a command during the course of
-an execution. Salt Slots are designed to allow to store this information and
+an execution. Salt Slots are designed to allow you to store this information and
 use it later during the :ref:`highstate <running-highstate>` or other job
 execution.
 
@@ -29,7 +29,7 @@ argument value in states.
 
 Slot syntax looks close to the simple python function call.
 
-.. code-block::
+.. code-block:: text
 
     __slot__:salt:<module>.<function>(<args>, ..., <kwargs...>, ...)
 

@@ -2,9 +2,9 @@
 '''
 Manage vms running on the OpenBSD VMM hypervisor using vmctl(8).
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
-:codeauthor: :email:`Jasper Lievisse Adriaanse <jasper@openbsd.org>`
+:codeauthor: ``Jasper Lievisse Adriaanse <jasper@openbsd.org>``
 
 .. note::
 
@@ -244,13 +244,13 @@ def start(name=None, id=None, bootpath=None, disk=None, disks=None, local_iface=
     if local_iface:
         cmd.append('-L')
 
-    if disk and (disks and len(disks) > 0):
+    if disk and disks:
         raise SaltInvocationError('Must provide either "disks" or "disk"')
 
     if disk:
         cmd.extend(['-d', disk])
 
-    if disks and len(disks) > 0:
+    if disks:
         cmd.extend(['-d', x] for x in disks)
 
     # Before attempting to define a new VM, make sure it doesn't already exist.
@@ -285,8 +285,8 @@ def start(name=None, id=None, bootpath=None, disk=None, disks=None, local_iface=
 
 def status(name=None, id=None):
     '''
-    List VMs running on the host, or only the VM specified by ``id''.
-    When both a name and id are provided, the id is ignored.
+    List VMs running on the host, or only the VM specified by ``id``.  When
+    both a name and id are provided, the id is ignored.
 
     name:
         Name of the defined VM.

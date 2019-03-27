@@ -81,7 +81,7 @@ the ``foo`` utility module with a ``__virtual__`` function.
     def bar():
         return 'baz'
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Instantiating objects from classes declared in util modules works with
     Master side modules, such as Runners, Outputters, etc.
 
@@ -139,13 +139,18 @@ where it is necessary to invoke the same function from a custom :ref:`outputter
 <all-salt.output>`/returner, as well as an execution module.
 
 Utility modules placed in ``salt://_utils/`` will be synced to the minions when
-any of the following Salt functions are called:
+a :ref:`highstate <running-highstate>` is run, as well as when any of the
+following Salt functions are called:
 
-* :mod:`state.apply <salt.modules.state.apply_>`
-* :mod:`saltutil.sync_utils <salt.modules.saltutil.sync_utils>`
-* :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
+* :py:func:`saltutil.sync_utils <salt.modules.saltutil.sync_utils>`
+* :py:func:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
+
+As of the 2019.2.0 release, as well as 2017.7.7 and 2018.3.2 in their
+respective release cycles, the ``sync`` argument to :py:func:`state.apply
+<salt.modules.state.apply_>`/:py:func:`state.sls <salt.modules.state.sls>` can
+be used to sync custom types when running individual SLS files.
 
 To sync to the Master, use either of the following:
 
-* :mod:`saltutil.sync_utils <salt.runners.saltutil.sync_utils>`
-* :mod:`saltutil.sync_all <salt.runners.saltutil.sync_all>`
+* :py:func:`saltutil.sync_utils <salt.runners.saltutil.sync_utils>`
+* :py:func:`saltutil.sync_all <salt.runners.saltutil.sync_all>`

@@ -2,7 +2,7 @@
 '''
 Salt module to manage Unix cryptsetup jobs and the crypttab file
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
 
 # Import python libraries
@@ -124,7 +124,7 @@ def active():
             dev_info = match.groupdict()
             ret[dev_info['devname']] = dev_info
         else:
-            log.warn('dmsetup output does not match expected format')
+            log.warning('dmsetup output does not match expected format')
 
     return ret
 

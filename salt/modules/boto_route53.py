@@ -343,7 +343,7 @@ def create_healthcheck(ip_addr=None, fqdn=None, region=None, key=None, keyid=Non
     '''
     Create a Route53 healthcheck
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     ip_addr
 

@@ -137,7 +137,7 @@ call functions available in other execution modules.
 The variable ``__salt__`` is packed into the modules after they are loaded into
 the Salt minion.
 
-The ``__salt__`` variable is a :ref:`Python dictionary <python2:typesmapping>`
+The ``__salt__`` variable is a :ref:`Python dictionary <python:typesmapping>`
 containing all of the Salt functions. Dictionary keys are strings representing
 the names of the modules and the values are the functions themselves.
 
@@ -157,6 +157,7 @@ Calling Execution Modules on the Salt Master
 ============================================
 
 .. versionadded:: 2016.11.0
+
 Execution modules can now also be called via the :command:`salt-run` command
 using the :ref:`salt runner <salt_salt_runner>`.
 
@@ -175,8 +176,8 @@ Grains Data
 -----------
 
 The values detected by the Salt Grains on the minion are available in a
-:ref:`dict <python2:typesmapping>` named ``__grains__`` and can be accessed
-from within callable objects in the Python modules.
+:ref:`Python dictionary <python:typesmapping>` named ``__grains__`` and can be
+accessed from within callable objects in the Python modules.
 
 To see the contents of the grains dictionary for a given system in your
 deployment run the :func:`grains.items` function:
@@ -287,7 +288,7 @@ Virtual module names are set using the ``__virtual__`` function and the
 ``__virtual__`` Function
 ========================
 
-The ``__virtual__`` function returns either a :ref:`string <python2:typesseq>`,
+The ``__virtual__`` function returns either a :ref:`string <python:typesseq>`,
 :py:data:`True`, :py:data:`False`, or :py:data:`False` with an :ref:`error
 string <modules-error-info>`. If a string is returned then the module is loaded
 using the name of the string as the virtual name. If ``True`` is returned the
@@ -297,7 +298,7 @@ prevent loading if dependencies are not met.
 
 Since ``__virtual__`` is called before the module is loaded, ``__salt__`` will
 be unreliable as not all modules will be available at this point in time. The
-``__pillar`` and ``__grains__`` :ref:`"dunder" dictionaries <dunder-dictionaries>`
+``__pillar__`` and ``__grains__`` :ref:`"dunder" dictionaries <dunder-dictionaries>`
 are available however.
 
 .. note::
@@ -509,7 +510,7 @@ To add documentation add a `Python docstring`_ to the function.
 Now when the sys.doc call is executed the docstring will be cleanly returned
 to the calling terminal.
 
-.. _`Python docstring`: http://docs.python.org/2/glossary.html#term-docstring
+.. _`Python docstring`: https://docs.python.org/3/glossary.html#term-docstring
 
 Documentation added to execution modules in docstrings will automatically be
 added to the online web-based documentation.

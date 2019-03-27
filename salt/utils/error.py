@@ -5,15 +5,12 @@ Utilities to enable exception reraising across the master commands
 '''
 from __future__ import absolute_import, unicode_literals, print_function
 
-# Import python libs
-try:
-    import exceptions
-except ImportError:
-    pass
-
 # Import salt libs
 import salt.exceptions
 import salt.utils.event
+
+# Import 3rd-party libs
+from salt.ext.six.moves import builtins as exceptions
 
 
 def raise_error(name=None, args=None, message=''):

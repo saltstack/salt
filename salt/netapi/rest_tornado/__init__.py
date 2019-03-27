@@ -123,11 +123,11 @@ def start():
                          backlog=mod_opts.get('backlog', 128),
                          )
         http_server.start(mod_opts['num_processes'])
-    except:
+    except Exception:
         log.error('Rest_tornado unable to bind to port %s', mod_opts['port'], exc_info=True)
         raise SystemExit(1)
 
     try:
-        tornado.ioloop.IOLoop.instance().start()
+        tornado.ioloop.IOLoop.current().start()
     except KeyboardInterrupt:
         raise SystemExit(0)

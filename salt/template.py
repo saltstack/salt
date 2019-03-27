@@ -12,10 +12,11 @@ import codecs
 import logging
 
 # Import Salt libs
+import salt.utils.data
 import salt.utils.files
-import salt.utils.locales
 import salt.utils.stringio
 import salt.utils.versions
+import salt.utils.sanitizers
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -43,6 +44,13 @@ def compile_template(template,
     '''
     Take the path to a template and return the high data structure
     derived from the template.
+
+    Helpers:
+
+    :param mask_value:
+        Mask value for debugging purposes (prevent sensitive information etc)
+        example: "mask_value="pass*". All "passwd", "password", "pass" will
+        be masked (as text).
     '''
 
     # if any error occurs, we return an empty dictionary
@@ -107,10 +115,9 @@ def compile_template(template,
             # yaml, mako, or another engine which renders to a data
             # structure) we don't want to log this.
             if salt.utils.stringio.is_readable(ret):
-                log.debug(
-                    'Rendered data from file: %s:\n%s',
-                    template,
-                    salt.utils.locales.sdecode(ret.read()))  # pylint: disable=no-member
+                log.debug('Rendered data from file: %s:\n%s', template,
+                          salt.utils.sanitizers.mask_args_value(salt.utils.data.decode(ret.read()),
+                                                                kwargs.get('mask_value')))  # pylint: disable=no-member
                 ret.seek(0)  # pylint: disable=no-member
 
     # Preserve newlines from original template

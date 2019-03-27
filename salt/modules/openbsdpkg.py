@@ -153,9 +153,10 @@ def latest_version(*names, **kwargs):
                 continue
 
             cur = pkgs.get(pkgname, '')
-            if not cur or salt.utils.compare_versions(ver1=cur,
-                                                      oper='<',
-                                                      ver2=pkgver):
+            if not cur or salt.utils.versions.compare(
+                ver1=cur,
+                oper='<',
+                ver2=pkgver):
                 ret[pkgname] = pkgver
 
     # Return a string if only one package name passed
@@ -215,7 +216,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     old = list_pkgs()
@@ -347,7 +348,7 @@ def upgrade_available(name):
     '''
     Check whether or not an upgrade is available for a given package
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -368,7 +369,7 @@ def upgrade(name=None,
 
     Returns a dictionary containing the changes:
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     .. code-block:: python
 

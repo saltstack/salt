@@ -3,7 +3,7 @@
 Management of NFS exports
 ===============================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 To ensure an NFS export exists:
 

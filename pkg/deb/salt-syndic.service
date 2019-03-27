@@ -1,6 +1,7 @@
 [Unit]
 Description=The Salt Syndic daemon
 After=network.target
+PartOf=salt-master.service
 
 [Service]
 Type=notify

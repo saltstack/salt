@@ -105,7 +105,7 @@ def query(key, value=None, service=None, profile=None):  # pylint: disable=W0613
         pair_key, pair_val = pair.split('=')
         key_vars[pair_key] = pair_val
 
-    renderer = __opts__.get('renderer', 'yaml_jinja')
+    renderer = __opts__.get('renderer', 'jinja|yaml')
     rend = salt.loader.render(__opts__, {})
     blacklist = __opts__.get('renderer_blacklist')
     whitelist = __opts__.get('renderer_whitelist')

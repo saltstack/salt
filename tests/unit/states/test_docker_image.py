@@ -84,7 +84,7 @@ class DockerImageTestCase(TestCase, LoaderModuleMockMixin):
                 - force: true
 
         if ``image:latest`` is not downloaded and force is true
-        should pull a new image successfuly.
+        should pull a new image successfully.
         '''
         docker_inspect_image = MagicMock(return_value={'Id': '1234567890ab'})
         docker_pull = MagicMock(

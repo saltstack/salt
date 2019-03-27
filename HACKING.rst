@@ -155,15 +155,6 @@ ZeroMQ Transport:
     pip install -e .
 
 
-RAET Transport:
-
-.. code-block:: bash
-
-    pip install -r requirements/raet.txt
-    pip install psutil
-    pip install -e .
-
-
 Running a self-contained development version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -259,9 +250,9 @@ If it is less than 2047, you should increase it with::
 Running the tests
 ~~~~~~~~~~~~~~~~~
 
-For running tests, you'll also need to install ``requirements/dev_python2x.txt``::
+For running tests, you'll also need to install ``requirements/dev_python27.txt``::
 
-    pip install -r requirements/dev_python2x.txt
+    pip install -r requirements/dev_python27.txt
 
 Finally you use setup.py to run the tests with the following command::
 

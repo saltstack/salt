@@ -8,7 +8,7 @@ of supported clouds, see http://libcloud.readthedocs.io/en/latest/storage/suppor
 
 Clouds include Amazon S3, Google Storage, Aliyun, Azure Blobs, Ceph, OpenStack swift
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :configuration:
     This module uses a configuration profile for one or multiple Storage providers

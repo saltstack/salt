@@ -25,7 +25,6 @@ import logging
 
 try:
     from sense_hat import SenseHat
-    _sensehat = SenseHat()
     has_sense_hat = True
 except (ImportError, NameError):
     _sensehat = None
@@ -39,15 +38,20 @@ def __virtual__():
     Only load the module if SenseHat is available
     '''
     if has_sense_hat:
+        try:
+            _sensehat = SenseHat()
+        except OSError:
+            return False, 'This module can only be used on a Raspberry Pi with a SenseHat.'
+
         rotation = __salt__['pillar.get']('sensehat:rotation', 0)
         if rotation in [0, 90, 180, 270]:
             _sensehat.set_rotation(rotation, False)
         else:
-            log.error("%s is not a valid rotation. Using default rotation.",
+            log.error('%s is not a valid rotation. Using default rotation.',
                       rotation)
         return True
-    else:
-        return False, "The SenseHat excecution module can not be loaded: SenseHat unavailable.\nThis module can only be used on a Raspberry Pi with a SenseHat. Also make sure that the sense_hat python library is installed!"
+
+    return False, 'The SenseHat execution module cannot be loaded: \'sense_hat\' python library unavailable.'
 
 
 def set_pixels(pixels):
@@ -141,7 +145,7 @@ def show_message(message, msg_type=None,
     message
         The message to display
     msg_type
-        The type of the message. Changes the appearence of the message.
+        The type of the message. Changes the appearance of the message.
 
         Available types are::
 

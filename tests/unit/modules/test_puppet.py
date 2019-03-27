@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
+    :codeauthor: Rahul Handay <rahulha@saltstack.com>
 '''
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import errno
 import os
 
 # Import Salt Testing Libs
@@ -140,8 +141,9 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
                         mock_open(read_data="resources: 1")):
                 self.assertDictEqual(puppet.summary(), {'resources': 1})
 
-            with patch('salt.utils.files.fopen', mock_open()) as m_open:
-                m_open.side_effect = IOError(13, 'Permission denied:', '/file')
+            permission_error = IOError(errno.EACCES, 'Permission denied:', '/file')
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data=permission_error)) as m_open:
                 self.assertRaises(CommandExecutionError, puppet.summary)
 
     def test_plugin_sync(self):
@@ -160,22 +162,27 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test to run facter and return the results
         '''
-        mock_lst = MagicMock(return_value=[])
-        with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-            mock_lst = MagicMock(return_value="True")
-            with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-                mock = MagicMock(return_value=["a", "b"])
-                with patch.object(puppet, '_format_fact', mock):
-                    self.assertDictEqual(puppet.facts(), {'a': 'b'})
+        mock = MagicMock(return_value={
+            'retcode': 0,
+            'stdout': "1\n2"
+        })
+        with patch.dict(puppet.__salt__, {'cmd.run_all': mock}):
+            mock = MagicMock(side_effect=[
+                ['a', 'b'],
+                ['c', 'd'],
+            ])
+            with patch.object(puppet, '_format_fact', mock):
+                self.assertDictEqual(puppet.facts(), {'a': 'b', 'c': 'd'})
 
     def test_fact(self):
         '''
         Test to run facter for a specific fact
         '''
-        mock_lst = MagicMock(return_value=[])
-        with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-            mock_lst = MagicMock(side_effect=[False, True])
-            with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-                self.assertEqual(puppet.fact("salt"), "")
+        mock = MagicMock(side_effect=[
+            {'retcode': 0, 'stdout': False},
+            {'retcode': 0, 'stdout': True},
+        ])
+        with patch.dict(puppet.__salt__, {'cmd.run_all': mock}):
+            self.assertEqual(puppet.fact('salt'), '')
 
-                self.assertTrue(puppet.fact("salt"))
+            self.assertTrue(puppet.fact('salt'))

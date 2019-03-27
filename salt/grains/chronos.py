@@ -5,9 +5,11 @@ Generate chronos proxy minion grains.
 .. versionadded:: 2015.8.2
 
 '''
+# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 
+# Import Salt libs
 import salt.utils.http
 import salt.utils.platform
 __proxyenabled__ = ['chronos']

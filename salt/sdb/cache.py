@@ -69,7 +69,7 @@ def set_(key, value, service=None, profile=None):  # pylint: disable=W0613
     '''
     key, profile = _parse_key(key, profile)
     cache = salt.cache.Cache(__opts__)
-    cache.set(profile['bank'], key=key, value=value)
+    cache.store(profile['bank'], key, value)
     return get(key, service, profile)
 
 

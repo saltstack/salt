@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-The `cache` roster provides a flexible interface to the Salt Masters' minion cache
+The ``cache`` roster provides a flexible interface to the Salt Masters' minion cache
 to access regular minions over ``salt-ssh``.
 
 .. versionadded:: 2017.7.0
@@ -93,17 +93,16 @@ This should be especially useful for the other roster keys:
             - ssh:auth:private_key
 
 '''
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Python
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import re
 import copy
 
-# Salt libs
+# Import Salt libs
 import salt.utils.data
 import salt.utils.minions
-import salt.utils.versions
 import salt.cache
 from salt._compat import ipaddress
 from salt.ext import six
@@ -132,25 +131,6 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     roster_order = __opts__.get('roster_order', {
         'host': ('ipv6-private', 'ipv6-global', 'ipv4-private', 'ipv4-public')
     })
-    if isinstance(roster_order, (tuple, list)):
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'Using legacy syntax for roster_order'
-        )
-        roster_order = {
-            'host': roster_order
-        }
-    for config_key, order in roster_order.items():
-        for idx, key in enumerate(order):
-            if key in ('public', 'private', 'local'):
-                salt.utils.versions.warn_until(
-                    'Fluorine',
-                    'roster_order {0} will include IPv6 soon. '
-                    'Set order to ipv4-{0} if needed.'.format(key)
-                )
-                order[idx] = 'ipv4-' + key
-
-    # log.debug(roster_order)
 
     ret = {}
     for minion_id in minions:

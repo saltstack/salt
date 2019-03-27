@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.integration.shell.cp
@@ -14,18 +14,24 @@ import os
 import pipes
 import shutil
 import tempfile
+import logging
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
-from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.unit import skipIf
 
 # Import salt libs
+import salt.utils.platform
 import salt.utils.files
 import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext import six
+
+
+log = logging.getLogger(__name__)
 
 
 class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
@@ -54,18 +60,25 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
         with salt.utils.files.fopen(testfile, 'r') as fh_:
             testfile_contents = fh_.read()
 
+        def quote(arg):
+            if salt.utils.platform.is_windows():
+                return arg
+            return pipes.quote(arg)
+
         for idx, minion in enumerate(minions):
+            if 'localhost' in minion:
+                continue
             ret = self.run_salt(
                 '--out yaml {0} file.directory_exists {1}'.format(
-                    pipes.quote(minion), TMP
+                    quote(minion), RUNTIME_VARS.TMP
                 )
             )
             data = salt.utils.yaml.safe_load('\n'.join(ret))
             if data[minion] is False:
                 ret = self.run_salt(
                     '--out yaml {0} file.makedirs {1}'.format(
-                        pipes.quote(minion),
-                        TMP
+                        quote(minion),
+                        RUNTIME_VARS.TMP
                     )
                 )
 
@@ -73,23 +86,24 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 self.assertTrue(data[minion])
 
             minion_testfile = os.path.join(
-                TMP, 'cp_{0}_testfile'.format(idx)
+                RUNTIME_VARS.TMP, 'cp_{0}_testfile'.format(idx)
             )
 
             ret = self.run_cp('--out pprint {0} {1} {2}'.format(
-                pipes.quote(minion),
-                pipes.quote(testfile),
-                pipes.quote(minion_testfile)
+                quote(minion),
+                quote(testfile),
+                quote(minion_testfile),
             ))
 
-            data = salt.utils.yaml.safe_load('\n'.join(ret))
+            data = eval('\n'.join(ret), {}, {})  # pylint: disable=eval-used
             for part in six.itervalues(data):
-                self.assertTrue(part[minion_testfile])
+                key = minion_testfile
+                self.assertTrue(part[key])
 
             ret = self.run_salt(
                 '--out yaml {0} file.file_exists {1}'.format(
-                    pipes.quote(minion),
-                    pipes.quote(minion_testfile)
+                    quote(minion),
+                    quote(minion_testfile)
                 )
             )
             data = salt.utils.yaml.safe_load('\n'.join(ret))
@@ -97,24 +111,25 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
 
             ret = self.run_salt(
                 '--out yaml {0} file.contains {1} {2}'.format(
-                    pipes.quote(minion),
-                    pipes.quote(minion_testfile),
-                    pipes.quote(testfile_contents)
+                    quote(minion),
+                    quote(minion_testfile),
+                    quote(testfile_contents)
                 )
             )
             data = salt.utils.yaml.safe_load('\n'.join(ret))
             self.assertTrue(data[minion])
             ret = self.run_salt(
                 '--out yaml {0} file.remove {1}'.format(
-                    pipes.quote(minion),
-                    pipes.quote(minion_testfile)
+                    quote(minion),
+                    quote(minion_testfile)
                 )
             )
             data = salt.utils.yaml.safe_load('\n'.join(ret))
             self.assertTrue(data[minion])
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_issue_7754(self):
-        config_dir = os.path.join(TMP, 'issue-7754')
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
 
         try:
             os.makedirs(config_dir)
@@ -138,7 +153,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
 
             ret = self.run_script(
                 self._call_binary_,
-                '--out pprint --config-dir {0} \'*\' {1} {0}/{2}'.format(
+                '--out pprint --config-dir {0} \'*minion\' {1} {0}/{2}'.format(
                     config_dir,
                     fn_,
                     os.path.basename(fn_),

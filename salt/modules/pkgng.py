@@ -290,7 +290,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name> jail=<jail name or id>
         salt '*' pkg.latest_version <package name> chroot=/path/to/chroot
     '''
-    if len(names) == 0:
+    if not names:
         return ''
     ret = {}
 
@@ -678,6 +678,7 @@ def install(name=None,
             reinstall_requires=False,
             regex=False,
             pcre=False,
+            batch=False,
             **kwargs):
     '''
     Install package(s) from a repository
@@ -801,7 +802,16 @@ def install(name=None,
 
         .. code-block:: bash
 
-            salt '*' pkg.install <extended regular expression> pcre=True
+
+    batch
+        Use BATCH=true for pkg install, skipping all questions.
+        Be careful when using in production.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install <package name> batch=True
     '''
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
@@ -810,9 +820,10 @@ def install(name=None,
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
+    env = {}
     opts = 'y'
     if salt.utils.data.is_true(orphan):
         opts += 'A'
@@ -832,6 +843,11 @@ def install(name=None,
         opts += 'x'
     if salt.utils.data.is_true(pcre):
         opts += 'X'
+    if salt.utils.data.is_true(batch):
+        env = {
+                "BATCH": "true",
+                "ASSUME_ALWAYS_YES": "YES"
+              }
 
     old = list_pkgs(jail=jail, chroot=chroot, root=root)
 
@@ -870,7 +886,8 @@ def install(name=None,
     out = __salt__['cmd.run_all'](
         cmd,
         output_loglevel='trace',
-        python_shell=False
+        python_shell=False,
+        env=env
     )
 
     if out['retcode'] != 0 and out['stderr']:
@@ -1885,7 +1902,7 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     .. note::
         This function is provided primarily for compatibilty with some
-        parts of :py:module:`states.pkg <salt.states.pkg>`.
+        parts of :py:mod:`states.pkg <salt.states.pkg>`.
         Consider using Consider using :py:func:`pkg.lock <salt.modules.pkgng.lock>` instead. instead.
 
     name
@@ -1949,9 +1966,9 @@ def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     Remove version locks
 
     .. note::
-        This function is provided primarily for compatibilty with some
-        parts of :py:module:`states.pkg <salt.states.pkg>`.
-        Consider using :py:func:`pkg.unlock <salt.modules.pkgng.unlock>` instead.
+        This function is provided primarily for compatibilty with some parts of
+        :py:mod:`states.pkg <salt.states.pkg>`.  Consider using
+        :py:func:`pkg.unlock <salt.modules.pkgng.unlock>` instead.
 
     name
         The name of the package to be unheld
@@ -2316,84 +2333,110 @@ def _parse_upgrade(stdout):
         'upgrade':
           pkgname:
             'repo': repository
+            'reason': reason
             'version':
               'current': n.n.n
               'new': n.n.n
         'install':
           pkgname:
             'repo': repository
+            'reason': reason
             'version':
               'current': n.n.n
         'reinstall':
           pkgname:
             'repo': repository
+            'reason': reason
             'version':
               'current': n.n.n
-
+        'downgrade':
+          pkgname:
+            'repo': repository
+            'reason': reason
+            'version':
+              'current': n.n.n
+              'new': n.n.n
+        'remove':
+          pkgname:
+            'repo': repository
+            'reason': reason
+            'version':
+              'current': n.n.n
     '''
     # Match strings like 'python36: 3.6.3 -> 3.6.4 [FreeBSD]'
-    upgrade_regex = re.compile(r'^\s+([^:]+):\s([0-9p_,.]+)\s+->\s+([0-9p_,.]+)\s+\[([^]]+)\]')
+    upgrade_regex = re.compile(r'^\s+([^:]+):\s([0-9a-z_,.]+)\s+->\s+([0-9a-z_,.]+)\s*(\[([^]]+)\])?\s*(\(([^)]+)\))?')
     # Match strings like 'rubygem-bcrypt_pbkdf: 1.0.0 [FreeBSD]'
-    install_regex = re.compile(r'^\s+([^:]+):\s+([0-9p_,.]+)\s+\[([^]]+)\]')
+    install_regex = re.compile(r'^\s+([^:]+):\s+([0-9a-z_,.]+)\s*(\[([^]]+)\])?\s*(\(([^)]+)\))?')
     # Match strings like 'py27-yaml-3.11_2 [FreeBSD] (direct dependency changed: py27-setuptools)'
-    reinstall_regex = re.compile(r'^\s+(\S+)-(?<=-)([0-9p_,.]+)\s+\[([^]]+)\]')
+    reinstall_regex = re.compile(r'^\s+(\S+)-(?<=-)([0-9a-z_,.]+)\s*(\[([^]]+)\])?\s*(\(([^)]+)\))?')
 
-    result = {'upgrade': {}, 'install': {}, 'reinstall': {}}
-    section = None
+    result = {'upgrade': {}, 'install': {}, 'reinstall': {}, 'remove': {}, 'downgrade': {}}
+    action = None
     for line in salt.utils.itertools.split(stdout, '\n'):
 
         if not line:
-            section = None
+            action = None
             continue
 
         if line == 'Installed packages to be UPGRADED:':
-            section = 'upgrade'
+            action = 'upgrade'
             continue
 
         if line == 'New packages to be INSTALLED:':
-            section = 'install'
+            action = 'install'
             continue
 
         if line == 'Installed packages to be REINSTALLED:':
-            section = 'reinstall'
+            action = 'reinstall'
             continue
 
-        if section == 'upgrade':
+        if line == 'Installed packages to be REMOVED:':
+            action = 'remove'
+            continue
+
+        if line == 'Installed packages to be DOWNGRADED:':
+            action = 'downgrade'
+            continue
+
+        if action == 'upgrade' or action == 'downgrade':
             match = upgrade_regex.match(line)
             if match:
-                result[section][match.group(1)] = {
+                result[action][match.group(1)] = {
                     'version': {
                         'current': match.group(2),
                         'new': match.group(3)
                     },
-                    'repo': match.group(4)
+                    'repo': match.group(5),
+                    'reason': match.group(7)
                 }
             else:
-                log.error('Unable to parse upgrade: \'%s\'', line)
+                log.error('Unable to parse %s: \'%s\'', action, line)
 
-        if section == 'install':
+        if action == 'install':
             match = install_regex.match(line)
             if match:
-                result[section][match.group(1)] = {
+                result[action][match.group(1)] = {
                     'version': {
                         'current': match.group(2)
                     },
-                    'repo': match.group(3)
+                    'repo': match.group(4),
+                    'reason': match.group(6)
                 }
             else:
-                log.error('Unable to parse install: \'%s\'', line)
+                log.error('Unable to parse %s: \'%s\'', action, line)
 
-        if section == 'reinstall':
+        if (action == 'reinstall') or (action == 'remove'):
             match = reinstall_regex.match(line)
             if match:
-                result[section][match.group(1)] = {
+                result[action][match.group(1)] = {
                     'version': {
                         'current': match.group(2)
                     },
-                    'repo': match.group(3)
+                    'repo': match.group(4),
+                    'reason': match.group(6)
                 }
             else:
-                log.error('Unable to parse reinstall: \'%s\'', line)
+                log.error('Unable to parse %s: \'%s\'', action, line)
 
     return result
 

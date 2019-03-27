@@ -72,12 +72,22 @@ def _changes(name,
             delusers = [salt.utils.win_functions.get_sam_name(user).lower() for user in delusers]
 
     change = {}
+    ret = {}
     if gid:
-        if lgrp['gid'] != gid:
-            change['gid'] = gid
+        try:
+            gid = int(gid)
+            if lgrp['gid'] != gid:
+                change['gid'] = gid
+        except (TypeError, ValueError):
+            ret['result'] = False
+            ret['comment'] = 'Invalid gid'
+            return ret
 
-    if members:
-        # -- if new member list if different than the current
+    if members is not None and not members:
+        if set(lgrp['members']).symmetric_difference(members):
+            change['delusers'] = set(lgrp['members'])
+    elif members:
+        # if new member list if different than the current
         if set(lgrp['members']).symmetric_difference(members):
             change['members'] = members
 
@@ -158,7 +168,7 @@ def present(name,
            'result': True,
            'comment': 'Group {0} is present and up to date'.format(name)}
 
-    if members and (addusers or delusers):
+    if members is not None and (addusers is not None or delusers is not None):
         ret['result'] = None
         ret['comment'] = (
             'Error: Conflicting options "members" with "addusers" and/or'

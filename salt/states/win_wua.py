@@ -410,18 +410,18 @@ def uptodate(name,
 
         # Update the system using the state defaults
         update_system:
-          wua.up_to_date
+          wua.uptodate
 
         # Update the drivers
         update_drivers:
-          wua.up_to_date:
+          wua.uptodate:
             - software: False
             - drivers: True
             - skip_reboot: False
 
         # Apply all critical updates
         update_critical:
-          wua.up_to_date:
+          wua.uptodate:
             - severities:
               - Critical
     '''

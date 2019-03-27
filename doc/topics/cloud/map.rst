@@ -88,9 +88,9 @@ Any top level data element from your profile may be overridden in the map file:
 
     fedora_small:
       - web1:
-        size: t2.micro
+          size: t2.micro
       - web2:
-        size: t2.nano
+          size: t2.nano
 
 As of Salt 2017.7.0, nested elements are merged, and can can be specified
 individually without having to repeat the complete definition for each top

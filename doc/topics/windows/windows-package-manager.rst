@@ -62,6 +62,11 @@ the package repository.
 
     salt -G 'os:windows' pkg.refresh_db
 
+.. note::
+   Use ``pkg.refresh_db`` from 2016.11 when developing new Windows package
+   definitions to check for errors in the definitions against one or more
+   Windows minions.
+
 Install Windows Software
 ========================
 
@@ -182,7 +187,7 @@ by modifying or extending the :conf_master:`winrepo_remotes` and
     ``winrepo_remotes`` was called ``win_gitrepos`` in Salt versions earlier
     than 2015.8.0
 
-Package definitions are pulled down from the online repository by running the
+Package definitions are pulled down from the online git repository by running the
 :mod:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>` runner.
 This command is run on the master:
 
@@ -204,9 +209,9 @@ This will pull down the software definition files for older minions
 
     Additionally, when you run ``winrepo.genrepo`` and ``pkg.refresh_db`` the
     entire contents under ``win/repo`` and ``win/repo-ng``, to include all
-    subdirectories, are used to create the msgpack file.
+    subdirectories, are used to create the meta database file.
 
-The next step (if you have older minions) is to create the msgpack file for the
+The next step (if you have older minions) is to create the meta database file for the
 repo (``winrepo.p``). This is done by running the
 :mod:`winrepo.genrepo <salt.runners.winrepo.genrepo>` runner. This is also run
 on the master:
@@ -229,8 +234,8 @@ on the master as well:
 
 On older minions (older than 2015.8.0) this will copy the winrepo.p file down to
 the minion. On newer minions (2015.8.0 and newer) this will copy all the
-software definition files (.sls) down to the minion and then create the msgpack
-file (``winrepo.p``) locally. The reason this is done locally is because the
+software definition files (.sls) down to the minion and then create the meta
+database file (``winrepo.p``) locally. The reason this is done locally is because the
 jinja needs to be parsed using the minion's grains.
 
 .. important::
@@ -245,7 +250,7 @@ jinja needs to be parsed using the minion's grains.
     If the ``winrepo.genrepo`` or the ``pkg.refresh_db`` fails, it is likely a
     problem with the jinja in one of the software definition files. This will
     cause the operations to stop. You'll need to fix the syntax in order for the
-    msgpack file to be created successfully.
+    meta database file to be created successfully.
 
 To disable one of the repos, set it to an empty list ``[]`` in the master
 config. For example, to disable :conf_master:`winrepo_remotes` set the following
@@ -262,7 +267,7 @@ Creating a Package Definition SLS File
 The package definition file is a yaml file that contains all the information
 needed to install a piece of software using salt. It defines information about
 the package to include version, full name, flags required for the installer and
-uninstaller, whether or not to use the windows task scheduler to install the
+uninstaller, whether or not to use the Windows task scheduler to install the
 package, where to find the installation package, etc.
 
 Take a look at this example for Firefox:
@@ -302,25 +307,30 @@ can define multiple versions for the same piece of software. The lines following
 the version are indented two more spaces and contain all the information needed
 to install that package.
 
-.. warning:: The package name and the ``full_name`` must be unique to all
-    other packages in the software repository.
+.. warning::
+    The package name and the ``full_name`` must be unique to all other packages
+    in the software repository.
 
 The version line is the version for the package to be installed. It is used when
 you need to install a specific version of a piece of software.
 
-.. warning:: The version must be enclosed in quotes, otherwise the yaml parser
-    will remove trailing zeros.
+.. warning::
+    The version must be enclosed in quotes, otherwise the yaml parser will
+    remove trailing zeros.
 
-.. note:: There are unique situations where previous versions are unavailable.
-    Take Google Chrome for example. There is only one url provided for a
-    standalone installation of Google Chrome.
+.. note::
+    There are unique situations where previous versions are unavailable. Take
+    Google Chrome for example. There is only one url provided for a standalone
+    installation of Google Chrome.
+
     (https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi)
+
     When a new version is released, the url just points to the new version. To
     handle situations such as these, set the version to `latest`. Salt will
     install the version of Chrome at the URL and report that version. Here's an
     example:
 
-.. code-block:: bash
+.. code-block:: yaml
 
     chrome:
       latest:
@@ -335,200 +345,237 @@ you need to install a specific version of a piece of software.
 
 Available parameters are as follows:
 
-:param str full_name: The Full Name for the software as shown in "Programs and
-    Features" in the control panel. You can also get this information by
-    installing the package manually and then running ``pkg.list_pkgs``. Here's
-    an example of the output from ``pkg.list_pkgs``:
+:param str full_name:
+    The Full Name for the software as shown in "Programs and Features" in the
+    control panel. You can also get this information by installing the package
+    manually and then running ``pkg.list_pkgs``. Here's an example of the output
+    from ``pkg.list_pkgs``:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-    salt 'test-2008' pkg.list_pkgs
-    test-2008
-        ----------
-        7-Zip 9.20 (x64 edition):
-            9.20.00.0
-        Microsoft .NET Framework 4 Client Profile:
-            4.0.30319,4.0.30319
-        Microsoft .NET Framework 4 Extended:
-            4.0.30319,4.0.30319
-        Microsoft Visual C++ 2008 Redistributable - x64 9.0.21022:
-            9.0.21022
-        Mozilla Firefox 17.0.1 (x86 en-US):
-            17.0.1
-        Mozilla Maintenance Service:
-            17.0.1
-        NSClient++ (x64):
-            0.3.8.76
-        Notepad++:
-            6.4.2
-        Salt Minion 0.16.0:
-            0.16.0
+        salt 'test-2008' pkg.list_pkgs
+        test-2008
+            ----------
+            7-Zip 9.20 (x64 edition):
+                9.20.00.0
+            Microsoft .NET Framework 4 Client Profile:
+                4.0.30319,4.0.30319
+            Microsoft .NET Framework 4 Extended:
+                4.0.30319,4.0.30319
+            Microsoft Visual C++ 2008 Redistributable - x64 9.0.21022:
+                9.0.21022
+            Mozilla Firefox 17.0.1 (x86 en-US):
+                17.0.1
+            Mozilla Maintenance Service:
+                17.0.1
+            NSClient++ (x64):
+                0.3.8.76
+            Notepad++:
+                6.4.2
+            Salt Minion 0.16.0:
+                0.16.0
 
-Notice the Full Name for Firefox: Mozilla Firefox 17.0.0 (x86 en-US). That's
-exactly what's in the ``full_name`` parameter in the software definition file.
+    Notice the Full Name for Firefox: ``Mozilla Firefox 17.0.0 (x86 en-US)``.
+    That's exactly what's in the ``full_name`` parameter in the software
+    definition file.
 
-If any of the software insalled on the machine matches one of the software
-definition files in the repository the full_name will be automatically renamed
-to the package name. The example below shows the ``pkg.list_pkgs`` for a
-machine that already has Mozilla Firefox 17.0.1 installed.
+    If any of the software installed on the machine matches one of the software
+    definition files in the repository, the full_name will be automatically
+    renamed to the package name. The example below shows the ``pkg.list_pkgs``
+    for a machine that already has Mozilla Firefox 17.0.1 installed.
 
-.. code-block:: bash
+    .. code-block:: bash
 
-    test-2008:
-        ----------
+        test-2008:
+            ----------
+            7zip:
+                9.20.00.0
+            Microsoft .NET Framework 4 Client Profile:
+                4.0.30319,4.0.30319
+            Microsoft .NET Framework 4 Extended:
+                4.0.30319,4.0.30319
+            Microsoft Visual C++ 2008 Redistributable - x64 9.0.21022:
+                9.0.21022
+            Mozilla Maintenance Service:
+                17.0.1
+            Notepad++:
+                6.4.2
+            Salt Minion 0.16.0:
+                0.16.0
+            firefox:
+                17.0.1
+            nsclient:
+                0.3.9.328
+
+    .. important::
+        The version number and ``full_name`` need to match the output from
+        ``pkg.list_pkgs`` so that the status can be verified when running a
+        highstate.
+
+    .. note::
+        It is still possible to successfully install packages using
+        ``pkg.install``, even if the ``full_name`` or the version number don't
+        match. However, this can make troubleshooting issues difficult, so be
+        careful.
+
+    .. tip::
+        To force salt to display the full name when there's already an existing
+        package definition file on the system, you can pass a bogus ``saltenv``
+        parameter to the command like so: ``pkg.list_pkgs saltenv=NotARealEnv``
+
+:param str installer:
+    The path to the ``.exe`` or ``.msi`` to use to install the package. This can
+    be a path or a URL. If it is a URL or a salt path (``salt://``), the package
+    will be cached locally and then executed. If it is a path to a file on disk
+    or a file share, it will be executed directly.
+
+    .. note::
+        If storing software in the same location as the winrepo it is best
+        practice to place each installer in its own directory rather than the
+        root of winrepo. Then you can place your package definition file in the
+        same directory. It is best practice to name the file ``init.sls``. This
+        will be picked up by ``pkg.refresh_db`` and processed properly.
+
+:param str install_flags:
+    Any flags that need to be passed to the installer to make it perform a
+    silent install. These can often be found by adding ``/?`` or ``/h`` when
+    running the installer from the command-line. A great resource for finding
+    these silent install flags can be found on the WPKG project's wiki_:
+
+    .. warning::
+        Salt will not return if the installer is waiting for user input so it is
+        imperative that the software package being installed has the ability to
+        install silently.
+
+:param str uninstaller:
+    The path to the program used to uninstall this software. This can be the
+    path to the same `exe` or `msi` used to install the software. It can also be
+    a GUID. You can find this value in the registry under the following keys:
+
+        - Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall
+        - Software\\Wow6432None\\Microsoft\\Windows\\CurrentVersion\\Uninstall
+
+:param str uninstall_flags:
+    Any flags that need to be passed to the uninstaller to make it perform a
+    silent uninstall. These can often be found by adding ``/?`` or ``/h`` when
+    running the uninstaller from the command-line. A great resource for finding
+    these silent install flags can be found on the WPKG project's wiki_:
+
+    .. warning::
+        Salt will not return if the uninstaller is waiting for user input so it
+        is imperative that the software package being uninstalled has the
+        ability to uninstall silently.
+
+    Here are some examples of installer and uninstaller settings:
+
+    .. code-block:: yaml
+
         7zip:
-            9.20.00.0
-        Microsoft .NET Framework 4 Client Profile:
-            4.0.30319,4.0.30319
-        Microsoft .NET Framework 4 Extended:
-            4.0.30319,4.0.30319
-        Microsoft Visual C++ 2008 Redistributable - x64 9.0.21022:
-            9.0.21022
-        Mozilla Maintenance Service:
-            17.0.1
-        Notepad++:
-            6.4.2
-        Salt Minion 0.16.0:
-            0.16.0
-        firefox:
-            17.0.1
-        nsclient:
-            0.3.9.328
+          '9.20.00.0':
+            installer: salt://win/repo/7zip/7z920-x64.msi
+            full_name: 7-Zip 9.20 (x64 edition)
+            reboot: False
+            install_flags: '/qn /norestart'
+            msiexec: True
+            uninstaller: '{23170F69-40C1-2702-0920-000001000000}'
+            uninstall_flags: '/qn /norestart'
 
-.. important:: The version number and ``full_name`` need to match the output
-    from ``pkg.list_pkgs`` so that the status can be verified when running
-    highstate.
+    Alternatively the ``uninstaller`` can also simply repeat the URL of an msi
+    file:
 
-.. note:: It is still possible to successfully install packages using
-    ``pkg.install`` even if they don't match. This can make troubleshooting
-    difficult so be careful.
+    .. code-block:: yaml
 
-:param str installer: The path to the ``.exe`` or ``.msi`` to use to install the
-    package. This can be a path or a URL. If it is a URL or a salt path
-    (salt://), the package will be cached locally and then executed. If it is a
-    path to a file on disk or a file share, it will be executed directly.
+        7zip:
+          '9.20.00.0':
+            installer: salt://win/repo/7zip/7z920-x64.msi
+            full_name: 7-Zip 9.20 (x64 edition)
+            reboot: False
+            install_flags: '/qn /norestart'
+            msiexec: True
+            uninstaller: salt://win/repo/7zip/7z920-x64.msi
+            uninstall_flags: '/qn /norestart'
 
-:param str install_flags: Any flags that need to be passed to the installer to
-    make it perform a silent install. These can often be found by adding ``/?``
-    or ``/h`` when running the installer from the command-line. A great resource
-    for finding these silent install flags can be found on the WPKG project's wiki_:
+:param msiexec:
+    This tells salt to use ``msiexec /i`` to install the package and
+    ``msiexec /x`` to uninstall. This is for ``.msi`` installations. Possible
+    options are: True, False or the path to ``msiexec.exe`` on your system
 
-Salt will not return if the installer is waiting for user input so these are
-important.
+    .. code-block:: yaml
 
-:param str uninstaller: The path to the program used to uninstall this software.
-    This can be the path to the same `exe` or `msi` used to install the
-    software. It can also be a GUID. You can find this value in the registry
-    under the following keys:
+        7zip:
+          '9.20.00.0':
+            installer: salt://win/repo/7zip/7z920-x64.msi
+            full_name: 7-Zip 9.20 (x64 edition)
+            reboot: False
+            install_flags: '/qn /norestart'
+            msiexec: 'C:\Windows\System32\msiexec.exe'
+            uninstaller: salt://win/repo/7zip/7z920-x64.msi
+            uninstall_flags: '/qn /norestart'
 
-    - Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall
-    - Software\\Wow6432None\\Microsoft\\Windows\\CurrentVersion\\Uninstall
+:param bool allusers:
+    This parameter is specific to ``.msi`` installations. It tells ``msiexec``
+    to install the software for all users. The default is ``True``.
 
-:param str uninstall_flags: Any flags that need to be passed to the uninstaller
-    to make it perform a silent uninstall. These can often be found by adding
-    ``/?`` or ``/h`` when running the uninstaller from the command-line. A great
-    resource for finding these silent install flags can be found on the WPKG
-    project's wiki_:
+:param bool cache_dir:
+    If ``True`` and the installer URL begins with ``salt://``, the entire
+    directory where the installer resides will be recursively cached. This is
+    useful for installers that depend on other files in the same directory for
+    installation.
 
-Salt will not return if the uninstaller is waiting for user input so these are
-important.
-
-Here are some examples of installer and uninstaller settings:
-
-.. code-block:: yaml
-
-    7zip:
-      '9.20.00.0':
-        installer: salt://win/repo/7zip/7z920-x64.msi
-        full_name: 7-Zip 9.20 (x64 edition)
-        reboot: False
-        install_flags: '/qn /norestart'
-        msiexec: True
-        uninstaller: '{23170F69-40C1-2702-0920-000001000000}'
-        uninstall_flags: '/qn /norestart'
-
-Alternatively the ``uninstaller`` can also simply repeat the URL of the msi file.
-
-.. code-block:: yaml
-
-    7zip:
-      '9.20.00.0':
-        installer: salt://win/repo/7zip/7z920-x64.msi
-        full_name: 7-Zip 9.20 (x64 edition)
-        reboot: False
-        install_flags: '/qn /norestart'
-        msiexec: True
-        uninstaller: salt://win/repo/7zip/7z920-x64.msi
-        uninstall_flags: '/qn /norestart'
-
-:param msiexec: This tells salt to use ``msiexec /i`` to install the
-    package and ``msiexec /x`` to uninstall. This is for `.msi` installations.
-    Possible options are: True, False or path to msiexec on your system
-
-    7zip:
-      '9.20.00.0':
-        installer: salt://win/repo/7zip/7z920-x64.msi
-        full_name: 7-Zip 9.20 (x64 edition)
-        reboot: False
-        install_flags: '/qn /norestart'
-        msiexec: 'C:\Windows\System32\msiexec.exe'
-        uninstaller: salt://win/repo/7zip/7z920-x64.msi
-        uninstall_flags: '/qn /norestart'
-
-:param str arch: This selects which ``msiexec.exe`` to use. Possible values:
-    ``x86``, ``x64``
-
-:param bool allusers: This parameter is specific to `.msi` installations. It
-    tells `msiexec` to install the software for all users. The default is True.
-
-:param bool cache_dir: If true when installer URL begins with salt://, the
-    entire directory where the installer resides will be recursively cached.
-    This is useful for installers that depend on other files in the same
-    directory for installation.
+    .. warning::
+        Be aware that all files and directories in the same location as the
+        installer file will be copied down to the minion. If you place your
+        installer file in the root of winrepo (``/srv/salt/win/repo-ng``) and
+        ``cache_dir: True`` the entire contents of winrepo will be cached to
+        the minion. Therefore, it is best practice to place your installer files
+        in a subdirectory if they are to be stored in winrepo.
 
 :param str cache_file:
-    When installer URL begins with salt://, this indicates single file to copy
-    down for use with the installer. Copied to the same location as the
-    installer. Use this over ``cache_dir`` if there are many files in the
+    When the installer URL begins with ``salt://``, this indicates a single file
+    to copy down for use with the installer. It is copied to the same location
+    as the installer. Use this over ``cache_dir`` if there are many files in the
     directory and you only need a specific file and don't want to cache
     additional files that may reside in the installer directory.
 
-Here's an example for a software package that has dependent files:
+    Here's an example for a software package that has dependent files:
 
-.. code-block:: yaml
+    .. code-block:: yaml
 
-    sqlexpress:
-      '12.0.2000.8':
-        installer: 'salt://win/repo/sqlexpress/setup.exe'
-        full_name: Microsoft SQL Server 2014 Setup (English)
-        reboot: False
-        install_flags: '/ACTION=install /IACCEPTSQLSERVERLICENSETERMS /Q'
-        cache_dir: True
+        sqlexpress:
+          '12.0.2000.8':
+            installer: 'salt://win/repo/sqlexpress/setup.exe'
+            full_name: Microsoft SQL Server 2014 Setup (English)
+            reboot: False
+            install_flags: '/ACTION=install /IACCEPTSQLSERVERLICENSETERMS /Q'
+            cache_dir: True
 
-:param bool use_scheduler: If true, windows will use the task scheduler to run
-    the installation. This is useful for running the salt installation itself as
-    the installation process kills any currently running instances of salt.
+:param bool use_scheduler:
+    If ``True``, Windows will use the task scheduler to run the installation.
+    This is useful for running the Salt installation itself as the installation
+    process kills any currently running instances of Salt.
 
-:param str source_hash: This tells salt to compare a hash sum of the installer
-to the provided hash sum before execution. The value can be formatted as
-``hash_algorithm=hash_sum``, or it can be a URI to a file containing the hash
-sum.
-For a list of supported algorithms, see the `hashlib documentation
-<https://docs.python.org/2/library/hashlib.html>`_.
+:param str source_hash:
+    This tells Salt to compare a hash sum of the installer to the provided hash
+    sum before execution. The value can be formatted as
+    ``<hash_algorithm>=<hash_sum>``, or it can be a URI to a file containing the
+    hash sum.
 
-Here's an example of source_hash usage:
+    For a list of supported algorithms, see the `hashlib documentation
+    <https://docs.python.org/2/library/hashlib.html>`_.
 
-.. code-block:: yaml
+    Here's an example of source_hash usage:
 
-    messageanalyzer:
-      '4.0.7551.0':
-        full_name: 'Microsoft Message Analyzer'
-        installer: 'salt://win/repo/messageanalyzer/MessageAnalyzer64.msi'
-        install_flags: '/quiet /norestart'
-        uninstaller: '{1CC02C23-8FCD-487E-860C-311EC0A0C933}'
-        uninstall_flags: '/quiet /norestart'
-        msiexec: True
-        source_hash: 'sha1=62875ff451f13b10a8ff988f2943e76a4735d3d4'
+    .. code-block:: yaml
+
+        messageanalyzer:
+          '4.0.7551.0':
+            full_name: 'Microsoft Message Analyzer'
+            installer: 'salt://win/repo/messageanalyzer/MessageAnalyzer64.msi'
+            install_flags: '/quiet /norestart'
+            uninstaller: '{1CC02C23-8FCD-487E-860C-311EC0A0C933}'
+            uninstall_flags: '/quiet /norestart'
+            msiexec: True
+            source_hash: 'sha1=62875ff451f13b10a8ff988f2943e76a4735d3d4'
 
 :param bool reboot: Not implemented
 
@@ -581,20 +628,32 @@ proper relative path. For example, if the ``base`` environment in
 into right location.
 
 
-Config Options for Minions 2015.8.0 and Later
-=============================================
+Configuration options for Minions 2015.8.0 and later
+====================================================
 
 The :conf_minion:`winrepo_source_dir` config parameter (default:
-``salt://win/repo``) controls where :mod:`pkg.refresh_db
-<salt.modules.win_pkg.refresh_db>` looks for the cachefile (default:
-``winrepo.p``). This means that the default location for the winrepo cachefile
-would be ``salt://win/repo/winrepo.p``. Both :conf_minion:`winrepo_source_dir`
-and :conf_minion:`winrepo_cachefile` can be adjusted to match the actual
-location of this file on the Salt fileserver.
+``salt://win/repo-ng/``) controls where :mod:`pkg.refresh_db
+<salt.modules.win_pkg.refresh_db>` fetches the software package definitions.
+:mod:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>` generates meta database
+file called :conf_minion:`winrepo_cachefile` on the minion.
+
+Cache configuration options for Minions 2016.11.0 and later
+===========================================================
+
+Software package definitions are automatically refresh if stale after
+:conf_minion:`winrepo_cache_expire_max`.  Running a highstate normal forces the
+refresh of the package definition and generation of meta database, unless the
+meta database is younger than :conf_minion:`winrepo_cache_expire_max`.
+Refreshing the package definition can take some time, these options were
+introduced to allow more control of when it occurs.
+
+It's important use :py:func:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>`
+to check for errors and ensure the latest package definition is on any minion
+your testing new definitions on.
 
 
-Config Options for Minions Before 2015.8.0
-==========================================
+Configuration options for Minions before 2015.8.0
+=================================================
 
 If connected to a master, the minion will by default look for the winrepo
 cachefile (the file generated by the :mod:`winrepo.genrepo runner
@@ -602,7 +661,6 @@ cachefile (the file generated by the :mod:`winrepo.genrepo runner
 cachefile is in a different path on the salt fileserver, then
 :conf_minion:`win_repo_cachefile` will need to be updated to reflect the proper
 location.
-
 
 .. _2015-8-0-winrepo-changes:
 
@@ -820,7 +878,7 @@ Packages management under Windows 2003
 --------------------------------------
 
 On Windows server 2003, you need to install optional Windows component "wmi
-windows installer provider" to have full list of installed packages. If you
+Windows installer provider" to have full list of installed packages. If you
 don't have this, salt-minion can't report some installed software.
 
 

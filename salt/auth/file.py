@@ -2,7 +2,7 @@
 '''
 Provide authentication using local files
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The `file` auth module allows simple authentication via local files. Different
 filetypes are supported, including:

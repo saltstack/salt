@@ -57,9 +57,13 @@ def run_file(name,
         grain=None,
         key=None,
         overwrite=True,
+        saltenv=None,
+        check_db_exists=True,
         **connection_args):
     '''
     Execute an arbitrary query on the specified database
+
+    .. versionadded:: 2017.7.0
 
     name
         Used only as an ID
@@ -85,12 +89,21 @@ def run_file(name,
     overwrite:
         The file or grain will be overwritten if it already exists (default)
 
-    .. versionadded:: 2017.7.0
+    saltenv:
+        The saltenv to pull the query_file from
+
+    check_db_exists:
+        The state run will check that the specified database exists (default=True)
+        before running any queries
+
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': 'Database {0} is already present'.format(database)}
+
+    if any([query_file.startswith(proto) for proto in ['http://', 'https://', 'salt://', 's3://', 'swift://']]):
+        query_file = __salt__['cp.cache_file'](query_file, saltenv=saltenv or __env__)
 
     if not os.path.exists(query_file):
         ret['comment'] = 'File {0} does not exist'.format(query_file)
@@ -98,7 +111,7 @@ def run_file(name,
         return ret
 
     # check if database exists
-    if not __salt__['mysql.db_exists'](database, **connection_args):
+    if check_db_exists and not __salt__['mysql.db_exists'](database, **connection_args):
         err = _get_mysql_error()
         if err is not None:
             ret['comment'] = err
@@ -216,6 +229,7 @@ def run(name,
         grain=None,
         key=None,
         overwrite=True,
+        check_db_exists=True,
         **connection_args):
     '''
     Execute an arbitrary query on the specified database
@@ -243,13 +257,17 @@ def run(name,
 
     overwrite:
         The file or grain will be overwritten if it already exists (default)
+
+    check_db_exists:
+        The state run will check that the specified database exists (default=True)
+        before running any queries
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': 'Database {0} is already present'.format(database)}
     # check if database exists
-    if not __salt__['mysql.db_exists'](database, **connection_args):
+    if check_db_exists and not __salt__['mysql.db_exists'](database, **connection_args):
         err = _get_mysql_error()
         if err is not None:
             ret['comment'] = err
@@ -346,9 +364,17 @@ def run(name,
                             )
                         )
             else:
-                output_file.write(
-                    salt.utils.stringutils.to_str(query_result)
-                )
+                if isinstance(query_result, six.text_type):
+                    output_file.write(
+                        salt.utils.stringutils.to_str(query_result)
+                    )
+                else:
+                    for col, val in six.iteritems(query_result):
+                        output_file.write(
+                            salt.utils.stringutils.to_str(
+                                '{0}:{1}\n'.format(col, val)
+                            )
+                        )
     else:
         ret['changes']['query'] = "Executed"
 

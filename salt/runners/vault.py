@@ -10,6 +10,7 @@ documented in the execution module docs.
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
+import json
 import logging
 import string
 import requests
@@ -40,7 +41,7 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         True. This happens when the master generates minion pillars.
     '''
     log.debug(
-        'Token generation request for %s (impersonated by master: %s)'.
+        'Token generation request for %s (impersonated by master: %s)',
         minion_id, impersonated_by_master
     )
     _validate_signature(minion_id, signature, impersonated_by_master)
@@ -54,6 +55,7 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
                 log.debug('Vault token expired. Recreating one')
                 # Requesting a short ttl token
                 url = '{0}/v1/auth/approle/login'.format(config['url'])
+
                 payload = {'role_id': config['auth']['role_id']}
                 if 'secret_id' in config['auth']:
                     payload['secret_id'] = config['auth']['secret_id']
@@ -62,7 +64,7 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
                     return {'error': response.reason}
                 config['auth']['token'] = response.json()['auth']['client_token']
 
-        url = '{0}/v1/auth/token/create'.format(config['url'])
+        url = _get_token_create_url(config)
         headers = {'X-Vault-Token': config['auth']['token']}
         audit_data = {
             'saltstack-jid': globals().get('__jid__', '<no jid set>'),
@@ -72,7 +74,7 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         payload = {
                     'policies': _get_policies(minion_id, config),
                     'num_uses': 1,
-                    'metadata': audit_data
+                    'meta': audit_data
                   }
 
         if payload['policies'] == []:
@@ -84,14 +86,44 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         if response.status_code != 200:
             return {'error': response.reason}
 
-        authData = response.json()['auth']
+        auth_data = response.json()['auth']
         return {
-            'token': authData['client_token'],
+            'token': auth_data['client_token'],
             'url': config['url'],
             'verify': verify,
         }
     except Exception as e:
         return {'error': six.text_type(e)}
+
+
+def unseal():
+    '''
+    Unseal Vault server
+
+    This function uses the 'keys' from the 'vault' configuration to unseal vault server
+
+    vault:
+      keys:
+        - n63/TbrQuL3xaIW7ZZpuXj/tIfnK1/MbVxO4vT3wYD2A
+        - S9OwCvMRhErEA4NVVELYBs6w/Me6+urgUr24xGK44Uy3
+        - F1j4b7JKq850NS6Kboiy5laJ0xY8dWJvB3fcwA+SraYl
+        - 1cYtvjKJNDVam9c7HNqJUfINk4PYyAXIpjkpN/sIuzPv
+        - 3pPK5X6vGtwLhNOFv1U2elahECz3HpRUfNXJFYLw6lid
+
+    .. note: This function will send unsealed keys until the api returns back
+             that the vault has been unsealed
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-run vault.unseal
+    '''
+    for key in __opts__['vault']['keys']:
+        ret = __utils__['vault.make_request']('PUT', 'v1/sys/unseal', data=json.dumps({'key': key})).json()
+        if ret['sealed'] is False:
+            return True
+    return False
 
 
 def show_policies(minion_id):
@@ -225,3 +257,13 @@ def _selftoken_expired():
         raise salt.exceptions.CommandExecutionError(
             'Error while looking up self token : {0}'.format(six.text_type(e))
             )
+
+
+def _get_token_create_url(config):
+    '''
+    Create Vault url for token creation
+    '''
+    role_name = config.get('role_name', None)
+    auth_path = '/v1/auth/token/create'
+    base_url = config['url']
+    return '/'.join(x.strip('/') for x in (base_url, auth_path, role_name) if x)

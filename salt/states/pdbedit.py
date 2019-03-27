@@ -107,7 +107,7 @@ def managed(name, **kwargs):
         specify user account control properties
 
         .. note::
-            Only the follwing can be set:
+            Only the following can be set:
             - N: No password required
             - D: Account disabled
             - H: Home directory required
