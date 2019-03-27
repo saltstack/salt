@@ -296,13 +296,14 @@ def _decrypt_ciphertext(cipher):
 
 
 def _decrypt_ciphertexts(cipher, translate_newlines=False):
-    cipher = salt.utils.stringutils.to_bytes(cipher)
+    to_bytes = salt.utils.stringutils.to_bytes
+    cipher = to_bytes(cipher)
     if translate_newlines:
-        cipher = cipher.replace(rb'\n', b'\n')
+        cipher = cipher.replace(to_bytes(r'\n'), to_bytes('\n'))
     def replace(match):
-        result = salt.utils.stringutils.to_bytes(_decrypt_ciphertext(match.group()))
+        result = to_bytes(_decrypt_ciphertext(match.group()))
         return result
-    ret, num = GPG_CIPHERTEXT.subn(replace, salt.utils.stringutils.to_bytes(cipher))
+    ret, num = GPG_CIPHERTEXT.subn(replace, to_bytes(cipher))
     if num > 0:
         # Remove trailing newlines. Without if crypted value initially specified as a YAML multiline
         # it will conain unexpected trailing newline.
