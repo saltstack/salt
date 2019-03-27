@@ -580,6 +580,115 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
 
+    def test__windows_os_release_grain(self):
+        versions = {
+            'Windows 10 Home': '10',
+            'Windows 10 Pro': '10',
+            'Windows 10 Pro for Workstations': '10',
+            'Windows 10 Pro Education': '10',
+            'Windows 10 Enterprise': '10',
+            'Windows 10 Enterprise LTSB': '10',
+            'Windows 10 Education': '10',
+            'Windows 10 IoT Core': '10',
+            'Windows 10 IoT Enterprise': '10',
+            'Windows 10 S': '10',
+            'Windows 8.1': '8.1',
+            'Windows 8.1 Pro': '8.1',
+            'Windows 8.1 Enterprise': '8.1',
+            'Windows 8.1 OEM': '8.1',
+            'Windows 8.1 with Bing': '8.1',
+            'Windows 8': '8',
+            'Windows 8 Pro': '8',
+            'Windows 8 Enterprise': '8',
+            'Windows 8 OEM': '8',
+            'Windows 7 Starter': '7',
+            'Windows 7 Home Basic': '7',
+            'Windows 7 Home Premium': '7',
+            'Windows 7 Professional': '7',
+            'Windows 7 Enterprise': '7',
+            'Windows 7 Ultimate': '7',
+            'Windows Thin PC': 'Thin',
+            'Windows Vista Starter': 'Vista',
+            'Windows Vista Home Basic': 'Vista',
+            'Windows Vista Home Premium': 'Vista',
+            'Windows Vista Business': 'Vista',
+            'Windows Vista Enterprise': 'Vista',
+            'Windows Vista Ultimate': 'Vista',
+            'Windows Server 2019 Essentials': '2019Server',
+            'Windows Server 2019 Standard': '2019Server',
+            'Windows Server 2019 Datacenter': '2019Server',
+            'Windows Server 2016 Essentials': '2016Server',
+            'Windows Server 2016 Standard': '2016Server',
+            'Windows Server 2016 Datacenter': '2016Server',
+            'Windows Server 2012 R2 Foundation': '2012ServerR2',
+            'Windows Server 2012 R2 Essentials': '2012ServerR2',
+            'Windows Server 2012 R2 Standard': '2012ServerR2',
+            'Windows Server 2012 R2 Datacenter': '2012ServerR2',
+            'Windows Server 2012 Foundation': '2012Server',
+            'Windows Server 2012 Essentials': '2012Server',
+            'Windows Server 2012 Standard': '2012Server',
+            'Windows Server 2012 Datacenter': '2012Server',
+            'Windows MultiPoint Server 2012': '2012Server',
+            'Windows Small Business Server 2011': '2011Server',
+            'Windows MultiPoint Server 2011': '2011Server',
+            'Windows Home Server 2011': '2011Server',
+            'Windows MultiPoint Server 2010': '2010Server',
+            'Windows Server 2008 R2 Foundation': '2008ServerR2',
+            'Windows Server 2008 R2 Standard': '2008ServerR2',
+            'Windows Server 2008 R2 Enterprise': '2008ServerR2',
+            'Windows Server 2008 R2 Datacenter': '2008ServerR2',
+            'Windows Server 2008 R2 for Itanium-based Systems': '2008ServerR2',
+            'Windows Web Server 2008 R2': '2008ServerR2',
+            'Windows Storage Server 2008 R2': '2008ServerR2',
+            'Windows HPC Server 2008 R2': '2008ServerR2',
+            'Windows Server 2008 Standard': '2008Server',
+            'Windows Server 2008 Enterprise': '2008Server',
+            'Windows Server 2008 Datacenter': '2008Server',
+            'Windows Server 2008 for Itanium-based Systems': '2008Server',
+            'Windows Server Foundation 2008': '2008Server',
+            'Windows Essential Business Server 2008': '2008Server',
+            'Windows HPC Server 2008': '2008Server',
+            'Windows Small Business Server 2008': '2008Server',
+            'Windows Storage Server 2008': '2008Server',
+            'Windows Web Server 2008': '2008Server'
+        }
+        for caption in versions:
+            version = core._windows_os_release_grain(caption, 1)
+            self.assertEqual(
+                version,
+                versions[caption],
+                'version: {0}\n'
+                'found: {1}\n'
+                'caption: {2}'.format(version, versions[caption], caption)
+            )
+
+        embedded_versions = {
+            'Windows Embedded 8.1 Industry Pro': '8.1',
+            'Windows Embedded 8 Industry Pro': '8',
+            'Windows POSReady 7': '7',
+            'Windows Embedded Standard 7': '7',
+            'Windows Embedded POSReady 2009': '2009',
+            'Windows Embedded Standard 2009': '2009',
+            'Windows XP Embedded': 'XP',
+        }
+        for caption in embedded_versions:
+            version = core._windows_os_release_grain(caption, 1)
+            self.assertEqual(
+                version,
+                embedded_versions[caption],
+                '{0} != {1}\n'
+                'version: {0}\n'
+                'found: {1}\n'
+                'caption: {2}'.format(version, embedded_versions[caption], caption)
+            )
+
+        # Special Cases
+        # Windows Embedded Standard is Windows 7
+        caption = 'Windows Embedded Standard'
+        with patch('platform.release', MagicMock(return_value='7')):
+            version = core._windows_os_release_grain(caption, 1)
+            self.assertEqual(version, '7')
+
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_linux_memdata(self):
         '''
