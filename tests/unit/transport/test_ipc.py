@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import errno
 import socket
+import threading
 import logging
 
 import tornado.gen
@@ -28,9 +29,6 @@ from salt.ext.six.moves import range
 from tests.support.mock import MagicMock
 from tests.support.paths import TMP
 from tests.support.unit import skipIf
-
-import pytest
-import threading
 
 log = logging.getLogger(__name__)
 
