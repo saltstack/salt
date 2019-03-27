@@ -2259,6 +2259,13 @@ class ClearFuncs(object):
             'missing': missing,
             }
 
+        # if you specified a master id, lets put that in the load
+        if 'master_id' in self.opts:
+            new_job_load['master_id'] = self.opts['master_id']
+        # if someone passed us one, use that
+        if 'master_id' in extra:
+            new_job_load['master_id'] = extra['master_id']
+
         # Announce the job on the event bus
         self.event.fire_event(new_job_load, tagify([clear_load['jid'], 'new'], 'job'))
 
