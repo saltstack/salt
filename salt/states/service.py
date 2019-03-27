@@ -456,7 +456,7 @@ def running(name,
         ret.setdefault('warnings', []).extend(warnings)
 
     if salt.utils.platform.is_windows():
-        for arg in ['timeout', 'with_deps', 'with_customers']:
+        for arg in ['timeout', 'with_deps', 'with_parents']:
             if kwargs.get(arg, False):
                 start_kwargs.update({arg: kwargs.get(arg)})
 
@@ -607,7 +607,7 @@ def dead(name,
         ret.setdefault('warnings', []).extend(warnings)
 
     if salt.utils.platform.is_windows():
-        for arg in ['timeout', 'with_deps', 'with_customers']:
+        for arg in ['timeout', 'with_deps', 'with_parents']:
             if kwargs.get(arg, False):
                 stop_kwargs.update({arg: kwargs.get(arg)})
 

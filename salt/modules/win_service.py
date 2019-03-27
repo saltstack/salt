@@ -105,7 +105,7 @@ def __virtual__():
 class ServiceDependencies(object):
     '''
     Helper class which provides functionality to get all dependencies and
-    customers of a Windows service
+    parents of a Windows service
 
     Args:
         name (str): The name of the service. This is not the display name.
@@ -189,7 +189,7 @@ class ServiceDependencies(object):
         log.trace("Dependencies of '%s': '%s'", normalized, ret)
         return ret
 
-    def _customers(self, name):
+    def _parents(self, name):
         # Using a list here to maintain order
         ret = list()
         try:
@@ -204,46 +204,46 @@ class ServiceDependencies(object):
             ret = list()
         return ret
 
-    def _customers_recursion(self, name):
+    def _parents_recursion(self, name):
         # Using a list here to maintain order
         ret = list()
         try:
-            customers = self._customers(name)
-            for customer in customers:
-                if customer not in ret:
-                    ret.append(customer)
-            for customer in customers:
-                indirect_customers = self._customers_recursion(customer)
-                for indirect_customer in indirect_customers:
-                    if indirect_customer in ret:
-                        ret.remove(indirect_customer)
-                    ret.append(indirect_customer)
+            parents = self._parents(name)
+            for parent in parents:
+                if parent not in ret:
+                    ret.append(parent)
+            for parent in parents:
+                indirect_parents = self._parents_recursion(parent)
+                for indirect_parent in indirect_parents:
+                    if indirect_parent in ret:
+                        ret.remove(indirect_parent)
+                    ret.append(indirect_parent)
         except Exception as e:
             log.debug(e)
             ret = list()
         return ret
 
-    def customers(self, with_indirect=False):
+    def parents(self, with_indirect=False):
         normalized = self._normalize_name(self._all_services, self._name)
         if bool(with_indirect):
-            ret = self._customers_recursion(normalized)
+            ret = self._parents_recursion(normalized)
         else:
-            ret = self._customers(normalized)
-        log.trace("Customers of '%s': '%s'", normalized, ret)
+            ret = self._parents(normalized)
+        log.trace("Parents of '%s': '%s'", normalized, ret)
         return ret
 
-    def start_order(self, with_deps=False, with_customers=False):
+    def start_order(self, with_deps=False, with_parents=False):
         ret = []
         if with_deps:
             ret.extend(self.dependencies(with_indirect=True))
         normalized = self._normalize_name(self._all_services, self._name)
         ret.append(normalized)
-        if with_customers:
-            ret.extend(self.customers(with_indirect=True))
+        if with_parents:
+            ret.extend(self.parents(with_indirect=True))
         return ret
 
-    def stop_order(self, with_deps=False, with_customers=False):
-        order = self.start_order(with_deps=with_deps, with_customers=with_customers)
+    def stop_order(self, with_deps=False, with_parents=False):
+        order = self.start_order(with_deps=with_deps, with_parents=with_parents)
         order.reverse()
         return order
 
@@ -591,7 +591,7 @@ def info(name):
     return ret
 
 
-def start(name, timeout=90, with_deps=False, with_customers=False):
+def start(name, timeout=90, with_deps=False, with_parents=False):
     '''
     Start the specified service.
 
@@ -612,7 +612,7 @@ def start(name, timeout=90, with_deps=False, with_customers=False):
             If enabled start the given service and the services the current
             service depends on.
 
-        with_customers (bool):
+        with_parents (bool):
             If enabled and in case other running services depend on the to be start
             service, this flag indicates that those other services will be started
             as well.
@@ -635,7 +635,7 @@ def start(name, timeout=90, with_deps=False, with_customers=False):
 
     # Using a list here to maintain order
     services = ServiceDependencies(name, get_all, info)
-    start = services.start_order(with_deps=with_deps, with_customers=with_customers)
+    start = services.start_order(with_deps=with_deps, with_parents=with_parents)
     log.debug("Starting services %s", start)
     for name in start:
         try:
@@ -653,7 +653,7 @@ def start(name, timeout=90, with_deps=False, with_customers=False):
     return False not in ret
 
 
-def stop(name, timeout=90, with_deps=False, with_customers=False):
+def stop(name, timeout=90, with_deps=False, with_parents=False):
     '''
     Stop the specified service
 
@@ -670,7 +670,7 @@ def stop(name, timeout=90, with_deps=False, with_customers=False):
             If enabled stop the given service and the services
             the current service depends on.
 
-        with_customers (bool):
+        with_parents (bool):
             If enabled and in case other running services depend on the to be stopped
             service, this flag indicates that those other services will be stopped
             as well.
@@ -690,7 +690,7 @@ def stop(name, timeout=90, with_deps=False, with_customers=False):
     ret = set()
 
     services = ServiceDependencies(name, get_all, info)
-    stop = services.stop_order(with_deps=with_deps, with_customers=with_customers)
+    stop = services.stop_order(with_deps=with_deps, with_parents=with_parents)
     log.debug("Stopping services %s", stop)
     for name in stop:
         try:
@@ -708,7 +708,7 @@ def stop(name, timeout=90, with_deps=False, with_customers=False):
     return False not in ret
 
 
-def restart(name, timeout=90, with_deps=False, with_customers=False):
+def restart(name, timeout=90, with_deps=False, with_parents=False):
     '''
     Restart the named service. This issues a stop command followed by a start.
 
@@ -734,7 +734,7 @@ def restart(name, timeout=90, with_deps=False, with_customers=False):
             If enabled restart the given service and the services
             the current service depends on.
 
-        with_customers (bool):
+        with_parents (bool):
             If enabled and in case other running services depend on the to be
             restarted service, this flag indicates that those other services
             will be restarted as well.
@@ -755,8 +755,8 @@ def restart(name, timeout=90, with_deps=False, with_customers=False):
         return execute_salt_restart_task()
 
     ret = set()
-    ret.add(stop(name=name, timeout=timeout, with_deps=with_deps, with_customers=with_customers))
-    ret.add(start(name=name, timeout=timeout, with_deps=with_deps, with_customers=with_customers))
+    ret.add(stop(name=name, timeout=timeout, with_deps=with_deps, with_parents=with_parents))
+    ret.add(start(name=name, timeout=timeout, with_deps=with_deps, with_parents=with_parents))
     return False not in ret
 
 
