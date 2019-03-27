@@ -214,14 +214,10 @@ def decode(data, encoding=None, errors='strict', keep=False,
 
 def decode_dict(data, encoding=None, errors='strict', keep=False,
                 normalize=False, preserve_dict_class=False,
-                preserve_tuples=False, to_str=False, keep_pillar=False):
+                preserve_tuples=False, to_str=False):
     '''
     Decode all string values to Unicode. Optionally use to_str=True to ensure
     strings are str types and not unicode on Python 2.
-
-    keep_pillar
-        If ``True``, pillar data that cannot be converted to unicode should be
-        kept as binary data (bytes on Python 3, str on Python 2).
     '''
     _decode_func = salt.utils.stringutils.to_unicode \
         if not to_str \
@@ -244,7 +240,7 @@ def decode_dict(data, encoding=None, errors='strict', keep=False,
                 # means we are going to leave the value as-is.
                 pass
             except UnicodeDecodeError:
-                if (key == 'pillar' and not keep_pillar) or not keep:
+                if not keep:
                     raise
 
         if isinstance(value, list):
@@ -268,7 +264,7 @@ def decode_dict(data, encoding=None, errors='strict', keep=False,
                 # means we are going to leave the value as-is.
                 pass
             except UnicodeDecodeError:
-                if (key == 'pillar' and not keep_pillar) and not keep:
+                if not keep:
                     raise
 
         rv[key] = value
