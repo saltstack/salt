@@ -23,7 +23,7 @@ import sys
 import os.path
 
 __PLATFORM = sys.platform.lower()
-svl = ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',
+svl = ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR', # svl = salt variable list
 	'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'HOME_DIR',
 	'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
 	'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
