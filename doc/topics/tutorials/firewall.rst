@@ -234,5 +234,5 @@ be set on the Master:
     needs to communicate with the listening network socket of
     ``salt-master`` on the *loopback* interface. Without this you will
     see no outgoing Salt traffic from the master, even for a simple
-    ``salt '*' test.ping``, because the ``salt`` client never reached
+    ``salt '*' test.version``, because the ``salt`` client never reached
     the ``salt-master`` to tell it to carry out the execution.
