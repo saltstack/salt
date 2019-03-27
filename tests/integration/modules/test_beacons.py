@@ -46,7 +46,7 @@ class BeaconsAddDeleteTest(ModuleCase):
         self.assertTrue(_add['result'])
 
         # save added beacon
-        _save = self.run_function('beacons.save')
+        _save = self.run_function('beacons.save', f_timeout=300)
         self.assertTrue(_save['result'])
 
         # delete the beacon
@@ -54,7 +54,7 @@ class BeaconsAddDeleteTest(ModuleCase):
         self.assertTrue(_delete['result'])
 
         # save the results
-        self.run_function('beacons.save')
+        self.run_function('beacons.save', f_timeout=300)
 
 
 class BeaconsTest(ModuleCase):
@@ -81,14 +81,14 @@ class BeaconsTest(ModuleCase):
             self.run_function('beacons.add',
                               ['ps', [{'processes': {'apache2': 'stopped'}}]],
                               f_timeout=300)
-            self.run_function('beacons.save')
+            self.run_function('beacons.save', f_timeout=300)
         except CommandExecutionError:
             self.skipTest('Unable to add beacon')
 
     def tearDown(self):
         # delete added beacon
         self.run_function('beacons.delete', ['ps'], f_timeout=300)
-        self.run_function('beacons.save')
+        self.run_function('beacons.save', f_timeout=300)
 
         # Reset beacons
         self.run_function('beacons.reset', f_timeout=300)

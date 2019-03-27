@@ -33,7 +33,7 @@ class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'beacon.present',
             name='diskusage',
-            timeout=300,
+            f_timeout=300,
             **kwargs
         )
         self.assertSaltTrueReturn(ret)
@@ -48,6 +48,7 @@ class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'beacon.absent',
             name='diskusage',
+            f_timeout=300
         )
         self.assertSaltTrueReturn(ret)
 

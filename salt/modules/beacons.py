@@ -146,11 +146,11 @@ def add(name, beacon_data, **kwargs):
     ret = {'comment': 'Failed to add beacon {0}.'.format(name),
            'result': False}
 
-    if name in list_(return_yaml=False):
+    if name in list_(return_yaml=False, **kwargs):
         ret['comment'] = 'Beacon {0} is already configured.'.format(name)
         return ret
 
-    if name not in list_available(return_yaml=False):
+    if name not in list_available(return_yaml=False, **kwargs):
         ret['comment'] = 'Beacon "{0}" is not available.'.format(name)
         return ret
 
@@ -223,7 +223,7 @@ def modify(name, beacon_data, **kwargs):
     ret = {'comment': '',
            'result': True}
 
-    current_beacons = list_(return_yaml=False)
+    current_beacons = list_(return_yaml=False, **kwargs)
     if name not in current_beacons:
         ret['comment'] = 'Beacon {0} is not configured.'.format(name)
         return ret
@@ -350,7 +350,7 @@ def delete(name, **kwargs):
     return ret
 
 
-def save():
+def save(**kwargs):
     '''
     Save all beacons on the minion
 
@@ -366,7 +366,7 @@ def save():
     ret = {'comment': [],
            'result': True}
 
-    beacons = list_(return_yaml=False, include_pillar=False)
+    beacons = list_(return_yaml=False, include_pillar=False, **kwargs)
 
     # move this file into an configurable opt
     sfn = os.path.join(__opts__['config_dir'],
@@ -433,7 +433,7 @@ def enable(**kwargs):
 
 def disable(**kwargs):
     '''
-    Disable all beaconsd jobs on the minion
+    Disable all beacons jobs on the minion
 
     :return:                Boolean and status message on success or failure of disable.
 
@@ -508,7 +508,7 @@ def enable_beacon(name, **kwargs):
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Beacon {0} would be enabled.'.format(name)
     else:
-        _beacons = list_(return_yaml=False)
+        _beacons = list_(return_yaml=False, **kwargs)
         if name not in _beacons:
             ret['comment'] = 'Beacon {0} is not currently configured.'.format(name)
             ret['result'] = False
@@ -566,7 +566,7 @@ def disable_beacon(name, **kwargs):
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Beacons would be enabled.'
     else:
-        _beacons = list_(return_yaml=False)
+        _beacons = list_(return_yaml=False, **kwargs)
         if name not in _beacons:
             ret['comment'] = 'Beacon {0} is not currently configured.'.format(name)
             ret['result'] = False
