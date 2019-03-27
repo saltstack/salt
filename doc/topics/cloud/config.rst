@@ -27,10 +27,8 @@ cloud is operating on.
 Minion Configuration
 ====================
 
-The default minion configuration is set up in this file or alternatively used in
-any ``.conf`` file listed in the ``/etc/salt/cloud.maps.d/``
-:ref:`map file <salt-cloud-map>` directory. Minions created by salt-cloud
-traditionally derive their configuration from this file.  Almost all parameters
+The default minion configuration is set up in this file. Minions created by
+salt-cloud derive their configuration from this file. Almost all parameters
 found in :ref:`Configuring the Salt Minion <configuration-salt-minion>` can be
 used here.
 
@@ -46,7 +44,7 @@ and its listening port, if the port is not set to the default.
 Similar to most other settings, Minion configuration settings are inherited
 across configuration files. For example, the master setting might be contained
 in the main ``cloud`` configuration file as demonstrated above, but additional
-settings can be placed in the provider or profile:
+settings can be placed in the provider, profile or map configuration files:
 
 .. code-block:: yaml
 
