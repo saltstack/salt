@@ -56,13 +56,18 @@ def _install_requirements(session, *extra_requirements):
     # Install requirements
     distro_requirements = None
 
-    if not IS_WINDOWS:
+    if IS_WINDOWS:
+        _distro_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', 'windows.txt')
+        if os.path.exists(_distro_requirements):
+            distro_requirements = _distro_requirements
+    else:
         # The distro package doesn't output anything for Windows
         session.install('distro')
         output = session.run('distro', '-j', silent=True)
         distro = json.loads(output.strip())
         session.log('Distro information:\n%s', pprint.pformat(distro))
         distro_keys = [
+            '{id}'.format(**distro),
             '{id}-{version}'.format(**distro),
             '{id}-{version_parts[major]}'.format(**distro)
         ]
@@ -120,11 +125,6 @@ def _install_requirements(session, *extra_requirements):
     if extra_requirements:
         session.install(*extra_requirements)
 
-    if IS_WINDOWS:
-        # Windows hacks :/
-        nox_windows_setup = os.path.join(REPO_ROOT, 'tests', 'support', 'nox-windows-setup.py')
-        session.run('python', nox_windows_setup)
-
 
 def _run_with_coverage(session, *test_cmd):
     session.install('coverage==4.5.3')
@@ -149,7 +149,7 @@ def _run_with_coverage(session, *test_cmd):
 @nox.parametrize('coverage', [False, True])
 def runtests(session, coverage):
     # Install requirements
-    _install_requirements(session, 'unittest-xml-reporting<2.4.0')
+    _install_requirements(session, 'unittest-xml-reporting==2.2.1')
     # Create required artifacts directories
     _create_ci_directories()
 
