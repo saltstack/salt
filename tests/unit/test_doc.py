@@ -58,12 +58,13 @@ class DocTestCase(TestCase):
             regex = re.compile(r':(?!\\)')
             key, val = regex.split(line, 1)
 
-            # Don't test man pages, this file,
-            # the tox virtualenv files, the page
-            # that documents to not use ":doc:",
-            # or the doc/conf.py file
+            # Don't test man pages, this file, the tox or nox virtualenv files,
+            # the page that documents to not use ":doc:", the doc/conf.py file
+            # or the artifacts directory on nox CI test runs
             if 'man' in key \
                     or '.tox/' in key \
+                    or '.nox/' in key \
+                    or 'artifacts/' in key \
                     or key.endswith('test_doc.py') \
                     or key.endswith(os.sep.join(['doc', 'conf.py'])) \
                     or key.endswith(os.sep.join(['conventions', 'documentation.rst'])) \
