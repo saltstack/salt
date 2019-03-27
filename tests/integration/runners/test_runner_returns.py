@@ -66,9 +66,11 @@ class RunnerReturnsTest(ShellCase):
         data['return']['kwargs'] = \
             salt.utils.args.clean_kwargs(**data['return']['kwargs'])
 
-        # Pop off the timestamp (do not provide a 2nd argument, if the stamp is
-        # missing we want to know!)
+        # Pop off dynamic keys in the return schema that are impossible to test.
+        # Do not supply the default arguments because we want to know if we are
+        # missing some aspect of the schema.
         data.pop('_stamp')
+        data.pop('pid')
 
     def write_conf(self, data):
         '''
@@ -122,7 +124,7 @@ class RunnerReturnsTest(ShellCase):
         )
         serial = salt.payload.Serial(self.master_opts)
         with salt.utils.files.fopen(serialized_return, 'rb') as fp_:
-            deserialized = serial.loads(fp_.read())
+            deserialized = serial.loads(fp_.read(), encoding='utf-8')
 
         self.clean_return(deserialized['return'])
 
