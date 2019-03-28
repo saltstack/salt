@@ -48,6 +48,22 @@ def _get_cpan_bin(bin_env):
         return salt.utils.path.which(bin_env)
 
 
+def version(bin_env=None):
+    '''
+    Returns the version of cpan.  sed ``bin_env`` to specify the path to
+    a specific virtualenv and get the cpan version in that virtualenv.
+
+    If unable to detect the cpan version, returns ``None``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cpan.version
+    '''
+    return show("CPAN").get("installed version", None)
+
+
 def install(module=None,
             bin_env=None,
             force=None,
@@ -188,7 +204,8 @@ def remove(module, details=False):
     return ret
 
 
-def list_():
+def list_(
+):
     '''
     List installed Perl modules, and the version installed
 
