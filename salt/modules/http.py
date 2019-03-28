@@ -44,7 +44,7 @@ def query(url, **kwargs):
     return salt.utils.http.query(url=url, opts=opts, **kwargs)
 
 
-def wait_for_successful_query(url, wait_for=300, **kwargs):
+def wait_for_successful_query(url, wait_for=300, ignore_exceptions=False, **kwargs):
     '''
     Query a resource until a successful response, and decode the return data
 
@@ -53,6 +53,10 @@ def wait_for_successful_query(url, wait_for=300, **kwargs):
     .. code-block:: bash
 
         salt '*' http.wait_for_successful_query http://somelink.com/ wait_for=160
+
+    In case the underlying HTTP library (e.g. Tornado) raises an exception, this might
+    disrupt the execution in undesirable ways. To ignore those exceptions, set
+    ``ignore_exceptions`` to ``True``.
     '''
 
     starttime = time.time()
@@ -68,7 +72,7 @@ def wait_for_successful_query(url, wait_for=300, **kwargs):
             caught_exception = exc
 
         if time.time() > starttime + wait_for:
-            if not result and caught_exception:
+            if not result and caught_exception and not ignore_exceptions:
                 # workaround pylint bug https://www.logilab.org/ticket/3207
                 raise caught_exception  # pylint: disable=E0702
 
