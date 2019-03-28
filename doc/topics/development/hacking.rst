@@ -160,7 +160,7 @@ installation is working:
     salt-minion -c ./etc/salt -d
     salt-key -c ./etc/salt -L
     salt-key -c ./etc/salt -A
-    salt -c ./etc/salt '*' test.ping
+    salt -c ./etc/salt '*' test.version
 
 Running the master and minion in debug mode can be helpful when developing. To
 do this, add ``-l debug`` to the calls to ``salt-master`` and ``salt-minion``.
@@ -283,7 +283,9 @@ Change to salt documentation directory, then:
   :strong:`text`.
 - The docs then are built within the :strong:`docs/_build/` folder. To update
   the docs after making changes, run ``make`` again.
-- The docs use `reStructuredText <http://sphinx-doc.org/rest.html>`_ for markup.
+- The docs use `reStructuredText
+  <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`_
+  for markup.
   See a live demo at http://rst.ninjs.org/.
 - The help information on each module or state is culled from the python code
   that runs for that piece. Find them in ``salt/modules/`` or ``salt/states/``.
