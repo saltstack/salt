@@ -7,6 +7,7 @@ Manage Perl modules using CPAN
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
+from ast import literal_eval
 import os
 import os.path
 import logging
@@ -32,7 +33,27 @@ def __virtual__():
     return (False, 'Unable to locate cpan. Make sure it is installed and in the PATH.')
 
 
-def install(module):
+def _get_cpan_bin(bin_env):
+    """
+    Locate the cpan binary, with 'bin_env' as the executable itself,
+    or from searching conventional filesystem locations
+    """
+    if not bin_env:
+        log.debug('cpan: Using cpan from system')
+        return [salt.utils.path.which('cpan')]
+
+    if os.access(bin_env, os.X_OK) and os.path.isfile(bin_env):
+        return os.path.normpath(bin_env)
+    else:
+        return salt.utils.path.which(bin_env)
+
+
+def install(module=None,
+            bin_env=None,
+            force=None,
+            mirror=None,
+            notest=None,
+            ):
     '''
     Install a Perl module from CPAN
 
@@ -42,25 +63,54 @@ def install(module):
 
         salt '*' cpan.install Template::Alloy
     '''
-    ret = {
-        'old': None,
-        'new': None,
-    }
-
     old_info = show(module)
 
-    cmd = 'cpan -i {0}'.format(module)
-    out = __salt__['cmd.run'](cmd)
+    cmd = _get_cpan_bin(bin_env)
 
-    if "don't know what it is" in out:
-        ret['error'] = 'CPAN cannot identify this package'
-        return ret
+    if force:
+        cmd.append('-f')
+
+    if mirror:
+        cmd.extend(['-M', mirror])
+
+    if notest:
+        cmd.append('-T')
+
+    if module:
+        cmd.append('-i')
+        cmd.append(module)
+    else:
+        # Funky things happen if we don't have a module to install
+        return dict()
+
+    #'cpan -i {0}'.format(module)
+    ret = __salt__['cmd.run_all'](cmd)
+
+    if ret.get("retcode", None):
+        return {'error': ret['stderr']}
 
     new_info = show(module)
-    ret['old'] = old_info.get('installed version', None)
-    ret['new'] = new_info['installed version']
 
-    return ret
+    if 'error' in new_info:
+        return {
+            'error': new_info['error']
+        }
+
+    if not new_info:
+        return {
+            'error': 'Could not install module {}'.format(module)
+        }
+
+    for k in old_info.copy().keys():
+        if old_info.get(k) == new_info[k]:
+            old_info.pop(k)
+            new_info.pop(k)
+
+    if old_info or new_info:
+        return {'old': old_info, 'new': new_info}
+    else:
+        return dict()
+
 
 
 def remove(module, details=False):
@@ -77,11 +127,6 @@ def remove(module, details=False):
 
         salt '*' cpan.remove Old::Package
     '''
-    ret = {
-        'old': None,
-        'new': None,
-    }
-
     info = show(module)
     if 'error' in info:
         return {
@@ -89,22 +134,24 @@ def remove(module, details=False):
         }
 
     version = info.get('installed version', None)
-    if version is None:
-        return ret
-
-    ret['old'] = version
-
-    if 'cpan build dirs' not in info:
-        return {
-            'error': 'No CPAN data available to use for uninstalling'
-        }
+    if 'not installed' in version or version is None:
+        log.debug("Module '{}' already removed, no changes made".format(module))
+        return dict()
 
     mod_pathfile = module.replace('::', '/') + '.pm'
     ins_path = info['installed file'].replace(mod_pathfile, '')
 
+    rm_details = {}
+    if 'cpan build dirs' in info:
+        log.warning('No CPAN data available to use for uninstalling')
+
     files = []
     for build_dir in info['cpan build dirs']:
-        contents = os.listdir(build_dir)
+        try:
+            contents = os.listdir(build_dir)
+        except Exception as e:
+            log.warning(e)
+            continue
         if 'MANIFEST' not in contents:
             continue
         mfile = os.path.join(build_dir, 'MANIFEST')
@@ -114,7 +161,6 @@ def remove(module, details=False):
                 if line.startswith('lib/'):
                     files.append(line.replace('lib/', ins_path).strip())
 
-    rm_details = {}
     for file_ in files:
         if file_ in rm_details:
             continue
@@ -124,8 +170,20 @@ def remove(module, details=False):
         else:
             rm_details[file_] = 'unable to remove'
 
+    new_info = show(module)
+
+    ret = dict()
     if details:
         ret['details'] = rm_details
+
+    for k in info.copy().keys():
+        if info.get(k) == new_info[k]:
+            info.pop(k)
+            new_info.pop(k)
+
+    if info or new_info:
+        ret['old'] = info
+        ret['new'] = new_info
 
     return ret
 
@@ -141,11 +199,14 @@ def list_():
         salt '*' cpan.list
     '''
     ret = {}
-    cmd = 'cpan -l'
-    out = __salt__['cmd.run'](cmd).splitlines()
-    for line in out:
+    cmd = [_get_cpan_bin('cpan'), '-l']
+    out = __salt__['cmd.run'](cmd)
+    for line in out.splitlines():
         comps = line.split()
-        ret[comps[0]] = comps[1]
+        # If there is text not related to the list we want, it will have
+        # more than 2 words
+        if len(comps) == 2:
+            ret[comps[0]] = comps[1]
     return ret
 
 
@@ -159,19 +220,20 @@ def show(module):
 
         salt '*' cpan.show Template::Alloy
     '''
-    ret = {}
-    ret['name'] = module
+    ret = {'name': module}
 
     # This section parses out details from CPAN, if possible
-    cmd = 'cpan -D {0}'.format(module)
-    out = __salt__['cmd.run'](cmd).splitlines()
-    mode = 'skip'
+    cmd = [_get_cpan_bin('cpan')]
+    cmd.extend(['-D', module])
+    out = __salt__['cmd.run'](cmd)
+    parse = False
     info = []
-    for line in out:
-        if line.startswith('-------------'):
-            mode = 'parse'
+    for line in out.splitlines():
+        # Once the dashes appear we are looking at the module info
+        if line.startswith('-'*20):
+            parse = True
             continue
-        if mode == 'skip':
+        if not parse:
             continue
         info.append(line)
 
@@ -180,7 +242,7 @@ def show(module):
         info.insert(2, '')
     if len(info) < 6:
         # This must not be a real package
-        ret['error'] = 'This package does not seem to exist'
+        ret['error'] = 'Could not find package {}'.format(module)
         return ret
 
     ret['description'] = info[0].strip()
@@ -201,11 +263,14 @@ def show(module):
     ret['author email'] = info[6].strip()
 
     # Check and see if there are cpan build directories
-    config = show_config()
-    build_dir = config.get('build_dir', None)
+    cfg = config()
+    build_dir = cfg.get('build_dir', None)
     if build_dir is not None:
         ret['cpan build dirs'] = []
-        builds = os.listdir(build_dir)
+        try:
+            builds = os.listdir(build_dir)
+        except FileNotFoundError as e:
+            return {'error': str(e)}
         pfile = module.replace('::', '-')
         for file_ in builds:
             if file_.startswith(pfile):
@@ -214,7 +279,7 @@ def show(module):
     return ret
 
 
-def show_config():
+def config():
     '''
     Return a dict of CPAN configuration values
 
@@ -222,17 +287,12 @@ def show_config():
 
     .. code-block:: bash
 
-        salt '*' cpan.show_config
+        salt '*' cpan.config
     '''
-    ret = {}
-    cmd = 'cpan -J'
-    out = __salt__['cmd.run'](cmd).splitlines()
-    for line in out:
-        if '=>' not in line:
-            # TODO: Some options take up multiple lines, so this doesn't always work
-            continue
-        comps = line.split('=>')
-        key = comps[0].replace("'", '').strip()
-        val = comps[1].replace("',", '').replace("'", '').strip()
-        ret[key] = val
-    return ret
+    cmd = [_get_cpan_bin('cpan'), '-J']
+    # Format the output like a python dictionary
+    out = __salt__['cmd.run'](cmd).replace('=>', ':').replace("\n", "")
+    # Remove everything before '{' and after '}'
+    out = out[out.find('{'):out.rfind('}') + 1]
+    return literal_eval(out)
+
