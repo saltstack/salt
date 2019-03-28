@@ -18,11 +18,13 @@ from datetime import datetime
 # Import Salt libs
 import salt.utils.platform
 from salt.exceptions import ArgumentValueError, CommandExecutionError
+import salt.utils.winapi
 
 # Import 3rd-party libraries
 try:
     import pythoncom
     import win32com.client
+    import win32api
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
@@ -143,22 +145,36 @@ instances = {'Parallel': TASK_INSTANCES_PARALLEL,
              'No New Instance': TASK_INSTANCES_IGNORE_NEW,
              'Stop Existing': TASK_INSTANCES_STOP_EXISTING}
 
-results = {0x0: 'The operation completed successfully',
-           0x1: 'Incorrect or unknown function called',
-           0x2: 'File not found',
-           0xA: 'The environment is incorrect',
-           0x41300: 'Task is ready to run at its next scheduled time',
-           0x41301: 'Task is currently running',
-           0x41302: 'Task is disabled',
-           0x41303: 'Task has not yet run',
-           0x41304: 'There are no more runs scheduled for this task',
-           0x41306: 'Task was terminated by the user',
-           0x8004130F: 'Credentials became corrupted',
-           0x8004131F: 'An instance of this task is already running',
-           0x800704DD: 'The service is not available (Run only when logged in?)',
-           0x800710E0: 'The operator or administrator has refused the request',
-           0xC000013A: 'The application terminated as a result of CTRL+C',
-           0xC06D007E: 'Unknown software exception'}
+
+def show_win32api_code(code):
+    '''
+    We should try to use the win32api to get error codes
+    instead of having a dict like:
+    results = {
+    0x0: 'The operation completed successfully',
+    0x1: 'Incorrect or unknown function called',
+    0x2: 'File not found',
+    0xA: 'The environment is incorrect',
+    0x41300: 'Task is ready to run at its next scheduled time',
+    0x41301: 'Task is currently running',
+    0x41302: 'Task is disabled',
+    0x41303: 'Task has not yet run',
+    0x41304: 'There are no more runs scheduled for this task',
+    0x41306: 'Task was terminated by the user',
+    0x8004130F: 'Credentials became corrupted',
+    0x8004131F: 'An instance of this task is already running',
+    0x800704DD: 'The service is not available (Run only when logged in?)',
+    0x800710E0: 'The operator or administrator has refused the request',
+    0xC000013A: 'The application terminated as a result of CTRL+C',
+    0xC06D007E: 'Unknown software exception'}
+
+    :param code:
+        A return code or error code from the win32com objects
+
+    :return: The associated message for the code
+    :rtype: str
+    '''
+    return win32api.FormatMessage(code).strip()
 
 
 def __virtual__():
@@ -335,8 +351,8 @@ def list_tasks(location='\\'):
         salt 'minion-id' task.list_tasks
     '''
     # Create the task service object
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # Get the folder to list tasks from
@@ -368,8 +384,8 @@ def list_folders(location='\\'):
         salt 'minion-id' task.list_folders
     '''
     # Create the task service object
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # Get the folder to list folders from
@@ -403,8 +419,8 @@ def list_triggers(name, location='\\'):
         salt 'minion-id' task.list_triggers <task_name>
     '''
     # Create the task service object
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # Get the folder to list folders from
@@ -439,8 +455,8 @@ def list_actions(name, location='\\'):
         salt 'minion-id' task.list_actions <task_name>
     '''
     # Create the task service object
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # Get the folder to list folders from
@@ -501,8 +517,8 @@ def create_task(name,
         return '{0} already exists'.format(name)
 
     # connect to the task scheduler
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # Create a new task definition
@@ -587,8 +603,8 @@ def create_task_from_xml(name,
         raise ArgumentValueError('Must specify either xml_text or xml_path')
 
     # Create the task service object
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # Load xml from file, overrides xml_text
@@ -685,8 +701,8 @@ def create_folder(name, location='\\'):
         return '{0} already exists'.format(name)
 
     # Create the task service object
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # Get the folder to list folders from
@@ -900,8 +916,8 @@ def edit_task(name=None,
         if name in list_tasks(location):
 
             # Connect to the task scheduler
-            pythoncom.CoInitialize()
-            task_service = win32com.client.Dispatch("Schedule.Service")
+            with salt.utils.winapi.Com():
+                task_service = win32com.client.Dispatch("Schedule.Service")
             task_service.Connect()
 
             # get the folder to create the task in
@@ -1066,8 +1082,8 @@ def delete_task(name, location='\\'):
         return '{0} not found in {1}'.format(name, location)
 
     # connect to the task scheduler
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # get the folder to delete the task from
@@ -1106,8 +1122,8 @@ def delete_folder(name, location='\\'):
         return '{0} not found in {1}'.format(name, location)
 
     # connect to the task scheduler
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # get the folder to delete the folder from
@@ -1147,8 +1163,8 @@ def run(name, location='\\'):
         return '{0} not found in {1}'.format(name, location)
 
     # connect to the task scheduler
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # get the folder to delete the folder from
@@ -1186,8 +1202,8 @@ def run_wait(name, location='\\'):
         return '{0} not found in {1}'.format(name, location)
 
     # connect to the task scheduler
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # get the folder to delete the folder from
@@ -1243,8 +1259,8 @@ def stop(name, location='\\'):
         return '{0} not found in {1}'.format(name, location)
 
     # connect to the task scheduler
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # get the folder to delete the folder from
@@ -1289,8 +1305,8 @@ def status(name, location='\\'):
         return '{0} not found in {1}'.format(name, location)
 
     # connect to the task scheduler
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # get the folder where the task is defined
@@ -1324,8 +1340,8 @@ def info(name, location='\\'):
         return '{0} not found in {1}'.format(name, location)
 
     # connect to the task scheduler
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # get the folder to delete the folder from
@@ -1334,7 +1350,7 @@ def info(name, location='\\'):
 
     properties = {'enabled': task.Enabled,
                   'last_run': _get_date_value(task.LastRunTime),
-                  'last_run_result': results[task.LastTaskResult],
+                  'last_run_result': show_win32api_code(task.LastTaskResult),
                   'missed_runs': task.NumberOfMissedRuns,
                   'next_run': _get_date_value(task.NextRunTime),
                   'status': states[task.State]}
@@ -1520,8 +1536,8 @@ def add_action(name=None,
         if name in list_tasks(location):
 
             # Connect to the task scheduler
-            pythoncom.CoInitialize()
-            task_service = win32com.client.Dispatch("Schedule.Service")
+            with salt.utils.winapi.Com():
+                task_service = win32com.client.Dispatch("Schedule.Service")
             task_service.Connect()
 
             # get the folder to create the task in
@@ -1627,8 +1643,8 @@ def _clear_actions(name, location='\\'):
         return '{0} not found in {1}'.format(name, location)
 
     # Create the task service object
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # Get the actions from the task
@@ -2031,8 +2047,8 @@ def add_trigger(name=None,
         if name in list_tasks(location):
 
             # Connect to the task scheduler
-            pythoncom.CoInitialize()
-            task_service = win32com.client.Dispatch("Schedule.Service")
+            with salt.utils.winapi.Com():
+                task_service = win32com.client.Dispatch("Schedule.Service")
             task_service.Connect()
 
             # get the folder to create the task in
@@ -2210,8 +2226,8 @@ def clear_triggers(name, location='\\'):
         return '{0} not found in {1}'.format(name, location)
 
     # Create the task service object
-    pythoncom.CoInitialize()
-    task_service = win32com.client.Dispatch("Schedule.Service")
+    with salt.utils.winapi.Com():
+        task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
     # Get the triggers from the task

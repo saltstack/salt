@@ -76,6 +76,11 @@ def communicator(func):
             queue.put('ERROR')
             queue.put('Exception')
             queue.put('{0}\n{1}\n'.format(ex, trace))
+        except SystemExit as ex:
+            trace = traceback.format_exc()
+            queue.put('ERROR')
+            queue.put('System exit')
+            queue.put('{0}\n{1}\n'.format(ex, trace))
         return ret
     return _call
 
@@ -1310,6 +1315,24 @@ class Cloud(object):
             output['ret'] = action_out
         return output
 
+    @staticmethod
+    def vm_config(name, main, provider, profile, overrides):
+        '''
+        Create vm config.
+
+        :param str name: The name of the vm
+        :param dict main: The main cloud config
+        :param dict provider: The provider config
+        :param dict profile: The profile config
+        :param dict overrides: The vm's config overrides
+        '''
+        vm = main.copy()
+        vm = salt.utils.dictupdate.update(vm, provider)
+        vm = salt.utils.dictupdate.update(vm, profile)
+        vm.update(overrides)
+        vm['name'] = name
+        return vm
+
     def extras(self, extra_):
         '''
         Extra actions
@@ -1392,12 +1415,13 @@ class Cloud(object):
                 ret[name] = {'Error': msg}
                 continue
 
-            vm_ = main_cloud_config.copy()
-            vm_.update(provider_details)
-            vm_.update(profile_details)
-            vm_.update(vm_overrides)
-
-            vm_['name'] = name
+            vm_ = self.vm_config(
+                name,
+                main_cloud_config,
+                provider_details,
+                profile_details,
+                vm_overrides,
+            )
             if self.opts['parallel']:
                 process = multiprocessing.Process(
                     target=self.create,
@@ -2077,6 +2101,7 @@ class Map(Cloud):
 
                 # Generate the master keys
                 log.debug('Generating master keys for \'%s\'', master_profile['name'])
+
                 priv, pub = salt.utils.cloud.gen_keys(
                     salt.config.get_cloud_config_value(
                         'keysize',

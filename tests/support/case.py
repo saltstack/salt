@@ -125,6 +125,10 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
             self.get_config_file_path('master')
         )
 
+        if 'asynchronous' in kwargs:
+            opts['async'] = True
+            kwargs.pop('asynchronous')
+
         opts_arg = list(arg)
         if kwargs:
             opts_arg.append({'__kwarg__': True})
@@ -208,9 +212,18 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
         script_path = self.get_script_path(script)
         if not os.path.isfile(script_path):
             return False
+        popen_kwargs = popen_kwargs or {}
 
         if salt.utils.platform.is_windows():
             cmd = 'python '
+            if 'cwd' not in popen_kwargs:
+                popen_kwargs['cwd'] = os.getcwd()
+            if 'env' not in popen_kwargs:
+                popen_kwargs['env'] = os.environ.copy()
+                if sys.version_info[0] < 3:
+                    popen_kwargs['env'][b'PYTHONPATH'] = CODE_DIR.encode()
+                else:
+                    popen_kwargs['env']['PYTHONPATH'] = CODE_DIR
         else:
             cmd = 'PYTHONPATH='
             python_path = os.environ.get('PYTHONPATH', None)
@@ -227,7 +240,6 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
 
         tmp_file = tempfile.SpooledTemporaryFile()
 
-        popen_kwargs = popen_kwargs or {}
         popen_kwargs = dict({
             'shell': True,
             'stdout': tmp_file,
@@ -509,6 +521,11 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         opts = {}
         opts.update(self.get_config('client_config', from_scratch=from_scratch))
         opts_arg = list(arg)
+
+        if 'asynchronous' in kwargs:
+            opts['async'] = True
+            kwargs.pop('asynchronous')
+
         if kwargs:
             opts_arg.append({'__kwarg__': True})
             opts_arg[-1].update(kwargs)

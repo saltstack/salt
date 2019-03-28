@@ -2710,7 +2710,7 @@ def _get_subnet_explicit_route_table(subnet_id, vpc_id, conn=None, region=None, 
 
 def request_vpc_peering_connection(requester_vpc_id=None, requester_vpc_name=None,
                                    peer_vpc_id=None, peer_vpc_name=None, name=None,
-                                   peer_owner_id=None, region=None,
+                                   peer_owner_id=None, peer_region=None, region=None,
                                    key=None, keyid=None, profile=None, dry_run=False):
     '''
     Request a VPC peering connection between two VPCs.
@@ -2729,8 +2729,8 @@ def request_vpc_peering_connection(requester_vpc_id=None, requester_vpc_name=Non
 
     peer_vpc_name
         Name tag of the VPC to create VPC peering connection with. This can only
-        be a VPC in the same account, else resolving it into a vpc ID will almost
-        certainly fail. Exclusive with peer_vpc_id.
+        be a VPC in the same account and same region, else resolving it into a
+        vpc ID will almost certainly fail. Exclusive with peer_vpc_id.
 
     name
         The name to use for this VPC peering connection.
@@ -2738,6 +2738,10 @@ def request_vpc_peering_connection(requester_vpc_id=None, requester_vpc_name=Non
     peer_owner_id
         ID of the owner of the peer VPC. Defaults to your account ID, so a value
         is required if peering with a VPC in a different account.
+
+    peer_region
+        Region of peer VPC. For inter-region vpc peering connections. Not required
+        for intra-region peering connections.
 
     region
         Region to connect to.
@@ -2792,19 +2796,16 @@ def request_vpc_peering_connection(requester_vpc_id=None, requester_vpc_name=Non
         if not peer_vpc_id:
             return {'error': 'Could not resolve VPC name {0} to an ID'.format(peer_vpc_name)}
 
+    peering_params = {"VpcId": requester_vpc_id, "PeerVpcId": peer_vpc_id, "DryRun": dry_run}
+
+    if peer_owner_id:
+        peering_params.update({"PeerOwnerId": peer_owner_id})
+    if peer_region:
+        peering_params.update({"PeerRegion": peer_region})
+
     try:
         log.debug('Trying to request vpc peering connection')
-        if not peer_owner_id:
-            vpc_peering = conn.create_vpc_peering_connection(
-                VpcId=requester_vpc_id,
-                PeerVpcId=peer_vpc_id,
-                DryRun=dry_run)
-        else:
-            vpc_peering = conn.create_vpc_peering_connection(
-                VpcId=requester_vpc_id,
-                PeerVpcId=peer_vpc_id,
-                PeerOwnerId=peer_owner_id,
-                DryRun=dry_run)
+        vpc_peering = conn.create_vpc_peering_connection(**peering_params)
         peering = vpc_peering.get('VpcPeeringConnection', {})
         peering_conn_id = peering.get('VpcPeeringConnectionId', 'ERROR')
         msg = 'VPC peering {0} requested.'.format(peering_conn_id)

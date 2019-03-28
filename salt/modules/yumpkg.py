@@ -83,7 +83,7 @@ def __virtual__():
     except Exception:
         return (False, "Module yumpkg: no yum based system detected")
 
-    enabled = ('amazon', 'xcp', 'xenserver', 'virtuozzolinux', 'virtuozzo')
+    enabled = ('amazon', 'xcp', 'xenserver', 'virtuozzolinux', 'virtuozzo', 'vmware photon')
 
     if os_family == 'redhat' or os_grain in enabled:
         return __virtualname__
@@ -146,6 +146,8 @@ def _yum():
         if ('fedora' in __grains__['os'].lower()
            and int(__grains__['osrelease']) >= 22):
             __context__[contextkey] = 'dnf'
+        elif 'photon' in __grains__['os'].lower():
+            __context__[contextkey] = 'tdnf'
         else:
             __context__[contextkey] = 'yum'
     return __context__[contextkey]
@@ -343,7 +345,7 @@ def _get_yum_config():
         # fall back to parsing the config ourselves
         # Look for the config the same order yum does
         fn = None
-        paths = ('/etc/yum/yum.conf', '/etc/yum.conf', '/etc/dnf/dnf.conf')
+        paths = ('/etc/yum/yum.conf', '/etc/yum.conf', '/etc/dnf/dnf.conf', '/etc/tdnf/tdnf.conf')
         for path in paths:
             if os.path.exists(path):
                 fn = path
