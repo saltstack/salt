@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Manage flatpak packages via Salt
 
 .. versionadded:: Neon
 
 :depends: flatpak for distribution
-"""
+'''
 
 from __future__ import absolute_import, print_function, unicode_literals
 import subprocess
@@ -26,20 +26,21 @@ def __virtual__():
 
 
 def install(location, name):
-    """Install the specified flatpak package or runtime from the specified location.
+    '''
+    Install the specified flatpak package or runtime from the specified location.
 
     Args:
         location (str): The location or remote to install from.
         name (str): The name of the package or runtime.
 
     Returns:
-        dict: The "result" and "output".
+        dict: The ``result`` and ``output``.
 
     CLI Example:
-        .. code-block:: bash
+    .. code-block:: bash
         salt '*' flatpak.install flathub org.gimp.GIMP
-    """
-    ret = {'result': None, 'output': ""}
+    '''
+    ret = {'result': None, 'output': ''}
 
     out = __salt__['cmd.run_all'](FLATPAK_BINARY_NAME + ' install ' + location + ' ' + name)
 
@@ -54,7 +55,8 @@ def install(location, name):
 
 
 def is_installed(name):
-    """Determine if a package or runtime is installed.
+    '''
+    Determine if a package or runtime is installed.
 
     Args:
         name (str): The name of the package or the runtime.
@@ -63,9 +65,9 @@ def is_installed(name):
         bool: True if the specified package or runtime is installed.
 
     CLI Example:
-        .. code-block:: bash
+    .. code-block:: bash
         salt '*' flatpak.is_installed org.gimp.GIMP
-    """
+    '''
     out = __salt__['cmd.run_all'](FLATPAK_BINARY_NAME + ' info ' + name)
 
     if out['retcode'] and out['stderr']:
@@ -75,19 +77,20 @@ def is_installed(name):
 
 
 def uninstall(pkg):
-    """Uninstall the specified package.
+    '''
+    Uninstall the specified package.
 
     Args:
         pkg (str): The package name.
 
     Returns:
-        dict: The "result" and "output".
+        dict: The ``result`` and ``output``.
 
     CLI Example:
-        .. code-block:: bash
+    .. code-block:: bash
         salt '*' flatpak.uninstall org.gimp.GIMP
-    """
-    ret = {'result': None, 'output': ""}
+    '''
+    ret = {'result': None, 'output': ''}
 
     out = __salt__['cmd.run_all'](FLATPAK_BINARY_NAME + ' uninstall ' + pkg)
 
@@ -102,20 +105,21 @@ def uninstall(pkg):
 
 
 def add_remote(name, location):
-    """Add a new location to install flatpak packages from.
+    '''
+    Add a new location to install flatpak packages from.
 
     Args:
         name (str): The repositories name.
         location (str): The location of the repository.
 
     Returns:
-        dict: The "result" and "output".
+        dict: The ``result`` and ``output``.
 
     CLI Example:
-        .. code-block:: bash
+    .. code-block:: bash
         salt '*' flatpak.add_remote flathub https://flathub.org/repo/flathub.flatpakrepo
-    """
-    ret = {'result': None, 'output': ""}
+    '''
+    ret = {'result': None, 'output': ''}
     out = __salt__['cmd.run_all'](FLATPAK_BINARY_NAME + ' remote-add ' + name + ' ' + location)
 
     if out['retcode'] and out['stderr']:
@@ -129,7 +133,8 @@ def add_remote(name, location):
 
 
 def is_remote_added(remote):
-    """Determines if a remote exists.
+    '''
+    Determines if a remote exists.
 
     Args:
         remote (str): The remote's name.
@@ -138,9 +143,9 @@ def is_remote_added(remote):
         bool: True if the remote has already been added.
 
     CLI Example:
-        .. code-block:: bash
+    .. code-block:: bash
         salt '*' flatpak.is_remote_added flathub
-    """
+    '''
     out = __salt__['cmd.run_all'](FLATPAK_BINARY_NAME + ' remotes')
 
     lines = out.splitlines()

@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Management of flatpak packages
 ==============================
 Allows the installation and uninstallation of flatpak packages.
 
 .. versionadded:: Neon
-"""
+'''
 from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.path
@@ -21,15 +21,24 @@ def __virtual__():
 
 
 def installed(location, name):
-    """Ensure that the named package is installed.
+    '''
+    Ensure that the named package is installed.
 
     Args:
         location (str): The location or remote to install the flatpak from.
         name (str): The name of the package or runtime.
 
     Returns:
-        dict: The "result" and "output".
-    """
+        dict: The ``result`` and ``output``.
+
+    Example:
+    .. code-block:: bash
+
+        install_package:
+          flatpack.installed:
+            - location: flathub
+            - name: gimp
+    '''
     ret = {'name': name,
            'changes': {},
            'result': None,
@@ -67,14 +76,22 @@ def installed(location, name):
 
 
 def uninstalled(name):
-    """Ensure that the named package is not installed.
+    '''
+    Ensure that the named package is not installed.
 
     Args:
         name (str): The flatpak package.
 
     Returns:
-        dict: The "result" and "output".
-    """
+        dict: The ``result`` and ``output``.
+
+    Example:
+    .. code-block:: bash
+
+        uninstall_package:
+          flatpack.uninstalled:
+            - name: gimp
+    '''
     ret = {'name': name,
            'changes': {},
            'result': None,
@@ -103,15 +120,24 @@ def uninstalled(name):
 
 
 def add_remote(name, location):
-    """Add a new location to install flatpak packages from.
+    '''
+    Add a new location to install flatpak packages from.
 
     Args:
         name (str): The repositories name.
         location (str): The location of the repository.
 
     Returns:
-        dict: The "result" and "output".
-    """
+        dict: The ``result`` and ``output``.
+
+    Example:
+    .. code-block:: bash
+
+        add_flathub:
+          flatpack.add_remote:
+            - name: flathub
+            - location: https://flathub.org/repo/flathub.flatpakrepo
+    '''
     ret = {'name': name,
            'changes': {},
            'result': None,
