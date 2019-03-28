@@ -1742,7 +1742,7 @@ def _starts_till(src, probe):
 
     if probe == src:
         return equal
-    
+
     return no_match
 
 
