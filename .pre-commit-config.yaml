@@ -4,82 +4,277 @@ repos:
     rev: master
     hooks:
       - id: pip-tools-compile
-        alias: compile-linux-py3-zmq-requirements
-        name: Linux Py3 ZeroMQ Requirements
+        alias: compile-linux-py2.7-zmq-requirements
+        name: Linux Py2.7 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/windows\.in$
+        exclude: ^requirements/static/(osx|windows)\.in$
         args:
+          - --py-version=2.7
+          - --platform=linux
           - --out-prefix=zeromq
+          - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-        language_version: python3
       - id: pip-tools-compile
-        alias: compile-linux-py2-zmq-requirements
-        name: Linux Py2 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/windows\.in$
+        alias: compile-osx-py2.7-zmq-requirements
+        name: OSX Py2.7 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
         args:
+          - --py-version=2.7
+          - --platform=darwin
           - --out-prefix=zeromq
+          - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-        language_version: python2
       - id: pip-tools-compile
-        alias: compile-linux-py3-raet-requirements
-        name: Linux Py3 RAET Requirements
-        files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/windows\.in$
-        args:
-          - --out-prefix=raet
-          - --include=requirements/raet.txt
-          - --include=requirements/pytest.txt
-        language_version: python3
-      - id: pip-tools-compile
-        alias: compile-linux-py2-raet-requirements
-        name: Linux Py2 RAET Requirements
-        files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/windows\.in$
-        args:
-          - --out-prefix=raet
-          - --include=requirements/raet.txt
-          - --include=requirements/pytest.txt
-        language_version: python2
-      - id: pip-tools-compile
-        alias: compile-windows-py3-zmq-requirements
-        name: Windows Py3 ZeroMQ Requirements
+        alias: compile-windows-py2.7-zmq-requirements
+        name: Windows Py2.7 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
         args:
+          - --py-version=2.7
           - --platform=windows
           - --out-prefix=zeromq
+          - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-        language_version: python3
       - id: pip-tools-compile
-        alias: compile-windows-py2-zmq-requirements
-        name: Windows Py2 ZeroMQ Requirements
+        alias: compile-linux-py2.7-raet-requirements
+        name: Linux Py2.7 RAET Requirements
+        files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(osx|windows)\.in$
+        args:
+          - --py-version=2.7
+          - --platform=linux
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-osx-py2.7-raet-requirements
+        name: OSX Py2.7 RAET Requirements
+        files: ^requirements/((base|raet|pytest)\.txt|static/osx\.in)$
+        args:
+          - --py-version=2.7
+          - --out-prefix=raet
+          - --platform=darwin
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-windows-py2.7-raet-requirements
+        name: Windows Py2.7 RAET Requirements
+        files: ^requirements/((base|raet|pytest)\.txt|static/windows\.in)$
+        args:
+          - --py-version=2.7
+          - --out-prefix=raet
+          - --platform=windows
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+
+      - id: pip-tools-compile
+        alias: compile-linux-py3.4-zmq-requirements
+        name: Linux Py3.4 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(osx|windows)\.in$
+        args:
+          - --py-version=3.4
+          - --platform=linux
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-osx-py3.4-zmq-requirements
+        name: OSX Py3.4 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        args:
+          - --py-version=3.4
+          - --platform=darwin
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-windows-py3.4-zmq-requirements
+        name: Windows Py3.4 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
         args:
+          - --py-version=3.4
           - --platform=windows
           - --out-prefix=zeromq
+          - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-        language_version: python2
       - id: pip-tools-compile
-        alias: compile-windows-py3-raet-requirements
-        name: Windows Py3 RAET Requirements
-        files: ^requirements/((base|raet|pytest)\.txt|static/windows\.in)$
+        alias: compile-linux-py3.4-raet-requirements
+        name: Linux Py3.4 RAET Requirements
+        files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(osx|windows)\.in$
         args:
+          - --py-version=3.4
+          - --platform=linux
           - --out-prefix=raet
-          - --platform=windows
+          - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
-        language_version: python3
       - id: pip-tools-compile
-        alias: compile-windows-py2-raet-requirements
-        name: Windows Py2 RAET Requirements
-        files: ^requirements/((base|raet|pytest)\.txt|static/windows\.in)$
+        alias: compile-osx-py3.4-raet-requirements
+        name: OSX Py3.4 RAET Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
         args:
+          - --py-version=3.4
+          - --platform=darwin
           - --out-prefix=raet
-          - --platform=windows
+          - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
-        language_version: python2
+      - id: pip-tools-compile
+        alias: compile-windows-py3.4-raet-requirements
+        name: Windows Py3.4 RAET Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        args:
+          - --py-version=3.4
+          - --platform=windows
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+
+      - id: pip-tools-compile
+        alias: compile-linux-py3.5-zmq-requirements
+        name: Linux Py3.5 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(osx|windows)\.in$
+        args:
+          - --py-version=3.5
+          - --platform=linux
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-osx-py3.5-zmq-requirements
+        name: OSX Py3.5 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        args:
+          - --py-version=3.5
+          - --platform=darwin
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-windows-py3.5-zmq-requirements
+        name: Windows Py3.5 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        args:
+          - --py-version=3.5
+          - --platform=windows
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-linux-py3.5-raet-requirements
+        name: Linux Py3.5 RAET Requirements
+        files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(osx|windows)\.in$
+        args:
+          - --py-version=3.5
+          - --platform=linux
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-osx-py3.5-raet-requirements
+        name: OSX Py3.5 RAET Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        args:
+          - --py-version=3.5
+          - --platform=darwin
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-windows-py3.5-raet-requirements
+        name: Windows Py3.5 RAET Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        args:
+          - --py-version=3.5
+          - --platform=windows
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+
+      - id: pip-tools-compile
+        alias: compile-linux-py3.6-zmq-requirements
+        name: Linux Py3.6 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(osx|windows)\.in$
+        args:
+          - --py-version=3.6
+          - --platform=linux
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-osx-py3.6-zmq-requirements
+        name: OSX Py3.6 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        args:
+          - --py-version=3.6
+          - --platform=darwin
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-windows-py3.6-zmq-requirements
+        name: Windows Py3.6 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        args:
+          - --py-version=3.6
+          - --platform=windows
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-linux-py3.6-raet-requirements
+        name: Linux Py3.6 RAET Requirements
+        files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(osx|windows)\.in$
+        args:
+          - --py-version=3.6
+          - --platform=linux
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-osx-py3.6-raet-requirements
+        name: OSX Py3.6 RAET Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        args:
+          - --py-version=3.6
+          - --platform=darwin
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-windows-py3.6-raet-requirements
+        name: Windows Py3.6 RAET Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        args:
+          - --py-version=3.6
+          - --platform=windows
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
