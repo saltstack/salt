@@ -345,8 +345,8 @@ def set_date(name, date):
 
         salt '*' shadow.set_date username 0
     '''
-    cmd = 'chage -d {0} {1}'.format(date, name)
-    return not __salt__['cmd.run'](cmd, python_shell=False)
+    cmd = ['chage', '-d', date, name]
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
 
 
 def set_expire(name, expire):
@@ -363,5 +363,5 @@ def set_expire(name, expire):
 
         salt '*' shadow.set_expire username -1
     '''
-    cmd = 'chage -E {0} {1}'.format(expire, name)
-    return not __salt__['cmd.run'](cmd, python_shell=False)
+    cmd = ['chage', '-E', expire, name]
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
