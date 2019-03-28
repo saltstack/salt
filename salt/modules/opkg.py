@@ -1239,6 +1239,24 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):  # pylint: disable=un
     return None
 
 
+def _set_repo_options(repo, options):
+    '''
+    Set the options to the repo.
+    '''
+    delimiters = "[", "]"
+    pattern = '|'.join(map(re.escape, delimiters))
+    for option in options:
+        splitted = re.split(pattern, option)
+        for opt in splitted:
+            if opt:
+                opt = opt.split('=')
+                if len(opt) == 2:
+                    if opt[0] == 'trusted':
+                        repo['trusted'] = opt[1] == 'yes'
+                    else:
+                        repo[opt[0]] = opt[1]
+
+
 def list_repos(**kwargs):  # pylint: disable=unused-argument
     '''
     Lists all repos on ``/etc/opkg/*.conf``
@@ -1271,6 +1289,9 @@ def list_repos(**kwargs):  # pylint: disable=unused-argument
                         repo['name'] = cols[1]
                         repo['uri'] = cols[2]
                         repo['file'] = os.path.join(OPKG_CONFDIR, filename)
+                        if len(cols) > 3:
+                            _set_repo_options(repo, cols[3:])
+
                         # do not store duplicated uri's
                         if repo['uri'] not in repos:
                             repos[repo['uri']] = [repo]
@@ -1316,7 +1337,18 @@ def _del_repo_from_file(alias, filepath):
         fhandle.writelines(output)
 
 
-def _add_new_repo(alias, uri, compressed, enabled=True):
+def _set_trusted_option_if_needed(repostr, trusted):
+    '''
+    Set trusted option to repo if needed
+    '''
+    if trusted is True:
+        repostr += ' [trusted=yes]'
+    elif trusted is False:
+        repostr += ' [trusted=no]'
+    return repostr
+
+
+def _add_new_repo(alias, uri, compressed, enabled=True, trusted=None):
     '''
     Add a new repo entry
     '''
@@ -1326,7 +1358,9 @@ def _add_new_repo(alias, uri, compressed, enabled=True):
         repostr += '"' + alias + '" '
     else:
         repostr += alias + ' '
-    repostr += uri + '\n'
+    repostr += uri
+    repostr = _set_trusted_option_if_needed(repostr, trusted)
+    repostr += '\n'
     conffile = os.path.join(OPKG_CONFDIR, alias + '.conf')
 
     with salt.utils.files.fopen(conffile, 'a') as fhandle:
@@ -1446,6 +1480,9 @@ def mod_repo(alias, **kwargs):
             else:
                 repostr += ' {0}'.format(repo_alias)
             repostr += ' {0}'.format(kwargs['uri'] if 'uri' in kwargs else source['uri'])
+            trusted = kwargs.get('trusted')
+            repostr = _set_trusted_option_if_needed(repostr, trusted) if trusted is not None else \
+                _set_trusted_option_if_needed(repostr, source.get('trusted'))
             _mod_repo_in_file(alias, repostr, source['file'])
         elif uri and source['uri'] == uri:
             raise CommandExecutionError(
@@ -1460,7 +1497,7 @@ def mod_repo(alias, **kwargs):
         compressed = kwargs['compressed'] if 'compressed' in kwargs else True
         # If enabled is not defined, assume True
         enabled = kwargs['enabled'] if 'enabled' in kwargs else True
-        _add_new_repo(alias, kwargs['uri'], compressed, enabled)
+        _add_new_repo(alias, kwargs['uri'], compressed, enabled, kwargs.get('trusted'))
 
     if 'refresh' in kwargs:
         refresh_db()
