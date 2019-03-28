@@ -1673,6 +1673,8 @@ def running(name,
 
     try:
         networks = _parse_networks(networks)
+        if networks:
+            kwargs['networks'] = networks
         image_id = _resolve_image(ret, image, client_timeout)
     except CommandExecutionError as exc:
         ret['result'] = False
