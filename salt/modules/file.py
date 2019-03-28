@@ -1740,7 +1740,7 @@ def _starts_till(src, probe):
     if not src or not probe:
         return no_match
 
-    if probe == src:
+    if probe == src.rstrip('\r\n'):
         return equal
 
     return no_match
