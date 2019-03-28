@@ -57,10 +57,13 @@ def _install_requirements(session, transport, *extra_requirements):
     # Install requirements
     distro_requirements = None
 
-    if session.python.startswith('2'):
-        pydir = 'py2'
-    else:
-        pydir = 'py3'
+    pydir = 'py{}'.format(
+        session.run(
+            'python', '-c'
+            'from __future__ import print_function; import sys; sys.stdout.write("{}.{}".format(*sys.version_info))',
+            silent=True
+        )
+    )
 
     if IS_WINDOWS:
         _distro_requirements = os.path.join(REPO_ROOT,
