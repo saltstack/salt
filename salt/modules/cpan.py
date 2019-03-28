@@ -152,7 +152,7 @@ def remove(module, details=False):
         }
 
     version = info.get('installed version', None)
-    if 'not installed' in version or version is None:
+    if (version is None) or ('not installed' in version):
         log.debug("Module '{}' already removed, no changes made".format(module))
         return dict()
 
@@ -197,7 +197,7 @@ def remove(module, details=False):
     for k in info.copy().keys():
         if info.get(k) == new_info[k]:
             info.pop(k)
-            new_info.pop(k)
+            new_info.pop(k, None)
 
     if info or new_info:
         ret['old'] = info
@@ -218,7 +218,7 @@ def list_():
     '''
     ret = {}
     cmd = [_get_cpan_bin('cpan'), '-l']
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run_all'](cmd).get('stdout', "")
     for line in out.splitlines():
         comps = line.split()
         # If there is text not related to the list we want, it will have
@@ -243,7 +243,7 @@ def show(module):
     # This section parses out details from CPAN, if possible
     cmd = [_get_cpan_bin('cpan')]
     cmd.extend(['-D', module])
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run_all'](cmd).get('stdout', "")
     parse = False
     info = []
     for line in out.splitlines():
@@ -308,9 +308,13 @@ def config():
         salt '*' cpan.config
     '''
     cmd = [_get_cpan_bin('cpan'), '-J']
+    out = __salt__['cmd.run_all'](cmd).get("stdout", "")
     # Format the output like a python dictionary
-    out = __salt__['cmd.run'](cmd).replace('=>', ':').replace("\n", "")
+    out = out.replace('=>', ':').replace("\n", "")
     # Remove everything before '{' and after '}'
-    out = out[out.find('{'):out.rfind('}') + 1]
-    return literal_eval(out)
+    if out:
+        out = out[out.find('{'):out.rfind('}') + 1]
+        return literal_eval(out)
+    else:
+        return dict()
 
