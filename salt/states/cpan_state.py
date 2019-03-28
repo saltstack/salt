@@ -47,8 +47,7 @@ def __virtual__():
     return False
 
 def installed(name,
-              pkgs=None,
-              cpan_bin=None,
+              modules=None,
               bin_env=None,
               force=None,
               mirror=None,
@@ -57,8 +56,33 @@ def installed(name,
     '''
     Make sure the package is installed
 
+    bin_env :
+        Absolute path to a virtual environment directory or absolute path to
+        a cpan executable.
+
     name
         The name of the perl module to install.
+
+    modules
+        Install the specified modules.
+
+    force
+        Force the specified action, when it normally would have failed. Use this to install a module even if its tests fail.
+
+    mirror
+        A list of mirrors to use for just this run.
+
+        .. code-block:: yaml
+
+            cpanm:
+              cpan.installed:
+                - name: App::cpanminus
+                - mirror:
+                  - http://cpan.metacpan.org/
+                  - ftp://mirror.xmission.com/CPAN/
+
+    notest
+        Do not test modules.  Simply install them.
 
     Example:
 
@@ -66,26 +90,26 @@ def installed(name,
 
         cpanm:
           cpan.installed:
-            - pkgs:
+            - modules:
               - App::cpanminus
               - CPAN
+            - mirror:
+              - http://cpan.metacpan.org/
+              - ftp://mirror.xmission.com/CPAN/
             - require:
               - pkg: perl
     '''
-    if cpan_bin and not bin_env:
-        bin_env = cpan_bin
-
-    # If pkgs is present, ignore name
-    if pkgs:
-        if not isinstance(pkgs, list):
+    # If modules is present, ignore name
+    if modules:
+        if not isinstance(modules, list):
             return {'name': name,
                     'result': False,
                     'changes': {},
-                    'comment': 'pkgs argument must be formatted as a list'}
+                    'comment': 'modules argument must be formatted as a list'}
     else:
-        pkgs = [name]
+        modules = [name]
 
-    ret = {'name': ';'.join(pkgs), 'result': None,
+    ret = {'name': ';'.join(modules), 'result': None,
            'comment': '', 'changes': {}}
 
     try:
@@ -99,23 +123,23 @@ def installed(name,
     # If support is added for cpanminus and cpanplus, this will be very crucial
 
     ret['changes'] = dict()
-    for pkg in pkgs:
+    for mod in modules:
         # Ignore modules that are already installed, don't force everything to update
-        version = __salt__['cpan.show'](pkg).get("installed version", None)
+        version = __salt__['cpan.show'](mod).get("installed version", None)
         if version and ('not installed' not in version):
             log.debug("perl module '{}' is already installed")
             continue
 
-        log.debug("Installing Perl module: {}".format(pkg))
+        log.debug("Installing Perl module: {}".format(mod))
         cpan_install_call = __salt__['cpan.install'](
-            module=pkg,
+            module=mod,
             force=force,
             mirror=mirror,
             notest=notest,
             **kwargs
         )
         if cpan_install_call:
-            ret['changes'][pkg] = cpan_install_call
+            ret['changes'][mod] = cpan_install_call
     return ret
 
 
@@ -125,7 +149,7 @@ def removed(name,
 
 
 def uptodate(name,
-             pkgs=None,
+             modules=None,
              cpan_bin=None,
              bin_env=None,
              force=None,
@@ -135,8 +159,36 @@ def uptodate(name,
     '''
     Verify that the given packages are completely up to date
 
+    bin_env :
+        Absolute path to a virtual environment directory or absolute path to
+        a cpan executable.
+
     name
-        The name of the perl module to install. You can also specify version
+        The name of the perl module to install.
+
+    modules
+        Install the specified modules.
+
+    force
+        Force the specified action, when it normally would have failed. Use this to install a module even if its tests fail.
+
+    mirror
+        A comma-separated list of mirrors to use for just this run.
+
+        .. code-block:: yaml
+
+            cpanm:
+              cpan.uptodate:
+                - name: App::cpanminus
+                - mirror:
+                  - http://cpan.metacpan.org/
+                  - ftp://mirror.xmission.com/CPAN/
+                - require:
+                  - pkg: perl
+
+    notest
+        Do not test modules.  Simply install them.
+
 
     Example:
 
@@ -144,7 +196,7 @@ def uptodate(name,
 
         cpanm:
           cpan.uptodate:
-            - pkgs:
+            - modules:
               - App::cpanminus
               - CPAN
             - require:
@@ -153,17 +205,17 @@ def uptodate(name,
     if cpan_bin and not bin_env:
         bin_env = cpan_bin
 
-    # If pkgs is present, ignore name
-    if pkgs:
-        if not isinstance(pkgs, list):
+    # If modules is present, ignore name
+    if modules:
+        if not isinstance(modules, list):
             return {'name': name,
                     'result': False,
                     'changes': {},
-                    'comment': 'pkgs argument must be formatted as a list'}
+                    'comment': 'modules argument must be formatted as a list'}
     else:
-        pkgs = [name]
+        modules = [name]
 
-    ret = {'name': ';'.join(pkgs), 'result': None,
+    ret = {'name': ';'.join(modules), 'result': None,
            'comment': '', 'changes': {}}
 
     try:
@@ -177,7 +229,7 @@ def uptodate(name,
     # If support is added for cpanminus and cpanplus, this will be very crucial
 
     ret['changes'] = dict()
-    for pkg in pkgs:
+    for pkg in modules:
         log.debug("Installing Perl module: {}".format(pkg))
         cpan_install_call = __salt__['cpan.install'](
             module=pkg,

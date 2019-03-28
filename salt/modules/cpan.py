@@ -87,7 +87,9 @@ def install(module=None,
         cmd.append('-f')
 
     if mirror:
-        cmd.extend(['-M', mirror])
+        # cpan accepts a single comma-separated string, but we prefer
+        # a list from state files,  Allow both.
+        cmd.extend(['-M', mirror if isinstance(mirror, str) else ','.join(mirror)])
 
     if notest:
         cmd.append('-T')
@@ -204,8 +206,7 @@ def remove(module, details=False):
     return ret
 
 
-def list_(
-):
+def list_():
     '''
     List installed Perl modules, and the version installed
 
