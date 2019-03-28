@@ -1495,6 +1495,10 @@ def _parse_cpe_name(cpe):
 
     Info: https://csrc.nist.gov/projects/security-content-automation-protocol/scap-specifications/cpe
 
+    Note: cpe:2.3:part:vendor:product:version:update:edition:lang:sw_edition:target_sw:target_hw:other
+          however some OS's do not have the full 13 elements, for example:
+                CPE_NAME="cpe:2.3:o:amazon:amazon_linux:2"
+
     :param cpe:
     :return:
     '''
@@ -1510,7 +1514,11 @@ def _parse_cpe_name(cpe):
             ret['vendor'], ret['product'], ret['version'] = cpe[2:5]
             ret['phase'] = cpe[5] if len(cpe) > 5 else None
             ret['part'] = part.get(cpe[1][1:])
-        elif len(cpe) == 13 and cpe[1] == '2.3':  # WFN to a string
+        elif len(cpe) == 6 and cpe[1] == '2.3':  # WFN to a string
+            ret['vendor'], ret['product'], ret['version'] = [x if x != '*' else None for x in cpe[3:6]]
+            ret['phase'] = None
+            ret['part'] = part.get(cpe[2])
+        elif len(cpe) > 7 and len(cpe) <= 13 and cpe[1] == '2.3':  # WFN to a string
             ret['vendor'], ret['product'], ret['version'], ret['phase'] = [x if x != '*' else None for x in cpe[3:7]]
             ret['part'] = part.get(cpe[2])
 

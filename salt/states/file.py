@@ -5059,19 +5059,23 @@ def append(name,
 
     if makedirs is True:
         dirname = os.path.dirname(name)
-        if not __salt__['file.directory_exists'](dirname):
-            try:
-                _makedirs(name=name)
-            except CommandExecutionError as exc:
-                return _error(ret, 'Drive {0} is not mapped'.format(exc.message))
+        if __opts__['test']:
+            ret['comment'] = 'Directory {0} is set to be updated'.format(dirname)
+            ret['result'] = None
+        else:
+            if not __salt__['file.directory_exists'](dirname):
+                try:
+                    _makedirs(name=name)
+                except CommandExecutionError as exc:
+                    return _error(ret, 'Drive {0} is not mapped'.format(exc.message))
 
-            if salt.utils.platform.is_windows():
-                check_res, check_msg, ret['pchanges'] = _check_directory_win(dirname)
-            else:
-                check_res, check_msg, ret['pchanges'] = _check_directory(dirname)
+                if salt.utils.platform.is_windows():
+                    check_res, check_msg, ret['pchanges'] = _check_directory_win(dirname)
+                else:
+                    check_res, check_msg, ret['pchanges'] = _check_directory(dirname)
 
-            if not check_res:
-                return _error(ret, check_msg)
+                if not check_res:
+                    return _error(ret, check_msg)
 
     check_res, check_msg = _check_file(name)
     if not check_res:

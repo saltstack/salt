@@ -22,5 +22,5 @@ allowed during blackout. This is configured with the special pillar key
 .. code-block:: yaml
 
     minion_blackout_whitelist:
-      - test.ping
-      - pillar.get
+     - test.version
+     - pillar.get
