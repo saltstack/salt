@@ -28,9 +28,12 @@ State to synchronize files and directories with rsync.
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import os
 
 import salt.utils.path
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -155,7 +158,6 @@ def synchronized(name, source,
         if result.get('retcode'):
             ret['result'] = False
             ret['comment'] = result['stderr']
-            ret['changes'] = result['stdout']
         # Changed
         elif _get_changes(result['stdout'])['changed']:
             ret['comment'] = _get_summary(result['stdout'])
