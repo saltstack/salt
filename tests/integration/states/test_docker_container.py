@@ -594,6 +594,33 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue('VAR2=value2' in ret['Config']['Env'])
         self.assertTrue('VAR3=value3' not in ret['Config']['Env'])
 
+    @with_network(subnet='10.247.197.96/27', create=True)
+    @container_name
+    def test_static_ip_one_network(self, container_name, net):
+        '''
+        Ensure that if a network is created and specified as network_mode, that is the only network, and
+        the static IP is applied.
+        '''
+        requested_ip = '10.247.197.100'
+        kwargs = {
+            'name': container_name,
+            'image': self.image,
+            'network_mode': net.name,
+            'networks': [{net.name: [{'ipv4_address': requested_ip}]}],
+            'shutdown_timeout': 1,
+        }
+        # Create a container
+        ret = self.run_state('docker_container.running', **kwargs)
+        self.assertSaltTrueReturn(ret)
+
+        inspect_result = self.run_function('docker.inspect_container',
+                                           [container_name])
+        connected_networks = inspect_result['NetworkSettings']['Networks']
+
+        self.assertEqual(list(connected_networks.keys()), [net.name])
+        self.assertEqual(inspect_result['HostConfig']['NetworkMode'], net.name)
+        self.assertEqual(connected_networks[net.name]['IPAMConfig']['IPv4Address'], requested_ip)
+
     def _test_running(self, container_name, *nets):
         '''
         DRY function for testing static IPs
