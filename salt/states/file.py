@@ -4499,7 +4499,7 @@ def replace(name,
 
     pattern
         A regular expression, to be matched using Python's
-        :py:func:`~re.search`.
+        :py:func:`re.search`.
 
         .. note::
 
