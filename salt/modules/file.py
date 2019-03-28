@@ -1729,11 +1729,11 @@ def _mkstemp_copy(path,
 
     return temp_file
 
+
 def _starts_till(src, probe):
     '''
     Returns True if the line matches the probe
     '''
-    
     no_match = -1
     equal = 0
 
@@ -1744,6 +1744,7 @@ def _starts_till(src, probe):
         return equal
     
     return no_match
+
 
 def _regex_to_static(src, regex):
     '''
