@@ -213,7 +213,7 @@ execution modules
     keystoneng
     keystore
     kmod
-    kubernetes
+    kubernetesmod
     launchctl_service
     layman
     ldap3
@@ -511,6 +511,7 @@ execution modules
     xapi_virt
     xbpspkg
     xfs
+    xml
     xmpp
     yumpkg
     zabbix
