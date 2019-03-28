@@ -1173,6 +1173,7 @@ def _windows_platform_data():
         except IndexError:
             log.debug('Motherboard info not available on this system')
 
+        os_release = platform.release()
         kernel_version = platform.version()
         info = salt.utils.win_osinfo.get_os_version_info()
 
@@ -1195,8 +1196,6 @@ def _windows_platform_data():
                 if re.match(r'^R\d+$', item):
                     release = item
             os_release = '{0}Server{1}'.format(version, release)
-        elif 'Windows Embedded Standard' in osinfo.Caption:
-            os_release = platform.release()
         else:
             for item in osinfo.Caption.split(' '):
                 # If it's a number, decimal number, Thin or Vista, then it's the
