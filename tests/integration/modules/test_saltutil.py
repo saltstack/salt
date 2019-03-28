@@ -110,6 +110,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'serializers': [],
                            'executors': []}
         ret = self.run_function('saltutil.sync_all')
+        print(ret)
         self.assertEqual(ret, expected_return)
 
     def test_sync_all_whitelist(self):

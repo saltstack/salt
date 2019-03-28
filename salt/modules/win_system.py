@@ -3,7 +3,6 @@
 Module for managing windows systems.
 
 :depends:
-    - pythoncom
     - pywintypes
     - win32api
     - win32con
@@ -31,7 +30,6 @@ from salt.exceptions import CommandExecutionError
 # Import 3rd-party Libs
 from salt.ext import six
 try:
-    import pythoncom
     import wmi
     import win32net
     import win32api
@@ -836,8 +834,8 @@ def _join_domain(domain,
     if not account_exists:
         join_options |= NETSETUP_ACCOUNT_CREATE
 
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
     comp = conn.Win32_ComputerSystem()[0]
 
     # Return the results of the command as an error
@@ -928,8 +926,8 @@ def unjoin_domain(username=None,
     if disable:
         unjoin_options |= NETSETUP_ACCT_DELETE
 
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
     comp = conn.Win32_ComputerSystem()[0]
     err = comp.UnjoinDomainOrWorkgroup(Password=password,
                                        UserName=username,

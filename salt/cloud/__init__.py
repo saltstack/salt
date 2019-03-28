@@ -2101,6 +2101,7 @@ class Map(Cloud):
 
                 # Generate the master keys
                 log.debug('Generating master keys for \'%s\'', master_profile['name'])
+
                 priv, pub = salt.utils.cloud.gen_keys(
                     salt.config.get_cloud_config_value(
                         'keysize',
