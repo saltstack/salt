@@ -1728,11 +1728,11 @@ def _mkstemp_copy(path,
     return temp_file
 
 
-def _starts_till(src, probe):
+def _line_match(src, probe):
     '''
     Returns True if the line matches the probe
     '''
-    no_match = -1
+    no_match = 1
     equal = 0
 
     if not src or not probe:
@@ -1810,7 +1810,7 @@ def _set_line_eol(src, line):
 
 
 def _insert_line_before(idx, body, content, indent):
-    if not idx or (idx and _starts_till(body[idx - 1], content) < 0):
+    if not idx or (idx and _line_match(body[idx - 1], content) != 0):
         cnd = _set_line_indent(body[idx], content, indent)
         body.insert(idx, cnd)
     return body
@@ -1819,7 +1819,7 @@ def _insert_line_before(idx, body, content, indent):
 def _insert_line_after(idx, body, content, indent):
     # No duplicates or append, if "after" is the last line
     next_line = idx + 1 < len(body) and body[idx + 1] or None
-    if next_line is None or _starts_till(next_line, content) < 0:
+    if next_line is None or _line_match(next_line, content) != 0:
         cnd = _set_line_indent(body[idx], content, indent)
         body.insert(idx + 1, cnd)
     return body
