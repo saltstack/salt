@@ -68,9 +68,12 @@ def cert(name,
     :param certname: Name of the certificate to save
     '''
 
+    if certname is None:
+        certname = name
+    
     if __opts__['test']:
         ret = {
-            'name': name,
+            'name': certname,
             'changes': {},
             'result': None
         }
@@ -80,10 +83,10 @@ def cert(name,
         except Exception:
             pass
 
-        comment = 'Certificate {0} '.format(name)
-        if not __salt__['acme.has'](name):
+        comment = 'Certificate {0} '.format(certname)
+        if not __salt__['acme.has'](certname):
             comment += 'would have been obtained'
-        elif __salt__['acme.needs_renewal'](name, window):
+        elif __salt__['acme.needs_renewal'](certname, window):
             comment += 'would have been renewed'
         else:
             comment += 'would not have been touched'
@@ -91,10 +94,10 @@ def cert(name,
         ret['comment'] = comment
         return ret
 
-    if not __salt__['acme.has'](name):
+    if not __salt__['acme.has'](certname):
         old = None
     else:
-        old = __salt__['acme.info'](name)
+        old = __salt__['acme.info'](certname)
 
     res = __salt__['acme.cert'](
         name,
@@ -112,7 +115,7 @@ def cert(name,
     )
 
     ret = {
-        'name': name,
+        'name': certname,
         'result': res['result'] is not False,
         'comment': res['comment']
     }
@@ -120,10 +123,10 @@ def cert(name,
     if res['result'] is None:
         ret['changes'] = {}
     else:
-        if not __salt__['acme.has'](name):
+        if not __salt__['acme.has'](certname):
             new = None
         else:
-            new = __salt__['acme.info'](name)
+            new = __salt__['acme.info'](certname)
 
         ret['changes'] = {
             'old': old,
