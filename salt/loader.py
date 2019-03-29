@@ -1615,7 +1615,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         except SystemExit as error:
             try:
                 fn_, _, caller, _ = traceback.extract_tb(sys.exc_info()[2])[-1]
-            except Exception:
+            except IndexError:
                 pass
             else:
                 tgt_fn = os.path.join('salt', 'utils', 'process.py')
