@@ -55,7 +55,7 @@ from salt.template import compile_template
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
-from salt.ext.six moves import queue
+from salt.ext.six.moves import queue
 try:
     import saltwinshell
     HAS_WINSHELL = True

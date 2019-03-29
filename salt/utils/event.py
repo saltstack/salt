@@ -829,7 +829,6 @@ class SaltEvent(object):
         except Exception as exc:
             log.error("Event iteration failed with exception: %s", exc)
 
-
     def fire_ret_load(self, load):
         '''
         Fire events based on information in the return load
