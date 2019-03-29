@@ -361,6 +361,8 @@ class SaltEvent(object):
                         lambda: self.subscriber.connect(timeout=timeout),
                     )
                     self.cpub = True
+                except tornado.iostream.StreamClosedError:
+                    log.error("Encountered StreamClosedException")
                 except Exception as exc:
                     log.info(
                         'An exception occurred connecting publisher: %s',
