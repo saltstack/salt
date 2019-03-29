@@ -78,8 +78,8 @@ def find_file(path, saltenv='base', **kwargs):
         '''
         try:
             fnd['stat'] = list(os.stat(fnd['path']))
-        except Exception:
-            pass
+        except Exception as exc:
+            log.error("Unable to state file (%s)", exc)
         return fnd
 
     if 'index' in kwargs:
