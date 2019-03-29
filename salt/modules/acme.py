@@ -128,12 +128,14 @@ def cert(name,
     '''
 
     cmd = [LEA, 'certonly', '--non-interactive']
+    if certname is None:
+        certname = name
 
-    cert_file = _cert_file(name, 'cert')
+    cert_file = _cert_file(certname, 'cert')
     if not __salt__['file.file_exists'](cert_file):
         log.debug('Certificate %s does not exist (yet)', cert_file)
         renew = False
-    elif needs_renewal(name, renew):
+    elif needs_renewal(certname, renew):
         log.debug('Certificate %s will be renewed', cert_file)
         cmd.append('--renew-by-default')
         renew = True
@@ -173,19 +175,19 @@ def cert(name,
             cmd.append('--expand')
             res = __salt__['cmd.run_all'](' '.join(cmd))
             if res['retcode'] != 0:
-                return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
+                return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(certname, res['stderr'])}
         else:
-            return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
+            return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(certname, res['stderr'])}
 
     if 'no action taken' in res['stdout']:
         comment = 'Certificate {0} unchanged'.format(cert_file)
     elif renew:
-        comment = 'Certificate {0} renewed'.format(name)
+        comment = 'Certificate {0} renewed'.format(certname)
     else:
-        comment = 'Certificate {0} obtained'.format(name)
+        comment = 'Certificate {0} obtained'.format(certname)
 
-    ret = {'comment': comment, 'not_after': expires(name), 'changes': {}, 'result': True}
-    ret, _ = __salt__['file.check_perms'](_cert_file(name, 'privkey'),
+    ret = {'comment': comment, 'not_after': expires(certname), 'changes': {}, 'result': True}
+    ret, _ = __salt__['file.check_perms'](_cert_file(certname, 'privkey'),
                                           ret,
                                           owner, group, mode,
                                           follow_symlinks=True)
