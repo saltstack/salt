@@ -360,11 +360,8 @@ def _file_lists(load, form):
                 try:
                     if not os.listdir(abs_path):
                         ret['empty_dirs'].add(rel_path)
-                except Exception:
-                    # Generic exception because running os.listdir() on a
-                    # non-directory path raises an OSError on *NIX and a
-                    # WindowsError on Windows.
-                    pass
+                except OSError:
+                    log.debug("Unable to list dir: %s", abs_path)
                 if is_link:
                     link_dest = salt.utils.path.readlink(abs_path)
                     log.trace(
