@@ -2134,9 +2134,10 @@ class State(object):
                 if isinstance(arg, dict):
                     # Search dictionary values for __slot__:
                     for key, value in arg.items():
-                        if value.startswith(SLOT_TEXT):
-                            log.debug("Slot processsing dict value %s", value)
-                            cdata[atype][ind][key] = self.__eval_slot(value)
+                        if isinstance(value, six.text_type):
+                            if value.startswith(SLOT_TEXT):
+                                log.debug("Slot processsing dict value %s", value)
+                                cdata[atype][ind][key] = self.__eval_slot(value)
                 elif isinstance(arg, list):
                     for idx, listvalue in enumerate(arg):
                         log.debug("Slot processing list value: %s", listvalue)
