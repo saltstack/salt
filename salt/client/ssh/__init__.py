@@ -21,11 +21,6 @@ import tempfile
 import binascii
 import sys
 import datetime
-try:
-    import queue
-except ImportError:
-    import Queue as queue
-
 
 # Import salt libs
 import salt.output
