@@ -1412,5 +1412,8 @@ class StateFire(object):
             try:
                 channel.send(load)
             except Exception as exc:
-                log.info('An exception occurred on fire_master: %s', exc, exc_info_on_loglevel=logging.DEBUG)
+                log.info(
+                    'An exception occurred on fire_master: %s',
+                    exc, exc_info_on_loglevel=logging.DEBUG
+                )
         return True
