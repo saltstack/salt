@@ -53,7 +53,7 @@ def installed(location, name):
             ret['result'] = None
             return ret
 
-        __salt__['flatpak.install'](name, location)
+        install_ret = __salt__['flatpak.install'](name, location)
         if __salt__['flatpak.is_installed'](name):
             ret['comment'] = 'Package "{0}" was installed'.format(name)
             ret['changes']['new'] = name
@@ -62,7 +62,7 @@ def installed(location, name):
             return ret
 
         ret['comment'] = 'Package "{0}" failed to install'.format(name)
-        ret['comment'] += '\noutput:\n' + install['output']
+        ret['comment'] += '\noutput:\n' + install_ret['output']
         ret['result'] = False
         return ret
 
@@ -152,7 +152,7 @@ def add_remote(name, location):
             ret['result'] = None
             return ret
 
-        __salt__['flatpak.add_remote'](name)
+        install_ret = __salt__['flatpak.add_remote'](name)
         if __salt__['flatpak.is_remote_added'](name):
             ret['comment'] = 'Remote "{0}" was added'.format(name)
             ret['changes']['new'] = name
@@ -161,7 +161,7 @@ def add_remote(name, location):
             return ret
 
         ret['comment'] = 'Failed to add remote "{0}"'.format(name)
-        ret['comment'] += '\noutput:\n' + install['output']
+        ret['comment'] += '\noutput:\n' + install_ret['output']
         ret['result'] = False
         return ret
 

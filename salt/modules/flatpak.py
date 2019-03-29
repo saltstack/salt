@@ -8,7 +8,6 @@ Manage flatpak packages via Salt
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals
-import subprocess
 import re
 
 import salt.utils.path
