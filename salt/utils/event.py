@@ -358,10 +358,14 @@ class SaltEvent(object):
                     )
                 try:
                     self.io_loop.run_sync(
-                        lambda: self.subscriber.connect(timeout=timeout))
+                        lambda: self.subscriber.connect(timeout=timeout),
+                    )
                     self.cpub = True
-                except Exception:
-                    pass
+                except Exception as exc:
+                    log.info(
+                        'An exception occurred connecting publisher: %s',
+                        exc, exc_info_on_loglevel=logging.DEBUG
+                    )
         else:
             if self.subscriber is None:
                 self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
@@ -401,12 +405,10 @@ class SaltEvent(object):
                         self.pulluri,
                         io_loop=self.io_loop
                     )
-                try:
                     self.io_loop.run_sync(
-                        lambda: self.pusher.connect(timeout=timeout))
+                        lambda: self.pusher.connect(timeout=timeout)
+                    )
                     self.cpush = True
-                except Exception:
-                    pass
         else:
             if self.pusher is None:
                 self.pusher = salt.transport.ipc.IPCMessageClient(
@@ -744,7 +746,7 @@ class SaltEvent(object):
                 try:
                     self.io_loop.run_sync(lambda: self.pusher.send(msg))
                 except Exception as ex:
-                    log.debug(ex)
+                    log.debug("Publisher send failed with exception: %s", ex)
                     raise
         else:
             self.io_loop.spawn_callback(self.pusher.send, msg)
@@ -824,8 +826,9 @@ class SaltEvent(object):
                                 'error',
                                 fun],
                                'job'))
-        except Exception:
-            pass
+        except Exception as exc:
+            log.error("Event iteration failed with exception: %s", exc)
+
 
     def fire_ret_load(self, load):
         '''
@@ -870,6 +873,10 @@ class SaltEvent(object):
 
     # pylint: disable=W1701
     def __del__(self):
+        # TODO: Wean off __del__ This method is ignoring exceptions due to the
+        # fact that __del__ is non deterministic. We shoold call destroy
+        # explicitly where needed.
+
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
         # shutdown-- where globals start going missing
         try:
