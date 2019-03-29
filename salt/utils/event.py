@@ -53,6 +53,7 @@ Namespaced tag
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
+import errno
 import os
 import time
 import fnmatch
@@ -363,6 +364,10 @@ class SaltEvent(object):
                     self.cpub = True
                 except tornado.iostream.StreamClosedError:
                     log.error("Encountered StreamClosedException")
+                except IOError as exc:
+                    if exc.errno != errno.ENOENT:
+                        raise
+                    log.error("Error opening stream, file does not exist")
                 except Exception as exc:
                     log.info(
                         'An exception occurred connecting publisher: %s',
