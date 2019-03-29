@@ -120,7 +120,7 @@ def cert(name,
         'comment': res['comment']
     }
 
-    if res['result'] is None:
+    if res['result'] is None or res['comment'].endswith('unchanged'):
         ret['changes'] = {}
     else:
         if not __salt__['acme.has'](certname):
