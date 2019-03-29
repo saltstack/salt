@@ -90,6 +90,8 @@ import salt.defaults.exitcodes
 import salt.transport.ipc
 import salt.transport.client
 
+from salt.utils.asynchronous import get_ioloop
+
 log = logging.getLogger(__name__)
 
 # The SUB_EVENT set is for functions that require events fired based on
@@ -379,16 +381,34 @@ class SaltEvent(object):
         if self._run_io_loop_sync:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.subscriber is None:
+                    #self.subscriber = salt.utils.asynchronous.SyncWrapper(
+                    #    salt.transport.ipc.IPCMessageSubscriber,
+                    #    args=(self.puburi,),
+                    #    async_methods=['connect', 'read']
+                    #)
+                    #self.subscriber.connect(timeout=timeout)
                     self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
-                    self.puburi,
-                    io_loop=self.io_loop
-                )
+                        self.puburi,
+                        io_loop=self.io_loop
+                    )
+                #try:
                 try:
+                    #log.error("*** RUN_SYNC SUB CONNECT")
                     self.io_loop.run_sync(
                         lambda: self.subscriber.connect(timeout=timeout))
                     self.cpub = True
-                except Exception:
-                    pass
+                except tornado.iostream.StreamClosedError:
+                    log.error("Encountered StreamClosedException")
+                    #salt.utils.asynchronous.run_sync_threaded(
+                    #    self.subscriber.connect,
+                    #    kwargs={'timeout': timeout},
+                    #)
+                    #salt.utils.asynchronous.run_sync(
+                    #    self.io_loop,
+                    #    lambda: self.subscriber.connect(timeout=timeout))
+                    #log.error("*** RUN_SYNC SUB CONNECT - END")
+                #except Exception:
+                #    pass
         else:
             if self.subscriber is None:
                 self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
@@ -428,12 +448,17 @@ class SaltEvent(object):
                         self.pulluri,
                         io_loop=self.io_loop
                     )
-                try:
-                    self.io_loop.run_sync(
-                        lambda: self.pusher.connect(timeout=timeout))
-                    self.cpush = True
-                except Exception:
-                    pass
+                    try:
+                        #self.io_loop.run_sync(
+                        #    lambda: self.pusher.connect(timeout=timeout))
+                        salt.utils.asynchronous.run_sync_threaded(
+                            self.pusher.connect,
+                            kwargs={'timeout': timeout},
+                        )
+                        self.cpush = True
+                    except Exception as exc:
+                    #    log.exception("WTF SON %s", exc)
+                        pass
         else:
             if self.pusher is None:
                 self.pusher = salt.transport.ipc.IPCMessageClient(
@@ -758,7 +783,11 @@ class SaltEvent(object):
         if self._run_io_loop_sync:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 try:
-                    self.io_loop.run_sync(lambda: self.pusher.send(msg))
+                    #self.io_loop.run_sync(lambda: self.pusher.send(msg))
+                    salt.utils.asynchronous.run_sync_threaded(
+                        self.pusher.send,
+                        args=(msg,),
+                    )
                 except Exception as ex:
                     log.debug(ex)
                     raise

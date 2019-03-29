@@ -1798,7 +1798,6 @@ class LocalClient(object):
         if not payload:
             return payload
 
-        # We have the payload, let's get rid of the channel fast(GC'ed faster)
         channel.close()
 
         return {'jid': payload['load']['jid'],
