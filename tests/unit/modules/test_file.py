@@ -1160,19 +1160,19 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             self.assertIn('"location" or "before/after"',
                           six.text_type(cmd_err))
 
-    def test_util_starts_till(self):
+    def test_util_line_match(self):
         '''
-        Test for file._starts_till function.
+        Test for file._line_match function.
 
         :return:
         '''
         src = 'here is something'
         self.assertEqual(
-            filemod._starts_till(src=src, probe='here quite something else'), 1)
+            filemod._line_match(src=src, probe='here quite something else'), 1)
         self.assertEqual(
-            filemod._starts_till(src=src, probe='here is something'), 0)
+            filemod._line_match(src=src, probe='here is something'), 0)
         self.assertEqual(
-            filemod._starts_till(src=src, probe='and here is something'), -1)
+            filemod._line_match(src=src, probe='and here is something'), 1)
 
     @with_tempfile()
     def test_line_insert_after_no_pattern(self, name):
