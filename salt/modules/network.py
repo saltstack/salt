@@ -823,6 +823,7 @@ def active_tcp():
         return {}
 
 
+@salt.utils.decorators.path.which('traceroute')
 def traceroute(host):
     '''
     Performs a traceroute to a 3rd party host
@@ -840,12 +841,7 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    if not salt.utils.path.which('traceroute'):
-        log.info('This minion does not have traceroute installed')
-        return ret
-
     cmd = 'traceroute {0}'.format(salt.utils.network.sanitize_host(host))
-
     out = __salt__['cmd.run'](cmd)
 
     # Parse version of traceroute
