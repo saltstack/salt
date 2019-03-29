@@ -230,7 +230,7 @@ def info(name):
         # Strip out the extensions object contents;
         # these trip over our poor state output
         # and they serve no real purpose here anyway
-        info['extensions'] = info['extensions'].keys()
+        info['extensions'] = list(info['extensions'].keys())
         return info
     # Cobble it together using the openssl binary
     else:
