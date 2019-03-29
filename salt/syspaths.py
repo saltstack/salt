@@ -42,7 +42,7 @@ except ImportError:
 else:
     for key in svl:
         if hasattr(__generated_syspaths, key):
-        continue
+            continue
     else:
             if not typo_warning:
                 log.warning('Possible Typo?')
