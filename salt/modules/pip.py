@@ -1289,23 +1289,24 @@ def list_json(bin_env=None,
     '''
     cmd = _get_pip_bin(bin_env)
     cmd.append('list')
+
+    if user_install:
+        cmd.append('--user')
+
     cmd.extend(['--format', 'json'])
 
     # Include pip, setuptools, distribute, wheel
-    min_version = '8.0.3'
+    min_version = '10'
     cur_version = version(bin_env)
     if salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version):
         logger.warning(
             'The version of pip installed is %s, which is older than %s. '
-            'The packages pip, wheel, setuptools, and distribute will not be '
-            'included in the output of pip.freeze', cur_version, min_version
+            'The location of the packages will not be displayed in the verbose output'
+            'as this feature was added to pip 10 milestone', cur_version, min_version
         )
-
-    if verbose:
-        cmd.append('--verbose')
-
-    if user_install:
-        cmd.append('--user')
+    else:
+        if verbose:
+            cmd.append('--verbose')
 
     cmd_kwargs = dict(runas=user, cwd=cwd, python_shell=False)
     if kwargs:
