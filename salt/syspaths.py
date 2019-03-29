@@ -23,7 +23,7 @@ import logging
 __PLATFORM = sys.platform.lower()
 typo_warning = False
 log = logging.getLogger(__name__)
-svl = ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR', # salt variable list
+svl = ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',  # salt variable list
     'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'HOME_DIR',
     'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
     'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
@@ -43,13 +43,13 @@ else:
     for key in svl:
         if hasattr(__generated_syspaths, key):
             continue
-    else:
+        else:
             if not typo_warning:
                 log.warning('Possible Typo?')
                 log.warning('To dissolve this warning add `[variable] = None` to _syspaths.py')
             typo_warning = True
             log.warning('Variable "' + key + '" is missing, value set to None')
-            setattr(__generated_syspaths, key, None) # missing variables defaulted to None
+            setattr(__generated_syspaths, key, None)  # missing variables defaulted to None
 
 # Let's find out the path of this module
 if 'SETUP_DIRNAME' in globals():
