@@ -873,7 +873,7 @@ class SaltEvent(object):
     # pylint: disable=W1701
     def __del__(self):
         # TODO: Wean off __del__ This method is ignoring exceptions due to the
-        # fact that __del__ is non deterministic. We shoold call destroy
+        # fact that __del__ is non deterministic. We should call destroy
         # explicitly where needed.
 
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
