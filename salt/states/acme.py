@@ -70,7 +70,7 @@ def cert(name,
 
     if certname is None:
         certname = name
-    
+
     if __opts__['test']:
         ret = {
             'name': certname,
