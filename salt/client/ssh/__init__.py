@@ -21,11 +21,6 @@ import tempfile
 import binascii
 import sys
 import datetime
-try:
-    import queue
-except ImportError:
-    import Queue as queue
-
 
 # Import salt libs
 import salt.output
@@ -60,6 +55,7 @@ from salt.template import compile_template
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six moves import queue
 try:
     import saltwinshell
     HAS_WINSHELL = True
