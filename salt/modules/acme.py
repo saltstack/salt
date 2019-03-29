@@ -185,14 +185,16 @@ def cert(
     """
 
     cmd = [LEA, "certonly", "--non-interactive", "--agree-tos"]
+    if certname is None:
+        certname = name
 
     supported_dns_plugins = ["cloudflare"]
 
-    cert_file = _cert_file(name, "cert")
+    cert_file = _cert_file(certname, "cert")
     if not __salt__["file.file_exists"](cert_file):
         log.debug("Certificate %s does not exist (yet)", cert_file)
         renew = False
-    elif needs_renewal(name, renew):
+    elif needs_renewal(certname, renew):
         log.debug("Certificate %s will be renewed", cert_file)
         cmd.append("--renew-by-default")
         renew = True
@@ -278,20 +280,20 @@ def cert(
         comment = "Certificate {0} unchanged".format(cert_file)
         result = None
     elif renew:
-        comment = "Certificate {0} renewed".format(name)
+        comment = "Certificate {0} renewed".format(certname)
         result = True
     else:
-        comment = "Certificate {0} obtained".format(name)
+        comment = "Certificate {0} obtained".format(certname)
         result = True
 
     ret = {
         "comment": comment,
-        "not_after": expires(name),
+        "not_after": expires(certname),
         "changes": {},
         "result": result,
     }
     ret, _ = __salt__["file.check_perms"](
-        _cert_file(name, "privkey"), ret, owner, group, mode, follow_symlinks=True
+        _cert_file(certname, "privkey"), ret, owner, group, mode, follow_symlinks=True
     )
 
     return ret
