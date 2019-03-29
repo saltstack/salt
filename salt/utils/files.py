@@ -61,8 +61,8 @@ def __clean_tmp(tmp):
     '''
     try:
         rm_rf(tmp)
-    except Exception:
-        pass
+    except Exception as exc:
+        log.error("Exception while removing tem directory (%s)", exc)
 
 
 def guess_archive_type(name):
