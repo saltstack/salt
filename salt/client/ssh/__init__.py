@@ -21,6 +21,11 @@ import tempfile
 import binascii
 import sys
 import datetime
+try:
+    import queue
+except ImportError:
+    import Queue as queue
+
 
 # Import salt libs
 import salt.output
@@ -598,11 +603,7 @@ class SSH(object):
                 if 'id' in ret:
                     returned.add(ret['id'])
                     yield {ret['id']: ret['ret']}
-            except Exception:
-                # This bare exception is here to catch spurious exceptions
-                # thrown by que.get during healthy operation. Please do not
-                # worry about this bare exception, it is entirely here to
-                # control program flow.
+            except queue.Empty:
                 pass
             for host in running:
                 if not running[host]['thread'].is_alive():
@@ -615,7 +616,7 @@ class SSH(object):
                                 if 'id' in ret:
                                     returned.add(ret['id'])
                                     yield {ret['id']: ret['ret']}
-                        except Exception:
+                        except queue.Empty:
                             pass
 
                         if host not in returned:
