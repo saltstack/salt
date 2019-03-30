@@ -101,19 +101,22 @@ class DocTestCase(TestCase):
     def test_module_doc_files(self):
         '''
         Ensure modules have associated documentation
+
+        doc example: doc/ref/modules/all/salt.modules.zabbix.rst
+        execution module example: salt/modules/zabbix.py
         '''
-        # 'doc/ref/modules/all/salt.modules.zabbix.rst'
-        # 'salt/modules/zabbix.py'
+
         salt_dir = RUNTIME_VARS.CODE_DIR
 
         # Build list of module files
         module_files = []
-        skip_module_files = []
+        skip_module_files = ['__init__']
         module_dir = os.path.join(salt_dir, 'salt', 'modules')
         for file in os.listdir(module_dir):
             if file.endswith(".py"):
                 module_name = os.path.splitext(file)[0]
-                module_files.append(module_name)
+                if not module_name in skip_module_files:
+                    module_files.append(module_name)
 
         # Build list of module documentation files
         module_docs = []
