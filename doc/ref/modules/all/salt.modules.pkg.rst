@@ -12,6 +12,7 @@ salt.modules.pkg
 ====================================== ========================================
 Execution Module                       Used for
 ====================================== ========================================
+:py:mod:`~salt.modules.aixpkg`         AIX OS using ``installp`` and ``rpm``
 :py:mod:`~salt.modules.aptpkg`         Debian/Ubuntu-based distros which use
                                        ``apt-get(8)`` for package management
 :py:mod:`~salt.modules.brew`           Mac OS software management using
@@ -38,4 +39,3 @@ Execution Module                       Used for
 
 .. _Homebrew: http://brew.sh/
 .. _OpenCSW: http://www.opencsw.org/
-
