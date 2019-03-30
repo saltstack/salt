@@ -97,3 +97,41 @@ class DocTestCase(TestCase):
 
         # test_ret should be empty, otherwise there are :doc: references present
         self.assertEqual(test_ret, {})
+
+    def test_module_doc_files(self):
+        '''
+        Ensure modules have associated documentation
+        '''
+        # 'doc/ref/modules/all/salt.modules.zabbix.rst'
+        # 'salt/modules/zabbix.py'
+        salt_dir = RUNTIME_VARS.CODE_DIR
+
+        # Build list of module files
+        module_files = []
+        skip_module_files = []
+        module_dir = os.path.join(salt_dir, 'salt', 'modules')
+        for file in os.listdir(module_dir):
+            if file.endswith(".py"):
+                module_name = os.path.splitext(file)[0]
+                module_files.append(module_name)
+
+        # Build list of module documentation files
+        module_docs = []
+        skip_doc_files = ['index', 'group', 'inspectlib', 'inspectlib.collector', 'inspectlib.dbhandle',
+                       'inspectlib.entities', 'inspectlib.exceptions', 'inspectlib.fsdb',
+                       'inspectlib.kiwiproc', 'inspectlib.query', 'kernelpkg', 'pkg', 'user']
+        module_doc_dir = os.path.join(salt_dir, 'doc', 'ref', 'modules', 'all')
+        for file in os.listdir(module_doc_dir):
+            if file.endswith(".rst"):
+                doc_name = os.path.splitext(file)[0]
+                if doc_name.startswith('salt.modules.'):
+                        doc_name = doc_name[13:]
+                if not doc_name in skip_doc_files:
+                    module_docs.append(doc_name)
+
+        # Check that every module has associated documentaiton file
+        for module in module_files:
+            self.assertIn(module, module_docs)
+
+        for doc_file in module_docs:
+            self.assertIn(doc_file, module_files)
