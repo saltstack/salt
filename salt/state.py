@@ -2134,19 +2134,26 @@ class State(object):
                 if isinstance(arg, dict):
                     # Search dictionary values for __slot__:
                     for key, value in arg.items():
-                        if isinstance(value, six.text_type):
+                        try:
                             if value.startswith(SLOT_TEXT):
                                 log.debug("Slot processsing dict value %s", value)
                                 cdata[atype][ind][key] = self.__eval_slot(value)
+                        except AttributeError:
+                            # Not a string/slot
+                            continue
                 elif isinstance(arg, list):
                     for idx, listvalue in enumerate(arg):
                         log.debug("Slot processing list value: %s", listvalue)
                         if isinstance(listvalue, dict):
                             # Search dict values in list for __slot__:
                             for key, value in listvalue.items():
-                                if value.startswith(SLOT_TEXT):
-                                    log.debug("Slot processsing nested dict value %s", value)
-                                    cdata[atype][ind][idx][key] = self.__eval_slot(value)
+                                try:
+                                    if value.startswith(SLOT_TEXT):
+                                        log.debug("Slot processsing nested dict value %s", value)
+                                        cdata[atype][ind][idx][key] = self.__eval_slot(value)
+                                except AttributeError:
+                                    # Not a string/slot
+                                    continue
                         if isinstance(listvalue, six.text_type):
                             # Search strings in a list for __slot__:
                             if listvalue.startswith(SLOT_TEXT):
