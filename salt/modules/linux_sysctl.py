@@ -60,8 +60,8 @@ def show(config_file=False):
     '''
     Return a list of sysctl parameters for this minion
 
-    config: Pull the data from the system configuration file
-        instead of the live data.
+    :param config_file: Pull data from the system configuration file
+                        instead of the live kernel.
 
     CLI Example:
 
@@ -106,6 +106,9 @@ def get(name, ignore=False):
     '''
     Return a single sysctl parameter for this minion
 
+    :param name: Name of sysctl setting
+    :param ignore: Optional boolean to pass --ignore to sysctl (Default: False)
+
     CLI Example:
 
     .. code-block:: bash
@@ -122,6 +125,10 @@ def get(name, ignore=False):
 def assign(name, value, ignore=False):
     '''
     Assign a single sysctl parameter for this minion
+
+    :param name: Name of sysctl setting
+    :param value: Desired value of sysctl setting
+    :param ignore: Optional boolean to pass --ignore to sysctl (Default: False)
 
     CLI Example:
 
@@ -176,6 +183,11 @@ def persist(name, value, config=None, ignore=False):
     Assign and persist a simple sysctl parameter for this minion. If ``config``
     is not specified, a sensible default will be chosen using
     :mod:`sysctl.default_config <salt.modules.linux_sysctl.default_config>`.
+
+    :param name: Name of sysctl setting
+    :param value: Desired value of sysctl setting
+    :param config: Optional path to sysctl.conf
+    :param ignore: Optional boolean to pass --ignore to sysctl (Default: False)
 
     CLI Example:
 

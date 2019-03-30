@@ -45,6 +45,13 @@ def present(name, value, config=None, ignore=False):
     config
         The location of the sysctl configuration file. If not specified, the
         proper location will be detected based on platform.
+
+    ignore
+        ..versionadded:: neon
+
+        Adds --ignore to sysctl commands. This suppresses errors in environments
+        where sysctl settings may have been disabled in kernel boot configuration.
+        Defaults to False
     '''
     ret = {'name': name,
            'result': True,
