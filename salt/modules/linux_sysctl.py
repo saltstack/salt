@@ -102,7 +102,7 @@ def show(config_file=False):
     return ret
 
 
-def get(name):
+def get(name, ignore=False):
     '''
     Return a single sysctl parameter for this minion
 
@@ -113,11 +113,13 @@ def get(name):
         salt '*' sysctl.get net.ipv4.ip_forward
     '''
     cmd = 'sysctl -n {0}'.format(name)
+    if ignore:
+        cmd += ' --ignore'
     out = __salt__['cmd.run'](cmd, python_shell=False)
     return out
 
 
-def assign(name, value):
+def assign(name, value, ignore=False):
     '''
     Assign a single sysctl parameter for this minion
 
@@ -139,11 +141,13 @@ def assign(name, value):
         tran_tab = name.translate(trans_args)
 
     sysctl_file = '/proc/sys/{0}'.format(tran_tab)
-    if not os.path.exists(sysctl_file):
+    if not ignore and not os.path.exists(sysctl_file):
         raise CommandExecutionError('sysctl {0} does not exist'.format(name))
 
     ret = {}
     cmd = 'sysctl -w {0}="{1}"'.format(name, value)
+    if ignore:
+        cmd += ' --ignore'
     data = __salt__['cmd.run_all'](cmd, python_shell=False)
     out = data['stdout']
     err = data['stderr']
@@ -156,6 +160,9 @@ def assign(name, value):
     if not regex.match(out) or 'Invalid argument' in six.text_type(err):
         if data['retcode'] != 0 and err:
             error = err
+        elif ignore:
+            ret[name] = 'ignored'
+            return ret
         else:
             error = out
         raise CommandExecutionError('sysctl -w failed: {0}'.format(error))
@@ -164,7 +171,7 @@ def assign(name, value):
     return ret
 
 
-def persist(name, value, config=None):
+def persist(name, value, config=None, ignore=False):
     '''
     Assign and persist a simple sysctl parameter for this minion. If ``config``
     is not specified, a sensible default will be chosen using
@@ -232,8 +239,11 @@ def persist(name, value, config=None):
             # This is the line to edit
             if six.text_type(comps[1]) == six.text_type(value):
                 # It is correct in the config, check if it is correct in /proc
-                if six.text_type(get(name)) != six.text_type(value):
-                    assign(name, value)
+                current_setting = get(name, ignore)
+                if not current_setting:
+                    return 'Ignored'
+                if six.text_type(current_setting) != six.text_type(value):
+                    assign(name, value, ignore)
                     return 'Updated'
                 else:
                     return 'Already set'
@@ -252,5 +262,5 @@ def persist(name, value, config=None):
         msg = 'Could not write to file: {0}'
         raise CommandExecutionError(msg.format(config))
 
-    assign(name, value)
+    assign(name, value, ignore)
     return 'Updated'
