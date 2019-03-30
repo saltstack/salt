@@ -9,6 +9,7 @@ repos:
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
         exclude: ^requirements/static/(osx|windows)\.in$
         args:
+          - -v
           - --py-version=2.7
           - --platform=linux
           - --out-prefix=zeromq
@@ -20,6 +21,7 @@ repos:
         name: OSX Py2.7 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
         args:
+          - -v
           - --py-version=2.7
           - --platform=darwin
           - --out-prefix=zeromq
@@ -31,6 +33,7 @@ repos:
         name: Windows Py2.7 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
         args:
+          - -v
           - --py-version=2.7
           - --platform=windows
           - --out-prefix=zeromq
@@ -43,6 +46,7 @@ repos:
         files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
         exclude: ^requirements/static/(osx|windows)\.in$
         args:
+          - -v
           - --py-version=2.7
           - --platform=linux
           - --out-prefix=raet
@@ -54,6 +58,7 @@ repos:
         name: OSX Py2.7 RAET Requirements
         files: ^requirements/((base|raet|pytest)\.txt|static/osx\.in)$
         args:
+          - -v
           - --py-version=2.7
           - --out-prefix=raet
           - --platform=darwin
@@ -65,6 +70,7 @@ repos:
         name: Windows Py2.7 RAET Requirements
         files: ^requirements/((base|raet|pytest)\.txt|static/windows\.in)$
         args:
+          - -v
           - --py-version=2.7
           - --out-prefix=raet
           - --platform=windows
@@ -78,6 +84,7 @@ repos:
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
         exclude: ^requirements/static/(osx|windows)\.in$
         args:
+          - -v
           - --py-version=3.4
           - --platform=linux
           - --out-prefix=zeromq
@@ -89,6 +96,7 @@ repos:
         name: OSX Py3.4 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
         args:
+          - -v
           - --py-version=3.4
           - --platform=darwin
           - --out-prefix=zeromq
@@ -100,6 +108,7 @@ repos:
         name: Windows Py3.4 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
         args:
+          - -v
           - --py-version=3.4
           - --platform=windows
           - --out-prefix=zeromq
@@ -112,6 +121,7 @@ repos:
         files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
         exclude: ^requirements/static/(osx|windows)\.in$
         args:
+          - -v
           - --py-version=3.4
           - --platform=linux
           - --out-prefix=raet
@@ -123,6 +133,7 @@ repos:
         name: OSX Py3.4 RAET Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
         args:
+          - -v
           - --py-version=3.4
           - --platform=darwin
           - --out-prefix=raet
@@ -134,6 +145,7 @@ repos:
         name: Windows Py3.4 RAET Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
         args:
+          - -v
           - --py-version=3.4
           - --platform=windows
           - --out-prefix=raet
@@ -147,6 +159,7 @@ repos:
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
         exclude: ^requirements/static/(osx|windows)\.in$
         args:
+          - -v
           - --py-version=3.5
           - --platform=linux
           - --out-prefix=zeromq
@@ -158,6 +171,7 @@ repos:
         name: OSX Py3.5 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
         args:
+          - -v
           - --py-version=3.5
           - --platform=darwin
           - --out-prefix=zeromq
@@ -169,6 +183,7 @@ repos:
         name: Windows Py3.5 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
         args:
+          - -v
           - --py-version=3.5
           - --platform=windows
           - --out-prefix=zeromq
@@ -181,6 +196,7 @@ repos:
         files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
         exclude: ^requirements/static/(osx|windows)\.in$
         args:
+          - -v
           - --py-version=3.5
           - --platform=linux
           - --out-prefix=raet
@@ -192,6 +208,7 @@ repos:
         name: OSX Py3.5 RAET Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
         args:
+          - -v
           - --py-version=3.5
           - --platform=darwin
           - --out-prefix=raet
@@ -203,6 +220,7 @@ repos:
         name: Windows Py3.5 RAET Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
         args:
+          - -v
           - --py-version=3.5
           - --platform=windows
           - --out-prefix=raet
@@ -216,6 +234,7 @@ repos:
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
         exclude: ^requirements/static/(osx|windows)\.in$
         args:
+          - -v
           - --py-version=3.6
           - --platform=linux
           - --out-prefix=zeromq
@@ -227,6 +246,7 @@ repos:
         name: OSX Py3.6 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
         args:
+          - -v
           - --py-version=3.6
           - --platform=darwin
           - --out-prefix=zeromq
@@ -238,6 +258,7 @@ repos:
         name: Windows Py3.6 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
         args:
+          - -v
           - --py-version=3.6
           - --platform=windows
           - --out-prefix=zeromq
@@ -250,6 +271,7 @@ repos:
         files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
         exclude: ^requirements/static/(osx|windows)\.in$
         args:
+          - -v
           - --py-version=3.6
           - --platform=linux
           - --out-prefix=raet
@@ -261,6 +283,7 @@ repos:
         name: OSX Py3.6 RAET Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
         args:
+          - -v
           - --py-version=3.6
           - --platform=darwin
           - --out-prefix=raet
@@ -272,6 +295,7 @@ repos:
         name: Windows Py3.6 RAET Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
         args:
+          - -v
           - --py-version=3.6
           - --platform=windows
           - --out-prefix=raet
