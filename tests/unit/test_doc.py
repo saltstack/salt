@@ -146,14 +146,14 @@ class DocTestCase(TestCase):
         Ensure states have associated documentation
 
         doc example: doc/ref/states/all/salt.states.zabbix_host.rst
-        state example: salt/states/zabbix_host.py
+        module example: salt/states/zabbix_host.py
         '''
 
-        skip_state_files = ['__init__']
-        state_dir = ['salt', 'states']
+        skip_files = ['__init__']
+        module_dir = ['salt', 'states']
         skip_doc_files = ['index', 'all']
-        state_doc_dir = ['doc', 'ref', 'states', 'all']
-        self._check_doc_files(skip_state_files, state_dir, skip_doc_files, state_doc_dir)
+        doc_dir = ['doc', 'ref', 'states', 'all']
+        self._check_doc_files(skip_files, module_dir, skip_doc_files, doc_dir)
 
     def test_auth_doc_files(self):
         '''
@@ -163,11 +163,11 @@ class DocTestCase(TestCase):
         auth module example: salt/auth/rest.py
         '''
 
-        skip_auth_files = ['__init__']
-        auth_dir = ['salt', 'auth']
+        skip_files = ['__init__']
+        module_dir = ['salt', 'auth']
         skip_doc_files = ['index', 'all']
-        auth_doc_dir = ['doc', 'ref', 'auth', 'all']
-        self._check_doc_files(skip_auth_files, auth_dir, skip_doc_files, auth_doc_dir)
+        doc_dir = ['doc', 'ref', 'auth', 'all']
+        self._check_doc_files(skip_files, module_dir, skip_doc_files, doc_dir)
 
     def test_beacon_doc_files(self):
         '''
@@ -177,11 +177,11 @@ class DocTestCase(TestCase):
         beacon module example: salt/beacons/rest.py
         '''
 
-        skip_beacon_files = ['__init__']
-        beacon_dir = ['salt', 'beacons']
+        skip_files = ['__init__']
+        module_dir = ['salt', 'beacons']
         skip_doc_files = ['index', 'all']
-        beacon_doc_dir = ['doc', 'ref', 'beacons', 'all']
-        self._check_doc_files(skip_beacon_files, beacon_dir, skip_doc_files, beacon_doc_dir)
+        doc_dir = ['doc', 'ref', 'beacons', 'all']
+        self._check_doc_files(skip_files, module_dir, skip_doc_files, doc_dir)
 
     def test_cache_doc_files(self):
         '''
@@ -351,4 +351,18 @@ class DocTestCase(TestCase):
         module_dir = ['salt', 'returners']
         skip_doc_files = ['index', 'all']
         doc_dir = ['doc', 'ref', 'returners', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_runners_doc_files(self):
+        '''
+        Ensure runner modules have associated documentation
+
+        doc example: doc/ref/runners/all/salt.runners.auth.rst
+        module example: salt/runners/auth.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'runners']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'runners', 'all']
         self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
