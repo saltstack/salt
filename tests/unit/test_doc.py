@@ -310,3 +310,31 @@ class DocTestCase(TestCase):
         skip_doc_files = ['index', 'all']
         doc_dir = ['doc', 'ref', 'proxy', 'all']
         self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_queues_doc_files(self):
+        '''
+        Ensure queue modules have associated documentation
+
+        doc example: doc/ref/queues/all/salt.queues.sqlite_queue.rst
+        module example: salt/queues/sqlite_queue.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'queues']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'queues', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_renderers_doc_files(self):
+        '''
+        Ensure render modules have associated documentation
+
+        doc example: doc/ref/renderers/all/salt.renderers.json.rst
+        module example: salt/renderers/json.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'renderers']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'renderers', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
