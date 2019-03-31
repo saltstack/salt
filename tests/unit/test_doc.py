@@ -98,6 +98,49 @@ class DocTestCase(TestCase):
         # test_ret should be empty, otherwise there are :doc: references present
         self.assertEqual(test_ret, {})
 
+    def _check_doc_files(self, module_skip, module_dir, doc_skip, module_doc_dir):
+        '''
+        Ensure various salt modules have associated documentation
+        '''
+
+        salt_dir = RUNTIME_VARS.CODE_DIR
+
+        # Build list of module files
+        module_files = []
+        skip_module_files = module_skip
+        full_module_dir = os.path.join(salt_dir, *module_dir)
+        for file in os.listdir(full_module_dir):
+            if file.endswith(".py"):
+                module_name = os.path.splitext(file)[0]
+                if module_name not in skip_module_files:
+                    module_files.append(module_name)
+
+        # Build list of beacon documentation files
+        module_docs = []
+        skip_doc_files = doc_skip
+        full_module_doc_dir = os.path.join(salt_dir, *module_doc_dir)
+        doc_prefix = '.'.join(module_dir) + '.'
+        for file in os.listdir(full_module_doc_dir):
+            if file.endswith(".rst"):
+                doc_name = os.path.splitext(file)[0]
+                if doc_name.startswith(doc_prefix):
+                    doc_name = doc_name[len(doc_prefix):]
+                if doc_name not in skip_doc_files:
+                    module_docs.append(doc_name)
+
+        # Check that every beacon has associated documentaiton file
+        for module in module_files:
+            self.assertIn(module,
+                          module_docs,
+                          'module file {0} is missing documentation in {1}'.format(module,
+                                                                                   full_module_doc_dir))
+
+        for doc_file in module_docs:
+            self.assertIn(doc_file,
+                          module_files,
+                          'Doc file {0} is missing associated module in {1}'.format(doc_file,
+                                                                                    full_module_dir))
+
     def test_module_doc_files(self):
         '''
         Ensure modules have associated documentation
@@ -106,87 +149,80 @@ class DocTestCase(TestCase):
         execution module example: salt/modules/zabbix.py
         '''
 
-        salt_dir = RUNTIME_VARS.CODE_DIR
-
-        # Build list of module files
-        module_files = []
         skip_module_files = ['__init__']
-        module_dir = os.path.join(salt_dir, 'salt', 'modules')
-        for file in os.listdir(module_dir):
-            if file.endswith(".py"):
-                module_name = os.path.splitext(file)[0]
-                if not module_name in skip_module_files:
-                    module_files.append(module_name)
-
-        # Build list of module documentation files
-        module_docs = []
+        module_dir = ['salt', 'modules']
         skip_doc_files = ['index', 'group', 'inspectlib', 'inspectlib.collector', 'inspectlib.dbhandle',
-                       'inspectlib.entities', 'inspectlib.exceptions', 'inspectlib.fsdb',
-                       'inspectlib.kiwiproc', 'inspectlib.query', 'kernelpkg', 'pkg', 'user']
-        module_doc_dir = os.path.join(salt_dir, 'doc', 'ref', 'modules', 'all')
-        for file in os.listdir(module_doc_dir):
-            if file.endswith(".rst"):
-                doc_name = os.path.splitext(file)[0]
-                if doc_name.startswith('salt.modules.'):
-                        doc_name = doc_name[13:]
-                if not doc_name in skip_doc_files:
-                    module_docs.append(doc_name)
-
-        # Check that every module has associated documentaiton file
-        for module in module_files:
-            self.assertIn(module,
-                          module_docs,
-                          'Module file {0} is missing documentation in {1}'.format(module,
-                                                                                   module_doc_dir))
-
-        for doc_file in module_docs:
-            self.assertIn(doc_file,
-                          module_files,
-                          'Doc file {0} is missing associated module in {1}'.format(doc_file,
-                                                                                    module_dir))
-
+                          'inspectlib.entities', 'inspectlib.exceptions', 'inspectlib.fsdb',
+                          'inspectlib.kiwiproc', 'inspectlib.query', 'kernelpkg', 'pkg', 'user']
+        module_doc_dir = ['doc', 'ref', 'modules', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, module_doc_dir)
 
     def test_state_doc_files(self):
         '''
         Ensure states have associated documentation
 
-        doc example: doc\ref\states\all\salt.states.zabbix_host.rst
-        state example: salt\states\zabbix_host.py
+        doc example: doc/ref/states/all/salt.states.zabbix_host.rst
+        state example: salt/states/zabbix_host.py
         '''
 
-        salt_dir = RUNTIME_VARS.CODE_DIR
-
-        # Build list of state files
-        state_files = []
         skip_state_files = ['__init__']
-        state_dir = os.path.join(salt_dir, 'salt', 'states')
-        for file in os.listdir(state_dir):
-            if file.endswith(".py"):
-                state_name = os.path.splitext(file)[0]
-                if not state_name in skip_state_files:
-                    state_files.append(state_name)
-
-        # Build list of state documentation files
-        state_docs = []
+        state_dir = ['salt', 'states']
         skip_doc_files = ['index', 'all']
-        state_doc_dir = os.path.join(salt_dir, 'doc', 'ref', 'states', 'all')
-        for file in os.listdir(state_doc_dir):
-            if file.endswith(".rst"):
-                doc_name = os.path.splitext(file)[0]
-                if doc_name.startswith('salt.states.'):
-                        doc_name = doc_name[12:]
-                if not doc_name in skip_doc_files:
-                    state_docs.append(doc_name)
+        state_doc_dir = ['doc', 'ref', 'states', 'all']
+        self._check_doc_files(skip_state_files, state_dir, skip_doc_files, state_doc_dir)
 
-        # Check that every state has associated documentaiton file
-        for state in state_files:
-            self.assertIn(state,
-                          state_docs,
-                          'State file {0} is missing documentation in {1}'.format(state,
-                                                                                  state_doc_dir))
+    def test_auth_doc_files(self):
+        '''
+        Ensure auth modules have associated documentation
 
-        for doc_file in state_docs:
-            self.assertIn(doc_file,
-                          state_files,
-                          'Doc file {0} is missing associated state in {1}'.format(doc_file,
-                                                                                   state_doc_dir))
+        doc example: doc/ref/auth/all/salt.auth.rest.rst
+        auth module example: salt/auth/rest.py
+        '''
+
+        skip_auth_files = ['__init__']
+        auth_dir = ['salt', 'auth']
+        skip_doc_files = ['index', 'all']
+        auth_doc_dir = ['doc', 'ref', 'auth', 'all']
+        self._check_doc_files(skip_auth_files, auth_dir, skip_doc_files, auth_doc_dir)
+
+    def test_beacon_doc_files(self):
+        '''
+        Ensure beacon modules have associated documentation
+
+        doc example: doc/ref/beacons/all/salt.beacon.rest.rst
+        beacon module example: salt/beacons/rest.py
+        '''
+
+        skip_beacon_files = ['__init__']
+        beacon_dir = ['salt', 'beacons']
+        skip_doc_files = ['index', 'all']
+        beacon_doc_dir = ['doc', 'ref', 'beacons', 'all']
+        self._check_doc_files(skip_beacon_files, beacon_dir, skip_doc_files, beacon_doc_dir)
+
+    def test_cache_doc_files(self):
+        '''
+        Ensure cache modules have associated documentation
+
+        doc example: doc/ref/cache/all/salt.cache.consul.rst
+        cache module example: salt/cache/consul.py
+        '''
+
+        skip_module_files = ['__init__']
+        cache_dir = ['salt', 'cache']
+        skip_doc_files = ['index', 'all']
+        cache_doc_dir = ['doc', 'ref', 'cache', 'all']
+        self._check_doc_files(skip_module_files, cache_dir, skip_doc_files, cache_doc_dir)
+
+    def test_cloud_doc_files(self):
+        '''
+        Ensure cloud modules have associated documentation
+
+        doc example: doc/ref/clouds/all/salt.cloud.gce.rst
+        cli module example: salt/cloud/clouds/gce.py
+        '''
+
+        skip_module_files = ['__init__']
+        cache_dir = ['salt', 'cloud', 'clouds']
+        skip_doc_files = ['index', 'all']
+        cache_doc_dir = ['doc', 'ref', 'clouds', 'all']
+        self._check_doc_files(skip_module_files, cache_dir, skip_doc_files, cache_doc_dir)
