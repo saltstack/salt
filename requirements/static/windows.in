@@ -15,7 +15,6 @@ more-itertools==5.0.0
 msgpack-python >= 0.4.2, != 0.5.5
 patch
 psutil
-pycryptodomex
 pyopenssl
 python-etcd==0.4.2
 python-gnupg
