@@ -141,20 +141,6 @@ class DocTestCase(TestCase):
                           'Doc file {0} is missing associated module in {1}'.format(doc_file,
                                                                                     full_module_dir))
 
-    def test_state_doc_files(self):
-        '''
-        Ensure states have associated documentation
-
-        doc example: doc/ref/states/all/salt.states.zabbix_host.rst
-        module example: salt/states/zabbix_host.py
-        '''
-
-        skip_files = ['__init__']
-        module_dir = ['salt', 'states']
-        skip_doc_files = ['index', 'all']
-        doc_dir = ['doc', 'ref', 'states', 'all']
-        self._check_doc_files(skip_files, module_dir, skip_doc_files, doc_dir)
-
     def test_auth_doc_files(self):
         '''
         Ensure auth modules have associated documentation
@@ -365,4 +351,88 @@ class DocTestCase(TestCase):
         module_dir = ['salt', 'runners']
         skip_doc_files = ['index', 'all']
         doc_dir = ['doc', 'ref', 'runners', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_sdb_doc_files(self):
+        '''
+        Ensure sdb modules have associated documentation
+
+        doc example: doc/ref/sdb/all/salt.sdb.rest.rst
+        module example: salt/sdb/rest.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'sdb']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'sdb', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_serializers_doc_files(self):
+        '''
+        Ensure serializer modules have associated documentation
+
+        doc example: doc/ref/serializers/all/salt.serializers.yaml.rst
+        module example: salt/serializers/yaml.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'serializers']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'serializers', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_states_doc_files(self):
+        '''
+        Ensure states have associated documentation
+
+        doc example: doc/ref/states/all/salt.states.zabbix_host.rst
+        module example: salt/states/zabbix_host.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'states']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'states', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_thorium_doc_files(self):
+        '''
+        Ensure thorium modules have associated documentation
+
+        doc example: doc/ref/thorium/all/salt.thorium.calc.rst
+        module example: salt/thorium/calc.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'thorium']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'thorium', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_tops_doc_files(self):
+        '''
+        Ensure top modules have associated documentation
+
+        doc example: doc/ref/tops/all/salt.tops.saltclass.rst
+        module example: salt/tops/saltclass.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'tops']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'tops', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_wheel_doc_files(self):
+        '''
+        Ensure wheel modules have associated documentation
+
+        doc example: doc/ref/wheel/all/salt.wheel.key.rst
+        module example: salt/wheel/key.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'wheel']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'wheel', 'all']
         self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
