@@ -282,3 +282,17 @@ class DocTestCase(TestCase):
         skip_doc_files = ['index', 'all']
         doc_dir = ['doc', 'ref', 'output', 'all']
         self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_pillar_doc_files(self):
+        '''
+        Ensure pillar modules have associated documentation
+
+        doc example: doc/ref/pillar/all/salt.pillar.cobbler.rst
+        module example: salt/pillar/cobbler.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'pillar']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'pillar', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
