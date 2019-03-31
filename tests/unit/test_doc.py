@@ -141,22 +141,6 @@ class DocTestCase(TestCase):
                           'Doc file {0} is missing associated module in {1}'.format(doc_file,
                                                                                     full_module_dir))
 
-    def test_module_doc_files(self):
-        '''
-        Ensure modules have associated documentation
-
-        doc example: doc/ref/modules/all/salt.modules.zabbix.rst
-        execution module example: salt/modules/zabbix.py
-        '''
-
-        skip_module_files = ['__init__']
-        module_dir = ['salt', 'modules']
-        skip_doc_files = ['index', 'group', 'inspectlib', 'inspectlib.collector', 'inspectlib.dbhandle',
-                          'inspectlib.entities', 'inspectlib.exceptions', 'inspectlib.fsdb',
-                          'inspectlib.kiwiproc', 'inspectlib.query', 'kernelpkg', 'pkg', 'user']
-        module_doc_dir = ['doc', 'ref', 'modules', 'all']
-        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, module_doc_dir)
-
     def test_state_doc_files(self):
         '''
         Ensure states have associated documentation
@@ -260,11 +244,41 @@ class DocTestCase(TestCase):
         Ensure grain modules have associated documentation
 
         doc example: doc/ref/grains/all/salt.grains.core.rst
-        grain module example: salt/grains/core.py
+        module example: salt/grains/core.py
         '''
 
         skip_module_files = ['__init__']
         module_dir = ['salt', 'grains']
         skip_doc_files = ['index', 'all']
         doc_dir = ['doc', 'ref', 'grains', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_module_doc_files(self):
+        '''
+        Ensure modules have associated documentation
+
+        doc example: doc/ref/modules/all/salt.modules.zabbix.rst
+        execution module example: salt/modules/zabbix.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'modules']
+        skip_doc_files = ['index', 'group', 'inspectlib', 'inspectlib.collector', 'inspectlib.dbhandle',
+                          'inspectlib.entities', 'inspectlib.exceptions', 'inspectlib.fsdb',
+                          'inspectlib.kiwiproc', 'inspectlib.query', 'kernelpkg', 'pkg', 'user']
+        doc_dir = ['doc', 'ref', 'modules', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_output_doc_files(self):
+        '''
+        Ensure output modules have associated documentation
+
+        doc example: doc/ref/output/all/salt.output.highstate.rst
+        module example: salt/output/highstate.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'output']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'output', 'all']
         self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
