@@ -338,3 +338,17 @@ class DocTestCase(TestCase):
         skip_doc_files = ['index', 'all']
         doc_dir = ['doc', 'ref', 'renderers', 'all']
         self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_returners_doc_files(self):
+        '''
+        Ensure return modules have associated documentation
+
+        doc example: doc/ref/returners/all/salt.returners.cassandra_return.rst
+        module example: salt/returners/cassandra_return.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'returners']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'returners', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
