@@ -134,7 +134,59 @@ class DocTestCase(TestCase):
 
         # Check that every module has associated documentaiton file
         for module in module_files:
-            self.assertIn(module, module_docs)
+            self.assertIn(module,
+                          module_docs,
+                          'Module file {0} is missing documentation in {1}'.format(module,
+                                                                                   module_doc_dir))
 
         for doc_file in module_docs:
-            self.assertIn(doc_file, module_files)
+            self.assertIn(doc_file,
+                          module_files,
+                          'Doc file {0} is missing associated module in {1}'.format(doc_file,
+                                                                                    module_dir))
+
+
+    def test_state_doc_files(self):
+        '''
+        Ensure states have associated documentation
+
+        doc example: doc\ref\states\all\salt.states.zabbix_host.rst
+        state example: salt\states\zabbix_host.py
+        '''
+
+        salt_dir = RUNTIME_VARS.CODE_DIR
+
+        # Build list of state files
+        state_files = []
+        skip_state_files = ['__init__']
+        state_dir = os.path.join(salt_dir, 'salt', 'states')
+        for file in os.listdir(state_dir):
+            if file.endswith(".py"):
+                state_name = os.path.splitext(file)[0]
+                if not state_name in skip_state_files:
+                    state_files.append(state_name)
+
+        # Build list of state documentation files
+        state_docs = []
+        skip_doc_files = ['index', 'all']
+        state_doc_dir = os.path.join(salt_dir, 'doc', 'ref', 'states', 'all')
+        for file in os.listdir(state_doc_dir):
+            if file.endswith(".rst"):
+                doc_name = os.path.splitext(file)[0]
+                if doc_name.startswith('salt.states.'):
+                        doc_name = doc_name[12:]
+                if not doc_name in skip_doc_files:
+                    state_docs.append(doc_name)
+
+        # Check that every state has associated documentaiton file
+        for state in state_files:
+            self.assertIn(state,
+                          state_docs,
+                          'State file {0} is missing documentation in {1}'.format(state,
+                                                                                  state_doc_dir))
+
+        for doc_file in state_docs:
+            self.assertIn(doc_file,
+                          state_files,
+                          'Doc file {0} is missing associated state in {1}'.format(doc_file,
+                                                                                   state_doc_dir))
