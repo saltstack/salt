@@ -296,3 +296,17 @@ class DocTestCase(TestCase):
         skip_doc_files = ['index', 'all']
         doc_dir = ['doc', 'ref', 'pillar', 'all']
         self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_proxy_doc_files(self):
+        '''
+        Ensure proxy modules have associated documentation
+
+        doc example: doc/ref/proxy/all/salt.proxy.docker.rst
+        module example: salt/proxy/docker.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'proxy']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'proxy', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
