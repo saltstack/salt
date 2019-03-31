@@ -14,9 +14,9 @@ backports.functools-lru-cache==1.5  # via cheroot, jaraco.functools
 backports.ssl-match-hostname==3.7.0.1  # via docker, websocket-client
 backports.tempfile==1.0   # via moto
 backports.weakref==1.0.post1  # via backports.tempfile
-boto3==1.9.124
+boto3==1.9.125
 boto==2.49.0
-botocore==1.12.124        # via boto3, moto, s3transfer
+botocore==1.12.125        # via boto3, moto, s3transfer
 cachetools==3.1.0         # via google-auth
 certifi==2019.3.9
 cffi==1.12.2
@@ -68,8 +68,10 @@ pyaml==18.11.0            # via moto
 pyasn1-modules==0.2.4     # via google-auth
 pyasn1==0.4.5             # via pyasn1-modules, rsa
 pycparser==2.19           # via cffi
-pycrypto==2.6.1
-pycryptodome==3.8.0       # via python-jose
+pycrypto==2.6.1 ; sys_platform != "win32"
+# Next line explicitly commented out by pip-tools-compile because of the following regex: '^pycryptodome==(.*)$'
+# pycryptodome==3.8.0       # via python-jose
+pycryptodomex==3.8.0
 pyinotify==0.9.6
 pyopenssl==19.0.0
 pytest-cov==2.6.1

@@ -17,6 +17,10 @@ mock<1.1.0
 more-itertools==5.0.0
 moto
 msgpack-python >= 0.4.2, != 0.5.5
+# We install pycryptodomex so that we can remove pycryptodome which is pulled in from
+# python-jose which in turn is pulled in from moto.
+# pycryptodome doesn't play nice with PyCrypto while pycryptodomex does
+pycryptodomex
 psutil
 pyinotify
 pyopenssl
