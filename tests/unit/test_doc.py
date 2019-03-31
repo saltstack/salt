@@ -208,21 +208,35 @@ class DocTestCase(TestCase):
         '''
 
         skip_module_files = ['__init__']
-        cache_dir = ['salt', 'cache']
+        module_dir = ['salt', 'cache']
         skip_doc_files = ['index', 'all']
-        cache_doc_dir = ['doc', 'ref', 'cache', 'all']
-        self._check_doc_files(skip_module_files, cache_dir, skip_doc_files, cache_doc_dir)
+        doc_dir = ['doc', 'ref', 'cache', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
 
     def test_cloud_doc_files(self):
         '''
         Ensure cloud modules have associated documentation
 
         doc example: doc/ref/clouds/all/salt.cloud.gce.rst
-        cli module example: salt/cloud/clouds/gce.py
+        cloud module example: salt/cloud/clouds/gce.py
         '''
 
         skip_module_files = ['__init__']
-        cache_dir = ['salt', 'cloud', 'clouds']
+        module_dir = ['salt', 'cloud', 'clouds']
         skip_doc_files = ['index', 'all']
-        cache_doc_dir = ['doc', 'ref', 'clouds', 'all']
-        self._check_doc_files(skip_module_files, cache_dir, skip_doc_files, cache_doc_dir)
+        doc_dir = ['doc', 'ref', 'clouds', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_engine_doc_files(self):
+        '''
+        Ensure engine modules have associated documentation
+
+        doc example: doc/ref/engines/all/salt.engines.docker_events.rst
+        engine module example: salt/engines/docker_events.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'engines']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'engines', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
