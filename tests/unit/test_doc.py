@@ -240,3 +240,31 @@ class DocTestCase(TestCase):
         skip_doc_files = ['index', 'all']
         doc_dir = ['doc', 'ref', 'engines', 'all']
         self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_fileserver_doc_files(self):
+        '''
+        Ensure fileserver modules have associated documentation
+
+        doc example: doc/ref/fileserver/all/salt.fileserver.gitfs.rst
+        module example: salt/fileserver/gitfs.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'fileserver']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'file_server', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_grain_doc_files(self):
+        '''
+        Ensure grain modules have associated documentation
+
+        doc example: doc/ref/grains/all/salt.grains.core.rst
+        grain module example: salt/grains/core.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'grains']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'grains', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
