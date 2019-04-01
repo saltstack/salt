@@ -117,14 +117,7 @@ def _get_pillar_errors(kwargs, pillar=None):
     :param pillar: external pillar
     :return: None or an error message
     '''
-    #return None if kwargs.get('force') else (pillar or {}).get('_errors', __pillar__.get('_errors')) or None
-    if kwargs.get('force'):
-        return None
-    else:
-        if pillar:
-            return pillar.get('_errors', {})
-        else:
-            return __pillar__.get('_errors', {})
+    return None if kwargs.get('force') else (pillar or {}).get('_errors', __pillar__.get('_errors')) or None
 
 
 def _wait(jid):

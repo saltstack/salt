@@ -748,6 +748,8 @@ class State(object):
                     self.opts.get('pillar_source_merging_strategy', 'smart'),
                     self.opts.get('renderer', 'yaml'),
                     self.opts.get('pillar_merge_lists', False))
+        # Update dunder pillar
+        __pillar__ = self.opts['pillar']
         log.debug('=== pillar_opts %s ===', self.opts['pillar'])
         log.debug('Finished gathering pillar data for state run')
         self.state_con = context or {}
