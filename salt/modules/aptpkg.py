@@ -14,6 +14,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
+import fcntl
 import os
 import re
 import logging
@@ -158,6 +159,34 @@ def _check_apt():
         )
 
 
+def _is_locked(fd):
+    '''
+    Check of fd is locked
+    '''
+    try:
+        fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except (IOError, OSError) as e:
+        return True
+    else:
+        fcntl.lockf(fd, fcntl.F_UNLCK)
+        return False
+
+
+def _wait_dpkg_lock():
+    '''
+    Wait for dpkg lock release
+    '''
+    count = 0
+    with salt.utils.files.fopen('/var/lib/dpkg/lock-frontend', 'r+') as fd:
+        while _is_locked(fd) and count < 100:
+            count += 1
+            log.warning('Waiting for dpkg lock release: retrying... %s/100', count)
+            time.sleep(3)
+
+        if count != 0:
+            log.warning('Waiting for dpkg lock release: done')
+
+
 def _call_apt(args, scope=True, **kwargs):
     '''
     Call apt* utilities.
@@ -172,6 +201,7 @@ def _call_apt(args, scope=True, **kwargs):
               'env': salt.utils.environment.get_module_environment(globals())}
     params.update(kwargs)
 
+    _wait_dpkg_lock()
     return __salt__['cmd.run_all'](cmd, **params)
 
 
