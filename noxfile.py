@@ -20,8 +20,50 @@ if __name__ == '__main__':
     exit(1)
 
 # Import 3rd-party libs
+import six
 import nox
 from nox.command import CommandFailed
+
+
+# ----- Helper Classes ---------------------------------------------------------------------------------------------->
+class StdStream(six.StringIO):
+    def __init__(self, std):
+        super(StdStream, self).__init__()
+        self._std = std
+
+    def write(self, data):
+        super(StdStream, self).write(data)
+        self._std.write(data)
+
+
+class CaptureSTDs(object):
+
+    def __init__(self):
+        self._stdout = StdStream(sys.stdout)
+        self._stderr = StdStream(sys.stderr)
+        self._sys_stdout = sys.stdout
+        self._sys_stderr = sys.stderr
+
+    def __enter__(self):
+        sys.stdout = self._stdout
+        sys.stderr = self._stderr
+        return self
+
+    def __exit__(self, *args):
+        sys.stdout = self._sys_stdout
+        sys.stderr = self._sys_stderr
+
+    @property
+    def stdout(self):
+        self._stdout.seek(0)
+        return self._stdout.read()
+
+    @property
+    def stderr(self):
+        self._stdout.seek(0)
+        return self._stdout.read()
+# <---- Helper Classes -----------------------------------------------------------------------------------------------
+
 
 # Global Path Definitions
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -53,17 +95,21 @@ def _create_ci_directories():
             os.makedirs(path)
 
 
-def _install_requirements(session, transport, *extra_requirements):
-    # Install requirements
-    distro_requirements = None
-
-    pydir = 'py{}'.format(
+def _get_pydir(session):
+    return 'py{}'.format(
         session.run(
             'python', '-c'
             'from __future__ import print_function; import sys; sys.stdout.write("{}.{}".format(*sys.version_info))',
             silent=True
         )
     )
+
+
+def _install_requirements(session, transport, *extra_requirements):
+    # Install requirements
+    distro_requirements = None
+
+    pydir = _get_pydir(session)
 
     if IS_WINDOWS:
         _distro_requirements = os.path.join(REPO_ROOT,
@@ -533,3 +579,66 @@ def _pytest(session, coverage, transport, cmd_args):
             _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
         else:
             session.run('py.test', *cmd_args)
+
+
+def _lint(session, rcfile, flags, paths):
+    _install_requirements(session, 'zeromq')
+    _install_requirements(session, 'raet')
+    session.install('-r', 'requirements/static/{}/lint.txt'.format(_get_pydir(session)))
+    session.run('pylint', '--version')
+    pylint_report_path = os.environ.get('PYLINT_REPORT')
+
+    cmd_args = [
+        'pylint',
+        '--rcfile={}'.format(rcfile)
+    ] + list(flags) + list(paths)
+
+    try:
+        with CaptureSTDs() as capstds:
+            session.run(*cmd_args)
+    except CommandFailed:
+        if pylint_report_path:
+            # Write report
+            with open(pylint_report_path, 'w') as wfh:
+                wfh.write(capstds.stdout)
+            session.log('Report file written to %r', pylint_report_path)
+        raise
+
+
+@nox.session(python=_PYTHON_VERSIONS)
+def lint(session):
+    '''
+    Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
+    '''
+    session.notify('lint-salt-{}'.format(session.python))
+    session.notify('lint-tests-{}'.format(session.python))
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='lint-salt')
+def lint_salt(session):
+    '''
+    Run PyLint against Salt. Set PYLINT_REPORT to a path to capture output.
+    '''
+    flags = [
+        '--disable=I,W1307,C0411,C0413,W8410,str-format-in-logging'
+    ]
+    if session.posargs:
+        paths = session.posargs
+    else:
+        paths = ['setup.py', 'salt/']
+    _lint(session, '.testing.pylintrc', flags, paths)
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='lint-tests')
+def lint_tests(session):
+    '''
+    Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
+    '''
+    flags = [
+        '--disable=I,W0232,E1002,W1307,C0411,C0413,W8410,str-format-in-logging'
+    ]
+    if session.posargs:
+        paths = session.posargs
+    else:
+        paths = ['tests/']
+    _lint(session, '.testing.pylintrc', flags, paths)
