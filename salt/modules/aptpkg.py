@@ -172,7 +172,14 @@ def _call_apt(args, scope=True, **kwargs):
               'env': salt.utils.environment.get_module_environment(globals())}
     params.update(kwargs)
 
-    return __salt__['cmd.run_all'](cmd, **params)
+    cmd_ret = __salt__['cmd.run_all'](cmd, **params)
+    count = 0
+    while 'Could not get lock' in cmd_ret.get('stderr', '') and count < 10:
+        count += 1
+        log.warning('Waiting for dpkg lock release: retrying... %s/100', count)
+        time.sleep(2**count)
+        cmd_ret = __salt__['cmd.run_all'](cmd, **params)
+    return cmd_ret
 
 
 def _warn_software_properties(repo):
