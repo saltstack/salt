@@ -181,7 +181,7 @@ def _create_gpg(user=None, gnupghome=None):
         gnupghome = _get_user_gnupghome(user)
 
     if GPG_1_3_1:
-        gpg = gnupg.GPG(homedir=gnupghome)
+        gpg = gnupg.GPG(homedir=gnupghome)  # pylint: disable=unexpected-keyword-arg
     else:
         gpg = gnupg.GPG(gnupghome=gnupghome)
 
