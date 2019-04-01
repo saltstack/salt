@@ -1303,9 +1303,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
                                    mocked=kwargs.get('mock', False),
                                    initial_pillar=_get_initial_pillar(opts))
 
-    log.debug('=== inside st_ %s ===', st_.opts['pillar'])
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
-    log.debug('=== inside sls errors %s ===', errors)
     if errors:
         __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         return ['Pillar failed to render with the following messages:'] + errors
