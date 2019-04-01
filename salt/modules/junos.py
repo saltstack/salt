@@ -686,8 +686,13 @@ def cli(command=None, **kwargs):
         ret['message'] = jxmlease.parse(result)
 
     if 'dest' in op and op['dest'] is not None:
-        with salt.utils.files.fopen(op['dest'], 'w') as fp:
-            fp.write(salt.utils.stringutils.to_str(result))
+        try:
+            with salt.utils.files.fopen(op['dest'], 'w') as fp:
+                fp.write(salt.utils.stringutils.to_str(result))
+        except IOError:
+            ret['message'] = 'Unable to open "{0}" to write'.format(op['dest'])
+            ret['out'] = False
+            return ret
 
     ret['out'] = True
     return ret
