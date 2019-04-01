@@ -123,6 +123,7 @@ def installed(name,
     # If support is added for cpanminus and cpanplus, this will be very crucial
 
     ret['changes'] = dict()
+    ret['result'] = True
     for mod in modules:
         # Ignore modules that are already installed, don't force everything to update
         version = __salt__['cpan.show'](mod).get("installed version", None)
@@ -140,12 +141,15 @@ def installed(name,
         )
         if cpan_install_call:
             ret['changes'][mod] = cpan_install_call
+        else:
+            # A single failure while installing will cause an overall failure
+            ret['result'] = False
     return ret
 
 
 def removed(name,
             bin_env=None):
-    raise NotImplemented("Unable to remove {}".format(name))
+    raise NotImplementedError("Unable to remove {}".format(name))
 
 
 def uptodate(name,
