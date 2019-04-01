@@ -117,7 +117,14 @@ def _get_pillar_errors(kwargs, pillar=None):
     :param pillar: external pillar
     :return: None or an error message
     '''
-    return None if kwargs.get('force') else (pillar or {}).get('_errors', __pillar__.get('_errors')) or None
+    #return None if kwargs.get('force') else (pillar or {}).get('_errors', __pillar__.get('_errors')) or None
+    if kwargs.get('force'):
+        return None
+    else:
+        if pillar:
+            return pillar.get('_errors', {})
+        else:
+            return __pillar__.get('_errors', {})
 
 
 def _wait(jid):
@@ -1303,7 +1310,9 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
                                    mocked=kwargs.get('mock', False),
                                    initial_pillar=_get_initial_pillar(opts))
 
+    log.debug('=== inside st_ %s ===', st_.opts['pillar'])
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
+    log.debug('=== inside sls errors %s ===', errors)
     if errors:
         __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         return ['Pillar failed to render with the following messages:'] + errors

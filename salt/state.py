@@ -734,6 +734,7 @@ class State(object):
                 pillar_enc = six.text_type(pillar_enc).lower()
         self._pillar_enc = pillar_enc
         log.debug('Gathering pillar data for state run')
+        log.debug('=== pillar_opts %s ===', self.opts['pillar'])
         if initial_pillar and not self._pillar_override:
             self.opts['pillar'] = initial_pillar
         else:
@@ -747,6 +748,7 @@ class State(object):
                     self.opts.get('pillar_source_merging_strategy', 'smart'),
                     self.opts.get('renderer', 'yaml'),
                     self.opts.get('pillar_merge_lists', False))
+        log.debug('=== pillar_opts %s ===', self.opts['pillar'])
         log.debug('Finished gathering pillar data for state run')
         self.state_con = context or {}
         self.load_modules()
