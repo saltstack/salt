@@ -597,7 +597,7 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
 
     This `lowstate_item_markdown` given a lowstate item, returns a dict like:
 
-    .. code-block:: yaml
+    .. code-block:: none
 
         vars:       # the raw lowstate_item that was proccessed
         id:         # the 'id' of the state.

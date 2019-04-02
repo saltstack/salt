@@ -16,7 +16,7 @@
 # limitations under the License.
 
 r'''
-:codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
+:codeauthor: `Bo Maryniuk <bo@suse.de>`
 
 Execution of Salt Support from within states
 ============================================
