@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+    :codeauthor: Tyler Johnson (tjohnson@saltstack.com)
 
 
-    tests.integration.states.pip_state
+    tests.integration.states.cpan_state
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
@@ -23,14 +23,8 @@ from tests.support.helpers import (
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 
-# Import salt libs
-
-# Import 3rd-party libs
-
-
 
 class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
-
     @skip_if_not_root
     def test_cpan_installed_removed(self):
         '''

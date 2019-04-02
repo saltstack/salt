@@ -140,7 +140,6 @@ def install(module=None,
         return dict()
 
 
-
 def remove(module, details=False):
     '''
     Attempt to remove a Perl module that was installed from CPAN. Because the
@@ -295,10 +294,10 @@ def show(module, bin_env='cpan'):
     build_dir = cfg.get('build_dir', None)
     if build_dir is not None:
         ret['cpan build dirs'] = []
-        try:
+        if os.path.exists(build_dir):
             builds = os.listdir(build_dir)
-        except FileNotFoundError as e:
-            return {'error': str(e)}
+        else:
+            return {'error': '\'{}\' is not a path'.format(build_dir)}
         pfile = module.replace('::', '-')
         for file_ in builds:
             if file_.startswith(pfile):
@@ -327,4 +326,3 @@ def config(bin_env='cpan'):
         return literal_eval(out)
     else:
         return dict()
-

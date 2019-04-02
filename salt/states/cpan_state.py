@@ -15,20 +15,18 @@ Example:
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+# pylint: disable=import-error
 try:
     import pkg_resources
     HAS_PKG_RESOURCES = True
 except ImportError:
     HAS_PKG_RESOURCES = False
+# pylint: enable=import-error
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
-# Import 3rd-party libs
-from salt.ext import six
-# pylint: disable=import-error
 
-# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -38,13 +36,14 @@ __virtualname__ = 'cpan'
 
 def __virtual__():
     '''
-    Only load if the pip module is available in __salt__
+    Only load if the cpan module is available in __salt__
     '''
     if HAS_PKG_RESOURCES is False:
         return False, 'The pkg_resources python library is not installed'
     if 'cpan.list' in __salt__:
         return __virtualname__
     return False
+
 
 def __install(name,
               modules=None,
@@ -224,4 +223,3 @@ def uptodate(name,
     '''
     return __install(name=name, modules=modules, bin_env=bin_env, force=force,
                      mirror=mirror, notest=notest, upgrade=True, **kwargs)
-
