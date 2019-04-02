@@ -28,6 +28,11 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     @classmethod
     def setUpClass(cls):
+        cert_path = os.path.join(BASE_FILES, 'x509_test.crt')
+        with salt.utils.files.fopen(cert_path) as fp:
+            cls.x509_cert_text = fp.read()
+
+    def setUp(self):
         with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'signing_policies.sls'), 'w') as fp:
             fp.write(textwrap.dedent('''\
                 x509_signing_policies:
@@ -51,12 +56,8 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
                          - signing_policies
                      '''))
         self.run_function('saltutil.refresh_pillar')
-        cert_path = os.path.join(BASE_FILES, 'x509_test.crt')
-        with salt.utils.files.fopen(cert_path) as fp:
-            cls.x509_cert_text = fp.read()
 
-    @classmethod
-    def tearDownClass(cls):
+    def tearDown(self):
         os.remove(os.path.join(TMP_PILLAR_TREE, 'signing_policies.sls'))
         os.remove(os.path.join(TMP_PILLAR_TREE, 'top.sls'))
         self.run_function('saltutil.refresh_pillar')
