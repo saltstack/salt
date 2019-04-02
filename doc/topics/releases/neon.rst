@@ -318,7 +318,7 @@ Module Changes
   secrets in AWS SSM parameters.
 
 - The :py:func:`file.set_selinux_context <salt.modules.file.set_selinux_context>`
-  module now supports perstant changes with ``persist=True`` by calling the
+  module now supports persistent changes with ``persist=True`` by calling the
   :py:func:`selinux.fcontext_add_policy <salt.modules.selinux.fcontext_add_policy>` module.
 
 - The :py:func:`yumpkg <salt.modules.yumpkg>` module has been updated to support
@@ -330,6 +330,21 @@ Runner Changes
 - The :py:func:`saltutil.sync_auth <salt.runners.saltutil.sync_auth>` function
   has been added to sync loadable auth modules. :py:func:`saltutil.sync_all <salt.runners.saltutil.sync_all>`
   will also include these modules.
+
+FileServer Enhancements
+==================
+- When using the file_roots file server, you can now optionally define your
+  roots on the fly by enabling ``dynamic_file_roots: true`` in master config.
+  When this mode is on, the file_roots server attempts to dictupdate.merge what
+  ``file_roots.roots`` and ``file_roots.all_roots`` _utils/ module functions
+  returns with what is defined in the normal file_roots configuration. Adding
+  these functions allows you to dynamically define what roots are associated
+  with an environment at runtime.
+
+.. note::
+  Due to the chicken-egg situation of using the FileServer to sync _utils
+  modules, make sure to sync your util module before turning this feature on,
+  or ensure it is available via the extension_modules or utils_dirs parameters.
 
 Enhancements to Engines
 =======================

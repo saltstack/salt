@@ -286,6 +286,9 @@ VALID_OPTS = immutabletypes.freeze({
     # a master for remote execution.
     'use_master_when_local': bool,
 
+    # enable optional file_root functionality
+    'dynamic_file_roots': bool,
+
     # A map of saltenvs and fileserver backend locations
     'file_roots': dict,
 
@@ -1288,6 +1291,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'file_client': 'remote',
     'local': False,
     'use_master_when_local': False,
+    'dynamic_file_roots': False,
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
                  salt.syspaths.SPM_FORMULA_PATH]
@@ -1538,6 +1542,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
     'key_cache': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'master'),
+    'dynamic_file_roots': False,
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
                  salt.syspaths.SPM_FORMULA_PATH]
