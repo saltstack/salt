@@ -1296,8 +1296,8 @@ def user_exists(user,
 
     if salt.utils.data.is_true(passwordless):
         if salt.utils.data.is_true(unix_socket):
+            args['unix_socket'] = 'unix_socket' if 'MariaDB' in server_version else 'auth_socket'
             qry += ' AND plugin=%(unix_socket)s'
-            args['unix_socket'] = 'unix_socket'
         else:
             qry += ' AND ' + password_column + ' = \'\''
     elif password:
@@ -1441,8 +1441,9 @@ def user_create(user,
         args['password'] = password_hash
     elif salt.utils.data.is_true(allow_passwordless):
         if salt.utils.data.is_true(unix_socket):
+            args['unix_socket'] = 'unix_socket' if 'MariaDB' in server_version else 'auth_socket'
             if host == 'localhost':
-                qry += ' IDENTIFIED VIA unix_socket'
+                qry += ' IDENTIFIED WITH %(unix_socket)s'
             else:
                 log.error(
                     'Auth via unix_socket can be set only for host=localhost'
@@ -1559,7 +1560,7 @@ def user_chpass(user,
     if salt.utils.data.is_true(allow_passwordless) and \
             salt.utils.data.is_true(unix_socket):
         if host == 'localhost':
-            args['unix_socket'] = 'auth_socket'
+            args['unix_socket'] = 'unix_socket' if 'MariaDB' in server_version else 'auth_socket'
             if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
                 qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(unix_socket)s AS %(user)s;"
             else:
@@ -1567,7 +1568,7 @@ def user_chpass(user,
                        + password_sql + ', plugin=%(unix_socket)s' +
                        ' WHERE User=%(user)s AND Host = %(host)s;')
         else:
-            log.error('Auth via unix_socket can be set only for host=localhost')
+            log.error('Auth via %(unix_socket)s can be set only for host=localhost')
     try:
         result = _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
