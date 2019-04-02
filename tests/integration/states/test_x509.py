@@ -8,7 +8,7 @@ from salt.ext import six
 import textwrap
 
 from tests.support.helpers import with_tempfile
-from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE, PILLAR_DIR
+from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.mixins import SaltReturnAssertsMixin
