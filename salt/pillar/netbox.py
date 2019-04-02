@@ -87,7 +87,16 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                                            params={'name': minion_id},
                                            header_dict=headers,
                                            decode=True)
-   # Check status code for API call
+    # Check if devices are empty and try virtual-machines
+    if len(device_results['dict']['results']) == 0:
+        device_url = '{api_url}/{app}/{endpoint}'.format(api_url=api_url,
+                                                     app='virtualization',
+                                                     endpoint='virtual-machines')
+        device_results = salt.utils.http.query(device_url,
+                                           params={'name': minion_id},
+                                           header_dict=headers,
+                                           decode=True)
+    # Check status code for API call
     if 'error' in device_results:
         log.error('API query failed for "%s", status code: %d',
                   minion_id, device_results['status'])
