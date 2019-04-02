@@ -179,7 +179,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
             if self.test_symlink_list_file_roots:
                 self.opts['file_roots'] = orig_file_roots
 
-    def test_dynamic_file_roots(self):
+    def test_fallback_file_root(self):
         dyn_root_dir = tempfile.mkdtemp(dir=TMP)
         top_sls = os.path.join(dyn_root_dir, 'top.sls')
         with salt.utils.files.fopen(top_sls, 'w') as fp_:
@@ -195,3 +195,64 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         self.assertEqual('dynamo.sls', ret1['rel'])
         self.assertIn('top.sls', ret2)
         self.assertIn('dynamo.sls', ret2)
+
+    def test_dynamic_file_roots(self):
+        root_a = tempfile.mkdtemp(dir=TMP)
+        root_b = tempfile.mkdtemp(dir=TMP)
+        root_c = tempfile.mkdtemp(dir=TMP)
+
+        top_sls = os.path.join(root_a, 'top.sls')
+
+        with salt.utils.files.fopen(top_sls, 'w') as fp_:
+            fp_.write("{{saltenv}}:\n  '*':\n    - dynamo\n")
+
+        root_a_sls = os.path.join(root_a, 'from_root_a.sls')
+        root_b_sls = os.path.join(root_b, 'from_root_b.sls')
+        root_c_sls = os.path.join(root_c, 'from_root_c.sls')
+        with salt.utils.files.fopen(root_a_sls, 'w') as fp_:
+            fp_.write("foo:\n  test.nop\n")
+        with salt.utils.files.fopen(root_b_sls, 'w') as fp_:
+            fp_.write("foo:\n  test.nop\n")
+        with salt.utils.files.fopen(root_c_sls, 'w') as fp_:
+            fp_.write("foo:\n  test.nop\n")
+
+        opts = {'file_roots': copy.copy(self.opts['file_roots']), 'dynamic_file_roots': True}
+
+        def _all_roots():
+            return {
+                'base': [root_a],
+                'root_b': [root_b],
+                'root_c': [root_b, root_c],
+            }
+
+        def _roots(env):
+            if env == 'base':
+                return [root_a]
+
+            if env == 'root_b':
+                return [root_b]
+
+            if env == 'root_c':
+                return [root_b, root_c]
+
+        with patch.object(roots, '__utils__', {'file_roots.all_roots': _all_roots, 'file_roots.roots': _roots}, create=True):
+            with patch.dict(roots.__opts__, opts):
+                # assert that the dynamic roots are additive to the config
+                ret = roots.find_file('from_root_a.sls', 'base')
+                self.assertEqual('from_root_a.sls', ret['rel'])
+
+                ret = roots.find_file('core.sls', 'base')
+                self.assertEqual('core.sls', ret['rel'])
+
+                # assert that roots are separate, root_a is not root_b
+                ret = roots.find_file('from_root_a.sls', 'root_b')
+                self.assertEqual('', ret['rel'])
+                self.assertEqual('', ret['path'])
+
+                # assert root_b only contains the tmpfile we created
+                ret = roots.file_list({'saltenv': 'root_b'})
+                self.assertEqual(['from_root_b.sls'], ret)
+
+                # assert root_c contains both root_b and root_c
+                ret = roots.file_list({'saltenv': 'root_c'})
+                self.assertEqual(['from_root_b.sls', 'from_root_c.sls'], ret)

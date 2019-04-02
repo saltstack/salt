@@ -24,6 +24,7 @@ import logging
 
 # Import salt libs
 import salt.fileserver
+import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
 import salt.utils.gzip_util
@@ -33,8 +34,41 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.ext import six
+from salt.exceptions import FileserverConfigError
 
 log = logging.getLogger(__name__)
+
+
+def _file_roots():
+    '''
+    helper to fetching all roots
+    '''
+    roots = __opts__['file_roots']
+
+    if __opts__['dynamic_file_roots']:
+        if not 'file_roots.all_roots' in __utils__:
+            log.error('missing _utils/file_roots.py:all_roots() for dynamic_file_roots. Did you forget to saltutil.sync_utils?')
+        else:
+            dynamic_roots = __utils__['file_roots.all_roots']()
+            roots = salt.utils.dictupdate.update(roots, dynamic_roots, merge_lists=True)
+
+    return roots
+
+
+def _file_roots_for(saltenv):
+    '''
+    helper to return the roots for a given saltenv
+    '''
+    roots = __opts__['file_roots'][saltenv]
+
+    if __opts__['dynamic_file_roots']:
+        if not 'file_roots.roots' in __utils__:
+            log.error('missing _utils/file_roots.py:roots() for dynamic_file_roots. Did you forget to saltutil.sync_utils?')
+        else:
+            dynamic_roots = __utils__['file_roots.roots'](saltenv)
+            roots = roots + dynamic_roots
+
+    return roots
 
 
 def find_file(path, saltenv='base', **kwargs):
@@ -50,8 +84,8 @@ def find_file(path, saltenv='base', **kwargs):
            'rel': ''}
     if os.path.isabs(path):
         return fnd
-    if saltenv not in __opts__['file_roots']:
-        if '__env__' in __opts__['file_roots']:
+    if saltenv not in _file_roots():
+        if '__env__' in _file_roots():
             log.debug("salt environment '%s' maps to __env__ file_roots directory", saltenv)
             saltenv = '__env__'
         else:
@@ -84,7 +118,7 @@ def find_file(path, saltenv='base', **kwargs):
 
     if 'index' in kwargs:
         try:
-            root = __opts__['file_roots'][saltenv][int(kwargs['index'])]
+            root = _file_roots_for(saltenv)[int(kwargs['index'])]
         except IndexError:
             # An invalid index was passed
             return fnd
@@ -97,7 +131,7 @@ def find_file(path, saltenv='base', **kwargs):
             fnd['rel'] = path
             return _add_file_stat(fnd)
         return fnd
-    for root in __opts__['file_roots'][saltenv]:
+    for root in _file_roots_for(saltenv):
         full = os.path.join(root, path)
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
             fnd['path'] = full
@@ -110,7 +144,7 @@ def envs():
     '''
     Return the file server environments
     '''
-    return sorted(__opts__['file_roots'])
+    return sorted(_file_roots())
 
 
 def serve_file(load, fnd):
@@ -160,7 +194,7 @@ def update():
             'backend': 'roots'}
 
     # generate the new map
-    new_mtime_map = salt.fileserver.generate_mtime_map(__opts__, __opts__['file_roots'])
+    new_mtime_map = salt.fileserver.generate_mtime_map(__opts__, _file_roots())
 
     old_mtime_map = {}
     # if you have an old map, load that
@@ -225,7 +259,7 @@ def file_hash(load, fnd):
         return ''
     path = fnd['path']
     saltenv = load['saltenv']
-    if saltenv not in __opts__['file_roots'] and '__env__' in __opts__['file_roots']:
+    if saltenv not in _file_roots() and '__env__' in _file_roots():
         saltenv = '__env__'
     ret = {}
 
@@ -301,8 +335,8 @@ def _file_lists(load, form):
         load.pop('env')
 
     saltenv = load['saltenv']
-    if saltenv not in __opts__['file_roots']:
-        if '__env__' in __opts__['file_roots']:
+    if saltenv not in _file_roots():
+        if '__env__' in _file_roots():
             log.debug("salt environment '%s' maps to __env__ file_roots directory", saltenv)
             saltenv = '__env__'
         else:
@@ -402,7 +436,7 @@ def _file_lists(load, form):
                         # (i.e. the "path" variable)
                         ret['links'][rel_path] = link_dest
 
-        for path in __opts__['file_roots'][saltenv]:
+        for path in _file_roots_for(saltenv):
             for root, dirs, files in salt.utils.path.os_walk(
                     path,
                     followlinks=__opts__['fileserver_followsymlinks']):
@@ -457,7 +491,7 @@ def symlink_list(load):
         load.pop('env')
 
     ret = {}
-    if load['saltenv'] not in __opts__['file_roots'] and '__env__' not in __opts__['file_roots']:
+    if load['saltenv'] not in _file_roots() and '__env__' not in _file_roots():
         return ret
 
     if 'prefix' in load:

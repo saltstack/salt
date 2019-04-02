@@ -83,3 +83,15 @@ interface, copy the file server data to the minion and set the file_roots
 option on the minion to point to the directories copied from the master.
 Once the minion ``file_roots`` option has been set, change the ``file_client``
 option to local to make sure that the local file server interface is used.
+
+Dynamic File Roots
+=================
+
+.. versionadded::  Neon
+
+If you need more flexibility in defining file roots offered by a given
+environment at runtime, you can add a ``file_roots.roots`` and  ``file_roots.all_roots``
+definition via the utils/ LazyLoader mechanism. If a utils module with these functions
+are found in your environment, you can define at runtime what roots a given
+environment should map to. The return values should be equivalent in structure
+to what you would place in your configuration.
