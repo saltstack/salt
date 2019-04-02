@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 import os
+import pprint
 import logging
 
 import salt.utils.files
 from salt.ext import six
 
 from tests.support.helpers import with_tempfile
-from tests.support.paths import BASE_FILES
+from tests.support.paths import BASE_FILES, TMP
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -61,3 +62,11 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
             assert state_result['result'] is True, state_result
         assert os.path.exists(keyfile)
         assert os.path.exists(crtfile)
+
+    def test_cert_signing(self):
+        ret = self.run_function('state.apply', ['test_cert'], pillar={'tmp_dir': TMP})
+        key = 'x509_|-test_crt_|-{}/pki/test.crt_|-certificate_managed'.format(TMP)
+        assert key in ret
+        assert 'changes' in ret[key]
+        assert 'Certificate' in ret[key]['changes']
+        assert 'New' in ret[key]['changes']['Certificate']
