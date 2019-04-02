@@ -5,9 +5,10 @@ import logging
 
 import salt.utils.files
 from salt.ext import six
+import textwrap
 
 from tests.support.helpers import with_tempfile
-from tests.support.paths import BASE_FILES, TMP
+from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE, PILLAR_DIR
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -27,9 +28,36 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     @classmethod
     def setUpClass(cls):
+        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'signing_policies.sls'), 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                x509_signing_policies:
+                  ca_policy:
+                    - minions: '*'
+                    - signing_private_key: {0}/pki/ca.key
+                    - signing_cert: {0}/pki/ca.crt
+                    - O: Test Company
+                    - basicConstraints: "CA:false"
+                    - keyUsage: "critical digitalSignature, keyEncipherment"
+                    - extendedKeyUsage: "critical serverAuth, clientAuth"
+                    - subjectKeyIdentifier: hash
+                    - authorityKeyIdentifier: keyid
+                    - days_valid: 730
+                    - copypath: {0}/pki
+                     '''.format(TMP)))
+        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     base:
+                       '*':
+                         - signing_policies
+                     '''))
         cert_path = os.path.join(BASE_FILES, 'x509_test.crt')
         with salt.utils.files.fopen(cert_path) as fp:
             cls.x509_cert_text = fp.read()
+
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(os.path.join(TMP_PILLAR_TREE, 'signing_policies.sls'))
+        os.remove(os.path.join(TMP_PILLAR_TREE, 'top.sls'))
 
     def run_function(self, *args, **kwargs):
         ret = super(x509Test, self).run_function(*args, **kwargs)
