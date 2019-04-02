@@ -128,7 +128,6 @@ def orchestrate(mods,
             orchestration_jid=orchestration_jid)
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
     res = __utils__['state.check_result'](ret['data'])
-    LOGGER.debug("got res: %s", res)
     if res:
         ret['retcode'] = 0
     else:

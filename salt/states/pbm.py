@@ -11,66 +11,64 @@ Storage policy
 
 .. code-block:: python
 
-{
-    "name": "salt_storage_policy"
-    "description": "Managed by Salt. Random capability values.",
-    "resource_type": "STORAGE",
-    "subprofiles": [
-        {
-            "capabilities": [
-                {
-                    "setting": {
-                        "type": "scalar",
-                        "value": 2
+    {
+        "name": "salt_storage_policy"
+        "description": "Managed by Salt. Random capability values.",
+        "resource_type": "STORAGE",
+        "subprofiles": [
+            {
+                "capabilities": [
+                    {
+                        "setting": {
+                            "type": "scalar",
+                            "value": 2
+                        },
+                        "namespace": "VSAN",
+                        "id": "hostFailuresToTolerate"
                     },
-                    "namespace": "VSAN",
-                    "id": "hostFailuresToTolerate"
-                },
-                {
-                    "setting": {
-                        "type": "scalar",
-                        "value": 2
+                    {
+                        "setting": {
+                            "type": "scalar",
+                            "value": 2
+                        },
+                        "namespace": "VSAN",
+                        "id": "stripeWidth"
                     },
-                    "namespace": "VSAN",
-                    "id": "stripeWidth"
-                },
-                {
-                    "setting": {
-                        "type": "scalar",
-                        "value": true
+                    {
+                        "setting": {
+                            "type": "scalar",
+                            "value": true
+                        },
+                        "namespace": "VSAN",
+                        "id": "forceProvisioning"
                     },
-                    "namespace": "VSAN",
-                    "id": "forceProvisioning"
-                },
-                {
-                    "setting": {
-                        "type": "scalar",
-                        "value": 50
+                    {
+                        "setting": {
+                            "type": "scalar",
+                            "value": 50
+                        },
+                        "namespace": "VSAN",
+                        "id": "proportionalCapacity"
                     },
-                    "namespace": "VSAN",
-                    "id": "proportionalCapacity"
-                },
-                {
-                    "setting": {
-                        "type": "scalar",
-                        "value": 0
-                    },
-                    "namespace": "VSAN",
-                    "id": "cacheReservation"
-                }
-            ],
-            "name": "Rule-Set 1: VSAN",
-            "force_provision": null
-        }
-    ],
-}
+                    {
+                        "setting": {
+                            "type": "scalar",
+                            "value": 0
+                        },
+                        "namespace": "VSAN",
+                        "id": "cacheReservation"
+                    }
+                ],
+                "name": "Rule-Set 1: VSAN",
+                "force_provision": null
+            }
+        ],
+    }
 
 Dependencies
 ============
 
-
 - pyVmomi Python Module
-
 
 pyVmomi
 -------
@@ -88,9 +86,9 @@ PyVmomi can be installed via pip:
     Python 2.7.9, or newer must be present. This is due to an upstream dependency
     in pyVmomi 6.0 that is not supported in Python versions 2.7 to 2.7.8. If the
     version of Python is not in the supported range, you will need to install an
-    earlier version of pyVmomi. See `Issue #29537`_ for more information.
+    earlier version of pyVmomi. See :ref:`Issue #29537` for more information.
 
-.. _Issue #29537: https://github.com/saltstack/salt/issues/29537
+.. Issue #29537: https://github.com/saltstack/salt/issues/29537
 '''
 
 # Import Python Libs
