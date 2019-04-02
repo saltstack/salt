@@ -1,9 +1,9 @@
 {% set tmp_dir = pillar['tmp_dir'] %}
-salt-minion:
-  service.running:
-    - enable: True
-    - listen:
-      - file: {{ tmp_dir }}/config/minion.d/signing_policies.conf
+#salt-minion:
+#  service.running:
+#    - enable: True
+#    - listen:
+#      - file: {{ tmp_dir }}/config/minion.d/signing_policies.conf
 
 {{ tmp_dir }}/pki:
   file.directory
@@ -15,7 +15,7 @@ salt-minion:
   x509.private_key_managed:
     - bits: 4096
     - require:
-      - file: /etc/pki
+      - file: {{ tmp_dir }}/pki
 
 {{ tmp_dir  }}/pki/ca.crt:
   x509.certificate_managed:
