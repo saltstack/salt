@@ -18,7 +18,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 log = logging.getLogger(__name__)
 
@@ -43,43 +42,33 @@ def __install(name,
               notest=None,
               upgrade=None,
               **kwargs):
-    # If modules is present, ignore name
-    if modules:
-        if not isinstance(modules, list):
-            return {'name': name,
-                    'result': False,
-                    'changes': {},
-                    'comment': 'modules argument must be formatted as a list'}
-    else:
+    # If modules is present, ignore name; otherwise use name for modules
+    if not modules:
         modules = [name]
 
-    ret = {'name': ';'.join(modules), 'result': None,
-           'comment': '', 'changes': {}}
-
-    try:
-        cur_version = __salt__['cpan.version'](bin_env)
-    except (CommandNotFoundError, CommandExecutionError) as err:
-        ret['result'] = False
-        ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
-        return ret
+    ret = dict(
+        name=';'.join(modules),
+        result=None,
+        comment='',
+        changes=dict())
 
     # TODO verify that the cpan* binary supports all options that have been passed
     # If support is added for cpanminus and cpanplus, this will be very crucial
 
-    ret['changes'] = dict()
     ret['result'] = True
     for mod in modules:
         # Ignore modules that are already installed, don't force everything to update
-        version = __salt__['cpan.show'](mod).get("installed version", None)
-        if version and ('not installed' not in version):
-            if not upgrade:
+        version = __salt__['cpan.show'](mod, bin_env=bin_env).get("installed version", None)
+        if version and not ('not installed' in version):
+            if upgrade:
+                log.debug("Attempting to upgrade '{}'")
+            else:
                 log.debug("perl module '{}' is already installed")
                 continue
-            else:
-                log.debug("Attempting to upgrade '{}'")
 
         log.debug("Installing Perl module: {}".format(mod))
         cpan_install_call = __salt__['cpan.install'](
+            bin_env=bin_env,
             module=mod,
             force=force,
             mirror=mirror,
@@ -91,8 +80,9 @@ def __install(name,
             ret['result'] = False
         if cpan_install_call:
             ret['changes'][mod] = cpan_install_call
+        # Quit on the first error
         if ret['comment']:
-            return ret
+            break
     return ret
 
 
@@ -153,9 +143,10 @@ def installed(name,
                      mirror=mirror, notest=notest, upgrade=False, **kwargs)
 
 
-def removed(name,
+def removed(module,
+            details=None,
             bin_env=None):
-    raise NotImplementedError("Unable to remove {}".format(name))
+    raise NotImplementedError("Unable to remove {}".format(module))
 
 
 def uptodate(name,

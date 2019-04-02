@@ -55,7 +55,8 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(cpan, 'show', mock):
                 self.assertDictEqual(cpan.install(module), {
                                      'new': {'installed version': '3.1'},
-                                     'old': {'installed version': None}})
+                                     'old': {'installed version': None},
+                                     'error': None})
                 self.assertIn("-i", mock1.call_args[0][0])
                 self.assertIn(module, mock1.call_args[0][0])
 
@@ -81,7 +82,6 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
                 cpan.install('Module', notest=True)
                 self.assertIn("-T", mock.call_args[0][0])
 
-
     def test_install_force(self):
         mock = MagicMock(return_value={'retval': 0})
         with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
@@ -97,8 +97,10 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retval': 1})
         module = 'Template::Alloy'
         with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(cpan.install(module),
-                                {'error': 'Could not find package {}'.format(module)})
+            self.assertDictEqual(cpan.install(module), {
+                'error': 'Could not find package {}'.format(module),
+                'new': {},
+                'old': {}})
 
     # 'remove' function tests: 4
     def test_remove(self):
@@ -113,7 +115,10 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
                                                'cpan build dirs': [''],
                                                'installed file': '/root'})
                 with patch.object(cpan, 'show', mock):
-                    self.assertDictEqual(cpan.remove(module), {})
+                    self.assertDictEqual(cpan.remove(module), {
+                                         'error': None,
+                                         'new': None,
+                                         'old': None})
 
     def test_remove_unexist_error(self):
         '''
@@ -122,9 +127,10 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'error': ""})
         module = 'Nonexistant::Package'
         with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(cpan.remove(module),
-                                 {'error':
-                                  'Could not find package {}'.format(module)})
+            self.assertDictEqual(cpan.remove(module), {
+                'error': 'Could not find package {}'.format(module),
+                'new': None,
+                'old': None})
 
     def test_remove_noninstalled_error(self):
         '''
@@ -132,7 +138,10 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'installed version': None})
         with patch.object(cpan, 'show', mock):
-            self.assertDictEqual(cpan.remove('Template::Alloy'), {})
+            self.assertDictEqual(cpan.remove('Template::Alloy'), {
+                                             'error': None,
+                                             'new': None,
+                                             'old': None})
 
     def test_remove_nopan_error(self):
         '''
@@ -143,7 +152,10 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
                                        'installed file': "",
                                        'cpan build dirs': []})
         with patch.object(cpan, 'show', mock):
-            self.assertDictEqual(cpan.remove('Template::Alloy'), {})
+            self.assertDictEqual(cpan.remove('Template::Alloy'), {
+                                             'error': None,
+                                             'new': None,
+                                             'old': None})
 
     # 'list' function tests: 1
     def test_list(self):

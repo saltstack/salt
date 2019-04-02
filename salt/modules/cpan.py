@@ -6,11 +6,11 @@ Manage Perl modules using CPAN
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
-from ast import literal_eval
+import logging
 import os
 import os.path
-import logging
+# Import python libs
+from ast import literal_eval
 
 # Import salt libs
 import salt.utils.files
@@ -44,19 +44,22 @@ def _get_cpan_bin(bin_env=None):
         log.debug('cpan: Using cpan from system')
         binary = salt.utils.path.which('cpan')
 
-    if not binary and (os.access(bin_env, os.X_OK) and os.path.isfile(bin_env)):
-        binary = os.path.normpath(bin_env)
-    elif not binary:
-        binary = salt.utils.path.which(bin_env)
+    # If cpan is not part of the path, check if it exists in bin_env
+    if not binary:
+        if os.access(bin_env, os.X_OK) and os.path.isfile(bin_env):
+            binary = os.path.normpath(bin_env)
+        else:
+            binary = salt.utils.path.which(bin_env)
 
+    # If none of the above assignments resulted in a path, throw an error
     if not binary:
         raise CommandNotFoundError('Unable to locate `{}` binary, '
             'Make sure it is installed and in the PATH'.format(bin_env))
-    else:
-        return binary
+
+    return binary
 
 
-def version(bin_env='cpan'):
+def version(bin_env=None):
     '''
     Returns the version of cpan.  sed ``bin_env`` to specify the path to
     a specific virtualenv and get the cpan version in that virtualenv.
@@ -72,7 +75,7 @@ def version(bin_env='cpan'):
     return show("CPAN", bin_env=bin_env).get("installed version", None)
 
 
-def install(module=None,
+def install(module,
             bin_env=None,
             force=None,
             mirror=None,
@@ -87,11 +90,18 @@ def install(module=None,
 
         salt '*' cpan.install Template::Alloy
     '''
+    # Get the state of the package before the install operations
     old_info = show(module, bin_env=bin_env)
 
+    # Initialize the standard return information for this function
+    ret = {
+        'error': None,
+        'old': None,
+        'new': None
+    }
+
+    # Build command based on function arguments
     cmd = [_get_cpan_bin(bin_env)]
-    if not cmd:
-        return {'error': 'Error installing \'{}\': Could not find a `cpan` binary'.format(module)}
 
     if force:
         cmd.append('-f')
@@ -107,37 +117,33 @@ def install(module=None,
     if module:
         cmd.append('-i')
         cmd.append(module)
-    else:
-        # Funky things happen if we don't have a module to install
-        return dict()
 
-    #'cpan -i {0}'.format(module)
-    ret = __salt__['cmd.run_all'](cmd)
+    # Run the cpan install command
+    cmd_ret = __salt__['cmd.run_all'](cmd)
 
-    if ret.get("retcode", None):
-        return {'error': ret['stderr']}
+    # Report an error if the return code was anything but zero
+    if cmd_ret.get("retcode", None):
+        ret['error'] = cmd_ret['stderr']
 
     new_info = show(module)
 
-    if 'error' in new_info:
-        return {
-            'error': new_info['error']
-        }
-
     if not new_info:
-        return {
-            'error': 'Could not install module {}'.format(module)
-        }
+        ret['error'] = 'Could not install module {}'.format(module)
 
+    if 'error' in new_info:
+        ret['error'] = new_info['error']
+
+
+    # Remove values that are identical, only report changes
     for k in old_info.copy().keys():
         if old_info.get(k) == new_info[k]:
             old_info.pop(k)
             new_info.pop(k)
 
-    if old_info or new_info:
-        return {'old': old_info, 'new': new_info}
-    else:
-        return dict()
+    ret['old'] = old_info
+    ret['new'] = new_info
+
+    return ret
 
 
 def remove(module, details=False):
@@ -154,61 +160,65 @@ def remove(module, details=False):
 
         salt '*' cpan.remove Old::Package
     '''
+    ret = {
+        'error': None,
+        'old': None,
+        'new': None
+    }
+
     info = show(module)
-    if 'error' in info:
-        return {
-            'error': info['error']
-        }
+    ret['error'] = info.get('error', None)
 
-    version = info.get(' version', None)
-    if (version is None) or ('not installed' in version):
+    cpan_version = info.get(' version', None)
+    if (cpan_version is None) or ('not installed' in cpan_version):
         log.debug("Module '{}' already removed, no changes made".format(module))
-        return dict()
+    else:
+        mod_pathfile = module.replace('::', '/') + '.pm'
+        ins_path = info['installed file'].replace(mod_pathfile, '')
 
-    mod_pathfile = module.replace('::', '/') + '.pm'
-    ins_path = info['installed file'].replace(mod_pathfile, '')
+        rm_details = {}
+        if 'cpan build dirs' in info:
+            log.warning('No CPAN data available to use for uninstalling')
 
-    rm_details = {}
-    if 'cpan build dirs' in info:
-        log.warning('No CPAN data available to use for uninstalling')
+        files = []
+        for build_dir in info['cpan build dirs']:
+            # Check if the build directory exists, if not then skip
+            if not os.path.isdir(build_dir):
+                log.warning("Could not find CPAN build dir: {}".format(build_dir))
+                continue
 
-    files = []
-    for build_dir in info['cpan build dirs']:
-        try:
+            # If the manifest is moving then skip
             contents = os.listdir(build_dir)
-        except Exception as e:
-            log.warning(e)
-            continue
-        if 'MANIFEST' not in contents:
-            continue
-        mfile = os.path.join(build_dir, 'MANIFEST')
-        with salt.utils.files.fopen(mfile, 'r') as fh_:
-            for line in fh_.readlines():
-                line = salt.utils.stringutils.to_unicode(line)
-                if line.startswith('lib/'):
-                    files.append(line.replace('lib/', ins_path).strip())
+            if 'MANIFEST' not in contents:
+                continue
 
-    for file_ in files:
-        if file_ in rm_details:
-            continue
-        log.trace('Removing %s', file_)
-        if __salt__['file.remove'](file_):
-            rm_details[file_] = 'removed'
-        else:
-            rm_details[file_] = 'unable to remove'
+            mfile = os.path.join(build_dir, 'MANIFEST')
+            with salt.utils.files.fopen(mfile, 'r') as fh_:
+                for line in fh_.readlines():
+                    line = salt.utils.stringutils.to_unicode(line)
+                    if line.startswith('lib/'):
+                        files.append(line.replace('lib/', ins_path).strip())
 
-    new_info = show(module)
+        for file_ in files:
+            if file_ in rm_details:
+                log.trace('Removing %s', file_)
+                continue
+            if __salt__['file.remove'](file_):
+                rm_details[file_] = 'removed'
+            else:
+                rm_details[file_] = 'unable to remove'
 
-    ret = dict()
-    if details:
-        ret['details'] = rm_details
+        new_info = show(module)
 
-    for k in info.copy().keys():
-        if info.get(k) == new_info[k]:
-            info.pop(k)
-            new_info.pop(k, None)
+        if details:
+            ret['details'] = rm_details
 
-    if info or new_info:
+        # Only report changes, remove values that are the same before and after
+        for k in info.copy().keys():
+            if info.get(k) == new_info[k]:
+                info.pop(k)
+                new_info.pop(k, None)
+
         ret['old'] = info
         ret['new'] = new_info
 

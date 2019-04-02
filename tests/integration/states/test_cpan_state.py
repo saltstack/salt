@@ -37,7 +37,6 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         # self.run_state('cpan.removed', name=name)
         self.run_function('cpan.remove', module=(name,))
 
-
     def test_missing_cpan(self):
         """
         Test cpan not being installed on the system
@@ -48,7 +47,6 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('cpan.installed', name=module, bin_env=bin_env)
         self.assertSaltFalseReturn(ret)
         self.assertInSaltComment(
-            'Error installing \'{}\': Unable to locate `{}` binary, '
-            'Make sure it is installed and in the PATH'.format(
-                module, bin_env), ret
+            'Unable to locate `{}` binary, Make sure it is installed and in the PATH'.format(
+                bin_env), ret
         )
