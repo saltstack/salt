@@ -46,6 +46,67 @@ def __virtual__():
         return __virtualname__
     return False
 
+def __install(name,
+              modules=None,
+              bin_env=None,
+              force=None,
+              mirror=None,
+              notest=None,
+              upgrade=None,
+              **kwargs):
+    # If modules is present, ignore name
+    if modules:
+        if not isinstance(modules, list):
+            return {'name': name,
+                    'result': False,
+                    'changes': {},
+                    'comment': 'modules argument must be formatted as a list'}
+    else:
+        modules = [name]
+
+    ret = {'name': ';'.join(modules), 'result': None,
+           'comment': '', 'changes': {}}
+
+    try:
+        cur_version = __salt__['cpan.version'](bin_env)
+    except (CommandNotFoundError, CommandExecutionError) as err:
+        ret['result'] = False
+        ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
+        return ret
+
+    # TODO verify that the cpan* binary supports all options that have been passed
+    # If support is added for cpanminus and cpanplus, this will be very crucial
+
+    ret['changes'] = dict()
+    ret['result'] = True
+    for mod in modules:
+        # Ignore modules that are already installed, don't force everything to update
+        version = __salt__['cpan.show'](mod).get("installed version", None)
+        if version and ('not installed' not in version):
+            if not upgrade:
+                log.debug("perl module '{}' is already installed")
+                continue
+            else:
+                log.debug("Attempting to upgrade '{}'")
+
+        log.debug("Installing Perl module: {}".format(mod))
+        cpan_install_call = __salt__['cpan.install'](
+            module=mod,
+            force=force,
+            mirror=mirror,
+            notest=notest,
+            **kwargs
+        )
+        if cpan_install_call.get('error', None):
+            ret['comment'] = cpan_install_call.pop('error')
+            ret['result'] = False
+        if cpan_install_call:
+            ret['changes'][mod] = cpan_install_call
+        if ret['comment']:
+            return ret
+    return ret
+
+
 def installed(name,
               modules=None,
               bin_env=None,
@@ -99,52 +160,8 @@ def installed(name,
             - require:
               - pkg: perl
     '''
-    # If modules is present, ignore name
-    if modules:
-        if not isinstance(modules, list):
-            return {'name': name,
-                    'result': False,
-                    'changes': {},
-                    'comment': 'modules argument must be formatted as a list'}
-    else:
-        modules = [name]
-
-    ret = {'name': ';'.join(modules), 'result': None,
-           'comment': '', 'changes': {}}
-
-    try:
-        cur_version = __salt__['cpan.version'](bin_env)
-    except (CommandNotFoundError, CommandExecutionError) as err:
-        ret['result'] = None
-        ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
-        return ret
-
-    # TODO verify that the cpan* binary supports all options that have been passed
-    # If support is added for cpanminus and cpanplus, this will be very crucial
-
-    ret['changes'] = dict()
-    ret['result'] = True
-    for mod in modules:
-        # Ignore modules that are already installed, don't force everything to update
-        version = __salt__['cpan.show'](mod).get("installed version", None)
-        if version and ('not installed' not in version):
-            log.debug("perl module '{}' is already installed")
-            continue
-
-        log.debug("Installing Perl module: {}".format(mod))
-        cpan_install_call = __salt__['cpan.install'](
-            module=mod,
-            force=force,
-            mirror=mirror,
-            notest=notest,
-            **kwargs
-        )
-        if cpan_install_call:
-            ret['changes'][mod] = cpan_install_call
-        else:
-            # A single failure while installing will cause an overall failure
-            ret['result'] = False
-    return ret
+    return __install(name=name, modules=modules, bin_env=bin_env, force=force,
+                     mirror=mirror, notest=notest, upgrade=False, **kwargs)
 
 
 def removed(name,
@@ -154,7 +171,6 @@ def removed(name,
 
 def uptodate(name,
              modules=None,
-             cpan_bin=None,
              bin_env=None,
              force=None,
              mirror=None,
@@ -206,43 +222,6 @@ def uptodate(name,
             - require:
               - pkg: perl
     '''
-    if cpan_bin and not bin_env:
-        bin_env = cpan_bin
-
-    # If modules is present, ignore name
-    if modules:
-        if not isinstance(modules, list):
-            return {'name': name,
-                    'result': False,
-                    'changes': {},
-                    'comment': 'modules argument must be formatted as a list'}
-    else:
-        modules = [name]
-
-    ret = {'name': ';'.join(modules), 'result': None,
-           'comment': '', 'changes': {}}
-
-    try:
-        cur_version = __salt__['cpan.version'](bin_env)
-    except (CommandNotFoundError, CommandExecutionError) as err:
-        ret['result'] = None
-        ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
-        return ret
-
-    # TODO verify that the cpan* binary supports all options that have been passed
-    # If support is added for cpanminus and cpanplus, this will be very crucial
-
-    ret['changes'] = dict()
-    for pkg in modules:
-        log.debug("Installing Perl module: {}".format(pkg))
-        cpan_install_call = __salt__['cpan.install'](
-            module=pkg,
-            force=force,
-            mirror=mirror,
-            notest=notest,
-            **kwargs
-        )
-        if cpan_install_call:
-            ret['changes'][pkg] = cpan_install_call
-    return ret
+    return __install(name=name, modules=modules, bin_env=bin_env, force=force,
+                     mirror=mirror, notest=notest, upgrade=True, **kwargs)
 

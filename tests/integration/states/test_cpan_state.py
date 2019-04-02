@@ -9,11 +9,6 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import errno
-import os
-import glob
-import shutil
-import sys
 
 try:
     import pwd
@@ -24,30 +19,13 @@ except ImportError:
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
-    requires_system_grains,
-    with_system_user,
     skip_if_not_root,
-    with_tempdir,
-    patched_environ
 )
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 # Import salt libs
-import salt.utils.files
-import salt.utils.path
-import salt.utils.platform
-import salt.utils.versions
-import salt.utils.win_dacl
-import salt.utils.win_functions
-import salt.utils.win_runas
-import salt.modules.cpan as cpan
-from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-from salt.ext import six
 
 
 
@@ -72,3 +50,17 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.run_function('cpan.remove', module=(name,))
 
 
+    def test_missing_cpan(self):
+        """
+        Test \cpan not being installed on the system
+        """
+        module="Nonexistant::Module"
+        # Use the name of a binary that doesn't exist
+        bin_env = "no_cpan"
+        ret = self.run_state('cpan.installed', name=module, bin_env=bin_env)
+        self.assertSaltFalseReturn(ret)
+        self.assertInSaltComment(
+            'Error installing \'{}\': Unable to locate `{}` binary, '
+            'Make sure it is installed and in the PATH'.format(
+                module, bin_env), ret
+        )

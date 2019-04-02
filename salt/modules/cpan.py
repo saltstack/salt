@@ -15,6 +15,7 @@ import logging
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+from salt.exceptions import CommandNotFoundError
 
 log = logging.getLogger(__name__)
 
@@ -38,17 +39,24 @@ def _get_cpan_bin(bin_env):
     Locate the cpan binary, with 'bin_env' as the executable itself,
     or from searching conventional filesystem locations
     """
+    binary = None
     if not bin_env:
         log.debug('cpan: Using cpan from system')
-        return [salt.utils.path.which('cpan')]
+        binary = salt.utils.path.which('cpan')
 
-    if os.access(bin_env, os.X_OK) and os.path.isfile(bin_env):
-        return os.path.normpath(bin_env)
+    if not binary and (os.access(bin_env, os.X_OK) and os.path.isfile(bin_env)):
+        binary = os.path.normpath(bin_env)
+    elif not binary:
+        binary = salt.utils.path.which(bin_env)
+
+    if not binary:
+        raise CommandNotFoundError('Unable to locate `{}` binary, '
+            'Make sure it is installed and in the PATH'.format(bin_env))
     else:
-        return salt.utils.path.which(bin_env)
+        return binary
 
 
-def version(bin_env=None):
+def version(bin_env='cpan'):
     '''
     Returns the version of cpan.  sed ``bin_env`` to specify the path to
     a specific virtualenv and get the cpan version in that virtualenv.
@@ -61,7 +69,7 @@ def version(bin_env=None):
 
         salt '*' cpan.version
     '''
-    return show("CPAN").get("installed version", None)
+    return show("CPAN", bin_env=bin_env).get("installed version", None)
 
 
 def install(module=None,
@@ -79,9 +87,11 @@ def install(module=None,
 
         salt '*' cpan.install Template::Alloy
     '''
-    old_info = show(module)
+    old_info = show(module, bin_env=bin_env)
 
     cmd = _get_cpan_bin(bin_env)
+    if not cmd:
+        return {'error': 'Error installing \'{}\': Could not find a `cpan` binary'.format(module)}
 
     if force:
         cmd.append('-f')
@@ -151,7 +161,7 @@ def remove(module, details=False):
             'error': info['error']
         }
 
-    version = info.get('installed version', None)
+    version = info.get(' version', None)
     if (version is None) or ('not installed' in version):
         log.debug("Module '{}' already removed, no changes made".format(module))
         return dict()
@@ -228,7 +238,7 @@ def list_():
     return ret
 
 
-def show(module):
+def show(module, bin_env='cpan'):
     '''
     Show information about a specific Perl module
 
@@ -241,7 +251,7 @@ def show(module):
     ret = {'name': module}
 
     # This section parses out details from CPAN, if possible
-    cmd = [_get_cpan_bin('cpan')]
+    cmd = [_get_cpan_bin(bin_env)]
     cmd.extend(['-D', module])
     out = __salt__['cmd.run_all'](cmd).get('stdout', "")
     parse = False
@@ -297,7 +307,7 @@ def show(module):
     return ret
 
 
-def config():
+def config(bin_env='cpan'):
     '''
     Return a dict of CPAN configuration values
 
@@ -307,7 +317,7 @@ def config():
 
         salt '*' cpan.config
     '''
-    cmd = [_get_cpan_bin('cpan'), '-J']
+    cmd = [_get_cpan_bin(bin_env), '-J']
     out = __salt__['cmd.run_all'](cmd).get("stdout", "")
     # Format the output like a python dictionary
     out = out.replace('=>', ':').replace("\n", "")
