@@ -133,7 +133,7 @@ try:
     # Default to `en-US` (1033)
     windll = ctypes.windll.kernel32
     INSTALL_LANGUAGE = locale.windows_locale.get(
-        windll.GetSystemDefaultUILanguage(), 1033).replace('_', '-')
+        windll.GetSystemDefaultUILanguage(), 'en_US').replace('_', '-')
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
