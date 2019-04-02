@@ -1,9 +1,4 @@
 {% set tmp_dir = pillar['tmp_dir'] %}
-#salt-minion:
-#  service.running:
-#    - enable: True
-#    - listen:
-#      - file: {{ tmp_dir }}/config/minion.d/signing_policies.conf
 
 {{ tmp_dir }}/pki:
   file.directory
@@ -37,7 +32,6 @@
         backup: True
     - require:
       - file: {{ tmp_dir  }}/pki
-      - salt-minion
       - {{ tmp_dir  }}/pki/ca.key
 
 mine.send:
@@ -66,3 +60,6 @@ test_crt:
         name: {{ tmp_dir  }}/pki/test.key
         bits: 4096
         backup: True
+    - require:
+        - {{ tmp_dir  }}/pki/ca.crt
+        - {{ tmp_dir  }}/pki/test.key
