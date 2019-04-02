@@ -642,3 +642,16 @@ def lint_tests(session):
     else:
         paths = ['tests/']
     _lint(session, '.testing.pylintrc', flags, paths)
+
+
+@nox.session(python='2.7')
+def docs(session):
+    '''
+    Build Salt's Documentation
+    '''
+    session.install('-r', 'requirements/static/py2.7/docs.txt')
+    os.chdir('doc/')
+    session.run('make', 'clean', external=True)
+    session.run('make', 'html', external=True)
+    session.run('tar', '-czvf', 'doc-archive.tar.gz', '_build/html')
+    os.chdir('..')
