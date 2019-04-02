@@ -10,6 +10,10 @@ Perform an HTTP query and statefully return the result
 import logging
 import re
 import time
+import sys
+
+from salt.ext import six
+
 
 __monitor__ = [
     "query",
@@ -209,18 +213,19 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
 
     while True:
         caught_exception = None
+        exception_type = None
+        stacktrace = None
         ret = None
         try:
             ret = query(name, **kwargs)
             if ret["result"]:
                 return ret
         except Exception as exc:  # pylint: disable=broad-except
-            caught_exception = exc
+            exception_type, caught_exception, stacktrace = sys.exc_info()
 
         if time.time() > starttime + wait_for:
             if not ret and caught_exception:
-                # workaround pylint bug https://www.logilab.org/ticket/3207
-                raise caught_exception  # pylint: disable=E0702
+                six.reraise(exception_type, caught_exception, stacktrace)
             return ret
         elif "request_interval" in kwargs:
             # Space requests out by delaying for an interval
