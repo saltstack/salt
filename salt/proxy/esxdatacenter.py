@@ -61,7 +61,7 @@ The location of the VMware vCenter server (host of ip) where the datacenter
 should be managed. Required.
 
 mechanism
-^^^^^^^^
+^^^^^^^^^
 The mechanism used to connect to the vCenter server. Supported values are
 ``userpass`` and ``sspi``. Required.
 
@@ -85,7 +85,7 @@ domain
 User domain. Required if mechanism is ``sspi``.
 
 principal
-^^^^^^^^
+^^^^^^^^^
 Kerberos principal. Rquired if mechanism is ``sspi``.
 
 protocol

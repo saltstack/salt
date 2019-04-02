@@ -26,7 +26,7 @@ To set things up, first generate a keypair. On the master, run the following:
 
 
 Using encrypted pillar
----------------------
+----------------------
 
 To encrypt secrets, copy the public key to your local machine and run:
 
