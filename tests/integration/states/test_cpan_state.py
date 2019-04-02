@@ -10,12 +10,6 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-try:
-    import pwd
-    HAS_PWD = True
-except ImportError:
-    HAS_PWD = False
-
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
@@ -46,9 +40,9 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     def test_missing_cpan(self):
         """
-        Test \cpan not being installed on the system
+        Test cpan not being installed on the system
         """
-        module="Nonexistant::Module"
+        module = "Nonexistant::Module"
         # Use the name of a binary that doesn't exist
         bin_env = "no_cpan"
         ret = self.run_state('cpan.installed', name=module, bin_env=bin_env)
