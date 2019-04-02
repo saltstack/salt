@@ -33,7 +33,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock()
         with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
             # Verify that the name of the default cpan executable starts with 'cpan'
-            self.assertTrue(os.path.split(cpan._get_cpan_bin(None)[0])[-1].startswith('cpan'))
+            self.assertTrue(os.path.split(cpan._get_cpan_bin())[-1].startswith('cpan'))
 
     def test_get_version(self):
         mock = MagicMock(return_value={'installed version': '2.26',

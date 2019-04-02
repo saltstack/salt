@@ -34,7 +34,7 @@ def __virtual__():
     return (False, 'Unable to locate cpan. Make sure it is installed and in the PATH.')
 
 
-def _get_cpan_bin(bin_env):
+def _get_cpan_bin(bin_env=None):
     """
     Locate the cpan binary, with 'bin_env' as the executable itself,
     or from searching conventional filesystem locations
@@ -89,7 +89,7 @@ def install(module=None,
     '''
     old_info = show(module, bin_env=bin_env)
 
-    cmd = _get_cpan_bin(bin_env)
+    cmd = [_get_cpan_bin(bin_env)]
     if not cmd:
         return {'error': 'Error installing \'{}\': Could not find a `cpan` binary'.format(module)}
 
