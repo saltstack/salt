@@ -4,7 +4,7 @@ Manage kubernetes resources as salt states
 ==========================================
 
 NOTE: This module requires the proper pillar values set. See
-salt.modules.kubernetes for more information.
+salt.modules.kubernetesmod for more information.
 
 .. warning::
 

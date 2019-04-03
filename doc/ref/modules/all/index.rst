@@ -38,6 +38,9 @@ execution modules
     at_solaris
     augeas_cfg
     aws_sqs
+    azurearm_compute
+    azurearm_network
+    azurearm_resource
     bamboohr
     bcache
     beacons
@@ -208,7 +211,7 @@ execution modules
     keystone
     keystoneng
     kmod
-    kubernetes
+    kubernetesmod
     launchctl_service
     layman
     ldap3
