@@ -542,7 +542,7 @@ def diff(**kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.diff 3
+        salt 'device_name' junos.diff id=3
     '''
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     id_ = kwargs.pop('id', 0)
