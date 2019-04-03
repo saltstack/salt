@@ -12,20 +12,17 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    skip_if_not_root,
-)
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
 class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
-    @skip_if_not_root
     def test_cpan_installed_removed(self):
         '''
         Tests installed and removed states
         '''
         name = 'Template::Alloy'
-        if "not installed" not in self.run_function('cpan.show', (name,))["installed version"]:
+        version = self.run_function('cpan.show', (name,))['installed version']
+        if version and ("not installed" not in version):
             # For now this is not implemented as state because it is experimental/non-stable
             # self.run_state('cpan.removed', name=name)
             self.run_function('cpan.remove', (name,))

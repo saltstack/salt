@@ -188,8 +188,8 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
                 self.assertDictEqual(cpan.show('Template::Alloy'), {'Salt': 'salt'})
 
-    # 'show_config' function tests: 1
-    def test_show_config(self):
+    # 'show' function tests: 1
+    def test_config(self):
         '''
         Test if it return a dict of CPAN configuration values
         '''

@@ -46,7 +46,7 @@ def _get_cpan_bin(bin_env=None):
 
     # If cpan is not part of the path, check if it exists in bin_env
     if not binary:
-        if os.access(bin_env, os.X_OK) and os.path.isfile(bin_env):
+        if bin_env and os.access(bin_env, os.X_OK) and os.path.isfile(bin_env):
             binary = os.path.normpath(bin_env)
         else:
             binary = salt.utils.path.which(bin_env)
@@ -109,7 +109,10 @@ def install(module,
     if mirror:
         # cpan accepts a single comma-separated string, but we prefer
         # a list from state files,  Allow both.
-        cmd.extend(['-M', mirror if isinstance(mirror, str) else ','.join(mirror)])
+        cmd.append("-M")
+        if isinstance(mirror, list):
+            mirror = ','.join(mirror)
+        cmd.extend(['-M', mirror])
 
     if notest:
         cmd.append('-T')
