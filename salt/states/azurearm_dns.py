@@ -70,7 +70,7 @@ Optional provider parameters:
 
     Example states using Azure Resource Manager authentication:
 
-    .. code-block:: yaml
+    .. code-block:: none
 
         {% set profile = salt['pillar.get']('azurearm:mysubscription') %}
         Ensure DNS zone exists:
