@@ -62,7 +62,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    salt linode-instance test.ping
+    salt linode-instance test.version
 
 
 Listing Sizes
