@@ -21,6 +21,7 @@ pillar modules
     django_orm
     ec2_pillar
     etcd_pillar
+    extra_minion_data_in_pillar
     file_tree
     foreman
     git_pillar
@@ -33,6 +34,7 @@ pillar modules
     makostack
     mongo
     mysql
+    nacl
     neutron
     nodegroups
     pepa
@@ -41,6 +43,7 @@ pillar modules
     puppet
     reclass_adapter
     redismod
+    rethinkdb_pillar
     s3
     saltclass
     sql_base

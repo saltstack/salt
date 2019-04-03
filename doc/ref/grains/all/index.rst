@@ -15,12 +15,22 @@ grains modules
     disks
     esxi
     extra
+    fibre_channel
     fx2
+    iscsi
     junos
     marathon
     mdadm
+    mdata
     metadata
+    minion_process
     napalm
+    nvme
+    nxos
+    onyx
     opts
     philips_hue
+    smartos
+    ssh_sample
     rest_sample
+    zfs

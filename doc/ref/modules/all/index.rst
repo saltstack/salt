@@ -23,6 +23,7 @@ execution modules
 
     acme
     aix_group
+    aix_shadow
     aliases
     alternatives
     ansiblegate
@@ -31,6 +32,7 @@ execution modules
     apf
     apkpkg
     aptpkg
+    aptly
     archive
     artifactory
     at
@@ -44,6 +46,7 @@ execution modules
     bluez_bluetooth
     boto3_elasticache
     boto3_route53
+    boto3_sns
     boto_apigateway
     boto_asg
     boto_cfn
@@ -67,6 +70,7 @@ execution modules
     boto_lambda
     boto_rds
     boto_route53
+    boto_s3
     boto_s3_bucket
     boto_secgroup
     boto_sns
@@ -86,6 +90,7 @@ execution modules
     chef
     chocolatey
     chronos
+    cimc
     cisconso
     cloud
     cmdmod
@@ -96,6 +101,7 @@ execution modules
     cp
     cpan
     cron
+    cryptdev
     csf
     cyg
     daemontools
@@ -128,7 +134,10 @@ execution modules
     elasticsearch
     environ
     eselect
+    esxcluster
+    esxdatacenter
     esxi
+    esxvm
     etcd_mod
     ethtool
     event
@@ -142,6 +151,7 @@ execution modules
     freebsdpkg
     freebsdports
     freebsdservice
+    gcp_addon
     gem
     genesis
     gentoo_service
@@ -150,6 +160,7 @@ execution modules
     github
     glance
     glanceng
+    glassfish
     glusterfs
     gnomedesktop
     gpg
@@ -164,6 +175,7 @@ execution modules
     heat
     hg
     hipchat
+    highstate_doc
     hosts
     http
     ifttt
@@ -286,6 +298,7 @@ execution modules
     network
     neutron
     neutronng
+    nexus
     nfs3
     nftables
     nginx
@@ -447,11 +460,13 @@ execution modules
     vault
     vbox_guest
     vboxmanage
+    vcenter
     victorops
     virt
     virtualenv_mod
     vsphere
     webutil
+    win_auditpol
     win_autoruns
     win_certutil
     win_dacl
@@ -486,6 +501,8 @@ execution modules
     win_update
     win_useradd
     win_wua
+    win_wusa
+    wordpress
     x509
     xapi_virt
     xbpspkg

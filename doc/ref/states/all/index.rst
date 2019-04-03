@@ -29,6 +29,7 @@ state modules
     blockdev
     boto3_elasticache
     boto3_route53
+    boto3_sns
     boto_apigateway
     boto_asg
     boto_cfn
@@ -53,6 +54,7 @@ state modules
     boto_lc
     boto_rds
     boto_route53
+    boto_s3
     boto_s3_bucket
     boto_secgroup
     boto_sns
@@ -69,6 +71,7 @@ state modules
     cmd
     composer
     cron
+    cryptdev
     csf
     cyg
     ddns
@@ -81,6 +84,7 @@ state modules
     docker_network
     docker_volume
     drac
+    dvs
     elasticsearch
     elasticsearch_index
     elasticsearch_index_template
@@ -88,7 +92,10 @@ state modules
     eselect
     etcd_mod
     ethtool
+    esxcluster
+    esxdatacenter
     esxi
+    esxvm
     event
     file
     firewall
@@ -98,6 +105,7 @@ state modules
     github
     glance
     glance_image
+    glassfish
     glusterfs
     gnomedesktop
     gpg
@@ -113,6 +121,7 @@ state modules
     heat
     hg
     hipchat
+    highstate_doc
     host
     http
     icinga2
@@ -180,6 +189,10 @@ state modules
     mongodb_user
     monit
     mount
+    mssql_database
+    mssql_login
+    mssql_role
+    mssql_user
     msteams
     mysql_database
     mysql_grants
@@ -196,6 +209,7 @@ state modules
     neutron_secgroup
     neutron_secgroup_rule
     neutron_subnet
+    nexus
     nfs_export
     nftables
     npm
@@ -210,6 +224,8 @@ state modules
     pagerduty_schedule
     pagerduty_service
     pagerduty_user
+    panos
+    pbm
     pcs
     pecl
     pdbedit
@@ -309,7 +325,9 @@ state modules
     win_system
     win_update
     win_wua
+    win_wusa
     winrepo
+    wordpress
     x509
     xmpp
     zabbix_host
@@ -317,6 +335,7 @@ state modules
     zabbix_mediatype
     zabbix_user
     zabbix_usergroup
+    zabbix_usermacro
     zcbuildout
     zenoss
     zk_concurrency

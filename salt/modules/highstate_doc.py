@@ -12,7 +12,7 @@ The proccessed data is passed to a `jinja` template that builds up the document 
 
 configuration: Pillar
 
-.. code-block:: yaml
+.. code-block:: none
 
     # the following defaults can be overrided
     highstate_doc.config:
@@ -145,7 +145,7 @@ Other hints
 
 If you wish to customize the document format:
 
-.. code-block:: yaml
+.. code-block:: none
 
     # you could also create a new `proccesser` for perhaps reStructuredText
     # highstate_doc.config:

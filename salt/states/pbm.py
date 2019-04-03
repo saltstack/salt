@@ -86,9 +86,9 @@ PyVmomi can be installed via pip:
     Python 2.7.9, or newer must be present. This is due to an upstream dependency
     in pyVmomi 6.0 that is not supported in Python versions 2.7 to 2.7.8. If the
     version of Python is not in the supported range, you will need to install an
-    earlier version of pyVmomi. See :ref:`Issue #29537` for more information.
-
-.. Issue #29537: https://github.com/saltstack/salt/issues/29537
+    earlier version of pyVmomi. See
+    `Issue #29537 <https://github.com/saltstack/salt/issues/29537>` for more
+    information.
 '''
 
 # Import Python Libs
