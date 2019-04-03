@@ -2066,6 +2066,12 @@ def locale_info():
 def hostname():
     '''
     Return fqdn, hostname, domainname
+
+    .. note::
+        On Windows the ``domain`` grain may refer to the dns entry for the host
+        instead of the Windows domain to which the host is joined. It may also
+        be empty if not a part of any domain. Refer to the ``windowsdomain``
+        grain instead
     '''
     # This is going to need some work
     # Provides:
