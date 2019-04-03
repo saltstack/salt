@@ -221,7 +221,13 @@ def rpc(cmd=None, dest=None, **kwargs):
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
         if 'filter' in op:
-            filter_reply = etree.XML(op['filter'])
+            try:
+                filter_reply = etree.XML(op['filter'])
+            except etree.XMLSyntaxError as ex:
+                ret['message'] = "Invalid filter " + ex.__repr__()
+                ret['out'] = False
+                return ret
+
             del op['filter']
 
         op.update({'format': format_})
