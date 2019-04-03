@@ -3,7 +3,7 @@
     :codeauthor: Tyler Johnson (tjohnson@saltstack.com)
 
 
-    tests.integration.states.cpan_state
+    tests.integration.states.cpan
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
