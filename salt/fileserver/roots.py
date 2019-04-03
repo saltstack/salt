@@ -34,7 +34,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.ext import six
-from salt.exceptions import FileserverConfigError
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +45,7 @@ def _file_roots():
     roots = __opts__['file_roots']
 
     if __opts__['dynamic_file_roots']:
-        if not 'file_roots.all_roots' in __utils__:
+        if 'file_roots.all_roots' not in __utils__:
             log.error('missing _utils/file_roots.py:all_roots() for dynamic_file_roots. Did you forget to saltutil.sync_utils?')
         else:
             dynamic_roots = __utils__['file_roots.all_roots']()
@@ -62,7 +61,7 @@ def _file_roots_for(saltenv):
     roots = __opts__['file_roots'][saltenv]
 
     if __opts__['dynamic_file_roots']:
-        if not 'file_roots.roots' in __utils__:
+        if 'file_roots.roots' not in __utils__:
             log.error('missing _utils/file_roots.py:roots() for dynamic_file_roots. Did you forget to saltutil.sync_utils?')
         else:
             dynamic_roots = __utils__['file_roots.roots'](saltenv)

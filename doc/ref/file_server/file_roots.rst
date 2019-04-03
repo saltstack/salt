@@ -85,7 +85,7 @@ Once the minion ``file_roots`` option has been set, change the ``file_client``
 option to local to make sure that the local file server interface is used.
 
 Dynamic File Roots
-=================
+==================
 
 .. versionadded::  Neon
 
