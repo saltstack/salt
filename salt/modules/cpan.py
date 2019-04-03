@@ -133,7 +133,6 @@ def install(module,
     if 'error' in new_info:
         ret['error'] = new_info['error']
 
-
     # Remove values that are identical, only report changes
     for k in old_info.copy().keys():
         if old_info.get(k) == new_info[k]:
