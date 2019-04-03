@@ -203,10 +203,6 @@ def rpc(cmd=None, dest=None, **kwargs):
         ret['out'] = False
         return ret
 
-    format_ = kwargs.pop('format', 'xml')
-    if not format_:
-        format_ = 'xml'
-
     op = dict()
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
@@ -218,6 +214,9 @@ def rpc(cmd=None, dest=None, **kwargs):
                 op[key] = value
     else:
         op.update(kwargs)
+
+    format_ = op.pop('format', 'xml')
+    dest = op.pop('dest', None) or dest
 
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
