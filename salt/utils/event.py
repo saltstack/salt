@@ -874,8 +874,7 @@ class SaltEvent(object):
                     self._fire_ret_load_specific_fun(load)
 
     def remove_event_handler(self, event_handler):
-        if event_handler in self.subscriber.callbacks:
-            self.subscriber.callbacks.remove(event_handler)
+        self.subscriber.remove_callback(event_handler)
 
     def set_event_handler(self, event_handler):
         '''
@@ -885,11 +884,8 @@ class SaltEvent(object):
 
         if not self.cpub:
             self.connect_pub()
-
-        self.subscriber.callbacks.add(event_handler)
-        if not self.subscriber.reading:
-            # This will handle reconnects
-            self.subscriber.read_async()
+        # This will handle reconnects
+        self.subscriber.read_async(event_handler)
 
     def __del__(self):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter

@@ -197,8 +197,8 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
     '''
     def setUp(self):
         super(IPCMessagePubSubCase, self).setUp()
-        self.opts = {'ipc_write_buffer': 0}
-        self.socket_path = os.path.join(TMP, 'ipc_test.ipc')
+        self.opts = {'ipc_write_buffer': 0, 'ipc_so_backlog': 128}
+        self.socket_path = os.path.join(RUNTIME_VARS.TMP, 'ipc_test.ipc')
         self.pub_channel = self._get_pub_channel()
         self.sub_channel = self._get_sub_channel()
 
@@ -270,3 +270,26 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
         self.assertEqual(len(call_cnt), 2)
         self.assertEqual(call_cnt[0], 'TEST')
         self.assertEqual(call_cnt[1], 'TEST')
+
+    def test_multi_handlers(self):
+        call_cnt = []
+        stop_len = 2
+
+        def handler(raw):
+            call_cnt.append(raw)
+            if len(call_cnt) >= stop_len:
+                self.stop()
+
+        def handler2(raw):
+            handler(raw)
+
+        self.sub_channel.read_async(handler)
+        self.sub_channel.read_async(handler2)
+        self.pub_channel.publish('TEST')
+        self.wait()
+        self.sub_channel.remove_callback(handler2)
+        self.pub_channel.publish('TEST2')
+        self.pub_channel.publish('TEST3')
+        stop_len = 4
+        self.wait()
+        self.assertEqual(call_cnt, ['TEST', 'TEST', 'TEST2', 'TEST3'])

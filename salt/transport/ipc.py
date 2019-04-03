@@ -415,6 +415,8 @@ class IPCClient(object):
         if self.stream is not None and not self.stream.closed():
             self.stream.close()
 
+        log.debug('Closed %s instance', self.__class__.__name__)
+
         # Remove the entry from the instance map so
         # that a closed entry may not be reused.
         # This forces this operation even if the reference
@@ -784,6 +786,8 @@ class IPCMessageSubscriber(object):
     def __init__(self, socket_path, io_loop=None):
         self.service = IPCMessageSubscriberService(socket_path, io_loop)
         self.queue = tornado.queues.Queue()
+        self.callbacks = set()
+        self.reading = False
 
     def connected(self):
         return self.service.connected()
@@ -796,13 +800,21 @@ class IPCMessageSubscriber(object):
         for msg in msgs:
             yield self.queue.put(msg)
 
+    def __run_callbacks(self, raw):
+        for callback in self.callbacks:
+            self.service.io_loop.spawn_callback(callback, raw)
+
     @tornado.gen.coroutine
-    def read_async(self, callback, timeout=None):
+    def _read(self, asynchronous=True, timeout=None):
         '''
         Asynchronously read messages and invoke a callback when they are ready.
 
         :param callback: A callback with the received data
         '''
+        if asynchronous and self.reading:
+            raise tornado.gen.Return()
+        self.reading = True
+
         self.service.read(self)
         while True:
             try:
@@ -810,6 +822,9 @@ class IPCMessageSubscriber(object):
                     deadline = time.time() + timeout
                 else:
                     deadline = None
+                log.debug('TORNADO: %s', tornado)
+                log.debug('GEN: %s', tornado.gen)
+                log.debug('TIMEOUTERROR: %s', tornado.gen.TimeoutError)
                 data = yield self.queue.get(timeout=deadline)
             except tornado.gen.TimeoutError:
                 raise tornado.gen.Return(None)
@@ -817,10 +832,27 @@ class IPCMessageSubscriber(object):
                 break
             elif isinstance(data, Exception):
                 raise data
-            elif callback:
-                self.service.io_loop.spawn_callback(callback, data)
+            elif asynchronous:
+                self.__run_callbacks(data)
             else:
                 raise tornado.gen.Return(data)
+
+    def add_callback(self, callback):
+        self.callbacks.add(callback)
+
+    def remove_callback(self, callback):
+        self.callbacks.discard(callback)
+
+    @tornado.gen.coroutine
+    def read_async(self, callback=None, timeout=None):
+        '''
+        Asynchronously read messages and invoke a callback when they are ready.
+
+        :param callback: A callback with the received data
+        '''
+        if callback:
+            self.add_callback(callback)
+        yield self._read(asynchronous=True, timeout=timeout)
 
     def read_sync(self, timeout=None):
         '''
@@ -831,7 +863,9 @@ class IPCMessageSubscriber(object):
         :return: message data if successful. None if timed out. Will raise an
                  exception for all other error conditions.
         '''
-        return self.service.io_loop.run_sync(lambda: self.read_async(None, timeout))
+        return self.service.io_loop.run_sync(lambda: self._read(asynchronous=False, timeout=timeout))
 
     def close(self):
         self.service.unsubscribe(self)
+        self.queue.put(None)
+        self.reading = False
