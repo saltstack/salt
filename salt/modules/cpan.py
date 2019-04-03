@@ -31,7 +31,8 @@ def __virtual__():
     '''
     if salt.utils.path.which('cpan'):
         return True
-    return (False, 'Unable to locate cpan. Make sure it is installed and in the PATH.')
+    return (
+    False, 'Unable to locate cpan. Make sure it is installed and in the PATH.')
 
 
 def _get_cpan_bin(bin_env=None):
@@ -54,7 +55,8 @@ def _get_cpan_bin(bin_env=None):
     # If none of the above assignments resulted in a path, throw an error
     if not binary:
         raise CommandNotFoundError('Unable to locate `{}` binary, '
-            'Make sure it is installed and in the PATH'.format(bin_env))
+                                   'Make sure it is installed and in the PATH'.format(
+                                    bin_env if bin_env else "cpan"))
 
     return binary
 
@@ -186,7 +188,8 @@ def remove(module, details=False):
         for build_dir in info['cpan build dirs']:
             # Check if the build directory exists, if not then skip
             if not os.path.isdir(build_dir):
-                log.warning("Could not find CPAN build dir: {}".format(build_dir))
+                log.warning(
+                    "Could not find CPAN build dir: {}".format(build_dir))
                 continue
 
             # If the manifest is moving then skip
@@ -269,7 +272,7 @@ def show(module, bin_env='cpan'):
     info = []
     for line in out.splitlines():
         # Once the dashes appear we are looking at the module info
-        if line.startswith('-'*20):
+        if line.startswith('-' * 20):
             parse = True
             continue
         if not parse:
