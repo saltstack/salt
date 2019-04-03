@@ -12,6 +12,13 @@ import os
 import sys
 import json
 import pprint
+try:
+    # Python 2
+    from StringIO import StringIO
+except ImportError:
+    # Python 3
+    import io
+    StringIO = io.StringIO
 
 
 if __name__ == '__main__':
@@ -20,19 +27,18 @@ if __name__ == '__main__':
     exit(1)
 
 # Import 3rd-party libs
-import six
 import nox
 from nox.command import CommandFailed
 
 
 # ----- Helper Classes ---------------------------------------------------------------------------------------------->
-class StdStream(six.StringIO):
+class StdStream(StringIO):
     def __init__(self, std):
-        super(StdStream, self).__init__()
+        StringIO.__init__(self)
         self._std = std
 
     def write(self, data):
-        super(StdStream, self).write(data)
+        StringIO.write(self, data)
         self._std.write(data)
 
 
