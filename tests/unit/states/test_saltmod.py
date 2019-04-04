@@ -248,7 +248,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
                                                                 timeout=-1.0),
                                          ret)
 
-    # 'runner' function tests: 1
+    # 'runner' function tests: 2
 
     def test_runner(self):
         '''
@@ -269,6 +269,13 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         ret = {'servername': {'Error': 'servername already exists under mh-vmware:vmware'}}
 
         runner_mock = MagicMock(return_value={'return': False})
+
+        with patch.dict(saltmod.__salt__, {'saltutil.runner': runner_mock}):
+          self.assertDictEqual(saltmod.runner(name), ret)
+
+        ret = {}
+
+        runner_mock = MagicMock(return_value={'return': {}})
 
         with patch.dict(saltmod.__salt__, {'saltutil.runner': runner_mock}):
           self.assertDictEqual(saltmod.runner(name), ret)
