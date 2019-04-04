@@ -129,14 +129,6 @@ repos:
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycryptodome==(.*)$
-      - id: pip-tools-compile
-        alias: compile-lint-py3.4-requirements
-        name: Lint Py3.4 Requirements
-        files: ^requirements/static/lint\.in$
-        args:
-          - -v
-          - --py-version=3.4
-          - --platform=linux
 
       - id: pip-tools-compile
         alias: compile-linux-py3.5-zmq-requirements
@@ -218,14 +210,6 @@ repos:
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycryptodome==(.*)$
-      - id: pip-tools-compile
-        alias: compile-lint-py3.5-requirements
-        name: Lint Py3.5 Requirements
-        files: ^requirements/static/lint\.in$
-        args:
-          - -v
-          - --py-version=3.5
-          - --platform=linux
 
       - id: pip-tools-compile
         alias: compile-linux-py3.6-zmq-requirements
@@ -307,11 +291,3 @@ repos:
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycryptodome==(.*)$
-      - id: pip-tools-compile
-        alias: compile-lint-py3.6-requirements
-        name: Lint Py3.6 Requirements
-        files: ^requirements/static/lint\.in$
-        args:
-          - -v
-          - --py-version=3.6
-          - --platform=linux
