@@ -264,6 +264,15 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(saltmod.__salt__, {'saltutil.runner': runner_mock}):
             self.assertDictEqual(saltmod.runner(name), ret)
 
+        name = 'orchestration'
+
+        ret = {'return': {'servername': {'Error': 'servername already exists under mh-vmware:vmware'}}
+
+        runner_mock = MagicMock(return_value={'return': False})
+
+        with patch.dict(saltmod.__salt__, {'saltutil.runner': runner_mock}):
+          self.assertDictEqual(saltmod.runner(name), ret)
+
     # 'wheel' function tests: 1
 
     def test_wheel(self):
