@@ -2136,20 +2136,20 @@ class State(object):
                     for key, value in arg.items():
                         try:
                             if value.startswith(SLOT_TEXT):
-                                log.debug("Slot processsing dict value %s", value)
+                                log.trace("Slot processsing dict value %s", value)
                                 cdata[atype][ind][key] = self.__eval_slot(value)
                         except AttributeError:
                             # Not a string/slot
                             continue
                 elif isinstance(arg, list):
                     for idx, listvalue in enumerate(arg):
-                        log.debug("Slot processing list value: %s", listvalue)
+                        log.trace("Slot processing list value: %s", listvalue)
                         if isinstance(listvalue, dict):
                             # Search dict values in list for __slot__:
                             for key, value in listvalue.items():
                                 try:
                                     if value.startswith(SLOT_TEXT):
-                                        log.debug("Slot processsing nested dict value %s", value)
+                                        log.trace("Slot processsing nested dict value %s", value)
                                         cdata[atype][ind][idx][key] = self.__eval_slot(value)
                                 except AttributeError:
                                     # Not a string/slot
@@ -2157,12 +2157,12 @@ class State(object):
                         if isinstance(listvalue, six.text_type):
                             # Search strings in a list for __slot__:
                             if listvalue.startswith(SLOT_TEXT):
-                                log.debug("Slot processsing nested string %s", listvalue)
+                                log.trace("Slot processsing nested string %s", listvalue)
                                 cdata[atype][ind][idx] = self.__eval_slot(listvalue)
                 elif isinstance(arg, six.text_type) \
                         and arg.startswith(SLOT_TEXT):
                     # Search strings for __slot__:
-                    log.debug("Slot processsing %s", arg)
+                    log.trace("Slot processsing %s", arg)
                     cdata[atype][ind] = self.__eval_slot(arg)
                 else:
                     # Not a slot, skip it
