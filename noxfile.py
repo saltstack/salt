@@ -75,14 +75,6 @@ class CaptureSTDs(object):
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
 SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, 'tests', 'support', 'coverage')
 IS_WINDOWS = sys.platform.lower().startswith('win')
-REQUIREMENTS_OVERRIDES = {
-    None: [
-        'jsonschema <= 2.6.0'
-    ],
-    'ubuntu-14.04': [
-        'tornado < 5.0'
-    ]
-}
 
 # Python versions to run against
 _PYTHON_VERSIONS = ('2', '2.7', '3', '3.4', '3.5', '3.6')
