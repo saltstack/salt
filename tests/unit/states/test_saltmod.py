@@ -267,7 +267,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         name = 'cloud.profile'
 
         ret = {'changes': {'return': {'servername': {'Error': 'servername already exists under mh-vmware:vmware'}}},
-               'name': 'orchestration', 'result': True,
+               'name': 'cloud.profile', 'result': True,
                'comment': 'Runner function \'cloud.profile\' executed.',
                '__orchestration__': True}
 
