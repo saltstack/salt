@@ -278,7 +278,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
         name = 'cloud.map_run'
         ret = {'changes': {}, 'name': 'cloud.map_run', 'result': False,
-               'comment': 'Runner function \'cloud.map_run\' executed.',
+               'comment': 'Runner function \'cloud.map_run\' failed.',
                '__orchestration__': True}
 
         runner_mock = MagicMock(return_value={'return': {}})
