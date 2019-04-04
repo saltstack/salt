@@ -20,10 +20,9 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Tests installed and removed states
         '''
-        # Verify that cpan is installed
-        ret = self.run_state('pkg.installed', name='cpan')
+        # Verify that cpan is installed (It's part of perl)
+        ret = self.run_state('pkg.installed', name='perl')
         self.assertSaltTrueReturn(ret)
-
         name = 'Template::Alloy'
         version = self.run_function('cpan.show', (name,))['installed version']
         if version and ("not installed" not in version):
