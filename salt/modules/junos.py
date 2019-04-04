@@ -203,10 +203,6 @@ def rpc(cmd=None, dest=None, **kwargs):
         ret['out'] = False
         return ret
 
-    format_ = kwargs.pop('format', 'xml')
-    if not format_:
-        format_ = 'xml'
-
     op = dict()
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
@@ -219,10 +215,19 @@ def rpc(cmd=None, dest=None, **kwargs):
     else:
         op.update(kwargs)
 
+    format_ = op.pop('format', 'xml')
+    dest = op.pop('dest', None) or dest
+
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
         if 'filter' in op:
-            filter_reply = etree.XML(op['filter'])
+            try:
+                filter_reply = etree.XML(op['filter'])
+            except etree.XMLSyntaxError as ex:
+                ret['message'] = "Invalid filter " + ex.__repr__()
+                ret['out'] = False
+                return ret
+
             del op['filter']
 
         op.update({'format': format_})
@@ -542,7 +547,7 @@ def diff(**kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.diff 3
+        salt 'device_name' junos.diff id=3
     '''
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     id_ = kwargs.pop('id', 0)
@@ -686,8 +691,13 @@ def cli(command=None, **kwargs):
         ret['message'] = jxmlease.parse(result)
 
     if 'dest' in op and op['dest'] is not None:
-        with salt.utils.files.fopen(op['dest'], 'w') as fp:
-            fp.write(salt.utils.stringutils.to_str(result))
+        try:
+            with salt.utils.files.fopen(op['dest'], 'w') as fp:
+                fp.write(salt.utils.stringutils.to_str(result))
+        except IOError:
+            ret['message'] = 'Unable to open "{0}" to write'.format(op['dest'])
+            ret['out'] = False
+            return ret
 
     ret['out'] = True
     return ret
