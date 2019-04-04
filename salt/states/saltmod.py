@@ -802,12 +802,6 @@ def runner(name, **kwargs):
     runner_return = out.get('return')
     if isinstance(runner_return, dict) and 'Error' in runner_return:
         out['success'] = False
-    elif isinstance(runner_return, dict) and runner_return == {}:
-        out['success'] = False
-    elif isinstance(runner_return, dict):
-        for returns in runner_return.values():
-            if isinstance(runner_return.values()[0], dict) and 'Error' in runner_return.values()[0]:
-                out['success'] = False
 
     success = out.get('success', True)
     ret = {'name': name,

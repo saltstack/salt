@@ -264,11 +264,14 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(saltmod.__salt__, {'saltutil.runner': runner_mock}):
             self.assertDictEqual(saltmod.runner(name), ret)
 
-        name = 'orchestration'
+        name = 'cloud.profile'
 
-        ret = {'servername': {'Error': 'servername already exists under mh-vmware:vmware'}}
+        ret = {'changes': {'return': {'servername': {'Error': 'servername already exists under mh-vmware:vmware'}}},
+               'name': 'orchestration', 'result': True,
+               'comment': 'Runner function \'cloud.profile\' executed.',
+               '__orchestration__': True}
 
-        runner_mock = MagicMock(return_value={'return': False})
+        runner_mock = MagicMock(return_value={'return': {'servername': {'Error': 'servername already exists under mh-vmware:vmware'}}})
 
         with patch.dict(saltmod.__salt__, {'saltutil.runner': runner_mock}):
           self.assertDictEqual(saltmod.runner(name), ret)
