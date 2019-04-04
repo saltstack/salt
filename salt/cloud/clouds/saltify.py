@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
+.. _saltify-module:
+
 Saltify Module
 ==============
 
