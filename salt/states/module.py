@@ -3,89 +3,109 @@ r'''
 Execution of Salt modules from within states
 ============================================
 
+.. note::
+
+    There are two styles of calling ``module.run``. To use the new style
+    you must add the following to your ``/etc/salt/minion`` config file:
+
+    .. code-block:: yaml
+
+        use_superseded:
+          - module.run
+
 With `module.run` these states allow individual execution module calls to be
-made via states. To call a single module function use a :mod:`module.run <salt.states.module.run>`
-state:
+made via states. To call a single module function use a
+:mod:`module.run <salt.states.module.run>` state:
 
 .. code-block:: yaml
 
+    # Old Style
     mine.send:
       module.run:
         - network.interfaces
 
-Note that this example is probably unnecessary to use in practice, since the
-``mine_functions`` and ``mine_interval`` config parameters can be used to
-schedule updates for the mine (see :ref:`here <salt-mine>` for more info).
+    # New Style
+    mine.send:
+      module.run:
+        # Note the trailing `:`
+        - network.interfaces:
+
+
+.. note::
+
+    The previous example is contrived and probably unnecessary to use in practice,
+    since the ``mine_functions`` and ``mine_interval`` config parameters
+    can be used to schedule updates for the mine (see :ref:`here <salt-mine>`
+    for more info).
 
 It is sometimes desirable to trigger a function call after a state is executed,
 for this the :mod:`module.wait <salt.states.module.wait>` state can be used:
 
 .. code-block:: yaml
 
-    fetch_out_of_band:
-      module.run:
-        - git.fetch:
-          - cwd: /path/to/my/repo
-          - user: myuser
-          - opts: '--all'
+    add example to hosts:
+      file.append:
+        - name: /etc/hosts
+        - text: 203.0.113.13     example.com
 
-Another example:
-
-.. code-block:: yaml
-
-    mine.send:
-      module.run:
-        - network.ip_addrs:
-          - interface: eth0
-
-And more complex example:
-
-.. code-block:: yaml
-
-    eventsviewer:
-      module.run:
-        - task.create_task:
-          - name: events-viewer
-          - user_name: System
-          - action_type: Execute
-          - cmd: 'c:\netops\scripts\events_viewer.bat'
-          - trigger_type: 'Daily'
-          - start_date: '2017-1-20'
-          - start_time: '11:59PM'
-
-Please note, this is a new behaviour of `module.run` function.
-
-With the previous `module.run` there are several differences:
-
-- The need of `name` keyword
-- The need of `m_` prefix
-- No way to call more than one function at once
-
-For example:
-
-.. code-block:: yaml
-
+    # Old Style
     mine.send:
       module.wait:
-        - name: network.interfaces
+        - name: hosts.list
         - watch:
-          - file: /etc/network/interfaces
+          - file: add example to hosts
 
-All arguments that the ``module`` state does not consume are passed through to
-the execution module function being executed:
+    # New Style
+    mine.send:
+      module.wait:
+        # Again, note the trailing `:`
+        - hosts.list_hosts:
+        - watch:
+          - file: add example to hosts
+
+In the old style, all arguments that the ``module`` state does not consume are
+passed through to the execution module function being executed:
 
 .. code-block:: yaml
 
-    fetch_out_of_band:
+    show off module.run with args:
       module.run:
-        - name: git.fetch
-        - cwd: /path/to/my/repo
-        - user: myuser
-        - opts: '--all'
+        - name: test.random_hash
+        - size: 42
+        - hash_type: sha256
 
-Due to how the state system works, if a module function accepts an
-argument called, ``name``, then ``m_name`` must be used to specify that
-argument, to avoid a collision with the ``name`` argument.
+In the new style, they are simply nested under the module name:
+
+.. code-block:: yaml
+
+    show off module.run with args:
+      module.run:
+        # Note the lack of `name: `, and trailing `:`
+        - test.random_hash:
+          - size: 42
+          - hash_type: sha256
+
+If the module takes ``*args``, they can be passed in as well:
+
+.. code-block:: yaml
+
+    args and kwargs:
+      module.run:
+        - test.arg:
+          - isn't
+          - this
+          - fun
+          - this: that
+          - salt: stack
+
+
+Legacy (Default) Examples
+-------------------------
+
+If you're using the legacy ``module.run``, due to how the state system works,
+if a module function accepts an argument called, ``name``, then ``m_name`` must
+be used to specify that argument, to avoid a collision with the ``name``
+argument.
 
 Here is a list of keywords hidden by the state system, which must be prefixed
 with ``m_``:
@@ -133,6 +153,15 @@ arguments. For example:
               delvol_on_destroy: 'True'
           }
 
+Other modules take the keyword arguments using this style:
+
+.. code-block:: yaml
+
+     mac_enable_ssh:
+       module.run:
+         - name: system.set_remote_login
+         - enable: True
+
 Another example that creates a recurring task that runs a batch file on a
 Windows system:
 
@@ -151,26 +180,59 @@ Windows system:
               start_time: '11:59PM'
         }
 
-Another option is to use the new version of `module.run`. With which you can call one (or more!)
-functions at once the following way:
+
+
+Modern Examples
+---------------
+
+Here are some other examples using the modern ``module.run``:
 
 .. code-block:: yaml
 
-    call_something:
+    fetch_out_of_band:
       module.run:
         - git.fetch:
           - cwd: /path/to/my/repo
           - user: myuser
           - opts: '--all'
 
-By default this behaviour is not turned on. In order to do so, please add the following
-configuration to the minion:
+Yet another example:
 
 .. code-block:: yaml
 
-    use_superseded:
-      - module.run
+    mine.send:
+      module.run:
+        - network.ip_addrs:
+          - interface: eth0
 
+And more complex example:
+
+.. code-block:: yaml
+
+    eventsviewer:
+      module.run:
+        - task.create_task:
+          - name: events-viewer
+          - user_name: System
+          - action_type: Execute
+          - cmd: 'c:\netops\scripts\events_viewer.bat'
+          - trigger_type: 'Daily'
+          - start_date: '2017-1-20'
+          - start_time: '11:59PM'
+
+With the modern ``module.run``, you can also run multiple different modules
+within the same state:
+
+.. code-block:: yaml
+
+    run all the things:
+      module.run:
+        - test.arg:
+          - so: cool
+        - test.version:
+        - test.true:
+        - test.fib:
+          - 4
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
