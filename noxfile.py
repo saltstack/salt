@@ -220,8 +220,15 @@ def _runtests(session, coverage, transport, cmd_args):
         else:
             session.run('python', os.path.join('tests', 'runtests.py'), *cmd_args)
     except CommandFailed:
-        session.log('Re-running failed tests if possible')
         names_file_path = os.path.join('artifacts', 'failed-tests.txt')
+        if not os.path.exists(names_file_path):
+            # raise the original exception
+            raise
+        with open(names_file_path) as rfh:
+            if not rfh.read():
+                # raise the original exception
+                raise
+        session.log('Re-running failed tests if possible')
         session.install('xunitparser==1.3.3')
         session.run(
             'python',
