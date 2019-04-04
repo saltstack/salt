@@ -1415,7 +1415,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                     "pico": "0.1.1",
                 }
 
-            def __call__(self, root=None):
+            def __call__(self, root=None, includes=None):
                 pkgs = self._pkgs.copy()
                 for target in self._packages:
                     if self._pkgs.get(target):
