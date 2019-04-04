@@ -276,7 +276,10 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(saltmod.__salt__, {'saltutil.runner': runner_mock}):
           self.assertDictEqual(saltmod.runner(name), ret)
 
-        ret = {}
+        name = 'cloud.map_run'
+        ret = {'changes': {}, 'name': 'cloud.map_run', 'result': False,
+               'comment': 'Runner function \'cloud.map_run\' executed.',
+               '__orchestration__': True}
 
         runner_mock = MagicMock(return_value={'return': {}})
 
