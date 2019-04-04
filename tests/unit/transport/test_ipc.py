@@ -29,7 +29,6 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import MagicMock
 from tests.support.unit import skipIf
 
-import pytest
 import threading
 
 log = logging.getLogger(__name__)
