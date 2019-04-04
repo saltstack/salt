@@ -268,7 +268,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = {'changes': {'return': {'servername': {'Error': 'servername already exists under mh-vmware:vmware'}}},
                'name': 'cloud.profile', 'result': False,
-               'comment': 'Runner function \'cloud.profile\' executed.',
+               'comment': 'Runner function \'cloud.profile\' failed.',
                '__orchestration__': True}
 
         runner_mock = MagicMock(return_value={'return': {'servername': {'Error': 'servername already exists under mh-vmware:vmware'}}})
