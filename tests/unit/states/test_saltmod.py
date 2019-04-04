@@ -266,7 +266,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
         name = 'orchestration'
 
-        ret = {'return': {'servername': {'Error': 'servername already exists under mh-vmware:vmware'}}}
+        ret = {'servername': {'Error': 'servername already exists under mh-vmware:vmware'}}
 
         runner_mock = MagicMock(return_value={'return': False})
 
