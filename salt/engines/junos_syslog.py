@@ -40,7 +40,7 @@ The corresponding dynamic topic sent on salt event bus would look something like
 The default topic title is 'jnpr/syslog/hostname/event'.
 
 The user can choose the type of data they wants of the event bus.
-Like, if one wants only events pertaining to a particular daemon, he/she can
+Like, if one wants only events pertaining to a particular daemon, they can
 specify that in the configuration file:
 
 .. code-block:: yaml
