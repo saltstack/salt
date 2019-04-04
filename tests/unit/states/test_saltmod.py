@@ -277,7 +277,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
           self.assertDictEqual(saltmod.runner(name), ret)
 
         name = 'cloud.map_run'
-        ret = {'changes': {}, 'name': 'cloud.map_run', 'result': False,
+        ret = {'changes': {'return': {}}, 'name': 'cloud.map_run', 'result': False,
                'comment': 'Runner function \'cloud.map_run\' failed.',
                '__orchestration__': True}
 
