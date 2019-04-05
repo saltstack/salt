@@ -91,7 +91,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    # salt myubuntu test.ping
+    # salt myubuntu test.version
 
 
 Required Settings

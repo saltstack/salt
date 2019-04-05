@@ -165,7 +165,7 @@ def setup_handlers():
         payload_type = __opts__['fluent_handler'].get('payload_type', None)
         # in general, you want the value of tag to ALSO be a member of tags
         tags = __opts__['fluent_handler'].get('tags', ['salt'])
-        tag = tags[0] if len(tags) else 'salt'
+        tag = tags[0] if tags else 'salt'
         if payload_type == 'graylog':
             version = 0
         elif payload_type == 'gelf':
@@ -199,7 +199,7 @@ class MessageFormatter(logging.Formatter, NewStyleClassMixIn):
     def __init__(self, payload_type, version, tags, msg_type=None, msg_path=None):
         self.payload_type = payload_type
         self.version = version
-        self.tag = tags[0] if len(tags) else 'salt'  # 'salt' for backwards compat
+        self.tag = tags[0] if tags else 'salt'  # 'salt' for backwards compat
         self.tags = tags
         self.msg_path = msg_path if msg_path else payload_type
         self.msg_type = msg_type if msg_type else payload_type

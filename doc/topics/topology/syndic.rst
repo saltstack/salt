@@ -131,15 +131,15 @@ On the Master node:
     Unaccepted Keys:
     Rejected Keys:
 
-    # salt '*' test.ping
+    # salt '*' test.version
     minion_1:
-        True
+        2018.3.4
     minion_2:
-        True
+        2018.3.4
     minion_4:
-        True
+        2018.3.4
     minion_3:
-        True
+        2018.3.4
 
 Topology
 ========
