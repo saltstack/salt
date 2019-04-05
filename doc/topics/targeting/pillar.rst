@@ -21,7 +21,7 @@ Example:
 
 .. code-block:: bash
 
-    salt -I 'somekey:specialvalue' test.ping
+    salt -I 'somekey:specialvalue' test.version
 
 Like with :ref:`Grains <targeting-grains>`, it is possible to use globbing
 as well as match nested values in Pillar, by adding colons for each level that
@@ -31,4 +31,4 @@ is being traversed. The below example would match minions with a pillar named
 
 .. code-block:: bash
 
-    salt -I 'foo:bar:baz*' test.ping
+    salt -I 'foo:bar:baz*' test.version
