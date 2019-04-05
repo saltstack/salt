@@ -135,7 +135,6 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
         orig_line = self.line
         orig_column = self.column
         orig_pointer = self.pointer
-        log.warning('=== Handling unicode literal string ===')
         try:
             return super(SaltYamlSafeLoader, self).fetch_plain()
         except yaml.scanner.ScannerError as exc:
