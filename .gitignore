@@ -4,6 +4,7 @@
 pkg/arch/*.tar.xz
 *.sw[pon]
 doc/_build
+doc/doc-archive.tar.gz
 dist
 MANIFEST
 *~
