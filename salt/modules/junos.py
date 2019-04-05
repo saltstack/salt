@@ -474,7 +474,7 @@ def rollback(**kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.rollback 10
+        salt 'device_name' junos.rollback id=10
     '''
     id_ = kwargs.pop('id', 0)
 
