@@ -59,7 +59,7 @@ def present(name,
            'changes': {},
            'comment': []}
 
-    current_beacons = __salt__['beacons.list'](return_yaml=False)
+    current_beacons = __salt__['beacons.list'](return_yaml=False, **kwargs)
     beacon_data = [{k: v} for k, v in six.iteritems(kwargs)]
 
     if name in current_beacons:
@@ -67,13 +67,13 @@ def present(name,
         if beacon_data == current_beacons[name]:
             ret['comment'].append('Job {0} in correct state'.format(name))
         else:
-            if 'test' in __opts__ and __opts__['test']:
+            if __opts__.get('test'):
                 kwargs['test'] = True
-                result = __salt__['beacons.modify'](name, beacon_data)
+                result = __salt__['beacons.modify'](name, beacon_data, **kwargs)
                 ret['comment'].append(result['comment'])
                 ret['changes'] = result['changes']
             else:
-                result = __salt__['beacons.modify'](name, beacon_data)
+                result = __salt__['beacons.modify'](name, beacon_data, **kwargs)
                 if not result['result']:
                     ret['result'] = result['result']
                     ret['comment'] = result['comment']
@@ -86,12 +86,12 @@ def present(name,
                         ret['comment'].append(result['comment'])
 
     else:
-        if 'test' in __opts__ and __opts__['test']:
+        if __opts__.get('test'):
             kwargs['test'] = True
             result = __salt__['beacons.add'](name, beacon_data, **kwargs)
             ret['comment'].append(result['comment'])
         else:
-            result = __salt__['beacons.add'](name, beacon_data)
+            result = __salt__['beacons.add'](name, beacon_data, **kwargs)
             if not result['result']:
                 ret['result'] = result['result']
                 ret['comment'] = result['comment']
@@ -100,8 +100,11 @@ def present(name,
                 ret['comment'].append('Adding {0} to beacons'.format(name))
 
     if save:
-        result = __salt__['beacons.save']()
-        ret['comment'].append('Beacon {0} saved'.format(name))
+        if __opts__.get('test'):
+            ret['comment'].append('Beacon {0} would be saved'.format(name))
+        else:
+            result = __salt__['beacons.save']()
+            ret['comment'].append('Beacon {0} saved'.format(name))
 
     ret['comment'] = '\n'.join(ret['comment'])
     return ret
@@ -128,9 +131,9 @@ def absent(name,
            'changes': {},
            'comment': []}
 
-    current_beacons = __salt__['beacons.list'](return_yaml=False)
+    current_beacons = __salt__['beacons.list'](return_yaml=False, **kwargs)
     if name in current_beacons:
-        if 'test' in __opts__ and __opts__['test']:
+        if __opts__.get('test'):
             kwargs['test'] = True
             result = __salt__['beacons.delete'](name, **kwargs)
             ret['comment'].append(result['comment'])
@@ -146,8 +149,11 @@ def absent(name,
         ret['comment'].append('{0} not configured in beacons'.format(name))
 
     if save:
-        result = __salt__['beacons.save']()
-        ret['comment'].append('Beacon {0} saved'.format(name))
+        if __opts__.get('test'):
+            ret['comment'].append('Beacon {0} would be saved'.format(name))
+        else:
+            result = __salt__['beacons.save']()
+            ret['comment'].append('Beacon {0} saved'.format(name))
 
     ret['comment'] = '\n'.join(ret['comment'])
     return ret
@@ -170,9 +176,9 @@ def enabled(name, **kwargs):
            'changes': {},
            'comment': []}
 
-    current_beacons = __salt__['beacons.list'](return_yaml=False)
+    current_beacons = __salt__['beacons.list'](return_yaml=False, **kwargs)
     if name in current_beacons:
-        if 'test' in __opts__ and __opts__['test']:
+        if __opts__.get('test'):
             kwargs['test'] = True
             result = __salt__['beacons.enable_beacon'](name, **kwargs)
             ret['comment'].append(result['comment'])
@@ -208,9 +214,9 @@ def disabled(name, **kwargs):
            'changes': {},
            'comment': []}
 
-    current_beacons = __salt__['beacons.list'](return_yaml=False)
+    current_beacons = __salt__['beacons.list'](return_yaml=False, **kwargs)
     if name in current_beacons:
-        if 'test' in __opts__ and __opts__['test']:
+        if __opts__.get('test'):
             kwargs['test'] = True
             result = __salt__['beacons.disable_beacon'](name, **kwargs)
             ret['comment'].append(result['comment'])

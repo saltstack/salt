@@ -1193,6 +1193,57 @@ def _clean_value(key, val):
     return val
 
 
+def _windows_os_release_grain(caption, product_type):
+    '''
+    helper function for getting the osrelease grain
+    :return:
+    '''
+    # This creates the osrelease grain based on the Windows Operating
+    # System Product Name. As long as Microsoft maintains a similar format
+    # this should be future proof
+    version = 'Unknown'
+    release = ''
+    if 'Server' in caption:
+        for item in caption.split(' '):
+            # If it's all digits, then it's version
+            if re.match(r'\d+', item):
+                version = item
+            # If it starts with R and then numbers, it's the release
+            # ie: R2
+            if re.match(r'^R\d+$', item):
+                release = item
+        os_release = '{0}Server{1}'.format(version, release)
+    else:
+        for item in caption.split(' '):
+            # If it's a number, decimal number, Thin or Vista, then it's the
+            # version
+            if re.match(r'^(\d+(\.\d+)?)|Thin|Vista|XP$', item):
+                version = item
+        os_release = version
+
+    # If the version is still Unknown, revert back to the old way of getting
+    # the os_release
+    # https://github.com/saltstack/salt/issues/52339
+    if os_release in ['Unknown']:
+        os_release = platform.release()
+        server = {'Vista': '2008Server',
+                  '7': '2008ServerR2',
+                  '8': '2012Server',
+                  '8.1': '2012ServerR2',
+                  '10': '2016Server'}
+
+        # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()`
+        # function started reporting the Desktop version instead of the
+        # Server version on # Server versions of Windows, so we need to look
+        # those up. So, if you find a Server Platform that's a key in the
+        # server dictionary, then lookup the actual Server Release.
+        # (Product Type 1 is Desktop, Everything else is Server)
+        if product_type > 1 and os_release in server:
+            os_release = server[os_release]
+
+    return os_release
+
+
 def _windows_platform_data():
     '''
     Use the platform module for as much as we can.
@@ -1240,7 +1291,6 @@ def _windows_platform_data():
         except IndexError:
             log.debug('Motherboard info not available on this system')
 
-        os_release = platform.release()
         kernel_version = platform.version()
         info = salt.utils.win_osinfo.get_os_version_info()
         net_info = salt.utils.win_osinfo.get_join_info()
@@ -1249,28 +1299,8 @@ def _windows_platform_data():
         if info['ServicePackMajor'] > 0:
             service_pack = ''.join(['SP', six.text_type(info['ServicePackMajor'])])
 
-        # This creates the osrelease grain based on the Windows Operating
-        # System Product Name. As long as Microsoft maintains a similar format
-        # this should be future proof
-        version = 'Unknown'
-        release = ''
-        if 'Server' in osinfo.Caption:
-            for item in osinfo.Caption.split(' '):
-                # If it's all digits, then it's version
-                if re.match(r'\d+', item):
-                    version = item
-                # If it starts with R and then numbers, it's the release
-                # ie: R2
-                if re.match(r'^R\d+$', item):
-                    release = item
-            os_release = '{0}Server{1}'.format(version, release)
-        else:
-            for item in osinfo.Caption.split(' '):
-                # If it's a number, decimal number, Thin or Vista, then it's the
-                # version
-                if re.match(r'^(\d+(\.\d+)?)|Thin|Vista$', item):
-                    version = item
-            os_release = version
+        os_release = _windows_os_release_grain(caption=osinfo.Caption,
+                                               product_type=osinfo.ProductType)
 
         grains = {
             'kernelrelease': _clean_value('kernelrelease', osinfo.Version),
@@ -1558,6 +1588,10 @@ def _parse_cpe_name(cpe):
 
     Info: https://csrc.nist.gov/projects/security-content-automation-protocol/scap-specifications/cpe
 
+    Note: cpe:2.3:part:vendor:product:version:update:edition:lang:sw_edition:target_sw:target_hw:other
+          however some OS's do not have the full 13 elements, for example:
+                CPE_NAME="cpe:2.3:o:amazon:amazon_linux:2"
+
     :param cpe:
     :return:
     '''
@@ -1573,7 +1607,11 @@ def _parse_cpe_name(cpe):
             ret['vendor'], ret['product'], ret['version'] = cpe[2:5]
             ret['phase'] = cpe[5] if len(cpe) > 5 else None
             ret['part'] = part.get(cpe[1][1:])
-        elif len(cpe) == 13 and cpe[1] == '2.3':  # WFN to a string
+        elif len(cpe) == 6 and cpe[1] == '2.3':  # WFN to a string
+            ret['vendor'], ret['product'], ret['version'] = [x if x != '*' else None for x in cpe[3:6]]
+            ret['phase'] = None
+            ret['part'] = part.get(cpe[2])
+        elif len(cpe) > 7 and len(cpe) <= 13 and cpe[1] == '2.3':  # WFN to a string
             ret['vendor'], ret['product'], ret['version'], ret['phase'] = [x if x != '*' else None for x in cpe[3:7]]
             ret['part'] = part.get(cpe[2])
 
