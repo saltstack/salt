@@ -94,13 +94,20 @@ def _create_ci_directories():
 
 
 def _get_pydir(session):
-    return 'py{}'.format(
-        session.run(
+    try:
+        return 'py{}'.format(session._runner._real_python_version)
+    except AttributeError:
+        session_py_version = session.run(
             'python', '-c'
             'from __future__ import print_function; import sys; sys.stdout.write("{}.{}".format(*sys.version_info))',
-            silent=True
+            silent=True,
+            log=False
         )
-    )
+        session._runner._real_python_version = session_py_version
+        version_info = tuple(int(part) for part in session_py_version.split('.'))
+        if version_info < (2, 7) or version_info >= (3, 7):
+            session.error('Only Python >= 2.7 and < 3.7 is supported')
+    return 'py{}'.format(session._runner._real_python_version)
 
 
 def _install_requirements(session, transport, *extra_requirements):
