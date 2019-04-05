@@ -83,18 +83,16 @@ def get(key, profile=None):
     Get a value from the vault service
     '''
     if '?' in key:
-        path, key = key.split('?')
-    else:
-        path, key = key.rsplit('/', 1)
+        key = key.replace('?', '/')
 
     try:
-        url = 'v1/{0}'.format(path)
+        url = 'v1/{0}'.format(key)
         response = __utils__['vault.make_request']('GET', url, profile)
         if response.status_code != 200:
             response.raise_for_status()
         data = response.json()['data']
 
-        return data[key]
-    except Exception as e:  # pylint: disable=broad-except
+        return data
+    except Exception as e:
         log.error('Failed to read secret! %s: %s', type(e).__name__, e)
         raise salt.exceptions.CommandExecutionError(e)
