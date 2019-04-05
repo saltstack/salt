@@ -50,7 +50,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-osx-py2.7-zmq-requirements
         name: OSX Py2.7 ZeroMQ Requirements
@@ -63,7 +63,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py2.7-zmq-requirements
         name: Windows Py2.7 ZeroMQ Requirements
@@ -76,7 +76,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-linux-py2.7-raet-requirements
         name: Linux Py2.7 RAET Requirements
@@ -90,7 +90,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-osx-py2.7-raet-requirements
         name: OSX Py2.7 RAET Requirements
@@ -103,7 +103,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py2.7-raet-requirements
         name: Windows Py2.7 RAET Requirements
@@ -116,7 +116,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
 
       - id: pip-tools-compile
         alias: compile-lint-py2.7-requirements
@@ -162,7 +162,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-linux-py3.4-raet-requirements
         name: Linux Py3.4 RAET Requirements
@@ -176,7 +176,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
 
       - id: pip-tools-compile
         alias: compile-linux-py3.5-tcp-requirements
@@ -225,7 +225,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-osx-py3.5-zmq-requirements
         name: OSX Py3.5 ZeroMQ Requirements
@@ -238,7 +238,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.5-zmq-requirements
         name: Windows Py3.5 ZeroMQ Requirements
@@ -251,7 +251,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-linux-py3.5-raet-requirements
         name: Linux Py3.5 RAET Requirements
@@ -265,7 +265,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-osx-py3.5-raet-requirements
         name: OSX Py3.5 RAET Requirements
@@ -278,7 +278,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.5-raet-requirements
         name: Windows Py3.5 RAET Requirements
@@ -291,7 +291,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
 
       - id: pip-tools-compile
         alias: compile-linux-py3.6-tcp-requirements
@@ -329,7 +329,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-osx-py3.6-zmq-requirements
         name: OSX Py3.6 ZeroMQ Requirements
@@ -342,7 +342,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.6-zmq-requirements
         name: Windows Py3.6 ZeroMQ Requirements
@@ -355,7 +355,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-linux-py3.6-raet-requirements
         name: Linux Py3.6 RAET Requirements
@@ -369,7 +369,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-osx-py3.6-raet-requirements
         name: OSX Py3.6 RAET Requirements
@@ -382,7 +382,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.6-raet-requirements
         name: Windows Py3.6 RAET Requirements
@@ -395,4 +395,4 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycryptodome==(.*)$
+          - --remove-line=^pycrypto==(.*)$

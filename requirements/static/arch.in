@@ -16,10 +16,9 @@ more-itertools==5.0.0
 moto
 msgpack-python >= 0.4.2, != 0.5.5
 psutil
-# We install pycryptodomex so that we can remove pycryptodome which is pulled in from
-# python-jose which in turn is pulled in from moto.
-# pycryptodome doesn't play nice with PyCrypto while pycryptodomex does
-pycryptodomex
+# Let's install cryptodome instead of pycrupto because of it's ourstanding security issues
+# PyCrypto, if pulled, will be removed from the generated static requirements
+pycryptodome
 pyinotify
 pyopenssl
 python-etcd==0.4.2
