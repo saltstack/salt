@@ -277,15 +277,6 @@ ForEach($key in $ini[$bitDLLs].Keys) {
 }
 
 #------------------------------------------------------------------------------
-# Remove the temporary download directory
-#------------------------------------------------------------------------------
-Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Cleaning up downloaded files"
-Write-Output " ----------------------------------------------------------------"
-Write-Output ""
-Remove-Item $($ini['Settings']['DownloadDir']) -Force -Recurse
-
-#------------------------------------------------------------------------------
 # Script complete
 #------------------------------------------------------------------------------
 Write-Output "================================================================="
@@ -298,3 +289,12 @@ If (-Not $Silent) {
     $p = $HOST.UI.RawUI.Flushinputbuffer()
     $p = $HOST.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
+
+#------------------------------------------------------------------------------
+# Remove the temporary download directory
+#------------------------------------------------------------------------------
+Write-Output " ----------------------------------------------------------------"
+Write-Output " - $script_name :: Cleaning up downloaded files"
+Write-Output " ----------------------------------------------------------------"
+Write-Output ""
+Remove-Item $($ini['Settings']['DownloadDir']) -Force -Recurse
