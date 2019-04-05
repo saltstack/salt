@@ -3,7 +3,6 @@
 Module for managing windows systems.
 
 :depends:
-    - pythoncom
     - pywintypes
     - win32api
     - win32con
@@ -24,12 +23,12 @@ from datetime import datetime
 import salt.utils.functools
 import salt.utils.locales
 import salt.utils.platform
+import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party Libs
 from salt.ext import six
 try:
-    import pythoncom
     import wmi
     import win32net
     import win32api
@@ -516,8 +515,8 @@ def get_system_info():
     os_type = {1: 'Work Station',
                2: 'Domain Controller',
                3: 'Server'}
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
     system = conn.Win32_OperatingSystem()[0]
     ret = {'name': get_computer_name(),
            'description': system.Description,
@@ -756,8 +755,8 @@ def _join_domain(domain,
     if not account_exists:
         join_options |= NETSETUP_ACCOUNT_CREATE
 
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
     comp = conn.Win32_ComputerSystem()[0]
 
     # Return the results of the command as an error
@@ -848,8 +847,8 @@ def unjoin_domain(username=None,
     if disable:
         unjoin_options |= NETSETUP_ACCT_DELETE
 
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
     comp = conn.Win32_ComputerSystem()[0]
     err = comp.UnjoinDomainOrWorkgroup(Password=password,
                                        UserName=username,
@@ -892,8 +891,8 @@ def get_domain_workgroup():
 
         salt 'minion-id' system.get_domain_workgroup
     '''
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
     for computer in conn.Win32_ComputerSystem():
         if computer.PartOfDomain:
             return {'Domain': computer.Domain}

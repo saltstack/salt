@@ -19,6 +19,7 @@ from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
 import salt.modules.win_file as win_file
+import salt.modules.temp as temp
 from salt.exceptions import CommandExecutionError
 import salt.utils.platform
 import salt.utils.win_functions
@@ -307,3 +308,26 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                                    inheritance=False,
                                    reset=True)
         self.assertDictEqual(expected, ret)
+
+    def test_issue_52002_check_file_remove_symlink(self):
+        '''
+        Make sure that directories including symlinks or symlinks can be removed
+        '''
+        base = temp.dir(prefix='base-')
+        target = os.path.join(base, 'child 1', 'target\\')
+        symlink = os.path.join(base, 'child 2', 'link')
+        try:
+            # Create environment
+            self.assertFalse(win_file.directory_exists(target))
+            self.assertFalse(win_file.directory_exists(symlink))
+            self.assertTrue(win_file.makedirs_(target))
+            self.assertTrue(win_file.makedirs_(symlink))
+            self.assertTrue(win_file.symlink(target, symlink))
+            self.assertTrue(win_file.directory_exists(symlink))
+            self.assertTrue(win_file.is_link(symlink))
+            # Test removal of directory containing symlink
+            self.assertTrue(win_file.remove(base))
+            self.assertFalse(win_file.directory_exists(base))
+        finally:
+            if os.path.exists(base):
+                win_file.remove(base)

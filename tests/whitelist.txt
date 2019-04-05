@@ -72,6 +72,7 @@ integration.runners.test_salt
 integration.scheduler.test_eval
 integration.scheduler.test_postpone
 integration.scheduler.test_skip
+integration.scheduler.test_helpers
 integration.sdb.test_env
 integration.shell.test_arguments
 integration.shell.test_auth

@@ -22,6 +22,7 @@ import locale
 import uuid
 from errno import EACCES, EPERM
 import datetime
+import warnings
 
 __proxyenabled__ = ['*']
 __FQDN__ = None
@@ -34,7 +35,12 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 
 # linux_distribution deprecated in py3.7
 try:
-    from platform import linux_distribution
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
 except ImportError:
     from distro import linux_distribution
 
@@ -1419,7 +1425,9 @@ _OS_FAMILY_MAP = {
     'KDE neon': 'Debian',
     'Void': 'Void',
     'IDMS': 'Debian',
-    'AIX': 'AIX'
+    'Funtoo': 'Gentoo',
+    'AIX': 'AIX',
+    'TurnKey': 'Debian',
 }
 
 # Matches any possible format:
@@ -1517,6 +1525,10 @@ def _parse_cpe_name(cpe):
 
     Info: https://csrc.nist.gov/projects/security-content-automation-protocol/scap-specifications/cpe
 
+    Note: cpe:2.3:part:vendor:product:version:update:edition:lang:sw_edition:target_sw:target_hw:other
+          however some OS's do not have the full 13 elements, for example:
+                CPE_NAME="cpe:2.3:o:amazon:amazon_linux:2"
+
     :param cpe:
     :return:
     '''
@@ -1532,7 +1544,11 @@ def _parse_cpe_name(cpe):
             ret['vendor'], ret['product'], ret['version'] = cpe[2:5]
             ret['phase'] = cpe[5] if len(cpe) > 5 else None
             ret['part'] = part.get(cpe[1][1:])
-        elif len(cpe) == 13 and cpe[1] == '2.3':  # WFN to a string
+        elif len(cpe) == 6 and cpe[1] == '2.3':  # WFN to a string
+            ret['vendor'], ret['product'], ret['version'] = [x if x != '*' else None for x in cpe[3:6]]
+            ret['phase'] = None
+            ret['part'] = part.get(cpe[2])
+        elif len(cpe) > 7 and len(cpe) <= 13 and cpe[1] == '2.3':  # WFN to a string
             ret['vendor'], ret['product'], ret['version'], ret['phase'] = [x if x != '*' else None for x in cpe[3:7]]
             ret['part'] = part.get(cpe[2])
 
@@ -2054,6 +2070,12 @@ def locale_info():
 def hostname():
     '''
     Return fqdn, hostname, domainname
+
+    .. note::
+        On Windows the ``domain`` grain may refer to the dns entry for the host
+        instead of the Windows domain to which the host is joined. It may also
+        be empty if not a part of any domain. Refer to the ``windowsdomain``
+        grain instead
     '''
     # This is going to need some work
     # Provides:

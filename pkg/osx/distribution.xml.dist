@@ -16,7 +16,7 @@
                 mime-type="image/png"
                 scaling="proportional" />
     <!-- Define documents displayed at various steps -->
-    <welcome file="welcome.rtf"
+    <welcome file="welcome@PY2@.rtf"
              mime-type="text/rtf" />
     <license file="license.rtf"
              mime-type="text/rtf" />
