@@ -272,7 +272,7 @@ def _runtests(session, coverage, transport, cmd_args):
 
 @nox.session(python=_PYTHON_VERSIONS, name='runtests-parametrized')
 @nox.parametrize('coverage', [False, True])
-@nox.parametrize('transport', ['zeromq', 'raet'])
+@nox.parametrize('transport', ['zeromq', 'raet', 'tcp'])
 @nox.parametrize('crypto', [None, 'm2crypto', 'pycryptodomex'])
 def runtests_parametrized(session, coverage, transport, crypto):
     # Install requirements
@@ -302,6 +302,20 @@ def runtests(session, coverage):
     '''
     session.notify(
         'runtests-parametrized-{}(coverage={}, crypto=None, transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-tcp')
+@nox.parametrize('coverage', [False, True])
+def runtests_tcp(session, coverage):
+    '''
+    runtests.py session with TCP transport and default crypto
+    '''
+    session.notify(
+        'runtests-parametrized-{}(coverage={}, crypto=None, transport=\'tcp\')'.format(
             session.python,
             coverage
         )
@@ -350,6 +364,20 @@ def runtests_m2crypto(session, coverage):
     )
 
 
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-tcp-m2crypto')
+@nox.parametrize('coverage', [False, True])
+def runtests_tcp_m2crypto(session, coverage):
+    '''
+    runtests.py session with TCP transport and m2crypto
+    '''
+    session.notify(
+        'runtests-parametrized-{}(coverage={}, crypto=\'m2crypto\', transport=\'tcp\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
 @nox.session(python=_PYTHON_VERSIONS, name='runtests-zeromq-m2crypto')
 @nox.parametrize('coverage', [False, True])
 def runtests_zeromq_m2crypto(session, coverage):
@@ -392,6 +420,20 @@ def runtests_pycryptodomex(session, coverage):
     )
 
 
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-tcp-pycryptodomex')
+@nox.parametrize('coverage', [False, True])
+def runtests_tcp_pycryptodomex(session, coverage):
+    '''
+    runtests.py session with TCP transport and pycryptodomex
+    '''
+    session.notify(
+        'runtests-parametrized-{}(coverage={}, crypto=\'pycryptodomex\', transport=\'tcp\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
 @nox.session(python=_PYTHON_VERSIONS, name='runtests-zeromq-pycryptodomex')
 @nox.parametrize('coverage', [False, True])
 def runtests_zeromq_pycryptodomex(session, coverage):
@@ -422,7 +464,7 @@ def runtests_raet_pycryptodomex(session, coverage):
 
 @nox.session(python=_PYTHON_VERSIONS, name='pytest-parametrized')
 @nox.parametrize('coverage', [False, True])
-@nox.parametrize('transport', ['zeromq', 'raet'])
+@nox.parametrize('transport', ['zeromq', 'raet', 'tcp'])
 @nox.parametrize('crypto', [None, 'm2crypto', 'pycryptodomex'])
 def pytest_parametrized(session, coverage, transport, crypto):
     # Install requirements
@@ -456,6 +498,20 @@ def pytest(session, coverage):
     '''
     session.notify(
         'pytest-parametrized-{}(coverage={}, crypto=None, transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-tcp')
+@nox.parametrize('coverage', [False, True])
+def pytest_tcp(session, coverage):
+    '''
+    pytest session with TCP transport and default crypto
+    '''
+    session.notify(
+        'pytest-parametrized-{}(coverage={}, crypto=None, transport=\'tcp\')'.format(
             session.python,
             coverage
         )
@@ -504,6 +560,20 @@ def pytest_m2crypto(session, coverage):
     )
 
 
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-tcp-m2crypto')
+@nox.parametrize('coverage', [False, True])
+def pytest_tcp_m2crypto(session, coverage):
+    '''
+    pytest session with TCP transport and m2crypto
+    '''
+    session.notify(
+        'pytest-parametrized-{}(coverage={}, crypto=\'m2crypto\', transport=\'tcp\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
 @nox.session(python=_PYTHON_VERSIONS, name='pytest-zeromq-m2crypto')
 @nox.parametrize('coverage', [False, True])
 def pytest_zeromq_m2crypto(session, coverage):
@@ -540,6 +610,20 @@ def pytest_pycryptodomex(session, coverage):
     '''
     session.notify(
         'pytest-parametrized-{}(coverage={}, crypto=\'pycryptodomex\', transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-tcp-pycryptodomex')
+@nox.parametrize('coverage', [False, True])
+def pytest_tcp_pycryptodomex(session, coverage):
+    '''
+    pytest session with TCP transport and pycryptodomex
+    '''
+    session.notify(
+        'pytest-parametrized-{}(coverage={}, crypto=\'pycryptodomex\', transport=\'tcp\')'.format(
             session.python,
             coverage
         )
