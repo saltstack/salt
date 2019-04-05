@@ -13,6 +13,11 @@ Execution of Salt modules from within states
         use_superseded:
           - module.run
 
+.. note::
+
+    The old style of ``module.run`` will no longer be available in the Sodium
+    release.
+
 With `module.run` these states allow individual execution module calls to be
 made via states. To call a single module function use a
 :mod:`module.run <salt.states.module.run>` state:
