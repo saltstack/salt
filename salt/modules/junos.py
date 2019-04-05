@@ -1299,11 +1299,16 @@ def load(path=None, **kwargs):
     if "template_vars" in op:
         template_vars = op["template_vars"]
 
-    template_cached_path = salt.utils.files.mkstemp()
-    __salt__['cp.get_template'](
-        path,
-        template_cached_path,
-        template_vars=template_vars)
+    try:
+        template_cached_path = salt.utils.files.mkstemp()
+        __salt__['cp.get_template'](
+            path,
+            template_cached_path,
+            template_vars=template_vars)
+    except Exception as ex:
+        ret['message'] = 'Salt failed to render the template, please check file path and syntax.\nError: ' + str(ex)
+        ret['out'] = False
+        return ret
 
     if not os.path.isfile(template_cached_path):
         ret['message'] = 'Invalid file path.'
