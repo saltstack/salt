@@ -2136,11 +2136,11 @@ class State(object):
             #remove first period
             return_get = return_get.split('.', 1)[1].strip()
             log.debug('Searching slot result %s for %s', slot_return, return_get)
-            slot_return = salt.utils.data.traverse_dict(slot_return,
-                                                        return_get,
-                                                        default=None,
-                                                        delimiter='.'
-                                                       )
+            slot_return = salt.utils.data.traverse_dict_and_list(slot_return,
+                                                                 return_get,
+                                                                 default=None,
+                                                                 delimiter='.'
+                                                                )
 
         if append_data:
             if isinstance(slot_return, six.string_types):
