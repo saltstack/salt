@@ -3,8 +3,13 @@ timeout(time: 6, unit: 'HOURS') {
         timestamps {
             ansiColor('xterm') {
                 withEnv([
-                    'SALT_KITCHEN_PLATFORMS=/var/jenkins/workspace/platforms.yml',
+                    'SALT_KITCHEN_PLATFORMS=/var/jenkins/workspace/nox-platforms.yml',
+                    'SALT_KITCHEN_VERIFIER=/var/jenkins/workspace/nox-win-verifier.yml',
                     'SALT_KITCHEN_DRIVER=/var/jenkins/workspace/driver.yml',
+                    'NOX_ENV_NAME=runtests-zeromq',
+                    'NOX_ENABLE_FROM_FILENAMES=true',
+                    'GOLDEN_IMAGES_CI_BRANCH=2017.7',
+                    'CODECOV_FLAGS=windows2016,py3',
                     'PATH=/usr/local/rbenv/shims/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin:/root/bin',
                     'RBENV_VERSION=2.4.2',
                     'TEST_SUITE=py3',
@@ -49,9 +54,18 @@ timeout(time: 6, unit: 'HOURS') {
                                         }
                                     }
                                 }
-                                archiveArtifacts artifacts: 'artifacts/xml-unittests-output/*.xml'
-                                archiveArtifacts artifacts: 'artifacts/logs/minion'
-                                archiveArtifacts artifacts: 'artifacts/logs/salt-runtests.log'
+                                archiveArtifacts artifacts: 'artifacts/*,artifacts/**/*'
+                            }
+                            stage('report code coverage') {
+                                script {
+                                    withCredentials([[$class: 'StringBinding', credentialsId: 'codecov-upload-token-salt', variable: 'CODECOV_TOKEN']]) {
+                                      sh '''
+                                      if [ -f artifacts/coverage/coverage.xml ]; then
+                                          curl -L https://codecov.io/bash | /bin/sh -s -- -R $(pwd) -s artifacts/coverage/ -F "${CODECOV_FLAGS}"
+                                      fi
+                                      '''
+                                    }
+                                }
                             }
                         }
                     } catch (Exception e) {
@@ -72,8 +86,8 @@ timeout(time: 6, unit: 'HOURS') {
                                     description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has failed",
                                     status: 'FAILURE',
                                     context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
-                                slackSend channel: "#jenkins-prod-pr", 
-                                    color: '#FF0000', 
+                                slackSend channel: "#jenkins-prod-pr",
+                                    color: '#FF0000',
                                     message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
                             }
                         }
