@@ -2700,7 +2700,7 @@ def managed(name,
                 'to True to allow the managed file to be empty.'
                 .format(contents_id)
             )
-        if isinstance(use_contents, six.binary_type) and b'\0' in use_contents:
+        if isinstance(use_contents, six.binary_type) in use_contents:
             contents = use_contents
         elif isinstance(use_contents, six.text_type) and str('\0') in use_contents:
             contents = use_contents
