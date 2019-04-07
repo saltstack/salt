@@ -228,13 +228,6 @@ def _runtests(session, coverage, transport, cmd_args):
             session.run('python', os.path.join('tests', 'runtests.py'), *cmd_args)
     except CommandFailed:
         names_file_path = os.path.join('artifacts', 'failed-tests.txt')
-        if not os.path.exists(names_file_path):
-            # raise the original exception
-            raise
-        with open(names_file_path) as rfh:
-            if not rfh.read():
-                # raise the original exception
-                raise
         session.log('Re-running failed tests if possible')
         session.install('xunitparser==1.3.3')
         session.run(
@@ -243,10 +236,22 @@ def _runtests(session, coverage, transport, cmd_args):
             names_file_path
         )
         if not os.path.exists(names_file_path):
-            session.error('No names file was generated to re-run tests')
-
+            session.log(
+                'Failed tests file(%s) was not found. Not rerunning failed tests.',
+                names_file_path
+            )
+            # raise the original exception
+            raise
         with open(names_file_path) as rfh:
-            failed_tests_count = len(rfh.read().splitlines())
+            contents = rfh.read().strip()
+            if not contents:
+                session.log(
+                    'The failed tests file(%s) is empty. Not rerunning failed tests.',
+                    names_file_path
+                )
+                # raise the original exception
+                raise
+            failed_tests_count = len(contents.splitlines())
             if failed_tests_count > 500:
                 # 500 test failures?! Something else must have gone wrong, don't even bother
                 session.error(
