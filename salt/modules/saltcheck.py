@@ -201,6 +201,7 @@ from salt.utils.json import loads, dumps
 import salt.utils.files
 import salt.utils.path
 import salt.utils.yaml
+import salt.utils.data
 import salt.client
 import salt.exceptions
 from salt.utils.odict import OrderedDict
@@ -540,7 +541,9 @@ class SaltCheck(object):
         except Exception:
             raise
         if isinstance(value, dict) and assertion_section:
-            return value.get(assertion_section, False)
+            return salt.utils.data.traverse_dict_and_list(value,
+                                                          assertion_section,
+                                                          default=False)
         else:
             return value
 
