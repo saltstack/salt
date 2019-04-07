@@ -14,9 +14,9 @@ backports.functools-lru-cache==1.5  # via cheroot, jaraco.functools
 backports.ssl-match-hostname==3.7.0.1  # via docker, websocket-client
 backports.tempfile==1.0   # via moto
 backports.weakref==1.0.post1  # via backports.tempfile
-boto3==1.9.129
+boto3==1.9.130
 boto==2.49.0
-botocore==1.12.129        # via boto3, moto, s3transfer
+botocore==1.12.130        # via boto3, moto, s3transfer
 cachetools==3.1.0         # via google-auth
 certifi==2019.3.9         # via kubernetes, requests, tornado
 cffi==1.12.2
@@ -43,7 +43,7 @@ google-auth==1.6.3        # via kubernetes
 idna==2.8                 # via requests
 ipaddress==1.0.22         # via cryptography, docker, kubernetes
 jaraco.functools==2.0     # via tempora
-jinja2==2.10
+jinja2==2.10.1
 jmespath==0.9.4           # via boto3, botocore
 jsondiff==1.1.1           # via moto
 jsonpickle==1.1           # via aws-xray-sdk
