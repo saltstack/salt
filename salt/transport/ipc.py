@@ -5,6 +5,7 @@ IPC transport classes
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import errno
 import logging
 import socket
 import weakref
@@ -742,7 +743,7 @@ class IPCMessageSubscriber(object):
 
     def reraise(self, exc_info):
         if six.PY2:
-            raise exc_info[0], exc_info[1], exc_info[2]
+            raise exc_info[0], exc_info[1], exc_info[2]  # pylint: disable=W1699
         else:
             raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
 
