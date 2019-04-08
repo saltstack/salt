@@ -197,7 +197,7 @@ def rollback(name, id, **kwargs):
 
 
 @resultdecorator
-def diff(name, d_id):
+def diff(name, **kwargs):
     '''
     Gets the difference between the candidate and the current configuration.
 
@@ -214,7 +214,7 @@ def diff(name, d_id):
           The rollback id value [0-49]. (default = 0)
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
-    ret['changes'] = __salt__['junos.diff'](d_id)
+    ret['changes'] = __salt__['junos.diff'](**kwargs)
     return ret
 
 
