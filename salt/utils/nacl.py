@@ -6,6 +6,7 @@ Common code shared between the nacl module and runner.
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
+import logging
 import os
 
 # Import Salt libs
@@ -18,6 +19,7 @@ import salt.utils.versions
 import salt.utils.win_functions
 import salt.utils.win_dacl
 
+log = logging.getLogger(__name__)
 
 REQ_ERROR = None
 try:
