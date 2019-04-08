@@ -9,6 +9,7 @@ import logging
 import socket
 import weakref
 import time
+import sys
 
 # Import 3rd-party libs
 import msgpack
@@ -81,6 +82,11 @@ class FutureWithTimeout(tornado.concurrent.Future):
             self.set_result(future.result())
         except Exception as exc:
             self.set_exception(exc)
+
+
+class IPCExceptionProxy(object):
+    def __init__(self, orig_info):
+        self.orig_info = orig_info
 
 
 class IPCServer(object):
@@ -648,6 +654,7 @@ class IPCMessageSubscriberService(IPCClient):
                 break
             except Exception as exc:
                 log.error('Exception occurred in Subscriber while handling stream: %s', exc)
+                exc = IPCExceptionProxy(sys.exc_info())
                 self._feed_subscribers([exc])
                 break
 
@@ -755,12 +762,18 @@ class IPCMessageSubscriber(object):
                 raise tornado.gen.Return(None)
             if data is None:
                 break
-            elif isinstance(data, Exception):
-                raise data
+            elif isinstance(data, IPCExceptionProxy):
+                self.reraise(data.orig_info)
             elif callback:
                 self.service.io_loop.spawn_callback(callback, data)
             else:
                 raise tornado.gen.Return(data)
+
+    def reraise(self, exc_info):
+        if six.PY2:
+            raise exc_info[0], exc_info[1], exc_info[2]
+        else:
+            raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
 
     def read_sync(self, timeout=None):
         '''
