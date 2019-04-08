@@ -86,13 +86,14 @@ class IPCMessageClient(BaseIPCReqCase):
     '''
 
     def _get_channel(self):
-        channel = salt.transport.ipc.IPCMessageClient(
-            socket_path=self.socket_path,
-            io_loop=self.io_loop,
-        )
-        channel.connect(callback=self.stop)
-        self.wait()
-        return channel
+        if not hasattr(self, 'channel') or self.channel is None:
+            self.channel = salt.transport.ipc.IPCMessageClient(
+                socket_path=self.socket_path,
+                io_loop=self.io_loop,
+            )
+            self.channel.connect(callback=self.stop)
+            self.wait()
+        return self.channel
 
     def setUp(self):
         super(IPCMessageClient, self).setUp()
@@ -107,6 +108,8 @@ class IPCMessageClient(BaseIPCReqCase):
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
+        finally:
+            self.channel = None
 
     def test_singleton(self):
         channel = self._get_channel()
