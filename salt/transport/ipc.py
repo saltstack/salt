@@ -250,36 +250,7 @@ class IPCClient(object):
                                 case it is used as the port for a tcp
                                 localhost connection.
     '''
-
-    # Create singleton map between two sockets
-    instance_map = weakref.WeakKeyDictionary()
-
-    def __new__(cls, socket_path, io_loop=None):
-        io_loop = io_loop or tornado.ioloop.IOLoop.current()
-        if io_loop not in IPCClient.instance_map:
-            IPCClient.instance_map[io_loop] = weakref.WeakValueDictionary()
-        loop_instance_map = IPCClient.instance_map[io_loop]
-
-        # FIXME
-        key = six.text_type(socket_path)
-
-        client = loop_instance_map.get(key)
-        if client is None:
-            log.debug('Initializing new IPCClient for path: %s', key)
-            client = object.__new__(cls)
-            # FIXME
-            client.__singleton_init__(io_loop=io_loop, socket_path=socket_path)
-            client._instance_key = key
-            loop_instance_map[key] = client
-            client._refcount = 1
-            client._refcount_lock = threading.RLock()
-        else:
-            log.debug('Re-using IPCClient for %s', key)
-            with client._refcount_lock:
-                client._refcount += 1
-        return client
-
-    def __singleton_init__(self, socket_path, io_loop=None):
+    def __init__(self, socket_path, io_loop=None):
         '''
         Create a new IPC client
 
@@ -297,10 +268,6 @@ class IPCClient(object):
         else:
             encoding = 'utf-8'
         self.unpacker = msgpack.Unpacker(encoding=encoding)
-
-    def __init__(self, socket_path, io_loop=None):
-        # Handled by singleton __new__
-        pass
 
     def connected(self):
         return self.stream is not None and not self.stream.closed()
@@ -373,16 +340,11 @@ class IPCClient(object):
 
     def __del__(self):
         try:
-            with self._refcount_lock:
-                # Make sure we actually close no matter if something
-                # went wrong with our ref counting
-                self._refcount = 1
-            try:
-                self.close()
-            except socket.error as exc:
-                if exc.errno != errno.EBADF:
-                    # If its not a bad file descriptor error, raise
-                    raise
+            self.close()
+        except socket.error as exc:
+            if exc.errno != errno.EBADF:
+                # If its not a bad file descriptor error, raise
+                raise
         except TypeError:
             # This is raised when Python's GC has collected objects which
             # would be needed when calling self.close()
@@ -413,17 +375,6 @@ class IPCClient(object):
 
         if self.stream is not None and not self.stream.closed():
             self.stream.close()
-
-        # Remove the entry from the instance map so
-        # that a closed entry may not be reused.
-        # This forces this operation even if the reference
-        # count of the entry has not yet gone to zero.
-        if self.io_loop in self.__class__.instance_map:
-            loop_instance_map = self.__class__.instance_map[self.io_loop]
-            if self._instance_key in loop_instance_map:
-                del loop_instance_map[self._instance_key]
-            if not loop_instance_map:
-                del self.__class__.instance_map[self.io_loop]
 
 
 class IPCMessageClient(IPCClient):
@@ -643,8 +594,8 @@ class IPCMessageSubscriberService(IPCClient):
 
     To use this refer to IPCMessageSubscriber documentation.
     '''
-    def __singleton_init__(self, socket_path, io_loop=None):
-        super(IPCMessageSubscriberService, self).__singleton_init__(
+    def __init__(self, socket_path, io_loop=None):
+        super(IPCMessageSubscriberService, self).__init__(
             socket_path, io_loop=io_loop)
         self.saved_data = []
         self._read_in_progress = Lock()
