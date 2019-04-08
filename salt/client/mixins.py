@@ -382,6 +382,7 @@ class SyncClientMixin(object):
             data['pid'] = os.getpid()
             with salt.utils.files.fopen(jid_proc_file, 'w+b') as fp_:
                 fp_.write(serial.dumps(data))
+            del data['pid']
 
             # Initialize a context for executing the method.
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):
