@@ -26,6 +26,7 @@ import sys
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
+import salt.utils.data
 import salt.utils.platform
 import salt.exceptions
 from salt.ext import six
@@ -366,7 +367,6 @@ def _get_certificate_obj(cert):
     '''
     if isinstance(cert, M2Crypto.X509.X509):
         return cert
-
     text = _text_or_file(cert)
     text = get_pem_entry(text, pem_type='CERTIFICATE')
     return M2Crypto.X509.load_cert_string(text)
@@ -1391,11 +1391,10 @@ def create_certificate(
         for ignore in list(_STATE_INTERNAL_KEYWORDS) + \
                 ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
-
         certs = __salt__['publish.publish'](
             tgt=ca_server,
             fun='x509.sign_remote_certificate',
-            arg=six.text_type(kwargs))
+            arg=salt.utils.data.decode_dict(kwargs, to_str=True))
 
         if not any(certs):
             raise salt.exceptions.SaltInvocationError(
