@@ -69,6 +69,7 @@ import salt.utils.stringutils
 import salt.utils.versions
 import salt.utils.vt
 import salt.utils.yaml
+from salt.utils.jinja import SerializerExtension
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.utils.validate.path import is_writeable
 
@@ -86,7 +87,7 @@ from salt.exceptions import (
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin,W0611
-from jinja2 import Template
+from jinja2 import Environment
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
 # Windows. This import has to be below where we import salt.utils.platform!
@@ -129,7 +130,8 @@ def __render_script(path, vm_=None, opts=None, minion=''):
     log.info('Rendering deploy script: %s', path)
     try:
         with salt.utils.files.fopen(path, 'r') as fp_:
-            template = Template(salt.utils.stringutils.to_unicode(fp_.read()))
+            environment = Environment(extensions=[SerializerExtension])
+            template = environment.from_string(salt.utils.stringutils.to_unicode(fp_.read()))
             return six.text_type(template.render(opts=opts, vm=vm_, minion=minion))
     except AttributeError:
         # Specified renderer was not found
