@@ -288,12 +288,14 @@ def create(vm_):
 
     log.info('Creating Cloud VM %s', vm_['name'])
     conn = get_conn()
+    # pylint: disable=not-callable
     kwargs = {
         'name': vm_['name'],
         'image': get_image(conn, vm_),
         'size': get_size(conn, vm_),
         'location': get_location(conn, vm_),
     }
+    # pylint: enable=not-callable
 
     sg = get_security_groups(conn, vm_)
     if sg is not False:
