@@ -287,7 +287,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                         ' should go')
                                 ret = return_val({'comment': comt,
                                             'result': False,
-                                            'changes': {'new': name}})
+                                            'changes': {}})
                                 self.assertDictEqual(filestate.symlink
                                                      (name, target, user=user,
                                                       group=group, backupname='SALT'),
