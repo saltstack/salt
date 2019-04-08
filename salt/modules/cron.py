@@ -12,6 +12,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import python libs
 import os
 import random
+import logging
 
 # Import salt libs
 import salt.utils.data
@@ -26,6 +27,8 @@ from salt.ext.six.moves import range
 TAG = '# Lines below here are managed by Salt, do not edit\n'
 SALT_CRON_IDENTIFIER = 'SALT_CRON_IDENTIFIER'
 SALT_CRON_NO_IDENTIFIER = 'NO ID SET'
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -403,6 +406,36 @@ def list_tab(user):
 
 # For consistency's sake
 ls = salt.utils.functools.alias_function(list_tab, 'ls')
+
+
+def get_entry(user, identifier=None, cmd=None):
+    '''
+    Return the specified entry from user's crontab.
+    identifier will be used if specified, otherwise will lookup cmd
+    Either identifier or cmd should be specified.
+
+    user:
+        User's crontab to query
+
+    identifier:
+        Search for line with identifier
+
+    cmd:
+        Search for cron line with cmd
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cron.identifier_exists root identifier=task1
+    '''
+    cron_entries = list_tab(user).get('crons', False)
+    for cron_entry in cron_entries:
+        if identifier and cron_entry.get('identifier') == identifier:
+            return cron_entry
+        elif cmd and cron_entry.get('cmd') == cmd:
+            return cron_entry
+    return False
 
 
 def set_special(user,
