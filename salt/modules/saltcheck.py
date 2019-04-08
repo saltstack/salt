@@ -232,8 +232,13 @@ def update_master_cache(saltenv='base'):
 
         salt '*' saltcheck.update_master_cache
     '''
+    copy_files = []
     log.info("Updating files for environment: %s", saltenv)
-    __salt__['cp.cache_master'](saltenv)
+    master_files = __salt__['cp.list_master'](saltenv)
+    for file in master_files:
+        if file.endswith('.tst'):
+            copy_files.append('salt://' + file)
+    __salt__['cp.cache_files'](copy_files, saltenv)
     return True
 
 
@@ -405,14 +410,6 @@ def _is_valid_module(module):
     return bool(module in modules)
 
 
-def _get_auto_update_cache_value():
-    '''
-    Return the config value of auto_update_master_cache
-    '''
-    __salt__['config.get']('auto_update_master_cache')
-    return True
-
-
 @memoize
 def _is_valid_function(module_name, function):
     '''
@@ -458,12 +455,10 @@ class SaltCheck(object):
                                   assertGreaterEqual
                                   assertLess assertLessEqual
                                   assertEmpty assertNotEmpty'''.split()
-        self.auto_update_master_cache = _get_auto_update_cache_value
         local_opts = salt.config.minion_config(__opts__['conf_file'])
         local_opts['file_client'] = 'local'
         self.salt_lc = salt.client.Caller(mopts=local_opts)
-        if self.auto_update_master_cache:
-            update_master_cache(saltenv)
+        update_master_cache(saltenv)
 
     def __is_valid_test(self, test_dict):
         '''
@@ -541,9 +536,10 @@ class SaltCheck(object):
         except Exception:
             raise
         if isinstance(value, dict) and assertion_section:
-            return salt.utils.data.traverse_dict_and_list(value,
-                                                          assertion_section,
-                                                          default=False)
+            return_value = salt.utils.data.traverse_dict_and_list(value,
+                                                                  assertion_section,
+                                                                  default=False)
+            return return_value
         else:
             return value
 
