@@ -360,3 +360,41 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.state_obj.format_slots(cdata)
         mock.assert_not_called()
         self.assertEqual(cdata, sls_data)
+
+    def test_slot_traverse_dict(self):
+        '''
+        Test the slot parsing of dict response.
+        '''
+        cdata = {
+            'args': [
+                'arg',
+            ],
+            'kwargs': {
+                'key': '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val).key1',
+            }
+        }
+        return_data = {'key1': 'value1'}
+        mock = MagicMock(return_value=return_data)
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'value1'}})
+
+    def test_slot_append(self):
+        '''
+        Test the slot parsing of dict response.
+        '''
+        cdata = {
+            'args': [
+                'arg',
+            ],
+            'kwargs': {
+                'key': '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val).key1 ~ thing~',
+            }
+        }
+        return_data = {'key1': 'value1'}
+        mock = MagicMock(return_value=return_data)
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'value1thing~'}})
