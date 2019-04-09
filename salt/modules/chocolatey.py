@@ -752,7 +752,8 @@ def upgrade(name,
             install_args=None,
             override_args=False,
             force_x86=False,
-            package_args=None):
+            package_args=None,
+            noop=False):
     '''
     .. versionadded:: 2016.3.4
 
@@ -799,6 +800,10 @@ def upgrade(name,
         package_args
             A list of arguments you want to pass to the package
 
+        noop (bool)
+            Report if the package would be upgraded by chocolatey without
+            actually upgrading it
+
     Returns:
         str: Results of the ``chocolatey`` command
 
@@ -828,6 +833,8 @@ def upgrade(name,
         cmd.append('--forcex86')
     if package_args:
         cmd.extend(['--packageparameters', package_args])
+    if noop:
+        cmd.append('--noop')
 
     # Salt doesn't need to see the progress
     cmd.extend(_no_progress(__context__))
