@@ -2097,18 +2097,53 @@ class State(object):
         '''
         Read in the arguments from the low level slot syntax to make a last
         minute runtime call to gather relevant data for the specific routine
+
+        Will parse strings, first level of dictionary values, and strings and
+        first level dict values inside of lists
         '''
         # __slot__:salt.cmd.run(foo, bar, baz=qux)
+        SLOT_TEXT = '__slot__:'
         ctx = (('args', enumerate(cdata['args'])),
                ('kwargs', cdata['kwargs'].items()))
         for atype, avalues in ctx:
             for ind, arg in avalues:
                 arg = salt.utils.data.decode(arg, keep=True)
-                if not isinstance(arg, six.text_type) \
-                        or not arg.startswith('__slot__:'):
+                if isinstance(arg, dict):
+                    # Search dictionary values for __slot__:
+                    for key, value in arg.items():
+                        try:
+                            if value.startswith(SLOT_TEXT):
+                                log.trace("Slot processsing dict value %s", value)
+                                cdata[atype][ind][key] = self.__eval_slot(value)
+                        except AttributeError:
+                            # Not a string/slot
+                            continue
+                elif isinstance(arg, list):
+                    for idx, listvalue in enumerate(arg):
+                        log.trace("Slot processing list value: %s", listvalue)
+                        if isinstance(listvalue, dict):
+                            # Search dict values in list for __slot__:
+                            for key, value in listvalue.items():
+                                try:
+                                    if value.startswith(SLOT_TEXT):
+                                        log.trace("Slot processsing nested dict value %s", value)
+                                        cdata[atype][ind][idx][key] = self.__eval_slot(value)
+                                except AttributeError:
+                                    # Not a string/slot
+                                    continue
+                        if isinstance(listvalue, six.text_type):
+                            # Search strings in a list for __slot__:
+                            if listvalue.startswith(SLOT_TEXT):
+                                log.trace("Slot processsing nested string %s", listvalue)
+                                cdata[atype][ind][idx] = self.__eval_slot(listvalue)
+                elif isinstance(arg, six.text_type) \
+                        and arg.startswith(SLOT_TEXT):
+                    # Search strings for __slot__:
+                    log.trace("Slot processsing %s", arg)
+                    cdata[atype][ind] = self.__eval_slot(arg)
+                else:
                     # Not a slot, skip it
                     continue
-                cdata[atype][ind] = self.__eval_slot(arg)
 
     def verify_retry_data(self, retry_data):
         '''
