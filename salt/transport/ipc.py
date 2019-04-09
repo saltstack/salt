@@ -311,9 +311,8 @@ class IPCClient(object):
             if self.stream is None:
                 with salt.utils.asynchronous.current_ioloop(self.io_loop):
                     self.stream = IOStream(
-                        socket.socket(sock_type, socket.SOCK_STREAM),
+                        socket.socket(sock_type, socket.SOCK_STREAM)
                     )
-
             try:
                 log.trace('IPCClient: Connecting to socket: %s', self.socket_path)
                 yield self.stream.connect(sock_addr)
@@ -659,8 +658,7 @@ class IPCMessageSubscriberService(IPCClient):
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
         '''
-        if not self._closing:
-            super(IPCMessageSubscriberService, self).close()
+        super(IPCMessageSubscriberService, self).close()
 
     def __del__(self):
         if IPCMessageSubscriberService in globals():
@@ -760,6 +758,7 @@ class IPCMessageSubscriber(object):
 
     def close(self):
         self.service.unsubscribe(self)
+        self.service.close()
 
     def __del__(self):
         self.close()
