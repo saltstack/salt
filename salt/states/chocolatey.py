@@ -412,9 +412,21 @@ def upgraded(name,
     if not ret['changes']:
         return ret
 
-    # Return if running in test mode
+    # Return comment if changes can be made
     if __opts__['test']:
         ret['result'] = None
+        result = __salt__['chocolatey.upgrade'](name=name,
+                                                version=version,
+                                                source=source,
+                                                force=force,
+                                                pre_versions=pre_versions,
+                                                install_args=install_args,
+                                                override_args=override_args,
+                                                force_x86=force_x86,
+                                                package_args=package_args,
+                                                noop=True)
+        if 'can upgrade:' in result.lower():
+            ret['comment'] = 'Package {0} is set to be upgraded'.format(name)
         return ret
 
     # Install the package
