@@ -3288,6 +3288,7 @@ class SaltAPIParser(six.with_metaclass(OptionParserMeta,
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
     # LogLevelMixIn attributes
+    _setup_mp_logging_listener_ = True
     _logfile_config_setting_name_ = 'api_logfile'
     _default_logging_logfile_ = config.DEFAULT_API_OPTS[_logfile_config_setting_name_]
 
