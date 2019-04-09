@@ -756,8 +756,12 @@ def upgrade(name,
     '''
     .. versionadded:: 2016.3.4
 
-    Instructs Chocolatey to upgrade packages on the system. (update is being
-    deprecated). This command will install the package if not installed.
+    Instructs Chocolatey to upgrade packages on the system.  This command will
+    install the package if not installed.
+
+    .. note::
+        The ``update`` command is being deprecated by chocolatey in favor of
+        ``upgrade``.
 
     Args:
 
@@ -842,6 +846,10 @@ def upgrade(name,
 def update(name, source=None, pre_versions=False):
     '''
     Instructs Chocolatey to update packages on the system.
+
+    .. warning::
+        The ``update`` command is being deprecated by chocolatey in favor of
+        ``upgrade``.
 
     name
         The name of the package to update, or "all" to update everything
