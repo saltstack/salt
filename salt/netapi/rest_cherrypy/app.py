@@ -1883,6 +1883,8 @@ class Login(LowDataAdapter):
             else:
                 # Get sum of '*' perms, user-specific perms, and group-specific perms
                 perms = eauth.get(token["name"], [])
+                if isinstance(perms, str):
+                    perms = [perms]
                 perms.extend(eauth.get("*", []))
 
                 if "groups" in token and token["groups"]:
