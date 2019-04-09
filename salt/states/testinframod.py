@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals, print_function
 
-import re
 import logging
 
 from salt.utils.stringutils import camel_to_snake_case
