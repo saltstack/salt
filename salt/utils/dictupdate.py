@@ -236,7 +236,7 @@ def update_dict_key_value(
 
     :param dict in_dict: The dictionary to work with
     :param str keys: The delimited string with one or more keys.
-    :param any value: The value to assign to the nested dict-key.
+    :param any value: The value to update the nested dict-key with.
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
@@ -254,7 +254,7 @@ def update_dict_key_value(
     except AttributeError:
         raise SaltInvocationError('The last key contains a {}, which cannot update.'
                                   ''.format(type(dict_pointer[last_key])))
-    except ValueError:
+    except (ValueError, TypeError):
         raise SaltInvocationError('Cannot update {} with a {}'
                                   ''.format(type(dict_pointer[last_key]), type(value)))
     return in_dict
@@ -274,7 +274,7 @@ def append_dict_key_value(
 
     :param dict in_dict: The dictionary to work with
     :param str keys: The delimited string with one or more keys.
-    :param any value: The value to assign to the nested dict-key.
+    :param any value: The value to append to the nested dict-key.
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
@@ -309,7 +309,7 @@ def extend_dict_key_value(
 
     :param dict in_dict: The dictionary to work with
     :param str keys: The delimited string with one or more keys.
-    :param any value: The value to assign to the nested dict-key.
+    :param any value: The value to extend the nested dict-key with.
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
