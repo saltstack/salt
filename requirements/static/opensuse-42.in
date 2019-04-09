@@ -32,7 +32,7 @@ salttesting==2017.6.1
 setproctitle
 setuptools-scm
 strict_rfc3339
-supervisor; python_version < '3'
+supervisor==3.3.5; python_version < '3'
 timelib
 tornado<5.0
 virtualenv
