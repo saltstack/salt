@@ -726,7 +726,7 @@ def get_public_key(key, passphrase=None, asObj=False):
         return evppubkey
 
     rsa.save_pub_key_bio(bio)
-    return bio.read_all()
+    return bio.read_all().decode()
 
 
 def get_private_key_size(private_key, passphrase=None):
