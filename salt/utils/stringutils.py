@@ -591,36 +591,36 @@ def get_diff(a, b, *args, **kwargs):
 
 
 @jinja_filter('to_snake_case')
-def camel_to_snake_case(input):
+def camel_to_snake_case(camel_input):
     '''
     Converts camelCase (or CamelCase) to snake_case.
     From https://codereview.stackexchange.com/questions/185966/functions-to-convert-camelcase-strings-to-snake-case
 
-    :param str input: The camelcase or CamelCase string to convert to snake_case
+    :param str camel_input: The camelcase or CamelCase string to convert to snake_case
 
     :return str
     '''
-    r = input[0].lower()
-    for i, letter in enumerate(input[1:], 1):
+    res = camel_input[0].lower()
+    for i, letter in enumerate(camel_input[1:], 1):
         if letter.isupper():
-            if input[i-1].islower() or (i != len(input)-1 and input[i+1].islower()):
-                r += '_'
-        r += letter.lower()
-    return r
+            if camel_input[i-1].islower() or (i != len(camel_input)-1 and camel_input[i+1].islower()):
+                res += '_'
+        res += letter.lower()
+    return res
 
 
 @jinja_filter('to_camelcase')
-def snake_to_camel_case(input, uppercamel=False):
+def snake_to_camel_case(snake_input, uppercamel=False):
     '''
     Converts snake_case to camelCase (or CamelCase if uppercamel is ``True``).
     Inspired by https://codereview.stackexchange.com/questions/85311/transform-snake-case-to-camelcase
 
-    :param str input: The input snake_case string to convert to camelCase
+    :param str snake_input: The input snake_case string to convert to camelCase
     :param bool uppercamel: Whether or not to convert to CamelCase instead
 
     :return str
     '''
-    words = input.split('_')
+    words = snake_input.split('_')
     if uppercamel:
         words[0] = words[0].capitalize()
     return words[0] + ''.join(word.capitalize() for word in words[1:])
