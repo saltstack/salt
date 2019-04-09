@@ -1695,8 +1695,12 @@ class LocalClient(object):
             if 'minions' in raw.get('data', {}):
                 continue
             try:
-                found.add(raw['id'])
-                ret = {raw['id']: {'ret': raw['return']}}
+                # There might be two jobs for the same minion, so we have to check for the jid
+                if jid == raw['jid']:
+                    found.add(raw['id'])
+                    ret = {raw['id']: {'ret': raw['return']}}
+                else:
+                    continue
             except KeyError:
                 # Ignore other erroneous messages
                 continue
