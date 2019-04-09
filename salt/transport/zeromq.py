@@ -234,8 +234,6 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         self._closing = True
         if hasattr(self, 'message_client'):
             self.message_client.close()
-        else:
-            log.debug('No message_client attr for AsyncZeroMQReqChannel found. Not destroying sockets.')
 
         # Remove the entry from the instance map so that a closed entry may not
         # be reused.
