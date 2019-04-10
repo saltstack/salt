@@ -316,7 +316,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             assert sorted(add_host.mock_calls) == expected, add_host.mock_calls
 
             expected = sorted([call(x, 'A comment') for x in ip_list])
-            assert sorted(add_host.mock_calls) == expected, add_host.mock_calls
+            assert sorted(set_comment.mock_calls) == expected, set_comment.mock_calls
 
             assert rm_host.mock_calls == [], rm_host.mock_calls
 

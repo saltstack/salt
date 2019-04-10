@@ -75,10 +75,10 @@ def _list_hosts():
                     comps = line.split()
                     ip = comps.pop(0)
                     if comment:
-                        ret.setdefault(ip, {}).update({'aliases': comps,
-                                                       'comment': comment})
+                        ret.setdefault(ip, {}).setdefault('aliases', []).extend(comps)
+                        ret.setdefault(ip, {}).setdefault('comment', '').update(comment)
                     else:
-                        ret.setdefault(ip, {}).update({'aliases': comps})
+                        ret.setdefault(ip, {}).setdefault('aliases', []).extend(comps)
         except (IOError, OSError) as exc:
             salt.utils.files.process_read_exception(exc, hfn, ignore=errno.ENOENT)
             # Don't set __context__ since we weren't able to read from the
@@ -120,8 +120,10 @@ def get_ip(host):
         return ''
     # Look for the op
     for addr in hosts:
-        if host in hosts[addr]['aliases']:
-            return addr
+        if isinstance(hosts[addr], dict) and 'aliases' in hosts[addr]:
+            _hosts = hosts[addr]['aliases']
+            if host in _hosts:
+                return addr
     # ip not found
     return ''
 
@@ -141,7 +143,7 @@ def get_alias(ip):
         salt '*' hosts.get_alias <ip addr>
     '''
     hosts = _list_hosts()
-    if ip in hosts:
+    if ip in list(hosts):
         return hosts[ip]['aliases']
     return []
 
