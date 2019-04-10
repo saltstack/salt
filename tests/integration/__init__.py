@@ -525,9 +525,7 @@ class TestDaemon(object):
         Create a roster file for salt's syndic
         '''
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
-        syndic_roster_path = os.path.join(FILES, 'conf/_ssh/syndic_roster')
         shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
-        shutil.copy(syndic_roster_path, os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'roster'))
 
     def prep_ssh(self):
         '''
