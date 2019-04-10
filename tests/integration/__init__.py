@@ -390,6 +390,7 @@ class TestDaemon(object):
                 ' * {LIGHT_YELLOW}Starting syndic salt-master ... {ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            self.prep_syndic()
             self.smaster_process = start_daemon(
                 daemon_name='salt-smaster',
                 daemon_id=self.syndic_master_opts['id'],
@@ -520,6 +521,15 @@ class TestDaemon(object):
         # no raet syndic daemon yet
 
     start_tcp_daemons = start_zeromq_daemons
+
+    def prep_syndic(self):
+        '''
+        Create a roster file for salt's syndic
+        '''
+        roster_path = os.path.join(FILES, 'conf/_ssh/roster')
+        syndic_roster_path = os.path.join(FILES, 'conf/_ssh/syndic_roster')
+        shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
+        shutil.copy(syndic_roster_path, os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'roster'))
 
     def prep_ssh(self):
         '''
@@ -672,14 +682,8 @@ class TestDaemon(object):
             print('sshd had errors on startup: {0}'.format(salt.utils.stringutils.to_str(sshd_err)))
         else:
             os.environ['SSH_DAEMON_RUNNING'] = 'True'
-        roster_path = os.path.join(FILES, 'conf/_ssh/roster')
-        syndic_roster_path = os.path.join(FILES, 'conf/_ssh/syndic_roster')
-        shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
-        shutil.copy(syndic_roster_path, os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'roster'))
-        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
-            roster.write('  user: {0}\n'.format(RUNTIME_VARS.RUNNING_TESTS_USER))
-            roster.write('  priv: {0}/{1}'.format(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'))
-        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'roster'), 'a') as roster:
+        self.prep_syndic()
+        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
             roster.write('  user: {0}\n'.format(RUNTIME_VARS.RUNNING_TESTS_USER))
             roster.write('  priv: {0}/{1}'.format(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'))
         sys.stdout.write(
