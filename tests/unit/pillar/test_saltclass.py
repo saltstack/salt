@@ -19,12 +19,12 @@ fake_minion_id2 = 'fake_id2'
 fake_minion_id3 = 'fake_id3'
 fake_minion_id4 = 'fake_id4'
 fake_minion_id5 = 'fake_id5'
-
+fake_minion_id6 = 'fake_id6'
 
 fake_pillar = {}
 fake_args = ({'path': os.path.abspath(
-                        os.path.join(base_path, '..', '..', 'integration',
-                                     'files', 'saltclass', 'examples-new'))})
+    os.path.join(base_path, '..', '..', 'integration',
+                 'files', 'saltclass', 'examples-new'))})
 fake_opts = {}
 fake_salt = {}
 fake_grains = {}
@@ -33,7 +33,8 @@ fake_grains = {}
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltclassTestCase(TestCase, LoaderModuleMockMixin):
     '''
-    New tests for salt.pillar.saltclass
+    Tests for salt.pillar.saltclass
+    TODO: change node and class names in mocks to make them more readable - all these A, B, C, X, L0 are unreadable
     '''
 
     def setup_loader_modules(self):
@@ -156,9 +157,59 @@ class SaltclassTestCase(TestCase, LoaderModuleMockMixin):
         }
         result = saltclass.ext_pillar(fake_minion_id4, nonsaltclass_pillars, fake_args)
         filtered_result = {}
-        for key in expected_result.keys():
+        for key in expected_result:
             filtered_result[key] = result.get(key)
         self.assertDictEqual(filtered_result, expected_result)
 
     def test_fail(self):
         self.assertRaises(SaltException, saltclass.ext_pillar, fake_minion_id5, {}, fake_args)
+
+    def test_globbing(self):
+        result = saltclass.ext_pillar(fake_minion_id6, {}, fake_args)
+        expected_result = {'A1': 'A1',
+                           'A2': 'A2',
+                           'A3': 'A3',
+                           'B-init': 'B-init',
+                           'B1': 'B1',
+                           'B2': 'B2',
+                           'B3': 'B3',
+                           'C': 'C',
+                           'C1': 'C1',
+                           'C2': 'C2',
+                           'D-init': 'D-init',
+                           'D1': 'D1',
+                           'X': 'X',
+                           'X-init': 'X-init',
+                           '__saltclass__': {'classes': ['L0.D.X',
+                                                         'L0.D.X.X',
+                                                         'L0.D.Y.B',
+                                                         'L0.D.Y.B.B1',
+                                                         'L0.D.Y.B.B2',
+                                                         'L0.D.Y.B.B3',
+                                                         'L0.D.Y.A.A1',
+                                                         'L0.D.Y.A.A2',
+                                                         'L0.D.Y.A.A3',
+                                                         'L0.D.Y.C.C',
+                                                         'L0.D.Y.C.C1',
+                                                         'L0.D.Y.C.C2',
+                                                         'L0.D.Y.D.D1',
+                                                         'L0.D.Y.D'],
+                                             'environment': 'base',
+                                             'nodename': 'fake_id6',
+                                             'states': ['X-init',
+                                                        'X',
+                                                        'B-init',
+                                                        'B1',
+                                                        'B2',
+                                                        'B3',
+                                                        'A11',
+                                                        'A12',
+                                                        'A2',
+                                                        'A31',
+                                                        'A32',
+                                                        'C',
+                                                        'C1',
+                                                        'C2',
+                                                        'D1',
+                                                        'D-init']}}
+        self.assertDictEqual(result, expected_result)

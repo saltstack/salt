@@ -1,0 +1,5 @@
+pillars:
+  X-init: X-init
+
+states:
+  - X-init

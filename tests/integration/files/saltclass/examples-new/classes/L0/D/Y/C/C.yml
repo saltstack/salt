@@ -1,0 +1,8 @@
+classes:
+  - .C1
+
+pillars:
+  C: C
+
+states:
+  - C
