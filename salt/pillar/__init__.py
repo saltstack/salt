@@ -770,32 +770,40 @@ class Pillar(object):
                                 key = v.get('key', None)
                             else:
                                 key = None
-                            if sub_sls not in mods:
-                                nstate, mods, err = self.render_pstate(
-                                        sub_sls,
-                                        saltenv,
-                                        mods,
-                                        defaults
-                                        )
-                                if nstate:
-                                    if key:
-                                        # If key is x:y, convert it to {x: {y: nstate}}
-                                        for key_fragment in reversed(key.split(":")):
-                                            nstate = {
-                                                key_fragment: nstate
-                                            }
-                                    if not self.opts.get('pillar_includes_override_sls', False):
-                                        include_states.append(nstate)
-                                    else:
-                                        state = merge(
-                                            state,
-                                            nstate,
-                                            self.merge_strategy,
-                                            self.opts.get('renderer', 'yaml'),
-                                            self.opts.get('pillar_merge_lists', False))
-                                if err:
-                                    errors += err
-
+                            try:
+                                matched_pstates = fnmatch.filter(self.avail[saltenv], sub_sls)
+                            except KeyError:
+                                errors.extend(
+                                    ['No matching pillar environment for environment '
+                                     '\'{0}\' found'.format(saltenv)]
+                                )
+                                matched_pstates = [sub_sls]
+                            for m_sub_sls in matched_pstates:
+                                if m_sub_sls not in mods:
+                                    nstate, mods, err = self.render_pstate(
+                                            m_sub_sls,
+                                            saltenv,
+                                            mods,
+                                            defaults
+                                            )
+                                    if nstate:
+                                        if key:
+                                            # If key is x:y, convert it to {x: {y: nstate}}
+                                            for key_fragment in reversed(key.split(":")):
+                                                nstate = {
+                                                    key_fragment: nstate
+                                                }
+                                        if not self.opts.get('pillar_includes_override_sls', False):
+                                            include_states.append(nstate)
+                                        else:
+                                            state = merge(
+                                                state,
+                                                nstate,
+                                                self.merge_strategy,
+                                                self.opts.get('renderer', 'yaml'),
+                                                self.opts.get('pillar_merge_lists', False))
+                                    if err:
+                                        errors += err
                         if not self.opts.get('pillar_includes_override_sls', False):
                             # merge included state(s) with the current state
                             # merged last to ensure that its values are
