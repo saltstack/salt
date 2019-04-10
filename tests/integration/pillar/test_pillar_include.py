@@ -1,4 +1,9 @@
+# -*- coding: utf-8 -*-
+'''
+Pillar include tests
+'''
 from __future__ import unicode_literals
+
 from tests.support.case import ModuleCase
 
 
