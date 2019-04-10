@@ -10,7 +10,6 @@ import logging
 import socket
 import weakref
 import time
-import threading
 import sys
 
 # Import 3rd-party libs
