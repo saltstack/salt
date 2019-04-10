@@ -160,6 +160,13 @@ class SyncThreadedWrapper(object):
         self._stop.set()
         self._thread.join()
 
+    def close(self):
+        try:
+            self.obj.close()
+        except AttributeError:
+            pass
+        self.stop()
+
     def __getattribute__(self, key):
         try:
             return object.__getattribute__(self, key)
