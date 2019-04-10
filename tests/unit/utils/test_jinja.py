@@ -919,6 +919,118 @@ class TestCustomExtensions(TestCase):
                 else "[{'foo': 'bar'}, {'baz': 42}]"
         )
 
+    def test_set_dict_key_value(self):
+        '''
+        Test the `set_dict_key_value` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl("{{ {} | set_dict_key_value('foo:bar:baz', 42) }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "{'foo': {'bar': {'baz': 42}}}")
+
+        rendered = render_jinja_tmpl("{{ {} | set_dict_key_value('foo.bar.baz', 42, delimiter='.') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "{'foo': {'bar': {'baz': 42}}}")
+
+    def test_update_dict_key_value(self):
+        '''
+        Test the `update_dict_key_value` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl("{{ foo | update_dict_key_value('bar:baz', {'quux': 3}) }}",
+                                     dict(foo={'bar': {'baz': {'qux': 1}}},
+                                          opts=self.local_opts,
+                                          saltenv='test',
+                                          salt=self.local_salt))
+        self.assertEqual(rendered,
+            "{u'bar': {u'baz': {u'qux': 1, 'quux': 3}}}" if six.PY2
+                else "{'bar': {'baz': {'qux': 1, 'quux': 3}}}"
+        )
+        # Test incorrect usage
+        template = "{{ {} | update_dict_key_value('bar:baz', 42) }}"
+        expected = r"Cannot update <type 'dict'> with a <type 'int'>.;"
+        self.assertRaisesRegex(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            template,
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
+        )
+        template = "{{ {} | update_dict_key_value('bar:baz', 'foo') }}"
+        expected = r"Cannot update <type 'dict'> with a <type 'str'>.;"
+        self.assertRaisesRegex(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            template,
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
+        )
+        template = "{{ {} | update_dict_key_value('bar:baz', [42]) }}"
+        expected = r"Cannot update <type 'dict'> with a <type 'list'>.;"
+        self.assertRaisesRegex(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            template,
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
+        )
+
+    def test_append_dict_key_value(self):
+        '''
+        Test the `append_dict_key_value` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl("{{ {} | append_dict_key_value('foo:bar:baz', 42) }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "{'foo': {'bar': {'baz': [42]}}}")
+
+        rendered = render_jinja_tmpl("{{ foo | append_dict_key_value('bar:baz', 42) }}",
+                                     dict(foo={'bar': {'baz': [1, 2]}},
+                                          opts=self.local_opts,
+                                          saltenv='test',
+                                          salt=self.local_salt))
+        self.assertEqual(
+            rendered,
+            "{u'bar': {u'baz': [1, 2, 42]}}" if six.PY2
+                else "{'bar': {'baz': [1, 2, 42]}}"
+        )
+
+    def test_extend_dict_key_value(self):
+        '''
+        Test the `extend_dict_key_value` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl("{{ {} | extend_dict_key_value('foo:bar:baz', [42]) }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "{'foo': {'bar': {'baz': [42]}}}")
+
+        rendered = render_jinja_tmpl("{{ foo | extend_dict_key_value('bar:baz', [42, 43]) }}",
+                                     dict(foo={'bar': {'baz': [1, 2]}},
+                                          opts=self.local_opts,
+                                          saltenv='test',
+                                          salt=self.local_salt))
+        self.assertEqual(
+            rendered,
+            "{u'bar': {u'baz': [1, 2, 42, 43]}}" if six.PY2
+                else "{'bar': {'baz': [1, 2, 42, 43]}}"
+        )
+        # Edge cases
+        rendered = render_jinja_tmpl("{{ {} | extend_dict_key_value('foo:bar:baz', 'quux') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "{'foo': {'bar': {'baz': ['q', 'u', 'u', 'x']}}}")
+        # Beware! When supplying a dict, the list gets extended with the dict coerced to a list,
+        # which will only contain the keys of the dict.
+        rendered = render_jinja_tmpl("{{ {} | extend_dict_key_value('foo:bar:baz', {'foo': 'bar'}) }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "{'foo': {'bar': {'baz': ['foo']}}}")
+
+        # Test incorrect usage
+        template = "{{ {} | extend_dict_key_value('bar:baz', 42) }}"
+        expected = r"Cannot extend <type 'list'> with a <type 'int'>.;"
+        self.assertRaisesRegex(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            template,
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
+        )
+
     def test_sequence(self):
         env = Environment()
         env.filters['sequence'] = ensure_sequence_filter
