@@ -751,6 +751,7 @@ class GitProvider(object):
                         'Config updates for %s remote \'%s\' written to %s',
                         self.role, self.id, git_config
                     )
+            return conf_changed
 
     def fetch(self):
         '''
@@ -1620,16 +1621,10 @@ class Pygit2(GitProvider):
             return []
         return super(Pygit2, self).clean_stale_refs()
 
-    def init_remote(self):
+    def _init_repo(self):
         '''
-        Initialize/attach to a remote using pygit2. Return a boolean which
-        will let the calling function know whether or not a new repo was
-        initialized by this function.
+        Initialize/attach to a local cache of the remote repository.
         '''
-        # https://github.com/libgit2/pygit2/issues/339
-        # https://github.com/libgit2/libgit2/issues/2122
-        home = os.path.expanduser('~')
-        pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
         new = False
         if not os.listdir(self.cachedir):
             # Repo cachedir is empty, initialize a new repo there
@@ -1641,11 +1636,24 @@ class Pygit2(GitProvider):
                 self.repo = pygit2.Repository(self.cachedir)
             except KeyError:
                 log.error(_INVALID_REPO, self.cachedir, self.url, self.role)
-                return new
+        return new
 
+    def init_remote(self):
+        '''
+        Initialize/attach to a remote using pygit2. Return a boolean which
+        will let the calling function know whether or not a new repo was
+        initialized by this function.
+        '''
+        # https://github.com/libgit2/pygit2/issues/339
+        # https://github.com/libgit2/libgit2/issues/2122
+        home = os.path.expanduser('~')
+        pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
+        new = self._init_repo()
         self.gitdir = salt.utils.path.join(self.repo.workdir, '.git')
-        self.enforce_git_config()
-
+        changed = self.enforce_git_config()
+        if changed:
+            # Reinit pygit2 repository handler to re-read the changed config file.
+            self._init_repo()
         return new
 
     def dir_list(self, tgt_env):
