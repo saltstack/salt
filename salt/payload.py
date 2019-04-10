@@ -147,11 +147,12 @@ class Serial(object):
                 # Due to this, if we don't need it, don't pass it at all so
                 # that under Python 2 we can still work with older versions
                 # of msgpack.
-                if msgpack.version >= (0, 5, 2):
+                if msgpack_version >= (0, 5, 2):
                     if encoding is None:
                         loads_kwargs['raw'] = True
                     else:
                         loads_kwargs['raw'] = False
+                    loads_kwargs['raw'] = False
                 else:
                     loads_kwargs['encoding'] = encoding
                 try:
