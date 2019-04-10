@@ -123,23 +123,6 @@ class IPCMessageClient(BaseIPCReqCase):
         self.wait()
         self.assertEqual(self.payloads[0], msg)
 
-    def test_last_singleton_instance_closes(self):
-        channel = self._get_channel()
-        msg = {'foo': 'bar', 'stop': True}
-        log.debug('Sending msg1')
-        self.channel.send(msg)
-        self.wait()
-        self.assertEqual(self.payloads[0], msg)
-        channel.close()
-        # Since this is a singleton, and only the last singleton instance
-        # should actually close the connection, the next code should still
-        # work and not timeout
-        msg = {'bar': 'foo', 'stop': True}
-        log.debug('Sending msg2')
-        self.channel.send(msg)
-        self.wait()
-        self.assertEqual(self.payloads[1], msg)
-
     def test_basic_send(self):
         msg = {'foo': 'bar', 'stop': True}
         self.channel.send(msg)
