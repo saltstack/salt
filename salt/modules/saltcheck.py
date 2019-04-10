@@ -220,7 +220,7 @@ def __virtual__():
     return __virtualname__
 
 
-def update_master_cache(saltenv='base'):
+def update_master_cache(states, saltenv='base'):
     '''
     Updates the master cache onto the minion - transfers all salt-check-tests
     Should be done one time before running tests, and if tests are updated
@@ -232,13 +232,26 @@ def update_master_cache(saltenv='base'):
 
         salt '*' saltcheck.update_master_cache
     '''
-    copy_files = []
-    log.info("Updating files for environment: %s", saltenv)
-    master_files = __salt__['cp.list_master'](saltenv)
-    for file in master_files:
-        if file.endswith('.tst'):
-            copy_files.append('salt://' + file)
-    __salt__['cp.cache_files'](copy_files, saltenv)
+    already_processed = []
+    log.info("Updating states %s for environment: %s", states, saltenv)
+    sls_list = salt.utils.args.split_input(states)
+    for state_name in sls_list:
+        state_path = state_name.replace(".", os.sep)
+        if state_path in already_processed:
+            log.debug("Already cached state for %s", state_path)
+        else:
+            cache_result = __salt__['cp.cache_dir']('salt://' + state_path, saltenv)
+            if cache_result:
+                already_processed.append(state_path)
+            else:
+                # Try dirname of given state as last argument must have been a file and not directory name
+                state_path_dir = os.path.dirname(state_path)
+                if state_path_dir in already_processed:
+                    log.debug("Already cached state for %s", state_path_dir)
+                else:
+                    cache_result = __salt__['cp.cache_dir']('salt://' + state_path_dir, saltenv)
+                    if cache_result:
+                        already_processed.append(state_path_dir)
     return True
 
 
@@ -308,6 +321,10 @@ def run_state_tests(state, saltenv=None, check_all=False):
         saltenv = __opts__['saltenv']
     if not saltenv:
         saltenv = 'base'
+
+    # Cache referenced states
+    update_master_cache(state, saltenv=saltenv)
+
     scheck = SaltCheck(saltenv)
     paths = scheck.get_state_search_path_list(saltenv)
     stl = StateTestLoader(search_paths=paths)
@@ -347,6 +364,9 @@ def run_highstate_tests(saltenv=None):
     for state in sls_list:
         if state not in all_states:
             all_states.append(state)
+
+    # update state cache
+    update_master_cache(all_states, saltenv=saltenv)
 
     for state_name in all_states:
         stl.add_test_files_for_sls(state_name)
@@ -458,7 +478,6 @@ class SaltCheck(object):
         local_opts = salt.config.minion_config(__opts__['conf_file'])
         local_opts['file_client'] = 'local'
         self.salt_lc = salt.client.Caller(mopts=local_opts)
-        update_master_cache(saltenv)
 
     def __is_valid_test(self, test_dict):
         '''
