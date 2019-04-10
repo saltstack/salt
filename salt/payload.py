@@ -146,7 +146,7 @@ class Serial(object):
                 # that under Python 2 we can still work with older versions
                 # of msgpack.
                 try:
-                    ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder, encoding=encoding)
+                    ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder, raw=False)
                 except UnicodeDecodeError:
                     # msg contains binary data
                     ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder)
