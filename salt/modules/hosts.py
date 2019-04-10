@@ -349,6 +349,7 @@ def set_comment(ip, comment):
         _write_hosts(hosts)
     return True
 
+
 def _write_hosts(hosts):
     lines = []
     for ip, host_info in six.iteritems(hosts):

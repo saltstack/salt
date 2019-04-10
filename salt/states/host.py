@@ -70,6 +70,7 @@ import salt.utils.validate.net
 
 log = logging.getLogger(__name__)
 
+
 def present(name, ip, comment='', clean=False):  # pylint: disable=C0103
     '''
     Ensures that the named host is present with the given ip
