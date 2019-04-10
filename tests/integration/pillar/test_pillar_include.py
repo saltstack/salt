@@ -25,6 +25,6 @@ class PillarIncludeTest(ModuleCase):
         '''
         ret = self.minion_run('pillar.items')
         assert 'glob-a' in ret
-        assert ret['glob-a'] == 'Entry A'
+        assert ret['glob-a'] == ['Entry A']
         assert 'glob-b' in ret
-        assert ret['glob-b'] == 'Entry B'
+        assert ret['glob-b'] == ['Entry B']
