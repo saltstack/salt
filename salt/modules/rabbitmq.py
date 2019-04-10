@@ -139,7 +139,8 @@ def _safe_output(line):
         line.startswith('Listing') and line.endswith('...'),
         line.startswith('Listing') and '\t' not in line,
         '...done' in line,
-        line.startswith('WARNING:')
+        line.startswith('WARNING:'),
+        len(line) == 0
     ])
 
 
@@ -256,6 +257,29 @@ def list_vhosts(runas=None):
     return _output_to_list(res['stdout'])
 
 
+def list_upstreams(runas=None):
+    '''
+    Returns a dict of upstreams based on rabbitmqctl list_parameters.
+
+    CLI Example:
+    .. code-block:: bash
+        salt '*' rabbitmq.list_upstreams
+    '''
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
+    ret = {}
+    res = __salt__['cmd.run_all'](
+        [RABBITMQCTL, 'list_parameters', '-q'],
+        reset_system_locale=False,
+        runas=runas,
+        python_shell=False)
+    for raw_line in res['stdout'].split('\n'):
+        if _safe_output(raw_line):
+            (_, name, definition) = raw_line.split('\t')
+            ret[name] = definition
+    return ret
+
+
 def user_exists(name, runas=None):
     '''
     Return whether the user exists based on rabbitmqctl list_users.
@@ -284,6 +308,19 @@ def vhost_exists(name, runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     return name in list_vhosts(runas=runas)
+
+
+def upstream_exists(name, runas=None):
+    '''
+    Return whether the upstreamexists based on rabbitmqctl list_parameters.
+
+    CLI Example:
+    .. code-block:: bash
+        salt '*' rabbitmq.upstream_exists rabbit_upstream
+    '''
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
+    return name in list_upstreams(runas=runas)
 
 
 def add_user(name, password=None, runas=None):
@@ -442,7 +479,11 @@ def check_password(name, password, runas=None):
         runas = salt.utils.user.get_user()
 
     try:
-        res = __salt__['cmd.run']([RABBITMQCTL, 'status'], reset_system_locale=False, runas=runas, python_shell=False)
+        res = __salt__['cmd.run'](
+            [RABBITMQCTL, 'status'],
+            reset_system_locale=False,
+            runas=runas,
+            python_shell=False)
         server_version = re.search(r'\{rabbit,"RabbitMQ","(.+)"\}', res)
 
         if server_version is None:
@@ -484,9 +525,9 @@ def check_password(name, password, runas=None):
         return True
 
     cmd = ('rabbit_auth_backend_internal:check_user_login'
-        '(<<"{0}">>, [{{password, <<"{1}">>}}]).').format(
-        name.replace('"', '\\"'),
-        password.replace('"', '\\"'))
+           '(<<"{0}">>, [{{password, <<"{1}">>}}]).').format(
+            name.replace('"', '\\"'),
+            password.replace('"', '\\"'))
 
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'eval', cmd],
@@ -696,7 +737,11 @@ def join_cluster(host, user='rabbit', ram_node=None, runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     stop_app(runas)
-    res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
+    res = __salt__['cmd.run_all'](
+        cmd,
+        reset_system_locale=False,
+        runas=runas,
+        python_shell=False)
     start_app(runas)
 
     return _format_response(res, 'Join')
@@ -800,7 +845,11 @@ def list_queues(runas=None, *args):
         runas = salt.utils.user.get_user()
     cmd = [RABBITMQCTL, 'list_queues', '-q']
     cmd.extend(args)
-    res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
+    res = __salt__['cmd.run_all'](
+        cmd,
+        reset_system_locale=False,
+        runas=runas,
+        python_shell=False)
     _check_response(res)
     return _output_to_dict(res['stdout'])
 
@@ -822,7 +871,11 @@ def list_queues_vhost(vhost, runas=None, *args):
         runas = salt.utils.user.get_user()
     cmd = [RABBITMQCTL, 'list_queues', '-q', '-p', vhost]
     cmd.extend(args)
-    res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
+    res = __salt__['cmd.run_all'](
+        cmd,
+        reset_system_locale=False,
+        runas=runas,
+        python_shell=False)
     _check_response(res)
     return _output_to_dict(res['stdout'])
 
@@ -923,7 +976,11 @@ def set_policy(vhost,
     if apply_to:
         cmd.extend(['--apply-to', apply_to])
     cmd.extend([name, pattern, definition])
-    res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
+    res = __salt__['cmd.run_all'](
+        cmd,
+        reset_system_locale=False,
+        runas=runas,
+        python_shell=False)
     log.debug('Set policy: %s', res['stdout'])
     return _format_response(res, 'Set')
 
@@ -982,7 +1039,11 @@ def list_available_plugins(runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'list', '-m']
-    ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, python_shell=False, runas=runas)
+    ret = __salt__['cmd.run_all'](
+        cmd,
+        reset_system_locale=False,
+        runas=runas,
+        python_shell=False)
     _check_response(ret)
     return _output_to_list(ret['stdout'])
 
@@ -1000,7 +1061,11 @@ def list_enabled_plugins(runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'list', '-m', '-e']
-    ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, python_shell=False, runas=runas)
+    ret = __salt__['cmd.run_all'](
+        cmd,
+        reset_system_locale=False,
+        runas=runas,
+        python_shell=False)
     _check_response(ret)
     return _output_to_list(ret['stdout'])
 
@@ -1033,7 +1098,11 @@ def enable_plugin(name, runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'enable', name]
-    ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
+    ret = __salt__['cmd.run_all'](
+        cmd,
+        reset_system_locale=False,
+        runas=runas,
+        python_shell=False)
     return _format_response(ret, 'Enabled')
 
 
@@ -1050,5 +1119,47 @@ def disable_plugin(name, runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'disable', name]
-    ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
+    ret = __salt__['cmd.run_all'](
+        cmd,
+        reset_system_locale=False,
+        runas=runas,
+        python_shell=False)
     return _format_response(ret, 'Disabled')
+
+
+def add_upstream(name, definition, runas=None):
+    '''
+    Adds an upstream via rabbitmqctl set_parameter.
+    Definition can be passed as (JSON) string or as dict, which will be converted
+    to a JSON string.
+
+    CLI Example:
+    .. code-block:: bash
+        salt '*' rabbitmq.add_upstream upstream_name \
+        '{"ack-mode":"on-confirm","max-hops":1,"trust-user-id":true,"uri":"amqp://hostname"}'
+    '''
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
+    json_def = salt.utils.json.dumps(definition) if isinstance(definition, dict) else definition
+    res = __salt__['cmd.run_all'](
+        [RABBITMQCTL, 'set_parameter', 'federation-upstream', name, json_def],
+        reset_system_locale=False,
+        runas=runas,
+        python_shell=False)
+    _check_response(res)
+    return True
+
+
+def delete_upstream(name, runas=None):
+    '''
+    Deletes an upstream via rabbitmqctl clear_parameter.
+    '''
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
+    res = __salt__['cmd.run_all'](
+        [RABBITMQCTL, 'clear_parameter', 'federation-upstream', name],
+        reset_system_locale=False,
+        runas=runas,
+        python_shell=False)
+    _check_response(res)
+    return True
