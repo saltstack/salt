@@ -161,7 +161,7 @@ def ensure_dict_key(
     while a_keys:
         current_key = a_keys.pop(0)
         if current_key not in dict_pointer or not isinstance(dict_pointer[current_key], dict):
-            dict_pointer[current_key] = OrderedDict if ordered_dict else {}
+            dict_pointer[current_key] = OrderedDict() if ordered_dict else {}
         dict_pointer = dict_pointer[current_key]
     return in_dict
 
@@ -186,8 +186,14 @@ def _dict_rpartition(
     '''
     if delimiter in keys:
         all_but_last_keys, _, last_key = keys.rpartition(delimiter)
-        ensure_dict_key(in_dict, all_but_last_keys, ordered_dict=ordered_dict)
-        dict_pointer = salt.utils.data.traverse_dict(in_dict, all_but_last_keys, None)
+        ensure_dict_key(in_dict,
+                        all_but_last_keys,
+                        delimiter=delimiter,
+                        ordered_dict=ordered_dict)
+        dict_pointer = salt.utils.data.traverse_dict(in_dict,
+                                                     all_but_last_keys,
+                                                     default=None,
+                                                     delimiter=delimiter)
     else:
         dict_pointer = in_dict
         last_key = keys
@@ -248,14 +254,14 @@ def update_dict_key_value(
                                               delimiter=delimiter,
                                               ordered_dict=ordered_dict)
     if last_key not in dict_pointer or dict_pointer[last_key] is None:
-        dict_pointer[last_key] = OrderedDict if ordered_dict else {}
+        dict_pointer[last_key] = OrderedDict() if ordered_dict else {}
     try:
         dict_pointer[last_key].update(value)
     except AttributeError:
         raise SaltInvocationError('The last key contains a {}, which cannot update.'
                                   ''.format(type(dict_pointer[last_key])))
     except (ValueError, TypeError):
-        raise SaltInvocationError('Cannot update {} with a {}'
+        raise SaltInvocationError('Cannot update {} with a {}.'
                                   ''.format(type(dict_pointer[last_key]), type(value)))
     return in_dict
 
@@ -328,4 +334,7 @@ def extend_dict_key_value(
     except AttributeError:
         raise SaltInvocationError('The last key contains a {}, which cannot extend.'
                                   ''.format(type(dict_pointer[last_key])))
+    except TypeError:
+        raise SaltInvocationError('Cannot extend {} with a {}.'
+                                  ''.format(type(dict_pointer[last_key]), type(value)))
     return in_dict
