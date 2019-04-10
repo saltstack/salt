@@ -358,16 +358,6 @@ class IPCClient(object):
         if self._closing:
             return
 
-        if self._refcount > 1:
-            # Decrease refcount
-            with self._refcount_lock:
-                self._refcount -= 1
-            log.debug(
-                'This is not the last %s instance. Not closing yet.',
-                self.__class__.__name__
-            )
-            return
-
         self._closing = True
 
         log.debug('Closing %s instance', self.__class__.__name__)
