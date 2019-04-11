@@ -19,7 +19,6 @@ import inspect
 import salt.loader
 import salt.fileclient
 import salt.minion
-import salt.crypt
 import salt.transport.client
 import salt.utils.args
 import salt.utils.cache
