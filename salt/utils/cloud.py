@@ -1981,25 +1981,22 @@ def fire_event(key, msg, tag, sock_dir, args=None, transport='zeromq'):
     '''
     Fire deploy action
     '''
-    event = salt.utils.event.get_event(
-        'master',
-        sock_dir,
-        transport,
-        listen=False)
+    with salt.utils.event.get_event( 'master', sock_dir, transport, listen=False) as event:
+        try:
+            event.fire_event(msg, tag)
+        except ValueError:
+            # We're using at least a 0.17.x version of salt
+            if isinstance(args, dict):
+                args[key] = msg
+            else:
+                args = {key: msg}
+            event.fire_event(args, tag)
+        finally:
+            event.destroy()
 
-    try:
-        event.fire_event(msg, tag)
-    except ValueError:
-        # We're using at least a 0.17.x version of salt
-        if isinstance(args, dict):
-            args[key] = msg
-        else:
-            args = {key: msg}
-        event.fire_event(args, tag)
-
-    # https://github.com/zeromq/pyzmq/issues/173#issuecomment-4037083
-    # Assertion failed: get_load () == 0 (poller_base.cpp:32)
-    time.sleep(0.025)
+        # https://github.com/zeromq/pyzmq/issues/173#issuecomment-4037083
+        # Assertion failed: get_load () == 0 (poller_base.cpp:32)
+        time.sleep(0.025)
 
 
 def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
@@ -2378,19 +2375,19 @@ def check_auth(name, sock_dir=None, queue=None, timeout=300):
     This function is called from a multiprocess instance, to wait for a minion
     to become available to receive salt commands
     '''
-    event = salt.utils.event.SaltEvent('master', sock_dir, listen=True)
-    starttime = time.mktime(time.localtime())
-    newtimeout = timeout
-    log.debug('In check_auth, waiting for %s to become available', name)
-    while newtimeout > 0:
-        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-        ret = event.get_event(full=True)
-        if ret is None:
-            continue
-        if ret['tag'] == 'salt/minion/{0}/start'.format(name):
-            queue.put(name)
-            newtimeout = 0
-            log.debug('Minion %s is ready to receive commands', name)
+    with salt.utils.event.SaltEvent('master', sock_dir, listen=True) as event:
+        starttime = time.mktime(time.localtime())
+        newtimeout = timeout
+        log.debug('In check_auth, waiting for %s to become available', name)
+        while newtimeout > 0:
+            newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+            ret = event.get_event(full=True)
+            if ret is None:
+                continue
+            if ret['tag'] == 'salt/minion/{0}/start'.format(name):
+                queue.put(name)
+                newtimeout = 0
+                log.debug('Minion %s is ready to receive commands', name)
 
 
 def ip_to_int(ip):
