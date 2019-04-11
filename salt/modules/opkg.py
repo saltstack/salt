@@ -1270,6 +1270,26 @@ def _set_repo_options(repo, options):
             _set_repo_option(repo, opt)
 
 
+def _create_repo(line, filename):
+    '''
+    Create repo
+    '''
+    repo = {}
+    if line.startswith('#'):
+        repo['enabled'] = False
+        line = line[1:]
+    else:
+        repo['enabled'] = True
+    cols = salt.utils.args.shlex_split(line.strip())
+    repo['compressed'] = not cols[0] in 'src'
+    repo['name'] = cols[1]
+    repo['uri'] = cols[2]
+    repo['file'] = os.path.join(OPKG_CONFDIR, filename)
+    if len(cols) > 3:
+        _set_repo_options(repo, cols[3:])
+    return repo
+
+
 def _read_repos(conf_file, repos, filename, regex):
     '''
     Read repos from configuration file
@@ -1278,19 +1298,7 @@ def _read_repos(conf_file, repos, filename, regex):
         line = salt.utils.stringutils.to_unicode(line)
         if not regex.search(line):
             continue
-        repo = {}
-        if line.startswith('#'):
-            repo['enabled'] = False
-            line = line[1:]
-        else:
-            repo['enabled'] = True
-        cols = salt.utils.args.shlex_split(line.strip())
-        repo['compressed'] = not cols[0] in 'src'
-        repo['name'] = cols[1]
-        repo['uri'] = cols[2]
-        repo['file'] = os.path.join(OPKG_CONFDIR, filename)
-        if len(cols) > 3:
-            _set_repo_options(repo, cols[3:])
+        repo = _create_repo(line, filename)
 
         # do not store duplicated uri's
         if repo['uri'] not in repos:
