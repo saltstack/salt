@@ -295,7 +295,6 @@ class SyncClientMixin(object):
                 'user': low.get('__user__', 'UNKNOWN'),
                }
 
-
         if print_event:
             print_func = self.print_async_event \
                 if hasattr(self, 'print_async_event') \
