@@ -170,13 +170,13 @@ class SyncClientMixin(object):
 
             if timeout is None:
                 timeout = self.opts.get('rest_timeout', 300)
-            with event.get_event(tag=ret_tag, full=True, wait=timeout, auto_reconnect=True) as evt:
-                if ret is None:
-                    raise salt.exceptions.SaltClientTimeout(
-                        "RunnerClient job '{0}' timed out".format(job['jid']),
-                        jid=job['jid'])
+            ret = event.get_event(tag=ret_tag, full=True, wait=timeout, auto_reconnect=True)
+            if ret is None:
+                raise salt.exceptions.SaltClientTimeout(
+                    "RunnerClient job '{0}' timed out".format(job['jid']),
+                    jid=job['jid'])
 
-                return ret if full_return else ret['data']['return']
+            return ret if full_return else ret['data']['return']
 
     def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):
         '''
