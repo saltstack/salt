@@ -294,7 +294,6 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             assert add_host.mock_calls == [], add_host.mock_calls
             assert rm_host.mock_calls == [], rm_host.mock_calls
 
-
     def test_host_present_should_return_True_if_test_and_no_changes(self):
         expected = {
             'comment': 'Host {} ({}) already present'.format(
