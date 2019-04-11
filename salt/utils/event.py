@@ -884,6 +884,12 @@ class SaltEvent(object):
         except Exception:
             pass
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self):
+        self.destroy()
+
 
 class MasterEvent(SaltEvent):
     '''
@@ -931,6 +937,15 @@ class NamespacedEvent(object):
         self.event.fire_event(data, tagify(tag, base=self.base))
         if self.print_func is not None:
             self.print_func(tag, data)
+
+    def destroy(self):
+        self.event.destroy()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self):
+        self.destroy()
 
 
 class MinionEvent(SaltEvent):
