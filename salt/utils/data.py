@@ -993,3 +993,40 @@ def json_query(data, expr):
         log.error(err)
         raise RuntimeError(err)
     return jmespath.search(expr, data)
+
+
+def filter_falsey(data, recurse_depth=None, ignore_types=None):
+    '''
+    Helper function to remove items from a dict or list with falsey value.
+    Removes ``None``, ``{}`` and ``[]``, 0, '' (but does not remove ``False``).
+    Recurses into subdicts or sublists if ``recurse`` is set to ``True``.
+
+    :param dict/list data: Source dict or list to process.
+    :param int recurse_depth: Recurse this many levels into values that are dicts
+        or lists to also process those. Default: 0 (do not recurse)
+    :param list ignore_types: Contains types that can be falsey but must not
+        be filtered. Default: Only booleans are not filtered.
+
+    :return type(data)
+    '''
+    if ignore_types is None:
+        ignore_types = []
+    if isinstance(data, dict):
+        ret = {}
+        for key, value in six.iteritems(data):
+            new_value = filter_falsey(value,
+                                      recurse_depth=recurse_depth-1,
+                                      ignore_types=ignore_types) if recurse_depth else value
+            if isinstance(new_value, bool) or (type(new_value) in ignore_types) or new_value:
+                ret.update({key: new_value})
+    elif isinstance(data, list):
+        ret = []
+        for item in data:
+            new_value = filter_falsey(item,
+                                      recurse_depth=recurse_depth-1,
+                                      ignore_types=ignore_types) if recurse_depth else item
+            if isinstance(new_value, bool) or (type(new_value) in ignore_types) or new_value:
+                ret.append(new_value)
+    else:
+        ret = data
+    return ret
