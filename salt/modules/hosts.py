@@ -76,7 +76,7 @@ def _list_hosts():
                     ip = comps.pop(0)
                     if comment:
                         ret.setdefault(ip, {}).setdefault('aliases', []).extend(comps)
-                        ret.setdefault(ip, {}).setdefault('comment', '').update(comment)
+                        ret.setdefault(ip, {}).update({'comment': comment})
                     else:
                         ret.setdefault(ip, {}).setdefault('aliases', []).extend(comps)
         except (IOError, OSError) as exc:
@@ -160,7 +160,10 @@ def has_pair(ip, alias):
     '''
     hosts = _list_hosts()
     try:
-        return alias in hosts[ip]['aliases']
+        if isinstance(alias, list):
+            return set(alias).issubset(hosts[ip]['aliases'])
+        else:
+            return alias in hosts[ip]['aliases']
     except KeyError:
         return False
 
@@ -252,7 +255,7 @@ def rm_host(ip, alias):
         if tmpline.startswith(b'#'):
             continue
         comment = None
-        if '#' in tmpline:
+        if b'#' in tmpline:
             host_info, comment = tmpline.split('#')
             comment = salt.utils.stringutils.to_bytes(comment).lstrip()
         else:
