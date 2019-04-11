@@ -86,13 +86,14 @@ class IPCMessageClient(BaseIPCReqCase):
     '''
 
     def _get_channel(self):
-        channel = salt.transport.ipc.IPCMessageClient(
-            socket_path=self.socket_path,
-            io_loop=self.io_loop,
-        )
-        channel.connect(callback=self.stop)
-        self.wait()
-        return channel
+        if not hasattr(self, 'channel') or self.channel is None:
+            self.channel = salt.transport.ipc.IPCMessageClient(
+                socket_path=self.socket_path,
+                io_loop=self.io_loop,
+            )
+            self.channel.connect(callback=self.stop)
+            self.wait()
+        return self.channel
 
     def setUp(self):
         super(IPCMessageClient, self).setUp()
@@ -107,6 +108,8 @@ class IPCMessageClient(BaseIPCReqCase):
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
+        finally:
+            self.channel = None
 
     def test_singleton(self):
         channel = self._get_channel()
@@ -119,23 +122,6 @@ class IPCMessageClient(BaseIPCReqCase):
         self.channel.send(msg)
         self.wait()
         self.assertEqual(self.payloads[0], msg)
-
-    def test_last_singleton_instance_closes(self):
-        channel = self._get_channel()
-        msg = {'foo': 'bar', 'stop': True}
-        log.debug('Sending msg1')
-        self.channel.send(msg)
-        self.wait()
-        self.assertEqual(self.payloads[0], msg)
-        channel.close()
-        # Since this is a singleton, and only the last singleton instance
-        # should actually close the connection, the next code should still
-        # work and not timeout
-        msg = {'bar': 'foo', 'stop': True}
-        log.debug('Sending msg2')
-        self.channel.send(msg)
-        self.wait()
-        self.assertEqual(self.payloads[1], msg)
 
     def test_basic_send(self):
         msg = {'foo': 'bar', 'stop': True}
