@@ -12,6 +12,7 @@ from __future__ import absolute_import
 import errno
 import os
 import glob
+import pprint
 import shutil
 import sys
 
@@ -72,7 +73,12 @@ class VirtualEnv(object):
 
     def __enter__(self):
         ret = self.test.run_function('virtualenv.create', [self.venv_dir])
-        self.test.assertEqual(ret['retcode'], 0)
+        self.test.assertEqual(
+            ret['retcode'], 0,
+            msg='Expected \'retcode\' key did not match. Full return dictionary:\n{}'.format(
+                pprint.pformat(ret)
+            )
+        )
 
     def __exit__(self, exc_type, exc_value, traceback):
         if os.path.isdir(self.venv_dir):
@@ -232,7 +238,12 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         try:
             # Let's create the testing virtualenv
             ret = self.run_function('virtualenv.create', [venv_dir])
-            self.assertEqual(ret['retcode'], 0)
+            self.assertEqual(
+                ret['retcode'], 0,
+                msg='Expected \'retcode\' key did not match. Full return dictionary:\n{}'.format(
+                    pprint.pformat(ret)
+                )
+            )
 
             # Let's remove the pip binary
             pip_bin = os.path.join(venv_dir, 'bin', 'pip')
@@ -390,16 +401,19 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('virtualenv.create', [venv_dir])
 
         try:
-            try:
-                self.assertEqual(ret['retcode'], 0)
-                self.assertIn(
-                    'New python executable',
-                    ret['stdout']
+            self.assertEqual(
+                ret['retcode'], 0,
+                msg='Expected \'retcode\' key did not match. Full return dictionary:\n{}'.format(
+                    pprint.pformat(ret)
                 )
-            except AssertionError:
-                import pprint
-                pprint.pprint(ret)
-                raise
+            )
+            self.assertIn(
+                'New python executable',
+                ret['stdout'],
+                msg='Expected STDOUT did not match. Full return dictionary:\n{}'.format(
+                    pprint.pformat(ret)
+                )
+            )
 
             # Let's install a fixed version pip over whatever pip was
             # previously installed
@@ -407,16 +421,17 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 'pip.install', ['pip==8.0'], upgrade=True,
                 bin_env=venv_dir
             )
-            try:
-                self.assertEqual(ret['retcode'], 0)
-                self.assertIn(
-                    'Successfully installed pip',
-                    ret['stdout']
+
+            if not isinstance(ret, dict):
+                self.fail(
+                    'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
                 )
-            except AssertionError:
-                import pprint
-                pprint.pprint(ret)
-                raise
+
+            self.assertEqual(ret['retcode'], 0)
+            self.assertIn(
+                'Successfully installed pip',
+                ret['stdout']
+            )
 
             # Let's make sure we have pip 8.0 installed
             self.assertEqual(
@@ -429,14 +444,14 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 'pip.installed', name='pip==8.0.1', upgrade=True,
                 bin_env=venv_dir
             )
-            try:
-                self.assertSaltTrueReturn(ret)
-                self.assertSaltStateChangesEqual(
-                    ret, {'pip==8.0.1': 'Installed'})
-            except AssertionError:
-                import pprint
-                pprint.pprint(ret)
-                raise
+
+            if not isinstance(ret, dict):
+                self.fail(
+                    'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+                )
+
+            self.assertSaltTrueReturn(ret)
+            self.assertSaltStateChangesEqual(ret, {'pip==8.0.1': 'Installed'})
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir, ignore_errors=True)
