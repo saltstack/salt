@@ -2600,7 +2600,7 @@ def managed(name,
                             reset=win_perms_reset)
                     except CommandExecutionError as exc:
                         if exc.strerror.startswith('Path not found'):
-                            ret['changes'] = '{0} will be created'.format(name)
+                            ret['changes'] = {'new': '{0} will be created'.format(name)}
 
             if isinstance(ret['changes'], tuple):
                 ret['result'], ret['comment'] = ret['changes']
