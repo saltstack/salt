@@ -777,6 +777,11 @@ def extracted(name,
         ret['comment'] = exc.strerror
         return ret
 
+    if not source_match:
+        ret['result'] = False
+        ret['comment'] = 'Invalid source "{0}"'.format(source)
+        return ret
+
     urlparsed_source = _urlparse(source_match)
     urlparsed_scheme = urlparsed_source.scheme
     urlparsed_path = os.path.join(
