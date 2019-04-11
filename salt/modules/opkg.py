@@ -1243,6 +1243,21 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):  # pylint: disable=un
     return None
 
 
+def _set_repo_option(repo, option):
+    '''
+    Set the option to repo
+    '''
+    if not option:
+        return
+    opt = option.split('=')
+    if len(opt) != 2:
+        return
+    if opt[0] == 'trusted':
+        repo['trusted'] = opt[1] == 'yes'
+    else:
+        repo[opt[0]] = opt[1]
+
+
 def _set_repo_options(repo, options):
     '''
     Set the options to the repo.
@@ -1252,13 +1267,34 @@ def _set_repo_options(repo, options):
     for option in options:
         splitted = re.split(pattern, option)
         for opt in splitted:
-            if opt:
-                opt = opt.split('=')
-                if len(opt) == 2:
-                    if opt[0] == 'trusted':
-                        repo['trusted'] = opt[1] == 'yes'
-                    else:
-                        repo[opt[0]] = opt[1]
+            _set_repo_option(repo, opt)
+
+
+def _read_repos(conf_file, repos, filename, regex):
+    '''
+    Read repos from configuration file
+    '''
+    for line in conf_file:
+        line = salt.utils.stringutils.to_unicode(line)
+        if not regex.search(line):
+            continue
+        repo = {}
+        if line.startswith('#'):
+            repo['enabled'] = False
+            line = line[1:]
+        else:
+            repo['enabled'] = True
+        cols = salt.utils.args.shlex_split(line.strip())
+        repo['compressed'] = not cols[0] in 'src'
+        repo['name'] = cols[1]
+        repo['uri'] = cols[2]
+        repo['file'] = os.path.join(OPKG_CONFDIR, filename)
+        if len(cols) > 3:
+            _set_repo_options(repo, cols[3:])
+
+        # do not store duplicated uri's
+        if repo['uri'] not in repos:
+            repos[repo['uri']] = [repo]
 
 
 def list_repos(**kwargs):  # pylint: disable=unused-argument
@@ -1274,31 +1310,10 @@ def list_repos(**kwargs):  # pylint: disable=unused-argument
     repos = {}
     regex = re.compile(REPO_REGEXP)
     for filename in os.listdir(OPKG_CONFDIR):
-        if filename.endswith(".conf"):
-            with salt.utils.files.fopen(os.path.join(OPKG_CONFDIR, filename)) as conf_file:
-                for line in conf_file:
-                    line = salt.utils.stringutils.to_unicode(line)
-                    if regex.search(line):
-                        repo = {}
-                        if line.startswith('#'):
-                            repo['enabled'] = False
-                            line = line[1:]
-                        else:
-                            repo['enabled'] = True
-                        cols = salt.utils.args.shlex_split(line.strip())
-                        if cols[0] in 'src':
-                            repo['compressed'] = False
-                        else:
-                            repo['compressed'] = True
-                        repo['name'] = cols[1]
-                        repo['uri'] = cols[2]
-                        repo['file'] = os.path.join(OPKG_CONFDIR, filename)
-                        if len(cols) > 3:
-                            _set_repo_options(repo, cols[3:])
-
-                        # do not store duplicated uri's
-                        if repo['uri'] not in repos:
-                            repos[repo['uri']] = [repo]
+        if not filename.endswith(".conf"):
+            continue
+        with salt.utils.files.fopen(os.path.join(OPKG_CONFDIR, filename)) as conf_file:
+            _read_repos(conf_file, repos, filename, regex)
     return repos
 
 
@@ -1352,18 +1367,18 @@ def _set_trusted_option_if_needed(repostr, trusted):
     return repostr
 
 
-def _add_new_repo(repo, uri, compressed, enabled=True, trusted=None):
+def _add_new_repo(repo, properties):
     '''
     Add a new repo entry
     '''
-    repostr = '# ' if not enabled else ''
-    repostr += 'src/gz ' if compressed else 'src '
+    repostr = '# ' if not properties.get('enabled') else ''
+    repostr += 'src/gz ' if properties.get('compressed') else 'src '
     if ' ' in repo:
         repostr += '"' + repo + '" '
     else:
         repostr += repo + ' '
-    repostr += uri
-    repostr = _set_trusted_option_if_needed(repostr, trusted)
+    repostr += properties.get('uri')
+    repostr = _set_trusted_option_if_needed(repostr, properties.get('trusted'))
     repostr += '\n'
     conffile = os.path.join(OPKG_CONFDIR, repo + '.conf')
 
@@ -1497,11 +1512,13 @@ def mod_repo(repo, **kwargs):
         if 'uri' not in kwargs:
             raise CommandExecutionError(
                 'Repository \'{0}\' not found and no URI passed to create one.'.format(repo))
+        properties = {'uri': kwargs['uri']}
         # If compressed is not defined, assume True
-        compressed = kwargs['compressed'] if 'compressed' in kwargs else True
+        properties['compressed'] = kwargs['compressed'] if 'compressed' in kwargs else True
         # If enabled is not defined, assume True
-        enabled = kwargs['enabled'] if 'enabled' in kwargs else True
-        _add_new_repo(repo, kwargs['uri'], compressed, enabled, kwargs.get('trusted'))
+        properties['enabled'] = kwargs['enabled'] if 'enabled' in kwargs else True
+        properties['trusted'] = kwargs.get('trusted')
+        _add_new_repo(repo, properties)
 
     if 'refresh' in kwargs:
         refresh_db()
