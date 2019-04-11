@@ -1353,7 +1353,7 @@ def extracted(name,
                     tar_opts = shlex.split(options)
 
                     tar_cmd = ['tar']
-                    tar_shortopts = 'x'
+                    tar_shortopts = 'xv'
                     tar_longopts = []
 
                     for position, opt in enumerate(tar_opts):
@@ -1383,9 +1383,9 @@ def extracted(name,
                         ret['changes'] = results
                         return ret
                     if _is_bsdtar():
-                        files = results['stderr']
+                        files = results['stderr'].splitlines()
                     else:
-                        files = results['stdout']
+                        files = results['stdout'].splitlines()
                     if not files:
                         files = 'no tar output so far'
         except CommandExecutionError as exc:
