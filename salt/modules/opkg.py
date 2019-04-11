@@ -39,6 +39,7 @@ from salt.exceptions import (
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
+from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
 OPKG_CONFDIR = '/etc/opkg'
