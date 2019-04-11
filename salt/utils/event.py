@@ -887,7 +887,7 @@ class SaltEvent(object):
     def __enter__(self):
         return self
 
-    def __exit__(self):
+    def __exit__(self, *args):
         self.destroy()
 
 
@@ -944,7 +944,7 @@ class NamespacedEvent(object):
     def __enter__(self):
         return self
 
-    def __exit__(self):
+    def __exit__(self, *args):
         self.destroy()
 
 
