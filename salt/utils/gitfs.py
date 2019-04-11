@@ -1611,11 +1611,19 @@ class Pygit2(GitProvider):
         '''
         Clean stale local refs so they don't appear as fileserver environments
         '''
+        try:
+            if pygit2.GIT_FETCH_PRUNE:
+                # Don't need to clean anything, pygit2 can do it by itself
+                return []
+        except AttributeError:
+            # However, only in 0.26.2 and newer
+            pass
         if self.credentials is not None:
             log.debug(
-                'pygit2 does not support detecting stale refs for '
-                'authenticated remotes, saltenvs will not reflect '
-                'branches/tags removed from remote \'%s\'', self.id
+                'The installed version of pygit2 (%s) does not support '
+                'detecting stale refs for authenticated remotes, saltenvs '
+                'will not reflect branches/tags removed from remote \'%s\'',
+                PYGIT2_VERSION, self.id
             )
             return []
         return super(Pygit2, self).clean_stale_refs()
@@ -1721,6 +1729,11 @@ class Pygit2(GitProvider):
         else:
             if self.credentials is not None:
                 origin.credentials = self.credentials
+        try:
+            fetch_kwargs['prune'] = pygit2.GIT_FETCH_PRUNE
+        except AttributeError:
+            # pruning only available in pygit2 >= 0.26.2
+            pass
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
         except GitError as exc:
@@ -2573,7 +2586,8 @@ class GitBase(object):
                     LIBGIT2_VERSION
                 )
             )
-        if not salt.utils.path.which('git'):
+        if not getattr(pygit2, 'GIT_FETCH_PRUNE', False) \
+                and not salt.utils.path.which('git'):
             errors.append(
                 'The git command line utility is required when using the '
                 '\'pygit2\' {0}_provider.'.format(self.role)
