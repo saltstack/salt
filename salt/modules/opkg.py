@@ -1179,7 +1179,7 @@ def del_repo(repo, **kwargs):  # pylint: disable=unused-argument
                         os.remove(repo_file)
                     except OSError:
                         pass
-                ret += msg.format(alias, repo_file)
+                ret += msg.format(repo, repo_file)
             if refresh:
                 refresh_db()
             return ret
