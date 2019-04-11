@@ -619,3 +619,123 @@ class DataTestCase(TestCase):
             sorted(salt.utils.data.json_query(user_groups, expression)),
             primary_groups
         )
+
+
+class FilterEmptyValuesTestCase(TestCase):
+
+    def test_nop(self):
+        '''
+        Test cases where nothing will be done.
+        '''
+        # Test with dictionary
+        old_dict = {'foo': 'bar', 'bar': {'baz': {'qux': 'quux'}}, 'baz': ['qux', {'foo': 'bar'}]}
+        new_dict = salt.utils.data.filter_falsey(old_dict)
+        self.assertEqual(old_dict, new_dict)
+        new_dict = salt.utils.data.filter_falsey(old_dict, recurse_depth=3)
+        self.assertEqual(old_dict, new_dict)
+        # Test with list
+        old_list = ['foo', 'bar']
+        new_list = salt.utils.data.filter_falsey(old_list)
+        self.assertEqual(old_list, new_list)
+        # Test excluding int
+        old_list = [0]
+        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type(0)])
+        self.assertEqual(old_list, new_list)
+        # Test excluding str (or unicode) (or both)
+        old_list = ['']
+        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type('')])
+        self.assertEqual(old_list, new_list)
+        # Test excluding list
+        old_list = [[]]
+        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type([])])
+        self.assertEqual(old_list, new_list)
+        # Test excluding dict
+        old_list = [{}]
+        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type({})])
+        self.assertEqual(old_list, new_list)
+
+
+    def test_filter_dict_no_recurse(self):
+        '''
+        Test filtering a dictionary without recursing.
+        This will only filter out key-values where the values are falsey.
+        '''
+        old_dict = {'foo': None, 'bar': {'baz': {'qux': None, 'quux': '', 'foo': []}}, 'baz': ['qux'], 'qux': {}, 'quux': []}
+        new_dict = salt.utils.data.filter_falsey(old_dict)
+        self.assertEqual({'bar': {'baz': {'qux': None, 'quux': '', 'foo': []}}, 'baz': ['qux']}, new_dict)
+
+    def test_filter_dict_recurse(self):
+        '''
+        Test filtering a dictionary with recursing.
+        This will filter out any key-values where the values are falsey or when
+        the values *become* falsey after filtering their contents (in case they
+        are lists or dicts).
+        '''
+        old_dict = {'foo': None, 'bar': {'baz': {'qux': None, 'quux': '', 'foo': []}}, 'baz': ['qux'], 'qux': {}, 'quux': []}
+        new_dict = salt.utils.data.filter_falsey(old_dict, recurse_depth=3)
+        self.assertEqual({'baz': ['qux']}, new_dict)
+
+    def test_filter_list_no_recurse(self):
+        '''
+        Test filtering a list without recursing.
+        This will only filter out items which are falsey.
+        '''
+        old_list = ['foo', None, [], {}, 0, '']
+        new_list = salt.utils.data.filter_falsey(old_list)
+        self.assertEqual(['foo'], new_list)
+        # Ensure nested values are *not* filtered out.
+        old_list = ['foo', ['foo'], ['foo', None], {'foo': 0}, {'foo': 'bar', 'baz': []}, [{'foo': ''}]]
+        new_list = salt.utils.data.filter_falsey(old_list)
+        self.assertEqual(old_list, new_list)
+
+    def test_filter_list_recurse(self):
+        '''
+        Test filtering a list with recursing.
+        This will filter out any items which are falsey, or which become falsey
+        after filtering their contents (in case they are lists or dicts).
+        '''
+        old_list = ['foo', ['foo'], ['foo', None], {'foo': 0}, {'foo': 'bar', 'baz': []}, [{'foo': ''}]]
+        new_list = salt.utils.data.filter_falsey(old_list, recurse_depth=3)
+        self.assertEqual(['foo', ['foo'], ['foo'], {'foo': 'bar'}], new_list)
+
+    def test_filter_list_recurse_limit(self):
+        '''
+        Test filtering a list with recursing, but with a limited depth.
+        Note that the top-level is always processed, so a recursion depth of 2
+        means that two *additional* levels are processed.
+        '''
+        old_list = [None, [None, [None, [None]]]]
+        new_list = salt.utils.data.filter_falsey(old_list, recurse_depth=2)
+        self.assertEqual([[[[None]]]], new_list)
+
+    def test_filter_dict_recurse_limit(self):
+        '''
+        Test filtering a dict with recursing, but with a limited depth.
+        Note that the top-level is always processed, so a recursion depth of 2
+        means that two *additional* levels are processed.
+        '''
+        old_dict = {'one': None, 'foo': {'two': None, 'bar': {'three': None, 'baz': {'four': None}}}}
+        new_dict = salt.utils.data.filter_falsey(old_dict, recurse_depth=2)
+        self.assertEqual({'foo': {'bar': {'baz': {'four': None}}}}, new_dict)
+
+    def test_filter_exclude_types(self):
+        '''
+        Test filtering a list recursively, but also ignoring (i.e. not filtering)
+        out certain types that can be falsey.
+        '''
+        # Ignore int, unicode
+        old_list = ['foo', ['foo'], ['foo', None], {'foo': 0}, {'foo': 'bar', 'baz': []}, [{'foo': ''}]]
+        new_list = salt.utils.data.filter_falsey(old_list, recurse_depth=3, ignore_types=[type(0), type('')])
+        self.assertEqual(['foo', ['foo'], ['foo'], {'foo': 0}, {'foo': 'bar'}, [{'foo': ''}]], new_list)
+        # Ignore list
+        old_list = ['foo', ['foo'], ['foo', None], {'foo': 0}, {'foo': 'bar', 'baz': []}, [{'foo': ''}]]
+        new_list = salt.utils.data.filter_falsey(old_list, recurse_depth=3, ignore_types=[type([])])
+        self.assertEqual(['foo', ['foo'], ['foo'], {'foo': 'bar', 'baz': []}, []], new_list)
+        # Ignore dict
+        old_list = ['foo', ['foo'], ['foo', None], {'foo': 0}, {'foo': 'bar', 'baz': []}, [{'foo': ''}]]
+        new_list = salt.utils.data.filter_falsey(old_list, recurse_depth=3, ignore_types=[type({})])
+        self.assertEqual(['foo', ['foo'], ['foo'], {}, {'foo': 'bar'}, [{}]], new_list)
+        # Ignore NoneType
+        old_list = ['foo', ['foo'], ['foo', None], {'foo': 0}, {'foo': 'bar', 'baz': []}, [{'foo': ''}]]
+        new_list = salt.utils.data.filter_falsey(old_list, recurse_depth=3, ignore_types=[type(None)])
+        self.assertEqual(['foo', ['foo'], ['foo', None], {'foo': 'bar'}], new_list)
