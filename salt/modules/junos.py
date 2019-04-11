@@ -157,7 +157,7 @@ def facts():
 
 
 @timeoutDecorator
-def rpc(cmd=None, dest=None, **kwargs):
+def rpc(cmd=None, **kwargs):
     '''
     This function executes the RPC provided as arguments on the junos device.
     The returned data can be stored in a file.
@@ -216,7 +216,7 @@ def rpc(cmd=None, dest=None, **kwargs):
         op.update(kwargs)
 
     format_ = op.pop('format', 'xml')
-    dest = op.pop('dest', None) or dest
+    dest = op.pop('dest', None)
 
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
