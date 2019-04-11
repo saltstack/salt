@@ -305,7 +305,7 @@ def get_saltclass_data(node_data, salt_data):
             else:
                 name = str(rel_path[:-len('.yml')]).replace(os.sep, '.')
             salt_data['class_paths'][name] = abs_path
-    salt_data['class_paths'] = OrderedDict(sorted(salt_data['class_paths'].iteritems(), key=lambda (k, v): k))
+    salt_data['class_paths'] = OrderedDict(((k, salt_data['class_paths'][k]) for k in sorted(salt_data['class_paths'])))
 
     # Merge minion_pillars into salt_data
     _dict_merge(salt_data['__pillar__'], node_data.get('pillars', {}))
