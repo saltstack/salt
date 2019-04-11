@@ -74,7 +74,7 @@ def start(host, port=5959, tag='salt/engine/logstash', proto='udp'):
     logstash_logger.setLevel(logging.INFO)
     logstash_logger.addHandler(logstashHandler(host, port, version=1))
 
-    with event_bus_context(__opts__) as event_bus():
+    with event_bus_context(__opts__) as event_bus:
         log.debug('Logstash engine started')
         while True:
             event = event_bus.get_event()
