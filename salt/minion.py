@@ -1084,6 +1084,8 @@ class MinionManager(MinionBase):
             masters = [masters]
 
         beacons_leader = True
+        self.opts["master_list"] = copy.deepcopy(masters)
+
         for master in masters:
             s_opts = copy.deepcopy(self.opts)
             s_opts["master"] = master
