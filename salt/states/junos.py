@@ -162,7 +162,7 @@ def commit(name, **kwargs):
 
 
 @resultdecorator
-def rollback(name, id, **kwargs):
+def rollback(name, **kwargs):
     '''
     Rollbacks the committed changes.
 
@@ -192,7 +192,7 @@ def rollback(name, id, **kwargs):
 
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
-    ret['changes'] = __salt__['junos.rollback'](id, **kwargs)
+    ret['changes'] = __salt__['junos.rollback'](**kwargs)
     return ret
 
 
