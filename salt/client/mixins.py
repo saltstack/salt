@@ -327,7 +327,7 @@ class SyncClientMixin(object):
             ),
             tag,
             print_func=print_func
-        ) as namespaced_event
+        ) as namespaced_event:
 
             # TODO: test that they exist
             # TODO: Other things to inject??
