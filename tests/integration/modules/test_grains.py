@@ -13,7 +13,7 @@ import pprint
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, flaky
+from tests.support.helpers import flaky
 
 log = logging.getLogger(__name__)
 
@@ -146,7 +146,6 @@ class TestModulesGrains(ModuleCase):
                 get_grain, int, msg='grain: {0} is not an int or empty'.format(grain))
 
 
-@destructiveTest
 class GrainsAppendTestCase(ModuleCase):
     '''
     Tests written specifically for the grains.append function.
