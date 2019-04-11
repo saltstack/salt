@@ -206,7 +206,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
 
     dict1 = {'A': 'B', 'C': {'D': 'E', 'F': {'G': 'H', 'I': 'J'}}}
 
-    def deep_set_overwrite(self):
+    def test_deep_set_overwrite(self):
         '''
         Test overwriting an existing value.
         '''
@@ -224,7 +224,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
         res = dictupdate.set_dict_key_value(mdict, 'C', None)
         self.assertEqual({'A': 'B', 'C': None}, res)
 
-    def deep_set_create(self):
+    def test_deep_set_create(self):
         '''
         Test creating new nested keys.
         '''
@@ -232,14 +232,14 @@ class UtilDeepDictUpdateTestCase(TestCase):
         res = dictupdate.set_dict_key_value(mdict, 'K:L:M', 'Q')
         self.assertEqual({'A': 'B', 'C': {'D': 'E', 'F': {'G': 'H', 'I': 'J'}}, 'K': {'L': {'M': 'Q'}}}, res)
 
-    def deep_set_ordered_dicts(self):
+    def test_deep_set_ordered_dicts(self):
         '''
         Test creating new nested ordereddicts.
         '''
         res = dictupdate.set_dict_key_value({}, 'A:B', 'foo', ordered_dict=True)
         self.assertEqual({'A': OrderedDict([('B', 'foo')])}, res)
 
-    def deep_append(self):
+    def test_deep_append(self):
         '''
         Test appending to a list.
         '''
@@ -253,7 +253,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
         res = dictupdate.append_dict_key_value({}, 'foo:bar:baz', 42)
         self.assertEqual({'foo': {'bar': {'baz': [42]}}}, res)
 
-    def deep_extend(self):
+    def test_deep_extend(self):
         '''
         Test extending a list.
         Note that the provided value (to extend with) will be coerced to a list
@@ -271,18 +271,18 @@ class UtilDeepDictUpdateTestCase(TestCase):
         res = dictupdate.extend_dict_key_value(sdict, 'bar:baz', {'qux': 'quux'})
         self.assertEqual({'bar': {'baz': [1, 2, 42, 42, 'qux']}}, res)
 
-    def deep_extend_illegal_addition(self):
+    def test_deep_extend_illegal_addition(self):
         '''
         Test errorhandling extending lists with illegal types.
         '''
         # Extend with an illegal type
         for extend_with in [42, None]:
             with self.assertRaisesRegex(SaltInvocationError,
-                                        r"Cannot extend <type 'list'> with a {}."
-                                        "".format(type(extend_with))):
+                                        r"Cannot extend {} with a {}."
+                                        "".format(type([]), type(extend_with))):
                 dictupdate.extend_dict_key_value({}, 'foo', extend_with)
 
-    def deep_extend_illegal_source(self):
+    def test_deep_extend_illegal_source(self):
         '''
         Test errorhandling extending things that are not a list.
         '''
@@ -293,7 +293,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
                                         "".format(type(extend_this))):
                 dictupdate.extend_dict_key_value({'foo': extend_this}, 'foo', [42])
 
-    def deep_update(self):
+    def test_deep_update(self):
         '''
         Test updating a (sub)dict.
         '''
@@ -308,15 +308,15 @@ class UtilDeepDictUpdateTestCase(TestCase):
         res = dictupdate.update_dict_key_value({}, 'foo bar baz', {'qux': 'quux'}, delimiter=' ')
         self.assertEqual({'foo': {'bar': {'baz': {'qux': 'quux'}}}}, res)
 
-    def deep_update_illegal_update(self):
+    def test_deep_update_illegal_update(self):
         '''
         Test errorhandling updating a (sub)dict with illegal types.
         '''
         # Update with an illegal type
         for update_with in [42, None, [42], 'bar']:
             with self.assertRaisesRegex(SaltInvocationError,
-                                        r"Cannot update <type 'dict'> with a {}."
-                                        "".format(type(update_with))):
+                                        r"Cannot update {} with a {}."
+                                        "".format(type({}), type(update_with))):
                 dictupdate.update_dict_key_value({}, 'foo', update_with)
         # Again, but now using OrderedDicts
         for update_with in [42, None, [42], 'bar']:
