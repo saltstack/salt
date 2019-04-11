@@ -835,7 +835,9 @@ class Schedule(object):
                         log.exception('Unhandled exception firing __schedule_return event')
                     finally:
                         event.destroy()
-            namespaced_event.destroy()
+
+            if self.opts['__role'] == 'master':
+                namespaced_event.destroy()
 
             if not self.standalone:
                 log.debug('schedule.handle_func: Removing %s', proc_fn)
