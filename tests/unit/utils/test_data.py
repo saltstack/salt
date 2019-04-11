@@ -131,8 +131,8 @@ class DataTestCase(TestCase):
                 test_three_level_dict, 'a:b:c:v'
             )
         )
-        self.assertFalse(
         # Test regression in 2015.8 where 'a:c:v' would match 'a:b:c:v'
+        self.assertFalse(
             salt.utils.data.subdict_match(
                 test_three_level_dict, 'a:c:v'
             )
@@ -443,14 +443,18 @@ class DataTestCase(TestCase):
             BYTES,
             [123, 456.789, _b('спам'), True, False, None, _b(EGGS), BYTES],
             (987, 654.321, _b('яйца'), _b(EGGS), None, (True, _b(EGGS), BYTES)),
-            {_b('str_key'): _b('str_val'),
-             None: True,
-             123: 456.789,
-             _b(EGGS): BYTES,
-             _b('subdict'): {_b('unicode_key'): _b(EGGS),
-                             _b('tuple'): (123, _b('hello'), _b('world'), True, _b(EGGS), BYTES),
-                             _b('list'): [456, _b('спам'), False, _b(EGGS), BYTES]}},
-             OrderedDict([(_b('foo'), _b('bar')), (123, 456), (_b(EGGS), BYTES)])
+            {
+                _b('str_key'): _b('str_val'),
+                None: True,
+                123: 456.789,
+                _b(EGGS): BYTES,
+                _b('subdict'): {
+                    _b('unicode_key'): _b(EGGS),
+                    _b('tuple'): (123, _b('hello'), _b('world'), True, _b(EGGS), BYTES),
+                    _b('list'): [456, _b('спам'), False, _b(EGGS), BYTES]
+                }
+            },
+            OrderedDict([(_b('foo'), _b('bar')), (123, 456), (_b(EGGS), BYTES)])
         ]
 
         # Both keep=True and keep=False should work because the BYTES data is
@@ -549,7 +553,7 @@ class DataTestCase(TestCase):
             keep=False,
             preserve_tuples=True)
 
-        for index, item in enumerate(data):
+        for index, _ in enumerate(data):
             self.assertEqual(
                 salt.utils.data.encode(data[index], encoding,
                                        keep=True, preserve_tuples=True),
@@ -621,7 +625,10 @@ class DataTestCase(TestCase):
         )
 
 
-class FilterEmptyValuesTestCase(TestCase):
+class FilterFalseyTestCase(TestCase):
+    '''
+    Test suite for salt.utils.data.filter_falsey
+    '''
 
     def test_nop(self):
         '''
@@ -654,15 +661,21 @@ class FilterEmptyValuesTestCase(TestCase):
         new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type({})])
         self.assertEqual(old_list, new_list)
 
-
     def test_filter_dict_no_recurse(self):
         '''
         Test filtering a dictionary without recursing.
         This will only filter out key-values where the values are falsey.
         '''
-        old_dict = {'foo': None, 'bar': {'baz': {'qux': None, 'quux': '', 'foo': []}}, 'baz': ['qux'], 'qux': {}, 'quux': []}
+        old_dict = {'foo': None,
+                    'bar': {'baz': {'qux': None, 'quux': '', 'foo': []}},
+                    'baz': ['qux'],
+                    'qux': {},
+                    'quux': []}
         new_dict = salt.utils.data.filter_falsey(old_dict)
-        self.assertEqual({'bar': {'baz': {'qux': None, 'quux': '', 'foo': []}}, 'baz': ['qux']}, new_dict)
+        self.assertEqual(
+            {'bar': {'baz': {'qux': None, 'quux': '', 'foo': []}}, 'baz': ['qux']},
+            new_dict
+        )
 
     def test_filter_dict_recurse(self):
         '''
@@ -671,7 +684,11 @@ class FilterEmptyValuesTestCase(TestCase):
         the values *become* falsey after filtering their contents (in case they
         are lists or dicts).
         '''
-        old_dict = {'foo': None, 'bar': {'baz': {'qux': None, 'quux': '', 'foo': []}}, 'baz': ['qux'], 'qux': {}, 'quux': []}
+        old_dict = {'foo': None,
+                    'bar': {'baz': {'qux': None, 'quux': '', 'foo': []}},
+                    'baz': ['qux'],
+                    'qux': {},
+                    'quux': []}
         new_dict = salt.utils.data.filter_falsey(old_dict, recurse_depth=3)
         self.assertEqual({'baz': ['qux']}, new_dict)
 
@@ -684,7 +701,14 @@ class FilterEmptyValuesTestCase(TestCase):
         new_list = salt.utils.data.filter_falsey(old_list)
         self.assertEqual(['foo'], new_list)
         # Ensure nested values are *not* filtered out.
-        old_list = ['foo', ['foo'], ['foo', None], {'foo': 0}, {'foo': 'bar', 'baz': []}, [{'foo': ''}]]
+        old_list = [
+            'foo',
+            ['foo'],
+            ['foo', None],
+            {'foo': 0},
+            {'foo': 'bar', 'baz': []},
+            [{'foo': ''}],
+        ]
         new_list = salt.utils.data.filter_falsey(old_list)
         self.assertEqual(old_list, new_list)
 
@@ -694,7 +718,14 @@ class FilterEmptyValuesTestCase(TestCase):
         This will filter out any items which are falsey, or which become falsey
         after filtering their contents (in case they are lists or dicts).
         '''
-        old_list = ['foo', ['foo'], ['foo', None], {'foo': 0}, {'foo': 'bar', 'baz': []}, [{'foo': ''}]]
+        old_list = [
+            'foo',
+            ['foo'],
+            ['foo', None],
+            {'foo': 0},
+            {'foo': 'bar', 'baz': []},
+            [{'foo': ''}]
+        ]
         new_list = salt.utils.data.filter_falsey(old_list, recurse_depth=3)
         self.assertEqual(['foo', ['foo'], ['foo'], {'foo': 'bar'}], new_list)
 
@@ -714,7 +745,8 @@ class FilterEmptyValuesTestCase(TestCase):
         Note that the top-level is always processed, so a recursion depth of 2
         means that two *additional* levels are processed.
         '''
-        old_dict = {'one': None, 'foo': {'two': None, 'bar': {'three': None, 'baz': {'four': None}}}}
+        old_dict = {'one': None,
+                    'foo': {'two': None, 'bar': {'three': None, 'baz': {'four': None}}}}
         new_dict = salt.utils.data.filter_falsey(old_dict, recurse_depth=2)
         self.assertEqual({'foo': {'bar': {'baz': {'four': None}}}}, new_dict)
 
