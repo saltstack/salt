@@ -774,7 +774,7 @@ class Pillar(object):
                                 matched_pstates = fnmatch.filter(
                                     self.avail[saltenv],
                                     sub_sls.lstrip('.').replace('/', '.'),
-                                ))
+                                )
                             except KeyError:
                                 errors.extend(
                                     ['No matching pillar environment for environment '
