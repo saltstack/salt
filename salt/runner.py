@@ -301,9 +301,12 @@ class Runner(RunnerClient):
             if not self.opts.get('quiet', False):
                 display_output(ret, 'nested', self.opts)
         else:
-            ret = {
-                'retcode': salt.defaults.exitcodes.EX_SOFTWARE,
-            }
+            # If we don't have any values in ret by now, that's a problem.
+            # Otherwise, we shouldn't be overwriting the retcode.
+            if not ret:
+                ret = {
+                    'retcode': salt.defaults.exitcodes.EX_SOFTWARE,
+                }
         log.debug('Runner return: %s', ret)
 
         return ret

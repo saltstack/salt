@@ -369,10 +369,6 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         try:
             try:
                 self.assertEqual(ret['retcode'], 0)
-                self.assertIn(
-                    'New python executable',
-                    ret['stdout']
-                )
             except AssertionError:
                 import pprint
                 pprint.pprint(ret)
