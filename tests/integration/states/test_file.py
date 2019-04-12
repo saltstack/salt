@@ -359,6 +359,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         set_grain_ret = self.run_function('grains.set', ['grain_path', grain_path])
         state_file = 'file-grainget'
 
+        # Sync grains
+        self.run_function('saltutil.sync_grains', refresh=True)
+
         state_sls_ret = self.run_function('state.sls', [state_file])
         self.assertTrue(
             os.path.exists(grain_path),
