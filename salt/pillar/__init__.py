@@ -19,7 +19,6 @@ import inspect
 import salt.loader
 import salt.fileclient
 import salt.minion
-import salt.crypt
 import salt.transport.client
 import salt.utils.args
 import salt.utils.cache
@@ -404,6 +403,7 @@ class Pillar(object):
         else:
             self.functions = functions
 
+        self.opts['minion_id'] = minion_id
         self.matchers = salt.loader.matchers(self.opts)
         self.rend = salt.loader.render(self.opts, self.functions)
         ext_pillar_opts = copy.deepcopy(self.opts)
@@ -804,7 +804,7 @@ class Pillar(object):
                                     sub_sls = '.'.join(include_parts+[sub_sls[1:]])
                                 matches = fnmatch.filter(
                                     self.avail[saltenv],
-                                    sub_sls,
+                                    sub_sls.lstrip('.').replace('/', '.'),
                                 )
                                 matched_pstates.extend(matches)
                             except KeyError:

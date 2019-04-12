@@ -276,8 +276,8 @@ command:
 This command will return data about all of the hypervisors and respective
 virtual machines.
 
-Now that the new VM is booted, it should have contacted the Salt Master. A
-``test.ping`` will reveal if the new VM is running.
+Now that the new VM is booted it should have contacted the Salt Master, a
+``test.version`` will reveal if the new VM is running.
 
 
 QEMU Copy on Write Support

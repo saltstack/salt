@@ -23,6 +23,25 @@ from salt.ext import six
 from salt.exceptions import CommandExecutionError
 import salt.states.virt as virt
 import salt.utils.files
+from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+from salt.ext import six
+
+
+class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
+    '''
+    libvirt library mockup
+    '''
+    class libvirtError(Exception):  # pylint: disable=invalid-name
+        '''
+        libvirt error mockup
+        '''
+        def get_error_message(self):
+            '''
+            Fake function return error message
+            '''
+            return six.text_type(self)
 
 
 class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
@@ -654,7 +673,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                source_name=None,
                                                source_format=None,
                                                transient=True,
-                                               start=True,
+                                               start=False,
                                                connection='myconnection',
                                                username='user',
                                                password='secret')
@@ -667,6 +686,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                               connection='myconnection',
                                               username='user',
                                               password='secret')
+            mocks['start'].assert_not_called()
 
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.pool_info': MagicMock(return_value={'state': 'running'}),
