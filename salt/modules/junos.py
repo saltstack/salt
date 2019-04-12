@@ -923,69 +923,73 @@ def install_config(path=None, **kwargs):
         del op['overwrite']
 
     db_mode = op.pop('mode', 'exclusive')
-    with Config(conn, mode=db_mode) as cu:
-        try:
-            cu.load(**op)
-
-        except Exception as exception:
-            ret['message'] = 'Could not load configuration due to : "{0}"'.format(
-                exception)
-            ret['format'] = op['format']
-            ret['out'] = False
-            return ret
-
-        finally:
-            salt.utils.files.safe_rm(template_cached_path)
-
-        config_diff = cu.diff()
-        if config_diff is None:
-            ret['message'] = 'Configuration already applied!'
-            ret['out'] = True
-            return ret
-
-        commit_params = {}
-        if 'confirm' in op:
-            commit_params['confirm'] = op['confirm']
-        if 'comment' in op:
-            commit_params['comment'] = op['comment']
-
-        try:
-            check = cu.commit_check()
-        except Exception as exception:
-            ret['message'] = \
-                'Commit check threw the following exception: "{0}"'\
-                .format(exception)
-
-            ret['out'] = False
-            return ret
-
-        if check and not test:
+    try:
+        with Config(conn, mode=db_mode) as cu:
             try:
-                cu.commit(**commit_params)
-                ret['message'] = 'Successfully loaded and committed!'
+                cu.load(**op)
+
             except Exception as exception:
-                ret['message'] = \
-                    'Commit check successful but commit failed with "{0}"'\
-                    .format(exception)
+                ret['message'] = 'Could not load configuration due to : "{0}"'.format(
+                    exception)
+                ret['format'] = op['format']
                 ret['out'] = False
                 return ret
-        elif not check:
-            cu.rollback()
-            ret['message'] = 'Loaded configuration but commit check failed, hence rolling back configuration.'
-            ret['out'] = False
-        else:
-            cu.rollback()
-            ret['message'] = 'Commit check passed, but skipping commit for dry-run and rolling back configuration.'
-            ret['out'] = True
 
-        try:
-            if write_diff and config_diff is not None:
-                with salt.utils.files.fopen(write_diff, 'w') as fp:
-                    fp.write(salt.utils.stringutils.to_str(config_diff))
-        except Exception as exception:
-            ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
-                exception)
-            ret['out'] = False
+            finally:
+                salt.utils.files.safe_rm(template_cached_path)
+
+            config_diff = cu.diff()
+            if config_diff is None:
+                ret['message'] = 'Configuration already applied!'
+                ret['out'] = True
+                return ret
+
+            commit_params = {}
+            if 'confirm' in op:
+                commit_params['confirm'] = op['confirm']
+            if 'comment' in op:
+                commit_params['comment'] = op['comment']
+
+            try:
+                check = cu.commit_check()
+            except Exception as exception:
+                ret['message'] = \
+                    'Commit check threw the following exception: "{0}"'\
+                    .format(exception)
+
+                ret['out'] = False
+                return ret
+
+            if check and not test:
+                try:
+                    cu.commit(**commit_params)
+                    ret['message'] = 'Successfully loaded and committed!'
+                except Exception as exception:
+                    ret['message'] = \
+                        'Commit check successful but commit failed with "{0}"'\
+                        .format(exception)
+                    ret['out'] = False
+                    return ret
+            elif not check:
+                cu.rollback()
+                ret['message'] = 'Loaded configuration but commit check failed, hence rolling back configuration.'
+                ret['out'] = False
+            else:
+                cu.rollback()
+                ret['message'] = 'Commit check passed, but skipping commit for dry-run and rolling back configuration.'
+                ret['out'] = True
+
+            try:
+                if write_diff and config_diff is not None:
+                    with salt.utils.files.fopen(write_diff, 'w') as fp:
+                        fp.write(salt.utils.stringutils.to_str(config_diff))
+            except Exception as exception:
+                ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
+                    exception)
+                ret['out'] = False
+    except ValueError:
+        ret['message'] = "Invalid mode. Modes supported: private, dynamic, batch, exclusive"
+        ret['out'] = False
 
     return ret
 
