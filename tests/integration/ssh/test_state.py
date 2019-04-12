@@ -62,7 +62,7 @@ class SSHStateTest(SSHCase):
         ret = self.run_function('state.sls_id', ['ssh-file-test', SSH_SLS,
                                                  'test=True'])
         self._check_dict_ret(ret=ret, val='comment',
-                             exp_ret='The file /tmp/test is set to be changed')
+                             exp_ret='The file /tmp/test is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.')
 
         # check state.sls_id without test=True
         ret = self.run_function('state.sls_id', ['ssh-file-test', SSH_SLS])
