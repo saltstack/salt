@@ -261,9 +261,13 @@ def list_upstreams(runas=None):
     '''
     Returns a dict of upstreams based on rabbitmqctl list_parameters.
 
+    :param str runas: The name of the user to run this command as.
+
     CLI Example:
     .. code-block:: bash
         salt '*' rabbitmq.list_upstreams
+
+    .. version-added:: Neon
     '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
@@ -314,9 +318,14 @@ def upstream_exists(name, runas=None):
     '''
     Return whether the upstreamexists based on rabbitmqctl list_parameters.
 
+    :param str name: The name of the upstream to check for.
+    :param str runas: The name of the user to run the command as.
+
     CLI Example:
     .. code-block:: bash
         salt '*' rabbitmq.upstream_exists rabbit_upstream
+
+    .. version-added:: Neon
     '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
@@ -1133,10 +1142,16 @@ def add_upstream(name, definition, runas=None):
     Definition can be passed as (JSON) string or as dict, which will be converted
     to a JSON string.
 
+    :param str name: The name of the upstream to add.
+    :param str definition: The JSON string that contains the upstream configuration.
+    :param str runas: The name of the user to run the command as.
+
     CLI Example:
     .. code-block:: bash
         salt '*' rabbitmq.add_upstream upstream_name \
         '{"ack-mode":"on-confirm","max-hops":1,"trust-user-id":true,"uri":"amqp://hostname"}'
+
+    .. version-added:: Neon
     '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
@@ -1153,6 +1168,11 @@ def add_upstream(name, definition, runas=None):
 def delete_upstream(name, runas=None):
     '''
     Deletes an upstream via rabbitmqctl clear_parameter.
+
+    :param str name: The name of the upstream to delete.
+    :param str runas: The name of the user to run the command as.
+
+    .. version-added:: Neon
     '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
