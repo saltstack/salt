@@ -83,9 +83,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                     fhw.write(line + ending)
 
         destpath = os.path.join(BASE_FILES, 'testappend', 'firstif')
-        _reline(destpath)
         destpath = os.path.join(BASE_FILES, 'testappend', 'secondif')
-        _reline(destpath)
 
     def test_show_highstate(self):
         '''
@@ -1904,7 +1902,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         for key, val in ret.items():
             self.assertEqual(val['comment'], comment)
-            self.assertEqual(val['changes'], {})
+            self.assertEqual(val['changes'], {'newfile': testfile})
 
     def test_state_sls_id_test_state_test_post_run(self):
         '''
@@ -1937,7 +1935,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(
                 val['comment'],
                 'The file {0} is set to be changed'.format(file_name))
-            self.assertEqual(val['changes'], {})
+            self.assertEqual(val['changes'], {'newfile': file_name})
 
     def test_state_sls_id_test_true_post_run(self):
         '''
