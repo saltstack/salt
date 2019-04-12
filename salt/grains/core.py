@@ -42,6 +42,8 @@ from distro import linux_distribution
 from salt.ext import six
 from salt.ext.six.moves import range
 
+from multiprocessing.dummy import Pool as ThreadPool
+
 try:
     import dateutil.tz  # pylint: disable=import-error
 
@@ -2354,16 +2356,9 @@ def fqdns():
     grains = {}
     fqdns = set()
 
-    addresses = salt.utils.network.ip_addrs(
-        include_loopback=False, interface_data=_INTERFACES
-    )
-    addresses.extend(
-        salt.utils.network.ip_addrs6(include_loopback=False, interface_data=_INTERFACES)
-    )
-    err_message = "An exception occurred resolving address '%s': %s"
-    for ip in addresses:
+    def _lookup_fqdn(ip):
         try:
-            fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
+            return [socket.getfqdn(socket.gethostbyaddr(ip)[0])]
         except socket.herror as err:
             if err.errno in (0, HOST_NOT_FOUND, NO_DATA):
                 # No FQDN for this IP address, so we don't need to know this all the time.
@@ -2372,6 +2367,26 @@ def fqdns():
                 log.error(err_message, ip, err)
         except (socket.error, socket.gaierror, socket.timeout) as err:
             log.error(err_message, ip, err)
+
+    start = time.time()
+
+    addresses = salt.utils.network.ip_addrs(include_loopback=False,
+                                            interface_data=_INTERFACES)
+    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False,
+                                                  interface_data=_INTERFACES))
+    err_message = "Exception during resolving address: %s"
+
+    # Create a ThreadPool to process the underlying calls to 'socket.gethostbyaddr' in parallel.
+    # This avoid blocking the execution when the "fqdn" is not defined for certains IP addresses, which was causing
+    # that "socket.timeout" was reached multiple times secuencially, blocking execution for several seconds.
+    pool = ThreadPool(8)
+    results = pool.map(_lookup_fqdn, addresses)
+    pool.close()
+    pool.join()
+
+    [fqdns.update(item) for item in results if item]
+    elapsed = time.time() - start
+    log.debug("Elapsed time getting FQDNs: {} seconds".format(elapsed))
 
     grains["fqdns"] = sorted(list(fqdns))
     return grains
