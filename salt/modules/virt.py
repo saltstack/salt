@@ -760,14 +760,14 @@ def _qemu_image_create(disk, create_overlay=False, saltenv='base'):
 
         qcow2 = False
         if salt.utils.path.which('qemu-img'):
-            res = __salt__['cmd.run']('qemu-img info {}'.format(sfn))
+            res = __salt__['cmd.run']('qemu-img info "{}"'.format(sfn))
             imageinfo = salt.utils.yaml.safe_load(res)
             qcow2 = imageinfo['file format'] == 'qcow2'
         try:
             if create_overlay and qcow2:
                 log.info('Cloning qcow2 image %s using copy on write', sfn)
                 __salt__['cmd.run'](
-                    'qemu-img create -f qcow2 -o backing_file={0} {1}'
+                    'qemu-img create -f qcow2 -o backing_file="{0}" "{1}"'
                     .format(sfn, img_dest).split())
             else:
                 log.debug('Copying %s to %s', sfn, img_dest)
@@ -778,7 +778,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv='base'):
             if disk_size and qcow2:
                 log.debug('Resize qcow2 image to %sM', disk_size)
                 __salt__['cmd.run'](
-                    'qemu-img resize {0} {1}M'
+                    'qemu-img resize "{0}" {1}M'
                     .format(img_dest, disk_size)
                 )
 
@@ -800,7 +800,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv='base'):
             if disk_size:
                 log.debug('Create empty image with size %sM', disk_size)
                 __salt__['cmd.run'](
-                    'qemu-img create -f {0} {1} {2}M'
+                    'qemu-img create -f {0} "{1}" {2}M'
                     .format(disk.get('format', 'qcow2'), img_dest, disk_size)
                 )
             else:

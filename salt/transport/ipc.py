@@ -772,6 +772,7 @@ class IPCMessageSubscriber(object):
 
     def close(self):
         self.service.unsubscribe(self)
+        self.service.close()
 
     def __del__(self):
         self.close()

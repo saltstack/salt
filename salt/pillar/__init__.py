@@ -19,7 +19,6 @@ import inspect
 import salt.loader
 import salt.fileclient
 import salt.minion
-import salt.crypt
 import salt.transport.client
 import salt.utils.args
 import salt.utils.cache
@@ -257,7 +256,7 @@ class RemotePillar(RemotePillarMixin):
         return ret_pillar
 
     def destroy(self):
-        if self._closing:
+        if hasattr(self, '_closing') and self._closing:
             return
 
         self._closing = True
@@ -386,6 +385,7 @@ class Pillar(object):
         else:
             self.functions = functions
 
+        self.opts['minion_id'] = minion_id
         self.matchers = salt.loader.matchers(self.opts)
         self.rend = salt.loader.render(self.opts, self.functions)
         ext_pillar_opts = copy.deepcopy(self.opts)
@@ -771,7 +771,10 @@ class Pillar(object):
                             else:
                                 key = None
                             try:
-                                matched_pstates = fnmatch.filter(self.avail[saltenv], sub_sls)
+                                matched_pstates = fnmatch.filter(
+                                    self.avail[saltenv],
+                                    sub_sls.lstrip('.').replace('/', '.'),
+                                ))
                             except KeyError:
                                 errors.extend(
                                     ['No matching pillar environment for environment '
