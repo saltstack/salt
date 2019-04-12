@@ -37,6 +37,7 @@ def install(location, name):
 
     CLI Example:
     .. code-block:: bash
+
         salt '*' flatpak.install flathub org.gimp.GIMP
     '''
     ret = {'result': None, 'output': ''}
@@ -65,6 +66,7 @@ def is_installed(name):
 
     CLI Example:
     .. code-block:: bash
+
         salt '*' flatpak.is_installed org.gimp.GIMP
     '''
     out = __salt__['cmd.run_all'](FLATPAK_BINARY_NAME + ' info ' + name)
@@ -87,6 +89,7 @@ def uninstall(pkg):
 
     CLI Example:
     .. code-block:: bash
+
         salt '*' flatpak.uninstall org.gimp.GIMP
     '''
     ret = {'result': None, 'output': ''}
@@ -116,6 +119,7 @@ def add_remote(name, location):
 
     CLI Example:
     .. code-block:: bash
+
         salt '*' flatpak.add_remote flathub https://flathub.org/repo/flathub.flatpakrepo
     '''
     ret = {'result': None, 'output': ''}
@@ -143,6 +147,7 @@ def is_remote_added(remote):
 
     CLI Example:
     .. code-block:: bash
+
         salt '*' flatpak.is_remote_added flathub
     '''
     out = __salt__['cmd.run_all'](FLATPAK_BINARY_NAME + ' remotes')
