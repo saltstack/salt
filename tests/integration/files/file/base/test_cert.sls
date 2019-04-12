@@ -1,5 +1,11 @@
 {% set tmp_dir = pillar['tmp_dir'] %}
 
+salt-minion:
+  service.running:
+    - enable: True
+    - listen:
+      - file: {{ tmp_dir}}/config/minion.d/signing_policies.conf
+
 {{ tmp_dir }}/pki:
   file.directory
 
