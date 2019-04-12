@@ -224,7 +224,7 @@ def rpc(cmd=None, **kwargs):
             try:
                 filter_reply = etree.XML(op['filter'])
             except etree.XMLSyntaxError as ex:
-                ret['message'] = "Invalid filter " + str(ex)
+                ret['message'] = 'Invalid filter: {0}'.format(str(ex))
                 ret['out'] = False
                 return ret
 
@@ -882,7 +882,8 @@ def install_config(path=None, **kwargs):
             template_cached_path,
             template_vars=template_vars)
     except Exception as ex:
-        ret['message'] = 'Salt failed to render the template, please check file path and syntax.\nError: ' + str(ex)
+        ret['message'] = 'Salt failed to render the template, please check file path and syntax.' \
+                         '\nError: {0}'.format(str(ex))
         ret['out'] = False
         return ret
 
@@ -1327,7 +1328,8 @@ def load(path=None, **kwargs):
             template_cached_path,
             template_vars=template_vars)
     except Exception as ex:
-        ret['message'] = 'Salt failed to render the template, please check file path and syntax.\nError: ' + str(ex)
+        ret['message'] = 'Salt failed to render the template, please check file path and syntax.' \
+                         '\nError: {0}'.format(str(ex))
         ret['out'] = False
         return ret
 
