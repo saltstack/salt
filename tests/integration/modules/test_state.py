@@ -1911,12 +1911,12 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         self._add_runtime_pillar(pillar={'test': True})
         testfile = os.path.join(TMP, 'testfile')
-        comment = 'The file {0} is set to be changed'.format(testfile)
+        comment = 'The file {0} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.'.format(testfile)
         ret = self.run_function('state.sls', ['core'])
 
         for key, val in ret.items():
             self.assertEqual(val['comment'], comment)
-            self.assertEqual(val['changes'], {})
+            self.assertEqual(val['changes'], {'newfile': testfile})
 
     def test_state_sls_id_test_state_test_post_run(self):
         '''
@@ -1948,8 +1948,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         for key, val in ret.items():
             self.assertEqual(
                 val['comment'],
-                'The file {0} is set to be changed'.format(file_name))
-            self.assertEqual(val['changes'], {})
+                'The file {0} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.'.format(file_name))
+            self.assertEqual(val['changes'], {'newfile': file_name})
 
     def test_state_sls_id_test_true_post_run(self):
         '''
