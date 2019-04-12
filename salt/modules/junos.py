@@ -51,7 +51,7 @@ try:
     import jnpr.junos.op as tables_dir
     from jnpr.junos.factory.factory_loader import FactoryLoader
     import yamlordereddictloader
-    from jnpr.junos.exception import ConnectClosedError
+    from jnpr.junos.exception import ConnectClosedError, LockError
     # pylint: enable=W0611
     HAS_JUNOS = True
 except ImportError:
@@ -988,7 +988,11 @@ def install_config(path=None, **kwargs):
                     exception)
                 ret['out'] = False
     except ValueError:
-        ret['message'] = "Invalid mode. Modes supported: private, dynamic, batch, exclusive"
+        ret['message'] = 'Invalid mode. Modes supported: private, dynamic, batch, exclusive'
+        ret['out'] = False
+    except LockError as ex:
+        log.error('Configuration database is locked')
+        ret['message'] = ex.message
         ret['out'] = False
 
     return ret
