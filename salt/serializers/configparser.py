@@ -20,7 +20,7 @@ __all__ = ['deserialize', 'serialize', 'available']
 
 available = True
 
-def _check_preservecase_option(**options)
+def _check_preservecase_option(**options):
     '''
     Checks options passed to the serialize/deserialze function
     for the 'casesensitive' argument.  If passed as True,

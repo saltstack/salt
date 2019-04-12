@@ -366,11 +366,25 @@ class TestSerializers(TestCase):
         '''
         data = {'foo': {'someItemWithCase': 'data'}}
         # configparser appends empty lines
-        serialized = configparser.serialize(data, options={'preserve_case': True}).strip()
+        serialized = configparser.serialize(data, **{'preserve_case': True}).strip()
         assert serialized == "[foo]\nsomeItemWithCase = data", serialized
 
-        deserialized = configparser.deserialize(serialized, options={'preserve_case': True})
+        deserialized = configparser.deserialize(serialized, **{'preserve_case': True})
         assert deserialized == data, deserialized
+
+    @skipIf(not configparser.available, SKIP_MESSAGE % 'configparser')
+    def test_configparser_case_not_preserved(self):
+        '''
+        Validate that items with case are *not* preserved through serialization/deserialization
+        if the preserve_case=True option is not passed
+        '''
+        data = {'foo': {'someItemWithCase': 'data'}}
+        # configparser appends empty lines
+        serialized = configparser.serialize(data).strip()
+        assert serialized == "[foo]\nsomeitemwithcase = data", serialized
+
+        deserialized = configparser.deserialize(serialized)
+        assert deserialized != data, deserialized
 
     @skipIf(not toml.available, SKIP_MESSAGE % 'toml')
     def test_serialize_toml(self):
