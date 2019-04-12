@@ -994,6 +994,14 @@ def zeroize():
     '''
     Resets the device to default factory settings
 
+    .. note::
+    In case of non-root user, proxy_reconnect will not be able
+    to re-connect to the device as zeroize will delete the local
+    user's configuration.
+
+    For more details on zeroize functionality, please refer
+    https://www.juniper.net/documentation/en_US/junos/topics/reference/command-summary/request-system-zeroize.html
+
     CLI Example:
 
     .. code-block:: bash
@@ -1004,7 +1012,7 @@ def zeroize():
     ret = {}
     ret['out'] = True
     try:
-        conn.cli('request system zeroize')
+        conn.rpc.request_system_zeroize()
         ret['message'] = 'Completed zeroize and rebooted'
     except Exception as exception:
         ret['message'] = 'Could not zeroize due to : "{0}"'.format(exception)
