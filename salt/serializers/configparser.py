@@ -20,6 +20,18 @@ __all__ = ['deserialize', 'serialize', 'available']
 
 available = True
 
+def _check_preservecase_option(**options)
+    '''
+    Checks options passed to the serialize/deserialze function
+    for the 'casesensitive' argument.  If passed as True,
+    the configparser object will preserve case in items
+    '''
+    preserve_case = False
+    if 'preserve_case' in options:
+        if options['preserve_case']:
+            preserve_case = True
+        options.pop('preserve_case')
+    return options, preserve_case
 
 def deserialize(stream_or_string, **options):
     '''
@@ -28,11 +40,16 @@ def deserialize(stream_or_string, **options):
     :param stream_or_string: stream or string to deserialize.
     :param options: options given to lower configparser module.
     '''
+    options, PRESERVE_CASE = _check_preservecase_option(**options)
 
     if six.PY3:
         cp = configparser.ConfigParser(**options)
+        if PRESERVE_CASE:
+            cp.optionxform = str
     else:
         cp = configparser.SafeConfigParser(**options)
+        if PRESERVE_CASE:
+            cp.optionxform = str
 
     try:
         if not isinstance(stream_or_string, (bytes, six.string_types)):
@@ -65,14 +82,20 @@ def serialize(obj, **options):
     :param options: options given to lower configparser module.
     '''
 
+    options, PRESERVE_CASE = _check_preservecase_option(**options)
+
     try:
         if not isinstance(obj, dict):
             raise TypeError("configparser can only serialize dictionaries, not {0}".format(type(obj)))
         fp = options.pop('fp', None)
         if six.PY3:
             cp = configparser.ConfigParser(**options)
+            if PRESERVE_CASE:
+                cp.optionxform = str
         else:
             cp = configparser.SafeConfigParser(**options)
+            if PRESERVE_CASE:
+                cp.optionxform = str
         _read_dict(cp, obj)
 
         if fp:
