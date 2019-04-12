@@ -133,6 +133,28 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             os_release = core._parse_os_release('/etc/os-release', '/usr/lib/os-release')
         self.assertEqual(os_release, {})
 
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test__windows_platform_data(self):
+        grains = core._windows_platform_data()
+        keys = ['biosversion',
+                'osrelease',
+                'domain',
+                'kernelrelease',
+                'motherboard',
+                'serialnumber',
+                'timezone',
+                'manufacturer',
+                'kernelversion',
+                'osservicepack',
+                'virtual',
+                'productname',
+                'osfullname',
+                'osmanufacturer',
+                'osversion',
+                'windowsdomain']
+        for key in keys:
+            self.assertIn(key, grains)
+
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_gnu_slash_linux_in_os_name(self):
         '''
