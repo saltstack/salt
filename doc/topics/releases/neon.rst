@@ -417,8 +417,7 @@ The VMWare driver has been updated to:
     Allow specifying a Windows domain to join during customization.
     Allow specifying timezone for the system during customization.
     Allow disabling the Windows autologon after deployment.
-    Allow specifying the source template/VM's datacenter (to allow
-        cloning between datacenters).
+    Allow specifying the source template/VM's datacenter (to allow cloning between datacenters).
 
 Salt Api
 ========
