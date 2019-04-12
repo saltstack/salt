@@ -1008,6 +1008,8 @@ def filter_falsey(data, recurse_depth=None, ignore_types=None):
         be filtered. Default: Only booleans are not filtered.
 
     :return type(data)
+
+    .. version-added:: Neon
     '''
     if ignore_types is None:
         ignore_types = []
