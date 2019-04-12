@@ -1021,7 +1021,7 @@ def zeroize():
     ret = {}
     ret['out'] = True
     try:
-        conn.rpc.request_system_zeroize()
+        conn.cli('request system zeroize')
         ret['message'] = 'Completed zeroize and rebooted'
     except Exception as exception:
         ret['message'] = 'Could not zeroize due to : "{0}"'.format(exception)
