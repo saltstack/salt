@@ -8,6 +8,8 @@ any remotes.
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
+import shutil
+
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
@@ -90,3 +92,45 @@ class TestGitFSProvider(TestCase):
                                 role_class,
                                 *args,
                                 **kwargs)
+
+    class _cleaner(object):
+        def __init__(self, directory):
+            self.dir = directory
+
+        def __enter__(self):
+            try:
+                shutil.rmtree(self.dir)
+            except OSError:
+                pass
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            self.__enter__()
+
+    def test_pygit2_fetch_to_cache(self):
+        opts = {}
+        cache_root = '/tmp/git_repo'
+        remote = cache_root  # We'll sync empty repo from itself for simplisity
+        per_remote_defaults = {'ssl_verify': False}
+        per_remote_only = ()
+        override_params = ()
+        role = 'gitfs'
+
+        with self._cleaner(cache_root):
+            # Do things as it's done by GitBase.init_remotes
+            repo_obj = salt.utils.gitfs.GIT_PROVIDERS['pygit2'](
+                opts,
+                remote,
+                per_remote_defaults,
+                per_remote_only,
+                override_params,
+                cache_root,
+                role
+            )
+            self.assertTrue(hasattr(repo_obj, 'repo'))
+            self.assertTrue(repo_obj.new)
+            repo_obj.verify_auth()
+            repo_obj.setup_callbacks()
+            try:
+                repo_obj.fetch()
+            except IndexError:
+                self.fail('PyGit2 raised an IndexError on fetch')
