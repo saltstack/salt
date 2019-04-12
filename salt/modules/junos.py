@@ -51,7 +51,7 @@ try:
     import jnpr.junos.op as tables_dir
     from jnpr.junos.factory.factory_loader import FactoryLoader
     import yamlordereddictloader
-    from jnpr.junos.exception import ConnectClosedError
+    from jnpr.junos.exception import ConnectClosedError, LockError
     # pylint: enable=W0611
     HAS_JUNOS = True
 except ImportError:
@@ -157,7 +157,7 @@ def facts():
 
 
 @timeoutDecorator
-def rpc(cmd=None, dest=None, **kwargs):
+def rpc(cmd=None, **kwargs):
     '''
     This function executes the RPC provided as arguments on the junos device.
     The returned data can be stored in a file.
@@ -216,7 +216,7 @@ def rpc(cmd=None, dest=None, **kwargs):
         op.update(kwargs)
 
     format_ = op.pop('format', 'xml')
-    dest = op.pop('dest', None) or dest
+    dest = op.pop('dest', None)
 
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
@@ -224,7 +224,7 @@ def rpc(cmd=None, dest=None, **kwargs):
             try:
                 filter_reply = etree.XML(op['filter'])
             except etree.XMLSyntaxError as ex:
-                ret['message'] = "Invalid filter " + ex.__repr__()
+                ret['message'] = 'Invalid filter: {0}'.format(str(ex))
                 ret['out'] = False
                 return ret
 
@@ -474,7 +474,7 @@ def rollback(**kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.rollback 10
+        salt 'device_name' junos.rollback id=10
     '''
     id_ = kwargs.pop('id', 0)
 
@@ -875,11 +875,17 @@ def install_config(path=None, **kwargs):
     if "template_vars" in op:
         template_vars = op["template_vars"]
 
-    template_cached_path = salt.utils.files.mkstemp()
-    __salt__['cp.get_template'](
-        path,
-        template_cached_path,
-        template_vars=template_vars)
+    try:
+        template_cached_path = salt.utils.files.mkstemp()
+        __salt__['cp.get_template'](
+            path,
+            template_cached_path,
+            template_vars=template_vars)
+    except Exception as ex:
+        ret['message'] = 'Salt failed to render the template, please check file path and syntax.' \
+                         '\nError: {0}'.format(str(ex))
+        ret['out'] = False
+        return ret
 
     if not os.path.isfile(template_cached_path):
         ret['message'] = 'Invalid file path.'
@@ -918,69 +924,77 @@ def install_config(path=None, **kwargs):
         del op['overwrite']
 
     db_mode = op.pop('mode', 'exclusive')
-    with Config(conn, mode=db_mode) as cu:
-        try:
-            cu.load(**op)
-
-        except Exception as exception:
-            ret['message'] = 'Could not load configuration due to : "{0}"'.format(
-                exception)
-            ret['format'] = op['format']
-            ret['out'] = False
-            return ret
-
-        finally:
-            salt.utils.files.safe_rm(template_cached_path)
-
-        config_diff = cu.diff()
-        if config_diff is None:
-            ret['message'] = 'Configuration already applied!'
-            ret['out'] = True
-            return ret
-
-        commit_params = {}
-        if 'confirm' in op:
-            commit_params['confirm'] = op['confirm']
-        if 'comment' in op:
-            commit_params['comment'] = op['comment']
-
-        try:
-            check = cu.commit_check()
-        except Exception as exception:
-            ret['message'] = \
-                'Commit check threw the following exception: "{0}"'\
-                .format(exception)
-
-            ret['out'] = False
-            return ret
-
-        if check and not test:
+    try:
+        with Config(conn, mode=db_mode) as cu:
             try:
-                cu.commit(**commit_params)
-                ret['message'] = 'Successfully loaded and committed!'
+                cu.load(**op)
+
             except Exception as exception:
-                ret['message'] = \
-                    'Commit check successful but commit failed with "{0}"'\
-                    .format(exception)
+                ret['message'] = 'Could not load configuration due to : "{0}"'.format(
+                    exception)
+                ret['format'] = op['format']
                 ret['out'] = False
                 return ret
-        elif not check:
-            cu.rollback()
-            ret['message'] = 'Loaded configuration but commit check failed, hence rolling back configuration.'
-            ret['out'] = False
-        else:
-            cu.rollback()
-            ret['message'] = 'Commit check passed, but skipping commit for dry-run and rolling back configuration.'
-            ret['out'] = True
 
-        try:
-            if write_diff and config_diff is not None:
-                with salt.utils.files.fopen(write_diff, 'w') as fp:
-                    fp.write(salt.utils.stringutils.to_str(config_diff))
-        except Exception as exception:
-            ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
-                exception)
-            ret['out'] = False
+            finally:
+                salt.utils.files.safe_rm(template_cached_path)
+
+            config_diff = cu.diff()
+            if config_diff is None:
+                ret['message'] = 'Configuration already applied!'
+                ret['out'] = True
+                return ret
+
+            commit_params = {}
+            if 'confirm' in op:
+                commit_params['confirm'] = op['confirm']
+            if 'comment' in op:
+                commit_params['comment'] = op['comment']
+
+            try:
+                check = cu.commit_check()
+            except Exception as exception:
+                ret['message'] = \
+                    'Commit check threw the following exception: "{0}"'\
+                    .format(exception)
+
+                ret['out'] = False
+                return ret
+
+            if check and not test:
+                try:
+                    cu.commit(**commit_params)
+                    ret['message'] = 'Successfully loaded and committed!'
+                except Exception as exception:
+                    ret['message'] = \
+                        'Commit check successful but commit failed with "{0}"'\
+                        .format(exception)
+                    ret['out'] = False
+                    return ret
+            elif not check:
+                cu.rollback()
+                ret['message'] = 'Loaded configuration but commit check failed, hence rolling back configuration.'
+                ret['out'] = False
+            else:
+                cu.rollback()
+                ret['message'] = 'Commit check passed, but skipping commit for dry-run and rolling back configuration.'
+                ret['out'] = True
+
+            try:
+                if write_diff and config_diff is not None:
+                    with salt.utils.files.fopen(write_diff, 'w') as fp:
+                        fp.write(salt.utils.stringutils.to_str(config_diff))
+            except Exception as exception:
+                ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
+                    exception)
+                ret['out'] = False
+    except ValueError:
+        ret['message'] = 'Invalid mode. Modes supported: private, dynamic, batch, exclusive'
+        ret['out'] = False
+    except LockError as ex:
+        log.error('Configuration database is locked')
+        ret['message'] = ex.message
+        ret['out'] = False
 
     return ret
 
@@ -988,6 +1002,14 @@ def install_config(path=None, **kwargs):
 def zeroize():
     '''
     Resets the device to default factory settings
+
+    .. note::
+    In case of non-root user, proxy_reconnect will not be able
+    to re-connect to the device as zeroize will delete the local
+    user's configuration.
+
+    For more details on zeroize functionality, please refer
+    https://www.juniper.net/documentation/en_US/junos/topics/reference/command-summary/request-system-zeroize.html
 
     CLI Example:
 
@@ -1299,11 +1321,17 @@ def load(path=None, **kwargs):
     if "template_vars" in op:
         template_vars = op["template_vars"]
 
-    template_cached_path = salt.utils.files.mkstemp()
-    __salt__['cp.get_template'](
-        path,
-        template_cached_path,
-        template_vars=template_vars)
+    try:
+        template_cached_path = salt.utils.files.mkstemp()
+        __salt__['cp.get_template'](
+            path,
+            template_cached_path,
+            template_vars=template_vars)
+    except Exception as ex:
+        ret['message'] = 'Salt failed to render the template, please check file path and syntax.' \
+                         '\nError: {0}'.format(str(ex))
+        ret['out'] = False
+        return ret
 
     if not os.path.isfile(template_cached_path):
         ret['message'] = 'Invalid file path.'
