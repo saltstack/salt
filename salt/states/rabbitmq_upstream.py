@@ -14,6 +14,8 @@ Example:
       - trust_user_id: True
       - ack_mode: on-confirm
       - max_hops: 1
+
+.. version-added:: Neon
 '''
 
 # Import python libs
@@ -107,6 +109,8 @@ def present(name,
         not HA.
     param str queue: The name of the upstream queue. Default is to use the same
         name as the federated queue.
+
+    .. version-added:: Neon
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
 
@@ -115,7 +119,7 @@ def present(name,
     except CommandExecutionError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         return ret
-    new_config = salt.utils.dicttrim.remove_empty_values({
+    new_config = salt.utils.data.filter_falsey({
         'uri': uri,
         'prefetch-count': prefetch_count,
         'reconnect-delay': reconnect_delay,
@@ -166,10 +170,10 @@ def absent(name,
     '''
     Ensure the named upstream is absent.
 
-    name
-        The name of the upstream to remove
-    runas
-        User to run the command
+    :param str name: The name of the upstream to remove
+    :param str runas: User to run the command
+
+    .. version-added:: Neon
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
 
