@@ -65,6 +65,25 @@ if HAS_PIP is True:
     except ImportError:
         InstallationError = ValueError
 
+    # pylint: disable=unused-import
+    # When reloading, some functions are ofen lost from sys.modules. Try to prevent that.
+    try:
+        # Pip 9.0.x
+        from pip.download import is_url, path_to_url, is_archive_file
+        from pip.utils import is_installable_dir
+        from pip.req.req_install import _strip_extras
+    except ImportError:
+        try:
+            # Pip 10.x
+            from pip._internal.req.req_install import _strip_extras
+        except ImportError:
+            # Pip >= 18.x
+            from pip._internal.req.constructors import _strip_extras
+        # Pip >= 10.x
+        from pip._internal.download import is_url, path_to_url, is_archive_file
+        from pip._internal.utils.misc import is_installable_dir
+    # pylint: enable=unused-import
+
 # pylint: enable=import-error
 
 logger = logging.getLogger(__name__)
