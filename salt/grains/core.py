@@ -2235,7 +2235,10 @@ def fqdns():
     pool.close()
     pool.join()
 
-    [fqdns.update(item) for item in results if item]
+    for item in results:
+        if item:
+            fqdns.update(item)
+
     elapsed = time.time() - start
     log.debug('Elapsed time getting FQDNs: {} seconds'.format(elapsed))
 
