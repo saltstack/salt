@@ -11,6 +11,7 @@ import copy
 import fnmatch
 import logging
 import re
+import functools
 
 try:
     from collections.abc import Mapping, MutableMapping, Sequence
@@ -995,13 +996,26 @@ def json_query(data, expr):
     return jmespath.search(expr, data)
 
 
-def filter_falsey(data, recurse_depth=None, ignore_types=None):
+def _is_not_considered_falsey(value, ignore_types=()):
     '''
-    Helper function to remove items from a dict or list with falsey value.
-    Removes ``None``, ``{}`` and ``[]``, 0, '' (but does not remove ``False``).
-    Recurses into subdicts or sublists if ``recurse`` is set to ``True``.
+    Helper function for filter_falsey to determine if something is not to be
+    considered falsey.
 
-    :param dict/list data: Source dict or list to process.
+    :param any value: The value to consider
+    :param list ignore_types: The types to ignore when considering the value.
+
+    :return bool
+    '''
+    return isinstance(value, bool) or type(value) in ignore_types or value
+
+
+def filter_falsey(data, recurse_depth=None, ignore_types=()):
+    '''
+    Helper function to remove items from an iterable with falsey value.
+    Removes ``None``, ``{}`` and ``[]``, 0, '' (but does not remove ``False``).
+    Recurses into sub-iterables if ``recurse`` is set to ``True``.
+
+    :param dict/list data: Source iterable (dict, OrderedDict, list, set, ...) to process.
     :param int recurse_depth: Recurse this many levels into values that are dicts
         or lists to also process those. Default: 0 (do not recurse)
     :param list ignore_types: Contains types that can be falsey but must not
@@ -1011,24 +1025,24 @@ def filter_falsey(data, recurse_depth=None, ignore_types=None):
 
     .. version-added:: Neon
     '''
-    if ignore_types is None:
-        ignore_types = []
+    filter_element = (
+        functools.partial(filter_falsey,
+                          recurse_depth=recurse_depth-1,
+                          ignore_types=ignore_types)
+        if recurse_depth else lambda x: x
+    )
+
     if isinstance(data, dict):
-        ret = {}
-        for key, value in six.iteritems(data):
-            new_value = filter_falsey(value,
-                                      recurse_depth=recurse_depth-1,
-                                      ignore_types=ignore_types) if recurse_depth else value
-            if isinstance(new_value, bool) or (type(new_value) in ignore_types) or new_value:
-                ret.update({key: new_value})
-    elif isinstance(data, list):
-        ret = []
-        for item in data:
-            new_value = filter_falsey(item,
-                                      recurse_depth=recurse_depth-1,
-                                      ignore_types=ignore_types) if recurse_depth else item
-            if isinstance(new_value, bool) or (type(new_value) in ignore_types) or new_value:
-                ret.append(new_value)
-    else:
-        ret = data
-    return ret
+        processed_elements = [(key, filter_element(value)) for key, value in six.iteritems(data)]
+        return type(data)([
+            (key, value)
+            for key, value in processed_elements
+            if _is_not_considered_falsey(value, ignore_types=ignore_types)
+        ])
+    elif hasattr(data, '__iter__'):
+        processed_elements = (filter_element(value) for value in data)
+        return type(data)([
+            value for value in processed_elements
+            if _is_not_considered_falsey(value, ignore_types=ignore_types)
+        ])
+    return data
