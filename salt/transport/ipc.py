@@ -316,9 +316,8 @@ class IPCClient(object):
             if self.stream is None:
                 with salt.utils.asynchronous.current_ioloop(self.io_loop):
                     self.stream = IOStream(
-                        socket.socket(sock_type, socket.SOCK_STREAM),
+                        socket.socket(sock_type, socket.SOCK_STREAM)
                     )
-
             try:
                 log.trace('IPCClient: Connecting to socket: %s', self.socket_path)
                 yield self.stream.connect(sock_addr)
