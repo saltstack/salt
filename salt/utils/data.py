@@ -1039,7 +1039,7 @@ def filter_falsey(data, recurse_depth=None, ignore_types=()):
             for key, value in processed_elements
             if _is_not_considered_falsey(value, ignore_types=ignore_types)
         ])
-    elif hasattr(data, '__iter__'):
+    elif hasattr(data, '__iter__') and not isinstance(data, six.string_types):
         processed_elements = (filter_element(value) for value in data)
         return type(data)([
             value for value in processed_elements
