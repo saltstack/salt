@@ -10,8 +10,10 @@ Nox configuration script
 from __future__ import absolute_import, unicode_literals, print_function
 import os
 import sys
+import glob
 import json
 import pprint
+import shutil
 try:
     # Python 2
     from StringIO import StringIO
@@ -96,21 +98,102 @@ def _create_ci_directories():
             os.makedirs(path)
 
 
-def _get_pydir(session):
+def _get_session_python_version_info(session):
     try:
-        return 'py{}'.format(session._runner._real_python_version)
+        version_info = session._runner._real_python_version_info
     except AttributeError:
         session_py_version = session.run(
             'python', '-c'
-            'from __future__ import print_function; import sys; sys.stdout.write("{}.{}".format(*sys.version_info))',
+            'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
             silent=True,
             log=False
         )
-        session._runner._real_python_version = session_py_version
-        version_info = tuple(int(part) for part in session_py_version.split('.'))
-        if version_info < (2, 7) or version_info >= (3, 7):
-            session.error('Only Python >= 2.7 and < 3.7 is supported')
-    return 'py{}'.format(session._runner._real_python_version)
+        version_info = tuple(int(part) for part in session_py_version.split('.') if part.isdigit())
+        session._runner._real_python_version_info = version_info
+    return version_info
+
+
+def _get_session_python_site_packages_dir(session):
+    try:
+        site_packages_dir = session._runner._site_packages_dir
+    except AttributeError:
+        site_packages_dir = session.run(
+            'python', '-c'
+            'import sys; from distutils.sysconfig import get_python_lib; sys.stdout.write(get_python_lib())',
+            silent=True,
+            log=False
+        )
+        session._runner._site_packages_dir = site_packages_dir
+    return site_packages_dir
+
+
+def _get_pydir(session):
+    version_info = _get_session_python_version_info(session)
+    if version_info < (2, 7) or version_info >= (3, 7):
+        session.error('Only Python >= 2.7 and < 3.7 is supported')
+    return 'py{}.{}'.format(*version_info)
+
+
+def _get_distro_info(session):
+    try:
+        distro = session._runner._distro
+    except AttributeError:
+        # The distro package doesn't output anything for Windows
+        session.install('distro', silent=PIP_INSTALL_SILENT)
+        output = session.run('distro', '-j', silent=True)
+        distro = json.loads(output.strip())
+        session.log('Distro information:\n%s', pprint.pformat(distro))
+        session._runner._distro = distro
+    return distro
+
+
+def _install_system_packages(session):
+    '''
+    Because some python packages are provided by the distribution and cannot
+    be pip installed, and because we don't want the whole system python packages
+    on our virtualenvs, we copy the required system python packages into
+    the virtualenv
+    '''
+    system_python_packages = {
+        '__debian_based_distros__': [
+            '/usr/lib/python{py_version}/dist-packages/*apt*'
+        ]
+    }
+    for key in ('ubuntu-14.04', 'ubuntu-16.04', 'ubuntu-18.04', 'debian-8', 'debian-9'):
+        system_python_packages[key] = system_python_packages['__debian_based_distros__']
+
+    distro = _get_distro_info(session)
+    distro_keys = [
+        '{id}'.format(**distro),
+        '{id}-{version}'.format(**distro),
+        '{id}-{version_parts[major]}'.format(**distro)
+    ]
+    version_info = _get_session_python_version_info(session)
+    py_version_keys = [
+        '{}'.format(*version_info),
+        '{}.{}'.format(*version_info)
+    ]
+    session_site_packages_dir = _get_session_python_site_packages_dir(session)
+    for distro_key in distro_keys:
+        if distro_key not in system_python_packages:
+            continue
+        patterns = system_python_packages[distro_key]
+        for pattern in patterns:
+            for py_version in py_version_keys:
+                matches = set(glob.glob(pattern.format(py_version=py_version)))
+                if not matches:
+                    continue
+                for match in matches:
+                    src = os.path.realpath(match)
+                    dst = os.path.join(session_site_packages_dir, os.path.basename(match))
+                    if os.path.exists(dst):
+                        session.log('Not overwritting already existing %s with %s', dst, src)
+                        continue
+                    session.log('Copying %s into %s', src, dst)
+                    if os.path.isdir(src):
+                        shutil.copytree(src, dst)
+                    else:
+                        shutil.copyfile(src, dst)
 
 
 def _install_requirements(session, transport, *extra_requirements):
@@ -133,11 +216,8 @@ def _install_requirements(session, transport, *extra_requirements):
                 session.install('setuptools-git', silent=PIP_INSTALL_SILENT)
             distro_requirements = _distro_requirements
     else:
-        # The distro package doesn't output anything for Windows
-        session.install('distro', silent=PIP_INSTALL_SILENT)
-        output = session.run('distro', '-j', silent=True)
-        distro = json.loads(output.strip())
-        session.log('Distro information:\n%s', pprint.pformat(distro))
+        _install_system_packages(session)
+        distro = _get_distro_info(session)
         distro_keys = [
             '{id}'.format(**distro),
             '{id}-{version}'.format(**distro),
