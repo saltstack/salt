@@ -19,6 +19,7 @@ from salt.utils import json
 import salt.utils.stringutils
 from salt.utils.stringutils import to_bytes as bts
 from salt.ext.six.moves import range
+from salt.ext.six import PY2
 
 try:
     import pytest
@@ -423,6 +424,7 @@ class SSHThinTestCase(TestCase):
         self.assertIn('The minimum required python version to run salt-ssh is '
                       '"2.6"', str(err.value))
 
+    @skipIf(PY2, 'Test only needed on Python 3')
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
     @patch('salt.utils.thin.os.makedirs', MagicMock())

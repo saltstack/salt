@@ -75,7 +75,7 @@ def setval(key, val, false_unsets=False, permanent=False):
             try:
                 os.environ.pop(key, None)
                 if permanent and is_windows:
-                    __salt__['reg.delete_value'](permanent_hive, permanent_key, key)
+                    __utils__['reg.delete_value'](permanent_hive, permanent_key, key)
                 return None
             except Exception as exc:
                 log.error(
@@ -89,7 +89,7 @@ def setval(key, val, false_unsets=False, permanent=False):
         try:
             os.environ[key] = val
             if permanent and is_windows:
-                __salt__['reg.set_value'](permanent_hive, permanent_key, key, val)
+                __utils__['reg.set_value'](permanent_hive, permanent_key, key, val)
             return os.environ[key]
         except Exception as exc:
             log.error(
