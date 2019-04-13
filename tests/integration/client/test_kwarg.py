@@ -8,12 +8,16 @@ from tests.support.case import ModuleCase
 
 # Import 3rd-party libs
 from salt.ext import six
+import salt.utils.platform
 
 
 class StdTest(ModuleCase):
     '''
     Test standard client calls
     '''
+    def setUp(self):
+        self.TIMEOUT = 600 if salt.utils.platform.is_windows() else 10
+
     def test_cli(self):
         '''
         Test cli function
@@ -84,6 +88,7 @@ class StdTest(ModuleCase):
                 'minion',
                 'test.arg_type',
                 ['a', 1],
+                timeout=self.TIMEOUT,
                 kwarg={'outer': {'a': terrible_yaml_string},
                        'inner': 'value'}
                 )
