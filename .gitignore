@@ -39,6 +39,7 @@ Pipfile.lock
 
 # code coverage outputs genereated by coverage.py
 .coverage
+.coverage.*
 coverage.xml
 htmlcov/
 
