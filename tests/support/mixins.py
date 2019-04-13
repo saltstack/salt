@@ -687,10 +687,10 @@ class SaltMinionEventAssertsMixin(object):
         #TODO
         raise salt.exceptions.NotImplemented('assertMinionEventFired() not implemented')
 
-    def assertMinionEventReceived(self, desired_event):
-        queue_wait = 5  # 2.5s
+    def assertMinionEventReceived(self, desired_event, timeout=5, sleep_time=0.5):
+        queue_wait = timeout / sleep_time
         while self.q.empty():
-            time.sleep(0.5)  # Wait for events to be pushed into the queue
+            time.sleep(sleep_time)  # Wait for events to be pushed into the queue
             queue_wait -= 1
             if queue_wait <= 0:
                 raise AssertionError('Queue wait timer expired')
