@@ -14,14 +14,7 @@ import glob
 import json
 import pprint
 import shutil
-try:
-    # Python 2
-    from StringIO import StringIO
-except ImportError:
-    # Python 3
-    import io
-    StringIO = io.StringIO
-
+import tempfile
 
 if __name__ == '__main__':
     sys.stderr.write('Do not execute this file directly. Use nox instead, it will know how to handle this file\n')
@@ -34,46 +27,6 @@ from nox.command import CommandFailed
 
 # Be verbose when runing under a CI context
 PIP_INSTALL_SILENT = (os.environ.get('JENKINS_URL') or os.environ.get('CI') or os.environ.get('DRONE')) is None
-
-
-# ----- Helper Classes ---------------------------------------------------------------------------------------------->
-class StdStream(StringIO):
-    def __init__(self, std):
-        StringIO.__init__(self)
-        self._std = std
-
-    def write(self, data):
-        StringIO.write(self, data)
-        self._std.write(data)
-
-
-class CaptureSTDs(object):
-
-    def __init__(self):
-        self._stdout = StdStream(sys.stdout)
-        self._stderr = StdStream(sys.stderr)
-        self._sys_stdout = sys.stdout
-        self._sys_stderr = sys.stderr
-
-    def __enter__(self):
-        sys.stdout = self._stdout
-        sys.stderr = self._stderr
-        return self
-
-    def __exit__(self, *args):
-        sys.stdout = self._sys_stdout
-        sys.stderr = self._sys_stderr
-
-    @property
-    def stdout(self):
-        self._stdout.seek(0)
-        return self._stdout.read()
-
-    @property
-    def stderr(self):
-        self._stdout.seek(0)
-        return self._stdout.read()
-# <---- Helper Classes -----------------------------------------------------------------------------------------------
 
 
 # Global Path Definitions
@@ -777,16 +730,25 @@ def _lint(session, rcfile, flags, paths):
         '--rcfile={}'.format(rcfile)
     ] + list(flags) + list(paths)
 
+    stdout = tempfile.TemporaryFile(mode='w+b')
+    lint_failed = False
     try:
-        with CaptureSTDs() as capstds:
-            session.run(*cmd_args)
+        session.run(*cmd_args, stdout=stdout)
     except CommandFailed:
-        if pylint_report_path:
-            # Write report
-            with open(pylint_report_path, 'w') as wfh:
-                wfh.write(capstds.stdout)
-            session.log('Report file written to %r', pylint_report_path)
+        lint_failed = True
         raise
+    finally:
+        stdout.seek(0)
+        contents = stdout.read().encode('utf-8')
+        if contents:
+            sys.stdout.write(contents)
+            sys.stdout.flush()
+            if pylint_report_path:
+                # Write report
+                with open(pylint_report_path, 'w') as wfh:
+                    wfh.write(contents)
+                session.log('Report file written to %r', pylint_report_path)
+        stdout.close()
 
 
 @nox.session(python='2.7')
