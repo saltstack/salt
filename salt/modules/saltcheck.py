@@ -199,9 +199,11 @@ from salt.utils.json import loads, dumps
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.path
 import salt.utils.yaml
 import salt.utils.data
+import salt.utils.url
 import salt.client
 import salt.exceptions
 from salt.utils.odict import OrderedDict
@@ -240,7 +242,8 @@ def update_master_cache(states, saltenv='base'):
         if state_path in already_processed:
             log.debug("Already cached state for %s", state_path)
         else:
-            cache_result = __salt__['cp.cache_dir']('salt://' + state_path, saltenv)
+            qualifed_state = salt.utils.url.create(state_path, saltenv)
+            cache_result = __salt__['cp.cache_dir'](qualifed_state)
             if cache_result:
                 already_processed.append(state_path)
             else:
@@ -249,7 +252,8 @@ def update_master_cache(states, saltenv='base'):
                 if state_path_dir in already_processed:
                     log.debug("Already cached state for %s", state_path_dir)
                 else:
-                    cache_result = __salt__['cp.cache_dir']('salt://' + state_path_dir, saltenv)
+                    qualifed_state = salt.utils.url.create(state_path_dir, saltenv)
+                    cache_result = __salt__['cp.cache_dir'](qualifed_state)
                     if cache_result:
                         already_processed.append(state_path_dir)
     return True
@@ -294,9 +298,10 @@ def state_apply(state_name, **kwargs):
         salt '*' saltcheck.state_apply postfix
     '''
     # A new salt client is instantiated with the default configuration because the main module's
-    # client is hardcoded to local
-    # If the minion is running with a master, a non-local client is needed to lookup states
-    caller = salt.client.Caller()
+    #   client is hardcoded to local
+    # If the minion is running with a master, a potentially non-local client is needed to lookup states
+    local_opts = salt.config.minion_config(__opts__['conf_file'])
+    caller = salt.client.Caller(mopts=local_opts)
     if kwargs:
         return caller.cmd('state.apply', state_name, **kwargs)
     else:
@@ -341,6 +346,9 @@ def run_state_tests(state, saltenv=None, check_all=False):
     return _generate_out_list(results)
 
 
+run_state_tests_ssh = salt.utils.functools.alias_function(run_state_tests, 'run_state_tests_ssh')
+
+
 def run_highstate_tests(saltenv=None):
     '''
     Execute all tests for states assigned to the minion through highstate and return results
@@ -355,28 +363,11 @@ def run_highstate_tests(saltenv=None):
         saltenv = __opts__['saltenv']
     if not saltenv:
         saltenv = 'base'
-    scheck = SaltCheck(saltenv)
-    paths = scheck.get_state_search_path_list(saltenv)
-    stl = StateTestLoader(search_paths=paths)
-    results = OrderedDict()
+    sls_list = []
     sls_list = _get_top_states(saltenv)
-    all_states = []
-    for state in sls_list:
-        if state not in all_states:
-            all_states.append(state)
+    all_states = ','.join(sls_list)
 
-    # update state cache
-    update_master_cache(all_states, saltenv=saltenv)
-
-    for state_name in all_states:
-        stl.add_test_files_for_sls(state_name)
-        stl.load_test_suite()
-        results_dict = OrderedDict()
-        for key, value in stl.test_dict.items():
-            result = scheck.run_test(value)
-            results_dict[key] = result
-        results[state_name] = results_dict
-    return _generate_out_list(results)
+    return run_state_tests(all_states, saltenv=saltenv)
 
 
 def _generate_out_list(results):
@@ -446,15 +437,10 @@ def _get_top_states(saltenv='base'):
     '''
     Equivalent to a salt cli: salt web state.show_top
     '''
-    alt_states = []
-    try:
-        returned = __salt__['state.show_top']()
-        for i in returned[saltenv]:
-            alt_states.append(i)
-    except Exception:
-        raise
-    # log.info("top states: %s", alt_states)
-    return alt_states
+    top_states = []
+    top_states = __salt__['state.show_top']()[saltenv]
+    # log.info("top states: %s", top_states)
+    return top_states
 
 
 class SaltCheck(object):
