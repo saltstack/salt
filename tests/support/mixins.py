@@ -47,7 +47,7 @@ from salt._compat import ElementTree as etree
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves.queue import Empty
+from salt.ext.six.moves.queue import Empty # pylint: disable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
 
