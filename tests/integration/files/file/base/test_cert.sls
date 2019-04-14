@@ -1,11 +1,5 @@
 {% set tmp_dir = pillar['tmp_dir'] %}
 
-salt-minion:
-  service.running:
-    - enable: True
-    - listen:
-      - file: {{ tmp_dir}}/config/minion.d/signing_policies.conf
-
 {{ tmp_dir }}/pki:
   file.directory
 
@@ -38,7 +32,7 @@ salt-minion:
         backup: True
     - require:
       - file: {{ tmp_dir  }}/pki
-      - {{ tmp_dir  }}/pki/ca.key
+      - x509: {{ tmp_dir  }}/pki/ca.key
 
 mine.send:
   module.run:
@@ -47,11 +41,21 @@ mine.send:
         glob_path: {{ tmp_dir  }}/pki/ca.crt
     - onchanges:
       - x509: {{ tmp_dir  }}/pki/ca.crt
+    - require:
+      - x509: {{ tmp_dir  }}/pki/ca.crt
+
+ca_waiter:
+  module.run:
+    - name: test.sleep
+    - length: 5
 
 {{ tmp_dir  }}/pki/test.key:
   x509.private_key_managed:
     - bits: 4096
     - backup: True
+    - require:
+      - x509: {{ tmp_dir  }}/pki/ca.crt
+      - ca_waiter
 
 test_crt:
   x509.certificate_managed:
@@ -67,5 +71,6 @@ test_crt:
         bits: 4096
         backup: True
     - require:
-        - {{ tmp_dir  }}/pki/ca.crt
-        - {{ tmp_dir  }}/pki/test.key
+        - x509: {{ tmp_dir  }}/pki/ca.crt
+        - x509: {{ tmp_dir  }}/pki/test.key
+        - ca_waiter
