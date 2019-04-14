@@ -47,6 +47,7 @@ from salt._compat import ElementTree as etree
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves.queue import Empty
 
 log = logging.getLogger(__name__)
 
@@ -688,18 +689,18 @@ class SaltMinionEventAssertsMixin(object):
         raise salt.exceptions.NotImplemented('assertMinionEventFired() not implemented')
 
     def assertMinionEventReceived(self, desired_event, timeout=5, sleep_time=0.5):
-        queue_wait = timeout / sleep_time
-        while self.q.empty():
-            time.sleep(sleep_time)  # Wait for events to be pushed into the queue
-            queue_wait -= 1
-            if queue_wait <= 0:
-                raise AssertionError('Queue wait timer expired')
-        while not self.q.empty():  # This is not thread-safe and may be inaccurate
-            event = self.q.get()
+        start = time.time()
+        while True:
+            try:
+                event = self.q.get(False)
+            except Emtpy:
+                time.sleep(sleep_time)
             if isinstance(event, dict):
                 event.pop('_stamp')
             if desired_event == event:
                 self.fetch_proc.terminate()
                 return True
+            if start - time.time() >= timeout:
+                break
         self.fetch_proc.terminate()
         raise AssertionError('Event {0} was not received by minion'.format(desired_event))
