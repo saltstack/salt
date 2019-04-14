@@ -263,6 +263,10 @@ def _runtests(session, coverage, transport, cmd_args):
         else:
             session.run('python', os.path.join('tests', 'runtests.py'), *cmd_args)
     except CommandFailed:
+        # Disabling re-running failed tests for the time being
+        raise
+
+        # pylint: disable=unreachable
         names_file_path = os.path.join('artifacts', 'failed-tests.txt')
         session.log('Re-running failed tests if possible')
         session.install('xunitparser==1.3.3', silent=PIP_INSTALL_SILENT)
@@ -309,6 +313,7 @@ def _runtests(session, coverage, transport, cmd_args):
             _run_with_coverage(session, 'coverage', 'run', '-m', 'tests.runtests', *cmd_args)
         else:
             session.run('python', os.path.join('tests', 'runtests.py'), *cmd_args)
+        # pylint: enable=unreachable
 
 
 @nox.session(python=_PYTHON_VERSIONS, name='runtests-parametrized')
