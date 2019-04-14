@@ -108,14 +108,7 @@ def uninstall(pkg):
 
 def add_remote(name, location):
     '''
-    Add a new location to install flatpak packages from.
-
-    Args:
-        name (str): The repositories name.
-        location (str): The location of the repository.
-
-    Returns:
-        dict: The ``result`` and ``output``.
+    :noindex:
 
     CLI Example:
     .. code-block:: bash

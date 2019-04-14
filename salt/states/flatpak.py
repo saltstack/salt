@@ -124,7 +124,7 @@ def add_remote(name, location):
     Adds a new location to install flatpak packages from.
 
     Args:
-        name (str): The repositories name.
+        name (str): The repository's name.
         location (str): The location of the repository.
 
     Returns:
