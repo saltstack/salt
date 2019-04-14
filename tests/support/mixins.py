@@ -695,6 +695,8 @@ class SaltMinionEventAssertsMixin(object):
                 event = self.q.get(False)
             except Empty:
                 time.sleep(sleep_time)
+                if start - time.time() >= timeout:
+                    break
                 continue
             if isinstance(event, dict):
                 event.pop('_stamp')
