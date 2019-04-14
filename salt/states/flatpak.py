@@ -121,7 +121,7 @@ def uninstalled(name):
 
 def add_remote(name, location):
     '''
-    Add a new location to install flatpak packages from.
+    Adds a new location to install flatpak packages from.
 
     Args:
         name (str): The repositories name.
