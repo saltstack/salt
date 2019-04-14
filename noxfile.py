@@ -254,7 +254,7 @@ def _run_with_coverage(session, *test_cmd):
     session.run('coverage', 'xml', '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'coverage.xml'))
 
 
-def _runtests(session, coverage, transport, cmd_args):
+def _runtests(session, coverage, cmd_args):
     # Create required artifacts directories
     _create_ci_directories()
     try:
@@ -337,7 +337,7 @@ def runtests_parametrized(session, coverage, transport, crypto):
         ),
         '--transport={}'.format(transport)
     ] + session.posargs
-    _runtests(session, coverage, transport, cmd_args)
+    _runtests(session, coverage, cmd_args)
 
 
 @nox.session(python=_PYTHON_VERSIONS)
@@ -533,7 +533,7 @@ def pytest_parametrized(session, coverage, transport, crypto):
         '-s',
         '--transport={}'.format(transport)
     ] + session.posargs
-    _pytest(session, coverage, transport, cmd_args)
+    _pytest(session, coverage, cmd_args)
 
 
 @nox.session(python=_PYTHON_VERSIONS)
@@ -704,7 +704,7 @@ def pytest_raet_pycryptodomex(session, coverage):
     )
 
 
-def _pytest(session, coverage, transport, cmd_args):
+def _pytest(session, coverage, cmd_args):
     # Create required artifacts directories
     _create_ci_directories()
 
