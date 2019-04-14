@@ -22,6 +22,7 @@ requisite to a pkg.installed state for the package which provides pip
 # Import python libs
 from __future__ import absolute_import
 import re
+import types
 import logging
 import pkg_resources
 
@@ -56,33 +57,24 @@ if HAS_PIP is True:
             HAS_PIP = False
             # Remove references to the loaded pip module above so reloading works
             import sys
+            pip_related_entries = [
+                (k, v) for (k, v) in sys.modules.items()
+                or getattr(v, '__module__', '').startswith('pip.')
+                or (isinstance(v, types.ModuleType) and v.__name__.startswith('pip.'))
+            ]
+            for name, entry in pip_related_entries:
+                sys.modules.pop(name)
+                del entry
+
             del pip
-            if 'pip' in sys.modules:
-                del sys.modules['pip']
+            sys_modules_pip = sys.modules.pop('pip', None)
+            if sys_modules_pip is not None:
+                del sys_modules_pip
 
     try:
         from pip.exceptions import InstallationError
     except ImportError:
         InstallationError = ValueError
-
-    # pylint: disable=unused-import
-    # When reloading, some functions are ofen lost from sys.modules. Try to prevent that.
-    try:
-        # Pip 9.0.x
-        from pip.download import is_url, path_to_url, is_archive_file
-        from pip.utils import is_installable_dir
-        from pip.req.req_install import _strip_extras
-    except ImportError:
-        try:
-            # Pip 10.x
-            from pip._internal.req.req_install import _strip_extras
-        except ImportError:
-            # Pip >= 18.x
-            from pip._internal.req.constructors import _strip_extras
-        # Pip >= 10.x
-        from pip._internal.download import is_url, path_to_url, is_archive_file
-        from pip._internal.utils.misc import is_installable_dir
-    # pylint: enable=unused-import
 
 # pylint: enable=import-error
 
@@ -141,9 +133,7 @@ def _check_pkg_version_format(pkg):
             # vcs+URL urls are not properly parsed.
             # The next line is meant to trigger an AttributeError and
             # handle lower pip versions
-            logger.debug(
-                'Installed pip version: {0}'.format(pip.__version__)
-            )
+            logger.debug('Installed pip version: %s', pip.__version__)
             install_req = _from_line(pkg)
         except AttributeError:
             logger.debug('Installed pip version is lower than 1.2')
