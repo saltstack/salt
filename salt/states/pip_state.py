@@ -21,18 +21,20 @@ requisite to a pkg.installed state for the package which provides pip
 
 # Import python libs
 from __future__ import absolute_import
-import re
-import logging
-import pkg_resources
 
-# Import salt libs
-import salt.utils
-import salt.utils.data
-from salt.version import SaltStackVersion as _SaltStackVersion
-from salt.exceptions import CommandExecutionError, CommandNotFoundError
+import logging
+import re
+
+import pkg_resources
 
 # Import 3rd-party libs
 import salt.ext.six as six
+# Import salt libs
+import salt.utils
+import salt.utils.data
+from salt.exceptions import CommandExecutionError, CommandNotFoundError
+from salt.version import SaltStackVersion as _SaltStackVersion
+
 # pylint: disable=import-error
 try:
     import pip
@@ -720,7 +722,7 @@ def installed(name,
     # No requirements case.
     # Check pre-existence of the requested packages.
     else:
-        # Attempt to pre-cache a the current pip list
+        # Attempt to pre-cache the current pip list
         try:
             pip_list = __salt__['pip.list'](bin_env=bin_env, user=user, cwd=cwd)
         # If we fail, then just send False, and we'll try again in the next function call
@@ -962,7 +964,7 @@ def removed(name,
     user
         The user under which to run pip
     bin_env : None
-        the pip executable or virtualenenv to use
+        the pip executable or virtualenv to use
     use_vt
         Use VT terminal emulation (see output while installing)
     '''
@@ -1019,7 +1021,7 @@ def uptodate(name,
     user
         The user under which to run pip
     bin_env
-        the pip executable or virtualenenv to use
+        the pip executable or virtualenv to use
     use_vt
         Use VT terminal emulation (see output while installing)
     '''
