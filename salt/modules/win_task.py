@@ -2027,9 +2027,10 @@ def add_trigger(name=None,
 
             .. note::
 
-                Arguments are parsed by the YAML loader and are subject to yaml's
-                idiosyncrasies. Therefore, time values in some formats (``%H:%M:%S`` and
-                ``%H:%M``) should to be quoted. See `YAML IDIOSYNCRASIES`_ for more details.
+                Arguments are parsed by the YAML loader and are subject to
+                yaml's idiosyncrasies. Therefore, time values in some formats
+                (``%H:%M:%S`` and ``%H:%M``) should to be quoted. See
+                `YAML IDIOSYNCRASIES`_ for more details.
 
             .. _`YAML IDIOSYNCRASIES`: https://docs.saltstack.com/en/latest/topics/troubleshooting/yaml_idiosyncrasies.html#time-expressions
 
