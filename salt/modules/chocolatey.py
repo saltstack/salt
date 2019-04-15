@@ -298,7 +298,6 @@ def list_(narrow=None,
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-
     # Chocolatey introduced Enhanced Exit Codes starting with version 0.10.12
     # Exit Code 2 means there were no results, but is not a failure
     # This may start to effect other functions in the future as Chocolatey
