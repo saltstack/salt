@@ -78,7 +78,9 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         because under windows, we can't seem to properly create a virtualenv off of
         another virtualenv(we can on linux) and also because, we really don't want to
         test virtualenv creation off of another virtualenv, we want a virtualenv created
-        from the original python
+        from the original python.
+        Also, one windows, we must also point to the virtualenv binary outside the existing
+        virtualenv because it will fail otherwise
         '''
         self.addCleanup(shutil.rmtree, path, ignore_errors=True)
         try:
@@ -87,7 +89,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             else:
                 python = os.path.join(sys.real_prefix, 'bin', os.path.basename(sys.executable))
             # We're running off a virtualenv, and we don't want to create a virtualenv off of
-            # a virtualenv
+            # a virtualenv, let's point to the actual python that created the virtualenv
             kwargs = {'python': python}
         except AttributeError:
             # We're running off of the system python

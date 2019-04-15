@@ -56,7 +56,9 @@ class PipModuleTest(ModuleCase):
         because under windows, we can't seem to properly create a virtualenv off of
         another virtualenv(we can on linux) and also because, we really don't want to
         test virtualenv creation off of another virtualenv, we want a virtualenv created
-        from the original python
+        from the original python.
+        Also, one windows, we must also point to the virtualenv binary outside the existing
+        virtualenv because it will fail otherwise
         '''
         try:
             if salt.utils.is_windows():
