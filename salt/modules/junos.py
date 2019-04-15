@@ -924,6 +924,11 @@ def install_config(path=None, **kwargs):
         del op['overwrite']
 
     db_mode = op.pop('mode', 'exclusive')
+    if write_diff and db_mode == 'dynamic:':
+        ret['message'] = 'Write diff is not supported with dynamic configuration mode'
+        ret['out'] = False
+        return ret
+
     try:
         with Config(conn, mode=db_mode) as cu:
             try:
@@ -939,11 +944,12 @@ def install_config(path=None, **kwargs):
             finally:
                 salt.utils.files.safe_rm(template_cached_path)
 
-            config_diff = cu.diff()
-            if config_diff is None:
-                ret['message'] = 'Configuration already applied!'
-                ret['out'] = True
-                return ret
+            if db_mode != 'dynamic':
+                config_diff = cu.diff()
+                if config_diff is None:
+                    ret['message'] = 'Configuration already applied!'
+                    ret['out'] = True
+                    return ret
 
             commit_params = {}
             if 'confirm' in op:
@@ -951,17 +957,18 @@ def install_config(path=None, **kwargs):
             if 'comment' in op:
                 commit_params['comment'] = op['comment']
 
-            try:
-                check = cu.commit_check()
-            except Exception as exception:
-                ret['message'] = \
-                    'Commit check threw the following exception: "{0}"'\
-                    .format(exception)
+            if db_mode != 'dynamic':
+                try:
+                    check = cu.commit_check()
+                except Exception as exception:
+                    ret['message'] = \
+                        'Commit check threw the following exception: "{0}"'\
+                        .format(exception)
 
-                ret['out'] = False
-                return ret
+                    ret['out'] = False
+                    return ret
 
-            if check and not test:
+            if db_mode == 'dynamic' or check and not test:
                 try:
                     cu.commit(**commit_params)
                     ret['message'] = 'Successfully loaded and committed!'
