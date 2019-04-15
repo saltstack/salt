@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+'''
+In-memory caching used by Salt
+'''
 # Import Python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import time
@@ -14,7 +17,9 @@ except ImportError:
 # Import salt libs
 import salt.config
 import salt.payload
+import salt.utils.data
 import salt.utils.dictupdate
+import salt.utils.files
 
 # Import third party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -29,7 +34,7 @@ class CacheFactory(object):
     '''
     @classmethod
     def factory(cls, backend, ttl, *args, **kwargs):
-        log.info('Factory backend: {0}'.format(backend))
+        log.info('Factory backend: %s', backend)
         if backend == 'memory':
             return CacheDict(ttl, *args, **kwargs)
         elif backend == 'disk':
@@ -133,8 +138,8 @@ class CacheDisk(CacheDict):
         '''
         if not HAS_MSGPACK or not os.path.exists(self._path):
             return
-        with salt.utils.fopen(self._path, 'rb') as fp_:
-            cache = msgpack.load(fp_, encoding=__salt_system_encoding__)
+        with salt.utils.files.fopen(self._path, 'rb') as fp_:
+            cache = salt.utils.data.decode(msgpack.load(fp_, encoding=__salt_system_encoding__))
         if "CacheDisk_cachetime" in cache:  # new format
             self._dict = cache["CacheDisk_data"]
             self._key_cache_time = cache["CacheDisk_cachetime"]
@@ -144,7 +149,7 @@ class CacheDisk(CacheDict):
             for key in self._dict:
                 self._key_cache_time[key] = timestamp
         if log.isEnabledFor(logging.DEBUG):
-            log.debug('Disk cache retrieved: {0}'.format(cache))
+            log.debug('Disk cache retrieved: %s', cache)
 
     def _write(self):
         '''
@@ -154,7 +159,7 @@ class CacheDisk(CacheDict):
             return
         # TODO Add check into preflight to ensure dir exists
         # TODO Dir hashing?
-        with salt.utils.fopen(self._path, 'wb+') as fp_:
+        with salt.utils.files.fopen(self._path, 'wb+') as fp_:
             cache = {
                 "CacheDisk_data": self._dict,
                 "CacheDisk_cachetime": self._key_cache_time
@@ -279,15 +284,15 @@ class ContextCache(object):
         '''
         if not os.path.isdir(os.path.dirname(self.cache_path)):
             os.mkdir(os.path.dirname(self.cache_path))
-        with salt.utils.fopen(self.cache_path, 'w+b') as cache:
+        with salt.utils.files.fopen(self.cache_path, 'w+b') as cache:
             self.serial.dump(context, cache)
 
     def get_cache_context(self):
         '''
         Retrieve a context cache from disk
         '''
-        with salt.utils.fopen(self.cache_path, 'rb') as cache:
-            return self.serial.load(cache)
+        with salt.utils.files.fopen(self.cache_path, 'rb') as cache:
+            return salt.utils.data.decode(self.serial.load(cache))
 
 
 def context_cache(func):

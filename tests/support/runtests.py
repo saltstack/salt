@@ -49,17 +49,18 @@
 # Import Python modules
 from __future__ import absolute_import, print_function
 import os
-import json
 import shutil
 import logging
 import multiprocessing
+
+import salt.utils.json
 
 # Import tests support libs
 import tests.support.paths as paths
 import tests.support.helpers
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import coverage  # pylint: disable=import-error
     HAS_COVERAGE = True
@@ -78,7 +79,7 @@ try:
         coverage_object.save()
 
     def multiprocessing_start(obj):
-        coverage_options = json.loads(os.environ.get('SALT_RUNTESTS_COVERAGE_OPTIONS', '{}'))
+        coverage_options = salt.utils.json.loads(os.environ.get('SALT_RUNTESTS_COVERAGE_OPTIONS', '{}'))
         if not coverage_options:
             return
 
@@ -183,6 +184,8 @@ class RuntimeVars(object):
             object.__setattr__(self, name, value)
             return
         self._vars[name] = value
+
+
 # <---- Helper Methods -----------------------------------------------------------------------------------------------
 
 # ----- Global Variables -------------------------------------------------------------------------------------------->

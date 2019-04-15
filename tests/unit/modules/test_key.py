@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os.path
 
 # Import Salt Testing Libs
@@ -18,7 +18,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.crypt
 import salt.modules.key as key
 
 
@@ -35,7 +35,7 @@ class KeyTestCase(TestCase, LoaderModuleMockMixin):
         Test for finger
         '''
         with patch.object(os.path, 'join', return_value='A'):
-            with patch.object(salt.utils,
+            with patch.object(salt.utils.crypt,
                               'pem_finger', return_value='A'):
                 with patch.dict(key.__opts__,
                         {'pki_dir': MagicMock(return_value='A'), 'hash_type': 'sha256'}):
@@ -46,7 +46,7 @@ class KeyTestCase(TestCase, LoaderModuleMockMixin):
         Test for finger
         '''
         with patch.object(os.path, 'join', return_value='A'):
-            with patch.object(salt.utils,
+            with patch.object(salt.utils.crypt,
                               'pem_finger', return_value='A'):
                 with patch.dict(key.__opts__,
                         {'pki_dir': 'A', 'hash_type': 'sha256'}):

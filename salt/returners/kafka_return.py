@@ -25,9 +25,9 @@ To use the kafka returner, append '--return kafka' to the Salt command, eg;
 '''
 
 # Import Python libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import salt.utils.json
 
 # Import third-party libs
 try:
@@ -74,7 +74,7 @@ def returner(ret):
 
         conn = _get_conn(ret)
         producer = SimpleProducer(conn)
-        producer.send_messages(topic, json.dumps(ret))
+        producer.send_messages(topic, salt.utils.json.dumps(ret))
 
         _close_conn(conn)
     else:

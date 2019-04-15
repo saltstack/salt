@@ -9,20 +9,21 @@ from salt.daemons import test
 test.run()
 
 '''
-# pylint: skip-file
-# pylint: disable=C0103,3rd-party-module-not-gated
-
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
+# pylint: disable=blacklisted-import
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
     import unittest
+# pylint: enable=blacklisted-import
 import os
 
 
 from ioflo.base.consoling import getConsole
 console = getConsole()
 console.reinit(verbosity=console.Wordage.concise)
+
 
 def run(start=None):
     '''
@@ -37,8 +38,9 @@ def run(start=None):
 
     console.terse("\nRunning all salt.daemons unit tests in '{0}', starting at '{1}'\n".format(top, start))
     loader = unittest.TestLoader()
-    suite = loader.discover(start, 'test_*.py', top )
+    suite = loader.discover(start, 'test_*.py', top)
     unittest.TextTestRunner(verbosity=2).run(suite)
+
 
 if __name__ == "__main__":
     run()

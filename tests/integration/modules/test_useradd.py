@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import string
 import random
 
@@ -14,15 +14,15 @@ from tests.support.helpers import (
     requires_system_grains
 )
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 @destructiveTest
-@skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
+@skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
 @skip_if_not_root
 class UseraddModuleTestLinux(ModuleCase):
 
@@ -108,7 +108,7 @@ class UseraddModuleTestLinux(ModuleCase):
 
 
 @destructiveTest
-@skipIf(not salt.utils.is_windows(), 'These tests can only be run on Windows')
+@skipIf(not salt.utils.platform.is_windows(), 'These tests can only be run on Windows')
 @skip_if_not_root
 class UseraddModuleTestWindows(ModuleCase):
 

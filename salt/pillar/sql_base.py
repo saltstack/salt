@@ -168,7 +168,7 @@ More complete example for MySQL (to also show configuration)
             as_list: True
             with_lists: [1,3]
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Please don't strip redundant parentheses from this file.
 # I have added some for clarity.
@@ -251,7 +251,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
 
         # Filter out values that don't have queries.
         qbuffer = [x for x in qbuffer if (
-                (isinstance(x[1], str) and len(x[1]))
+                (isinstance(x[1], six.string_types) and len(x[1]))
                 or
                 (isinstance(x[1], (list, tuple)) and (len(x[1]) > 0) and x[1][0])
                 or
@@ -266,7 +266,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                         'with_lists': None,
                         'ignore_null': False
                         }
-            if isinstance(qb[1], str):
+            if isinstance(qb[1], six.string_types):
                 defaults['query'] = qb[1]
             elif isinstance(qb[1], (list, tuple)):
                 defaults['query'] = qb[1][0]
@@ -275,7 +275,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                 # May set 'as_list' from qb[1][2].
             else:
                 defaults.update(qb[1])
-                if defaults['with_lists']:
+                if defaults['with_lists'] and isinstance(defaults['with_lists'], six.string_types):
                     defaults['with_lists'] = [
                         int(i) for i in defaults['with_lists'].split(',')
                     ]
@@ -424,10 +424,10 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
         Execute queries, merge and return as a dict.
         '''
         db_name = self._db_name()
-        log.info('Querying {0} for information for {1}'.format(db_name, minion_id))
+        log.info('Querying %s for information for %s', db_name, minion_id)
         #
-        #    log.debug('ext_pillar {0} args: {1}'.format(db_name, args))
-        #    log.debug('ext_pillar {0} kwargs: {1}'.format(db_name, kwargs))
+        #    log.debug('ext_pillar %s args: %s', db_name, args)
+        #    log.debug('ext_pillar %s kwargs: %s', db_name, kwargs)
         #
         # Most of the heavy lifting is in this class for ease of testing.
         qbuffer = self.extract_queries(args, kwargs)
@@ -437,8 +437,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                 cursor.execute(details['query'], (minion_id,))
 
                 # Extract the field names the db has returned and process them
-                self.process_fields([row[0] for row in cursor.description],
-                                           details['depth'])
+                self.process_fields([row[0] for row in cursor.description], details['depth'])
                 self.enter_root(root)
                 self.as_list = details['as_list']
                 if details['with_lists']:
@@ -448,7 +447,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                 self.ignore_null = details['ignore_null']
                 self.process_results(cursor.fetchall())
 
-                log.debug('ext_pillar {0}: Return data: {1}'.format(db_name, self))
+                log.debug('ext_pillar %s: Return data: %s', db_name, self)
         return self.result
 
 

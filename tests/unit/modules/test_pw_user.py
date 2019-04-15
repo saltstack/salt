@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -316,7 +316,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_group = 'saltgroup'
 
-        with patch('salt.utils.get_group_list', MagicMock(return_value=[mock_group])):
+        with patch('salt.utils.user.get_group_list', MagicMock(return_value=[mock_group])):
             self.assertEqual(pw_user.list_groups('name'), [mock_group])
 
     def test_list_users(self):

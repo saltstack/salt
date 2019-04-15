@@ -36,16 +36,16 @@ Connection module for Amazon KMS
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
-from salt.serializers import json
 
 # Import Salt libs
 import salt.utils.compat
 import salt.utils.odict as odict
-from salt.utils.versions import LooseVersion as _LooseVersion
+import salt.serializers.json
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -53,13 +53,6 @@ log = logging.getLogger(__name__)
 try:
     # pylint: disable=unused-import
     import boto
-    # KMS added in version 2.38.0
-    required_boto_version = '2.38.0'
-    if (_LooseVersion(boto.__version__) <
-            _LooseVersion(required_boto_version)):
-        msg = 'boto_kms requires boto {0}.'.format(required_boto_version)
-        log.debug(msg)
-        raise ImportError()
     import boto.kms
     # pylint: enable=unused-import
     logging.getLogger('boto').setLevel(logging.CRITICAL)
@@ -72,9 +65,10 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The boto_kms module could not be loaded: boto libraries not found')
-    return True
+    return salt.utils.versions.check_boto_reqs(
+        boto_ver='2.38.0',
+        check_boto3=False
+    )
 
 
 def __init__(opts):
@@ -146,7 +140,7 @@ def create_key(policy=None, description=None, key_usage=None, region=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     r = {}
-    _policy = json.serialize(policy)
+    _policy = salt.serializers.json.serialize(policy)
     try:
         key_metadata = conn.create_key(
             _policy,
@@ -432,7 +426,7 @@ def get_key_policy(key_id, policy_name, region=None, key=None, keyid=None,
     r = {}
     try:
         key_policy = conn.get_key_policy(key_id, policy_name)
-        r['key_policy'] = json.deserialize(
+        r['key_policy'] = salt.serializers.json.deserialize(
             key_policy['Policy'],
             object_pairs_hook=odict.OrderedDict
         )
@@ -536,7 +530,7 @@ def put_key_policy(key_id, policy_name, policy, region=None, key=None,
 
     r = {}
     try:
-        conn.put_key_policy(key_id, policy_name, json.serialize(policy))
+        conn.put_key_policy(key_id, policy_name, salt.serializers.json.serialize(policy))
         r['result'] = True
     except boto.exception.BotoServerError as e:
         r['result'] = False

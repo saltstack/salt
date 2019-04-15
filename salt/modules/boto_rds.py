@@ -43,25 +43,25 @@ Connection module for Amazon RDS
 '''
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
+# pylint whinging perfectly valid code
+#pylint: disable=W0106
 
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
 # Import Salt libs
-import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.odict as odict
-import salt.utils
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 try:
     #pylint: disable=unused-import
@@ -115,7 +115,7 @@ boto3_param_map = {
     'publicly_accessible': ('PubliclyAccessible', bool),
     'storage_encrypted': ('StorageEncrypted', bool),
     'storage_type': ('StorageType', str),
-    'taglist': ('Tags', list),
+    'tags': ('Tags', list),
     'tde_credential_arn': ('TdeCredentialArn', str),
     'tde_credential_password': ('TdeCredentialPassword', str),
     'vpc_security_group_ids': ('VpcSecurityGroupIds', list),
@@ -127,15 +127,9 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto3_version = '1.3.1'
-    if not HAS_BOTO:
-        return (False, 'The boto_rds module could not be loaded: '
-                'boto libraries not found')
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_rds module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto3_version))
-    else:
-        return True
+    return salt.utils.versions.check_boto_reqs(
+        boto3_ver='1.3.1'
+    )
 
 
 def __init__(opts):
@@ -158,7 +152,7 @@ def exists(name, tags=None, region=None, key=None, keyid=None, profile=None):
         rds = conn.describe_db_instances(DBInstanceIdentifier=name)
         return {'exists': bool(rds)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def option_group_exists(name, tags=None, region=None, key=None, keyid=None,
@@ -176,7 +170,7 @@ def option_group_exists(name, tags=None, region=None, key=None, keyid=None,
         rds = conn.describe_option_groups(OptionGroupName=name)
         return {'exists': bool(rds)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def parameter_group_exists(name, tags=None, region=None, key=None, keyid=None,
@@ -198,7 +192,7 @@ def parameter_group_exists(name, tags=None, region=None, key=None, keyid=None,
         resp = {}
         if e.response['Error']['Code'] == 'DBParameterGroupNotFound':
             resp['exists'] = False
-        resp['error'] = salt.utils.boto3.get_error(e)
+        resp['error'] = __utils__['boto3.get_error'](e)
         return resp
 
 
@@ -223,29 +217,29 @@ def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None,
         if "DBSubnetGroupNotFoundFault" in e.message:
             return {'exists': False}
         else:
-            return {'error': salt.utils.boto3.get_error(e)}
+            return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create(name, allocated_storage, db_instance_class, engine,
            master_username, master_user_password, db_name=None,
            db_security_groups=None, vpc_security_group_ids=None,
-           availability_zone=None, db_subnet_group_name=None,
-           preferred_maintenance_window=None, db_parameter_group_name=None,
-           backup_retention_period=None, preferred_backup_window=None,
-           port=None, multi_az=None, engine_version=None,
-           auto_minor_version_upgrade=None, license_model=None, iops=None,
-           option_group_name=None, character_set_name=None,
-           publicly_accessible=None, wait_status=None, tags=None,
-           db_cluster_identifier=None, storage_type=None,
+           vpc_security_groups=None, availability_zone=None,
+           db_subnet_group_name=None, preferred_maintenance_window=None,
+           db_parameter_group_name=None, backup_retention_period=None,
+           preferred_backup_window=None, port=None, multi_az=None,
+           engine_version=None, auto_minor_version_upgrade=None,
+           license_model=None, iops=None, option_group_name=None,
+           character_set_name=None, publicly_accessible=None, wait_status=None,
+           tags=None, db_cluster_identifier=None, storage_type=None,
            tde_credential_arn=None, tde_credential_password=None,
            storage_encrypted=None, kms_key_id=None, domain=None,
            copy_tags_to_snapshot=None, monitoring_interval=None,
            monitoring_role_arn=None, domain_iam_role_name=None, region=None,
            promotion_tier=None, key=None, keyid=None, profile=None):
     '''
-    Create an RDS
+    Create an RDS Instance
 
-    CLI example to create an RDS::
+    CLI example to create an RDS Instance::
 
         salt myminion boto_rds.create myrds 10 db.t2.micro MySQL sqlusr sqlpassw
     '''
@@ -263,10 +257,16 @@ def create(name, allocated_storage, db_instance_class, engine,
         raise SaltInvocationError('availability_zone and multi_az are mutually'
                                   ' exclusive arguments.')
     if wait_status:
-        wait_statuses = ['available', 'modifying', 'backing-up']
-        if wait_status not in wait_statuses:
-            raise SaltInvocationError('wait_status can be one of: '
-                                      '{0}'.format(wait_statuses))
+        wait_stati = ['available', 'modifying', 'backing-up']
+        if wait_status not in wait_stati:
+            raise SaltInvocationError(
+                'wait_status can be one of: {0}'.format(wait_stati))
+    if vpc_security_groups:
+        v_tmp = __salt__['boto_secgroup.convert_to_group_ids'](
+                groups=vpc_security_groups, region=region, key=key, keyid=keyid,
+                profile=profile)
+        vpc_security_group_ids = (vpc_security_group_ids + v_tmp
+                                  if vpc_security_group_ids else v_tmp)
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -276,13 +276,13 @@ def create(name, allocated_storage, db_instance_class, engine,
         kwargs = {}
         boto_params = set(boto3_param_map.keys())
         keys = set(locals().keys())
+        tags = _tag_doc(tags)
+
         for param_key in keys.intersection(boto_params):
             val = locals()[param_key]
             if val is not None:
                 mapped = boto3_param_map[param_key]
                 kwargs[mapped[0]] = mapped[1](val)
-
-        taglist = _tag_doc(tags)
 
         # Validation doesn't want parameters that are None
         # https://github.com/boto/boto3/issues/400
@@ -294,24 +294,29 @@ def create(name, allocated_storage, db_instance_class, engine,
             return {'created': False}
         if not wait_status:
             return {'created': True, 'message':
-                    'Created RDS instance {0}.'.format(name)}
+                    'RDS instance {0} created.'.format(name)}
 
         while True:
-            log.info('Waiting 10 secs...')
+            jmespath = 'DBInstances[*].DBInstanceStatus'
+            status = describe_db_instances(name=name, jmespath=jmespath,
+                                           region=region, key=key, keyid=keyid,
+                                           profile=profile)
+            if len(status):
+                stat = status[0]
+            else:
+                # Whoops, something is horribly wrong...
+                return {'created': False,
+                        'error': "RDS instance {0} should have been created but"
+                                 " now I can't find it.".format(name)}
+            if stat == wait_status:
+                return {'created': True,
+                        'message': 'RDS instance {0} created (current status '
+                        '{1})'.format(name, stat)}
             time.sleep(10)
-            _describe = describe(name=name, tags=tags, region=region, key=key,
-                                 keyid=keyid, profile=profile)['rds']
-            if not _describe:
-                return {'created': True}
-            if _describe['DBInstanceStatus'] == wait_status:
-                return {'created': True, 'message':
-                        'Created RDS {0} with current status '
-                        '{1}'.format(name, _describe['DBInstanceStatus'])}
-
-            log.info('Current status: {0}'.format(_describe['DBInstanceStatus']))
+            log.info('Instance status after 10 seconds is: %s', stat)
 
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create_read_replica(name, source_name, db_instance_class=None,
@@ -346,7 +351,7 @@ def create_read_replica(name, source_name, db_instance_class=None,
         kwargs = {}
         for key in ('OptionGroupName', 'MonitoringRoleArn'):
             if locals()[key] is not None:
-                kwargs[key] = str(locals()[key])
+                kwargs[key] = str(locals()[key])  # future lint: disable=blacklisted-function
 
         for key in ('MonitoringInterval', 'Iops', 'Port'):
             if locals()[key] is not None:
@@ -369,7 +374,7 @@ def create_read_replica(name, source_name, db_instance_class=None,
 
         return {'exists': bool(rds_replica)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create_option_group(name, engine_name, major_engine_version,
@@ -402,7 +407,7 @@ def create_option_group(name, engine_name, major_engine_version,
 
         return {'exists': bool(rds)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create_parameter_group(name, db_parameter_group_family, description,
@@ -438,7 +443,7 @@ def create_parameter_group(name, db_parameter_group_family, description,
         return {'exists': bool(rds), 'message':
                 'Created RDS parameter group {0}'.format(name)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create_subnet_group(name, description, subnet_ids, tags=None,
@@ -469,7 +474,7 @@ def create_subnet_group(name, description, subnet_ids, tags=None,
 
         return {'created': bool(rds)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def update_parameter_group(name, parameters, apply_method="pending-reboot",
@@ -499,7 +504,7 @@ def update_parameter_group(name, parameters, apply_method="pending-reboot",
         if type(value) is bool:
             item.update({'ParameterValue': 'on' if value else 'off'})
         else:
-            item.update({'ParameterValue': str(value)})
+            item.update({'ParameterValue': str(value)})  # future lint: disable=blacklisted-function
         param_list.append(item)
 
     if not len(param_list):
@@ -514,7 +519,7 @@ def update_parameter_group(name, parameters, apply_method="pending-reboot",
                                              Parameters=param_list)
         return {'results': bool(res)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def describe(name, tags=None, region=None, key=None, keyid=None,
@@ -562,9 +567,59 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
         else:
             return {'rds': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
     except IndexError:
         return {'rds': None}
+
+
+def describe_db_instances(name=None, filters=None, jmespath='DBInstances',
+                          region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a detailed listing of some, or all, DB Instances visible in the
+    current scope.  Arbitrary subelements or subsections of the returned dataset
+    can be selected by passing in a valid JMSEPath filter as well.
+
+    CLI example::
+
+        salt myminion boto_rds.describe_db_instances jmespath='DBInstances[*].DBInstanceIdentifier'
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    pag = conn.get_paginator('describe_db_instances')
+    args = {}
+    args.update({'DBInstanceIdentifier': name}) if name else None
+    args.update({'Filters': filters}) if filters else None
+    pit = pag.paginate(**args)
+    pit = pit.search(jmespath) if jmespath else pit
+    try:
+        return [p for p in pit]
+    except ClientError as e:
+        code = getattr(e, 'response', {}).get('Error', {}).get('Code')
+        if code != 'DBInstanceNotFound':
+            log.error(__utils__['boto3.get_error'](e))
+    return []
+
+
+def describe_db_subnet_groups(name=None, filters=None, jmespath='DBSubnetGroups',
+                              region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a detailed listing of some, or all, DB Subnet Groups visible in the
+    current scope.  Arbitrary subelements or subsections of the returned dataset
+    can be selected by passing in a valid JMSEPath filter as well.
+
+    CLI example::
+
+        salt myminion boto_rds.describe_db_subnet_groups
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    pag = conn.get_paginator('describe_db_subnet_groups')
+    args = {}
+    args.update({'DBSubnetGroupName': name}) if name else None
+    args.update({'Filters': filters}) if filters else None
+    pit = pag.paginate(**args)
+    pit = pit.search(jmespath) if jmespath else pit
+    return [p for p in pit]
 
 
 def get_endpoint(name, tags=None, region=None, key=None, keyid=None,
@@ -591,7 +646,7 @@ def get_endpoint(name, tags=None, region=None, key=None, keyid=None,
                     return endpoint
 
         except ClientError as e:
-            return {'error': salt.utils.boto3.get_error(e)}
+            return {'error': __utils__['boto3.get_error'](e)}
 
     return endpoint
 
@@ -625,7 +680,7 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
             kwargs['SkipFinalSnapshot'] = bool(locals()['skip_final_snapshot'])
 
         if locals()['final_db_snapshot_identifier'] is not None:
-            kwargs['FinalDBSnapshotIdentifier'] = str(locals()['final_db_snapshot_identifier'])
+            kwargs['FinalDBSnapshotIdentifier'] = str(locals()['final_db_snapshot_identifier'])  # future lint: disable=blacklisted-function
 
         res = conn.delete_db_instance(DBInstanceIdentifier=name, **kwargs)
 
@@ -646,9 +701,11 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
                 raise SaltInvocationError('RDS instance {0} has not been '
                                           'deleted completely after {1} '
                                           'seconds'.format(name, timeout))
+            log.info('Waiting up to %s seconds for RDS instance %s to be '
+                     'deleted.', timeout, name)
             time.sleep(10)
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def delete_option_group(name, region=None, key=None, keyid=None, profile=None):
@@ -673,7 +730,7 @@ def delete_option_group(name, region=None, key=None, keyid=None, profile=None):
         return {'deleted': bool(res), 'message':
                 'Deleted RDS option group {0}.'.format(name)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def delete_parameter_group(name, region=None, key=None, keyid=None,
@@ -695,7 +752,7 @@ def delete_parameter_group(name, region=None, key=None, keyid=None,
         return {'deleted': bool(r), 'message':
                 'Deleted RDS parameter group {0}.'.format(name)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def delete_subnet_group(name, region=None, key=None, keyid=None,
@@ -717,7 +774,7 @@ def delete_subnet_group(name, region=None, key=None, keyid=None,
         return {'deleted': bool(r), 'message':
                 'Deleted RDS subnet group {0}.'.format(name)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def describe_parameter_group(name, Filters=None, MaxRecords=None, Marker=None,
@@ -744,7 +801,7 @@ def describe_parameter_group(name, Filters=None, MaxRecords=None, Marker=None,
         kwargs = {}
         for key in ('Marker', 'Filters'):
             if locals()[key] is not None:
-                kwargs[key] = str(locals()[key])
+                kwargs[key] = str(locals()[key])  # future lint: disable=blacklisted-function
 
         if locals()['MaxRecords'] is not None:
             kwargs['MaxRecords'] = int(locals()['MaxRecords'])
@@ -759,7 +816,7 @@ def describe_parameter_group(name, Filters=None, MaxRecords=None, Marker=None,
         return {'results': bool(info), 'message':
                 'Got RDS descrition for group {0}.'.format(name)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def describe_parameters(name, Source=None, MaxRecords=None, Marker=None,
@@ -789,7 +846,7 @@ def describe_parameters(name, Source=None, MaxRecords=None, Marker=None,
         kwargs.update({'DBParameterGroupName': name})
         for key in ('Marker', 'Source'):
             if locals()[key] is not None:
-                kwargs[key] = str(locals()[key])
+                kwargs[key] = str(locals()[key])  # future lint: disable=blacklisted-function
 
         if locals()['MaxRecords'] is not None:
             kwargs['MaxRecords'] = int(locals()['MaxRecords'])
@@ -815,7 +872,7 @@ def describe_parameters(name, Source=None, MaxRecords=None, Marker=None,
         ret['parameters'] = parameters
         return ret
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def modify_db_instance(name,
@@ -892,14 +949,14 @@ def modify_db_instance(name,
                 'Modified RDS db instance {0}.'.format(name),
                 'results': dict(info)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def _tag_doc(tags):
     taglist = []
     if tags is not None:
         for k, v in six.iteritems(tags):
-            if str(k).startswith('__'):
+            if six.text_type(k).startswith('__'):
                 continue
-            taglist.append({'Key': str(k), 'Value': str(v)})
+            taglist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
     return taglist

@@ -34,7 +34,7 @@ Assigned codenames:
 - Boron: ``2016.3.0``
 - Carbon: ``2016.11.0``
 - Nitrogen: ``2017.7.0``
-- Oxygen: ``TBD``
+- Oxygen: ``2018.3.0``
 - Fluorine: ``TBD``
 - Neon: ``TBD``
 - Sodium: ``TBD``

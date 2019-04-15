@@ -41,7 +41,6 @@ Changes
 - Add ability to clone from a snapshot to the VMWare salt-cloud driver.
 - Add ability to specify disk backing mode in the VMWare salt cloud profile.
 
-
 Changelog for v2016.3.3..v2016.3.4
 ==================================
 

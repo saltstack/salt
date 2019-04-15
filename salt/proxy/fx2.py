@@ -171,12 +171,12 @@ Look there to find an example structure for pillar as well as an example
 ``.sls`` file for standing up a Dell Chassis from scratch.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
-import salt.utils
 import salt.utils.http
+import salt.utils.path
 
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ['fx2']
@@ -195,7 +195,7 @@ def __virtual__():
     '''
     Only return if all the modules are available
     '''
-    if not salt.utils.which('racadm'):
+    if not salt.utils.path.which('racadm'):
         return False, 'fx2 proxy minion needs "racadm" to be installed.'
     return True
 
@@ -328,7 +328,7 @@ def chconfig(cmd, *args, **kwargs):
 
     '''
     # Strip the __pub_ keys...is there a better way to do this?
-    for k in kwargs:
+    for k in list(kwargs):
         if k.startswith('__pub_'):
             kwargs.pop(k)
 

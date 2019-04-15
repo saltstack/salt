@@ -10,12 +10,12 @@ import os
 import re
 
 # Import Salt Testing libs
+from tests.support.paths import CODE_DIR
 from tests.support.unit import TestCase
 
 # Import Salt libs
-import tests.integration as integration
 import salt.modules.cmdmod
-import salt.utils
+import salt.utils.platform
 
 
 class DocTestCase(TestCase):
@@ -34,9 +34,9 @@ class DocTestCase(TestCase):
 
         https://github.com/saltstack/salt/issues/12788
         '''
-        salt_dir = integration.CODE_DIR
+        salt_dir = CODE_DIR
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # No grep in Windows, use findstr
             # findstr in windows doesn't prepend 'Binary` to binary files, so
             # use the '/P' switch to skip files with unprintable characters
@@ -58,12 +58,13 @@ class DocTestCase(TestCase):
             regex = re.compile(r':(?!\\)')
             key, val = regex.split(line, 1)
 
-            # Don't test man pages, this file,
-            # the tox virtualenv files, the page
-            # that documents to not use ":doc:",
-            # or the doc/conf.py file
+            # Don't test man pages, this file, the tox or nox virtualenv files,
+            # the page that documents to not use ":doc:", the doc/conf.py file
+            # or the artifacts directory on nox CI test runs
             if 'man' in key \
                     or '.tox/' in key \
+                    or '.nox/' in key \
+                    or 'artifacts/' in key \
                     or key.endswith('test_doc.py') \
                     or key.endswith(os.sep.join(['doc', 'conf.py'])) \
                     or key.endswith(os.sep.join(['conventions', 'documentation.rst'])) \

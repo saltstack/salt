@@ -25,17 +25,17 @@ Most parameters will fall back to cli.ini defaults if None is given.
 
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import datetime
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
-LEA = salt.utils.which_bin(['certbot', 'letsencrypt',
+LEA = salt.utils.path.which_bin(['certbot', 'letsencrypt',
                             'certbot-auto', 'letsencrypt-auto',
                             '/opt/letsencrypt/letsencrypt-auto'])
 LE_LIVE = '/etc/letsencrypt/live/'
@@ -131,10 +131,10 @@ def cert(name,
 
     cert_file = _cert_file(name, 'cert')
     if not __salt__['file.file_exists'](cert_file):
-        log.debug('Certificate {0} does not exist (yet)'.format(cert_file))
+        log.debug('Certificate %s does not exist (yet)', cert_file)
         renew = False
     elif needs_renewal(name, renew):
-        log.debug('Certificate {0} will be renewed'.format(cert_file))
+        log.debug('Certificate %s will be renewed', cert_file)
         cmd.append('--renew-by-default')
         renew = True
     if server:
@@ -169,7 +169,13 @@ def cert(name,
     res = __salt__['cmd.run_all'](' '.join(cmd))
 
     if res['retcode'] != 0:
-        return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
+        if 'expand' in res['stderr']:
+            cmd.append('--expand')
+            res = __salt__['cmd.run_all'](' '.join(cmd))
+            if res['retcode'] != 0:
+                return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
+        else:
+            return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
 
     if 'no action taken' in res['stdout']:
         comment = 'Certificate {0} unchanged'.format(cert_file)

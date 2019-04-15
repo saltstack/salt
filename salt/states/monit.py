@@ -20,8 +20,8 @@ monit_disable_service_monitoring:
     execution module is available.
 '''
 
-
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():

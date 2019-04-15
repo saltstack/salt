@@ -193,14 +193,15 @@ Overriding the alarm values on the resource:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import hashlib
 import logging
 import copy
 
 # Import Salt libs
 import salt.utils.dictupdate as dictupdate
-import salt.ext.six as six
+import salt.utils.stringutils
+from salt.ext import six
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -461,17 +462,17 @@ def present(
             profile
         )
         vpc_id = vpc_id.get('vpc_id')
-        log.debug('Auto Scaling Group {0} is associated with VPC ID {1}'
-                  .format(name, vpc_id))
+        log.debug('Auto Scaling Group %s is associated with VPC ID %s',
+                  name, vpc_id)
     else:
         vpc_id = None
-        log.debug('Auto Scaling Group {0} has no VPC Association'
-                  .format(name))
+        log.debug('Auto Scaling Group %s has no VPC Association', name)
     # if launch_config is defined, manage the launch config first.
     # hash the launch_config dict to create a unique name suffix and then
     # ensure it is present
     if launch_config:
-        launch_config_name = launch_config_name + '-' + hashlib.md5(str(launch_config)).hexdigest()
+        launch_config_bytes = salt.utils.stringutils.to_bytes(str(launch_config))  # future lint: disable=blacklisted-function
+        launch_config_name = launch_config_name + '-' + hashlib.md5(launch_config_bytes).hexdigest()
         args = {
             'name': launch_config_name,
             'region': region,
@@ -628,8 +629,7 @@ def present(
             if asg_property in asg:
                 _value = __utils__['boto3.ordered'](asg[asg_property])
                 if not value == _value:
-                    log_msg = '{0} asg_property differs from {1}'
-                    log.debug(log_msg.format(value, _value))
+                    log.debug('%s asg_property differs from %s', value, _value)
                     proposed.setdefault('old', {}).update({asg_property: _value})
                     proposed.setdefault('new', {}).update({asg_property: value})
                     need_update = True

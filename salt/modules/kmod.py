@@ -2,7 +2,7 @@
 '''
 Module to manage Linux kernel modules
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -10,7 +10,8 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -128,12 +129,12 @@ def available():
 
     built_in_file = os.path.join(mod_dir, 'modules.builtin')
     if os.path.exists(built_in_file):
-        with salt.utils.fopen(built_in_file, 'r') as f:
+        with salt.utils.files.fopen(built_in_file, 'r') as f:
             for line in f:
                 # Strip .ko from the basename
                 ret.append(os.path.basename(line)[:-4])
 
-    for root, dirs, files in os.walk(mod_dir):
+    for root, dirs, files in salt.utils.path.os_walk(mod_dir):
         for fn_ in files:
             if '.ko' in fn_:
                 ret.append(fn_[:fn_.index('.ko')].replace('-', '_'))
@@ -141,7 +142,7 @@ def available():
     if 'Arch' in __grains__['os_family']:
         # Sadly this path is relative to kernel major version but ignores minor version
         mod_dir_arch = '/lib/modules/extramodules-' + os.uname()[2][0:3] + '-ARCH'
-        for root, dirs, files in os.walk(mod_dir_arch):
+        for root, dirs, files in salt.utils.path.os_walk(mod_dir_arch):
             for fn_ in files:
                 if '.ko' in fn_:
                     ret.append(fn_[:fn_.index('.ko')].replace('-', '_'))
@@ -210,14 +211,14 @@ def mod_list(only_persist=False):
         conf = _get_modules_conf()
         if os.path.exists(conf):
             try:
-                with salt.utils.fopen(conf, 'r') as modules_file:
+                with salt.utils.files.fopen(conf, 'r') as modules_file:
                     for line in modules_file:
                         line = line.strip()
                         mod_name = _strip_module_name(line)
                         if not line.startswith('#') and mod_name:
                             mods.add(mod_name)
             except IOError:
-                log.error('kmod module could not open modules file at {0}'.format(conf))
+                log.error('kmod module could not open modules file at %s', conf)
     else:
         for mod in lsmod():
             mods.add(mod['module'])

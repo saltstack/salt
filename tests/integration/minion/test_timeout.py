@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import os
 import sys
 
-import salt.utils
+import salt.utils.platform
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -25,7 +25,7 @@ class MinionTimeoutTestCase(ShellCase):
         '''
         # Launch the command
         sleep_length = 30
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             popen_kwargs = {'env': dict(os.environ, PYTHONPATH=';'.join(sys.path))}
         else:
             popen_kwargs = None

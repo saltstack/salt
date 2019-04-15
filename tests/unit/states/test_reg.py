@@ -3,7 +3,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -17,9 +17,11 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.states.reg as reg
+import salt.utils.platform
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class RegTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.reg
@@ -46,8 +48,10 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
                                            {'vdata': 'a', 'success': True},
                                            {'vdata': 'a', 'success': True}])
         mock_t = MagicMock(return_value=True)
-        with patch.dict(reg.__salt__, {'reg.read_value': mock_read,
-                                       'reg.set_value': mock_t}):
+        mock_cast = MagicMock(return_value=vdata)
+        with patch.dict(reg.__utils__, {'reg.read_value': mock_read,
+                                        'reg.set_value': mock_t,
+                                        'reg.cast_vdata': mock_cast}):
             self.assertDictEqual(reg.present(name,
                                              vname=vname,
                                              vdata=vdata), ret)
@@ -92,17 +96,17 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
         mock_read_false = MagicMock(return_value={'success': False, 'vdata': False})
 
         mock_t = MagicMock(return_value=True)
-        with patch.dict(reg.__salt__, {'reg.read_value': mock_read_false,
+        with patch.dict(reg.__utils__, {'reg.read_value': mock_read_false,
                                        'reg.delete_value': mock_t}):
             self.assertDictEqual(reg.absent(name, vname), ret)
 
-        with patch.dict(reg.__salt__, {'reg.read_value': mock_read_true}):
+        with patch.dict(reg.__utils__, {'reg.read_value': mock_read_true}):
             with patch.dict(reg.__opts__, {'test': True}):
                 ret.update({'comment': '', 'result': None,
                             'changes': {'reg': {'Will remove': {'Entry': vname, 'Key': name}}}})
                 self.assertDictEqual(reg.absent(name, vname), ret)
 
-        with patch.dict(reg.__salt__, {'reg.read_value': mock_read_true,
+        with patch.dict(reg.__utils__, {'reg.read_value': mock_read_true,
                                        'reg.delete_value': mock_t}):
             with patch.dict(reg.__opts__, {'test': False}):
                 ret.update({'result': True,

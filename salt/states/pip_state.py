@@ -20,21 +20,41 @@ requisite to a pkg.installed state for the package which provides pip
 '''
 
 # Import python libs
+<<<<<<< HEAD
 from __future__ import absolute_import
 
 import logging
 import re
 
 import pkg_resources
+=======
+from __future__ import absolute_import, print_function, unicode_literals
+import re
+import logging
+try:
+    import pkg_resources
+    HAS_PKG_RESOURCES = True
+except ImportError:
+    HAS_PKG_RESOURCES = False
+>>>>>>> 530be35a0e53b5b2dfe4dade6260d079736e0b64
 
 # Import 3rd-party libs
 import salt.ext.six as six
 # Import salt libs
-import salt.utils
 import salt.utils.data
+<<<<<<< HEAD
+=======
+import salt.utils.versions
+from salt.version import SaltStackVersion as _SaltStackVersion
+>>>>>>> 530be35a0e53b5b2dfe4dade6260d079736e0b64
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 from salt.version import SaltStackVersion as _SaltStackVersion
 
+<<<<<<< HEAD
+=======
+# Import 3rd-party libs
+from salt.ext import six
+>>>>>>> 530be35a0e53b5b2dfe4dade6260d079736e0b64
 # pylint: disable=import-error
 try:
     import pip
@@ -69,7 +89,7 @@ if HAS_PIP is True:
 
 # pylint: enable=import-error
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'pip'
@@ -79,6 +99,8 @@ def __virtual__():
     '''
     Only load if the pip module is available in __salt__
     '''
+    if HAS_PKG_RESOURCES is False:
+        return False, 'The pkg_resources python library is not installed'
     if 'pip.list' in __salt__:
         return __virtualname__
     return False
@@ -93,7 +115,7 @@ def _fulfills_version_spec(version, version_spec):
     for oper, spec in version_spec:
         if oper is None:
             continue
-        if not salt.utils.compare_versions(ver1=version, oper=oper, ver2=spec, cmp_func=_pep440_version_cmp):
+        if not salt.utils.versions.compare(ver1=version, oper=oper, ver2=spec, cmp_func=_pep440_version_cmp):
             return False
     return True
 
@@ -124,12 +146,10 @@ def _check_pkg_version_format(pkg):
             # vcs+URL urls are not properly parsed.
             # The next line is meant to trigger an AttributeError and
             # handle lower pip versions
-            logger.debug(
-                'Installed pip version: {0}'.format(pip.__version__)
-            )
+            log.debug('Installed pip version: %s', pip.__version__)
             install_req = _from_line(pkg)
         except AttributeError:
-            logger.debug('Installed pip version is lower than 1.2')
+            log.debug('Installed pip version is lower than 1.2')
             supported_vcs = ('git', 'svn', 'hg', 'bzr')
             if pkg.startswith(supported_vcs):
                 for vcs in supported_vcs:
@@ -266,7 +286,8 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
     and 1 if version1 > version2. Return None if there was a problem
     making the comparison.
     '''
-    normalize = lambda x: str(x).split('!', 1)[-1] if ignore_epoch else str(x)
+    normalize = lambda x: six.text_type(x).split('!', 1)[-1] \
+        if ignore_epoch else six.text_type(x)
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 
@@ -278,7 +299,7 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
         if pkg_resources.parse_version(pkg1) > pkg_resources.parse_version(pkg2):
             return 1
     except Exception as exc:
-        logger.exception(exc)
+        log.exception(exc)
     return None
 
 
@@ -592,8 +613,8 @@ def installed(name,
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
     if 'no_chown' in kwargs:
-        salt.utils.warn_until(
-            'Flourine',
+        salt.utils.versions.warn_until(
+            'Fluorine',
             'The no_chown argument has been deprecated and is no longer used. '
             'Its functionality was removed in Boron.')
         kwargs.pop('no_chown')
@@ -615,7 +636,7 @@ def installed(name,
     # prepro = lambda pkg: pkg if type(pkg) == str else \
     #     ' '.join((pkg.items()[0][0], pkg.items()[0][1].replace(',', ';')))
     # pkgs = ','.join([prepro(pkg) for pkg in pkgs])
-    prepro = lambda pkg: pkg if isinstance(pkg, str) else \
+    prepro = lambda pkg: pkg if isinstance(pkg, six.string_types) else \
         ' '.join((six.iteritems(pkg)[0][0], six.iteritems(pkg)[0][1]))
     pkgs = [prepro(pkg) for pkg in pkgs]
 
@@ -632,8 +653,8 @@ def installed(name,
     if use_wheel:
         min_version = '1.4'
         max_version = '9.0.3'
-        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
-        too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
         if too_low or too_high:
             ret['result'] = False
             ret['comment'] = ('The \'use_wheel\' option is only supported in '
@@ -645,8 +666,8 @@ def installed(name,
     if no_use_wheel:
         min_version = '1.4'
         max_version = '9.0.3'
-        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
-        too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
         if too_low or too_high:
             ret['result'] = False
             ret['comment'] = ('The \'no_use_wheel\' option is only supported in '
@@ -657,7 +678,7 @@ def installed(name,
     # Check that the pip binary supports the 'no_binary' option
     if no_binary:
         min_version = '7.0.0'
-        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
         if too_low:
             ret['result'] = False
             ret['comment'] = ('The \'no_binary\' option is only supported in '
@@ -675,7 +696,7 @@ def installed(name,
                    repo,
                    version=_SaltStackVersion.from_name('Lithium').formatted_version
                ))
-        salt.utils.warn_until('Lithium', msg)
+        salt.utils.versions.warn_until('Lithium', msg)
         ret.setdefault('warnings', []).append(msg)
         name = repo
 
@@ -727,7 +748,7 @@ def installed(name,
             pip_list = __salt__['pip.list'](bin_env=bin_env, user=user, cwd=cwd)
         # If we fail, then just send False, and we'll try again in the next function call
         except Exception as exc:
-            logger.exception(exc)
+            log.exception(exc)
             pip_list = False
 
         for prefix, state_pkg_name, version_spec in pkgs_details:
@@ -1033,7 +1054,7 @@ def uptodate(name,
     try:
         packages = __salt__['pip.list_upgrades'](bin_env=bin_env, user=user, cwd=cwd)
     except Exception as e:
-        ret['comment'] = str(e)
+        ret['comment'] = six.text_type(e)
         return ret
 
     if not packages:

@@ -180,6 +180,404 @@ available, since that's not actually part of what's being tested, we mocked that
 import by patching ``sys.modules`` when tests are running.
 
 
+Mocking Filehandles
+-------------------
+
+.. note::
+    This documentation applies to the 2018.3 release cycle and newer. The
+    extended functionality for ``mock_open`` described below does not exist in
+    the 2017.7 and older release branches.
+
+Opening files in Salt is done using ``salt.utils.files.fopen()``. When testing
+code that reads from files, the ``mock_open`` helper can be used to mock
+filehandles. Note that is not the same ``mock_open`` as
+:py:func:`unittest.mock.mock_open` from the Python standard library, but rather
+a separate implementation which has additional functionality.
+
+.. code-block:: python
+
+    from tests.support.unit import TestCase, skipIf
+    from tests.support.mock import (
+        patch
+        mock_open,
+        NO_MOCK,
+        NO_MOCK_REASON,
+    )
+
+    import salt.modules.mymod as mymod
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    class MyAwesomeTestCase(TestCase):
+
+        def test_something(self):
+            fopen_mock = mock_open(read_data='foo\nbar\nbaz\n')
+            with patch('salt.utils.files.fopen', fopen_mock):
+                result = mymod.myfunc()
+                assert result is True
+
+This will force any filehandle opened to mimic a filehandle which, when read,
+produces the specified contents.
+
+.. important::
+    **String Types**
+
+    When running tests on Python 2, ``mock_open`` will convert any ``unicode``
+    types to ``str`` types to more closely reproduce Python 2 behavior (file
+    reads are always ``str`` types in Python 2, irrespective of mode).
+
+    However, when configuring your read_data, make sure that you are using
+    bytestrings (e.g. ``b'foo\nbar\nbaz\n'``) when the code you are testing is
+    opening a file for binary reading, otherwise the tests will fail on Python
+    3. The mocked filehandles produced by ``mock_open`` will raise a
+    :py:obj:`TypeError` if you attempt to read a bytestring when opening for
+    non-binary reading, and similarly will not let you read a string when
+    opening a file for binary reading. They will also not permit bytestrings to
+    be "written" if the mocked filehandle was opened for non-binary writing,
+    and vice-versa when opened for non-binary writing. These enhancements force
+    test writers to write more accurate tests.
+
+More Complex Scenarios
+**********************
+
+.. _unit-tests-multiple-file-paths:
+
+Multiple File Paths
++++++++++++++++++++
+
+What happens when the code being tested reads from more than one file? For
+those cases, you can pass ``read_data`` as a dictionary:
+
+.. code-block:: python
+
+    import textwrap
+
+    from tests.support.unit import TestCase, skipIf
+    from tests.support.mock import (
+        patch
+        mock_open,
+        NO_MOCK,
+        NO_MOCK_REASON,
+    )
+
+    import salt.modules.mymod as mymod
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    class MyAwesomeTestCase(TestCase):
+
+        def test_something(self):
+            contents = {
+                '/etc/foo.conf': textwrap.dedent('''\
+                    foo
+                    bar
+                    baz
+                    '''),
+                '/etc/b*.conf': textwrap.dedent('''\
+                    one
+                    two
+                    three
+                    '''),
+            }
+            fopen_mock = mock_open(read_data=contents)
+            with patch('salt.utils.files.fopen', fopen_mock):
+                result = mymod.myfunc()
+                assert result is True
+
+This would make ``salt.utils.files.fopen()`` produce filehandles with different
+contents depending on which file was being opened by the code being tested.
+``/etc/foo.conf`` and any file matching the pattern ``/etc/b*.conf`` would
+work, while opening any other path would result in a
+:py:obj:`FileNotFoundError` being raised (in Python 2, an ``IOError``).
+
+Since file patterns are supported, it is possible to use a pattern of ``'*'``
+to define a fallback if no other patterns match the filename being opened. The
+below two ``mock_open`` calls would produce identical results:
+
+.. code-block:: python
+
+    mock_open(read_data='foo\n')
+    mock_open(read_data={'*': 'foo\n'})
+
+.. note::
+    Take care when specifying the ``read_data`` as a dictionary, in cases where
+    the patterns overlap (e.g. when both ``/etc/b*.conf`` and ``/etc/bar.conf``
+    are in the ``read_data``). Dictionary iteration order will determine which
+    pattern is attempted first, second, etc., with the exception of ``*`` which
+    is used when no other pattern matches. If your test case calls for
+    specifying overlapping patterns, and you are not running Python 3.6 or
+    newer, then an ``OrderedDict`` can be used to ensure matching is handled in
+    the desired way:
+
+    .. code-block:: python
+
+        contents = OrderedDict()
+        contents['/etc/bar.conf'] = 'foo\nbar\nbaz\n'
+        contents['/etc/b*.conf'] = IOError(errno.EACCES, 'Permission denied')
+        contents['*'] = 'This is a fallback for files not beginning with "/etc/b"\n'
+        fopen_mock = mock_open(read_data=contents)
+
+Raising Exceptions
+++++++++++++++++++
+
+Instead of a string, an exception can also be used as the ``read_data``:
+
+.. code-block:: python
+
+    import errno
+
+    from tests.support.unit import TestCase, skipIf
+    from tests.support.mock import (
+        patch
+        mock_open,
+        NO_MOCK,
+        NO_MOCK_REASON,
+    )
+
+    import salt.modules.mymod as mymod
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    class MyAwesomeTestCase(TestCase):
+
+        def test_something(self):
+            exc = IOError(errno.EACCES, 'Permission denied')
+            fopen_mock = mock_open(read_data=exc)
+            with patch('salt.utils.files.fopen', fopen_mock):
+                mymod.myfunc()
+
+The above example would raise the specified exception when any file is opened.
+The expectation would be that ``mymod.myfunc()`` would gracefully handle the
+IOError, so a failure to do that would result in it being raised and causing
+the test to fail.
+
+Multiple File Contents
+++++++++++++++++++++++
+
+For cases in which a file is being read more than once, and it is necessary to
+test a function's behavior based on what the file looks like the second (or
+third, etc.) time it is read, just specify the the contents for that file as a
+list. Each time the file is opened, ``mock_open`` will cycle through the list
+and produce a mocked filehandle with the specified contents. For example:
+
+.. code-block:: python
+
+    import errno
+    import textwrap
+
+    from tests.support.unit import TestCase, skipIf
+    from tests.support.mock import (
+        patch
+        mock_open,
+        NO_MOCK,
+        NO_MOCK_REASON,
+    )
+
+    import salt.modules.mymod as mymod
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    class MyAwesomeTestCase(TestCase):
+
+        def test_something(self):
+            contents = {
+                '/etc/foo.conf': [
+                    textwrap.dedent('''\
+                        foo
+                        bar
+                        '''),
+                    textwrap.dedent('''\
+                        foo
+                        bar
+                        baz
+                        '''),
+                ],
+                '/etc/b*.conf': [
+                    IOError(errno.ENOENT, 'No such file or directory'),
+                    textwrap.dedent('''\
+                        one
+                        two
+                        three
+                        '''),
+                ],
+            }
+            fopen_mock = mock_open(read_data=contents)
+            with patch('salt.utils.files.fopen', fopen_mock):
+                result = mymod.myfunc()
+                assert result is True
+
+Using this example, the first time ``/etc/foo.conf`` is opened, it will
+simulate a file with the first string in the list as its contents, while the
+second time it is opened, the simulated file's contents will be the second
+string in the list.
+
+If no more items remain in the list, then attempting to open the file will
+raise a :py:obj:`RuntimeError`. In the example above, if ``/etc/foo.conf`` were
+to be opened a third time, a :py:obj:`RuntimeError` would be raised.
+
+Note that exceptions can also be mixed in with strings when using this
+technique. In the above example, if ``/etc/bar.conf`` were to be opened twice,
+the first time would simulate the file not existing, while the second time
+would simulate a file with string defined in the second element of the list.
+
+.. note::
+    Notice that the second path in the ``contents`` dictionary above
+    (``/etc/b*.conf``) contains an asterisk. The items in the list are cycled
+    through for each match of a given pattern (*not* separately for each
+    individual file path), so this means that only two files matching that
+    pattern could be opened before the next one would raise a
+    :py:obj:`RuntimeError`.
+
+Accessing the Mocked Filehandles in a Test
+******************************************
+
+.. note::
+    The code for the ``MockOpen``, ``MockCall``, and ``MockFH`` classes
+    (referenced below) can be found in ``tests/support/mock.py``. There are
+    extensive unit tests for them located in ``tests/unit/test_mock.py``.
+
+The above examples simply show how to mock ``salt.utils.files.fopen()`` to
+simulate files with the contents you desire, but you can also access the mocked
+filehandles (and more), and use them to craft assertions in your tests. To do
+so, just add an ``as`` clause to the end of the ``patch`` statement:
+
+.. code-block:: python
+
+    fopen_mock = mock_open(read_data='foo\nbar\nbaz\n')
+    with patch('salt.utils.files.fopen', fopen_mock) as m_open:
+        # do testing here
+        ...
+        ...
+
+When doing this, ``m_open`` will be a ``MockOpen`` instance. It will contain
+several useful attributes:
+
+- **read_data** - A dictionary containing the ``read_data`` passed when
+  ``mock_open`` was invoked. In the event that :ref:`multiple file paths
+  <unit-tests-multiple-file-paths>` are not used, then this will be a
+  dictionary mapping ``*`` to the ``read_data`` passed to ``mock_open``.
+
+- **call_count** - An integer representing how many times
+  ``salt.utils.files.fopen()`` was called to open a file.
+
+- **calls** - A list of ``MockCall`` objects. A ``MockCall`` object is a simple
+  class which stores the arguments passed to it, making the positional
+  arguments available via its ``args`` attribute, and the keyword arguments
+  available via its ``kwargs`` attribute.
+
+  .. code-block:: python
+
+      from tests.support.unit import TestCase, skipIf
+      from tests.support.mock import (
+          patch
+          mock_open,
+          MockCall,
+          NO_MOCK,
+          NO_MOCK_REASON,
+      )
+
+      import salt.modules.mymod as mymod
+
+      @skipIf(NO_MOCK, NO_MOCK_REASON)
+      class MyAwesomeTestCase(TestCase):
+
+          def test_something(self):
+
+              with patch('salt.utils.files.fopen', mock_open(read_data=b'foo\n')) as m_open:
+                  mymod.myfunc()
+                  # Assert that only two opens attempted
+                  assert m_open.call_count == 2
+                  # Assert that only /etc/foo.conf was opened
+                  assert all(call.args[0] == '/etc/foo.conf' for call in m_open.calls)
+                  # Asser that the first open was for binary read, and the
+                  # second was for binary write.
+                  assert m_open.calls == [
+                      MockCall('/etc/foo.conf', 'rb'),
+                      MockCall('/etc/foo.conf', 'wb'),
+                  ]
+
+  Note that ``MockCall`` is imported from ``tests.support.mock`` in the above
+  example. Also, the second assert above is redundant since it is covered in
+  the final assert, but both are included simply as an example.
+
+- **filehandles** - A dictionary mapping the unique file paths opened, to lists
+  of ``MockFH`` objects. Each open creates a unique ``MockFH`` object. Each
+  ``MockFH`` object itself has a number of useful attributes:
+
+  - **filename** - The path to the file which was opened using
+    ``salt.utils.files.fopen()``
+
+  - **call** - A ``MockCall`` object representing the arguments passed to
+    ``salt.utils.files.fopen()``. Note that this ``MockCall`` is also available
+    in the parent ``MockOpen`` instance's **calls** list.
+
+  - The following methods are mocked using :py:class:`unittest.mock.Mock`
+    objects, and Mock's built-in asserts (as well as the call data) can be used
+    as you would with any other Mock object:
+
+    - **.read()**
+
+    - **.readlines()**
+
+    - **.readline()**
+
+    - **.close()**
+
+    - **.write()**
+
+    - **.writelines()**
+
+    - **.seek()**
+
+  - The read functions (**.read()**, **.readlines()**, **.readline()**) all
+    work as expected, as does iterating through the file line by line (i.e.
+    ``for line in fh:``).
+
+  - The **.tell()** method is also implemented in such a way that it updates
+    after each time the mocked filehandle is read, and will report the correct
+    position. The one caveat here is that **.seek()** doesn't actually work
+    (it's simply mocked), and will not change the position. Additionally,
+    neither **.write()** or **.writelines()** will modify the mocked
+    filehandle's contents.
+
+  - The attributes **.write_calls** and **.writelines_calls** (no parenthesis)
+    are available as shorthands and correspond to lists containing the contents
+    passed for all calls to **.write()** and **.writelines()**, respectively.
+
+Examples
+++++++++
+
+.. code-block:: python
+
+    with patch('salt.utils.files.fopen', mock_open(read_data=contents)) as m_open:
+        # Run the code you are unit testing
+        mymod.myfunc()
+        # Check that only the expected file was opened, and that it was opened
+        # only once.
+        assert m_open.call_count == 1
+        assert list(m_open.filehandles) == ['/etc/foo.conf']
+        # "opens" will be a list of all the mocked filehandles opened
+        opens = m_open.filehandles['/etc/foo.conf']
+        # Check that we wrote the expected lines ("expected" here is assumed to
+        # be a list of strings)
+        assert opens[0].write_calls == expected
+
+.. code-block:: python
+
+    with patch('salt.utils.files.fopen', mock_open(read_data=contents)) as m_open:
+        # Run the code you are unit testing
+        mymod.myfunc()
+        # Check that .readlines() was called (remember, it's a Mock)
+        m_open.filehandles['/etc/foo.conf'][0].readlines.assert_called()
+
+.. code-block:: python
+
+    with patch('salt.utils.files.fopen', mock_open(read_data=contents)) as m_open:
+        # Run the code you are unit testing
+        mymod.myfunc()
+        # Check that we read the file and also wrote to it
+        m_open.filehandles['/etc/foo.conf'][0].read.assert_called_once()
+        m_open.filehandles['/etc/foo.conf'][1].writelines.assert_called_once()
+
+.. _`Mock()`: https://github.com/testing-cabal/mock
+
+
 Naming Conventions
 ------------------
 
@@ -198,7 +596,7 @@ prepended with the ``test_`` naming syntax, as described above.
 If a function does not start with ``test_``, then the function acts as a "normal"
 function and is not considered a testing function. It will not be included in the
 test run or testing output. The same principle applies to unit test files that
-do not have the ``test_*.py`` naming syntax. This test file naming convention 
+do not have the ``test_*.py`` naming syntax. This test file naming convention
 is how the test runner recognizes that a test file contains unit tests.
 
 
@@ -209,8 +607,7 @@ Most commonly, the following imports are necessary to create a unit test:
 
 .. code-block:: python
 
-    # Import Salt Testing libs
-    from tests.support.unit import skipIf, TestCase
+    from tests.support.unit import TestCase, skipIf
 
 If you need mock support to your tests, please also import:
 
@@ -513,7 +910,7 @@ This function contains two raise statements and one return statement, so we
 know that we will need (at least) three tests.  It has two function arguments
 and many references to non-builtin functions.  In the tests below you will see
 that MagicMock's ``patch()`` method may be used as a context manager or as a
-decorator. When patching the salt dunders however, please use the context 
+decorator. When patching the salt dunders however, please use the context
 manager approach.
 
 There are three test functions, one for each raise and return statement in the

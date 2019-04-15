@@ -3,21 +3,22 @@
 integration tests for mac_service
 '''
 
-# Import python libs
-from __future__ import absolute_import, print_function
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.path
+import salt.utils.platform
 
 
-@skipIf(not salt.utils.is_darwin(), 'Test only available on macOS')
-@skipIf(not salt.utils.which('launchctl'), 'Test requires launchctl binary')
-@skipIf(not salt.utils.which('plutil'), 'Test requires plutil binary')
+@skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
+@skipIf(not salt.utils.path.which('launchctl'), 'Test requires launchctl binary')
+@skipIf(not salt.utils.path.which('plutil'), 'Test requires plutil binary')
 @skip_if_not_root
 class MacServiceModuleTest(ModuleCase):
     '''
@@ -39,8 +40,10 @@ class MacServiceModuleTest(ModuleCase):
         '''
         if self.SERVICE_ENABLED:
             self.run_function('service.start', [self.SERVICE_NAME])
+            self.run_function('service.enable', [self.SERVICE_NAME])
         else:
             self.run_function('service.stop', [self.SERVICE_NAME])
+            self.run_function('service.disable', [self.SERVICE_NAME])
 
     def test_show(self):
         '''

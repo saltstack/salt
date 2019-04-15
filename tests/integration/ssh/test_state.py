@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import threading
 import time
+import logging
 
 # Import Salt Testing Libs
 from tests.support.case import SSHCase
+from tests.support.helpers import flaky
 from tests.support.paths import TMP
-from tests.support.unit import skipIf
 
 # Import Salt Libs
 from salt.ext import six
@@ -19,13 +20,17 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 SSH_SLS = 'ssh_state_tests'
 SSH_SLS_FILE = '/tmp/test'
 
+log = logging.getLogger(__name__)
+
 
 class SSHStateTest(SSHCase):
     '''
     testing the state system with salt-ssh
     '''
     def _check_dict_ret(self, ret, val, exp_ret, equal=True):
+        self.assertIsInstance(ret, dict)
         for key, value in ret.items():
+            self.assertIsInstance(value, dict)
             if equal:
                 self.assertEqual(value[val], exp_ret)
             else:
@@ -34,7 +39,7 @@ class SSHStateTest(SSHCase):
     def _check_request(self, empty=False):
         check = self.run_function('state.check_request', wipe=False)
         if empty:
-            self.assertFalse(bool(check))
+            self.assertFalse(bool(check), 'bool({0}) is not False'.format(check))
         else:
             self._check_dict_ret(ret=check['default']['test_run']['local']['return'],
                        val='__sls__', exp_ret=SSH_SLS)
@@ -88,13 +93,12 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function('file.file_exists', [SSH_SLS_FILE], wipe=False)
         self.assertFalse(check_file)
 
-    @skipIf(six.PY3, 'Skipped on Python3 for 2017.7 branch only')
     def test_state_show_top(self):
         '''
         test state.show_top with salt-ssh
         '''
         ret = self.run_function('state.show_top')
-        self.assertEqual(ret, {'base': list(set(['master_tops_test']).union(['core']))})
+        self.assertEqual(ret, {'base': ['core', 'master_tops_test']})
 
     def test_state_single(self):
         '''
@@ -107,7 +111,9 @@ class SSHStateTest(SSHCase):
         single = self.run_function('state.single',
                                    ['test.succeed_with_changes name=itworked'])
 
+        self.assertIsInstance(single, dict)
         for key, value in six.iteritems(single):
+            self.assertIsInstance(value, dict)
             self.assertEqual(value['name'], ret_out['name'])
             self.assertEqual(value['result'], ret_out['result'])
             self.assertEqual(value['comment'], ret_out['comment'])
@@ -118,8 +124,8 @@ class SSHStateTest(SSHCase):
         '''
         high = self.run_function('state.show_highstate')
         destpath = os.path.join(TMP, 'testfile')
-        self.assertTrue(isinstance(high, dict))
-        self.assertTrue(destpath in high)
+        self.assertIsInstance(high, dict)
+        self.assertIn(destpath, high)
         self.assertEqual(high[destpath]['__env__'], 'base')
 
     def test_state_high(self):
@@ -130,9 +136,12 @@ class SSHStateTest(SSHCase):
                    'result': True,
                    'comment': 'Success!'}
 
-        high = self.run_function('state.high', ['"{"itworked": {"test": ["succeed_with_changes"]}}"'])
+        high = self.run_function('state.high',
+                                 ['"{"itworked": {"test": ["succeed_with_changes"]}}"'])
 
+        self.assertIsInstance(high, dict)
         for key, value in six.iteritems(high):
+            self.assertIsInstance(value, dict)
             self.assertEqual(value['name'], ret_out['name'])
             self.assertEqual(value['result'], ret_out['result'])
             self.assertEqual(value['comment'], ret_out['comment'])
@@ -142,8 +151,8 @@ class SSHStateTest(SSHCase):
         state.show_lowstate with salt-ssh
         '''
         low = self.run_function('state.show_lowstate')
-        self.assertTrue(isinstance(low, list))
-        self.assertTrue(isinstance(low[0], dict))
+        self.assertIsInstance(low, list)
+        self.assertIsInstance(low[0], dict)
 
     def test_state_low(self):
         '''
@@ -153,9 +162,13 @@ class SSHStateTest(SSHCase):
                    'result': True,
                    'comment': 'Success!'}
 
-        low = self.run_function('state.low', ['"{"state": "test", "fun": "succeed_with_changes", "name": "itworked"}"'])
+        low = self.run_function(
+                'state.low',
+                ['"{"state": "test", "fun": "succeed_with_changes", "name": "itworked"}"'])
 
+        self.assertIsInstance(low, dict)
         for key, value in six.iteritems(low):
+            self.assertIsInstance(value, dict)
             self.assertEqual(value['name'], ret_out['name'])
             self.assertEqual(value['result'], ret_out['result'])
             self.assertEqual(value['comment'], ret_out['comment'])
@@ -186,6 +199,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function('file.file_exists', [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
 
+    @flaky
     def test_state_running(self):
         '''
         test state.running with salt-ssh
@@ -197,34 +211,33 @@ class SSHStateTest(SSHCase):
         bg_thread.start()
 
         expected = 'The function "state.pkg" is running as'
-        for _ in range(3):
+        state_ret = []
+        for _ in range(30):
             time.sleep(5)
             get_sls = self.run_function('state.running', wipe=False)
-            try:
-                self.assertIn(expected, ' '.join(get_sls))
-            except AssertionError:
-                pass
-            else:
+            state_ret.append(get_sls)
+            if expected in ' '.join(get_sls):
                 # We found the expected return
                 break
         else:
             self.fail(
-                'Did not find \'{0}\' in state.running return'.format(expected)
+                    'Did not find \'{0}\' in state.running return: {1}'.format(expected, state_ret)
             )
 
         # make sure we wait until the earlier state is complete
         future = time.time() + 120
         while True:
-            if time.time() > future:
-                break
             if expected not in ' '.join(self.run_function('state.running', wipe=False)):
                 break
+            if time.time() > future:
+                self.fail('state.pkg is still running overtime. Test did not clean up correctly.')
 
     def tearDown(self):
         '''
         make sure to clean up any old ssh directories
         '''
         salt_dir = self.run_function('config.get', ['thin_dir'], wipe=False)
+        self.assertIsInstance(salt_dir, six.string_types)
         if os.path.exists(salt_dir):
             shutil.rmtree(salt_dir)
 

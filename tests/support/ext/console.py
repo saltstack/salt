@@ -51,7 +51,7 @@ def _getTerminalSize_windows():
     if res:
         (bufx, bufy, curx, cury, wattr,
          left, top, right, bottom, maxx, maxy) = struct.unpack(
-             'hhhhHhhhhhh', csbi.raw)
+             b'hhhhHhhhhhh', csbi.raw)
         sizex = right - left + 1
         sizey = bottom - top + 1
         return sizex, sizey
@@ -82,7 +82,7 @@ def _getTerminalSize_linux():
     def ioctl_GWINSZ(fd):
         try:
             cr = struct.unpack(
-                'hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234')
+                b'hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234')
             )
         except Exception:
             return None

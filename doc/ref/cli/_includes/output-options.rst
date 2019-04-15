@@ -6,12 +6,9 @@ Output Options
     Pass in an alternative outputter to display the return of data. This
     outputter can be any of the available outputters:
 
-        ``grains``, ``highstate``, ``json``, ``key``, ``overstatestage``, ``pprint``, ``raw``, ``txt``, ``yaml``
+        ``highstate``, ``json``, ``key``, ``overstatestage``, ``pprint``, ``raw``, ``txt``, ``yaml``, and :ref:`many others <all-salt.output>`.
 
-    Some outputters are formatted only for data returned from specific
-    functions; for instance, the ``grains`` outputter will not work for non-grains
-    data.
-
+    Some outputters are formatted only for data returned from specific functions.
     If an outputter is used that does not support the data passed into it, then
     Salt will fall back on the ``pprint`` outputter and display the return data
     using the Python ``pprint`` standard library module.

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -66,11 +66,26 @@ class TestGemModule(TestCase, LoaderModuleMockMixin):
                         {'rvm.is_installed': MagicMock(return_value=False),
                          'rbenv.is_installed': MagicMock(return_value=True),
                          'rbenv.do': mock}),\
-                patch('salt.utils.is_windows', return_value=False):
+                patch('salt.utils.platform.is_windows', return_value=False):
             gem._gem(['install', 'rails'])
             mock.assert_called_once_with(
                 ['gem', 'install', 'rails'],
                 runas=None
+            )
+
+    def test_install_pre_rubygems_3(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(gem.__salt__,
+                        {'rvm.is_installed': MagicMock(return_value=False),
+                         'rbenv.is_installed': MagicMock(return_value=False),
+                         'cmd.run_all': mock}),\
+                patch.object(
+                    gem, '_has_rubygems_3', MagicMock(return_value=True)):
+            gem.install('rails', pre_releases=True)
+            mock.assert_called_once_with(
+                ['gem', 'install', 'rails', '--no-document', '--prerelease'],
+                runas=None,
+                python_shell=False
             )
 
     def test_install_pre(self):
@@ -78,7 +93,9 @@ class TestGemModule(TestCase, LoaderModuleMockMixin):
         with patch.dict(gem.__salt__,
                         {'rvm.is_installed': MagicMock(return_value=False),
                          'rbenv.is_installed': MagicMock(return_value=False),
-                         'cmd.run_all': mock}):
+                         'cmd.run_all': mock}),\
+                patch.object(
+                    gem, '_has_rubygems_3', MagicMock(return_value=False)):
             gem.install('rails', pre_releases=True)
             mock.assert_called_once_with(
                 ['gem', 'install', 'rails', '--no-rdoc', '--no-ri', '--pre'],

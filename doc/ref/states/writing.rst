@@ -205,6 +205,8 @@ This code will call the `managed` function in the :mod:`file
 <salt.states.file>` state module and pass the arguments ``name`` and ``source``
 to it.
 
+.. _state-return-data:
+
 Return Data
 ===========
 
@@ -229,25 +231,30 @@ A State Module must return a dict containing the following keys/values:
   ``test=True``, and changes would have been made if the state was not run in
   test mode.
 
-  +--------------------+-----------+-----------+
-  |                    | live mode | test mode |
-  +====================+===========+===========+
-  | no changes         | ``True``  | ``True``  |
-  +--------------------+-----------+-----------+
-  | successful changes | ``True``  | ``None``  |
-  +--------------------+-----------+-----------+
-  | failed changes     | ``False`` | ``None``  |
-  +--------------------+-----------+-----------+
+  +--------------------+-----------+------------------------+
+  |                    | live mode | test mode              |
+  +====================+===========+========================+
+  | no changes         | ``True``  | ``True``               |
+  +--------------------+-----------+------------------------+
+  | successful changes | ``True``  | ``None``               |
+  +--------------------+-----------+------------------------+
+  | failed changes     | ``False`` | ``False`` or ``None``  |
+  +--------------------+-----------+------------------------+
 
   .. note::
 
-      Test mode does not predict if the changes will be successful or not.
+      Test mode does not predict if the changes will be successful or not,
+      and hence the result for pending changes is usually ``None``.
 
-- **comment:** A string containing a summary of the result.
+      However, if a state is going to fail and this can be determined
+      in test mode without applying the change, ``False`` can be returned.
 
-The return data can also, include the **pchanges** key, this stands for
-`predictive changes`. The **pchanges** key informs the State system what
-changes are predicted to occur.
+- **comment:** A list of strings or a single string summarizing the result.
+  Note that support for lists of strings is available as of Salt 2018.3.0.
+  Lists of strings will be joined with newlines to form the final comment;
+  this is useful to allow multiple comments from subparts of a state.
+  Prefer to keep line lengths short (use multiple lines as needed),
+  and end with punctuation (e.g. a period) to delimit multiple comments.
 
 .. note::
 
@@ -434,7 +441,6 @@ Example state module
             'changes': {},
             'result': False,
             'comment': '',
-            'pchanges': {},
             }
 
         # Start with basic error-checking. Do all the passed parameters make sense
@@ -455,7 +461,7 @@ Example state module
         # in ``test=true`` mode.
         if __opts__['test'] == True:
             ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
-            ret['pchanges'] = {
+            ret['changes'] = {
                 'old': current_state,
                 'new': 'Description, diff, whatever of the new state',
             }

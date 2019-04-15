@@ -3,15 +3,15 @@
 Tests for the fileserver runner
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import contextlib
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 
 class FileserverTest(ShellCase):
@@ -163,7 +163,7 @@ class FileserverTest(ShellCase):
 
     # Git doesn't handle symlinks in Windows. See the thread below:
     # http://stackoverflow.com/questions/5917249/git-symlinks-in-windows
-    @skipIf(salt.utils.is_windows(),
+    @skipIf(salt.utils.platform.is_windows(),
             'Git for Windows does not preserve symbolic links when cloning')
     def test_symlink_list(self):
         '''

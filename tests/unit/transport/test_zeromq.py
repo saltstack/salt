@@ -4,7 +4,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import time
 import threading
@@ -29,8 +29,9 @@ import tornado.gen
 # Import Salt libs
 import salt.config
 import salt.log.setup
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.process
+import salt.utils.platform
 import salt.transport.server
 import salt.transport.client
 import salt.exceptions
@@ -143,6 +144,17 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         TODO: something besides echo
         '''
         raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
+
+    def test_master_uri_override(self):
+        '''
+        ensure master_uri kwarg is respected
+        '''
+        # minion_config should be 127.0.0.1, we want a different uri that still connects
+        uri = 'tcp://{master_ip}:{master_port}'.format(master_ip='localhost', master_port=self.minion_config['master_port'])
+
+        channel = salt.transport.Channel.factory(self.minion_config, master_uri=uri)
+        self.assertIn('localhost', channel.master_uri)
+        del channel
 
 
 @flaky
@@ -311,6 +323,55 @@ class AsyncReqMessageClientPoolTest(TestCase):
         self.assertEqual([], self.message_client_pool.message_clients)
 
 
+class ZMQConfigTest(TestCase):
+    def test_master_uri(self):
+        '''
+        test _get_master_uri method
+        '''
+
+        m_ip = '127.0.0.1'
+        m_port = 4505
+        s_ip = '111.1.0.1'
+        s_port = 4058
+
+        m_ip6 = '1234:5678::9abc'
+        s_ip6 = '1234:5678::1:9abc'
+
+        with patch('salt.transport.zeromq.LIBZMQ_VERSION_INFO', (4, 1, 6)), \
+            patch('salt.transport.zeromq.ZMQ_VERSION_INFO', (16, 0, 1)):
+            # pass in both source_ip and source_port
+            assert salt.transport.zeromq._get_master_uri(master_ip=m_ip,
+                                                         master_port=m_port,
+                                                         source_ip=s_ip,
+                                                         source_port=s_port) == 'tcp://{0}:{1};{2}:{3}'.format(s_ip, s_port, m_ip, m_port)
+
+            assert salt.transport.zeromq._get_master_uri(master_ip=m_ip6,
+                                                         master_port=m_port,
+                                                         source_ip=s_ip6,
+                                                         source_port=s_port) == 'tcp://[{0}]:{1};[{2}]:{3}'.format(s_ip6, s_port, m_ip6, m_port)
+
+            # source ip and source_port empty
+            assert salt.transport.zeromq._get_master_uri(master_ip=m_ip,
+                                                         master_port=m_port) == 'tcp://{0}:{1}'.format(m_ip, m_port)
+
+            assert salt.transport.zeromq._get_master_uri(master_ip=m_ip6,
+                                                         master_port=m_port) == 'tcp://[{0}]:{1}'.format(m_ip6, m_port)
+
+            # pass in only source_ip
+            assert salt.transport.zeromq._get_master_uri(master_ip=m_ip,
+                                                         master_port=m_port,
+                                                         source_ip=s_ip) == 'tcp://{0}:0;{1}:{2}'.format(s_ip, m_ip, m_port)
+
+            assert salt.transport.zeromq._get_master_uri(master_ip=m_ip6,
+                                                         master_port=m_port,
+                                                         source_ip=s_ip6) == 'tcp://[{0}]:0;[{1}]:{2}'.format(s_ip6, m_ip6, m_port)
+
+            # pass in only source_port
+            assert salt.transport.zeromq._get_master_uri(master_ip=m_ip,
+                                                         master_port=m_port,
+                                                         source_port=s_port) == 'tcp://0.0.0.0:{0};{1}:{2}'.format(s_port, m_ip, m_port)
+
+
 class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @classmethod
@@ -401,7 +462,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
                 results.append(payload['jid'])
         return results
 
-    @skipIf(salt.utils.is_windows(), 'Skip on Windows OS')
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_publish_to_pubserv_ipc(self):
         '''
         Test sending 10K messags to ZeroMQPubServerChannel using IPC transport
@@ -501,7 +562,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
 
-    @skipIf(salt.utils.is_windows(), 'Skip on Windows OS')
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_issue_36469_udp(self):
         '''
         Test sending both large and small messags to publisher using UDP
@@ -527,6 +588,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             executor.submit(self._send_small, opts, 3)
             executor.submit(self._send_large, opts, 4)
         expect = ['{}-{}'.format(a, b) for a in range(10) for b in (1, 2, 3, 4)]
+        time.sleep(0.1)
         server_channel.publish({'tgt_type': 'glob', 'tgt': '*', 'stop': True})
         gather.join()
         server_channel.pub_close()

@@ -6,3 +6,4 @@ yappi>=0.8.2
 python-gnupg
 cherrypy>=3.2.2,<18.0.0; python_version < '3.5'
 cherrypy>=3.2.2; python_version >= '3.5'
+libnacl

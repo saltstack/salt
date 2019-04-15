@@ -129,8 +129,8 @@ Cache        ``salt.cache`` (:ref:`index <all-salt.cache>`)                   ``
 Cloud        ``salt.cloud.clouds`` (:ref:`index <all-salt.clouds>`)           ``clouds``                ``cloud_dirs``
 Engine       ``salt.engines`` (:ref:`index <engines>`)                        ``engines``               ``engines_dirs``
 Execution    ``salt.modules`` (:ref:`index <all-salt.modules>`)               ``modules``               ``module_dirs``
-Executor     ``salt.executors`` (:ref:`index <all-salt_executors>`)           ``executors`` [#no-fs]_   ``executor_dirs``
-File Server  ``salt.fileserver`` (:ref:`index <file-server>`)                 ``fileserver`` [#no-fs]_  ``fileserver_dirs``
+Executor     ``salt.executors`` (:ref:`index <all-salt.executors>`)           ``executors`` [#no-fs]_   ``executor_dirs``
+File Server  ``salt.fileserver`` (:ref:`index <file-server>`)                 ``fileserver``            ``fileserver_dirs``
 Grain        ``salt.grains`` (:ref:`index <all-salt.grains>`)                 ``grains``                ``grains_dirs``
 Log Handler  ``salt.log.handlers`` (:ref:`index <external-logging-handlers>`) ``log_handlers``          ``log_handlers_dirs``
 Net API      ``salt.netapi`` (:ref:`index <all-netapi-modules>`)              ``netapi`` [#no-fs]_      ``netapi_dirs``
@@ -143,13 +143,13 @@ Returner     ``salt.returners`` (:ref:`index <all-salt.returners>`)           ``
 Roster       ``salt.roster`` (:ref:`index <all-salt.roster>`)                 ``roster``                ``roster_dirs``
 Runner       ``salt.runners`` (:ref:`index <all-salt.runners>`)               ``runners``               ``runner_dirs``
 SDB          ``salt.sdb`` (:ref:`index <all-salt.sdb>`)                       ``sdb``                   ``sdb_dirs``
-Search       ``salt.search``                                                  ``search`` [#no-fs]_      ``search_dirs``
 Serializer   ``salt.serializers`` (:ref:`index <all-salt.serializers>`)       ``serializers`` [#no-fs]_ ``serializers_dirs``
 SPM pkgdb    ``salt.spm.pkgdb``                                               ``pkgdb`` [#no-fs]_       ``pkgdb_dirs``
 SPM pkgfiles ``salt.spm.pkgfiles``                                            ``pkgfiles`` [#no-fs]_    ``pkgfiles_dirs``
 SSH Wrapper  ``salt.client.ssh.wrapper``                                      ``wrapper`` [#no-fs]_     ``wrapper_dirs``
 State        ``salt.states`` (:ref:`index <all-salt.states>`)                 ``states``                ``states_dirs``
-Thorium      ``salt.thorium`` (:ref:`index <all-salt.thorium>`)               ``thorium`` [#no-fs]_     ``thorium_dirs``
+Thorium      ``salt.thorium`` (:ref:`index <all-salt.thorium>`)               ``thorium``               ``thorium_dirs``
+Tokens       ``salt.tokens``                                                  ``tokens``                ``tokens_dirs``
 Top          ``salt.tops`` (:ref:`index <all-salt.tops>`)                     ``tops``                  ``top_dirs``
 Util         ``salt.utils``                                                   ``utils``                 ``utils_dirs``
 Wheel        ``salt.wheels`` (:ref:`index <all-salt.wheel>`)                  ``wheel``                 ``wheel_dirs``
@@ -222,6 +222,12 @@ object.
 
 Executor
 --------
+
+.. toctree::
+    :maxdepth: 1
+    :glob:
+
+    /ref/executors/index
 
 Executors control how execution modules get called. The default is to just call
 them, but this can be customized.
@@ -322,11 +328,6 @@ SDB
 SDB is a way to store data that's not associated with a minion. See 
 :ref:`Storing Data in Other Databases <sdb>`.
 
-Search
-------
-
-A system for indexing the file server and pillars. Removed in 2018.3.
-
 Serializer
 ----------
 
@@ -374,6 +375,16 @@ Thorium
 -------
 
 Modules for use in the :ref:`Thorium <thorium-reactor>` event reactor.
+
+Tokens
+------
+
+Token stores for :ref:`External Authentication <acl-eauth>`. See the
+:py:mod:`salt.tokens` docstring for details.
+
+.. note:
+    The runner to load tokens modules is
+    :py:func:`saltutil.sync_eauth_tokens <salt.runners.saltutil.sync_eauth_tokens>`.
 
 Tops
 ----

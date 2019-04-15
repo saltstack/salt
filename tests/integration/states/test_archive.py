@@ -2,8 +2,8 @@
 '''
 Tests for the archive state
 '''
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
 import os
@@ -14,16 +14,16 @@ from tests.support.helpers import skip_if_not_root, Webserver
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.paths import FILES
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
 
 # Setup logging
 log = logging.getLogger(__name__)
 
-if salt.utils.is_windows():
-    ARCHIVE_DIR = os.path.join('c:/', 'tmp')
-else:
-    ARCHIVE_DIR = '/tmp/archive'
+ARCHIVE_DIR = os.path.join('c:/', 'tmp') \
+    if salt.utils.platform.is_windows() \
+    else '/tmp/archive'
 
 ARCHIVE_NAME = 'custom.tar.gz'
 ARCHIVE_TAR_SOURCE = 'http://localhost:{0}/{1}'.format(9999, ARCHIVE_NAME)
@@ -31,6 +31,7 @@ ARCHIVE_LOCAL_TAR_SOURCE = 'file://{0}'.format(os.path.join(FILES, 'file', 'base
 UNTAR_FILE = os.path.join(ARCHIVE_DIR, 'custom/README')
 ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
 ARCHIVE_TAR_BAD_HASH = 'md5=d41d8cd98f00b204e9800998ecf8427e'
+ARCHIVE_TAR_HASH_UPPER = 'md5=7643861AC07C30FE7D2310E9F25CA514'
 
 
 class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
@@ -56,7 +57,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
     @staticmethod
     def _clear_archive_dir():
         try:
-            salt.utils.rm_rf(ARCHIVE_DIR)
+            salt.utils.files.rm_rf(ARCHIVE_DIR)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise
@@ -113,7 +114,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         test archive.extracted with user and group set to "root"
         '''
         r_group = 'root'
-        if salt.utils.is_darwin():
+        if salt.utils.platform.is_darwin():
             r_group = 'wheel'
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
                              source=self.archive_tar_source, archive_format='tar',
@@ -231,6 +232,18 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
                              source_hash=ARCHIVE_TAR_BAD_HASH)
 
         self.assertSaltFalseReturn(ret)
+
+    def test_local_archive_extracted_with_uppercase_source_hash(self):
+        '''
+        test archive.extracted with local file and bad hash
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=ARCHIVE_LOCAL_TAR_SOURCE, archive_format='tar',
+                             source_hash=ARCHIVE_TAR_HASH_UPPER)
+
+        self.assertSaltTrueReturn(ret)
+
+        self._check_extracted(UNTAR_FILE)
 
     def test_archive_extracted_with_non_base_saltenv(self):
         '''

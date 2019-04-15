@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
 log = logging.getLogger(__name__)
 
+# To give us some leeway when making time-calculations
 BLUR_FACTOR = 0.95
-"""
-To give us some leeway when making time-calculations
-"""
 
 
 def wait_for(func, timeout=10, step=1, default=None, func_args=(), func_kwargs=None):
-    """
-    Call `func` at regular intervals and Waits until the given function returns a truthy value
-    within the given timeout and returns that value.
+    '''
+    Call `func` at regular intervals and Waits until the given function returns
+    a truthy value within the given timeout and returns that value.
 
     @param func:
     @type func: function
@@ -29,7 +27,7 @@ def wait_for(func, timeout=10, step=1, default=None, func_args=(), func_kwargs=N
     @param func_kwargs: **kwargs for `func`
     @type func_kwargs: dict
     @return: `default` or result of `func`
-    """
+    '''
     if func_kwargs is None:
         func_kwargs = dict()
     max_time = time.time() + timeout

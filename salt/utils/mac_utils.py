@@ -3,24 +3,31 @@
 Helper functions for use by mac modules
 .. versionadded:: 2016.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import Python Libraries
 import logging
 import subprocess
 import os
+import plistlib
 import time
+import xml.parsers.expat
 
 # Import Salt Libs
-import salt.utils
+import salt.modules.cmdmod
+import salt.utils.args
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.timed_subprocess
 import salt.grains.extra
-from salt.ext import six
 from salt.exceptions import CommandExecutionError, SaltInvocationError,\
     TimedProcTimeoutError
 
 # Import Third Party Libs
 from salt.ext.six.moves import range
+from salt.ext import six
 
 DEFAULT_SHELL = salt.grains.extra.shell()['shell']
 
@@ -29,12 +36,22 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'mac_utils'
 
+__salt__ = {
+    'cmd.run_all': salt.modules.cmdmod._run_all_quiet,
+    'cmd.run': salt.modules.cmdmod._run_quiet,
+}
+
+if six.PY2:
+    class InvalidFileException(Exception):
+        pass
+    plistlib.InvalidFileException = InvalidFileException
+
 
 def __virtual__():
     '''
     Load only on Mac OS
     '''
-    if not salt.utils.is_darwin():
+    if not salt.utils.platform.is_darwin():
         return (False, 'The mac_utils utility could not be loaded: '
                        'utility only works on MacOS systems.')
 
@@ -51,11 +68,11 @@ def _run_all(cmd):
 
     '''
     if not isinstance(cmd, list):
-        cmd = salt.utils.shlex_split(cmd, posix=False)
+        cmd = salt.utils.args.shlex_split(cmd, posix=False)
 
     for idx, item in enumerate(cmd):
         if not isinstance(cmd[idx], six.string_types):
-            cmd[idx] = str(cmd[idx])
+            cmd[idx] = six.text_type(cmd[idx])
 
     cmd = ' '.join(cmd)
 
@@ -86,7 +103,7 @@ def _run_all(cmd):
     try:
         proc.run()
     except TimedProcTimeoutError as exc:
-        ret['stdout'] = str(exc)
+        ret['stdout'] = six.text_type(exc)
         ret['stderr'] = ''
         ret['retcode'] = 1
         ret['pid'] = proc.process.pid
@@ -95,9 +112,9 @@ def _run_all(cmd):
     out, err = proc.stdout, proc.stderr
 
     if out is not None:
-        out = salt.utils.to_str(out).rstrip()
+        out = salt.utils.stringutils.to_str(out).rstrip()
     if err is not None:
-        err = salt.utils.to_str(err).rstrip()
+        err = salt.utils.stringutils.to_str(err).rstrip()
 
     ret['pid'] = proc.process.pid
     ret['retcode'] = proc.process.returncode
@@ -105,6 +122,18 @@ def _run_all(cmd):
     ret['stderr'] = err
 
     return ret
+
+
+def _check_launchctl_stderr(ret):
+    '''
+    helper class to check the launchctl stderr.
+    launchctl does not always return bad exit code
+    if there is a failure
+    '''
+    err = ret['stderr'].lower()
+    if 'service is disabled' in err:
+        return True
+    return False
 
 
 def execute_return_success(cmd):
@@ -190,7 +219,7 @@ def validate_enabled(enabled):
     :return: "on" or "off" or errors
     :rtype: str
     '''
-    if isinstance(enabled, str):
+    if isinstance(enabled, six.string_types):
         if enabled.lower() not in ['on', 'off', 'yes', 'no']:
             msg = '\nMac Power: Invalid String Value for Enabled.\n' \
                   'String values must be \'on\' or \'off\'/\'yes\' or \'no\'.\n' \
@@ -224,3 +253,181 @@ def confirm_updated(value, check_fun, normalize_ret=False, wait=5):
             return True
         time.sleep(1)
     return False
+
+
+def launchctl(sub_cmd, *args, **kwargs):
+    '''
+    Run a launchctl command and raise an error if it fails
+
+    Args: additional args are passed to launchctl
+        sub_cmd (str): Sub command supplied to launchctl
+
+    Kwargs: passed to ``cmd.run_all``
+        return_stdout (bool): A keyword argument. If true return the stdout of
+            the launchctl command
+
+    Returns:
+        bool: ``True`` if successful
+        str: The stdout of the launchctl command if requested
+
+    Raises:
+        CommandExecutionError: If command fails
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        import salt.utils.mac_service
+        salt.utils.mac_service.launchctl('debug', 'org.cups.cupsd')
+    '''
+    # Get return type
+    return_stdout = kwargs.pop('return_stdout', False)
+
+    # Construct command
+    cmd = ['launchctl', sub_cmd]
+    cmd.extend(args)
+
+    # Run command
+    kwargs['python_shell'] = False
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    ret = __salt__['cmd.run_all'](cmd, **kwargs)
+    error = _check_launchctl_stderr(ret)
+
+    # Raise an error or return successful result
+    if ret['retcode'] or error:
+        out = 'Failed to {0} service:\n'.format(sub_cmd)
+        out += 'stdout: {0}\n'.format(ret['stdout'])
+        out += 'stderr: {0}\n'.format(ret['stderr'])
+        out += 'retcode: {0}'.format(ret['retcode'])
+        raise CommandExecutionError(out)
+    else:
+        return ret['stdout'] if return_stdout else True
+
+
+def _available_services(refresh=False):
+    '''
+    This is a helper function for getting the available macOS services.
+
+    The strategy is to look through the known system locations for
+    launchd plist files, parse them, and use their information for
+    populating the list of services. Services can run without a plist
+    file present, but normally services which have an automated startup
+    will have a plist file, so this is a minor compromise.
+    '''
+    try:
+        if __context__['available_services'] and not refresh:
+            log.debug('Found context for available services.')
+            __context__['using_cached_services'] = True
+            return __context__['available_services']
+    except KeyError:
+        pass
+
+    launchd_paths = [
+        '/Library/LaunchAgents',
+        '/Library/LaunchDaemons',
+        '/System/Library/LaunchAgents',
+        '/System/Library/LaunchDaemons',
+    ]
+
+    try:
+        for user in os.listdir('/Users/'):
+            agent_path = '/Users/{}/Library/LaunchAgents'.format(user)
+            if os.path.isdir(agent_path):
+                launchd_paths.append(agent_path)
+    except OSError:
+        pass
+
+    _available_services = dict()
+    for launch_dir in launchd_paths:
+        for root, dirs, files in salt.utils.path.os_walk(launch_dir):
+            for file_name in files:
+
+                # Must be a plist file
+                if not file_name.endswith('.plist'):
+                    continue
+
+                # Follow symbolic links of files in _launchd_paths
+                file_path = os.path.join(root, file_name)
+                true_path = os.path.realpath(file_path)
+                log.trace('Gathering service info for %s', true_path)
+                # ignore broken symlinks
+                if not os.path.exists(true_path):
+                    continue
+
+                try:
+                    if six.PY2:
+                        # py2 plistlib can't read binary plists, and
+                        # uses a different API than py3.
+                        plist = plistlib.readPlist(true_path)
+                    else:
+                        with salt.utils.files.fopen(true_path, 'rb') as handle:
+                            plist = plistlib.load(handle)
+
+                except plistlib.InvalidFileException:
+                    # Raised in python3 if the file is not XML.
+                    # There's nothing we can do; move on to the next one.
+                    msg = 'Unable to parse "%s" as it is invalid XML: InvalidFileException.'
+                    logging.warning(msg, true_path)
+                    continue
+
+                except xml.parsers.expat.ExpatError:
+                    # Raised by py2 for all errors.
+                    # Raised by py3 if the file is XML, but with errors.
+                    if six.PY3:
+                        # There's an error in the XML, so move on.
+                        msg = 'Unable to parse "%s" as it is invalid XML: xml.parsers.expat.ExpatError.'
+                        logging.warning(msg, true_path)
+                        continue
+
+                    # Use the system provided plutil program to attempt
+                    # conversion from binary.
+                    cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
+                        true_path)
+                    try:
+                        plist_xml = __salt__['cmd.run'](cmd)
+                        plist = plistlib.readPlistFromString(plist_xml)
+                    except xml.parsers.expat.ExpatError:
+                        # There's still an error in the XML, so move on.
+                        msg = 'Unable to parse "%s" as it is invalid XML: xml.parsers.expat.ExpatError.'
+                        logging.warning(msg, true_path)
+                        continue
+
+                try:
+                    # not all launchd plists contain a Label key
+                    _available_services[plist['Label'].lower()] = {
+                        'file_name': file_name,
+                        'file_path': true_path,
+                        'plist': plist}
+                except KeyError:
+                    log.debug('Service %s does not contain a'
+                              ' Label key. Skipping.', true_path)
+                    continue
+
+    # put this in __context__ as this is a time consuming function.
+    # a fix for this issue. https://github.com/saltstack/salt/issues/48414
+    __context__['available_services'] = _available_services
+    # this is a fresh gathering of services, set cached to false
+    __context__['using_cached_services'] = False
+
+    return __context__['available_services']
+
+
+def available_services(refresh=False):
+    '''
+    Return a dictionary of all available services on the system
+
+    :param bool refresh: If you wish to refresh the available services
+    as this data is cached on the first run.
+
+    Returns:
+        dict: All available services
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        import salt.utils.mac_service
+        salt.utils.mac_service.available_services()
+    '''
+    log.debug('Loading available services')
+    return _available_services(refresh)

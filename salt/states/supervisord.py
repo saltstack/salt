@@ -12,11 +12,11 @@ Interaction with the Supervisor daemon
         - watch:
           - file: /etc/nginx/sites-enabled/wsgi_server.conf
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
-import salt.ext.six as six
+from salt.ext import six
 
 
 log = logging.getLogger(__name__)

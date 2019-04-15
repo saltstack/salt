@@ -54,13 +54,14 @@ dict in your SLS templates.
 Module Documentation
 ====================
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 import re
 
 # Import third party libs
+from salt.ext import six
 try:
     import pymongo
     HAS_PYMONGO = True
@@ -117,17 +118,17 @@ def ext_pillar(minion_id,
     '''
     host = __opts__['mongo.host']
     port = __opts__['mongo.port']
-    log.info('connecting to {0}:{1} for mongo ext_pillar'.format(host, port))
+    log.info('connecting to %s:%s for mongo ext_pillar', host, port)
     conn = pymongo.MongoClient(host, port)
 
-    log.debug('using database \'{0}\''.format(__opts__['mongo.db']))
+    log.debug('using database \'%s\'', __opts__['mongo.db'])
     mdb = conn[__opts__['mongo.db']]
 
     user = __opts__.get('mongo.user')
     password = __opts__.get('mongo.password')
 
     if user and password:
-        log.debug('authenticating as \'{0}\''.format(user))
+        log.debug('authenticating as \'%s\'', user)
         mdb.authenticate(user, password)
 
     # Do the regex string replacement on the minion id
@@ -135,20 +136,16 @@ def ext_pillar(minion_id,
         minion_id = re.sub(re_pattern, re_replace, minion_id)
 
     log.info(
-        'ext_pillar.mongo: looking up pillar def for {{\'{0}\': \'{1}\'}} '
-        'in mongo'.format(
-            id_field, minion_id
-        )
+        'ext_pillar.mongo: looking up pillar def for {\'%s\': \'%s\'} '
+        'in mongo', id_field, minion_id
     )
 
     result = mdb[collection].find_one({id_field: minion_id}, projection=fields)
     if result:
         if fields:
             log.debug(
-                'ext_pillar.mongo: found document, returning fields '
-                '\'{0}\''.format(
-                    fields
-                )
+                'ext_pillar.mongo: found document, returning fields \'%s\'',
+                fields
             )
         else:
             log.debug('ext_pillar.mongo: found document, returning whole doc')
@@ -156,14 +153,13 @@ def ext_pillar(minion_id,
             # Converting _id to a string
             # will avoid the most common serialization error cases, but DBRefs
             # and whatnot will still cause problems.
-            result['_id'] = str(result['_id'])
+            result['_id'] = six.text_type(result['_id'])
         return result
     else:
         # If we can't find the minion the database it's not necessarily an
         # error.
         log.debug(
-            'ext_pillar.mongo: no document found in collection {0}'.format(
-                collection
-            )
+            'ext_pillar.mongo: no document found in collection %s',
+            collection
         )
         return {}

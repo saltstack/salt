@@ -1,7 +1,7 @@
 .. _all-salt.cache:
 
 =============
-cache modules
+Cache Modules
 =============
 
 .. currentmodule:: salt.cache
@@ -10,6 +10,8 @@ cache modules
     :toctree:
     :template: autosummary.rst.tmpl
 
-    localfs
     consul
+    etcd_cache
+    localfs
+    mysql_cache
     redis_cache

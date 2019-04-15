@@ -30,45 +30,94 @@ Master Configuration
           follow_dir_links: False
           keep_newline: True
 
-    node_groups:
-      internal_servers: 'L@bob,stuart,kevin'
+The ``root_dir`` parameter is required and points to the directory where files
+for each host are stored. The ``follow_dir_links`` parameter is optional and
+defaults to False. If ``follow_dir_links`` is set to True, this external pillar
+will follow symbolic links to other directories.
 
-Pillar Configuration
---------------------
+.. warning::
+    Be careful when using ``follow_dir_links``, as a recursive symlink chain
+    will result in unexpected results.
 
-.. code-block:: bash
+.. versionchanged:: 2018.3.0
+    If ``root_dir`` is a relative path, it will be treated as relative to the
+    :conf_master:`pillar_roots` of the environment specified by
+    :conf_minion:`pillarenv`. If an environment specifies multiple
+    roots, this module will search for files relative to all of them, in order,
+    merging the results.
 
-    (salt-master) # tree /srv/ext_pillar
-    /srv/ext_pillar/
-    |-- hosts
-    |   |-- bob
-    |   |   |-- apache
-    |   |   |   `-- config.d
-    |   |   |       |-- 00_important.conf
-    |   |   |       `-- 20_bob_extra.conf
-    |   |   `-- corporate_app
-    |   |       `-- settings
-    |   |           `-- bob_settings.cfg
-    |   `-- kevin
-    |       |-- apache
-    |       |   `-- config.d
-    |       |       `-- 00_important.conf
-    |       `-- corporate_app
-    |           `-- settings
-    |               `-- kevin_settings.cfg
-    `-- nodegroups
-        `-- internal_servers
-            `-- corporate_app
-                `-- settings
-                    `-- common_settings.cfg
+If ``keep_newline`` is set to ``True``, then the pillar values for files ending
+in newlines will keep that newline. The default behavior is to remove the
+end-of-file newline. ``keep_newline`` should be turned on if the pillar data is
+intended to be used to deploy a file using ``contents_pillar`` with a
+:py:func:`file.managed <salt.states.file.managed>` state.
 
-Verify Pillar Data
-------------------
+.. versionchanged:: 2015.8.4
+    The ``raw_data`` parameter has been renamed to ``keep_newline``. In earlier
+    releases, ``raw_data`` must be used. Also, this parameter can now be a list
+    of globs, allowing for more granular control over which pillar values keep
+    their end-of-file newline. The globs match paths relative to the
+    directories named for minion IDs and nodegroups underneath the ``root_dir``
+    (see the layout examples in the below sections).
 
-.. code-block:: bash
+    .. code-block:: yaml
 
-    (salt-master) # salt bob pillar.items
-    bob:
+        ext_pillar:
+          - file_tree:
+              root_dir: /path/to/root/directory
+              keep_newline:
+                - files/testdir/*
+
+.. note::
+    In earlier releases, this documentation incorrectly stated that binary
+    files would not affected by the ``keep_newline`` configuration.  However,
+    this module does not actually distinguish between binary and text files.
+
+.. versionchanged:: 2017.7.0
+    Templating/rendering has been added. You can now specify a default render
+    pipeline and a black- and whitelist of (dis)allowed renderers.
+
+    ``template`` must be set to ``True`` for templating to happen.
+
+    .. code-block:: yaml
+
+        ext_pillar:
+          - file_tree:
+            root_dir: /path/to/root/directory
+            render_default: jinja|yaml
+            renderer_blacklist:
+              - gpg
+            renderer_whitelist:
+              - jinja
+              - yaml
+            template: True
+
+Assigning Pillar Data to Individual Hosts
+-----------------------------------------
+
+To configure pillar data for each host, this external pillar will recursively
+iterate over ``root_dir``/hosts/``id`` (where ``id`` is a minion ID), and
+compile pillar data with each subdirectory as a dictionary key and each file
+as a value.
+
+For example, the following ``root_dir`` tree:
+
+.. code-block:: text
+
+    ./hosts/
+    ./hosts/test-host/
+    ./hosts/test-host/files/
+    ./hosts/test-host/files/testdir/
+    ./hosts/test-host/files/testdir/file1.txt
+    ./hosts/test-host/files/testdir/file2.txt
+    ./hosts/test-host/files/another-testdir/
+    ./hosts/test-host/files/another-testdir/symlink-to-file1.txt
+
+will result in the following pillar tree for minion with ID ``test-host``:
+
+.. code-block:: text
+
+    test-host:
         ----------
         apache:
             ----------
@@ -93,7 +142,7 @@ Verify Pillar Data
 
     The leaf data in the example shown is the contents of the pillar files.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import fnmatch
@@ -102,11 +151,14 @@ import os
 
 # Import salt libs
 import salt.loader
-import salt.utils
 import salt.utils.dictupdate
+import salt.utils.files
 import salt.utils.minions
+import salt.utils.path
 import salt.utils.stringio
+import salt.utils.stringutils
 import salt.template
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -114,7 +166,7 @@ log = logging.getLogger(__name__)
 
 def _on_walk_error(err):
     '''
-    Log os.walk() error.
+    Log salt.utils.path.os_walk() error.
     '''
     log.error('%s: %s', err.filename, err.strerror)
 
@@ -135,7 +187,7 @@ def _check_newline(prefix, file_name, keep_newline):
             if fnmatch.fnmatch(full_path, pattern):
                 return False
         except TypeError:
-            if fnmatch.fnmatch(full_path, str(pattern)):
+            if fnmatch.fnmatch(full_path, six.text_type(pattern)):
                 return False
     return True
 
@@ -154,7 +206,7 @@ def _construct_pillar(top_dir,
     renderers = salt.loader.render(__opts__, __salt__)
 
     norm_top_dir = os.path.normpath(top_dir)
-    for dir_path, dir_names, file_names in os.walk(
+    for dir_path, dir_names, file_names in salt.utils.path.os_walk(
             top_dir, topdown=True, onerror=_on_walk_error,
             followlinks=follow_dir_links):
         # Find current path in pillar tree
@@ -181,14 +233,14 @@ def _construct_pillar(top_dir,
                 log.error('file_tree: %s: not a regular file', file_path)
                 continue
 
-            contents = ''
+            contents = b''
             try:
-                with salt.utils.fopen(file_path, 'rb') as fhr:
+                with salt.utils.files.fopen(file_path, 'rb') as fhr:
                     buf = fhr.read(__opts__['file_buffer_size'])
                     while buf:
                         contents += buf
                         buf = fhr.read(__opts__['file_buffer_size'])
-                    if contents.endswith('\n') \
+                    if contents.endswith(b'\n') \
                             and _check_newline(prefix,
                                                file_name,
                                                keep_newline):
@@ -200,7 +252,7 @@ def _construct_pillar(top_dir,
             else:
                 data = contents
                 if template is True:
-                    data = salt.template.compile_template_str(template=contents,
+                    data = salt.template.compile_template_str(template=salt.utils.stringutils.to_unicode(contents),
                                                               renderers=renderers,
                                                               default=render_default,
                                                               blacklist=renderer_blacklist,
@@ -260,6 +312,13 @@ def ext_pillar(minion_id,
     :param root_dir:
         Filesystem directory used as the root for pillar data (e.g.
         ``/srv/ext_pillar``)
+
+        .. versionchanged:: 2018.3.0
+            If ``root_dir`` is a relative path, it will be treated as relative to the
+            :conf_master:`pillar_roots` of the environment specified by
+            :conf_minion:`pillarenv`. If an environment specifies multiple
+            roots, this module will search for files relative to all of them, in order,
+            merging the results.
 
     :param follow_dir_links:
         Follow symbolic links to directories while collecting pillar files.
@@ -349,6 +408,60 @@ def ext_pillar(minion_id,
         log.error('file_tree: no root_dir specified')
         return {}
 
+    if not os.path.isabs(root_dir):
+        pillarenv = __opts__['pillarenv']
+        if pillarenv is None:
+            log.error('file_tree: root_dir is relative but pillarenv is not set')
+            return {}
+        log.debug('file_tree: pillarenv = %s', pillarenv)
+
+        env_roots = __opts__['pillar_roots'].get(pillarenv, None)
+        if env_roots is None:
+            log.error('file_tree: root_dir is relative but no pillar_roots are specified '
+                      ' for pillarenv %s', pillarenv)
+            return {}
+
+        env_dirs = []
+        for env_root in env_roots:
+            env_dir = os.path.normpath(os.path.join(env_root, root_dir))
+            # don't redundantly load consecutively, but preserve any expected precedence
+            if env_dir not in env_dirs or env_dir != env_dirs[-1]:
+                env_dirs.append(env_dir)
+        dirs = env_dirs
+    else:
+        dirs = [root_dir]
+
+    result_pillar = {}
+    for root in dirs:
+        dir_pillar = _ext_pillar(minion_id,
+                                 root,
+                                 follow_dir_links,
+                                 debug,
+                                 keep_newline,
+                                 render_default,
+                                 renderer_blacklist,
+                                 renderer_whitelist,
+                                 template)
+        result_pillar = salt.utils.dictupdate.merge(result_pillar,
+                                                    dir_pillar,
+                                                    strategy='recurse')
+    return result_pillar
+
+
+def _ext_pillar(minion_id,
+                root_dir,
+                follow_dir_links,
+                debug,
+                keep_newline,
+                render_default,
+                renderer_blacklist,
+                renderer_whitelist,
+                template):
+    '''
+    Compile pillar data for a single root_dir for the specified minion ID
+    '''
+    log.debug('file_tree: reading %s', root_dir)
+
     if not os.path.isdir(root_dir):
         log.error(
             'file_tree: root_dir %s does not exist or is not a directory',
@@ -374,20 +487,22 @@ def ext_pillar(minion_id,
                 if (os.path.isdir(nodegroups_dir) and
                         nodegroup in master_ngroups):
                     ckminions = salt.utils.minions.CkMinions(__opts__)
-                    match = ckminions.check_minions(
+                    _res = ckminions.check_minions(
                         master_ngroups[nodegroup],
                         'compound')
+                    match = _res['minions']
                     if minion_id in match:
                         ngroup_dir = os.path.join(
-                            nodegroups_dir, str(nodegroup))
-                        ngroup_pillar.update(
+                            nodegroups_dir, six.text_type(nodegroup))
+                        ngroup_pillar = salt.utils.dictupdate.merge(ngroup_pillar,
                             _construct_pillar(ngroup_dir,
                                               follow_dir_links,
                                               keep_newline,
                                               render_default,
                                               renderer_blacklist,
                                               renderer_whitelist,
-                                              template)
+                                              template),
+                            strategy='recurse'
                         )
         else:
             if debug is True:

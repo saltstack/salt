@@ -194,6 +194,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         guestinfo.foo: bar
         guestinfo.domain: foobar.com
         guestinfo.customVariable: customValue
+      annotation: Created by Salt-Cloud
 
       deploy: True
       customization: True
@@ -283,6 +284,10 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         thin_provision
             Specifies whether the disk should be thin provisioned or not. Default is ``thin_provision: False``.
             .. versionadded:: 2016.3.0
+        eagerly_scrub
+            Specifies whether the disk should be rewrite with zeros during thick provisioning or not.
+            Default is ``eagerly_scrub: False``.
+            .. versionadded:: 2018.3.0
         controller
             Specify the SCSI controller label to which this disk should be attached.
             This should be specified only when creating both the specified SCSI
@@ -451,6 +456,11 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     describes a set of modifications to the additional options. If the key is already
     present, it will be reset with the new value provided. Otherwise, a new option is
     added. Keys with empty values will be removed.
+
+``annotation``
+    User-provided description of the virtual machine. This will store a message in the
+    vSphere interface, under the annotations section in the Summary view of the virtual
+    machine.
 
 ``deploy``
     Specifies if salt should be installed on the newly created VM. Default is ``True``

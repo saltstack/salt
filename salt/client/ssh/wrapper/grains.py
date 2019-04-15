@@ -4,27 +4,29 @@ Return/control aspects of the grains data
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import collections
 import copy
 import math
-import json
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.dictupdate
+import salt.utils.json
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Seed the grains dict so cython will build
 __grains__ = {}
 
 
 def _serial_sanitizer(instr):
-    '''Replaces the last 1/4 of a string with X's'''
+    '''
+    Replaces the last 1/4 of a string with X's
+    '''
     length = len(instr)
     index = int(math.floor(length * .75))
     return '{0}{1}'.format(instr[:index], 'X' * (length - index))
@@ -72,11 +74,12 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
     if ordered is True:
         grains = __grains__
     else:
-        grains = json.loads(json.dumps(__grains__))
-    return salt.utils.traverse_dict_and_list(__grains__,
-                                             key,
-                                             default,
-                                             delimiter)
+        grains = salt.utils.json.loads(salt.utils.json.dumps(__grains__))
+    return salt.utils.data.traverse_dict_and_list(
+        __grains__,
+        key,
+        default,
+        delimiter)
 
 
 def has_value(key):
@@ -97,7 +100,9 @@ def has_value(key):
 
         salt '*' grains.has_value pkg:apache
     '''
-    return True if salt.utils.traverse_dict_and_list(__grains__, key, False) else False
+    return True \
+        if salt.utils.data.traverse_dict_and_list(__grains__, key, False) \
+        else False
 
 
 def items(sanitize=False):
@@ -116,7 +121,7 @@ def items(sanitize=False):
 
         salt '*' grains.items sanitize=True
     '''
-    if salt.utils.is_true(sanitize):
+    if salt.utils.data.is_true(sanitize):
         out = dict(__grains__)
         for key, func in six.iteritems(_SANITIZERS):
             if key in out:
@@ -149,7 +154,7 @@ def item(*args, **kwargs):
             ret[arg] = __grains__[arg]
         except KeyError:
             pass
-    if salt.utils.is_true(kwargs.get('sanitize')):
+    if salt.utils.data.is_true(kwargs.get('sanitize')):
         for arg, func in six.iteritems(_SANITIZERS):
             if arg in ret:
                 ret[arg] = func(ret[arg])

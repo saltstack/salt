@@ -89,6 +89,6 @@ bare-bones example:
 .. note::
     If a master_tops module returns :ref:`top file <states-top>` data for a
     given minion, it will be added to the states configured in the top file. It
-    will *not* replace it altogether. The Oxygen release adds additional
+    will *not* replace it altogether. The 2018.3.0 release adds additional
     functionality allowing a minion to treat master_tops as the single source
     of truth, irrespective of the top file.

@@ -2,7 +2,7 @@
 '''
 Directly manage the Salt fileserver plugins
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.fileserver

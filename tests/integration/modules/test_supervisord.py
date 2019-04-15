@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import time
 import subprocess
@@ -12,16 +12,16 @@ from tests.support.unit import skipIf
 from tests.support.paths import TMP
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 @skipIf(six.PY3, 'supervisor does not work under python 3')
-@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
-@skipIf(salt.utils.which('supervisorctl') is None, 'supervisord not installed')
+@skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+@skipIf(salt.utils.path.which('supervisorctl') is None, 'supervisord not installed')
 class SupervisordModuleTest(ModuleCase):
     '''
     Validates the supervisorctl functions.

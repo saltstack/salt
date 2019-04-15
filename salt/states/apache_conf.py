@@ -16,18 +16,18 @@ Enable and disable apache confs.
       apache_conf.disabled:
         - name: security
 '''
-from __future__ import absolute_import
-from salt.ext.six import string_types
+from __future__ import absolute_import, print_function, unicode_literals
+from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 
 def __virtual__():
     '''
     Only load if a2enconf is available.
     '''
-    return 'apache_conf' if 'apache.a2enconf' in __salt__ and salt.utils.which('a2enconf') else False
+    return 'apache_conf' if 'apache.a2enconf' in __salt__ and salt.utils.path.which('a2enconf') else False
 
 
 def enabled(name):
@@ -49,14 +49,14 @@ def enabled(name):
             ret['result'] = None
             return ret
         status = __salt__['apache.a2enconf'](name)['Status']
-        if isinstance(status, string_types) and 'enabled' in status:
+        if isinstance(status, six.string_types) and 'enabled' in status:
             ret['result'] = True
             ret['changes']['old'] = None
             ret['changes']['new'] = name
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to enable {0} Apache conf'.format(name)
-            if isinstance(status, string_types):
+            if isinstance(status, six.string_types):
                 ret['comment'] = ret['comment'] + ' ({0})'.format(status)
             return ret
     else:
@@ -83,14 +83,14 @@ def disabled(name):
             ret['result'] = None
             return ret
         status = __salt__['apache.a2disconf'](name)['Status']
-        if isinstance(status, string_types) and 'disabled' in status:
+        if isinstance(status, six.string_types) and 'disabled' in status:
             ret['result'] = True
             ret['changes']['old'] = name
             ret['changes']['new'] = None
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to disable {0} Apache conf'.format(name)
-            if isinstance(status, string_types):
+            if isinstance(status, six.string_types):
                 ret['comment'] = ret['comment'] + ' ({0})'.format(status)
             return ret
     else:

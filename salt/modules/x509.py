@@ -9,7 +9,7 @@ Manage X509 certificates
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import logging
 import hashlib
@@ -17,16 +17,18 @@ import glob
 import random
 import ctypes
 import tempfile
-import yaml
 import re
 import datetime
 import ast
+import sys
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
+import salt.utils.platform
 import salt.exceptions
-import salt.ext.six as six
+from salt.ext import six
 from salt.utils.odict import OrderedDict
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import range
@@ -132,6 +134,10 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
         raise salt.exceptions.SaltInvocationError(
             'value must be precomputed hash')
 
+    # ensure name and value are bytes
+    name = salt.utils.stringutils.to_str(name)
+    value = salt.utils.stringutils.to_str(value)
+
     try:
         ctx = M2Crypto.m2.x509v3_set_nconf()
         _fix_ctx(ctx, issuer)
@@ -166,7 +172,7 @@ def _parse_openssl_req(csr_filename):
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )
@@ -177,7 +183,7 @@ def _parse_openssl_req(csr_filename):
     output = re.sub(r': rsaEncryption', ':', output)
     output = re.sub(r'[0-9a-f]{2}:', '', output)
 
-    return yaml.safe_load(output)
+    return salt.utils.data.decode(salt.utils.yaml.safe_load(output))
 
 
 def _get_csr_extensions(csr):
@@ -215,7 +221,7 @@ def _parse_openssl_crl(crl_filename):
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )
@@ -266,7 +272,7 @@ def _parse_openssl_crl(crl_filename):
 
         rev_sn = revoked.split('\n')[0].strip()
         revoked = rev_sn + ':\n' + '\n'.join(revoked.split('\n')[1:])
-        rev_yaml = yaml.safe_load(revoked)
+        rev_yaml = salt.utils.data.decode(salt.utils.yaml.safe_load(revoked))
         # pylint: disable=unused-variable
         for rev_item, rev_values in six.iteritems(rev_yaml):
             # pylint: enable=unused-variable
@@ -310,16 +316,28 @@ def _dec2hex(decval):
     return _pretty_hex('{0:X}'.format(decval))
 
 
+def _isfile(path):
+    '''
+    A wrapper around os.path.isfile that ignores ValueError exceptions which
+    can be raised if the input to isfile is too long.
+    '''
+    try:
+        return os.path.isfile(path)
+    except ValueError:
+        pass
+    return False
+
+
 def _text_or_file(input_):
     '''
     Determines if input is a path to a file, or a string with the
     content to be parsed.
     '''
-    if os.path.isfile(input_):
-        with salt.utils.fopen(input_) as fp_:
-            return fp_.read()
+    if _isfile(input_):
+        with salt.utils.files.fopen(input_) as fp_:
+            return salt.utils.stringutils.to_str(fp_.read())
     else:
-        return input_
+        return salt.utils.stringutils.to_str(input_)
 
 
 def _parse_subject(subject):
@@ -336,9 +354,8 @@ def _parse_subject(subject):
             if val:
                 ret[nid_name] = val
                 nids.append(nid_num)
-        except TypeError as e:
-            if e.args and e.args[0] == 'No string argument provided':
-                pass
+        except TypeError as err:
+            log.trace("Missing attribute '%s'. Error: %s", nid_name, err)
 
     return ret
 
@@ -373,7 +390,7 @@ def _passphrase_callback(passphrase):
     Returns a callback function used to supply a passphrase for private keys
     '''
     def f(*args):
-        return passphrase
+        return salt.utils.stringutils.to_bytes(passphrase)
     return f
 
 
@@ -494,7 +511,7 @@ def get_pem_entry(text, pem_type=None):
         ret += pem_body[i:i + 64] + '\n'
     ret += pem_footer + '\n'
 
-    return ret
+    return salt.utils.stringutils.to_bytes(ret, encoding='ascii')
 
 
 def get_pem_entries(glob_path):
@@ -654,7 +671,7 @@ def read_crl(crl):
     text = get_pem_entry(text, pem_type='X509 CRL')
 
     crltempfile = tempfile.NamedTemporaryFile()
-    crltempfile.write(text)
+    crltempfile.write(salt.utils.stringutils.to_str(text))
     crltempfile.flush()
     crlparsed = _parse_openssl_crl(crltempfile.name)
     crltempfile.close()
@@ -679,12 +696,12 @@ def get_public_key(key, passphrase=None, asObj=False):
 
     if isinstance(key, M2Crypto.X509.X509):
         rsa = key.get_pubkey().get_rsa()
-        text = ''
+        text = b''
     else:
         text = _text_or_file(key)
         text = get_pem_entry(text)
 
-    if text.startswith('-----BEGIN PUBLIC KEY-----'):
+    if text.startswith(b'-----BEGIN PUBLIC KEY-----'):
         if not asObj:
             return text
         bio = M2Crypto.BIO.MemoryBuffer()
@@ -692,14 +709,14 @@ def get_public_key(key, passphrase=None, asObj=False):
         rsa = M2Crypto.RSA.load_pub_key_bio(bio)
 
     bio = M2Crypto.BIO.MemoryBuffer()
-    if text.startswith('-----BEGIN CERTIFICATE-----'):
+    if text.startswith(b'-----BEGIN CERTIFICATE-----'):
         cert = M2Crypto.X509.load_cert_string(text)
         rsa = cert.get_pubkey().get_rsa()
-    if text.startswith('-----BEGIN CERTIFICATE REQUEST-----'):
+    if text.startswith(b'-----BEGIN CERTIFICATE REQUEST-----'):
         csr = M2Crypto.X509.load_request_string(text)
         rsa = csr.get_pubkey().get_rsa()
-    if (text.startswith('-----BEGIN PRIVATE KEY-----') or
-            text.startswith('-----BEGIN RSA PRIVATE KEY-----')):
+    if (text.startswith(b'-----BEGIN PRIVATE KEY-----') or
+            text.startswith(b'-----BEGIN RSA PRIVATE KEY-----')):
         rsa = M2Crypto.RSA.load_key_string(
             text, callback=_passphrase_callback(passphrase))
 
@@ -759,23 +776,24 @@ def write_pem(text, path, overwrite=True, pem_type=None):
         text = get_pem_entry(text, pem_type=pem_type)
         _dhparams = ''
         _private_key = ''
-        if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and \
-                not overwrite:
+        if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and not overwrite:
             _filecontents = _text_or_file(path)
             try:
                 _dhparams = get_pem_entry(_filecontents, 'DH PARAMETERS')
-            except salt.exceptions.SaltInvocationError:
-                pass
+            except salt.exceptions.SaltInvocationError as err:
+                log.debug("Error when getting DH PARAMETERS: %s", err)
+                log.trace(err, exc_info=err)
             try:
                 _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
-            except salt.exceptions.SaltInvocationError:
-                pass
-        with salt.utils.fopen(path, 'w') as _fp:
+            except salt.exceptions.SaltInvocationError as err:
+                log.debug("Error when getting PRIVATE KEY: %s", err)
+                log.trace(err, exc_info=err)
+        with salt.utils.files.fopen(path, 'w') as _fp:
             if pem_type and pem_type == 'CERTIFICATE' and _private_key:
-                _fp.write(_private_key)
-            _fp.write(text)
+                _fp.write(salt.utils.stringutils.to_str(_private_key))
+            _fp.write(salt.utils.stringutils.to_str(text))
             if pem_type and pem_type == 'CERTIFICATE' and _dhparams:
-                _fp.write(_dhparams)
+                _fp.write(salt.utils.stringutils.to_str(_dhparams))
     return 'PEM written to {0}'.format(path)
 
 
@@ -846,7 +864,7 @@ def create_private_key(path=None,
             pem_type='(?:RSA )?PRIVATE KEY'
         )
     else:
-        return bio.read_all()
+        return salt.utils.stringutils.to_str(bio.read_all())
 
 
 def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
@@ -942,6 +960,8 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
             rev_item['not_after'] = rev_cert['Not After']
 
         serial_number = rev_item['serial_number'].replace(':', '')
+        # OpenSSL bindings requires this to be a non-unicode string
+        serial_number = salt.utils.stringutils.to_bytes(serial_number)
 
         if 'not_after' in rev_item and not include_expired:
             not_after = datetime.datetime.strptime(
@@ -956,13 +976,16 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         rev_date = datetime.datetime.strptime(
             rev_item['revocation_date'], '%Y-%m-%d %H:%M:%S')
         rev_date = rev_date.strftime('%Y%m%d%H%M%SZ')
+        rev_date = salt.utils.stringutils.to_bytes(rev_date)
 
         rev = OpenSSL.crypto.Revoked()
         rev.set_serial(serial_number)
         rev.set_rev_date(rev_date)
 
         if 'reason' in rev_item:
-            rev.set_reason(rev_item['reason'])
+            # Same here for OpenSSL bindings and non-unicode strings
+            reason = salt.utils.stringutils.to_str(rev_item['reason'])
+            rev.set_reason(reason)
 
         crl.add_revoked(rev)
 
@@ -983,7 +1006,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         'days': days_valid
     }
     if digest:
-        export_kwargs['digest'] = bytes(digest)
+        export_kwargs['digest'] = salt.utils.stringutils.to_bytes(digest)
     else:
         log.warning('No digest specified. The default md5 digest will be used.')
 
@@ -1049,7 +1072,7 @@ def sign_remote_certificate(argdic, **kwargs):
     try:
         return create_certificate(path=None, text=True, **argdic)
     except Exception as except_:  # pylint: disable=broad-except
-        return str(except_)
+        return six.text_type(except_)
 
 
 def get_signing_policy(signing_policy_name):
@@ -1354,9 +1377,9 @@ def create_certificate(
                 pem_type='CERTIFICATE REQUEST').replace('\n', '')
         if 'public_key' in kwargs:
             # Strip newlines to make passing through as cli functions easier
-            kwargs['public_key'] = get_public_key(
+            kwargs['public_key'] = salt.utils.stringutils.to_str(get_public_key(
                 kwargs['public_key'],
-                passphrase=kwargs['public_key_passphrase']).replace('\n', '')
+                passphrase=kwargs['public_key_passphrase'])).replace('\n', '')
 
         # Remove system entries in kwargs
         # Including listen_in and preqreuired because they are not included
@@ -1369,7 +1392,7 @@ def create_certificate(
         certs = __salt__['publish.publish'](
             tgt=ca_server,
             fun='x509.sign_remote_certificate',
-            arg=str(kwargs))
+            arg=six.text_type(kwargs))
 
         if not any(certs):
             raise salt.exceptions.SaltInvocationError(
@@ -1416,7 +1439,20 @@ def create_certificate(
     if 'serial_number' not in kwargs:
         kwargs['serial_number'] = _dec2hex(
             random.getrandbits(kwargs['serial_bits']))
-    cert.set_serial_number(int(kwargs['serial_number'].replace(':', ''), 16))
+    serial_number = int(kwargs['serial_number'].replace(':', ''), 16)
+    # With Python3 we occasionally end up with an INT that is greater than a C
+    # long max_value. This causes an overflow error due to a bug in M2Crypto.
+    # See issue: https://gitlab.com/m2crypto/m2crypto/issues/232
+    # Remove this after M2Crypto fixes the bug.
+    if six.PY3:
+        if salt.utils.platform.is_windows():
+            INT_MAX = 2147483647
+            if serial_number >= INT_MAX:
+                serial_number -= int(serial_number / INT_MAX) * INT_MAX
+        else:
+            if serial_number >= sys.maxsize:
+                serial_number -= int(serial_number / sys.maxsize) * sys.maxsize
+    cert.set_serial_number(serial_number)
 
     # Set validity dates
     # pylint: disable=no-member
@@ -1523,7 +1559,7 @@ def create_certificate(
 
     if 'copypath' in kwargs:
         if 'prepend_cn' in kwargs and kwargs['prepend_cn'] is True:
-            prepend = str(kwargs['CN']) + '-'
+            prepend = six.text_type(kwargs['CN']) + '-'
         else:
             prepend = ''
         write_pem(text=cert.as_pem(), path=os.path.join(kwargs['copypath'],
@@ -1538,7 +1574,7 @@ def create_certificate(
             pem_type='CERTIFICATE'
         )
     else:
-        return cert.as_pem()
+        return salt.utils.stringutils.to_str(cert.as_pem())
 # pylint: enable=too-many-locals
 
 
@@ -1589,7 +1625,7 @@ def create_csr(path=None, text=False, **kwargs):
         log.warning(
             "OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key")
 
-    if 'private_key' not in kwargs not in kwargs:
+    if 'private_key' not in kwargs:
         raise salt.exceptions.SaltInvocationError('private_key is required')
 
     if 'public_key' not in kwargs:
@@ -1737,20 +1773,20 @@ def verify_crl(crl, cert):
 
         salt '*' x509.verify_crl crl=/etc/pki/myca.crl cert=/etc/pki/myca.crt
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )
     crltext = _text_or_file(crl)
     crltext = get_pem_entry(crltext, pem_type='X509 CRL')
     crltempfile = tempfile.NamedTemporaryFile()
-    crltempfile.write(crltext)
+    crltempfile.write(salt.utils.stringutils.to_str(crltext))
     crltempfile.flush()
 
     certtext = _text_or_file(cert)
     certtext = get_pem_entry(certtext, pem_type='CERTIFICATE')
     certtempfile = tempfile.NamedTemporaryFile()
-    certtempfile.write(certtext)
+    certtempfile.write(salt.utils.stringutils.to_str(certtext))
     certtempfile.flush()
 
     cmd = ('openssl crl -noout -in {0} -CAfile {1}'.format(

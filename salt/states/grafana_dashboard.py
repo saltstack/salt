@@ -39,13 +39,13 @@ allowing users to manage their own custom rows.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
-import json
 import requests
 
 # Import Salt libs
-import salt.ext.six as six
+import salt.utils.json
+from salt.ext import six
 from salt.utils.dictdiffer import DictDiffer
 
 
@@ -158,16 +158,18 @@ def present(name,
     if updated_needed:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = ('Dashboard {0} is set to be updated, '
-                              'changes={1}').format(
-                                  name,
-                                  json.dumps(
-                                      _dashboard_diff(
-                                          _cleaned(new_dashboard),
-                                          _cleaned(old_dashboard)
-                                      ),
-                                      indent=4
-                                  ))
+            ret['comment'] = (
+                str('Dashboard {0} is set to be updated, changes={1}').format(  # future lint: blacklisted-function
+                    name,
+                    salt.utils.json.dumps(
+                        _dashboard_diff(
+                            _cleaned(new_dashboard),
+                            _cleaned(old_dashboard)
+                        ),
+                        indent=4
+                    )
+                )
+            )
             return ret
 
         response = _update(new_dashboard, profile)

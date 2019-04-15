@@ -36,7 +36,7 @@ file, in order to use this module to manage packages, like so:
       pkg: pkgng
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -44,10 +44,15 @@ import logging
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.files
+import salt.utils.functools
+import salt.utils.itertools
 import salt.utils.pkg
+import salt.utils.stringutils
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +75,7 @@ def __virtual__():
         providers = {}
         if 'providers' in __opts__:
             providers = __opts__['providers']
-        log.debug('__opts__.providers: {0}'.format(providers))
+        log.debug('__opts__.providers: %s', providers)
         if providers and 'pkg' in providers and providers['pkg'] == 'pkgng':
             log.debug('Configuration option \'providers:pkg\' is set to '
                 '\'pkgng\', using \'pkgng\' in favor of \'freebsdpkg\'.')
@@ -127,11 +132,11 @@ def _contextkey(jail=None, chroot=None, root=None, prefix='pkg.list_pkgs'):
     unique to that jail/chroot is used.
     '''
     if jail:
-        return str(prefix) + '.jail_{0}'.format(jail)
+        return six.text_type(prefix) + '.jail_{0}'.format(jail)
     elif chroot:
-        return str(prefix) + '.chroot_{0}'.format(chroot)
+        return six.text_type(prefix) + '.chroot_{0}'.format(chroot)
     elif root:
-        return str(prefix) + '.root_{0}'.format(root)
+        return six.text_type(prefix) + '.root_{0}'.format(root)
     return prefix
 
 
@@ -151,8 +156,9 @@ def parse_config(file_name='/usr/local/etc/pkg.conf'):
     if not os.path.isfile(file_name):
         return 'Unable to find {0} on file system'.format(file_name)
 
-    with salt.utils.fopen(file_name) as ifile:
+    with salt.utils.files.fopen(file_name) as ifile:
         for line in ifile:
+            line = salt.utils.stringutils.to_unicode(line)
             if line.startswith('#') or line.startswith('\n'):
                 pass
             else:
@@ -201,7 +207,7 @@ def version(*names, **kwargs):
     '''
     with_origin = kwargs.pop('with_origin', False)
     ret = __salt__['pkg_resource.version'](*names, **kwargs)
-    if not salt.utils.is_true(with_origin):
+    if not salt.utils.data.is_true(with_origin):
         return ret
     # Put the return value back into a dict since we're adding a subdict
     if len(names) == 1:
@@ -214,7 +220,7 @@ def version(*names, **kwargs):
 
 
 # Support pkg.info get version info, since this is the CLI usage
-info = salt.utils.alias_function(version, 'info')
+info = salt.utils.functools.alias_function(version, 'info')
 
 
 def refresh_db(jail=None, chroot=None, root=None, force=False):
@@ -263,7 +269,7 @@ def refresh_db(jail=None, chroot=None, root=None, force=False):
 
 
 # Support pkg.update to refresh the db, since this is the CLI usage
-update = salt.utils.alias_function(refresh_db, 'update')
+update = salt.utils.functools.alias_function(refresh_db, 'update')
 
 
 def latest_version(*names, **kwargs):
@@ -296,7 +302,7 @@ def latest_version(*names, **kwargs):
     root = kwargs.get('root')
     pkgs = list_pkgs(versions_as_list=True, jail=jail, chroot=chroot, root=root)
 
-    if salt.utils.compare_versions(_get_pkgng_version(jail, chroot, root), '>=', '1.6.0'):
+    if salt.utils.versions.compare(_get_pkgng_version(jail, chroot, root), '>=', '1.6.0'):
         quiet = True
     else:
         quiet = False
@@ -310,7 +316,7 @@ def latest_version(*names, **kwargs):
             cmd = _pkg(jail, chroot, root) + ['search', '-S', 'name', '-Q', 'version', '-e']
         if quiet:
             cmd.append('-q')
-        if not salt.utils.is_true(refresh):
+        if not salt.utils.data.is_true(refresh):
             cmd.append('-U')
         cmd.append(name)
 
@@ -328,7 +334,7 @@ def latest_version(*names, **kwargs):
                 ret[name] = pkgver
             else:
                 if not any(
-                    (salt.utils.compare_versions(ver1=x,
+                    (salt.utils.versions.compare(ver1=x,
                                                  oper='>=',
                                                  ver2=pkgver)
                      for x in installed)
@@ -342,7 +348,7 @@ def latest_version(*names, **kwargs):
 
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def list_pkgs(versions_as_list=False,
@@ -382,11 +388,11 @@ def list_pkgs(versions_as_list=False,
         salt '*' pkg.list_pkgs chroot=/path/to/chroot
     '''
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     contextkey_pkg = _contextkey(jail, chroot, root)
     contextkey_origins = _contextkey(jail, chroot, root, prefix='pkg.origin')
 
@@ -394,7 +400,7 @@ def list_pkgs(versions_as_list=False,
         ret = copy.deepcopy(__context__[contextkey_pkg])
         if not versions_as_list:
             __salt__['pkg_resource.stringify'](ret)
-        if salt.utils.is_true(with_origin):
+        if salt.utils.data.is_true(with_origin):
             origins = __context__.get(contextkey_origins, {})
             return dict([
                 (x, {'origin': origins.get(x, ''), 'version': y})
@@ -424,7 +430,7 @@ def list_pkgs(versions_as_list=False,
     __context__[contextkey_origins] = origins
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
-    if salt.utils.is_true(with_origin):
+    if salt.utils.data.is_true(with_origin):
         return dict([
             (x, {'origin': origins.get(x, ''), 'version': y})
             for x, y in six.iteritems(ret)
@@ -819,25 +825,25 @@ def install(name=None,
 
     env = {}
     opts = 'y'
-    if salt.utils.is_true(orphan):
+    if salt.utils.data.is_true(orphan):
         opts += 'A'
-    if salt.utils.is_true(force):
+    if salt.utils.data.is_true(force):
         opts += 'f'
-    if salt.utils.is_true(glob):
+    if salt.utils.data.is_true(glob):
         opts += 'g'
-    if salt.utils.is_true(local):
+    if salt.utils.data.is_true(local):
         opts += 'U'
-    if salt.utils.is_true(dryrun):
+    if salt.utils.data.is_true(dryrun):
         opts += 'n'
-    if salt.utils.is_true(quiet):
+    if salt.utils.data.is_true(quiet):
         opts += 'q'
-    if salt.utils.is_true(reinstall_requires):
+    if salt.utils.data.is_true(reinstall_requires):
         opts += 'R'
-    if salt.utils.is_true(regex):
+    if salt.utils.data.is_true(regex):
         opts += 'x'
-    if salt.utils.is_true(pcre):
+    if salt.utils.data.is_true(pcre):
         opts += 'X'
-    if salt.utils.is_true(batch):
+    if salt.utils.data.is_true(batch):
         env = {
                 "BATCH": "true",
                 "ASSUME_ALWAYS_YES": "YES"
@@ -871,7 +877,7 @@ def install(name=None,
         cmd.append('-' + opts)
     cmd.extend(targets)
 
-    if pkg_cmd == 'add' and salt.utils.is_true(dryrun):
+    if pkg_cmd == 'add' and salt.utils.data.is_true(dryrun):
         # pkg add doesn't have a dryrun mode, so echo out what will be run
         return ' '.join(cmd)
 
@@ -890,7 +896,7 @@ def install(name=None,
     __context__.pop(_contextkey(jail, chroot, root), None)
     __context__.pop(_contextkey(jail, chroot, root, prefix='pkg.origin'), None)
     new = list_pkgs(jail=jail, chroot=chroot, root=root)
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -1028,21 +1034,21 @@ def remove(name=None,
         return {}
 
     opts = ''
-    if salt.utils.is_true(all_installed):
+    if salt.utils.data.is_true(all_installed):
         opts += 'a'
-    if salt.utils.is_true(force):
+    if salt.utils.data.is_true(force):
         opts += 'f'
-    if salt.utils.is_true(glob):
+    if salt.utils.data.is_true(glob):
         opts += 'g'
-    if salt.utils.is_true(dryrun):
+    if salt.utils.data.is_true(dryrun):
         opts += 'n'
-    if not salt.utils.is_true(dryrun):
+    if not salt.utils.data.is_true(dryrun):
         opts += 'y'
-    if salt.utils.is_true(recurse):
+    if salt.utils.data.is_true(recurse):
         opts += 'R'
-    if salt.utils.is_true(regex):
+    if salt.utils.data.is_true(regex):
         opts += 'x'
-    if salt.utils.is_true(pcre):
+    if salt.utils.data.is_true(pcre):
         opts += 'X'
 
     cmd = _pkg(jail, chroot, root)
@@ -1065,7 +1071,7 @@ def remove(name=None,
     __context__.pop(_contextkey(jail, chroot, root), None)
     __context__.pop(_contextkey(jail, chroot, root, prefix='pkg.origin'), None)
     new = list_pkgs(jail=jail, chroot=chroot, root=root, with_origin=True)
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -1077,9 +1083,9 @@ def remove(name=None,
 
 
 # Support pkg.delete to remove packages, since this is the CLI usage
-delete = salt.utils.alias_function(remove, 'delete')
+delete = salt.utils.functools.alias_function(remove, 'delete')
 # No equivalent to purge packages, use remove instead
-purge = salt.utils.alias_function(remove, 'purge')
+purge = salt.utils.functools.alias_function(remove, 'purge')
 
 
 def upgrade(*names, **kwargs):
@@ -1173,8 +1179,6 @@ def upgrade(*names, **kwargs):
         opts += 'n'
     if not dryrun:
         opts += 'y'
-    if opts:
-        opts = '-' + opts
 
     cmd = _pkg(jail, chroot, root)
     cmd.append('upgrade')
@@ -1189,7 +1193,7 @@ def upgrade(*names, **kwargs):
     __context__.pop(_contextkey(jail, chroot, root), None)
     __context__.pop(_contextkey(jail, chroot, root, prefix='pkg.origin'), None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(

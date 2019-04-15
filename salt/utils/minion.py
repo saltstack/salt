@@ -4,17 +4,16 @@ Utility functions for minions
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import os
 import logging
 import threading
 
 # Import Salt Libs
-import salt.utils
 import salt.payload
-
-# Import 3rd-party libs
-import salt.ext.six as six
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.process
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +42,9 @@ def running(opts):
 
 
 def cache_jobs(opts, jid, ret):
+    '''
+    Write job information to cache
+    '''
     serial = salt.payload.Serial(opts=opts)
 
     fn_ = os.path.join(
@@ -53,7 +55,7 @@ def cache_jobs(opts, jid, ret):
     jdir = os.path.dirname(fn_)
     if not os.path.isdir(jdir):
         os.makedirs(jdir)
-    with salt.utils.fopen(fn_, 'w+b') as fp_:
+    with salt.utils.files.fopen(fn_, 'w+b') as fp_:
         fp_.write(serial.dumps(ret))
 
 
@@ -64,7 +66,7 @@ def _read_proc_file(path, opts):
     serial = salt.payload.Serial(opts)
     current_thread = threading.currentThread().name
     pid = os.getpid()
-    with salt.utils.fopen(path, 'rb') as fp_:
+    with salt.utils.files.fopen(path, 'rb') as fp_:
         buf = fp_.read()
         fp_.close()
         if buf:
@@ -74,7 +76,7 @@ def _read_proc_file(path, opts):
             try:
                 os.remove(path)
             except IOError:
-                pass
+                log.debug('Unable to remove proc file %s.', path)
             return None
     if not isinstance(data, dict):
         # Invalid serial object
@@ -85,7 +87,7 @@ def _read_proc_file(path, opts):
         try:
             os.remove(path)
         except IOError:
-            pass
+            log.debug('Unable to remove proc file %s.', path)
         return None
     if opts.get('multiprocessing'):
         if data.get('pid') == pid:
@@ -95,7 +97,7 @@ def _read_proc_file(path, opts):
             try:
                 os.remove(path)
             except IOError:
-                pass
+                log.debug('Unable to remove proc file %s.', path)
             return None
         if data.get('jid') == current_thread:
             return None
@@ -103,19 +105,19 @@ def _read_proc_file(path, opts):
             try:
                 os.remove(path)
             except IOError:
-                pass
+                log.debug('Unable to remove proc file %s.', path)
             return None
 
     if not _check_cmdline(data):
         pid = data.get('pid')
         if pid:
             log.warning(
-                'PID {0} exists but does not appear to be a salt process.'.format(pid)
+                'PID %s exists but does not appear to be a salt process.', pid
             )
         try:
             os.remove(path)
         except IOError:
-            pass
+            log.debug('Unable to remove proc file %s.', path)
         return None
     return data
 
@@ -129,7 +131,7 @@ def _check_cmdline(data):
 
     For non-Linux systems we punt and just return True
     '''
-    if not salt.utils.is_linux():
+    if not salt.utils.platform.is_linux():
         return True
     pid = data.get('pid')
     if not pid:
@@ -140,8 +142,8 @@ def _check_cmdline(data):
     if not os.path.isfile(path):
         return False
     try:
-        with salt.utils.fopen(path, 'rb') as fp_:
-            if six.b('salt') in fp_.read():
+        with salt.utils.files.fopen(path, 'rb') as fp_:
+            if b'salt' in fp_.read():
                 return True
     except (OSError, IOError):
         return False

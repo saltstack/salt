@@ -16,11 +16,12 @@ powercfg.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.data
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ def __virtual__():
     '''
     Only work on Windows
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'PowerCFG: Module only works on Windows'
     return __virtualname__
 
@@ -132,7 +133,7 @@ def set_timeout(name, value, power='ac', scheme=None):
     # Get the setting after the change
     new = __salt__['powercfg.get_{0}_timeout'.format(name)](scheme=scheme)
 
-    changes = salt.utils.compare_dicts(old, new)
+    changes = salt.utils.data.compare_dicts(old, new)
 
     if changes:
         ret['changes'] = {name: changes}

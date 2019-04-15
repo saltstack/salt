@@ -3,14 +3,13 @@
 Module for managing SNMP service settings on Windows servers.
 The Windows feature 'SNMP-Service' must be installed.
 '''
-
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
-# Import salt libs
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-import salt.utils
 
 # Import 3rd party libs
 from salt.ext import six
@@ -46,7 +45,7 @@ def __virtual__():
     '''
     Only works on Windows systems.
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Module win_snmp: Requires Windows'
 
     if not __salt__['reg.key_exists'](_HKEY, _SNMP_KEY):
@@ -371,7 +370,7 @@ def get_community_names():
                 if not isinstance(current_value, dict):
                     continue
 
-                permissions = str()
+                permissions = six.text_type()
                 for permission_name in _PERMISSION_TYPES:
                     if current_value['vdata'] == _PERMISSION_TYPES[permission_name]:
                         permissions = permission_name

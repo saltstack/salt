@@ -1,81 +1,196 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: Mike Place <mp@saltstack.com>
+    tests.unit.context_test
+    ~~~~~~~~~~~~~~~~~~~~
 '''
-
-# Import python libraries
+# Import python libs
 from __future__ import absolute_import
-import os
-import shutil
+import tornado.stack_context
+import tornado.gen
+from tornado.testing import AsyncTestCase, gen_test
+import threading
+import time
 
-# Import Salt testing libraries
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
-from salt.utils.cache import context_cache
+# Import Salt Testing libs
+from tests.support.unit import TestCase
+from salt.ext.six.moves import range
 
-# Import Salt libraries
-import salt.payload
-import salt.utils
-
-__context__ = {'a': 'b'}
-__opts__ = {'cachedir': '/tmp'}
+# Import Salt libs
+import salt.utils.json
+from salt.utils.context import ContextDict, NamespacedDictWrapper
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-class ContextCacheTest(TestCase):
-    '''
-    Test case for salt.utils.cache.ContextCache
-    '''
+class ContextDictTests(AsyncTestCase):
+    # how many threads/coroutines to run at a time
+    num_concurrent_tasks = 5
+
     def setUp(self):
+        super(ContextDictTests, self).setUp()
+        self.cd = ContextDict()
+        # set a global value
+        self.cd['foo'] = 'global'
+
+    def test_threads(self):
+        '''Verify that ContextDict overrides properly within threads
         '''
-        Clear the cache before every test
+        rets = []
+
+        def tgt(x, s):
+            inner_ret = []
+            over = self.cd.clone()
+
+            inner_ret.append(self.cd.get('foo'))
+            with over:
+                inner_ret.append(over.get('foo'))
+                over['foo'] = x
+                inner_ret.append(over.get('foo'))
+                time.sleep(s)
+                inner_ret.append(over.get('foo'))
+                rets.append(inner_ret)
+
+        threads = []
+        for x in range(0, self.num_concurrent_tasks):
+            s = self.num_concurrent_tasks - x
+            t = threading.Thread(target=tgt, args=(x, s))
+            t.start()
+            threads.append(t)
+
+        for t in threads:
+            t.join()
+
+        for r in rets:
+            self.assertEqual(r[0], r[1])
+            self.assertEqual(r[2], r[3])
+
+    @gen_test
+    def test_coroutines(self):
+        '''Verify that ContextDict overrides properly within coroutines
         '''
-        context_dir = os.path.join(__opts__['cachedir'], 'context')
-        if os.path.isdir(context_dir):
-            shutil.rmtree(context_dir)
+        @tornado.gen.coroutine
+        def secondary_coroutine(over):
+            raise tornado.gen.Return(over.get('foo'))
 
-    def test_set_cache(self):
+        @tornado.gen.coroutine
+        def tgt(x, s, over):
+            inner_ret = []
+            # first grab the global
+            inner_ret.append(self.cd.get('foo'))
+            # grab the child's global (should match)
+            inner_ret.append(over.get('foo'))
+            # override the global
+            over['foo'] = x
+            inner_ret.append(over.get('foo'))
+            # sleep for some time to let other coroutines do this section of code
+            yield tornado.gen.sleep(s)
+            # get the value of the global again.
+            inner_ret.append(over.get('foo'))
+            # Call another coroutine to verify that we keep our context
+            r = yield secondary_coroutine(over)
+            inner_ret.append(r)
+            raise tornado.gen.Return(inner_ret)
+
+        futures = []
+
+        for x in range(0, self.num_concurrent_tasks):
+            s = self.num_concurrent_tasks - x
+            over = self.cd.clone()
+
+            f = tornado.stack_context.run_with_stack_context(
+                tornado.stack_context.StackContext(lambda: over),  # pylint: disable=W0640
+                lambda: tgt(x, s/5.0, over),  # pylint: disable=W0640
+            )
+            futures.append(f)
+
+        wait_iterator = tornado.gen.WaitIterator(*futures)
+        while not wait_iterator.done():
+            r = yield wait_iterator.next()  # pylint: disable=incompatible-py3-code
+            self.assertEqual(r[0], r[1])  # verify that the global value remails
+            self.assertEqual(r[2], r[3])  # verify that the override sticks locally
+            self.assertEqual(r[3], r[4])  # verify that the override sticks across coroutines
+
+    def test_basic(self):
+        '''Test that the contextDict is a dict
         '''
-        Tests to ensure the cache is written correctly
-        '''
-        @context_cache
-        def _test_set_cache():
-            '''
-            This will inherit globals from the test module itself.
-            Normally these are injected by the salt loader [salt.loader]
-            '''
-            pass
+        # ensure we get the global value
+        self.assertEqual(
+            dict(self.cd),
+            {'foo': 'global'},
+        )
 
-        _test_set_cache()
+    def test_override(self):
+        over = self.cd.clone()
+        over['bar'] = 'global'
+        self.assertEqual(
+            dict(over),
+            {'foo': 'global', 'bar': 'global'},
+        )
+        self.assertEqual(
+            dict(self.cd),
+            {'foo': 'global'},
+        )
+        with over:
+            self.assertEqual(
+                dict(over),
+                {'foo': 'global', 'bar': 'global'},
+            )
+            self.assertEqual(
+                dict(self.cd),
+                {'foo': 'global', 'bar': 'global'},
+            )
+            over['bar'] = 'baz'
+            self.assertEqual(
+                dict(over),
+                {'foo': 'global', 'bar': 'baz'},
+            )
+            self.assertEqual(
+                dict(self.cd),
+                {'foo': 'global', 'bar': 'baz'},
+            )
+        self.assertEqual(
+            dict(over),
+            {'foo': 'global', 'bar': 'baz'},
+        )
+        self.assertEqual(
+            dict(self.cd),
+            {'foo': 'global'},
+        )
 
-        target_cache_file = os.path.join(__opts__['cachedir'], 'context', '{0}.p'.format(__name__))
-        self.assertTrue(os.path.isfile(target_cache_file), 'Context cache did not write cache file')
+    def test_multiple_contexts(self):
+        cds = []
+        for x in range(0, 10):
+            cds.append(self.cd.clone(bar=x))
+        for x, cd in enumerate(cds):
+            self.assertNotIn('bar', self.cd)
+            with cd:
+                self.assertEqual(
+                    dict(self.cd),
+                    {'bar': x, 'foo': 'global'},
+                )
+        self.assertNotIn('bar', self.cd)
 
-        # Test manual de-serialize
-        with salt.utils.fopen(target_cache_file, 'rb') as fp_:
-            target_cache_data = salt.payload.Serial(__opts__).load(fp_)
-        self.assertDictEqual(__context__, target_cache_data)
 
-        # Test cache de-serialize
-        cc = salt.utils.cache.ContextCache(__opts__, __name__)
-        retrieved_cache = cc.get_cache_context()
-        self.assertDictEqual(retrieved_cache, __context__)
+class NamespacedDictWrapperTests(TestCase):
+    PREFIX = 'prefix'
 
-    def test_refill_cache(self):
-        '''
-        Tests to ensure that the context cache can rehydrate a wrapped function
-        '''
-        # First populate the cache
-        @context_cache
-        def _test_set_cache():
-            pass
-        _test_set_cache()
+    def setUp(self):
+        self._dict = {}
 
-        # Then try to rehydate a func
-        @context_cache
-        def _test_refill_cache(comparison_context):
-            self.assertEqual(__context__, comparison_context)
+    def test_single_key(self):
+        self._dict['prefix'] = {'foo': 'bar'}
+        w = NamespacedDictWrapper(self._dict, 'prefix')
+        self.assertEqual(w['foo'], 'bar')
 
-        global __context__
-        __context__ = {}
-        _test_refill_cache({'a': 'b'})  # Compare to the context before it was emptied
+    def test_multiple_key(self):
+        self._dict['prefix'] = {'foo': {'bar': 'baz'}}
+        w = NamespacedDictWrapper(self._dict, ('prefix', 'foo'))
+        self.assertEqual(w['bar'], 'baz')
+
+    def test_json_dumps_single_key(self):
+        self._dict['prefix'] = {'foo': {'bar': 'baz'}}
+        w = NamespacedDictWrapper(self._dict, 'prefix')
+        self.assertEqual(salt.utils.json.dumps(w), '{"foo": {"bar": "baz"}}')
+
+    def test_json_dumps_multiple_key(self):
+        self._dict['prefix'] = {'foo': {'bar': 'baz'}}
+        w = NamespacedDictWrapper(self._dict, ('prefix', 'foo'))
+        self.assertEqual(salt.utils.json.dumps(w), '{"bar": "baz"}')

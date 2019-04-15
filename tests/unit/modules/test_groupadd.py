@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 try:
     import grp
 except ImportError:
@@ -16,12 +16,12 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
-import salt.utils
 import salt.modules.groupadd as groupadd
+import salt.utils.platform
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), "Module not available on Windows")
+@skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
 class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.groupadd
@@ -158,7 +158,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         ]
 
         for os_version in os_version_list:
-            mock_ret = MagicMock(return_value={'retcode': 0})
+            mock_retcode = MagicMock(return_value=0)
             mock_stdout = MagicMock(return_value='test foo')
             mock_info = MagicMock(return_value={'passwd': '*',
                                                 'gid': 0,
@@ -166,10 +166,10 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
                                                 'members': ['root']})
 
             with patch.dict(groupadd.__grains__, os_version['grains']):
-                with patch.dict(groupadd.__salt__, {'cmd.retcode': mock_ret,
+                with patch.dict(groupadd.__salt__, {'cmd.retcode': mock_retcode,
                                                     'group.info': mock_info,
                                                     'cmd.run_stdout': mock_stdout}):
-                    self.assertFalse(groupadd.deluser('test', 'root'))
+                    self.assertTrue(groupadd.deluser('test', 'root'))
                     groupadd.__salt__['cmd.retcode'].assert_called_once_with(os_version['cmd'], python_shell=False)
 
     # 'deluser' function tests: 1

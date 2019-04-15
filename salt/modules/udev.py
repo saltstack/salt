@@ -5,10 +5,12 @@ Manage and query udev info
 .. versionadded:: 2015.8.0
 
 '''
-from __future__ import absolute_import
-
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import salt.utils
+
+# Import Salt libs
+import salt.utils.path
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
 
@@ -23,7 +25,7 @@ def __virtual__():
     '''
     Only work when udevadm is installed.
     '''
-    return salt.utils.which_bin(['udevadm']) is not None
+    return salt.utils.path.which_bin(['udevadm']) is not None
 
 
 def _parse_udevadm_info(udev_info):

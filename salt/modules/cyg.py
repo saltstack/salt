@@ -4,7 +4,7 @@ Manage cygwin packages.
 
 Module file to accompany the cyg state.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -16,8 +16,13 @@ import bz2
 from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 LOG = logging.getLogger(__name__)
@@ -31,9 +36,9 @@ __virtualname__ = 'cyg'
 
 def __virtual__():
     '''
-    Only works on Windows systems.
+    Only works on Windows systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return __virtualname__
     return (False, 'Module cyg: module only works on Windows systems.')
 
@@ -152,7 +157,7 @@ def _run_silent_cygwin(cyg_arch='x86_64',
         os.remove(cyg_setup_path)
 
     file_data = _urlopen(cyg_setup_source)
-    with salt.utils.fopen(cyg_setup_path, "wb") as fhw:
+    with salt.utils.files.fopen(cyg_setup_path, "wb") as fhw:
         fhw.write(file_data.read())
 
     setup_command = cyg_setup_path
@@ -313,8 +318,8 @@ def list_(package='', cyg_arch='x86_64'):
     args = ' '.join(['-c', '-d', package])
     stdout = _cygcheck(args, cyg_arch=cyg_arch)
     lines = []
-    if isinstance(stdout, str):
-        lines = str(stdout).splitlines()
+    if isinstance(stdout, six.string_types):
+        lines = salt.utils.stringutils.to_unicode(stdout).splitlines()
     for line in lines:
         match = re.match(r'^([^ ]+) *([^ ]+)', line)
         if match:

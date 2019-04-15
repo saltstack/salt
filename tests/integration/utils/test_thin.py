@@ -8,7 +8,7 @@ import os
 
 from tests.support.unit import TestCase
 
-import salt.utils
+import salt.utils.files
 import salt.utils.thin
 try:
     import virtualenv
@@ -23,7 +23,7 @@ class TestThinDir(TestCase):
         self.tmpdir = tempfile.mkdtemp()
 
     def tearDown(self):
-        salt.utils.rm_rf(self.tmpdir)
+        salt.utils.files.rm_rf(self.tmpdir)
 
     def test_thin_dir(self):
         '''

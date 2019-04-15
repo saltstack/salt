@@ -13,12 +13,13 @@ powercfg.
     salt '*' powercfg.set_disk_timeout 120 power=ac
 '''
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import re
 import logging
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.platform
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ def __virtual__():
     '''
     Only work on Windows
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'PowerCFG: Module only works on Windows'
     return __virtualname__
 
@@ -73,7 +74,7 @@ def _set_powercfg_value(scheme, sub_group, setting_guid, power, value):
     '''
     Sets the AC/DC values of a setting with the given power for the given scheme
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'This function now expects the timeout value in minutes instead of '
         'seconds as stated in the documentation. This warning will be removed '

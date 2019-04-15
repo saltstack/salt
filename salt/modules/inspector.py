@@ -17,7 +17,7 @@
 '''
 Module for full system inspection.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import getpass
@@ -26,8 +26,9 @@ from salt.modules.inspectlib.exceptions import (InspectorQueryException,
                                                 InspectorKiwiProcessorException)
 
 # Import Salt libs
-import salt.utils
+from salt.ext import six
 import salt.utils.fsutils
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from salt.exceptions import get_error_message as _get_error_message
 
@@ -38,7 +39,7 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    return not salt.utils.is_windows() and 'inspector'
+    return not salt.utils.platform.is_windows() and 'inspector'
 
 
 def _(module):
@@ -57,7 +58,7 @@ def _(module):
         mod = importlib.import_module("salt.modules.inspectlib.{0}".format(module))
     except ImportError as err:
         # No importlib around (2.6)
-        mod = getattr(__import__("salt.modules.inspectlib", globals(), locals(), fromlist=[str(module)]), module)
+        mod = getattr(__import__("salt.modules.inspectlib", globals(), locals(), fromlist=[six.text_type(module)]), module)
     # pylint: enable=E0598
 
     mod.__grains__ = __grains__
@@ -267,7 +268,7 @@ def delete(all=False, *databases):
         inspector = _("collector").Inspector(cachedir=__opts__['cachedir'],
                                              piddir=os.path.dirname(__opts__['pidfile']))
         for dbid in all and inspector.db.list() or databases:
-            ret[dbid] = inspector.db._db.purge(str(dbid))
+            ret[dbid] = inspector.db._db.purge(six.text_type(dbid))
         return ret
     except InspectorSnapshotException as err:
         raise CommandExecutionError(err)

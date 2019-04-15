@@ -23,7 +23,7 @@ using the existing Libcloud driver for Dimension Data.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import socket
 import pprint
@@ -40,10 +40,11 @@ try:
     from libcloud.loadbalancer.types import Provider as Provider_lb
     from libcloud.loadbalancer.providers import get_driver as get_driver_lb
 
-    # This work-around for Issue #32743 is no longer needed for libcloud >= 1.4.0.
-    # However, older versions of libcloud must still be supported with this work-around.
-    # This work-around can be removed when the required minimum version of libcloud is
-    # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
+    # This work-around for Issue #32743 is no longer needed for libcloud >=
+    # 1.4.0. However, older versions of libcloud must still be supported with
+    # this work-around. This work-around can be removed when the required
+    # minimum version of libcloud is 2.0.0 (See PR #40837 - which is
+    # implemented in Salt 2018.3.0).
     if _LooseVersion(libcloud.__version__) < _LooseVersion('1.4.0'):
         # See https://github.com/saltstack/salt/issues/32743
         import libcloud.security
@@ -54,7 +55,7 @@ except ImportError:
 
 # Import salt.cloud libs
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
-from salt.utils import namespaced_function
+from salt.utils.functools import namespaced_function
 import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
@@ -295,7 +296,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc))
+            raise SaltCloudSystemExit(six.text_type(exc))
 
     log.debug('VM is now running')
     if ssh_interface(vm_) == 'private_ips':
@@ -327,11 +328,10 @@ def create(vm_):
     if 'password' in data.extra:
         del data.extra['password']
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data.__dict__)
-        )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(data.__dict__)
     )
 
     __utils__['cloud.fire_event'](

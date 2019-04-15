@@ -28,9 +28,9 @@ Minion Configuration
 ====================
 
 The default minion configuration is set up in this file. Minions created by
-salt-cloud derive their configuration from this file.  Almost all parameters
-found in :ref:`Configuring the Salt Minion <configuration-salt-minion>` can
-be used here.
+salt-cloud derive their configuration from this file. Almost all parameters
+found in :ref:`Configuring the Salt Minion <configuration-salt-minion>` can be
+used here.
 
 .. code-block:: yaml
 
@@ -44,7 +44,7 @@ and its listening port, if the port is not set to the default.
 Similar to most other settings, Minion configuration settings are inherited
 across configuration files. For example, the master setting might be contained
 in the main ``cloud`` configuration file as demonstrated above, but additional
-settings can be placed in the provider or profile:
+settings can be placed in the provider, profile or map configuration files:
 
 .. code-block:: yaml
 
@@ -55,6 +55,24 @@ settings can be placed in the provider or profile:
         startup_states: sls
         sls_list:
           - web
+
+
+When salt cloud creates a new minon, it can automatically add grain information
+to the minion configuration file identifying the sources originally used
+to define it.
+
+The generated grain information will appear similar to:
+
+.. code-block:: yaml
+
+    grains:
+      salt-cloud:
+        driver: ec2
+        provider: my_ec2:ec2
+        profile: ec2-web
+
+The generation of the salt-cloud grain can be suppressed by the
+option ``enable_cloud_grains: 'False'`` in the cloud configuration file.
 
 Cloud Configuration Syntax
 ==========================
@@ -166,37 +184,18 @@ minion. In your pillar file, you would use something like this:
       ssh_key_file: /root/.ssh/id_rsa
       update_cachedir: True
       diff_cache_events: True
-      change_password: True
 
       providers:
-        my-nova:
-          identity_url: https://identity.api.rackspacecloud.com/v2.0/
-          compute_region: IAD
-          user: myuser
-          api_key: apikey
-          tenant: 123456
-          driver: nova
-
         my-openstack:
-          identity_url: https://identity.api.rackspacecloud.com/v2.0/tokens
-          user: user2
-          apikey: apikey2
-          tenant: 654321
-          compute_region: DFW
           driver: openstack
-          compute_name: cloudServersOpenStack
+          region_name: ORD
+          cloud: mycloud
 
       profiles:
-        ubuntu-nova:
-          provider: my-nova
-          size: performance1-8
-          image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
-          script_args: git develop
-
         ubuntu-openstack:
           provider: my-openstack
-          size: performance1-8
-          image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
+          size: ds512M
+          image: CentOS 7
           script_args: git develop
 
 
@@ -345,76 +344,37 @@ be set in the configuration file to enable interfacing with GoGrid:
 OpenStack
 ---------
 
-OpenStack configuration differs between providers, and at the moment several
-options need to be specified. This module has been officially tested against
-the HP and the Rackspace implementations, and some examples are provided for
-both.
+Using Salt for OpenStack uses the `shade <https://docs.openstack.org/shade/latest/>` driver managed by the
+openstack-infra team.  
+
+This driver can be configured using the ``/etc/openstack/clouds.yml`` file with
+`os-client-config <https://docs.openstack.org/os-client-config/latest/>`
 
 .. code-block:: yaml
 
-    # For HP
-    my-openstack-hp-config:
-      identity_url:
-      'https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/'
-      compute_name: Compute
-      compute_region: 'az-1.region-a.geo-1'
-      tenant: myuser-tenant1
-      user: myuser
-      ssh_key_name: mykey
-      ssh_key_file: '/etc/salt/hpcloud/mykey.pem'
-      password: mypass
+    myopenstack:
       driver: openstack
+      region_name: RegionOne
+      cloud: mycloud
 
-    # For Rackspace
-    my-openstack-rackspace-config:
-      identity_url: 'https://identity.api.rackspacecloud.com/v2.0/tokens'
-      compute_name: cloudServersOpenStack
-      protocol: ipv4
-      compute_region: DFW
-      user: myuser
-      tenant: 5555555
-      password: mypass
+Or by just configuring the same auth block directly in the cloud provider config.
+
+.. code-block:: yaml
+
+    myopenstack:
       driver: openstack
+      region_name: RegionOne
+      auth:
+        username: 'demo'
+        password: secret
+        project_name: 'demo'
+        auth_url: 'http://openstack/identity'
 
+Both of these methods support using the
+`vendor <https://docs.openstack.org/os-client-config/latest/user/vendor-support.html>`
+options.
 
-If you have an API key for your provider, it may be specified instead of a
-password:
-
-.. code-block:: yaml
-
-    my-openstack-hp-config:
-      apikey: 901d3f579h23c8v73q9
-
-    my-openstack-rackspace-config:
-      apikey: 901d3f579h23c8v73q9
-
-.. note::
-
-    In the cloud profile that uses this provider configuration, the syntax for the
-    ``provider`` required field would be either ``provider: my-openstack-hp-config``
-    or ``provider: my-openstack-rackspace-config``.
-
-You will certainly need to configure the ``user``, ``tenant``, and either
-``password`` or ``apikey``.
-
-If your OpenStack instances only have private IP addresses and a CIDR range of
-private addresses are not reachable from the salt-master, you may set your
-preference to have Salt ignore it:
-
-.. code-block:: yaml
-
-    my-openstack-config:
-      ignore_cidr: 192.168.0.0/16
-
-For in-house OpenStack Essex installation, libcloud needs the service_type :
-
-.. code-block:: yaml
-
-    my-openstack-config:
-      identity_url: 'http://control.openstack.example.org:5000/v2.0/'
-      compute_name : Compute Service
-      service_type : compute
-
+For more information, look at :mod:`Openstack Cloud Driver Docs <salt.cloud.clouds.openstack>`
 
 DigitalOcean
 ------------
@@ -426,7 +386,7 @@ under the API Access tab.
 .. code-block:: yaml
 
     my-digitalocean-config:
-      driver: digital_ocean
+      driver: digitalocean
       personal_access_token: xxx
       location: New York 1
 
@@ -521,6 +481,17 @@ machine, virtual or bare metal, using SSH. This driver is useful for provisionin
 machines which are already installed, but not Salted. For more information about using
 this driver and for configuration examples, please see the
 :ref:`Gettting Started with Saltify <getting-started-with-saltify>` documentation.
+
+.. _config_vagrant:
+
+Vagrant
+-------
+
+The Vagrant driver is a new, experimental driver for controlling a VagrantBox
+virtual machine, and installing Salt on it. The target host machine must be a
+working salt minion, which is controlled via the salt master using salt-api.
+For more information, see
+:ref:`Getting Started With Vagrant <getting-started-with-vagrant>`.
 
 
 Extending Profiles and Cloud Providers Configuration

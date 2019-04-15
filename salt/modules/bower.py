@@ -8,15 +8,15 @@ Note that npm, git and bower must be installed for this module to be
 available.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import json
 import logging
 import shlex
 
 # Import salt libs
-import salt.utils
+import salt.utils.json
+import salt.utils.path
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -33,7 +33,7 @@ def __virtual__():
     '''
     Only work when Bower is installed
     '''
-    if salt.utils.which('bower') is None:
+    if salt.utils.path.which('bower') is None:
         return (False, 'The bower module could not be loaded: bower command not found')
     return True
 
@@ -129,7 +129,7 @@ def install(pkg,
         raise CommandExecutionError(result['stderr'])
 
     # If package is already installed, Bower will emit empty dict to STDOUT
-    stdout = json.loads(result['stdout'])
+    stdout = salt.utils.json.loads(result['stdout'])
     return stdout != {}
 
 
@@ -174,7 +174,7 @@ def uninstall(pkg, dir, runas=None, env=None):
         raise CommandExecutionError(result['stderr'])
 
     # If package is not installed, Bower will emit empty dict to STDOUT
-    stdout = json.loads(result['stdout'])
+    stdout = salt.utils.json.loads(result['stdout'])
     return stdout != {}
 
 
@@ -214,7 +214,7 @@ def list_(dir, runas=None, env=None):
     if result['retcode'] != 0:
         raise CommandExecutionError(result['stderr'])
 
-    return json.loads(result['stdout'])['dependencies']
+    return salt.utils.json.loads(result['stdout'])['dependencies']
 
 
 def prune(dir, runas=None, env=None):
@@ -255,4 +255,4 @@ def prune(dir, runas=None, env=None):
         raise CommandExecutionError(result['stderr'])
 
     # Bower returns an empty dictionary if nothing was pruned
-    return json.loads(result['stdout'])
+    return salt.utils.json.loads(result['stdout'])

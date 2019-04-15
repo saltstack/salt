@@ -43,7 +43,7 @@ to update data sources if the already exists.
         - basic_auth_password: mypass
         - is_default: true
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 from salt.ext.six import string_types
 from salt.utils.dictdiffer import deep_diff
@@ -128,7 +128,7 @@ def present(name,
     if isinstance(profile, string_types):
         profile = __salt__['config.option'](profile)
 
-    ret = {'name': name, 'result': None, 'comment': None, 'changes': None}
+    ret = {'name': name, 'result': None, 'comment': None, 'changes': {}}
     datasource = __salt__['grafana4.get_datasource'](name, orgname, profile)
     data = _get_json_data(
         name=name,
@@ -149,6 +149,9 @@ def present(name,
         defaults=datasource)
 
     if not datasource:
+        if __opts__['test']:
+            ret['comment'] = 'Datasource {0} will be created'.format(name)
+            return ret
         __salt__['grafana4.create_datasource'](profile=profile, **data)
         datasource = __salt__['grafana4.get_datasource'](name, profile=profile)
         ret['result'] = True
@@ -156,15 +159,23 @@ def present(name,
         ret['changes'] = data
         return ret
 
+    # At this stage, the datasource exists; however, the object provided by
+    # Grafana may lack some null keys compared to our "data" dict:
+    for key in data:
+        if key not in datasource:
+            datasource[key] = None
+
     if data == datasource:
-        ret['changes'] = None
         ret['comment'] = 'Data source {0} already up-to-date'.format(name)
         return ret
 
+    if __opts__['test']:
+        ret['comment'] = 'Datasource {0} will be updated'.format(name)
+        return ret
     __salt__['grafana4.update_datasource'](
         datasource['id'], profile=profile, **data)
     ret['result'] = True
-    ret['changes'] = deep_diff(datasource, data, ignore=['id', 'orgId'])
+    ret['changes'] = deep_diff(datasource, data, ignore=['id', 'orgId', 'readOnly'])
     ret['comment'] = 'Data source {0} updated'.format(name)
     return ret
 
@@ -194,6 +205,9 @@ def absent(name, orgname=None, profile='grafana'):
         ret['comment'] = 'Data source {0} already absent'.format(name)
         return ret
 
+    if __opts__['test']:
+        ret['comment'] = 'Datasource {0} will be deleted'.format(name)
+        return ret
     __salt__['grafana4.delete_datasource'](datasource['id'], profile=profile)
 
     ret['result'] = True

@@ -10,7 +10,7 @@ require any configuration.
 Expiration values can be set in the relevant config file (``/etc/salt/master`` for
 the master, ``/etc/salt/cloud`` for Salt Cloud, etc).
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import os.path
@@ -19,8 +19,8 @@ import shutil
 import tempfile
 
 from salt.exceptions import SaltCacheError
-import salt.utils
 import salt.utils.atomicfile
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ def store(bank, key, data, cachedir):
     tmpfh, tmpfname = tempfile.mkstemp(dir=base)
     os.close(tmpfh)
     try:
-        with salt.utils.fopen(tmpfname, 'w+b') as fh_:
+        with salt.utils.files.fopen(tmpfname, 'w+b') as fh_:
             fh_.write(__context__['serial'].dumps(data))
         # On Windows, os.rename will fail if the destination file exists.
         salt.utils.atomicfile.atomic_rename(tmpfname, outfile)
@@ -87,7 +87,7 @@ def fetch(bank, key, cachedir):
         log.debug('Cache file "%s" does not exist', key_file)
         return {}
     try:
-        with salt.utils.fopen(key_file, 'rb') as fh_:
+        with salt.utils.files.fopen(key_file, 'rb') as fh_:
             if inkey:
                 return __context__['serial'].load(fh_)[key]
             else:

@@ -10,15 +10,17 @@ Manage groups on Linux, OpenBSD and NetBSD
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
+from salt.ext import six
 try:
     import grp
 except ImportError:
     pass
 
 log = logging.getLogger(__name__)
+
 
 # Define the module's virtual name
 __virtualname__ = 'group'
@@ -220,7 +222,7 @@ def deluser(name, username, root=None):
                 out = __salt__['cmd.run_stdout']('id -Gn {0}'.format(username),
                                                  python_shell=False)
                 cmd = ['usermod', '-S']
-                cmd.append(','.join([g for g in out.split() if g != str(name)]))
+                cmd.append(','.join([g for g in out.split() if g != six.text_type(name)]))
                 cmd.append('{0}'.format(username))
                 retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
             else:

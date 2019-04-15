@@ -122,7 +122,7 @@ This example, simplified from the pkg state, shows how to create mod_aggregate f
         for chunk in chunks:
             # The state runtime uses "tags" to track completed jobs, it may
             # look familiar with the _|-
-            tag = salt.utils.gen_state_tag(chunk)
+            tag = __utils__['state.gen_tag'](chunk)
             if tag in running:
                 # Already ran the pkg state, skip aggregation
                 continue

@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import socket
 import ctypes
 import os
-import ipaddress
+from salt._compat import ipaddress
 import salt.ext.six as six
 
 
@@ -24,7 +24,7 @@ if hasattr(ctypes, 'windll'):
     WSAStringToAddressA = ctypes.windll.ws2_32.WSAStringToAddressA
     WSAAddressToStringA = ctypes.windll.ws2_32.WSAAddressToStringA
 else:
-    def not_windows():
+    def not_windows(*args):
         raise SystemError(
             "Invalid platform. ctypes.windll must be available."
         )
@@ -37,10 +37,7 @@ def inet_pton(address_family, ip_string):
     # This will catch IP Addresses such as 10.1.2
     if address_family == socket.AF_INET:
         try:
-            if isinstance(ip_string, six.binary_type):
-                ipaddress.ip_address(six.u(ip_string))
-            else:
-                ipaddress.ip_address(ip_string)
+            ipaddress.ip_address(six.text_type(ip_string))
         except ValueError:
             raise socket.error('illegal IP address string passed to inet_pton')
         return socket.inet_aton(ip_string)

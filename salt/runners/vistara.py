@@ -20,10 +20,9 @@ For example ``/etc/salt/master.d/_vistara.conf``:
 
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
-import json
 import logging
 
 # Import Salt libs
@@ -144,7 +143,7 @@ def _search_devices(query_string, client_id, access_token):
     if not respbody:
         return False
 
-    respbodydict = json.loads(resp['body'])
+    respbodydict = salt.utils.json.loads(resp['body'])
     deviceresults = respbodydict['results']
 
     return deviceresults
@@ -174,7 +173,7 @@ def _delete_resource(device_id, client_id, access_token):
     if not respbody:
         return False
 
-    respbodydict = json.loads(resp['body'])
+    respbodydict = salt.utils.json.loads(resp['body'])
 
     return respbodydict
 
@@ -217,5 +216,5 @@ def _get_oath2_access_token(client_key, client_secret):
     if not respbody:
         return False
 
-    access_token = json.loads(respbody)['access_token']
+    access_token = salt.utils.json.loads(respbody)['access_token']
     return access_token

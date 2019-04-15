@@ -1,0 +1,20 @@
+classes:
+  - default.users
+  - default.motd
+  - default.empty
+
+states:
+  - openssh
+
+pillars:
+  default:
+    network:
+      dns:
+{% if __grains__['os'] == 'should_never_match' %}
+        srv1: 192.168.0.1
+        srv2: 192.168.0.2
+        domain: example.com
+{% endif %}
+      ntp:
+        srv1: 192.168.10.10
+        srv2: 192.168.10.20

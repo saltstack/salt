@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 # Import Salt Testing libs
@@ -9,10 +9,10 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
 # Import Salt libs
-import salt.utils
+import salt.utils.platform
 
 
-@skipIf(not salt.utils.is_windows(), 'windows test only')
+@skipIf(not salt.utils.platform.is_windows(), 'windows test only')
 class WinIPTest(ModuleCase):
     '''
     Tests for salt.modules.win_ip
