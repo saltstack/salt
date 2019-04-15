@@ -1573,13 +1573,21 @@ def add_action(name=None,
         Send and email. Requires ``server``, ``from``, and ``to`` or ``cc``.
 
             from (str): The sender
+
             reply_to (str): Who to reply to
+
             to (str): The recipient
+
             cc (str): The CC recipient
+
             bcc (str): The BCC recipient
+
             subject (str): The subject of the email
+
             body (str): The Message Body of the email
+
             server (str): The server used to send the email
+
             attachments (list):
                 A list of attachments. These will be the paths to the files to
                 attach. ie: ``attachments="['C:\attachment1.txt',
