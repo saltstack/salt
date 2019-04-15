@@ -110,7 +110,8 @@ from salt.utils.pycrypto import gen_hash, secure_password
 import salt.utils.platform
 import salt.utils.nxos
 from salt.ext import six
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, NxosError
+from socket import error as socket_error
 
 __virtualname__ = 'nxos'
 
@@ -338,11 +339,15 @@ def sendline(command, method='cli_show_ascii', **kwargs):
         Hint: White space separated commands should be wrapped by double quotes
         """.format(smethods, method)
         return msg
-
-    if salt.utils.platform.is_proxy():
-        return __proxy__['nxos.sendline'](command, method, **kwargs)
-    else:
-        return _nxapi_request(command, method, **kwargs)
+    try:
+        if salt.utils.platform.is_proxy():
+            return __proxy__['nxos.sendline'](command, method, **kwargs)
+        else:
+            return _nxapi_request(command, method, **kwargs)
+    except socket_error as e:
+        return e.strerror
+    except NxosError as e:
+        return e.strerror
 
 
 def show(commands, raw_text=True, **kwargs):
@@ -544,7 +549,14 @@ def config(commands=None,
                                                                saltenv)
     # whatever the source of the commands would be, split them line by line
     commands = [line for line in file_str.splitlines() if line.strip()]
-    config_result = _parse_config_result(_configure_device(commands, **kwargs))
+    try:
+        config_result = _configure_device(commands, **kwargs)
+    except socket_error as e:
+        return e.strerror
+    except NxosError as e:
+        return e.strerror
+
+    config_result = _parse_config_result(config_result)
     current_config = show('show running-config', **kwargs)
     if isinstance(current_config, list):
         current_config = current_config[0]
