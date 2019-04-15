@@ -1548,54 +1548,54 @@ def add_action(name=None,
 
     **Execute**
 
-    Execute a command or an executable
+        Execute a command or an executable
 
-        cmd (str):
-            (required) The command / executable to run.
+            cmd (str):
+                (required) The command or executable to run.
 
-        arguments (str):
-            (optional) Arguments to be passed to the command / executable. To
-            launch a script the first command will need to be the interpreter
-            for the script. For example, to run a vbscript you would pass
-            ``cscript.exe`` in the `cmd` parameter and pass the script in the
-            ``arguments`` parameter as follows:
+            arguments (str):
+                (optional) Arguments to be passed to the command or executable.
+                To launch a script the first command will need to be the
+                interpreter for the script. For example, to run a vbscript you
+                would pass ``cscript.exe`` in the `cmd` parameter and pass the
+                script in the ``arguments`` parameter as follows:
 
-                - ``cmd='cscript.exe' arguments='c:\scripts\myscript.vbs'``
+                    - ``cmd='cscript.exe' arguments='c:\scripts\myscript.vbs'``
 
-            Batch files do not need an interpreter and may be passed to the cmd
-            parameter directly.
+                Batch files do not need an interpreter and may be passed to the
+                cmd parameter directly.
 
-        start_in (str):
-            (optional) The current working directory for the command.
+            start_in (str):
+                (optional) The current working directory for the command.
 
     **Email**
 
-    Send and email. Requires ``server``, ``from``, and ``to`` or ``cc``.
+        Send and email. Requires ``server``, ``from``, and ``to`` or ``cc``.
 
-        from (str): The sender
-        reply_to (str): Who to reply to
-        to (str): The recipient
-        cc (str): The CC recipient
-        bcc (str): The BCC recipient
-        subject (str): The subject of the email
-        body (str): The Message Body of the email
-        server (str): The server used to send the email
-        attachments (list):
-            A list of attachments. These will be the paths to the files to
-            attach. ie: ``attachments="['C:\attachment1.txt',
-            'C:\attachment2.txt']"``
+            from (str): The sender
+            reply_to (str): Who to reply to
+            to (str): The recipient
+            cc (str): The CC recipient
+            bcc (str): The BCC recipient
+            subject (str): The subject of the email
+            body (str): The Message Body of the email
+            server (str): The server used to send the email
+            attachments (list):
+                A list of attachments. These will be the paths to the files to
+                attach. ie: ``attachments="['C:\attachment1.txt',
+                'C:\attachment2.txt']"``
 
     **Message**
 
-    Display a dialog box. The task must be set to "Run only when
-    user is logged on" in order for the dialog box to display. Both parameters
-    are required.
+        Display a dialog box. The task must be set to "Run only when user is
+        logged on" in order for the dialog box to display. Both parameters are
+        required.
 
-        title (str):
-            The dialog box title.
+            title (str):
+                The dialog box title.
 
-        message (str):
-            The dialog box message body
+            message (str):
+                The dialog box message body
 
     Returns:
         dict: A dictionary containing the task configuration
@@ -1922,127 +1922,142 @@ def add_trigger(name=None,
 
     *Event*
 
-        subscription (str):
-            An event definition in xml format that fires the trigger. The
-            easiest way to get this would is to create an event in Windows Task
-            Scheduler and then copy the xml text.
+        The trigger will be fired by an event.
+
+            subscription (str):
+                An event definition in xml format that fires the trigger. The
+                easiest way to get this would is to create an event in Windows
+                Task Scheduler and then copy the xml text.
 
     *Once*
 
-    No special parameters required.
+        No special parameters required.
 
     *Daily*
 
-        days_interval (int):
-            The interval between days in the schedule. An interval of 1 produces
-            a daily schedule. An interval of 2 produces an every-other day
-            schedule. If no interval is specified, 1 is used. Valid entries are
-            1 - 999.
+        The task will run daily.
+
+            days_interval (int):
+                The interval between days in the schedule. An interval of 1
+                produces a daily schedule. An interval of 2 produces an
+                every-other day schedule. If no interval is specified, 1 is
+                used. Valid entries are 1 - 999.
             
     *Weekly*
 
-        weeks_interval (int):
-            The interval between weeks in the schedule. An interval of 1
-            produces a weekly schedule. An interval of 2 produces an every-other
-            week schedule. If no interval is specified, 1 is used. Valid entries
-            are 1 - 52.
+        The task will run weekly.
 
-        days_of_week (list):
-            Sets the days of the week on which the task runs. Should be a list.
-            ie: ``['Monday','Wednesday','Friday']``. Valid entries are the names
-            of the days of the week.
+            weeks_interval (int):
+                The interval between weeks in the schedule. An interval of 1
+                produces a weekly schedule. An interval of 2 produces an
+                every-other week schedule. If no interval is specified, 1 is
+                used. Valid entries are 1 - 52.
+
+            days_of_week (list):
+                Sets the days of the week on which the task runs. Should be a
+                list. ie: ``['Monday','Wednesday','Friday']``. Valid entries are
+                the names of the days of the week.
 
     *Monthly*
 
-        months_of_year (list):
-            Sets the months of the year during which the task runs. Should be a
-            list. ie: ``['January','July']``. Valid entries are the full names
-            of all the months.
+        The task will run monthly.
 
-        days_of_month (list):
-            Sets the days of the month during which the task runs. Should be a
-            list. ie: ``[1, 15, 'Last']``. Options are all days of the month 1 -
-            31 and the word 'Last' to indicate the last day of the month.
+            months_of_year (list):
+                Sets the months of the year during which the task runs. Should
+                be a list. ie: ``['January','July']``. Valid entries are the
+                full names of all the months.
 
-        last_day_of_month (bool):
-            Boolean value that indicates that the task runs on the last day of
-            the month regardless of the actual date of that day.
+            days_of_month (list):
+                Sets the days of the month during which the task runs. Should be
+                a list. ie: ``[1, 15, 'Last']``. Options are all days of the
+                month 1 - 31 and the word 'Last' to indicate the last day of the
+                month.
 
-        .. note::
+            last_day_of_month (bool):
+                Boolean value that indicates that the task runs on the last day
+                of the month regardless of the actual date of that day.
 
-            You can set the task to run on the last day of the month by either
-            including the word 'Last' in the list of days, or setting the
-            parameter 'last_day_of_month` equal to True.
+                .. note::
+
+                    You can set the task to run on the last day of the month by
+                    either including the word 'Last' in the list of days, or
+                    setting the parameter 'last_day_of_month` equal to ``True``.
 
     *MonthlyDay*
 
-        months_of_year (list):
-            Sets the months of the year during which the task runs. Should be a
-            list. ie: ``['January','July']``. Valid entries are the full names
-            of all the months.
+        The task will run monthly an the specified day.
 
-        weeks_of_month (list):
-            Sets the weeks of the month during which the task runs. Should be a
-            list. ie: ``['First','Third']``. Valid options are:
+            months_of_year (list):
+                Sets the months of the year during which the task runs. Should
+                be a list. ie: ``['January','July']``. Valid entries are the
+                full names of all the months.
 
-                - First
-                - Second
-                - Third
-                - Fourth
+            weeks_of_month (list):
+                Sets the weeks of the month during which the task runs. Should
+                be a list. ie: ``['First','Third']``. Valid options are:
 
-        last_week_of_month (bool):
-            Boolean value that indicates that the task runs on the last week of
-            the month.
+                    - First
+                    - Second
+                    - Third
+                    - Fourth
 
-        days_of_week (list):
-            Sets the days of the week during which the task runs. Should be a
-            list. ie: ``['Monday','Wednesday','Friday']``.  Valid entries are
-            the names of the days of the week.
+            last_week_of_month (bool):
+                Boolean value that indicates that the task runs on the last week
+                of the month.
+
+            days_of_week (list):
+                Sets the days of the week during which the task runs. Should be
+                a list. ie: ``['Monday','Wednesday','Friday']``.  Valid entries
+                are the names of the days of the week.
 
     *OnIdle*
     
-    No special parameters required.
+        No special parameters required.
 
     *OnTaskCreation*
     
-    No special parameters required.
+        No special parameters required.
 
     *OnBoot*
     
-    No special parameters required.
+        No special parameters required.
 
     *OnLogon*
     
-    No special parameters required.
+        No special parameters required.
 
     *OnSessionChange*
 
-        session_user_name (str):
-            Sets the user for the Terminal Server session. When a session state
-            change is detected for this user, a task is started. To detect
-            session status change for any user, do not pass this parameter.
+        The task will be triggered by a session change.
 
-        state_change (str):
-            Sets the kind of Terminal Server session change that would trigger a
-            task launch. Valid options are:
+            session_user_name (str):
+                Sets the user for the Terminal Server session. When a session
+                state change is detected for this user, a task is started. To
+                detect session status change for any user, do not pass this
+                parameter.
 
-                - ConsoleConnect: When you connect to a user session (switch
-                  users)
-                - ConsoleDisconnect: When you disconnect a user session (switch
-                  users)
-                - RemoteConnect: When a user connects via Remote Desktop
-                - RemoteDisconnect: When a user disconnects via Remote Desktop
-                - SessionLock: When the workstation is locked
-                - SessionUnlock: When the workstation is unlocked
+            state_change (str):
+                Sets the kind of Terminal Server session change that would
+                trigger a task launch. Valid options are:
 
-            .. note::
+                    - ConsoleConnect: When you connect to a user session (switch
+                      users)
+                    - ConsoleDisconnect: When you disconnect a user session
+                      (switch users)
+                    - RemoteConnect: When a user connects via Remote Desktop
+                    - RemoteDisconnect: When a user disconnects via Remote
+                      Desktop
+                    - SessionLock: When the workstation is locked
+                    - SessionUnlock: When the workstation is unlocked
 
-                Arguments are parsed by the YAML loader and are subject to
-                yaml's idiosyncrasies. Therefore, time values in some formats
-                (``%H:%M:%S`` and ``%H:%M``) should to be quoted. See
-                `YAML IDIOSYNCRASIES`_ for more details.
+                .. note::
 
-            .. _`YAML IDIOSYNCRASIES`: https://docs.saltstack.com/en/latest/topics/troubleshooting/yaml_idiosyncrasies.html#time-expressions
+                    Arguments are parsed by the YAML loader and are subject to
+                    yaml's idiosyncrasies. Therefore, time values in some
+                    formats (``%H:%M:%S`` and ``%H:%M``) should to be quoted.
+                    See `YAML IDIOSYNCRASIES`_ for more details.
+
+                .. _`YAML IDIOSYNCRASIES`: https://docs.saltstack.com/en/latest/topics/troubleshooting/yaml_idiosyncrasies.html#time-expressions
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
