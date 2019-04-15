@@ -16,7 +16,7 @@ from datetime import datetime
 import logging
 import time
 
-# Import salt libraries
+# Import Salt libs
 import salt.utils
 
 # Import 3rd Party Libraries
@@ -155,7 +155,8 @@ results = {0x0: 'The operation completed successfully',
            0x41306: 'Task was terminated by the user',
            0x8004130F: 'Credentials became corrupted',
            0x8004131F: 'An instance of this task is already running',
-           0x800704DD: 'The service is not available (Run only when logged in?)',
+           0x800704DD: 'The service is not available (Run only when logged '
+                       'in?)',
            0xC000013A: 'The application terminated as a result of CTRL+C',
            0xC06D007E: 'Unknown software exception'}
 
@@ -168,7 +169,7 @@ def __virtual__():
         if not HAS_DEPENDENCIES:
             log.warning('Could not load dependencies for {0}'.format(__virtualname__))
         return __virtualname__
-    return (False, "Module win_task: module only works on Windows systems")
+    return False, "Module win_task: module only works on Windows systems"
 
 
 def _get_date_time_format(dt_string):
@@ -301,7 +302,8 @@ def _save_task_definition(name,
 
     except pythoncom.com_error as error:
         hr, msg, exc, arg = error.args  # pylint: disable=W0633
-        fc = {-2147024773: 'The filename, directory name, or volume label syntax is incorrect',
+        fc = {-2147024773: 'The filename, directory name, or volume label '
+                           'syntax is incorrect',
               -2147024894: 'The system cannot find the file specified',
               -2147216615: 'Required element or attribute missing',
               -2147216616: 'Value incorrectly formatted or out of range',
@@ -324,8 +326,8 @@ def list_tasks(location='\\'):
 
         location (str):
             A string value representing the folder from which you want to list
-            tasks. Default is '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            tasks. Default is ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         list: Returns a list of tasks
@@ -362,10 +364,10 @@ def list_folders(location='\\'):
 
     Args:
 
-    location (str):
-        A string value representing the folder from which you want to list
-        tasks. Default is '\' which is the root for the task scheduler
-        (C:\Windows\System32\tasks).
+        location (str):
+            A string value representing the folder from which you want to list
+            tasks. Default is ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         list: Returns a list of folders.
@@ -405,9 +407,10 @@ def list_triggers(name, location='\\'):
         name (str):
             The name of the task for which list triggers.
 
-        location (str): A string value representing the location of the task
-            from which to list triggers. Default is '\' which is the root for
-            the task scheduler (C:\Windows\System32\tasks).
+        location (str):
+            A string value representing the location of the task from which to
+            list triggers. Default is ``\`` which is the root for the task
+            scheduler (``C:\Windows\System32\tasks``).
 
     Returns:
         list: Returns a list of triggers.
@@ -421,7 +424,7 @@ def list_triggers(name, location='\\'):
 
         # List all triggers for the XblGameSaveTask in the Microsoft\XblGameSave
         # location
-        salt 'minion-id' task.list_triggers XblGameSaveTask Microsoft\XblGameSave
+        salt '*' task.list_triggers XblGameSaveTask Microsoft\XblGameSave
     '''
     # Create the task service object
     pythoncom.CoInitialize()
@@ -451,8 +454,8 @@ def list_actions(name, location='\\'):
 
         location (str):
             A string value representing the location of the task from which to
-            list actions. Default is '\' which is the root for the task
-            scheduler (C:\Windows\System32\tasks).
+            list actions. Default is ``\`` which is the root for the task
+            scheduler (``C:\Windows\System32\tasks``).
 
     Returns:
         list: Returns a list of actions.
@@ -495,9 +498,9 @@ def create_task(name,
     Create a new task in the designated location. This function has many keyword
     arguments that are not listed here. For additional arguments see:
 
-    - :py:func:`edit_task`
-    - :py:func:`add_action`
-    - :py:func:`add_trigger`
+        - :py:func:`edit_task`
+        - :py:func:`add_action`
+        - :py:func:`add_trigger`
 
     Args:
 
@@ -506,8 +509,8 @@ def create_task(name,
 
         location (str):
             A string value representing the location in which to create the
-            task. Default is '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            task. Default is ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
         user_name (str):
             The user account under which to run the task. To specify the
@@ -589,8 +592,8 @@ def create_task_from_xml(name,
 
         location (str):
             A string value representing the location in which to create the
-            task. Default is '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            task. Default is ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
         xml_text (str):
             A string of xml representing the task to be created. This will be
@@ -616,7 +619,7 @@ def create_task_from_xml(name,
 
     .. code-block:: bash
 
-        salt 'minion-id' task.create_task_from_xml <task_name> xml_path=C:\task.xml
+        salt '*' task.create_task_from_xml <task_name> xml_path=C:\task.xml
     '''
     # Check for existing task
     if name in list_tasks(location):
@@ -693,8 +696,8 @@ def create_folder(name, location='\\'):
 
         location (str):
             A string value representing the location in which to create the
-            folder. Default is '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            folder. Default is ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -766,8 +769,8 @@ def edit_task(name=None,
 
         location (str):
             A string value representing the location in which to create the
-            task. Default is '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            task. Default is ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
         user_name (str):
             The user account under which to run the task. To specify the
@@ -805,25 +808,25 @@ def edit_task(name=None,
             A value that indicates the amount of time that the computer must be
             in an idle state before the task is run. Valid values are:
 
-            - 1 minute
-            - 5 minutes
-            - 10 minutes
-            - 15 minutes
-            - 30 minutes
-            - 1 hour
+                - 1 minute
+                - 5 minutes
+                - 10 minutes
+                - 15 minutes
+                - 30 minutes
+                - 1 hour
 
         idle_wait_timeout (str):
             A value that indicates the amount of time that the Task Scheduler
             will wait for an idle condition to occur. Valid values are:
 
-            - Do not wait
-            - 1 minute
-            - 5 minutes
-            - 10 minutes
-            - 15 minutes
-            - 30 minutes
-            - 1 hour
-            - 2 hours
+                - Do not wait
+                - 1 minute
+                - 5 minutes
+                - 10 minutes
+                - 15 minutes
+                - 30 minutes
+                - 1 hour
+                - 2 hours
 
         idle_stop_on_end (bool):
             Boolean value that indicates that the Task Scheduler will terminate
@@ -868,14 +871,14 @@ def edit_task(name=None,
             A value that specifies the interval between task restart attempts.
             Valid values are:
 
-            - False (to disable)
-            - 1 minute
-            - 5 minutes
-            - 10 minutes
-            - 15 minutes
-            - 30 minutes
-            - 1 hour
-            - 2 hours
+                - False (to disable)
+                - 1 minute
+                - 5 minutes
+                - 10 minutes
+                - 15 minutes
+                - 30 minutes
+                - 1 hour
+                - 2 hours
 
         restart_count (int):
             The number of times the Task Scheduler will attempt to restart the
@@ -884,14 +887,14 @@ def edit_task(name=None,
         execution_time_limit (bool, str):
             The amount of time allowed to complete the task. Valid values are:
 
-            - False (to disable)
-            - 1 hour
-            - 2 hours
-            - 4 hours
-            - 8 hours
-            - 12 hours
-            - 1 day
-            - 3 days
+                - False (to disable)
+                - 1 hour
+                - 2 hours
+                - 4 hours
+                - 8 hours
+                - 12 hours
+                - 1 day
+                - 3 days
 
         force_stop (bool):
             Boolean value that indicates that the task may be terminated by
@@ -902,21 +905,21 @@ def edit_task(name=None,
             the task after it expires. Requires a trigger with an expiration
             date. Valid values are:
 
-            - False (to disable)
-            - Immediately
-            - 30 days
-            - 90 days
-            - 180 days
-            - 365 days
+                - False (to disable)
+                - Immediately
+                - 30 days
+                - 90 days
+                - 180 days
+                - 365 days
 
         multiple_instances (str):
             Sets the policy that defines how the Task Scheduler deals with
             multiple instances of the task. Valid values are:
 
-            - Parallel
-            - Queue
-            - No New Instance
-            - Stop Existing
+                - Parallel
+                - Queue
+                - No New Instance
+                - Stop Existing
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -925,7 +928,7 @@ def edit_task(name=None,
 
     .. code-block:: bash
 
-        salt 'minion-id' task.edit_task <task_name> description='This task is awesome'
+        salt '*' task.edit_task <task_name> description='This task is awesome'
     '''
     # TODO: Add more detailed return for items changed
 
@@ -1046,7 +1049,8 @@ def edit_task(name=None,
             task_definition.Settings.RestartInterval = ''
         else:
             if restart_every in duration:
-                task_definition.Settings.RestartInterval = _lookup_first(duration, restart_every)
+                task_definition.Settings.RestartInterval = _lookup_first(
+                    duration, restart_every)
             else:
                 return 'Invalid value for "restart_every"'
     if task_definition.Settings.RestartInterval:
@@ -1060,7 +1064,8 @@ def edit_task(name=None,
             task_definition.Settings.ExecutionTimeLimit = 'PT0S'
         else:
             if execution_time_limit in duration:
-                task_definition.Settings.ExecutionTimeLimit = _lookup_first(duration, execution_time_limit)
+                task_definition.Settings.ExecutionTimeLimit = _lookup_first(
+                    duration, execution_time_limit)
             else:
                 return 'Invalid value for "execution_time_limit"'
     if force_stop is not None:
@@ -1070,7 +1075,8 @@ def edit_task(name=None,
         if delete_after is False:
             task_definition.Settings.DeleteExpiredTaskAfter = ''
         if delete_after in duration:
-            task_definition.Settings.DeleteExpiredTaskAfter = _lookup_first(duration, delete_after)
+            task_definition.Settings.DeleteExpiredTaskAfter = _lookup_first(
+                duration, delete_after)
         else:
             return 'Invalid value for "delete_after"'
     if multiple_instances is not None:
@@ -1097,8 +1103,8 @@ def delete_task(name, location='\\'):
 
         location (str):
             A string value representing the location of the task. Default is
-            '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -1141,8 +1147,8 @@ def delete_folder(name, location='\\'):
 
         location (str):
             A string value representing the location of the folder.  Default is
-            '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -1185,9 +1191,9 @@ def run(name, location='\\'):
             The name of the task to run.
 
         location (str):
-            A string value representing the location of the task. Default is '\'
-            which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            A string value representing the location of the task. Default is
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -1214,7 +1220,7 @@ def run(name, location='\\'):
     try:
         task.Run('')
         return True
-    except pythoncom.com_error as error:
+    except pythoncom.com_error:
         return False
 
 
@@ -1228,9 +1234,9 @@ def run_wait(name, location='\\'):
             The name of the task to run.
 
         location (str):
-            A string value representing the location of the task. Default is '\'
+            A string value representing the location of the task. Default is ``\``
             which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -1289,9 +1295,9 @@ def stop(name, location='\\'):
             The name of the task to stop.
 
         location (str):
-            A string value representing the location of the task. Default is '\'
-            which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            A string value representing the location of the task. Default is
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -1332,9 +1338,9 @@ def status(name, location='\\'):
             The name of the task for which to return the status
 
         location (str):
-            A string value representing the location of the task. Default is '\'
+            A string value representing the location of the task. Default is ``\``
             which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         str: The current status of the task. Will be one of the following:
@@ -1377,9 +1383,9 @@ def info(name, location='\\'):
             The name of the task for which to return the status
 
         location (str):
-            A string value representing the location of the task. Default is '\'
-            which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            A string value representing the location of the task. Default is
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         dict: A dictionary containing the task configuration
@@ -1412,39 +1418,43 @@ def info(name, location='\\'):
 
     def_set = task.Definition.Settings
 
-    settings = {}
-    settings['allow_demand_start'] = def_set.AllowDemandStart
-    settings['force_stop'] = def_set.AllowHardTerminate
+    settings = {
+        'allow_demand_start': def_set.AllowDemandStart,
+        'force_stop': def_set.AllowHardTerminate}
 
     if def_set.DeleteExpiredTaskAfter == '':
         settings['delete_after'] = False
     elif def_set.DeleteExpiredTaskAfter == 'PT0S':
         settings['delete_after'] = 'Immediately'
     else:
-        settings['delete_after'] = _reverse_lookup(duration, def_set.DeleteExpiredTaskAfter)
+        settings['delete_after'] = _reverse_lookup(
+            duration, def_set.DeleteExpiredTaskAfter)
 
     if def_set.ExecutionTimeLimit == '':
         settings['execution_time_limit'] = False
     else:
-        settings['execution_time_limit'] = _reverse_lookup(duration, def_set.ExecutionTimeLimit)
+        settings['execution_time_limit'] = _reverse_lookup(
+            duration, def_set.ExecutionTimeLimit)
 
-    settings['multiple_instances'] = _reverse_lookup(instances, def_set.MultipleInstances)
+    settings['multiple_instances'] = _reverse_lookup(
+        instances, def_set.MultipleInstances)
 
     if def_set.RestartInterval == '':
         settings['restart_interval'] = False
     else:
-        settings['restart_interval'] = _reverse_lookup(duration, def_set.RestartInterval)
+        settings['restart_interval'] = _reverse_lookup(
+            duration, def_set.RestartInterval)
 
     if settings['restart_interval']:
         settings['restart_count'] = def_set.RestartCount
     settings['stop_if_on_batteries'] = def_set.StopIfGoingOnBatteries
     settings['wake_to_run'] = def_set.WakeToRun
 
-    conditions = {}
-    conditions['ac_only'] = def_set.DisallowStartIfOnBatteries
-    conditions['run_if_idle'] = def_set.RunOnlyIfIdle
-    conditions['run_if_network'] = def_set.RunOnlyIfNetworkAvailable
-    conditions['start_when_available'] = def_set.StartWhenAvailable
+    conditions = {
+        'ac_only': def_set.DisallowStartIfOnBatteries,
+        'run_if_idle': def_set.RunOnlyIfIdle,
+        'run_if_network': def_set.RunOnlyIfNetworkAvailable,
+        'start_when_available': def_set.StartWhenAvailable}
 
     if conditions['run_if_idle']:
         idle_set = def_set.IdleSettings
@@ -1460,8 +1470,7 @@ def info(name, location='\\'):
 
     actions = []
     for actionObj in task.Definition.Actions:
-        action = {}
-        action['action_type'] = _reverse_lookup(action_types, actionObj.Type)
+        action = {'action_type': _reverse_lookup(action_types, actionObj.Type)}
         if actionObj.Path:
             action['cmd'] = actionObj.Path
         if actionObj.Arguments:
@@ -1472,10 +1481,11 @@ def info(name, location='\\'):
 
     triggers = []
     for triggerObj in task.Definition.Triggers:
-        trigger = {}
-        trigger['trigger_type'] = _reverse_lookup(trigger_types, triggerObj.Type)
+        trigger = {
+            'trigger_type': _reverse_lookup(trigger_types, triggerObj.Type)}
         if triggerObj.ExecutionTimeLimit:
-            trigger['execution_time_limit'] = _reverse_lookup(duration, triggerObj.ExecutionTimeLimit)
+            trigger['execution_time_limit'] = _reverse_lookup(
+                duration, triggerObj.ExecutionTimeLimit)
         if triggerObj.StartBoundary:
             start_date, start_time = triggerObj.StartBoundary.split('T', 1)
             trigger['start_date'] = start_date
@@ -1487,7 +1497,8 @@ def info(name, location='\\'):
         trigger['enabled'] = triggerObj.Enabled
         if hasattr(triggerObj, 'RandomDelay'):
             if triggerObj.RandomDelay:
-                trigger['random_delay'] = _reverse_lookup(duration, triggerObj.RandomDelay)
+                trigger['random_delay'] = _reverse_lookup(
+                    duration, triggerObj.RandomDelay)
             else:
                 trigger['random_delay'] = False
         if hasattr(triggerObj, 'Delay'):
@@ -1519,82 +1530,79 @@ def add_action(name=None,
             The name of the task to which to add the action.
 
         location (str):
-            A string value representing the location of the task. Default is '\'
+            A string value representing the location of the task. Default is ``\``
             which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            (``C:\Windows\System32\tasks``).
 
         action_type (str):
             The type of action to add. There are three action types. Each one
             requires its own set of Keyword Arguments (kwargs). Valid values
             are:
 
-            - Execute
-            - Email
-            - Message
+                - Execute
+                - Email
+                - Message
 
     Required arguments for each action_type:
 
-    **Execute** - Execute a command or an executable
+    **Execute**
 
-        cmd (str):
-            (required) The command / executable to run.
+        Execute a command or an executable
 
-        arguments (str):
-            (optional) Arguments to be passed to the command / executable. To
-            launch a script the first command will need to be the interpreter
-            for the script. For example, to run a vbscript you would pass
-            ``cscript.exe`` in the `cmd` parameter and pass the script in the
-            ``arguments`` parameter as follows:
+            cmd (str):
+                (required) The command / executable to run.
 
-            - ``cmd='cscript.exe' arguments='c:\scripts\myscript.vbs'``
+            arguments (str):
+                (optional) Arguments to be passed to the command / executable.
+                To launch a script the first command will need to be the
+                interpreter for the script. For example, to run a vbscript you
+                would pass ``cscript.exe`` in the `cmd` parameter and pass the
+                script in the ``arguments`` parameter as follows:
 
-            Batch files do not need an interpreter and may be passed to the cmd
-            parameter directly.
+                    - ``cmd='cscript.exe' arguments='c:\scripts\myscript.vbs'``
 
-        start_in (str):
-            (optional) The current working directory for the command.
+                Batch files do not need an interpreter and may be passed to the
+                cmd parameter directly.
 
-    **Email** - Send and email. Requires ``server``, ``from``, and ``to`` or
-    ``cc``.
+            start_in (str):
+                (optional) The current working directory for the command.
 
-        from (str):
-            The sender
+    **Email**
 
-        reply_to (str):
-            Who to reply to
+        Send and email. Requires ``server``, ``from``, and ``to`` or ``cc``.
 
-        to (str):
-            The recipient
+            from (str): The sender
 
-        cc (str):
-            The CC recipient
+            reply_to (str): Who to reply to
 
-        bcc (str):
-            The BCC recipient
+            to (str): The recipient
 
-        subject (str):
-            The subject of the email
+            cc (str): The CC recipient
 
-        body (str):
-            The Message Body of the email
+            bcc (str): The BCC recipient
 
-        server (str):
-            The server used to send the email
+            subject (str): The subject of the email
 
-        attachments (list):
-            A list of attachments. These will be the paths to the files to
-            attach. ie: ``attachments="['C:\attachment1.txt',
-            'C:\attachment2.txt']"``
+            body (str): The Message Body of the email
 
-    **Message** - Display a dialog box. The task must be set to "Run only when
-    user is logged on" in order for the dialog box to display. Both parameters
-    are required.
+            server (str): The server used to send the email
 
-        title (str):
-            The dialog box title.
+            attachments (list):
+                A list of attachments. These will be the paths to the files to
+                attach. ie: ``attachments="['C:\attachment1.txt',
+                'C:\attachment2.txt']"``
 
-        message (str):
-            The dialog box message body
+    **Message**
+
+        Display a dialog box. The task must be set to "Run only when user is
+        logged on" in order for the dialog box to display. Both parameters are
+        required.
+
+            title (str):
+                The dialog box title.
+
+            message (str):
+                The dialog box message body
 
     Returns:
         dict: A dictionary containing the task configuration
@@ -1708,8 +1716,8 @@ def _clear_actions(name, location='\\'):
     :param str name: The name of the task from which to clear all actions.
 
     :param str location: A string value representing the location of the task.
-    Default is '\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+    Default is ``\`` which is the root for the task scheduler
+    (``C:\Windows\System32\tasks``).
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
@@ -1763,6 +1771,15 @@ def add_trigger(name=None,
     r'''
     Add a trigger to a Windows Scheduled task
 
+    .. note::
+
+        Arguments are parsed by the YAML loader and are subject to
+        yaml's idiosyncrasies. Therefore, time values in some
+        formats (``%H:%M:%S`` and ``%H:%M``) should to be quoted.
+        See `YAML IDIOSYNCRASIES`_ for more details.
+
+    .. _`YAML IDIOSYNCRASIES`: https://docs.saltstack.com/en/latest/topics/troubleshooting/yaml_idiosyncrasies.html#time-expressions
+
     Args:
 
         name (str):
@@ -1770,24 +1787,24 @@ def add_trigger(name=None,
 
         location (str):
             A string value representing the location of the task. Default is
-            '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
         trigger_type (str):
             The type of trigger to create. This is defined when the trigger is
             created and cannot be changed later. Options are as follows:
 
-            - Event
-            - Once
-            - Daily
-            - Weekly
-            - Monthly
-            - MonthlyDay
-            - OnIdle
-            - OnTaskCreation
-            - OnBoot
-            - OnLogon
-            - OnSessionChange
+                - Event
+                - Once
+                - Daily
+                - Weekly
+                - Monthly
+                - MonthlyDay
+                - OnIdle
+                - OnTaskCreation
+                - OnBoot
+                - OnLogon
+                - OnSessionChange
 
         trigger_enabled (bool):
             Boolean value that indicates whether the trigger is enabled.
@@ -1796,83 +1813,84 @@ def add_trigger(name=None,
             The date when the trigger is activated. If no value is passed, the
             current date will be used. Can be one of the following formats:
 
-            - %Y-%m-%d
-            - %m-%d-%y
-            - %m-%d-%Y
-            - %m/%d/%y
-            - %m/%d/%Y
-            - %Y/%m/%d
+                - %Y-%m-%d
+                - %m-%d-%y
+                - %m-%d-%Y
+                - %m/%d/%y
+                - %m/%d/%Y
+                - %Y/%m/%d
 
         start_time (str):
             The time when the trigger is activated. If no value is passed,
             midnight will be used. Can be one of the following formats:
 
-            - %I:%M:%S %p
-            - %I:%M %p
-            - %H:%M:%S
-            - %H:%M
+                - %I:%M:%S %p
+                - %I:%M %p
+                - %H:%M:%S
+                - %H:%M
 
         end_date (str):
             The date when the trigger is deactivated. The trigger cannot start
             the task after it is deactivated. Can be one of the following
             formats:
 
-            - %Y-%m-%d
-            - %m-%d-%y
-            - %m-%d-%Y
-            - %m/%d/%y
-            - %m/%d/%Y
-            - %Y/%m/%d
+                - %Y-%m-%d
+                - %m-%d-%y
+                - %m-%d-%Y
+                - %m/%d/%y
+                - %m/%d/%Y
+                - %Y/%m/%d
 
         end_time (str):
             The time when the trigger is deactivated. If the this is not passed
             with ``end_date`` it will be set to midnight. Can be one of the
             following formats:
 
-            - %I:%M:%S %p
-            - %I:%M %p
-            - %H:%M:%S
-            - %H:%M
+                - %I:%M:%S %p
+                - %I:%M %p
+                - %H:%M:%S
+                - %H:%M
 
         random_delay (str):
             The delay time that is randomly added to the start time of the
             trigger. Valid values are:
 
-            - 30 seconds
-            - 1 minute
-            - 30 minutes
-            - 1 hour
-            - 8 hours
-            - 1 day
+                - 30 seconds
+                - 1 minute
+                - 30 minutes
+                - 1 hour
+                - 8 hours
+                - 1 day
 
             .. note::
+
                 This parameter applies to the following trigger types
 
-                - Once
-                - Daily
-                - Weekly
-                - Monthly
-                - MonthlyDay
+                    - Once
+                    - Daily
+                    - Weekly
+                    - Monthly
+                    - MonthlyDay
 
         repeat_interval (str):
             The amount of time between each restart of the task. Valid values
             are:
 
-            - 5 minutes
-            - 10 minutes
-            - 15 minutes
-            - 30 minutes
-            - 1 hour
+                - 5 minutes
+                - 10 minutes
+                - 15 minutes
+                - 30 minutes
+                - 1 hour
 
         repeat_duration (str):
             How long the pattern is repeated. Valid values are:
 
-            - Indefinitely
-            - 15 minutes
-            - 30 minutes
-            - 1 hour
-            - 12 hours
-            - 1 day
+                - Indefinitely
+                - 15 minutes
+                - 30 minutes
+                - 1 hour
+                - 12 hours
+                - 1 day
 
         repeat_stop_at_duration_end (bool):
             Boolean value that indicates if a running instance of the task is
@@ -1882,35 +1900,36 @@ def add_trigger(name=None,
             The maximum amount of time that the task launched by the trigger is
             allowed to run. Valid values are:
 
-            - 30 minutes
-            - 1 hour
-            - 2 hours
-            - 4 hours
-            - 8 hours
-            - 12 hours
-            - 1 day
-            - 3 days (default)
+                - 30 minutes
+                - 1 hour
+                - 2 hours
+                - 4 hours
+                - 8 hours
+                - 12 hours
+                - 1 day
+                - 3 days (default)
 
         delay (str):
             The time the trigger waits after its activation to start the task.
             Valid values are:
 
-            - 15 seconds
-            - 30 seconds
-            - 1 minute
-            - 30 minutes
-            - 1 hour
-            - 8 hours
-            - 1 day
+                - 15 seconds
+                - 30 seconds
+                - 1 minute
+                - 30 minutes
+                - 1 hour
+                - 8 hours
+                - 1 day
 
             .. note::
+
                 This parameter applies to the following trigger types:
 
-                - OnLogon
-                - OnBoot
-                - Event
-                - OnTaskCreation
-                - OnSessionChange
+                    - OnLogon
+                    - OnBoot
+                    - Event
+                    - OnTaskCreation
+                    - OnSessionChange
 
     **kwargs**
 
@@ -1919,110 +1938,132 @@ def add_trigger(name=None,
 
     *Event*
 
-        subscription (str):
-            An event definition in xml format that fires the trigger. The
-            easiest way to get this would is to create an event in Windows Task
-            Scheduler and then copy the xml text.
+        The trigger will be fired by an event.
+
+            subscription (str):
+                An event definition in xml format that fires the trigger. The
+                easiest way to get this would is to create an event in Windows
+                Task Scheduler and then copy the xml text.
 
     *Once*
 
-    No special parameters required.
+        No special parameters required.
 
     *Daily*
 
-        days_interval (int):
-            The interval between days in the schedule. An interval of 1 produces
-            a daily schedule. An interval of 2 produces an every-other day
-            schedule. If no interval is specified, 1 is used. Valid entries are
-            1 - 999.
+        The task will run daily.
+
+            days_interval (int):
+                The interval between days in the schedule. An interval of 1
+                produces a daily schedule. An interval of 2 produces an
+                every-other day schedule. If no interval is specified, 1 is
+                used. Valid entries are 1 - 999.
+
     *Weekly*
 
-        weeks_interval (int):
-            The interval between weeks in the schedule. An interval of 1
-            produces a weekly schedule. An interval of 2 produces an every-other
-            week schedule. If no interval is specified, 1 is used. Valid entries
-            are 1 - 52.
+        The task will run weekly.
 
-        days_of_week (list):
-            Sets the days of the week on which the task runs. Should be a list.
-            ie: ``['Monday','Wednesday','Friday']``. Valid entries are the names
-            of the days of the week.
+            weeks_interval (int):
+                The interval between weeks in the schedule. An interval of 1
+                produces a weekly schedule. An interval of 2 produces an
+                every-other week schedule. If no interval is specified, 1 is
+                used. Valid entries are 1 - 52.
+
+            days_of_week (list):
+                Sets the days of the week on which the task runs. Should be a
+                list. ie: ``['Monday','Wednesday','Friday']``. Valid entries are
+                the names of the days of the week.
 
     *Monthly*
 
-        months_of_year (list):
-            Sets the months of the year during which the task runs. Should be a
-            list. ie: ``['January','July']``. Valid entries are the full names
-            of all the months.
+        The task will run monthly.
 
-        days_of_month (list):
-            Sets the days of the month during which the task runs. Should be a
-            list. ie: ``[1, 15, 'Last']``. Options are all days of the month 1 -
-            31 and the word 'Last' to indicate the last day of the month.
+            months_of_year (list):
+                Sets the months of the year during which the task runs. Should
+                be a list. ie: ``['January','July']``. Valid entries are the
+                full names of all the months.
 
-        last_day_of_month (bool):
-            Boolean value that indicates that the task runs on the last day of
-            the month regardless of the actual date of that day.
+            days_of_month (list):
+                Sets the days of the month during which the task runs. Should be
+                a list. ie: ``[1, 15, 'Last']``. Options are all days of the
+                month 1 - 31 and the word 'Last' to indicate the last day of the
+                month.
 
-        .. note::
-            You can set the task to run on the last day of the month by either
-            including the word 'Last' in the list of days, or setting the
-            parameter 'last_day_of_month` equal to True.
+            last_day_of_month (bool):
+                Boolean value that indicates that the task runs on the last day
+                of the month regardless of the actual date of that day.
+
+                .. note::
+                    You can set the task to run on the last day of the month by
+                    either including the word 'Last' in the list of days, or
+                    setting the parameter 'last_day_of_month` equal to True.
 
     *MonthlyDay*
 
-        months_of_year (list):
-            Sets the months of the year during which the task runs. Should be a
-            list. ie: ``['January','July']``. Valid entries are the full names
-            of all the months.
+        The task will run monthly on the specified day.
 
-        weeks_of_month (list):
-            Sets the weeks of the month during which the task runs. Should be a
-            list. ie: ``['First','Third']``. Valid options are:
+            months_of_year (list):
+                Sets the months of the year during which the task runs. Should
+                be a list. ie: ``['January','July']``. Valid entries are the
+                full names of all the months.
 
-            - First
-            - Second
-            - Third
-            - Fourth
+            weeks_of_month (list):
+                Sets the weeks of the month during which the task runs. Should
+                be a list. ie: ``['First','Third']``. Valid options are:
 
-        last_week_of_month (bool):
-            Boolean value that indicates that the task runs on the last week of
-            the month.
+                    - First
+                    - Second
+                    - Third
+                    - Fourth
 
-        days_of_week (list):
-            Sets the days of the week during which the task runs. Should be a
-            list. ie: ``['Monday','Wednesday','Friday']``.  Valid entries are
-            the names of the days of the week.
+            last_week_of_month (bool):
+                Boolean value that indicates that the task runs on the last week
+                of the month.
+
+            days_of_week (list):
+                Sets the days of the week during which the task runs. Should be
+                a list. ie: ``['Monday','Wednesday','Friday']``.  Valid entries
+                are the names of the days of the week.
 
     *OnIdle*
-    No special parameters required.
+
+        No special parameters required.
 
     *OnTaskCreation*
-    No special parameters required.
+
+        No special parameters required.
 
     *OnBoot*
-    No special parameters required.
+
+        No special parameters required.
 
     *OnLogon*
-    No special parameters required.
+
+        No special parameters required.
 
     *OnSessionChange*
 
-        session_user_name (str):
-            Sets the user for the Terminal Server session. When a session state
-            change is detected for this user, a task is started. To detect
-            session status change for any user, do not pass this parameter.
+        The task will be triggered by a session change.
 
-        state_change (str):
-            Sets the kind of Terminal Server session change that would trigger a
-            task launch. Valid options are:
+            session_user_name (str):
+                Sets the user for the Terminal Server session. When a session
+                state change is detected for this user, a task is started. To
+                detect session status change for any user, do not pass this
+                parameter.
 
-            - ConsoleConnect: When you connect to a user session (switch users)
-            - ConsoleDisconnect: When you disconnect a user session (switch users)
-            - RemoteConnect: When a user connects via Remote Desktop
-            - RemoteDisconnect: When a user disconnects via Remote Desktop
-            - SessionLock: When the workstation is locked
-            - SessionUnlock: When the workstation is unlocked
+            state_change (str):
+                Sets the kind of Terminal Server session change that would
+                trigger a task launch. Valid options are:
+
+                    - ConsoleConnect: When you connect to a user session (switch
+                      users)
+                    - ConsoleDisconnect: When you disconnect a user session
+                      (switch users)
+                    - RemoteConnect: When a user connects via Remote Desktop
+                    - RemoteDisconnect: When a user disconnects via Remote
+                      Desktop
+                    - SessionLock: When the workstation is locked
+                    - SessionUnlock: When the workstation is unlocked
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -2031,7 +2072,7 @@ def add_trigger(name=None,
 
     .. code-block:: bash
 
-        salt 'minion-id' task.add_trigger <task_name> trigger_type=Once trigger_enabled=True start_date=2016/12/1 start_time=12:01
+        salt 'minion-id' task.add_trigger <task_name> trigger_type=Once trigger_enabled=True start_date=2016/12/1 start_time='"12:01"'
     '''
     if not trigger_type:
         return 'Required parameter "trigger_type" not specified'
@@ -2126,7 +2167,6 @@ def add_trigger(name=None,
                                       tm_obj.strftime('%H:%M:%S'))
 
     dt_obj = None
-    tm_obj = None
     if end_date:
         date_format = _get_date_time_format(end_date)
         if date_format:
@@ -2189,10 +2229,12 @@ def add_trigger(name=None,
     if repeat_interval:
         trigger.Repetition.Interval = _lookup_first(duration, repeat_interval)
         if repeat_duration:
-            trigger.Repetition.Duration = _lookup_first(duration, repeat_duration)
+            trigger.Repetition.Duration = _lookup_first(duration,
+                                                        repeat_duration)
         trigger.Repetition.StopAtDurationEnd = repeat_stop_at_duration_end
     if execution_time_limit:
-        trigger.ExecutionTimeLimit = _lookup_first(duration, execution_time_limit)
+        trigger.ExecutionTimeLimit = _lookup_first(duration,
+                                                   execution_time_limit)
     if end_boundary:
         trigger.EndBoundary = end_boundary
     trigger.Enabled = trigger_enabled
@@ -2247,11 +2289,12 @@ def add_trigger(name=None,
                 trigger.DaysOfMonth = bits_days
             trigger.RunOnLastDayOfMonth = kwargs.get('last_day_of_month', False)
         else:
-            return 'Monthly trigger requires "days_of_month" or "last_day_of_month" parameters'
+            return 'Monthly trigger requires "days_of_month" or "last_day_of_' \
+                   'month" parameters'
 
     # Monthly Day Of Week Trigger Parameters
     elif trigger_types[trigger_type] == TASK_TRIGGER_MONTHLYDOW:
-        trigger.Id = 'Monthy_DOW_ID1'
+        trigger.Id = 'Monthly_DOW_ID1'
         if kwargs.get('months_of_year', False):
             bits_months = 0
             for month in kwargs.get('months_of_year'):
@@ -2269,7 +2312,8 @@ def add_trigger(name=None,
                 trigger.WeeksOfMonth = bits_weeks
             trigger.RunOnLastWeekOfMonth = kwargs.get('last_week_of_month', False)
         else:
-            return 'Monthly DOW trigger requires "weeks_of_month" or "last_week_of_month" parameters'
+            return 'Monthly DOW trigger requires "weeks_of_month" or "last_' \
+                   'week_of_month" parameters'
 
         if kwargs.get('days_of_week', False):
             bits_days = 0
@@ -2326,9 +2370,9 @@ def clear_triggers(name, location='\\'):
             The name of the task from which to clear all triggers.
 
         location (str):
-            A string value representing the location of the task. Default is '\'
-            which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            A string value representing the location of the task. Default is
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
