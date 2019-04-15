@@ -261,8 +261,8 @@ def _not_fast_forward(ret, rev, pre, post, branch, local_branch,
 
 
 def latest(name,
+           target,
            rev='HEAD',
-           target=None,
            branch=None,
            user=None,
            password=None,
@@ -2203,7 +2203,7 @@ def present(name,
 
 def detached(name,
            rev,
-           target=None,
+           target,
            remote='origin',
            user=None,
            password=None,
@@ -2741,7 +2741,7 @@ def detached(name,
 
 
 def cloned(name,
-           target=None,
+           target,
            branch=None,
            user=None,
            password=None,
