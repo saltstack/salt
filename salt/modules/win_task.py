@@ -1960,7 +1960,7 @@ def add_trigger(name=None,
                 produces a daily schedule. An interval of 2 produces an
                 every-other day schedule. If no interval is specified, 1 is
                 used. Valid entries are 1 - 999.
-            
+
     *Weekly*
 
         The task will run weekly.
@@ -2029,19 +2029,19 @@ def add_trigger(name=None,
                 are the names of the days of the week.
 
     *OnIdle*
-    
+
         No special parameters required.
 
     *OnTaskCreation*
-    
+
         No special parameters required.
 
     *OnBoot*
-    
+
         No special parameters required.
 
     *OnLogon*
-    
+
         No special parameters required.
 
     *OnSessionChange*
