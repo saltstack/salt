@@ -92,7 +92,6 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
 """
 
-# Import Python libs
 
 import sys
 
@@ -101,11 +100,7 @@ import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
 import salt.utils.versions
-
-# Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 
@@ -379,7 +374,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
             else salt.utils.data.is_true(disabled)
         )
 
-    elif __grains__["os_family"] in ("RedHat", "Suse"):
+    elif __grains__["os_family"] in ("RedHat", "Suse", "VMware Photon"):
         if __grains__["os_family"] in "RedHat":
             if copr is not None:
                 repo = ":".join(("copr", copr))
@@ -438,7 +433,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
                     # not explicitly set, so we don't need to update the repo
                     # if it's desired to be enabled and the 'enabled' key is
                     # missing from the repo definition
-                    if __grains__["os_family"] == "RedHat":
+                    if __grains__["os_family"] in ("RedHat", "VMware Photon"):
                         if not salt.utils.data.is_true(sanitizedkwargs[kwarg]):
                             break
                     else:
@@ -465,7 +460,10 @@ def managed(name, ppa=None, copr=None, **kwargs):
                     )
                     if pre_comments != post_comments:
                         break
-            elif kwarg == "comments" and __grains__["os_family"] == "RedHat":
+            elif kwarg == "comments" and __grains__["os_family"] in (
+                "RedHat",
+                "VMware Photon",
+            ):
                 precomments = salt.utils.pkg.rpm.combine_comments(pre[kwarg])
                 kwargcomments = salt.utils.pkg.rpm.combine_comments(
                     sanitizedkwargs[kwarg]
@@ -476,7 +474,11 @@ def managed(name, ppa=None, copr=None, **kwargs):
                 if set(sanitizedkwargs[kwarg]) != set(pre[kwarg]):
                     break
             else:
-                if __grains__["os_family"] in ("RedHat", "Suse") and any(
+                if __grains__["os_family"] in (
+                    "RedHat",
+                    "Suse",
+                    "VMware Photon",
+                ) and any(
                     isinstance(x, bool) for x in (sanitizedkwargs[kwarg], pre[kwarg])
                 ):
                     # This check disambiguates 1/0 from True/False
