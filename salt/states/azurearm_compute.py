@@ -2,7 +2,7 @@
 '''
 Azure (ARM) Compute State Module
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 :maintainer: <devops@decisionlab.io>
 :maturity: new
@@ -20,8 +20,8 @@ Azure (ARM) Compute State Module
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as a dictionary of
-keyword arguments to the ``connection_auth`` parameter in order to work properly. Since the authentication
-parameters are sensitive, it's recommended to pass them to the states via pillar.
+    keyword arguments to the ``connection_auth`` parameter in order to work properly. Since the authentication
+    parameters are sensitive, it's recommended to pass them to the states via pillar.
 
     Required provider parameters:
 
@@ -62,7 +62,7 @@ parameters are sensitive, it's recommended to pass them to the states via pillar
 
     Example states using Azure Resource Manager authentication:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set profile = salt['pillar.get']('azurearm:mysubscription') %}
         Ensure availability set exists:
@@ -105,7 +105,7 @@ def availability_set_present(name, resource_group, tags=None, platform_update_do
                              platform_fault_domain_count=None, virtual_machines=None, sku=None, connection_auth=None,
                              **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure an availability set exists.
 
@@ -265,7 +265,7 @@ def availability_set_present(name, resource_group, tags=None, platform_update_do
 
 def availability_set_absent(name, resource_group, connection_auth=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure an availability set does not exist in a resource group.
 

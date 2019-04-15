@@ -2,7 +2,7 @@
 '''
 Azure (ARM) Network Execution Module
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 :maintainer: <devops@decisionlab.io>
 :maturity: new
@@ -20,7 +20,7 @@ Azure (ARM) Network Execution Module
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as keyword arguments
-to every function in order to work properly.
+    to every function in order to work properly.
 
     Required provider parameters:
 
@@ -37,7 +37,7 @@ to every function in order to work properly.
 
     Optional provider parameters:
 
-    **cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
+**cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
     Possible values:
       * ``AZURE_PUBLIC_CLOUD`` (default)
       * ``AZURE_CHINA_CLOUD``
@@ -86,7 +86,7 @@ def __virtual__():
 
 def check_dns_name_availability(name, region, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Check whether a domain name in the current zone is available for use.
 
@@ -118,7 +118,7 @@ def check_dns_name_availability(name, region, **kwargs):
 def check_ip_address_availability(ip_address, virtual_network, resource_group,
                                   **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Check that a private ip address is available within the specified
     virtual network.
@@ -154,7 +154,7 @@ def check_ip_address_availability(ip_address, virtual_network, resource_group,
 
 def default_security_rule_get(name, security_group, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a default security rule within a security group.
 
@@ -193,9 +193,7 @@ def default_security_rule_get(name, security_group, resource_group, **kwargs):
                 'error': 'Unable to find {0} in {1}!'.format(name, security_group)
             }
     except KeyError as exc:
-        log.error(
-            'Unable to find {0} in {1}!'.format(name, security_group)
-        )
+        log.error('Unable to find %s in %s!', name, security_group)
         result = {'error': str(exc)}
 
     return result
@@ -203,7 +201,7 @@ def default_security_rule_get(name, security_group, resource_group, **kwargs):
 
 def default_security_rules_list(security_group, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List default security rules within a security group.
 
@@ -233,9 +231,7 @@ def default_security_rules_list(security_group, resource_group, **kwargs):
     try:
         result = secgroup['default_security_rules']
     except KeyError as exc:
-        log.error(
-            'No default security rules found for {0}!'.format(security_group)
-        )
+        log.error('No default security rules found for %s!', security_group)
         result = {'error': str(exc)}
 
     return result
@@ -243,7 +239,7 @@ def default_security_rules_list(security_group, resource_group, **kwargs):
 
 def security_rules_list(security_group, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List security rules within a network security group.
 
@@ -279,7 +275,7 @@ def security_rule_create_or_update(name, access, direction, priority, protocol, 
                                    destination_address_prefixes=None, source_port_ranges=None,
                                    destination_port_ranges=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a security rule within a specified network security group.
 
@@ -357,7 +353,8 @@ def security_rule_create_or_update(name, access, direction, priority, protocol, 
         # pylint: disable=eval-used
         if not eval(params[0]) and not eval(params[1]):
             log.error(
-                'Either the {0} or {1} parameter must be provided!'.format(params[0], params[1])
+                'Either the %s or %s parameter must be provided!',
+                params[0], params[1]
             )
             return False
         # pylint: disable=eval-used
@@ -412,7 +409,7 @@ def security_rule_create_or_update(name, access, direction, priority, protocol, 
 def security_rule_delete(security_rule, security_group, resource_group,
                          **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a security rule within a specified security group.
 
@@ -449,7 +446,7 @@ def security_rule_delete(security_rule, security_group, resource_group,
 
 def security_rule_get(security_rule, security_group, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get a security rule within a specified network security group.
 
@@ -485,7 +482,7 @@ def security_rule_get(security_rule, security_group, resource_group, **kwargs):
 
 def network_security_group_create_or_update(name, resource_group, **kwargs):  # pylint: disable=invalid-name
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a network security group.
 
@@ -541,7 +538,7 @@ def network_security_group_create_or_update(name, resource_group, **kwargs):  # 
 
 def network_security_group_delete(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a network security group within a resource group.
 
@@ -574,7 +571,7 @@ def network_security_group_delete(name, resource_group, **kwargs):
 
 def network_security_group_get(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a network security group within a resource group.
 
@@ -606,7 +603,7 @@ def network_security_group_get(name, resource_group, **kwargs):
 
 def network_security_groups_list(resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all network security groups within a resource group.
 
@@ -639,7 +636,7 @@ def network_security_groups_list(resource_group, **kwargs):
 
 def network_security_groups_list_all(**kwargs):  # pylint: disable=invalid-name
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all network security groups within a subscription.
 
@@ -667,7 +664,7 @@ def network_security_groups_list_all(**kwargs):  # pylint: disable=invalid-name
 
 def subnets_list(virtual_network, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all subnets within a virtual network.
 
@@ -704,7 +701,7 @@ def subnets_list(virtual_network, resource_group, **kwargs):
 
 def subnet_get(name, virtual_network, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a specific subnet.
 
@@ -741,7 +738,7 @@ def subnet_get(name, virtual_network, resource_group, **kwargs):
 
 def subnet_create_or_update(name, address_prefix, virtual_network, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a subnet.
 
@@ -818,7 +815,7 @@ def subnet_create_or_update(name, address_prefix, virtual_network, resource_grou
 
 def subnet_delete(name, virtual_network, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a subnet.
 
@@ -855,7 +852,7 @@ def subnet_delete(name, virtual_network, resource_group, **kwargs):
 
 def virtual_networks_list_all(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all virtual networks within a subscription.
 
@@ -882,7 +879,7 @@ def virtual_networks_list_all(**kwargs):
 
 def virtual_networks_list(resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all virtual networks within a resource group.
 
@@ -920,7 +917,7 @@ def virtual_network_create_or_update(name,
                                      resource_group,
                                      **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a virtual network.
 
@@ -996,7 +993,7 @@ def virtual_network_create_or_update(name,
 
 def virtual_network_delete(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a virtual network.
 
@@ -1029,7 +1026,7 @@ def virtual_network_delete(name, resource_group, **kwargs):
 
 def virtual_network_get(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a specific virtual network.
 
@@ -1061,7 +1058,7 @@ def virtual_network_get(name, resource_group, **kwargs):
 
 def load_balancers_list_all(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all load balancers within a subscription.
 
@@ -1088,7 +1085,7 @@ def load_balancers_list_all(**kwargs):
 
 def load_balancers_list(resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all load balancers within a resource group.
 
@@ -1122,7 +1119,7 @@ def load_balancers_list(resource_group, **kwargs):
 
 def load_balancer_get(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a specific load balancer.
 
@@ -1154,7 +1151,7 @@ def load_balancer_get(name, resource_group, **kwargs):
 
 def load_balancer_create_or_update(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a load balancer within a specified resource group.
 
@@ -1328,7 +1325,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
 
 def load_balancer_delete(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a load balancer.
 
@@ -1361,7 +1358,7 @@ def load_balancer_delete(name, resource_group, **kwargs):
 
 def usages_list(location, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List subscription network usage for a location.
 
@@ -1386,7 +1383,7 @@ def usages_list(location, **kwargs):
 
 def network_interface_delete(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a network interface.
 
@@ -1420,7 +1417,7 @@ def network_interface_delete(name, resource_group, **kwargs):
 
 def network_interface_get(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a specific network interface.
 
@@ -1454,7 +1451,7 @@ def network_interface_get(name, resource_group, **kwargs):
 def network_interface_create_or_update(name, ip_configurations, subnet, virtual_network,
                                        resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a network interface within a specified resource group.
 
@@ -1575,7 +1572,7 @@ def network_interface_create_or_update(name, ip_configurations, subnet, virtual_
 
 def network_interfaces_list_all(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all network interfaces within a subscription.
 
@@ -1602,7 +1599,7 @@ def network_interfaces_list_all(**kwargs):
 
 def network_interfaces_list(resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all network interfaces within a resource group.
 
@@ -1637,7 +1634,7 @@ def network_interfaces_list(resource_group, **kwargs):
 # pylint: disable=invalid-name
 def network_interface_get_effective_route_table(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get all route tables for a specific network interface.
 
@@ -1673,7 +1670,7 @@ def network_interface_get_effective_route_table(name, resource_group, **kwargs):
 # pylint: disable=invalid-name
 def network_interface_list_effective_network_security_groups(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get all network security groups applied to a specific network interface.
 
@@ -1712,7 +1709,7 @@ def list_virtual_machine_scale_set_vm_network_interfaces(scale_set,
                                                          resource_group,
                                                          **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get information about all network interfaces in a specific virtual machine within a scale set.
 
@@ -1753,7 +1750,7 @@ def list_virtual_machine_scale_set_vm_network_interfaces(scale_set,
 # pylint: disable=invalid-name
 def list_virtual_machine_scale_set_network_interfaces(scale_set, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get information about all network interfaces within a scale set.
 
@@ -1791,7 +1788,7 @@ def list_virtual_machine_scale_set_network_interfaces(scale_set, resource_group,
 # pylint: disable=invalid-name
 def get_virtual_machine_scale_set_network_interface(name, scale_set, vm_index, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get information about a specfic network interface within a scale set.
 
@@ -1833,7 +1830,7 @@ def get_virtual_machine_scale_set_network_interface(name, scale_set, vm_index, r
 
 def public_ip_address_delete(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a public IP address.
 
@@ -1866,7 +1863,7 @@ def public_ip_address_delete(name, resource_group, **kwargs):
 
 def public_ip_address_get(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a specific public IP address.
 
@@ -1902,7 +1899,7 @@ def public_ip_address_get(name, resource_group, **kwargs):
 
 def public_ip_address_create_or_update(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a public IP address within a specified resource group.
 
@@ -1958,7 +1955,7 @@ def public_ip_address_create_or_update(name, resource_group, **kwargs):
 
 def public_ip_addresses_list_all(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all public IP addresses within a subscription.
 
@@ -1985,7 +1982,7 @@ def public_ip_addresses_list_all(**kwargs):
 
 def public_ip_addresses_list(resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all public IP addresses within a resource group.
 
@@ -2019,7 +2016,7 @@ def public_ip_addresses_list(resource_group, **kwargs):
 
 def route_filter_rule_delete(name, route_filter, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a route filter rule.
 
@@ -2055,7 +2052,7 @@ def route_filter_rule_delete(name, route_filter, resource_group, **kwargs):
 
 def route_filter_rule_get(name, route_filter, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a specific route filter rule.
 
@@ -2092,7 +2089,7 @@ def route_filter_rule_get(name, route_filter, resource_group, **kwargs):
 
 def route_filter_rule_create_or_update(name, access, communities, route_filter, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a rule within a specified route filter.
 
@@ -2171,7 +2168,7 @@ def route_filter_rule_create_or_update(name, access, communities, route_filter, 
 
 def route_filter_rules_list(route_filter, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all routes within a route filter.
 
@@ -2208,7 +2205,7 @@ def route_filter_rules_list(route_filter, resource_group, **kwargs):
 
 def route_filter_delete(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a route filter.
 
@@ -2241,7 +2238,7 @@ def route_filter_delete(name, resource_group, **kwargs):
 
 def route_filter_get(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a specific route filter.
 
@@ -2277,7 +2274,7 @@ def route_filter_get(name, resource_group, **kwargs):
 
 def route_filter_create_or_update(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a route filter within a specified resource group.
 
@@ -2333,7 +2330,7 @@ def route_filter_create_or_update(name, resource_group, **kwargs):
 
 def route_filters_list(resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all route filters within a resource group.
 
@@ -2367,7 +2364,7 @@ def route_filters_list(resource_group, **kwargs):
 
 def route_filters_list_all(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all route filters within a subscription.
 
@@ -2394,7 +2391,7 @@ def route_filters_list_all(**kwargs):
 
 def route_delete(name, route_table, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a route from a route table.
 
@@ -2430,7 +2427,7 @@ def route_delete(name, route_table, resource_group, **kwargs):
 
 def route_get(name, route_table, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a specific route.
 
@@ -2468,7 +2465,7 @@ def route_get(name, route_table, resource_group, **kwargs):
 def route_create_or_update(name, address_prefix, next_hop_type, route_table, resource_group,
                            next_hop_ip_address=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a route within a specified route table.
 
@@ -2530,7 +2527,7 @@ def route_create_or_update(name, address_prefix, next_hop_type, route_table, res
 
 def routes_list(route_table, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all routes within a route table.
 
@@ -2567,7 +2564,7 @@ def routes_list(route_table, resource_group, **kwargs):
 
 def route_table_delete(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a route table.
 
@@ -2600,7 +2597,7 @@ def route_table_delete(name, resource_group, **kwargs):
 
 def route_table_get(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a specific route table.
 
@@ -2636,7 +2633,7 @@ def route_table_get(name, resource_group, **kwargs):
 
 def route_table_create_or_update(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a route table within a specified resource group.
 
@@ -2692,7 +2689,7 @@ def route_table_create_or_update(name, resource_group, **kwargs):
 
 def route_tables_list(resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all route tables within a resource group.
 
@@ -2726,7 +2723,7 @@ def route_tables_list(resource_group, **kwargs):
 
 def route_tables_list_all(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all route tables within a subscription.
 

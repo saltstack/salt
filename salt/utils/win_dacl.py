@@ -1861,6 +1861,174 @@ def get_inheritance(obj_name, obj_type='file'):
     return False
 
 
+def copy_security(source,
+                  target,
+                  obj_type='file',
+                  copy_owner=True,
+                  copy_group=True,
+                  copy_dacl=True,
+                  copy_sacl=True):
+    r'''
+    Copy the security descriptor of the Source to the Target. You can specify a
+    specific portion of the security descriptor to copy using one of the
+    `copy_*` parameters.
+
+    .. note::
+        At least one `copy_*` parameter must be ``True``
+
+    .. note::
+        The user account running this command must have the following
+        privileges:
+
+        - SeTakeOwnershipPrivilege
+        - SeRestorePrivilege
+        - SeSecurityPrivilege
+
+    Args:
+
+        source (str):
+            The full path to the source. This is where the security info will be
+            copied from
+
+        target (str):
+            The full path to the target. This is where the security info will be
+            applied
+
+        obj_type (str): file
+            The type of object to query. This value changes the format of the
+            ``obj_name`` parameter as follows:
+            - file: indicates a file or directory
+                - a relative path, such as ``FileName.txt`` or ``..\FileName``
+                - an absolute path, such as ``C:\DirName\FileName.txt``
+                - A UNC name, such as ``\\ServerName\ShareName\FileName.txt``
+            - service: indicates the name of a Windows service
+            - printer: indicates the name of a printer
+            - registry: indicates a registry key
+                - Uses the following literal strings to denote the hive:
+                    - HKEY_LOCAL_MACHINE
+                    - MACHINE
+                    - HKLM
+                    - HKEY_USERS
+                    - USERS
+                    - HKU
+                    - HKEY_CURRENT_USER
+                    - CURRENT_USER
+                    - HKCU
+                    - HKEY_CLASSES_ROOT
+                    - CLASSES_ROOT
+                    - HKCR
+                - Should be in the format of ``HIVE\Path\To\Key``. For example,
+                    ``HKLM\SOFTWARE\Windows``
+            - registry32: indicates a registry key under WOW64. Formatting is
+                the same as it is for ``registry``
+            - share: indicates a network share
+
+        copy_owner (bool): True
+            ``True`` copies owner information. Default is ``True``
+
+        copy_group (bool): True
+            ``True`` copies group information. Default is ``True``
+
+        copy_dacl (bool): True
+            ``True`` copies the DACL. Default is ``True``
+
+        copy_sacl (bool): True
+            ``True`` copies the SACL. Default is ``True``
+
+    Returns:
+        bool: ``True`` if successful
+
+    Raises:
+        SaltInvocationError: When parameters are invalid
+        CommandExecutionError: On failure to set security
+
+    Usage:
+
+    .. code-block:: python
+
+        salt.utils.win_dacl.copy_security(
+            source='C:\\temp\\source_file.txt',
+            target='C:\\temp\\target_file.txt',
+            obj_type='file')
+
+        salt.utils.win_dacl.copy_security(
+            source='HKLM\\SOFTWARE\\salt\\test_source',
+            target='HKLM\\SOFTWARE\\salt\\test_target',
+            obj_type='registry',
+            copy_owner=False)
+    '''
+    obj_dacl = dacl(obj_type=obj_type)
+    if 'registry' in obj_type.lower():
+        source = obj_dacl.get_reg_name(source)
+        log.info('Source converted to: %s', source)
+        target = obj_dacl.get_reg_name(target)
+        log.info('Target converted to: %s', target)
+
+    # Set flags
+    try:
+        obj_type_flag = flags().obj_type[obj_type.lower()]
+    except KeyError:
+        raise SaltInvocationError(
+            'Invalid "obj_type" passed: {0}'.format(obj_type))
+
+    security_flags = 0
+    if copy_owner:
+        security_flags |= win32security.OWNER_SECURITY_INFORMATION
+    if copy_group:
+        security_flags |= win32security.GROUP_SECURITY_INFORMATION
+    if copy_dacl:
+        security_flags |= win32security.DACL_SECURITY_INFORMATION
+    if copy_sacl:
+        security_flags |= win32security.SACL_SECURITY_INFORMATION
+
+    if not security_flags:
+        raise SaltInvocationError(
+            'One of copy_owner, copy_group, copy_dacl, or copy_sacl must be '
+            'True')
+
+    # To set the owner to something other than the logged in user requires
+    # SE_TAKE_OWNERSHIP_NAME and SE_RESTORE_NAME privileges
+    # Enable them for the logged in user
+    # Setup the privilege set
+    new_privs = set()
+    luid = win32security.LookupPrivilegeValue('', 'SeTakeOwnershipPrivilege')
+    new_privs.add((luid, win32con.SE_PRIVILEGE_ENABLED))
+    luid = win32security.LookupPrivilegeValue('', 'SeRestorePrivilege')
+    new_privs.add((luid, win32con.SE_PRIVILEGE_ENABLED))
+    luid = win32security.LookupPrivilegeValue('', 'SeSecurityPrivilege')
+    new_privs.add((luid, win32con.SE_PRIVILEGE_ENABLED))
+
+    # Get the current token
+    p_handle = win32api.GetCurrentProcess()
+    t_handle = win32security.OpenProcessToken(
+        p_handle,
+        win32security.TOKEN_ALL_ACCESS | win32con.TOKEN_ADJUST_PRIVILEGES)
+
+    # Enable the privileges
+    win32security.AdjustTokenPrivileges(t_handle, 0, new_privs)
+
+    # Load object Security Info from the Source
+    sec = win32security.GetNamedSecurityInfo(
+        source, obj_type_flag, security_flags)
+
+    # The following return None if the corresponding flag is not set
+    sd_sid = sec.GetSecurityDescriptorOwner()
+    sd_gid = sec.GetSecurityDescriptorGroup()
+    sd_dacl = sec.GetSecurityDescriptorDacl()
+    sd_sacl = sec.GetSecurityDescriptorSacl()
+
+    # Set Security info on the target
+    try:
+        win32security.SetNamedSecurityInfo(
+            target, obj_type_flag, security_flags, sd_sid, sd_gid, sd_dacl,
+            sd_sacl)
+    except pywintypes.error as exc:
+        raise CommandExecutionError(
+            'Failed to set security info: {0}'.format(exc.strerror))
+
+    return True
+
+
 def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
     '''
     Helper function used by ``check_perms`` for checking and setting Grant and
@@ -1924,7 +2092,7 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
             # Check Perms for basic perms
             if isinstance(new_perms[user]['perms'], six.string_types):
                 if not has_permission(obj_name=obj_name,
-                                      principal=user,
+                                      principal=user_name,
                                       permission=new_perms[user]['perms'],
                                       access_mode=access_mode,
                                       obj_type=obj_type,
@@ -1937,7 +2105,7 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
             else:
                 for perm in new_perms[user]['perms']:
                     if not has_permission(obj_name=obj_name,
-                                          principal=user,
+                                          principal=user_name,
                                           permission=perm,
                                           access_mode=access_mode,
                                           obj_type=obj_type,
@@ -1957,17 +2125,15 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
                         changes[user]['applies_to'] = applies_to
 
     if changes:
-        if 'perms' not in ret['pchanges']:
-            ret['pchanges']['perms'] = {}
         if 'perms' not in ret['changes']:
             ret['changes']['perms'] = {}
         for user in changes:
             user_name = get_name(principal=user)
 
             if __opts__['test'] is True:
-                if user not in ret['pchanges']['perms']:
-                    ret['pchanges']['perms'][user] = {}
-                ret['pchanges']['perms'][user][access_mode] = changes[user][access_mode]
+                if user not in ret['changes']['perms']:
+                    ret['changes']['perms'][user] = {}
+                ret['changes']['perms'][user][access_mode] = changes[user][access_mode]
             else:
                 # Get applies_to
                 applies_to = None
@@ -2015,7 +2181,7 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
                 try:
                     set_permissions(
                         obj_name=obj_name,
-                        principal=user,
+                        principal=user_name,
                         permissions=perms,
                         access_mode=access_mode,
                         applies_to=applies_to,
@@ -2044,7 +2210,7 @@ def check_perms(obj_name,
     Check owner and permissions for the passed directory. This function checks
     the permissions and sets them, returning the changes made.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Args:
 
@@ -2123,7 +2289,6 @@ def check_perms(obj_name,
     if not ret:
         ret = {'name': obj_name,
                'changes': {},
-               'pchanges': {},
                'comment': [],
                'result': True}
         orig_comment = ''
@@ -2137,13 +2302,13 @@ def check_perms(obj_name,
         current_owner = get_owner(obj_name=obj_name, obj_type=obj_type)
         if owner != current_owner:
             if __opts__['test'] is True:
-                ret['pchanges']['owner'] = owner
+                ret['changes']['owner'] = owner
             else:
                 try:
                     set_owner(obj_name=obj_name,
                               principal=owner,
                               obj_type=obj_type)
-                    log.debug('Owner set to {0}'.format(owner))
+                    log.debug('Owner set to %s', owner)
                     ret['changes']['owner'] = owner
                 except CommandExecutionError:
                     ret['result'] = False
@@ -2155,7 +2320,7 @@ def check_perms(obj_name,
         if not inheritance == get_inheritance(obj_name=obj_name,
                                               obj_type=obj_type):
             if __opts__['test'] is True:
-                ret['pchanges']['inheritance'] = inheritance
+                ret['changes']['inheritance'] = inheritance
             else:
                 try:
                     set_inheritance(
@@ -2171,7 +2336,7 @@ def check_perms(obj_name,
                         ''.format(obj_name, inheritance))
 
     # Check permissions
-    log.debug('Getting current permissions for {0}'.format(obj_name))
+    log.debug('Getting current permissions for %s', obj_name)
     cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
 
     # Verify Deny Permissions
@@ -2195,16 +2360,17 @@ def check_perms(obj_name,
     # Check reset
     # If reset=True, which users will be removed as a result
     if reset:
-        log.debug('Resetting permissions for {0}'.format(obj_name))
+        log.debug('Resetting permissions for %s', obj_name)
         cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
         for user_name in cur_perms['Not Inherited']:
             # case insensitive dictionary search
-            if user_name.lower() not in set(k.lower() for k in grant_perms):
+            if grant_perms is not None and \
+                    user_name.lower() not in set(k.lower() for k in grant_perms):
                 if 'grant' in cur_perms['Not Inherited'][user_name]:
                     if __opts__['test'] is True:
-                        if 'remove_perms' not in ret['pchanges']:
-                            ret['pchanges']['remove_perms'] = {}
-                        ret['pchanges']['remove_perms'].update(
+                        if 'remove_perms' not in ret['changes']:
+                            ret['changes']['remove_perms'] = {}
+                        ret['changes']['remove_perms'].update(
                             {user_name: cur_perms['Not Inherited'][user_name]})
                     else:
                         if 'remove_perms' not in ret['changes']:
@@ -2217,12 +2383,13 @@ def check_perms(obj_name,
                         ret['changes']['remove_perms'].update(
                             {user_name: cur_perms['Not Inherited'][user_name]})
             # case insensitive dictionary search
-            if user_name.lower() not in set(k.lower() for k in deny_perms):
+            if deny_perms is not None and \
+                    user_name.lower() not in set(k.lower() for k in deny_perms):
                 if 'deny' in cur_perms['Not Inherited'][user_name]:
                     if __opts__['test'] is True:
-                        if 'remove_perms' not in ret['pchanges']:
-                            ret['pchanges']['remove_perms'] = {}
-                        ret['pchanges']['remove_perms'].update(
+                        if 'remove_perms' not in ret['changes']:
+                            ret['changes']['remove_perms'] = {}
+                        ret['changes']['remove_perms'].update(
                             {user_name: cur_perms['Not Inherited'][user_name]})
                     else:
                         if 'remove_perms' not in ret['changes']:
@@ -2246,7 +2413,7 @@ def check_perms(obj_name,
     ret['comment'] = '\n'.join(ret['comment'])
 
     # Set result for test = True
-    if __opts__['test'] and (ret['changes'] or ret['pchanges']):
+    if __opts__['test'] and ret['changes']:
         ret['result'] = None
 
     return ret
@@ -2306,7 +2473,7 @@ def set_perms(obj_name,
     '''
     Set permissions for the given path
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Args:
 

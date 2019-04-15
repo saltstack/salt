@@ -63,7 +63,7 @@ def post_message(name,
         The unique name for this event.
 
     channel
-        The channel to send the message to. Can either be the ID or the name.
+        The channel to send the message to. Must be in the format "#channelname" or "@membername".
 
     from_name
         The name of that is to be shown in the "from" field.

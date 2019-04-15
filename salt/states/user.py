@@ -141,13 +141,13 @@ def _changes(name,
             change['empty_password'] = True
         if date is not None and lshad['lstchg'] != date:
             change['date'] = date
-        if mindays and mindays is not 0 and lshad['min'] != mindays:
+        if mindays is not None and lshad['min'] != mindays:
             change['mindays'] = mindays
-        if maxdays and maxdays is not 999999 and lshad['max'] != maxdays:
+        if maxdays is not None and lshad['max'] != maxdays:
             change['maxdays'] = maxdays
-        if inactdays and inactdays is not 0 and lshad['inact'] != inactdays:
+        if inactdays is not None and lshad['inact'] != inactdays:
             change['inactdays'] = inactdays
-        if warndays and warndays is not 7 and lshad['warn'] != warndays:
+        if warndays is not None and lshad['warn'] != warndays:
             change['warndays'] = warndays
         if expire and lshad['expire'] != expire:
             change['expire'] = expire
@@ -225,7 +225,7 @@ def _changes(name,
 def present(name,
             uid=None,
             gid=None,
-            gid_from_name=False,
+            usergroup=None,
             groups=None,
             optional_groups=None,
             remove_groups=True,
@@ -270,12 +270,7 @@ def present(name,
     gid
         The id of the default group to assign to the user. Either a group name
         or gid can be used. If not specified, and the user does not exist, then
-        he next available gid will be assigned.
-
-    gid_from_name : False
-        If ``True``, the default group id will be set to the id of the group
-        with the same name as the user. If the group does not exist the state
-        will fail.
+        the next available gid will be assigned.
 
     allow_uid_change : False
         Set to ``True`` to allow the state to update the uid.
@@ -286,6 +281,17 @@ def present(name,
         Set to ``True`` to allow the state to update the gid.
 
         .. versionadded:: 2018.3.1
+
+    usergroup
+        If True, a group with the same name as the user will be created. If
+        False, a group with the same name as the user will not be created. The
+        default is distribution-specific. See the USERGROUPS_ENAB section of
+        the login.defs(5) man page.
+
+        .. note::
+            Only supported on GNU/Linux distributions
+
+        .. versionadded:: Fluorine
 
     groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -463,7 +469,7 @@ def present(name,
             _, algo, shadow_salt, shadow_hash = __salt__['shadow.info'](name)['passwd'].split('$', 4)
             if algo == '1':
                 log.warning('Using MD5 for hashing passwords is considered insecure!')
-            log.debug('Re-using existing shadow salt for hashing password using {}'.format(algorithms.get(algo)))
+            log.debug('Re-using existing shadow salt for hashing password using %s', algorithms.get(algo))
             password = __salt__['shadow.gen_password'](password, crypt_salt=shadow_salt, algorithm=algorithms.get(algo))
         except ValueError:
             log.info('No existing shadow salt found, defaulting to a randomly generated new one')
@@ -526,17 +532,18 @@ def present(name,
                 'for user %s', isected, name
             )
 
-    if gid_from_name:
-        gid = __salt__['file.group_to_gid'](name)
-        if gid == '':
-            ret['comment'] = 'Default group with name "{0}" is not present'.format(name)
-            ret['result'] = False
-            return ret
+    # If usergroup was specified, we'll also be creating a new
+    # group. We should report this change without setting the gid
+    # variable.
+    if usergroup and __salt__['file.group_to_gid'](name) != '':
+        changes_gid = name
+    else:
+        changes_gid = gid
 
     try:
         changes = _changes(name,
                            uid,
-                           gid,
+                           changes_gid,
                            groups,
                            present_optgroups,
                            remove_groups,
@@ -741,7 +748,8 @@ def present(name,
                       'other': other,
                       'createhome': createhome,
                       'nologinit': nologinit,
-                      'loginclass': loginclass}
+                      'loginclass': loginclass,
+                      'usergroup': usergroup}
         else:
             params = ({'name': name,
                        'password': password,

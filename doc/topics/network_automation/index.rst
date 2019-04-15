@@ -35,8 +35,8 @@ NAPALM
 NAPALM (Network Automation and Programmability Abstraction Layer with
 Multivendor support) is an opensourced Python library that implements a set of
 functions to interact with different router vendor devices using a unified API.
-Begin vendor-agnostic simplifies the operations, as the configuration
-and the interaction with the network device does not rely on a particular vendor.
+Being vendor-agnostic simplifies operations, as the configuration and
+interaction with the network device does not rely on a particular vendor.
 
 .. image:: /_static/napalm_logo.png
 

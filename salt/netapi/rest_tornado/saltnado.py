@@ -185,9 +185,8 @@ a return like::
 .. |406| replace:: requested Content-Type not available
 .. |500| replace:: internal server error
 '''
-from __future__ import absolute_import, print_function, unicode_literals
-
 # Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 import fnmatch
 import logging
@@ -369,7 +368,7 @@ class EventListener(object):
         if not future.done():
             future.set_exception(TimeoutException())
             self.tag_map[(tag, matcher)].remove(future)
-        if len(self.tag_map[(tag, matcher)]) == 0:
+        if not self.tag_map[(tag, matcher)]:
             del self.tag_map[(tag, matcher)]
 
     def _handle_event_socket_recv(self, raw):
@@ -503,6 +502,8 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         '''
         # timeout all the futures
         self.timeout_futures()
+        # clear local_client objects to disconnect event publisher's IOStream connections
+        del self.saltclients
 
     def on_connection_close(self):
         '''
@@ -616,7 +617,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
     '''
     def get(self):
         '''
-        All logins are done over post, this is a parked enpoint
+        All logins are done over post, this is a parked endpoint
 
         .. http:get:: /login
 
@@ -629,7 +630,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
             curl -i localhost:8000/login
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /login HTTP/1.1
             Host: localhost:8000
@@ -637,7 +638,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 401 Unauthorized
             Content-Type: application/json
@@ -656,7 +657,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
     # TODO: make asynchronous? Underlying library isn't... and we ARE making disk calls :(
     def post(self):
         '''
-        :ref:`Authenticate  <rest_tornado-auth>` against Salt's eauth system
+        :ref:`Authenticate <rest_tornado-auth>` against Salt's eauth system
 
         .. http:post:: /login
 
@@ -684,7 +685,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                     -d password='saltpass' \\
                     -d eauth='pam'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST / HTTP/1.1
             Host: localhost:8000
@@ -696,7 +697,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: application/json
@@ -744,17 +745,22 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         try:
             eauth = self.application.opts['external_auth'][token['eauth']]
             # Get sum of '*' perms, user-specific perms, and group-specific perms
-            perms = eauth.get(token['name'], [])
-            perms.extend(eauth.get('*', []))
+            _perms = eauth.get(token['name'], [])
+            _perms.extend(eauth.get('*', []))
 
             if 'groups' in token and token['groups']:
                 user_groups = set(token['groups'])
                 eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
 
                 for group in user_groups & eauth_groups:
-                    perms.extend(eauth['{0}%'.format(group)])
+                    _perms.extend(eauth['{0}%'.format(group)])
 
-            perms = sorted(list(set(perms)))
+            # dedup. perm can be a complex dict, so we cant use set
+            perms = []
+            for perm in _perms:
+                if perm not in perms:
+                    perms.append(perm)
+
         # If we can't find the creds, then they aren't authorized
         except KeyError:
             self.send_error(401)
@@ -788,7 +794,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
     '''
     def get(self):
         '''
-        An enpoint to determine salt-api capabilities
+        An endpoint to determine salt-api capabilities
 
         .. http:get:: /
 
@@ -804,7 +810,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
             curl -i localhost:8000
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET / HTTP/1.1
             Host: localhost:8000
@@ -812,7 +818,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: application/json
@@ -856,7 +862,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                     -d fun='test.ping' \\
                     -d arg
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST / HTTP/1.1
             Host: localhost:8000
@@ -868,11 +874,12 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             fun=test.ping&arg&client=local&tgt=*
 
         **Example response:**
+
         Responses are an in-order list of the lowstate's return data. In the
         event of an exception running a command the return will be a string
         instead of a mapping.
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 200
@@ -887,10 +894,11 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 ms-4: true
 
         .. admonition:: multiple commands
+
             Note that if multiple :term:`lowstate` structures are sent, the Salt
             API will execute them in serial, and will not stop execution upon failure
             of a previous job. If you need to have commands executed in order and
-            stop on failure please use compount-command-execution.
+            stop on failure please use compound-command-execution.
 
         '''
         # if you aren't authenticated, redirect to login
@@ -933,22 +941,37 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 ret.append('Unexpected exception while handling request: {0}'.format(ex))
                 log.error('Unexpected exception while handling request:', exc_info=True)
 
-        self.write(self.serialize({'return': ret}))
-        self.finish()
+        if not self._finished:
+            self.write(self.serialize({'return': ret}))
+            self.finish()
 
     @tornado.gen.coroutine
     def _disbatch_local(self, chunk):
         '''
         Dispatch local client commands
         '''
-        # Generate jid before triggering a job to subscribe all returns from minions
-        chunk['jid'] = salt.utils.jid.gen_jid(self.application.opts)
+        # Generate jid and find all minions before triggering a job to subscribe all returns from minions
+        full_return = chunk.pop('full_return', False)
+        chunk['jid'] = salt.utils.jid.gen_jid(self.application.opts) if not chunk.get('jid', None) else chunk['jid']
+        minions = set(self.ckminions.check_minions(chunk['tgt'], chunk.get('tgt_type', 'glob')))
+
+        def subscribe_minion(minion):
+            salt_evt = self.application.event_listener.get_event(
+                     self,
+                     tag='salt/job/{}/ret/{}'.format(chunk['jid'], minion),
+                     matcher=EventListener.exact_matcher)
+            syndic_evt = self.application.event_listener.get_event(
+                    self,
+                    tag='syndic/job/{}/ret/{}'.format(chunk['jid'], minion),
+                    matcher=EventListener.exact_matcher)
+            return salt_evt, syndic_evt
 
         # start listening for the event before we fire the job to avoid races
-        events = [
-            self.application.event_listener.get_event(self, tag='salt/job/'+chunk['jid']),
-            self.application.event_listener.get_event(self, tag='syndic/job/'+chunk['jid']),
-        ]
+        events = []
+        for minion in minions:
+            salt_evt, syndic_evt = subscribe_minion(minion)
+            events.append(salt_evt)
+            events.append(syndic_evt)
 
         f_call = self._format_call_run_job_async(chunk)
         # fire a job off
@@ -964,6 +987,12 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                     pass
             raise tornado.gen.Return('No minions matched the target. No command was sent, no jid was assigned.')
 
+        # get_event for missing minion
+        for minion in list(set(pub_data['minions']) - set(minions)):
+            salt_evt, syndic_evt = subscribe_minion(minion)
+            events.append(salt_evt)
+            events.append(syndic_evt)
+
         # Map of minion_id -> returned for all minions we think we need to wait on
         minions = {m: False for m in pub_data['minions']}
 
@@ -977,7 +1006,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             min_wait_time = tornado.gen.sleep(self.application.opts['syndic_wait'])
 
         # To ensure job_not_running and all_return are terminated by each other, communicate using a future
-        is_finished = tornado.gen.sleep(self.application.opts['gather_job_timeout'])
+        is_timed_out = tornado.gen.sleep(self.application.opts['gather_job_timeout'])
+        is_finished = Future()
 
         # ping until the job is not running, while doing so, if we see new minions returning
         # that they are running the job, add them to the list
@@ -988,7 +1018,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                                                       is_finished)
 
         def more_todo():
-            '''Check if there are any more minions we are waiting on returns from
+            '''
+            Check if there are any more minions we are waiting on returns from
             '''
             return any(x is False for x in six.itervalues(minions))
 
@@ -998,18 +1029,18 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         # early if gather_job_timeout has been exceeded
         chunk_ret = {}
         while True:
-            to_wait = events+[is_finished]
+            to_wait = events+[is_finished, is_timed_out]
             if not min_wait_time.done():
                 to_wait += [min_wait_time]
 
             def cancel_inflight_futures():
                 for event in to_wait:
-                    if not event.done():
+                    if not event.done() and event is not is_timed_out:
                         event.set_result(None)
             f = yield Any(to_wait)
             try:
                 # When finished entire routine, cleanup other futures and return result
-                if f is is_finished:
+                if f is is_finished or f is is_timed_out:
                     cancel_inflight_futures()
                     raise tornado.gen.Return(chunk_ret)
                 elif f is min_wait_time:
@@ -1017,29 +1048,26 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                         cancel_inflight_futures()
                         raise tornado.gen.Return(chunk_ret)
                     continue
+
                 f_result = f.result()
+                if f in events:
+                    events.remove(f)
                 # if this is a start, then we need to add it to the pile
                 if f_result['tag'].endswith('/new'):
                     for minion_id in f_result['data']['minions']:
                         if minion_id not in minions:
                             minions[minion_id] = False
                 else:
-                    chunk_ret[f_result['data']['id']] = f_result['data']['return']
+                    chunk_ret[f_result['data']['id']] = f_result if full_return else f_result['data']['return']
                     # clear finished event future
                     minions[f_result['data']['id']] = True
-
                     # if there are no more minions to wait for, then we are done
                     if not more_todo() and min_wait_time.done():
                         cancel_inflight_futures()
                         raise tornado.gen.Return(chunk_ret)
 
             except TimeoutException:
-                pass
-
-            if f == events[0]:
-                events[0] = self.application.event_listener.get_event(self, tag='salt/job/'+chunk['jid'])
-            else:
-                events[1] = self.application.event_listener.get_event(self, tag='syndic/job/'+chunk['jid'])
+                break
 
     @tornado.gen.coroutine
     def job_not_running(self, jid, tgt, tgt_type, minions, is_finished):
@@ -1059,15 +1087,12 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 event = self.application.event_listener.get_event(self,
                                                                   tag=ping_tag,
                                                                   timeout=self.application.opts['gather_job_timeout'])
-                f = yield Any([event, is_finished])
-                # When finished entire routine, cleanup other futures and return result
-                if f is is_finished:
-                    if not event.done():
-                        event.set_result(None)
-                    raise tornado.gen.Return(True)
-                event = f.result()
+                event = yield event
             except TimeoutException:
-                if not minion_running:
+                if not event.done():
+                    event.set_result(None)
+
+                if not minion_running or is_finished.done():
                     raise tornado.gen.Return(True)
                 else:
                     ping_pub_data = yield self.saltclients['local'](tgt,
@@ -1101,13 +1126,15 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         '''
         Disbatch runner client commands
         '''
+        full_return = chunk.pop('full_return', False)
         pub_data = self.saltclients['runner'](chunk)
         tag = pub_data['tag'] + '/ret'
         try:
             event = yield self.application.event_listener.get_event(self, tag=tag)
 
             # only return the return data
-            raise tornado.gen.Return(event['data']['return'])
+            ret = event if full_return else event['data']['return']
+            raise tornado.gen.Return(ret)
         except TimeoutException:
             raise tornado.gen.Return('Timeout waiting for runner to execute')
 
@@ -1155,7 +1182,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
             curl -i localhost:8000/minions/ms-3
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /minions/ms-3 HTTP/1.1
             Host: localhost:8000
@@ -1163,7 +1190,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 129005
@@ -1216,7 +1243,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
                 -d tgt='*' \\
                 -d fun='status.diskusage'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /minions HTTP/1.1
             Host: localhost:8000
@@ -1228,7 +1255,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 202 Accepted
             Content-Length: 86
@@ -1283,7 +1310,7 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
             curl -i localhost:8000/jobs
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /jobs HTTP/1.1
             Host: localhost:8000
@@ -1291,7 +1318,7 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 165
@@ -1312,7 +1339,7 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
             curl -i localhost:8000/jobs/20121130104633606931
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /jobs/20121130104633606931 HTTP/1.1
             Host: localhost:8000
@@ -1320,7 +1347,7 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 73
@@ -1401,7 +1428,7 @@ class RunSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
                 -d password='saltdev' \\
                 -d eauth='pam'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /run HTTP/1.1
             Host: localhost:8000
@@ -1413,7 +1440,7 @@ class RunSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 73
@@ -1460,14 +1487,14 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
             curl -NsS localhost:8000/events
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /events HTTP/1.1
             Host: localhost:8000
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Connection: keep-alive
@@ -1615,7 +1642,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
             curl -sS localhost:8000/hook -d foo='Foo!' -d bar='Bar!'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /hook HTTP/1.1
             Host: localhost:8000
@@ -1626,7 +1653,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         **Example response**:
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 14
@@ -1639,7 +1666,9 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         ``http://localhost:8000/hook/mycompany/build/success`` which contains
         the result of a build and the SHA of the version that was built as
         JSON. That would then produce the following event in Salt that could be
-        used to kick off a deployment via Salt's Reactor::
+        used to kick off a deployment via Salt's Reactor:
+
+        .. code-block:: text
 
             Event fired at Fri Feb 14 17:40:11 2014
             *************************
@@ -1664,7 +1693,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         And finally deploy the new build:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set secret_key = data.get('headers', {}).get('X-My-Secret-Key') %}
             {% set build = data.get('post', {}) %}
@@ -1719,9 +1748,9 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
 
 def _check_cors_origin(origin, allowed_origins):
-    """
+    '''
     Check if an origin match cors allowed origins
-    """
+    '''
     if isinstance(allowed_origins, list):
         if origin in allowed_origins:
             return origin

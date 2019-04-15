@@ -15,8 +15,6 @@ from tests.support.runtests import RUNTIME_VARS
 import salt.utils.files
 import salt.utils.platform
 
-CURL = os.path.join(RUNTIME_VARS.FILES, 'file', 'base', 'win', 'repo-ng', 'curl.sls')
-
 
 @skipIf(not salt.utils.platform.is_windows(), 'windows test only')
 class WinPKGTest(ModuleCase):
@@ -27,21 +25,32 @@ class WinPKGTest(ModuleCase):
     specific windows software respository tests while
     using the win_pkg module.
     '''
+    @classmethod
+    def setUpClass(cls):
+        cls.repo_dir = os.path.join(RUNTIME_VARS.FILES, 'file', 'base', 'win', 'repo-ng')
+        cls.curl_sls_path = os.path.join(cls.repo_dir, 'curl.sls')
+
+    def tearDown(self):
+        if os.path.isfile(self.curl_sls_path):
+            os.remove(self.curl_sls_path)
+
     @destructiveTest
     def test_adding_removing_pkg_sls(self):
         '''
         Test add and removing a new pkg sls
         in the windows software repository
         '''
-        def _check_pkg(pkgs, exists=True):
-            self.run_function('pkg.refresh_db')
+        def _check_pkg(pkgs, check_refresh, exists=True):
+            refresh = self.run_function('pkg.refresh_db')
+            self.assertEqual(check_refresh, refresh['total'],
+                 msg='total returned {0}. Expected return {1}'.format(refresh['total'], check_refresh))
             repo_data = self.run_function('pkg.get_repo_data')
             repo_cache = os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache', 'files', 'base', 'win', 'repo-ng')
             for pkg in pkgs:
                 if exists:
-                    assert pkg in str(repo_data)
+                    assert pkg in str(repo_data), str(repo_data)
                 else:
-                    assert pkg not in str(repo_data)
+                    assert pkg not in str(repo_data), str(repo_data)
 
                 for root, dirs, files in os.walk(repo_cache):
                     if exists:
@@ -51,10 +60,10 @@ class WinPKGTest(ModuleCase):
 
         pkgs = ['putty', '7zip']
         # check putty and 7zip are in cache and repo query
-        _check_pkg(pkgs)
+        _check_pkg(pkgs, 2)
 
         # now add new sls
-        with salt.utils.files.fopen(CURL, 'w') as fp_:
+        with salt.utils.files.fopen(self.curl_sls_path, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 curl:
                   '7.46.0':
@@ -74,12 +83,10 @@ class WinPKGTest(ModuleCase):
                 '''))
         # now check if curl is also in cache and repo query
         pkgs.append('curl')
-        _check_pkg(pkgs)
+        for pkg in pkgs:
+            self.assertIn(pkg + '.sls', os.listdir(self.repo_dir))
+        _check_pkg(pkgs, 3)
 
         # remove curl sls and check its not in cache and repo query
-        os.remove(CURL)
-        _check_pkg(['curl'], exists=False)
-
-    def tearDown(self):
-        if os.path.isfile(CURL):
-            os.remove(CURL)
+        os.remove(self.curl_sls_path)
+        _check_pkg(['curl'], 2, exists=False)

@@ -26,6 +26,7 @@ import sys
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
+import salt.utils.platform
 import salt.exceptions
 from salt.ext import six
 from salt.utils.odict import OrderedDict
@@ -308,12 +309,24 @@ def _dec2hex(decval):
     return _pretty_hex('{0:X}'.format(decval))
 
 
+def _isfile(path):
+    '''
+    A wrapper around os.path.isfile that ignores ValueError exceptions which
+    can be raised if the input to isfile is too long.
+    '''
+    try:
+        return os.path.isfile(path)
+    except ValueError:
+        pass
+    return False
+
+
 def _text_or_file(input_):
     '''
     Determines if input is a path to a file, or a string with the
     content to be parsed.
     '''
-    if os.path.isfile(input_):
+    if _isfile(input_):
         with salt.utils.files.fopen(input_) as fp_:
             out = salt.utils.stringutils.to_str(fp_.read())
     else:
@@ -372,7 +385,7 @@ def _passphrase_callback(passphrase):
     Returns a callback function used to supply a passphrase for private keys
     '''
     def f(*args):
-        return salt.utils.stringutils.to_str(passphrase)
+        return salt.utils.stringutils.to_bytes(passphrase)
     return f
 
 
@@ -411,7 +424,7 @@ def _make_regex(pem_type):
         r"(?:(?P<proc_type>Proc-Type: 4,ENCRYPTED)\s*)?"
         r"(?:(?P<dek_info>DEK-Info: (?:DES-[3A-Z\-]+,[0-9A-F]{{16}}|[0-9A-Z\-]+,[0-9A-F]{{32}}))\s*)?"
         r"(?P<pem_body>.+?)\s+(?P<pem_footer>"
-        r"-----END {1}-----)\s*".format(pem_type, pem_type),
+        r"-----END {0}-----)\s*".format(pem_type),
         re.DOTALL
     )
 
@@ -446,7 +459,7 @@ def get_pem_entry(text, pem_type=None):
         # mine.get returns the PEM on a single line, we fix this
         pem_fixed = []
         pem_temp = text
-        while len(pem_temp) > 0:
+        while pem_temp:
             if pem_temp.startswith('-----'):
                 # Grab ----(.*)---- blocks
                 pem_fixed.append(pem_temp[:pem_temp.index('-----', 5) + 5])
@@ -941,7 +954,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
 
         serial_number = rev_item['serial_number'].replace(':', '')
         # OpenSSL bindings requires this to be a non-unicode string
-        serial_number = salt.utils.stringutils.to_str(serial_number)
+        serial_number = salt.utils.stringutils.to_bytes(serial_number)
 
         if 'not_after' in rev_item and not include_expired:
             not_after = datetime.datetime.strptime(
@@ -955,10 +968,11 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         rev_date = datetime.datetime.strptime(
             rev_item['revocation_date'], '%Y-%m-%d %H:%M:%S')
         rev_date = rev_date.strftime('%Y%m%d%H%M%SZ')
+        rev_date = salt.utils.stringutils.to_bytes(rev_date)
 
         rev = OpenSSL.crypto.Revoked()
-        rev.set_serial(serial_number)
-        rev.set_rev_date(rev_date)
+        rev.set_serial(salt.utils.stringutils.to_bytes(serial_number))
+        rev.set_rev_date(salt.utils.stringutils.to_bytes(rev_date))
 
         if 'reason' in rev_item:
             # Same here for OpenSSL bindings and non-unicode strings
@@ -984,7 +998,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         'days': days_valid
     }
     if digest:
-        export_kwargs['digest'] = bytes(digest)
+        export_kwargs['digest'] = salt.utils.stringutils.to_bytes(digest)
     else:
         log.warning('No digest specified. The default md5 digest will be used.')
 
@@ -1116,7 +1130,7 @@ def create_certificate(
     ca_server:
         Request a remotely signed certificate from ca_server. For this to
         work, a ``signing_policy`` must be specified, and that same policy
-        must be configured on the ca_server. See ``signing_policy`` for
+        must be configured on the ca_server (name or list of ca server). See ``signing_policy`` for
         details. Also the salt master must permit peers to call the
         ``sign_remote_certificate`` function.
 
@@ -1375,18 +1389,25 @@ def create_certificate(
         for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
 
-        certs = __salt__['publish.publish'](
-            tgt=ca_server,
-            fun='x509.sign_remote_certificate',
-            arg=six.text_type(kwargs))
+        if not isinstance(ca_server, list):
+            ca_server = [ca_server]
+        random.shuffle(ca_server)
+        for server in ca_server:
+            certs = __salt__['publish.publish'](
+                tgt=server,
+                fun='x509.sign_remote_certificate',
+                arg=six.text_type(kwargs))
+            if certs is None or not any(certs):
+                continue
+            else:
+                cert_txt = certs[server]
+                break
 
         if not any(certs):
             raise salt.exceptions.SaltInvocationError(
                     'ca_server did not respond'
                     ' salt master must permit peers to'
                     ' call the sign_remote_certificate function.')
-
-        cert_txt = certs[ca_server]
 
         if path:
             return write_pem(
@@ -1426,12 +1447,18 @@ def create_certificate(
         kwargs['serial_number'] = _dec2hex(
             random.getrandbits(kwargs['serial_bits']))
     serial_number = int(kwargs['serial_number'].replace(':', ''), 16)
-    # With Python3 we occasionally end up with an INT
-    # that is too large because Python3 no longer supports long INTs.
-    # If we're larger than the maxsize value
-    # then we adjust the serial number.
-    if serial_number > sys.maxsize:
-        serial_number = serial_number - sys.maxsize
+    # With Python3 we occasionally end up with an INT that is greater than a C
+    # long max_value. This causes an overflow error due to a bug in M2Crypto.
+    # See issue: https://gitlab.com/m2crypto/m2crypto/issues/232
+    # Remove this after M2Crypto fixes the bug.
+    if six.PY3:
+        if salt.utils.platform.is_windows():
+            INT_MAX = 2147483647
+            if serial_number >= INT_MAX:
+                serial_number -= int(serial_number / INT_MAX) * INT_MAX
+        else:
+            if serial_number >= sys.maxsize:
+                serial_number -= int(serial_number / sys.maxsize) * sys.maxsize
     cert.set_serial_number(serial_number)
 
     # Set validity dates
@@ -1502,8 +1529,7 @@ def create_certificate(
         ext = _new_extension(
             name=extname, value=extval, critical=critical, issuer=issuer)
         if not ext.x509_ext:
-            log.info(
-                'Invalid X509v3 Extension. {0}: {1}'.format(extname, extval))
+            log.info('Invalid X509v3 Extension. %s: %s', extname, extval)
             continue
 
         cert.add_ext(ext)
@@ -1556,7 +1582,7 @@ def create_certificate(
             pem_type='CERTIFICATE'
         )
     else:
-        return cert.as_pem()
+        return salt.utils.stringutils.to_str(cert.as_pem())
 # pylint: enable=too-many-locals
 
 
@@ -1666,8 +1692,7 @@ def create_csr(path=None, text=False, **kwargs):
         ext = _new_extension(
             name=extname, value=extval, critical=critical, issuer=issuer)
         if not ext.x509_ext:
-            log.info(
-                'Invalid X509v3 Extension. {0}: {1}'.format(extname, extval))
+            log.info('Invalid X509v3 Extension. %s: %s', extname, extval)
             continue
 
         extstack.push(ext)

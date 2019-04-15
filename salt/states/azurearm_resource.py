@@ -2,7 +2,7 @@
 '''
 Azure (ARM) Resource State Module
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 :maintainer: <devops@decisionlab.io>
 :maturity: new
@@ -20,8 +20,8 @@ Azure (ARM) Resource State Module
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as a dictionary of
-keyword arguments to the ``connection_auth`` parameter in order to work properly. Since the authentication
-parameters are sensitive, it's recommended to pass them to the states via pillar.
+    keyword arguments to the ``connection_auth`` parameter in order to work properly. Since the authentication
+    parameters are sensitive, it's recommended to pass them to the states via pillar.
 
     Required provider parameters:
 
@@ -62,7 +62,7 @@ parameters are sensitive, it's recommended to pass them to the states via pillar
 
     Example states using Azure Resource Manager authentication:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set profile = salt['pillar.get']('azurearm:mysubscription') %}
         Ensure resource group exists:
@@ -103,7 +103,7 @@ def __virtual__():
 
 def resource_group_present(name, location, managed_by=None, tags=None, connection_auth=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a resource group exists.
 
@@ -212,7 +212,7 @@ def resource_group_present(name, location, managed_by=None, tags=None, connectio
 
 def resource_group_absent(name, connection_auth=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a resource group does not exist in the current subscription.
 
@@ -280,7 +280,7 @@ def policy_definition_present(name, policy_rule=None, policy_type=None, mode=Non
                               template='jinja', source_hash=None, source_hash_name=None, skip_verify=False,
                               connection_auth=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a security policy definition exists.
 
@@ -546,7 +546,7 @@ def policy_definition_present(name, policy_rule=None, policy_type=None, mode=Non
 
 def policy_definition_absent(name, connection_auth=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a policy definition does not exist in the current subscription.
 
@@ -602,7 +602,7 @@ def policy_definition_absent(name, connection_auth=None):
 def policy_assignment_present(name, scope, definition_name, display_name=None, description=None, assignment_type=None,
                               parameters=None, connection_auth=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a security policy assignment exists.
 
@@ -755,7 +755,7 @@ def policy_assignment_present(name, scope, definition_name, display_name=None, d
 
 def policy_assignment_absent(name, scope, connection_auth=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a policy assignment does not exist in the provided scope.
 

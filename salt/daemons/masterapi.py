@@ -45,6 +45,7 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.versions
+import salt.utils.master
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.pillar import git_pillar
 
@@ -174,6 +175,42 @@ def clean_old_jobs(opts):
         mminion.returners[fstr]()
 
 
+def clean_proc_dir(opts):
+    '''
+    Clean out old tracked jobs running on the master
+
+    Generally, anything tracking a job should remove the job
+    once the job has finished. However, this will remove any
+    jobs that for some reason were not properly removed
+    when finished or errored.
+    '''
+    serial = salt.payload.Serial(opts)
+    proc_dir = os.path.join(opts['cachedir'], 'proc')
+    for fn_ in os.listdir(proc_dir):
+        proc_file = os.path.join(*[proc_dir, fn_])
+        data = salt.utils.master.read_proc_file(proc_file, opts)
+        if not data:
+            try:
+                log.warning(
+                    "Found proc file %s without proper data. Removing from tracked proc files.",
+                    proc_file
+                )
+                os.remove(proc_file)
+            except (OSError, IOError) as err:
+                log.error('Unable to remove proc file: %s.', err)
+            continue
+        if not salt.utils.master.is_pid_healthy(data['pid']):
+            try:
+                log.warning(
+                    "PID %s not owned by salt or no longer running. Removing tracked proc file %s",
+                    data['pid'],
+                    proc_file
+                )
+                os.remove(proc_file)
+            except (OSError, IOError) as err:
+                log.error('Unable to remove proc file: %s.', err)
+
+
 def mk_key(opts, user):
     if HAS_PWD:
         uid = None
@@ -275,6 +312,7 @@ class AutoKey(object):
     Implement the methods to run auto key acceptance and rejection
     '''
     def __init__(self, opts):
+        self.signing_files = {}
         self.opts = opts
 
     def check_permissions(self, filename):
@@ -314,15 +352,15 @@ class AutoKey(object):
             log.warning('Wrong permissions for %s, ignoring content', signing_file)
             return False
 
-        with salt.utils.files.fopen(signing_file, 'r') as fp_:
-            for line in fp_:
-                line = line.strip()
-                if line.startswith('#'):
-                    continue
-                else:
-                    if salt.utils.stringutils.expr_match(keyid, line):
-                        return True
-        return False
+        mtime = os.path.getmtime(signing_file)
+        if self.signing_files.get(signing_file, {}).get('mtime') != mtime:
+            self.signing_files.setdefault(signing_file, {})['mtime'] = mtime
+            with salt.utils.files.fopen(signing_file, 'r') as fp_:
+                self.signing_files[signing_file]['data'] = [
+                    entry for entry in [line.strip() for line in fp_] if not entry.strip().startswith('#')
+                ]
+        return any(salt.utils.stringutils.expr_match(keyid, line) for line
+                   in self.signing_files[signing_file].get('data', []))
 
     def check_autosign_dir(self, keyid):
         '''
@@ -574,7 +612,7 @@ class RemoteFuncs(object):
                 if any(re.match(perm, fun) for perm in perms):
                     functions_allowed.append(fun)
 
-            if not len(functions_allowed):
+            if not functions_allowed:
                 return {}
         else:
             functions_allowed = functions

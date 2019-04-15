@@ -6,16 +6,16 @@ Configuring the Salt Master
 
 The Salt system is amazingly simple and easy to configure, the two components
 of the Salt system each have a respective configuration file. The
-:command:`salt-master` is configured via the master configuration file, and the
-:command:`salt-minion` is configured via the minion configuration file.
+``salt-master`` is configured via the master configuration file, and the
+``salt-minion`` is configured via the minion configuration file.
 
 .. seealso::
+
     :ref:`Example master configuration file <configuration-examples-master>`.
 
-The configuration file for the salt-master is located at
-:file:`/etc/salt/master` by default.  A notable exception is FreeBSD, where the
-configuration file is located at :file:`/usr/local/etc/salt`.  The available
-options are as follows:
+The configuration file for the salt-master is located at ``/etc/salt/master``
+by default. A notable exception is FreeBSD, where the configuration file is
+located at ``/usr/local/etc/salt``. The available options are as follows:
 
 
 .. _primary-master-configuration:
@@ -749,6 +749,22 @@ accessible from the minions.
 
     master_job_cache: redis
 
+.. conf_master:: job_cache_store_endtime
+
+``job_cache_store_endtime``
+---------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``False``
+
+Specify whether the Salt Master should store end times for jobs as returns
+come in.
+
+.. code-block:: yaml
+
+    job_cache_store_endtime: False
+
 .. conf_master:: enforce_mine_cache
 
 ``enforce_mine_cache``
@@ -850,9 +866,8 @@ Default: ``zeromq``
 
 Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
-a significant impact on performance and should not be changed unless you know
-what you are doing!
+``zeromq`` and ``tcp`` (experimental). This setting has a significant impact on
+performance and should not be changed unless you know what you are doing!
 
 .. code-block:: yaml
 
@@ -887,8 +902,8 @@ Default: False
 
 Turning on the master stats enables runtime throughput and statistics events
 to be fired from the master event bus. These events will report on what
-functions have been run on the master and how long these runs have, on
-average, taken over a given period of time.
+functions have been run on the master along with their average latency and
+duration, taken over a given period of time.
 
 .. conf_master:: master_stats_event_iter
 
@@ -1028,7 +1043,7 @@ cache events are fired when a minion requests a minion data cache refresh.
 ``http_connect_timeout``
 ------------------------
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Default: ``20``
 
@@ -1893,40 +1908,6 @@ The listen queue size of the ZeroMQ backlog.
 
     zmq_backlog: 1000
 
-.. conf_master:: salt_event_pub_hwm
-.. conf_master:: event_publisher_pub_hwm
-
-``salt_event_pub_hwm`` and ``event_publisher_pub_hwm``
-------------------------------------------------------
-
-These two ZeroMQ High Water Mark settings, ``salt_event_pub_hwm`` and
-``event_publisher_pub_hwm`` are significant for masters with thousands of
-minions. When these are insufficiently high it will manifest in random
-responses missing in the CLI and even missing from the job cache. Masters
-that have fast CPUs and many cores with appropriate ``worker_threads``
-will not need these set as high.
-
-The ZeroMQ high-water-mark for the ``SaltEvent`` pub socket default is:
-
-.. code-block:: yaml
-
-    salt_event_pub_hwm: 20000
-
-The ZeroMQ high-water-mark for the ``EventPublisher`` pub socket default is:
-
-.. code-block:: yaml
-
-    event_publisher_pub_hwm: 10000
-
-As an example, on single master deployment with 8,000 minions, 2.4GHz CPUs,
-24 cores, and 32GiB memory has these settings:
-
-.. code-block:: yaml
-
-    salt_event_pub_hwm: 128000
-    event_publisher_pub_hwm: 64000
-
-
 .. _master-module-management:
 
 Master Module Management
@@ -2482,6 +2463,12 @@ Master will not be returned to the Minion.
 ------------------------------
 
 .. versionadded:: 2014.1.0
+.. deprecated:: 2018.3.4
+   This option is now ignored. Firstly, it only traversed
+   :conf_master:`file_roots`, which means it did not work for the other
+   fileserver backends. Secondly, since this option was added we have added
+   caching to the code that traverses the file_roots (and gitfs, etc.), which
+   greatly reduces the amount of traversal that is done.
 
 Default: ``False``
 
@@ -2658,6 +2645,8 @@ can have multiple root directories. The subdirectories in the multiple file
 roots cannot match, otherwise the downloaded files will not be able to be
 reliably ensured. A base environment is required to house the top file.
 
+As of 2018.3.5 and 2019.2.1, it is possible to have `__env__` as a catch-all environment.
+
 Example:
 
 .. code-block:: yaml
@@ -2671,6 +2660,8 @@ Example:
       prod:
         - /srv/salt/prod/services
         - /srv/salt/prod/states
+      __env__:
+        - /srv/salt/default
 
 .. note::
     For masterless Salt, this parameter must be specified in the minion config
@@ -4598,7 +4589,7 @@ Default: ``3600``
 
 If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 of time, in seconds, before the cache is considered invalid by a master and a fresh
-pillar is recompiled and stored.
+pillar is recompiled and stored. A value of 0 will cause the cache to always be valid.
 
 .. conf_master:: pillar_cache_backend
 
@@ -4692,6 +4683,55 @@ The queue size for workers in the reactor.
 .. code-block:: yaml
 
     reactor_worker_hwm: 10000
+
+
+.. _salt-api-master-settings:
+
+Salt-API Master Settings
+========================
+
+There are some settings for :ref:`salt-api <netapi-introduction>` that can be
+configured on the Salt Master.
+
+.. conf_master:: api_logfile
+
+``api_logfile``
+---------------
+
+Default: ``/var/log/salt/api``
+
+The logfile location for ``salt-api``.
+
+.. code-block:: yaml
+
+    api_logfile: /var/log/salt/api
+
+.. conf_master:: api_pidfile
+
+``api_pidfile``
+---------------
+
+Default: /var/run/salt-api.pid
+
+If this master will be running ``salt-api``, specify the pidfile of the
+``salt-api`` daemon.
+
+.. code-block:: yaml
+
+    api_pidfile: /var/run/salt-api.pid
+
+.. conf_master:: rest_timeout
+
+``rest_timeout``
+----------------
+
+Default: ``300``
+
+Used by ``salt-api`` for the master requests timeout.
+
+.. code-block:: yaml
+
+    rest_timeout: 300
 
 
 .. _syndic-server-settings:
@@ -5061,12 +5101,42 @@ This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
 
+.. conf_master:: log_rotate_max_bytes
+
+``log_rotate_max_bytes``
+------------------------
+
+Default:  ``0``
+
+The maximum number of bytes a single log file may contain before it is rotated.
+A value of 0 disables this feature. Currently only supported on Windows. On
+other platforms, use an external tool such as 'logrotate' to manage log files.
+:conf_log:`log_rotate_max_bytes`
+
+
+.. conf_master:: log_rotate_backup_count
+
+``log_rotate_backup_count``
+---------------------------
+
+Default:  ``0``
+
+The number of backup files to keep when rotating log files. Only used if
+:conf_master:`log_rotate_max_bytes` is greater than 0. Currently only supported
+on Windows. On other platforms, use an external tool such as 'logrotate' to
+manage log files.
+:conf_log:`log_rotate_backup_count`
+
+
 .. _node-groups:
 
 Node Groups
 ===========
 
 .. conf_master:: nodegroups
+
+``nodegroups``
+--------------
 
 Default: ``{}``
 

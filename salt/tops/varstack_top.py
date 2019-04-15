@@ -55,10 +55,7 @@ __virtualname__ = 'varstack'
 
 
 def __virtual__():
-    return (
-        varstack and __virtualname__ or False,
-        'The varstack module could not be loaded: varstack dependency is missing.'
-    )
+    return (False, 'varstack not installed') if varstack is None else __virtualname__
 
 
 def top(**kwargs):

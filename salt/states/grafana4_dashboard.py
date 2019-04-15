@@ -247,6 +247,7 @@ def absent(name, orgname=None, profile='grafana'):
 
 _IGNORED_DASHBOARD_FIELDS = [
     'id',
+    'uid',
     'originalTitle',
     'version',
 ]

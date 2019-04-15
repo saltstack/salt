@@ -19,19 +19,6 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.utils.sdb as sdb
 
-TEMP_DATABASE_FILE = os.path.join(RUNTIME_VARS.TMP, 'test_sdb.sqlite')
-
-SDB_OPTS = {
-            'extension_modules': '',
-            'optimization_order': [0, 1, 2],
-            'test_sdb_data': {
-                'driver': 'sqlite3',
-                'database': TEMP_DATABASE_FILE,
-                'table': 'sdb',
-                'create_table': True
-                }
-            }
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SdbTestCase(TestCase, LoaderModuleMockMixin):
@@ -40,9 +27,23 @@ class SdbTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     @classmethod
+    def setUpClass(cls):
+        cls.TEMP_DATABASE_FILE = os.path.join(RUNTIME_VARS.TMP, 'test_sdb.sqlite')
+        cls.sdb_opts = {
+            'extension_modules': '',
+            'optimization_order': [0, 1, 2],
+            'test_sdb_data': {
+                'driver': 'sqlite3',
+                'database': cls.TEMP_DATABASE_FILE,
+                'table': 'sdb',
+                'create_table': True
+                }
+        }
+
+    @classmethod
     def tearDownClass(cls):
         try:
-            os.unlink(TEMP_DATABASE_FILE)
+            os.unlink(cls.TEMP_DATABASE_FILE)
         except OSError:
             pass
 
@@ -53,13 +54,13 @@ class SdbTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_sqlite_get_not_found(self):
         what = sdb.sdb_get(
-                'sdb://test_sdb_data/thisKeyDoesNotExist', SDB_OPTS)
+                'sdb://test_sdb_data/thisKeyDoesNotExist', self.sdb_opts)
         self.assertEqual(what, None)
 
     # test with SQLite database write and read
 
     def test_sqlite_get_found(self):
         expected = {b'name': b'testone', b'number': 46}
-        sdb.sdb_set('sdb://test_sdb_data/test1', expected, SDB_OPTS)
-        resp = sdb.sdb_get('sdb://test_sdb_data/test1', SDB_OPTS)
+        sdb.sdb_set('sdb://test_sdb_data/test1', expected, self.sdb_opts)
+        resp = sdb.sdb_get('sdb://test_sdb_data/test1', self.sdb_opts)
         self.assertEqual(resp, expected)

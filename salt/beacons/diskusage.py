@@ -12,6 +12,8 @@ from __future__ import absolute_import, unicode_literals
 import logging
 import re
 
+import salt.utils.platform
+
 # Import Third Party Libs
 try:
     import psutil
@@ -94,6 +96,15 @@ def beacon(config):
         if not mount.endswith('$'):
             mount_re = '{0}$'.format(mount)
 
+        if salt.utils.platform.is_windows():
+            # mount_re comes in formatted with a $ at the end
+            # can be `C:\\$` or `C:\\\\$`
+            # re string must be like `C:\\\\` regardless of \\ or \\\\
+            # also, psutil returns uppercase
+            mount_re = re.sub(r':\\\$', r':\\\\', mount_re)
+            mount_re = re.sub(r':\\\\\$', r':\\\\', mount_re)
+            mount_re = mount_re.upper()
+
         for part in parts:
             if re.match(mount_re, part.mountpoint):
                 _mount = part.mountpoint
@@ -106,7 +117,6 @@ def beacon(config):
 
                 current_usage = _current_usage.percent
                 monitor_usage = mounts[mount]
-                log.debug('current_usage %s', current_usage)
                 if '%' in monitor_usage:
                     monitor_usage = re.sub('%', '', monitor_usage)
                 monitor_usage = float(monitor_usage)

@@ -48,6 +48,7 @@ except ImportError:
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.data
+import salt.utils.dictupdate
 import salt.utils.filebuffer
 import salt.utils.files
 import salt.utils.find
@@ -60,7 +61,6 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.user
-import salt.utils.data
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
 from salt.utils.files import HASHES, HASHES_REVMAP
 
@@ -522,6 +522,10 @@ def _cmp_attrs(path, attrs):
     '''
     diff = [None, None]
 
+    # lsattr for AIX is not the same thing as lsattr for linux.
+    if salt.utils.platform.is_aix():
+        return None
+
     try:
         lattrs = lsattr(path).get(path, '')
     except AttributeError:
@@ -529,11 +533,11 @@ def _cmp_attrs(path, attrs):
         return None
 
     old = [chr for chr in lattrs if chr not in attrs]
-    if len(old) > 0:
+    if old:
         diff[1] = ''.join(old)
 
     new = [chr for chr in attrs if chr not in lattrs]
-    if len(new) > 0:
+    if new:
         diff[0] = ''.join(new)
 
     return diff
@@ -544,6 +548,9 @@ def lsattr(path):
     .. versionadded:: 2018.3.0
     .. versionchanged:: 2018.3.1
         If ``lsattr`` is not installed on the system, ``None`` is returned.
+    .. versionchanged:: 2018.3.4
+        If on ``AIX``, ``None`` is returned even if in filesystem as lsattr on ``AIX``
+        is not the same thing as the linux version.
 
     Obtain the modifiable attributes of the given file. If path
     is to a directory, an empty list is returned.
@@ -557,7 +564,7 @@ def lsattr(path):
 
         salt '*' file.lsattr foo1.txt
     '''
-    if not salt.utils.path.which('lsattr'):
+    if not salt.utils.path.which('lsattr') or salt.utils.platform.is_aix():
         return None
 
     if not os.path.exists(path):
@@ -570,7 +577,7 @@ def lsattr(path):
     for line in result.splitlines():
         if not line.startswith('lsattr: '):
             vals = line.split(None, 1)
-            results[vals[1]] = re.findall(r"[acdijstuADST]", vals[0])
+            results[vals[1]] = re.findall(r"[aAcCdDeijPsStTu]", vals[0])
 
     return results
 
@@ -587,8 +594,8 @@ def chattr(*files, **kwargs):
         should be added or removed from files
 
     attributes
-        One or more of the following characters: ``acdijstuADST``, representing
-        attributes to add to/remove from files
+        One or more of the following characters: ``aAcCdDeijPsStTu``,
+        representing attributes to add to/remove from files
 
     version
         a version number to assign to the file(s)
@@ -613,7 +620,7 @@ def chattr(*files, **kwargs):
         raise SaltInvocationError(
             "Need an operator: 'add' or 'remove' to modify attributes.")
     if attributes is None:
-        raise SaltInvocationError("Need attributes: [AacDdijsTtSu]")
+        raise SaltInvocationError("Need attributes: [aAcCdDeijPsStTu]")
 
     cmd = ['chattr']
 
@@ -793,6 +800,7 @@ def get_source_sum(file_name='',
         ret = extract_hash(hash_fn, '', file_name, source, source_hash_name)
         if ret is None:
             _invalid_source_hash_format()
+        ret['hsum'] = ret['hsum'].lower()
         return ret
     else:
         # The source_hash is a hash expression
@@ -836,6 +844,7 @@ def get_source_sum(file_name='',
                     )
                 )
 
+        ret['hsum'] = ret['hsum'].lower()
         return ret
 
 
@@ -1237,7 +1246,7 @@ def psed(path,
     after = six.text_type(after)
     before = _sed_esc(before, escape_all)
     # The pattern to replace with does not need to be escaped!!!
-    #after = _sed_esc(after, escape_all)
+    # after = _sed_esc(after, escape_all)
     limit = _sed_esc(limit, escape_all)
 
     shutil.copy2(path, '{0}{1}'.format(path, backup))
@@ -1472,8 +1481,8 @@ def comment_line(path,
     try:
         # Use a read-only handle to open the file
         with salt.utils.files.fopen(path,
-                              mode='rb',
-                              buffering=bufsize) as r_file:
+                                    mode='rb',
+                                    buffering=bufsize) as r_file:
             # Loop through each line of the file and look for a match
             for line in r_file:
                 # Is it in this line
@@ -1511,13 +1520,13 @@ def comment_line(path,
         # Open the file in write mode
         mode = 'wb' if six.PY2 and salt.utils.platform.is_windows() else 'w'
         with salt.utils.files.fopen(path,
-                              mode=mode,
-                              buffering=bufsize) as w_file:
+                                    mode=mode,
+                                    buffering=bufsize) as w_file:
             try:
                 # Open the temp file in read mode
                 with salt.utils.files.fopen(temp_file,
-                                      mode='rb',
-                                      buffering=bufsize) as r_file:
+                                            mode='rb',
+                                            buffering=bufsize) as r_file:
                     # Loop through each line of the file and look for a match
                     for line in r_file:
                         line = salt.utils.stringutils.to_unicode(line)
@@ -1694,6 +1703,8 @@ def _starts_till(src, probe, strip_comments=True):
     if not src or not probe:
         return no_match
 
+    src = src.rstrip('\n\r')
+    probe = probe.rstrip('\n\r')
     if src == probe:
         return equal
 
@@ -1931,7 +1942,7 @@ def line(path, content=None, match=None, mode=None, location=None,
     match = _regex_to_static(body, match)
 
     if os.stat(path).st_size == 0 and mode in ('delete', 'replace'):
-        log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
+        log.warning('Cannot find text to %s. File \'%s\' is empty.', mode, path)
         body = []
     elif mode == 'delete' and match:
         body = [line for line in body if line != match[0]]
@@ -2073,7 +2084,7 @@ def replace(path,
             ignore_if_missing=False,
             preserve_inode=True,
             backslash_literal=False,
-        ):
+            ):
     '''
     .. versionadded:: 0.17.0
 
@@ -2261,8 +2272,8 @@ def replace(path,
         r_data = None
         # Use a read-only handle to open the file
         with salt.utils.files.fopen(path,
-                              mode='rb',
-                              buffering=bufsize) as r_file:
+                                    mode='rb',
+                                    buffering=bufsize) as r_file:
             try:
                 # mmap throws a ValueError if the file is empty.
                 r_data = mmap.mmap(r_file.fileno(),
@@ -2275,6 +2286,8 @@ def replace(path,
                 # Just search; bail as early as a match is found
                 if re.search(cpattern, r_data):
                     return True  # `with` block handles file closure
+                else:
+                    return False
             else:
                 result, nrepl = re.subn(cpattern,
                                         repl.replace('\\', '\\\\') if backslash_literal else repl,
@@ -2362,7 +2375,7 @@ def replace(path,
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
-            if 0 != len(new_file):
+            if new_file:
                 if not new_file[-1].endswith(salt.utils.stringutils.to_bytes(os.linesep)):
                     new_file[-1] += salt.utils.stringutils.to_bytes(os.linesep)
             new_file.append(not_found_content + salt.utils.stringutils.to_bytes(os.linesep))
@@ -2404,7 +2417,7 @@ def replace(path,
             except OSError:
                 os.remove(symlink_backup)
                 os.symlink(target_backup, symlink_backup)
-            except:
+            except Exception:
                 raise CommandExecutionError(
                     "Unable create backup symlink '{0}'. "
                     "Target was '{1}'. "
@@ -2526,7 +2539,7 @@ def blockreplace(path,
         .. versionadded:: 2016.3.4
         .. versionchanged:: 2017.7.5,2018.3.1
             New behavior added when value is ``None``.
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
             The default value of this argument will change to ``None`` to match
             the behavior of the :py:func:`file.blockreplace state
             <salt.states.file.blockreplace>`
@@ -3168,9 +3181,13 @@ def touch(name, atime=None, mtime=None):
     simply update the atime and mtime if it already does.
 
     atime:
-        Access time in Unix epoch time
+        Access time in Unix epoch time. Set it to 0 to set atime of the
+        file with Unix date of birth. If this parameter isn't set, atime
+        will be set with current time.
     mtime:
-        Last modification in Unix epoch time
+        Last modification in Unix epoch time. Set it to 0 to set mtime of
+        the file with Unix date of birth. If this parameter isn't set,
+        mtime will be set with current time.
 
     CLI Example:
 
@@ -3189,11 +3206,11 @@ def touch(name, atime=None, mtime=None):
             with salt.utils.files.fopen(name, 'a'):
                 pass
 
-        if not atime and not mtime:
+        if atime is None and mtime is None:
             times = None
-        elif not mtime and atime:
+        elif mtime is None and atime is not None:
             times = (atime, time.time())
-        elif not atime and mtime:
+        elif atime is None and mtime is not None:
             times = (time.time(), mtime)
         else:
             times = (atime, mtime)
@@ -3205,6 +3222,69 @@ def touch(name, atime=None, mtime=None):
         raise CommandExecutionError(exc.strerror)
 
     return os.path.exists(name)
+
+
+def tail(path, lines):
+    '''
+    .. versionadded:: Neon
+
+    Read the last n lines from a file
+
+    path
+        path to file
+
+    lines
+        number of lines to read
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.tail /path/to/file 10
+    '''
+    path = os.path.expanduser(path)
+    lines_found = []
+    buffer_size = 4098
+
+    if not os.path.isfile(path):
+        raise SaltInvocationError('File not found: {0}'.format(path))
+
+    if not __utils__['files.is_text'](path):
+        raise SaltInvocationError(
+            'Cannot tail a binary file: {0}'.format(path))
+
+    try:
+        lines = int(lines)
+    except ValueError:
+        raise SaltInvocationError('file.tail: \'lines\' value must be an integer')
+
+    try:
+        with salt.utils.fopen(path) as tail_fh:
+            blk_cnt = 1
+            size = os.stat(path).st_size
+
+            if size > buffer_size:
+                tail_fh.seek(-buffer_size * blk_cnt, os.SEEK_END)
+            data = string.split(tail_fh.read(buffer_size), os.linesep)
+
+            for i in range(lines):
+                while len(data) == 1 and ((blk_cnt * buffer_size) < size):
+                    blk_cnt += 1
+                    line = data[0]
+                    try:
+                        tail_fh.seek(-buffer_size * blk_cnt, os.SEEK_END)
+                        data = string.split(tail_fh.read(buffer_size) + line, os.linesep)
+                    except IOError:
+                        tail_fh.seek(0)
+                        data = string.split(tail_fh.read(size - (buffer_size * (blk_cnt - 1))) + line, os.linesep)
+
+                line = data[-1]
+                data.pop()
+                lines_found.append(line)
+
+        return lines_found[-lines:]
+    except (OSError, IOError):
+        raise CommandExecutionError('Could not tail \'{0}\''.format(path))
 
 
 def seek_read(path, size, offset):
@@ -3707,7 +3787,7 @@ def rmdir(path):
         return exc.strerror
 
 
-def remove(path):
+def remove(path, **kwargs):
     '''
     Remove the named file. If a directory is supplied, it will be recursively
     deleted.
@@ -3826,8 +3906,13 @@ def set_selinux_context(path,
                         user=None,
                         role=None,
                         type=None,    # pylint: disable=W0622
-                        range=None):  # pylint: disable=W0622
+                        range=None,   # pylint: disable=W0622
+                        persist=False):
     '''
+    .. versionchanged:: Neon
+
+        Added persist option
+
     Set a specific SELinux label on a given path
 
     CLI Example:
@@ -3839,6 +3924,15 @@ def set_selinux_context(path,
     '''
     if not any((user, role, type, range)):
         return False
+
+    if persist:
+        fcontext_result = __salt__['selinux.fcontext_add_policy'](path,
+            sel_type=type, sel_user=user, sel_level=range)
+        if fcontext_result.get('retcode', None) is not 0:
+            # Problem setting fcontext policy
+            raise CommandExecutionError(
+                'Problem setting fcontext: {0}'.format(fcontext_result)
+            )
 
     cmd = ['chcon']
     if user:
@@ -4002,7 +4096,7 @@ def apply_template_on_contents(
     if template in salt.utils.templates.TEMPLATE_REGISTRY:
         context_dict = defaults if defaults else {}
         if context:
-            context_dict.update(context)
+            context_dict = salt.utils.dictupdate.merge(context_dict, context)
         # Apply templating
         contents = salt.utils.templates.TEMPLATE_REGISTRY[template](
             contents,
@@ -4158,7 +4252,7 @@ def get_managed(
                     msg = (
                         'Unable to verify upstream hash of source file {0}, '
                         'please set source_hash or set skip_verify to True'
-                        .format(source)
+                        .format(salt.utils.url.redact_http_basic_auth(source))
                     )
                     return '', {}, msg
 
@@ -4190,12 +4284,14 @@ def get_managed(
             except Exception as exc:
                 # A 404 or other error code may raise an exception, catch it
                 # and return a comment that will fail the calling state.
-                return '', {}, 'Failed to cache {0}: {1}'.format(source, exc)
+                _source = salt.utils.url.redact_http_basic_auth(source)
+                return '', {}, 'Failed to cache {0}: {1}'.format(_source, exc)
 
         # If cache failed, sfn will be False, so do a truth check on sfn first
         # as invoking os.path.exists() on a bool raises a TypeError.
         if not sfn or not os.path.exists(sfn):
-            return sfn, {}, 'Source file \'{0}\' not found'.format(source)
+            _source = salt.utils.url.redact_http_basic_auth(source)
+            return sfn, {}, 'Source file \'{0}\' not found'.format(_source)
         if sfn == name:
             raise SaltInvocationError(
                 'Source file cannot be the same as destination'
@@ -4205,7 +4301,7 @@ def get_managed(
             if template in salt.utils.templates.TEMPLATE_REGISTRY:
                 context_dict = defaults if defaults else {}
                 if context:
-                    context_dict.update(context)
+                    context_dict = salt.utils.dictupdate.merge(context_dict, context)
                 data = salt.utils.templates.TEMPLATE_REGISTRY[template](
                     sfn,
                     name=name,
@@ -4467,8 +4563,13 @@ def extract_hash(hash_fn,
     return None
 
 
-def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False):
+def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False, seuser=None,
+                serole=None, setype=None, serange=None):
     '''
+    .. versionchanged:: Neon
+
+        Added selinux options
+
     Check the permissions on files, modify attributes and chown if needed. File
     attributes are only verified if lsattr(1) is installed.
 
@@ -4502,11 +4603,13 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
 
     is_dir = os.path.isdir(name)
     is_link = os.path.islink(name)
-    if not salt.utils.platform.is_windows() and not is_dir and not is_link:
+    if attrs is not None \
+            and not salt.utils.platform.is_windows() \
+            and not is_dir and not is_link:
         try:
             lattrs = lsattr(name)
         except SaltInvocationError:
-            lsattrs = None
+            lattrs = None
         if lattrs is not None:
             # List attributes on file
             perms['lattrs'] = ''.join(lattrs.get(name, ''))
@@ -4646,6 +4749,99 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
                         else:
                             ret['changes']['attrs'] = attrs
 
+    # Set selinux attributes if needed
+    if salt.utils.platform.is_linux() and (seuser or serole or setype or serange):
+        selinux_error = False
+        try:
+            current_seuser, current_serole, current_setype, current_serange = get_selinux_context(name).split(':')
+            log.debug(
+                'Current selinux context user:%s role:%s type:%s range:%s',
+                current_seuser, current_serole, current_setype, current_serange
+            )
+        except ValueError:
+            log.error('Unable to get current selinux attributes')
+            ret['result'] = False
+            ret['comment'].append(
+                'Failed to get selinux attributes'
+            )
+            selinux_error = True
+
+        if not selinux_error:
+            requested_seuser = None
+            requested_serole = None
+            requested_setype = None
+            requested_serange = None
+            # Only set new selinux variables if updates are needed
+            if seuser and seuser != current_seuser:
+                requested_seuser = seuser
+            if serole and serole != current_serole:
+                requested_serole = serole
+            if setype and setype != current_setype:
+                requested_setype = setype
+            if serange and serange != current_serange:
+                requested_serange = serange
+
+            if requested_seuser or requested_serole or requested_setype or requested_serange:
+                # selinux updates needed, prep changes output
+                selinux_change_new = ''
+                selinux_change_orig = ''
+                if requested_seuser:
+                    selinux_change_new += "User: {0} ".format(requested_seuser)
+                    selinux_change_orig += "User: {0} ".format(current_seuser)
+                if requested_serole:
+                    selinux_change_new += "Role: {0} ".format(requested_serole)
+                    selinux_change_orig += "Role: {0} ".format(current_serole)
+                if requested_setype:
+                    selinux_change_new += "Type: {0} ".format(requested_setype)
+                    selinux_change_orig += "Type: {0} ".format(current_setype)
+                if requested_serange:
+                    selinux_change_new += "Range: {0} ".format(requested_serange)
+                    selinux_change_orig += "Range: {0} ".format(current_serange)
+
+                if __opts__['test']:
+                    ret['comment'] = 'File {0} selinux context to be updated'.format(name)
+                    ret['result'] = None
+                    ret['changes']['selinux'] = {'Old': selinux_change_orig.strip(),
+                                                 'New': selinux_change_new.strip()}
+                else:
+                    try:
+                        # set_selinux_context requires type to be set on any other change
+                        if (requested_seuser or requested_serole or requested_serange) and not requested_setype:
+                            requested_setype = current_setype
+                        result = set_selinux_context(name, user=requested_seuser, role=requested_serole,
+                                                     type=requested_setype, range=requested_serange, persist=True)
+                        log.debug('selinux set result: %s', result)
+                        current_seuser, current_serole, current_setype, current_serange = result.split(':')
+                    except ValueError:
+                        log.error('Unable to set current selinux attributes')
+                        ret['result'] = False
+                        ret['comment'].append(
+                            'Failed to set selinux attributes'
+                        )
+                        selinux_error = True
+
+                    if not selinux_error:
+                        ret['comment'].append('The file {0} is set to be changed'.format(name))
+
+                        if requested_seuser:
+                            if current_seuser != requested_seuser:
+                                ret['comment'].append("Unable to update seuser context")
+                                ret['result'] = False
+                        if requested_serole:
+                            if current_serole != requested_serole:
+                                ret['comment'].append("Unable to update serole context")
+                                ret['result'] = False
+                        if requested_setype:
+                            if current_setype != requested_setype:
+                                ret['comment'].append("Unable to update setype context")
+                                ret['result'] = False
+                        if requested_serange:
+                            if current_serange != requested_serange:
+                                ret['comment'].append("Unable to update serange context")
+                                ret['result'] = False
+                        ret['changes']['selinux'] = {'Old': selinux_change_orig.strip(),
+                                                     'New': selinux_change_new.strip()}
+
     # Only combine the comment list into a string
     # after all comments are added above
     if isinstance(orig_comment, six.string_types):
@@ -4676,6 +4872,10 @@ def check_managed(
         saltenv,
         contents=None,
         skip_verify=False,
+        seuser=None,
+        serole=None,
+        setype=None,
+        serange=None,
         **kwargs):
     '''
     Check to see what changes need to be made for a file
@@ -4715,7 +4915,9 @@ def check_managed(
             __clean_tmp(sfn)
             return False, comments
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, attrs, saltenv, contents)
+                              group, mode, attrs, saltenv, contents,
+                              seuser=seuser, serole=serole, setype=setype,
+                              serange=serange)
     # Ignore permission for files written temporary directories
     # Files in any path will still be set correctly using get_managed()
     if name.startswith(tempfile.gettempdir()):
@@ -4747,9 +4949,17 @@ def check_managed_changes(
         contents=None,
         skip_verify=False,
         keep_mode=False,
+        seuser=None,
+        serole=None,
+        setype=None,
+        serange=None,
         **kwargs):
     '''
     Return a dictionary of what changes need to be made for a file
+
+    .. versionchanged:: Neon
+
+        selinux attributes added
 
     CLI Example:
 
@@ -4789,7 +4999,7 @@ def check_managed_changes(
 
         if comments:
             __clean_tmp(sfn)
-            return False, comments
+            raise CommandExecutionError(comments)
         if sfn and source and keep_mode:
             if _urlparse(source).scheme in ('salt', 'file') \
                     or source.startswith('/'):
@@ -4798,7 +5008,8 @@ def check_managed_changes(
                 except Exception as exc:
                     log.warning('Unable to stat %s: %s', sfn, exc)
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, attrs, saltenv, contents)
+                              group, mode, attrs, saltenv, contents,
+                              seuser=seuser, serole=serole, setype=setype, serange=serange)
     __clean_tmp(sfn)
     return changes
 
@@ -4813,7 +5024,11 @@ def check_file_meta(
         mode,
         attrs,
         saltenv,
-        contents=None):
+        contents=None,
+        seuser=None,
+        serole=None,
+        setype=None,
+        serange=None):
     '''
     Check for the changes in the file metadata.
 
@@ -4863,6 +5078,26 @@ def check_file_meta(
 
     contents
         File contents
+
+    seuser
+        selinux user attribute
+
+        .. versionadded:: Neon
+
+    serole
+        selinux role attribute
+
+        .. versionadded:: Neon
+
+    setype
+        selinux type attribute
+
+        .. versionadded:: Neon
+
+    serange
+        selinux range attribute
+
+        .. versionadded:: Neon
     '''
     changes = {}
     if not source_sum:
@@ -4907,7 +5142,7 @@ def check_file_meta(
         try:
             differences = get_diff(name, tmp, show_filenames=False)
         except CommandExecutionError as exc:
-            log.error('Failed to diff files: {0}'.format(exc))
+            log.error('Failed to diff files: %s', exc)
             differences = exc.strerror
         __clean_tmp(tmp)
         if differences:
@@ -4942,6 +5177,27 @@ def check_file_meta(
                         and (diff_attrs[0] is not None
                              or diff_attrs[1] is not None):
                     changes['attrs'] = attrs
+
+        # Check selinux
+        if seuser or serole or setype or serange:
+            try:
+                current_seuser, current_serole, current_setype, current_serange = get_selinux_context(name).split(':')
+                log.debug(
+                    'Current selinux context user:%s role:%s type:%s range:%s',
+                    current_seuser, current_serole, current_setype, current_serange
+                )
+            except ValueError as exc:
+                log.error('Unable to get current selinux attributes')
+                changes['selinux'] = exc.strerror
+
+            if seuser and seuser != current_seuser:
+                changes['selinux'] = {"user": seuser}
+            if serole and serole != current_serole:
+                changes['selinux'] = {"role": serole}
+            if setype and setype != current_setype:
+                changes['selinux'] = {"type": setype}
+            if serange and serange != current_serange:
+                changes['selinux'] = {"range": serange}
 
     return changes
 
@@ -5092,6 +5348,10 @@ def manage_file(name,
                 keep_mode=False,
                 encoding=None,
                 encoding_errors='strict',
+                seuser=None,
+                serole=None,
+                setype=None,
+                serange=None,
                 **kwargs):
     '''
     Checks the destination against what was retrieved with get_managed and
@@ -5184,6 +5444,26 @@ def manage_file(name,
         for the error handling schemes.
 
         .. versionadded:: 2017.7.0
+
+    seuser
+        selinux user attribute
+
+        .. versionadded:: Neon
+
+    serange
+        selinux range attribute
+
+        .. versionadded:: Neon
+
+    setype
+        selinux type attribute
+
+        .. versionadded:: Neon
+
+    serange
+        selinux range attribute
+
+        .. versionadded:: Neon
 
     CLI Example:
 
@@ -5284,9 +5564,9 @@ def manage_file(name,
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
                 salt.utils.files.copyfile(sfn,
-                                    real_name,
-                                    __salt__['config.backup_mode'](backup),
-                                    __opts__['cachedir'])
+                                          real_name,
+                                          __salt__['config.backup_mode'](backup),
+                                          __opts__['cachedir'])
             except IOError as io_error:
                 __clean_tmp(sfn)
                 return _error(
@@ -5323,9 +5603,9 @@ def manage_file(name,
                 # Pre requisites are met, the file needs to be replaced, do it
                 try:
                     salt.utils.files.copyfile(tmp,
-                                        real_name,
-                                        __salt__['config.backup_mode'](backup),
-                                        __opts__['cachedir'])
+                                              real_name,
+                                              __salt__['config.backup_mode'](backup),
+                                              __opts__['cachedir'])
                 except IOError as io_error:
                     __clean_tmp(tmp)
                     return _error(
@@ -5374,7 +5654,7 @@ def manage_file(name,
             # on Windows. The local function will be overridden
             # pylint: disable=E1120,E1121,E1123
             ret = check_perms(
-               path=name,
+                path=name,
                 ret=ret,
                 owner=kwargs.get('win_owner'),
                 grant_perms=kwargs.get('win_perms'),
@@ -5383,7 +5663,8 @@ def manage_file(name,
                 reset=kwargs.get('win_perms_reset', False))
             # pylint: enable=E1120,E1121,E1123
         else:
-            ret, _ = check_perms(name, ret, user, group, mode, attrs, follow_symlinks)
+            ret, _ = check_perms(name, ret, user, group, mode, attrs, follow_symlinks,
+                                 seuser=seuser, serole=serole, setype=setype, serange=serange)
 
         if ret['changes']:
             ret['comment'] = 'File {0} updated'.format(
@@ -5504,11 +5785,11 @@ def manage_file(name,
             # Write the static contents to a temporary file
             tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                            text=True)
-            if salt.utils.platform.is_windows():
-                contents = os.linesep.join(
-                    _splitlines_preserving_trailing_newline(contents))
             with salt.utils.files.fopen(tmp, 'wb') as tmp_:
                 if encoding:
+                    if salt.utils.platform.is_windows():
+                        contents = os.linesep.join(
+                            _splitlines_preserving_trailing_newline(contents))
                     log.debug('File will be encoded with %s', encoding)
                     tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
                 else:
@@ -5541,7 +5822,7 @@ def manage_file(name,
             # on Windows. The local function will be overridden
             # pylint: disable=E1120,E1121,E1123
             ret = check_perms(
-               path=name,
+                path=name,
                 ret=ret,
                 owner=kwargs.get('win_owner'),
                 grant_perms=kwargs.get('win_perms'),
@@ -5550,7 +5831,8 @@ def manage_file(name,
                 reset=kwargs.get('win_perms_reset', False))
             # pylint: enable=E1120,E1121,E1123
         else:
-            ret, _ = check_perms(name, ret, user, group, mode, attrs)
+            ret, _ = check_perms(name, ret, user, group, mode, attrs,
+                                 seuser=seuser, serole=serole, setype=setype, serange=serange)
 
         if not ret['comment']:
             ret['comment'] = 'File ' + name + ' updated'
@@ -5762,8 +6044,8 @@ def mknod_chrdev(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug('Creating character device name:{0} major:{1} minor:{2} mode:{3}'
-              .format(name, major, minor, mode))
+    log.debug('Creating character device name:%s major:%s minor:%s mode:%s',
+              name, major, minor, mode)
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Character device {0} created.'.format(name)}
@@ -5837,8 +6119,8 @@ def mknod_blkdev(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug('Creating block device name:{0} major:{1} minor:{2} mode:{3}'
-              .format(name, major, minor, mode))
+    log.debug('Creating block device name:%s major:%s minor:%s mode:%s',
+              name, major, minor, mode)
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Block device {0} created.'.format(name)}
@@ -5910,7 +6192,7 @@ def mknod_fifo(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug('Creating FIFO name: {0}'.format(name))
+    log.debug('Creating FIFO name: %s', name)
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
@@ -6040,6 +6322,7 @@ def list_backups(path, limit=None):
         list(range(len(files))),
         [files[x] for x in sorted(files, reverse=True)[:limit]]
     )))
+
 
 list_backup = salt.utils.functools.alias_function(list_backups, 'list_backup')
 
@@ -6213,6 +6496,7 @@ def delete_backup(path, backup_id):
 
     return ret
 
+
 remove_backup = salt.utils.functools.alias_function(delete_backup, 'remove_backup')
 
 
@@ -6328,7 +6612,7 @@ def open_files(by_pid=False):
 
         #try:
         #    fd_.append(os.path.realpath('{0}/task/{1}exe'.format(ppath, tid)))
-        #except:
+        #except Exception:
         #    pass
 
         for fpath in os.listdir('{0}/fd'.format(ppath)):

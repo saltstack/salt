@@ -11,6 +11,7 @@ import os
 import sys
 import time
 import warnings
+import collections
 
 TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 if os.name == 'nt':
@@ -97,7 +98,7 @@ MAX_OPEN_FILES = {
 
 # Combine info from command line options and test suite directories.  A test
 # suite is a python package of test modules relative to the tests directory.
-TEST_SUITES = {
+TEST_SUITES_UNORDERED = {
     'unit':
        {'display_name': 'Unit',
         'path': 'unit'},
@@ -185,7 +186,13 @@ TEST_SUITES = {
     'logging':
         {'display_name': 'Logging',
          'path': 'integration/logging'},
+    'utils':
+       {'display_name': 'Utils',
+        'path': 'integration/utils'},
 }
+
+TEST_SUITES = collections.OrderedDict(sorted(TEST_SUITES_UNORDERED.items(),
+    key=lambda x: x[0]))
 
 
 class SaltTestsuiteParser(SaltCoverageTestingParser):
@@ -248,9 +255,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.add_option(
             '--transport',
             default='zeromq',
-            choices=('zeromq', 'raet', 'tcp'),
+            choices=('zeromq', 'tcp'),
             help=('Select which transport to run the integration tests with, '
-                  'zeromq, raet, or tcp. Default: %default')
+                  'zeromq or tcp. Default: %default')
         )
         self.add_option(
             '--interactive',
@@ -522,6 +529,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             default=False,
             help='Run logging integration tests'
+        )
+        self.test_selection_group.add_option(
+            '--utils',
+            dest='utils',
+            action='store_true',
+            default=False,
+            help='Run utils integration tests'
         )
 
     def validate_options(self):

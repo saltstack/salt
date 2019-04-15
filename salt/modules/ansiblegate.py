@@ -333,7 +333,7 @@ def playbooks(playbook, rundir=None, check=False, diff=False, extra_vars=None,
     if diff:
         command.append('--diff')
     if isinstance(extra_vars, dict):
-        command.append('--extra-vars={0}'.format(json.dumps(extra_vars)))
+        command.append("--extra-vars='{0}'".format(json.dumps(extra_vars)))
     elif isinstance(extra_vars, six.text_type) and extra_vars.startswith('@'):
         command.append('--extra-vars={0}'.format(extra_vars))
     if flush_cache:

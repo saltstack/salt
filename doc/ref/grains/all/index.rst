@@ -10,6 +10,7 @@ grains modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    bluecoat_sslv
     cimc
     chronos
     core

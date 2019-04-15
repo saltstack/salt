@@ -63,7 +63,9 @@ def _active_mountinfo(ret):
         msg = 'File not readable {0}'
         raise CommandExecutionError(msg.format(filename))
 
-    blkid_info = __salt__['disk.blkid']()
+    if 'disk.blkid' not in __context__:
+        __context__['disk.blkid'] = __salt__['disk.blkid']()
+    blkid_info = __context__['disk.blkid']
 
     with salt.utils.files.fopen(filename) as ifile:
         for line in ifile:
@@ -226,6 +228,7 @@ def _resolve_user_group_names(opts):
                 if _info and _param in _info:
                     _id = _info[_param]
             opts[ind] = _param + '=' + six.text_type(_id)
+        opts[ind] = opts[ind].replace('\\040', '\\ ')
     return opts
 
 
@@ -729,7 +732,7 @@ def set_fstab(
         'name': name,
         'device': device.replace('\\ ', '\\040'),
         'fstype': fstype,
-        'opts': opts,
+        'opts': opts.replace('\\ ', '\\040'),
         'dump': dump,
         'pass_num': pass_num,
     }
@@ -1209,13 +1212,17 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util
         lopts = ','.join(opts)
         args = '-o {0}'.format(lopts)
 
-    # use of fstype on AIX differs from typical Linux use of -t functionality
-    # AIX uses -v vfsname, -t fstype mounts all with fstype in /etc/filesystems
-    if 'AIX' in __grains__['os']:
-        if fstype:
+    if fstype:
+        # use of fstype on AIX differs from typical Linux use of -t
+        # functionality AIX uses -v vfsname, -t fstype mounts all with
+        # fstype in /etc/filesystems
+        if 'AIX' in __grains__['os']:
             args += ' -v {0}'.format(fstype)
-    else:
-        args += ' -t {0}'.format(fstype)
+        elif 'solaris' in __grains__['os'].lower():
+            if fstype:
+                args += ' -F {0}'.format(fstype)
+        else:
+            args += ' -t {0}'.format(fstype)
     cmd = 'mount {0} {1} {2} '.format(args, device, name)
     out = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
     if out['retcode']:

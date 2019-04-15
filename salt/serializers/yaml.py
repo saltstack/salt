@@ -20,6 +20,7 @@ from yaml.scanner import ScannerError
 from salt.serializers import DeserializationError, SerializationError
 from salt.ext import six
 from salt.utils.odict import OrderedDict
+from salt.utils.thread_local_proxy import ThreadLocalProxy
 
 __all__ = ['deserialize', 'serialize', 'available']
 
@@ -121,6 +122,7 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
     '''Overwrites Dumper as not for pollute legacy Dumper'''
     pass
 
+
 Dumper.add_multi_representer(EncryptedString, EncryptedString.yaml_dumper)
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
 Dumper.add_multi_representer(str, Dumper.represent_str)
@@ -138,3 +140,7 @@ Dumper.add_multi_representer(datetime.date, Dumper.represent_date)
 Dumper.add_multi_representer(datetime.datetime, Dumper.represent_datetime)
 Dumper.add_multi_representer(None, Dumper.represent_undefined)
 Dumper.add_multi_representer(OrderedDict, Dumper.represent_dict)
+Dumper.add_representer(
+    ThreadLocalProxy,
+    lambda dumper, proxy:
+        dumper.represent_data(ThreadLocalProxy.unproxy(proxy)))

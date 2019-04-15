@@ -176,7 +176,7 @@ def db_remove(database_name, **kwargs):
         salt minion mssql.db_remove database_name='DBNAME'
     '''
     try:
-        if db_exists(database_name) and database_name not in ['master', 'model', 'msdb', 'tempdb']:
+        if db_exists(database_name, **kwargs) and database_name not in ['master', 'model', 'msdb', 'tempdb']:
             conn = _get_connection(**kwargs)
             conn.autocommit(True)
             cur = conn.cursor()

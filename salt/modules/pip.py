@@ -79,7 +79,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import logging
 import os
-import pkg_resources
+try:
+    import pkg_resources
+except ImportError:
+    pkg_resources = None
 import re
 import shutil
 import sys
@@ -116,7 +119,12 @@ def __virtual__():
     entire filesystem.  If it's not installed in a conventional location, the
     user is required to provide the location of pip each time it is used.
     '''
-    return 'pip'
+    if pkg_resources is None:
+        ret = False, 'Package dependency "pkg_resource" is missing'
+    else:
+        ret = 'pip'
+
+    return ret
 
 
 def _clear_context(bin_env=None):
@@ -1272,7 +1280,7 @@ def list_upgrades(bin_env=None,
             if match:
                 name, version_ = match.groups()
             else:
-                logger.error('Can\'t parse line \'{0}\''.format(line))
+                logger.error('Can\'t parse line \'%s\'', line)
                 continue
             packages[name] = version_
 
@@ -1457,11 +1465,11 @@ def list_all_versions(pkg,
 
     index_url
         Base URL of Python Package Index
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     extra_index_url
         Additional URL of Python Package Index
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
