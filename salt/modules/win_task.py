@@ -155,7 +155,8 @@ results = {0x0: 'The operation completed successfully',
            0x41306: 'Task was terminated by the user',
            0x8004130F: 'Credentials became corrupted',
            0x8004131F: 'An instance of this task is already running',
-           0x800704DD: 'The service is not available (Run only when logged in?)',
+           0x800704DD: 'The service is not available (Run only when logged '
+                       'in?)',
            0x800710E0: 'The operator or administrator has refused the request',
            0xC000013A: 'The application terminated as a result of CTRL+C',
            0xC06D007E: 'Unknown software exception'}
@@ -169,7 +170,7 @@ def __virtual__():
         if not HAS_DEPENDENCIES:
             log.warning('Could not load dependencies for %s', __virtualname__)
         return __virtualname__
-    return (False, "Module win_task: module only works on Windows systems")
+    return False, 'Module win_task: module only works on Windows systems'
 
 
 def _get_date_time_format(dt_string):
@@ -302,7 +303,8 @@ def _save_task_definition(name,
 
     except pythoncom.com_error as error:
         hr, msg, exc, arg = error.args  # pylint: disable=W0633
-        fc = {-2147024773: 'The filename, directory name, or volume label syntax is incorrect',
+        fc = {-2147024773: 'The filename, directory name, or volume label '
+                           'syntax is incorrect',
               -2147024894: 'The system cannot find the file specified',
               -2147216615: 'Required element or attribute missing',
               -2147216616: 'Value incorrectly formatted or out of range',
@@ -422,7 +424,7 @@ def list_triggers(name, location='\\'):
 
         # List all triggers for the XblGameSaveTask in the Microsoft\XblGameSave
         # location
-        salt 'minion-id' task.list_triggers XblGameSaveTask Microsoft\XblGameSave
+        salt '*' task.list_triggers XblGameSaveTask Microsoft\XblGameSave
     '''
     # Create the task service object
     with salt.utils.winapi.Com():
@@ -617,7 +619,7 @@ def create_task_from_xml(name,
 
     .. code-block:: bash
 
-        salt 'minion-id' task.create_task_from_xml <task_name> xml_path=C:\task.xml
+        salt '*' task.create_task_from_xml <task_name> xml_path=C:\task.xml
     '''
     # Check for existing task
     if name in list_tasks(location):
@@ -780,6 +782,7 @@ def edit_task(name=None,
             working.
 
             .. note::
+
                 The combination of user_name and password determine how the
                 task runs. For example, if a username is passed without at
                 password the task will only run when the user is logged in. If a
@@ -926,7 +929,7 @@ def edit_task(name=None,
 
     .. code-block:: bash
 
-        salt 'minion-id' task.edit_task <task_name> description='This task is awesome'
+        salt '*' task.edit_task <task_name> description='This task is awesome'
     '''
     # TODO: Add more detailed return for items changed
 
@@ -1047,7 +1050,8 @@ def edit_task(name=None,
             task_definition.Settings.RestartInterval = ''
         else:
             if restart_every in duration:
-                task_definition.Settings.RestartInterval = _lookup_first(duration, restart_every)
+                task_definition.Settings.RestartInterval = _lookup_first(
+                    duration, restart_every)
             else:
                 return 'Invalid value for "restart_every"'
     if task_definition.Settings.RestartInterval:
@@ -1061,7 +1065,8 @@ def edit_task(name=None,
             task_definition.Settings.ExecutionTimeLimit = 'PT0S'
         else:
             if execution_time_limit in duration:
-                task_definition.Settings.ExecutionTimeLimit = _lookup_first(duration, execution_time_limit)
+                task_definition.Settings.ExecutionTimeLimit = _lookup_first(
+                    duration, execution_time_limit)
             else:
                 return 'Invalid value for "execution_time_limit"'
     if force_stop is not None:
@@ -1071,7 +1076,8 @@ def edit_task(name=None,
         if delete_after is False:
             task_definition.Settings.DeleteExpiredTaskAfter = ''
         if delete_after in duration:
-            task_definition.Settings.DeleteExpiredTaskAfter = _lookup_first(duration, delete_after)
+            task_definition.Settings.DeleteExpiredTaskAfter = _lookup_first(
+                duration, delete_after)
         else:
             return 'Invalid value for "delete_after"'
     if multiple_instances is not None:
@@ -1186,8 +1192,8 @@ def run(name, location='\\'):
             The name of the task to run.
 
         location (str):
-            A string value representing the location of the task. Default is ``\``
-            which is the root for the task scheduler
+            A string value representing the location of the task. Default is
+            ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
@@ -1215,7 +1221,7 @@ def run(name, location='\\'):
     try:
         task.Run('')
         return True
-    except pythoncom.com_error as error:
+    except pythoncom.com_error:
         return False
 
 
@@ -1319,7 +1325,7 @@ def stop(name, location='\\'):
     try:
         task.Stop(0)
         return True
-    except pythoncom.com_error as error:
+    except pythoncom.com_error:
         return False
 
 
@@ -1413,39 +1419,43 @@ def info(name, location='\\'):
 
     def_set = task.Definition.Settings
 
-    settings = {}
-    settings['allow_demand_start'] = def_set.AllowDemandStart
-    settings['force_stop'] = def_set.AllowHardTerminate
+    settings = {
+        'allow_demand_start': def_set.AllowDemandStart,
+        'force_stop': def_set.AllowHardTerminate}
 
     if def_set.DeleteExpiredTaskAfter == '':
         settings['delete_after'] = False
     elif def_set.DeleteExpiredTaskAfter == 'PT0S':
         settings['delete_after'] = 'Immediately'
     else:
-        settings['delete_after'] = _reverse_lookup(duration, def_set.DeleteExpiredTaskAfter)
+        settings['delete_after'] = _reverse_lookup(
+            duration, def_set.DeleteExpiredTaskAfter)
 
     if def_set.ExecutionTimeLimit == '':
         settings['execution_time_limit'] = False
     else:
-        settings['execution_time_limit'] = _reverse_lookup(duration, def_set.ExecutionTimeLimit)
+        settings['execution_time_limit'] = _reverse_lookup(
+            duration, def_set.ExecutionTimeLimit)
 
-    settings['multiple_instances'] = _reverse_lookup(instances, def_set.MultipleInstances)
+    settings['multiple_instances'] = _reverse_lookup(
+        instances, def_set.MultipleInstances)
 
     if def_set.RestartInterval == '':
         settings['restart_interval'] = False
     else:
-        settings['restart_interval'] = _reverse_lookup(duration, def_set.RestartInterval)
+        settings['restart_interval'] = _reverse_lookup(
+            duration, def_set.RestartInterval)
 
     if settings['restart_interval']:
         settings['restart_count'] = def_set.RestartCount
     settings['stop_if_on_batteries'] = def_set.StopIfGoingOnBatteries
     settings['wake_to_run'] = def_set.WakeToRun
 
-    conditions = {}
-    conditions['ac_only'] = def_set.DisallowStartIfOnBatteries
-    conditions['run_if_idle'] = def_set.RunOnlyIfIdle
-    conditions['run_if_network'] = def_set.RunOnlyIfNetworkAvailable
-    conditions['start_when_available'] = def_set.StartWhenAvailable
+    conditions = {
+        'ac_only': def_set.DisallowStartIfOnBatteries,
+        'run_if_idle': def_set.RunOnlyIfIdle,
+        'run_if_network': def_set.RunOnlyIfNetworkAvailable,
+        'start_when_available': def_set.StartWhenAvailable}
 
     if conditions['run_if_idle']:
         idle_set = def_set.IdleSettings
@@ -1461,8 +1471,7 @@ def info(name, location='\\'):
 
     actions = []
     for actionObj in task.Definition.Actions:
-        action = {}
-        action['action_type'] = _reverse_lookup(action_types, actionObj.Type)
+        action = {'action_type': _reverse_lookup(action_types, actionObj.Type)}
         if actionObj.Path:
             action['cmd'] = actionObj.Path
         if actionObj.Arguments:
@@ -1473,10 +1482,11 @@ def info(name, location='\\'):
 
     triggers = []
     for triggerObj in task.Definition.Triggers:
-        trigger = {}
-        trigger['trigger_type'] = _reverse_lookup(trigger_types, triggerObj.Type)
+        trigger = {
+            'trigger_type': _reverse_lookup(trigger_types, triggerObj.Type)}
         if triggerObj.ExecutionTimeLimit:
-            trigger['execution_time_limit'] = _reverse_lookup(duration, triggerObj.ExecutionTimeLimit)
+            trigger['execution_time_limit'] = _reverse_lookup(
+                duration, triggerObj.ExecutionTimeLimit)
         if triggerObj.StartBoundary:
             start_date, start_time = triggerObj.StartBoundary.split('T', 1)
             trigger['start_date'] = start_date
@@ -1488,7 +1498,8 @@ def info(name, location='\\'):
         trigger['enabled'] = triggerObj.Enabled
         if hasattr(triggerObj, 'RandomDelay'):
             if triggerObj.RandomDelay:
-                trigger['random_delay'] = _reverse_lookup(duration, triggerObj.RandomDelay)
+                trigger['random_delay'] = _reverse_lookup(
+                    duration, triggerObj.RandomDelay)
             else:
                 trigger['random_delay'] = False
         if hasattr(triggerObj, 'Delay'):
@@ -1804,7 +1815,8 @@ def add_trigger(name=None,
 
         end_date (str):
             The date when the trigger is deactivated. The trigger cannot start
-            the task after it is deactivated. Can be one of the following formats:
+            the task after it is deactivated. Can be one of the following
+            formats:
 
                 - %Y-%m-%d
                 - %m-%d-%y
@@ -1835,6 +1847,7 @@ def add_trigger(name=None,
                 - 1 day
 
             .. note::
+
                 This parameter applies to the following trigger types
 
                     - Once
@@ -1893,6 +1906,7 @@ def add_trigger(name=None,
                 - 1 day
 
             .. note::
+
                 This parameter applies to the following trigger types:
 
                     - OnLogon
@@ -1955,6 +1969,7 @@ def add_trigger(name=None,
             the month regardless of the actual date of that day.
 
         .. note::
+
             You can set the task to run on the last day of the month by either
             including the word 'Last' in the list of days, or setting the
             parameter 'last_day_of_month` equal to True.
@@ -2011,8 +2026,10 @@ def add_trigger(name=None,
             Sets the kind of Terminal Server session change that would trigger a
             task launch. Valid options are:
 
-                - ConsoleConnect: When you connect to a user session (switch users)
-                - ConsoleDisconnect: When you disconnect a user session (switch users)
+                - ConsoleConnect: When you connect to a user session (switch
+                  users)
+                - ConsoleDisconnect: When you disconnect a user session (switch
+                  users)
                 - RemoteConnect: When a user connects via Remote Desktop
                 - RemoteDisconnect: When a user disconnects via Remote Desktop
                 - SessionLock: When the workstation is locked
@@ -2129,7 +2146,6 @@ def add_trigger(name=None,
                                       tm_obj.strftime('%H:%M:%S'))
 
     dt_obj = None
-    tm_obj = None
     if end_date:
         date_format = _get_date_time_format(end_date)
         if date_format:
@@ -2192,10 +2208,12 @@ def add_trigger(name=None,
     if repeat_interval:
         trigger.Repetition.Interval = _lookup_first(duration, repeat_interval)
         if repeat_duration:
-            trigger.Repetition.Duration = _lookup_first(duration, repeat_duration)
+            trigger.Repetition.Duration = _lookup_first(duration,
+                                                        repeat_duration)
         trigger.Repetition.StopAtDurationEnd = repeat_stop_at_duration_end
     if execution_time_limit:
-        trigger.ExecutionTimeLimit = _lookup_first(duration, execution_time_limit)
+        trigger.ExecutionTimeLimit = _lookup_first(duration,
+                                                   execution_time_limit)
     if end_boundary:
         trigger.EndBoundary = end_boundary
     trigger.Enabled = trigger_enabled
@@ -2271,9 +2289,11 @@ def add_trigger(name=None,
                 for week in kwargs.get('weeks_of_month'):
                     bits_weeks |= weeks[week]
                 trigger.WeeksOfMonth = bits_weeks
-            trigger.RunOnLastWeekOfMonth = kwargs.get('last_week_of_month', False)
+            trigger.RunOnLastWeekOfMonth = kwargs.get('last_week_of_month',
+                                                      False)
         else:
-            return 'Monthly DOW trigger requires "weeks_of_month" or "last_week_of_month" parameters'
+            return 'Monthly DOW trigger requires "weeks_of_month" or "last_' \
+                   'week_of_month" parameters'
 
         if kwargs.get('days_of_week', False):
             bits_days = 0
@@ -2330,8 +2350,8 @@ def clear_triggers(name, location='\\'):
             The name of the task from which to clear all triggers.
 
         location (str):
-            A string value representing the location of the task. Default is ``\``
-            which is the root for the task scheduler
+            A string value representing the location of the task. Default is
+            ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
