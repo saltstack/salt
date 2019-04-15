@@ -325,8 +325,8 @@ def list_tasks(location='\\'):
 
         location (str):
             A string value representing the folder from which you want to list
-            tasks. Default is '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            tasks. Default is ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         list: Returns a list of tasks
@@ -365,8 +365,8 @@ def list_folders(location='\\'):
 
     location (str):
         A string value representing the folder from which you want to list
-        tasks. Default is '\' which is the root for the task scheduler
-        (C:\Windows\System32\tasks).
+        tasks. Default is ``\`` which is the root for the task scheduler
+        (``C:\Windows\System32\tasks``).
 
     Returns:
         list: Returns a list of folders.
@@ -407,8 +407,8 @@ def list_triggers(name, location='\\'):
             The name of the task for which list triggers.
 
         location (str): A string value representing the location of the task
-            from which to list triggers. Default is '\' which is the root for
-            the task scheduler (C:\Windows\System32\tasks).
+            from which to list triggers. Default is ``\`` which is the root for
+            the task scheduler (``C:\Windows\System32\tasks``).
 
     Returns:
         list: Returns a list of triggers.
@@ -452,8 +452,8 @@ def list_actions(name, location='\\'):
 
         location (str):
             A string value representing the location of the task from which to
-            list actions. Default is '\' which is the root for the task
-            scheduler (C:\Windows\System32\tasks).
+            list actions. Default is ``\`` which is the root for the task
+            scheduler (``C:\Windows\System32\tasks``).
 
     Returns:
         list: Returns a list of actions.
@@ -507,8 +507,8 @@ def create_task(name,
 
         location (str):
             A string value representing the location in which to create the
-            task. Default is '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            task. Default is ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
         user_name (str):
             The user account under which to run the task. To specify the
@@ -590,8 +590,8 @@ def create_task_from_xml(name,
 
         location (str):
             A string value representing the location in which to create the
-            task. Default is '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            task. Default is ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
         xml_text (str):
             A string of xml representing the task to be created. This will be
@@ -694,8 +694,8 @@ def create_folder(name, location='\\'):
 
         location (str):
             A string value representing the location in which to create the
-            folder. Default is '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            folder. Default is ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -767,8 +767,8 @@ def edit_task(name=None,
 
         location (str):
             A string value representing the location in which to create the
-            task. Default is '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            task. Default is ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
         user_name (str):
             The user account under which to run the task. To specify the
@@ -1098,8 +1098,8 @@ def delete_task(name, location='\\'):
 
         location (str):
             A string value representing the location of the task. Default is
-            '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -1142,8 +1142,8 @@ def delete_folder(name, location='\\'):
 
         location (str):
             A string value representing the location of the folder.  Default is
-            '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -1186,9 +1186,9 @@ def run(name, location='\\'):
             The name of the task to run.
 
         location (str):
-            A string value representing the location of the task. Default is '\'
+            A string value representing the location of the task. Default is ``\``
             which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -1229,9 +1229,9 @@ def run_wait(name, location='\\'):
             The name of the task to run.
 
         location (str):
-            A string value representing the location of the task. Default is '\'
-            which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            A string value representing the location of the task. Default is
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -1290,9 +1290,9 @@ def stop(name, location='\\'):
             The name of the task to stop.
 
         location (str):
-            A string value representing the location of the task. Default is '\'
-            which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            A string value representing the location of the task. Default is
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -1333,9 +1333,9 @@ def status(name, location='\\'):
             The name of the task for which to return the status
 
         location (str):
-            A string value representing the location of the task. Default is '\'
-            which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            A string value representing the location of the task. Default is
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         str: The current status of the task. Will be one of the following:
@@ -1378,9 +1378,9 @@ def info(name, location='\\'):
             The name of the task for which to return the status
 
         location (str):
-            A string value representing the location of the task. Default is '\'
-            which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            A string value representing the location of the task. Default is
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         dict: A dictionary containing the task configuration
@@ -1520,9 +1520,9 @@ def add_action(name=None,
             The name of the task to which to add the action.
 
         location (str):
-            A string value representing the location of the task. Default is '\'
-            which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            A string value representing the location of the task. Default is
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
         action_type (str):
             The type of action to add. There are three action types. Each one
@@ -1535,7 +1535,9 @@ def add_action(name=None,
 
     Required arguments for each action_type:
 
-    **Execute** - Execute a command or an executable
+    **Execute**
+
+    Execute a command or an executable
 
         cmd (str):
             (required) The command / executable to run.
@@ -1555,39 +1557,26 @@ def add_action(name=None,
         start_in (str):
             (optional) The current working directory for the command.
 
-    **Email** - Send and email. Requires ``server``, ``from``, and ``to`` or
-    ``cc``.
+    **Email**
 
-        from (str):
-            The sender
+    Send and email. Requires ``server``, ``from``, and ``to`` or ``cc``.
 
-        reply_to (str):
-            Who to reply to
-
-        to (str):
-            The recipient
-
-        cc (str):
-            The CC recipient
-
-        bcc (str):
-            The BCC recipient
-
-        subject (str):
-            The subject of the email
-
-        body (str):
-            The Message Body of the email
-
-        server (str):
-            The server used to send the email
-
+        from (str): The sender
+        reply_to (str): Who to reply to
+        to (str): The recipient
+        cc (str): The CC recipient
+        bcc (str): The BCC recipient
+        subject (str): The subject of the email
+        body (str): The Message Body of the email
+        server (str): The server used to send the email
         attachments (list):
             A list of attachments. These will be the paths to the files to
             attach. ie: ``attachments="['C:\attachment1.txt',
             'C:\attachment2.txt']"``
 
-    **Message** - Display a dialog box. The task must be set to "Run only when
+    **Message**
+
+    Display a dialog box. The task must be set to "Run only when
     user is logged on" in order for the dialog box to display. Both parameters
     are required.
 
@@ -1709,8 +1698,8 @@ def _clear_actions(name, location='\\'):
     :param str name: The name of the task from which to clear all actions.
 
     :param str location: A string value representing the location of the task.
-    Default is '\' which is the root for the task scheduler
-    (C:\Windows\System32\tasks).
+    Default is ``\`` which is the root for the task scheduler
+    (``C:\Windows\System32\tasks``).
 
     :return: True if successful, False if unsuccessful
     :rtype: bool
@@ -1771,8 +1760,8 @@ def add_trigger(name=None,
 
         location (str):
             A string value representing the location of the task. Default is
-            '\' which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
         trigger_type (str):
             The type of trigger to create. This is defined when the trigger is
@@ -1936,6 +1925,7 @@ def add_trigger(name=None,
             a daily schedule. An interval of 2 produces an every-other day
             schedule. If no interval is specified, 1 is used. Valid entries are
             1 - 999.
+            
     *Weekly*
 
         weeks_interval (int):
@@ -1996,15 +1986,19 @@ def add_trigger(name=None,
             the names of the days of the week.
 
     *OnIdle*
+    
     No special parameters required.
 
     *OnTaskCreation*
+    
     No special parameters required.
 
     *OnBoot*
+    
     No special parameters required.
 
     *OnLogon*
+    
     No special parameters required.
 
     *OnSessionChange*
@@ -2336,9 +2330,9 @@ def clear_triggers(name, location='\\'):
             The name of the task from which to clear all triggers.
 
         location (str):
-            A string value representing the location of the task. Default is '\'
+            A string value representing the location of the task. Default is ``\``
             which is the root for the task scheduler
-            (C:\Windows\System32\tasks).
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
