@@ -913,6 +913,13 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                     if self.opts['zmq_filtering']:
                         # if you have a specific topic list, use that
                         if 'topic_lst' in unpacked_package:
+                            # Syndic broadcast first
+                            if self.opts.get('order_masters'):
+                                log.trace('Sending filtered data to syndic')
+                                pub_sock.send(b'syndic', flags=zmq.SNDMORE)
+                                pub_sock.send(payload)
+                                log.trace('Filtered data has been sent to syndic')
+
                             for topic in unpacked_package['topic_lst']:
                                 log.trace('Sending filtered data over publisher %s', pub_uri)
                                 # zmq filters are substring match, hash the topic
@@ -922,12 +929,6 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                                 pub_sock.send(payload)
                                 log.trace('Filtered data has been sent')
 
-                            # Syndic broadcast
-                            if self.opts.get('order_masters'):
-                                log.trace('Sending filtered data to syndic')
-                                pub_sock.send(b'syndic', flags=zmq.SNDMORE)
-                                pub_sock.send(payload)
-                                log.trace('Filtered data has been sent to syndic')
                         # otherwise its a broadcast
                         else:
                             # TODO: constants file for "broadcast"
