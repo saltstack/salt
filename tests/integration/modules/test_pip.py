@@ -8,6 +8,7 @@ tests.integration.modules.pip
 from __future__ import absolute_import
 import os
 import re
+import sys
 import pprint
 import shutil
 import tempfile
@@ -28,16 +29,45 @@ class PipModuleTest(ModuleCase):
 
     def setUp(self):
         super(PipModuleTest, self).setUp()
+        # Restore the environ
+        self.addCleanup(os.environ.update, os.environ.copy())
 
         self.venv_test_dir = tempfile.mkdtemp(dir=TMP)
+        # Remove the venv test directory
+        self.addCleanup(shutil.rmtree, self.venv_test_dir, ignore_errors=True)
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
         for key in os.environ.copy():
             if key.startswith('PIP_'):
                 os.environ.pop(key)
         self.pip_temp = os.path.join(self.venv_test_dir, '.pip-temp')
+        # Remove the pip-temp directory
+        self.addCleanup(shutil.rmtree, self.pip_temp, ignore_errors=True)
         if not os.path.isdir(self.pip_temp):
             os.makedirs(self.pip_temp)
         os.environ['PIP_SOURCE_DIR'] = os.environ['PIP_BUILD_DIR'] = ''
+        for item in ('venv_dir', 'venv_test_dir', 'pip_temp'):
+            self.addCleanup(delattr, self, item)
+
+    def _create_virtualenv(self, path):
+        '''
+        The reason why the virtualenv creation is proxied by this function is mostly
+        because under windows, we can't seem to properly create a virtualenv off of
+        another virtualenv(we can on linux) and also because, we really don't want to
+        test virtualenv creation off of another virtualenv, we want a virtualenv created
+        from the original python
+        '''
+        try:
+            if salt.utils.is_windows():
+                python = os.path.join(sys.real_prefix, os.path.basename(sys.executable))
+            else:
+                python = os.path.join(sys.real_prefix, 'bin', os.path.basename(sys.executable))
+            # We're running off a virtualenv, and we don't want to create a virtualenv off of
+            # a virtualenv
+            kwargs = {'python': python}
+        except AttributeError:
+            # We're running off of the system python
+            kwargs = {}
+        self.run_function('virtualenv.create', [path], **kwargs)
 
     def _check_download_error(self, ret):
         '''
@@ -67,7 +97,7 @@ class PipModuleTest(ModuleCase):
 
     def test_issue_2087_missing_pip(self):
         # Let's create the testing virtualenv
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         # Let's remove the pip binary
         pip_bin = os.path.join(self.venv_dir, 'bin', 'pip')
@@ -98,7 +128,7 @@ class PipModuleTest(ModuleCase):
 
     @skip_if_not_root
     def test_requirements_as_list_of_chains__cwd_set__absolute_file_path(self):
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         # Create a requirements file that depends on another one.
 
@@ -141,7 +171,7 @@ class PipModuleTest(ModuleCase):
 
     @skip_if_not_root
     def test_requirements_as_list_of_chains__cwd_not_set__absolute_file_path(self):
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         # Create a requirements file that depends on another one.
 
@@ -184,7 +214,7 @@ class PipModuleTest(ModuleCase):
 
     @skip_if_not_root
     def test_requirements_as_list__absolute_file_path(self):
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
@@ -219,7 +249,7 @@ class PipModuleTest(ModuleCase):
 
     @skip_if_not_root
     def test_requirements_as_list__non_absolute_file_path(self):
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         # Create a requirements file that depends on another one.
 
@@ -261,7 +291,7 @@ class PipModuleTest(ModuleCase):
 
     @skip_if_not_root
     def test_chained_requirements__absolute_file_path(self):
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         # Create a requirements file that depends on another one.
 
@@ -294,7 +324,7 @@ class PipModuleTest(ModuleCase):
 
     @skip_if_not_root
     def test_chained_requirements__non_absolute_file_path(self):
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         # Create a requirements file that depends on another one.
         req_basepath = (self.venv_dir)
@@ -332,7 +362,7 @@ class PipModuleTest(ModuleCase):
 
     @skip_if_not_root
     def test_issue_4805_nested_requirements(self):
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         # Create a requirements file that depends on another one.
         req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
@@ -365,7 +395,7 @@ class PipModuleTest(ModuleCase):
 
     def test_pip_uninstall(self):
         # Let's create the testing virtualenv
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
         ret = self.run_function('pip.install', ['pep8'], bin_env=self.venv_dir)
 
         if not isinstance(ret, dict):
@@ -407,7 +437,7 @@ class PipModuleTest(ModuleCase):
 
     def test_pip_install_upgrade(self):
         # Create the testing virtualenv
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
         ret = self.run_function(
             'pip.install', ['pep8==1.3.4'], bin_env=self.venv_dir
         )
@@ -482,7 +512,7 @@ class PipModuleTest(ModuleCase):
         ]
 
         # Create the testing virtualenv
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
         ret = self.run_function(
             'pip.install', [],
             editable='{0}'.format(','.join(editables)),
@@ -516,7 +546,7 @@ class PipModuleTest(ModuleCase):
         ]
 
         # Create the testing virtualenv
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
         ret = self.run_function(
             'pip.install', ['pep8'],
             editable='{0}'.format(','.join(editables)),
@@ -554,13 +584,3 @@ class PipModuleTest(ModuleCase):
         ret2 = self.run_function('cmd.run', '/bin/pip3 freeze | grep lazyimport')
         assert 'lazyimport==0.0.1' in ret1
         assert ret2 == ''
-
-    def tearDown(self):
-        super(PipModuleTest, self).tearDown()
-        if os.path.isdir(self.venv_test_dir):
-            shutil.rmtree(self.venv_test_dir, ignore_errors=True)
-        if os.path.isdir(self.pip_temp):
-            shutil.rmtree(self.pip_temp, ignore_errors=True)
-        del self.venv_dir
-        del self.venv_test_dir
-        del self.pip_temp
