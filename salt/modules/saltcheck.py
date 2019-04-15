@@ -301,6 +301,8 @@ def state_apply(state_name, **kwargs):
     #   client is hardcoded to local
     # If the minion is running with a master, a potentially non-local client is needed to lookup states
     local_opts = salt.config.minion_config(__opts__['conf_file'])
+    if '_salt/running_data/var/run/salt-minion.pid' in __opts__.get('pidfile', False):
+        local_opts['file_client'] = 'local'
     caller = salt.client.Caller(mopts=local_opts)
     if kwargs:
         return caller.cmd('state.apply', state_name, **kwargs)
