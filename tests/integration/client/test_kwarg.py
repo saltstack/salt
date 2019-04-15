@@ -73,6 +73,7 @@ class StdTest(ModuleCase):
                 'minion',
                 'test.arg',
                 ['foo', 'bar', 'baz'],
+                timeout=self.TIMEOUT,
                 kwarg={'qux': 'quux'}
                 )
         data = ret['minion']['ret']
@@ -99,7 +100,9 @@ class StdTest(ModuleCase):
         self.assertIn(six.text_type.__name__, data['kwargs']['inner'])
 
     def test_full_return_kwarg(self):
-        ret = self.client.cmd('minion', 'test.ping', full_return=True)
+        ret = self.client.cmd(
+            'minion', 'test.ping', full_return=True, timeout=self.TIMEOUT,
+        )
         for mid, data in ret.items():
             self.assertIn('retcode', data)
 
@@ -112,8 +115,10 @@ class StdTest(ModuleCase):
             ],
             kwarg={
                 'quux': 'Quux',
-            })
 
+            },
+            timeout=self.TIMEOUT,
+        )
         self.assertEqual(ret['minion'], {
             'args': ['foo'],
             'kwargs': {
