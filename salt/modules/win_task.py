@@ -496,9 +496,9 @@ def create_task(name,
     Create a new task in the designated location. This function has many keyword
     arguments that are not listed here. For additional arguments see:
 
-    - :py:func:`edit_task`
-    - :py:func:`add_action`
-    - :py:func:`add_trigger`
+        - :py:func:`edit_task`
+        - :py:func:`add_action`
+        - :py:func:`add_trigger`
 
     Args:
 
@@ -806,25 +806,25 @@ def edit_task(name=None,
             A value that indicates the amount of time that the computer must be
             in an idle state before the task is run. Valid values are:
 
-            - 1 minute
-            - 5 minutes
-            - 10 minutes
-            - 15 minutes
-            - 30 minutes
-            - 1 hour
+                - 1 minute
+                - 5 minutes
+                - 10 minutes
+                - 15 minutes
+                - 30 minutes
+                - 1 hour
 
         idle_wait_timeout (str):
             A value that indicates the amount of time that the Task Scheduler
             will wait for an idle condition to occur. Valid values are:
 
-            - Do not wait
-            - 1 minute
-            - 5 minutes
-            - 10 minutes
-            - 15 minutes
-            - 30 minutes
-            - 1 hour
-            - 2 hours
+                - Do not wait
+                - 1 minute
+                - 5 minutes
+                - 10 minutes
+                - 15 minutes
+                - 30 minutes
+                - 1 hour
+                - 2 hours
 
         idle_stop_on_end (bool):
             Boolean value that indicates that the Task Scheduler will terminate
@@ -869,14 +869,14 @@ def edit_task(name=None,
             A value that specifies the interval between task restart attempts.
             Valid values are:
 
-            - False (to disable)
-            - 1 minute
-            - 5 minutes
-            - 10 minutes
-            - 15 minutes
-            - 30 minutes
-            - 1 hour
-            - 2 hours
+                - False (to disable)
+                - 1 minute
+                - 5 minutes
+                - 10 minutes
+                - 15 minutes
+                - 30 minutes
+                - 1 hour
+                - 2 hours
 
         restart_count (int):
             The number of times the Task Scheduler will attempt to restart the
@@ -885,14 +885,14 @@ def edit_task(name=None,
         execution_time_limit (bool, str):
             The amount of time allowed to complete the task. Valid values are:
 
-            - False (to disable)
-            - 1 hour
-            - 2 hours
-            - 4 hours
-            - 8 hours
-            - 12 hours
-            - 1 day
-            - 3 days
+                - False (to disable)
+                - 1 hour
+                - 2 hours
+                - 4 hours
+                - 8 hours
+                - 12 hours
+                - 1 day
+                - 3 days
 
         force_stop (bool):
             Boolean value that indicates that the task may be terminated by
@@ -903,21 +903,21 @@ def edit_task(name=None,
             the task after it expires. Requires a trigger with an expiration
             date. Valid values are:
 
-            - False (to disable)
-            - Immediately
-            - 30 days
-            - 90 days
-            - 180 days
-            - 365 days
+                - False (to disable)
+                - Immediately
+                - 30 days
+                - 90 days
+                - 180 days
+                - 365 days
 
         multiple_instances (str):
             Sets the policy that defines how the Task Scheduler deals with
             multiple instances of the task. Valid values are:
 
-            - Parallel
-            - Queue
-            - No New Instance
-            - Stop Existing
+                - Parallel
+                - Queue
+                - No New Instance
+                - Stop Existing
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -1529,9 +1529,9 @@ def add_action(name=None,
             requires its own set of Keyword Arguments (kwargs). Valid values
             are:
 
-            - Execute
-            - Email
-            - Message
+                - Execute
+                - Email
+                - Message
 
     Required arguments for each action_type:
 
@@ -1549,7 +1549,7 @@ def add_action(name=None,
             ``cscript.exe`` in the `cmd` parameter and pass the script in the
             ``arguments`` parameter as follows:
 
-            - ``cmd='cscript.exe' arguments='c:\scripts\myscript.vbs'``
+                - ``cmd='cscript.exe' arguments='c:\scripts\myscript.vbs'``
 
             Batch files do not need an interpreter and may be passed to the cmd
             parameter directly.
@@ -1767,17 +1767,17 @@ def add_trigger(name=None,
             The type of trigger to create. This is defined when the trigger is
             created and cannot be changed later. Options are as follows:
 
-            - Event
-            - Once
-            - Daily
-            - Weekly
-            - Monthly
-            - MonthlyDay
-            - OnIdle
-            - OnTaskCreation
-            - OnBoot
-            - OnLogon
-            - OnSessionChange
+                - Event
+                - Once
+                - Daily
+                - Weekly
+                - Monthly
+                - MonthlyDay
+                - OnIdle
+                - OnTaskCreation
+                - OnBoot
+                - OnLogon
+                - OnSessionChange
 
         trigger_enabled (bool):
             Boolean value that indicates whether the trigger is enabled.
@@ -1786,83 +1786,83 @@ def add_trigger(name=None,
             The date when the trigger is activated. If no value is passed, the
             current date will be used. Can be one of the following formats:
 
-            - %Y-%m-%d
-            - %m-%d-%y
-            - %m-%d-%Y
-            - %m/%d/%y
-            - %m/%d/%Y
-            - %Y/%m/%d
+                - %Y-%m-%d
+                - %m-%d-%y
+                - %m-%d-%Y
+                - %m/%d/%y
+                - %m/%d/%Y
+                - %Y/%m/%d
 
         start_time (str):
             The time when the trigger is activated. If no value is passed,
             midnight will be used. Can be one of the following formats:
 
-            - %I:%M:%S %p
-            - %I:%M %p
-            - %H:%M:%S
-            - %H:%M
+                - %I:%M:%S %p
+                - %I:%M %p
+                - %H:%M:%S
+                - %H:%M
 
         end_date (str):
             The date when the trigger is deactivated. The trigger cannot start
             the task after it is deactivated. Can be one of the following
             formats:
 
-            - %Y-%m-%d
-            - %m-%d-%y
-            - %m-%d-%Y
-            - %m/%d/%y
-            - %m/%d/%Y
-            - %Y/%m/%d
+                - %Y-%m-%d
+                - %m-%d-%y
+                - %m-%d-%Y
+                - %m/%d/%y
+                - %m/%d/%Y
+                - %Y/%m/%d
 
         end_time (str):
-            The time when the trigger is deactivated. If the this is not passed
+            The time when the trigger is deactivated. If this is not passed
             with ``end_date`` it will be set to midnight. Can be one of the
             following formats:
 
-            - %I:%M:%S %p
-            - %I:%M %p
-            - %H:%M:%S
-            - %H:%M
+                - %I:%M:%S %p
+                - %I:%M %p
+                - %H:%M:%S
+                - %H:%M
 
         random_delay (str):
             The delay time that is randomly added to the start time of the
             trigger. Valid values are:
 
-            - 30 seconds
-            - 1 minute
-            - 30 minutes
-            - 1 hour
-            - 8 hours
-            - 1 day
+                - 30 seconds
+                - 1 minute
+                - 30 minutes
+                - 1 hour
+                - 8 hours
+                - 1 day
 
             .. note::
                 This parameter applies to the following trigger types
 
-                - Once
-                - Daily
-                - Weekly
-                - Monthly
-                - MonthlyDay
+                    - Once
+                    - Daily
+                    - Weekly
+                    - Monthly
+                    - MonthlyDay
 
         repeat_interval (str):
             The amount of time between each restart of the task. Valid values
             are:
 
-            - 5 minutes
-            - 10 minutes
-            - 15 minutes
-            - 30 minutes
-            - 1 hour
+                - 5 minutes
+                - 10 minutes
+                - 15 minutes
+                - 30 minutes
+                - 1 hour
 
         repeat_duration (str):
             How long the pattern is repeated. Valid values are:
 
-            - Indefinitely
-            - 15 minutes
-            - 30 minutes
-            - 1 hour
-            - 12 hours
-            - 1 day
+                - Indefinitely
+                - 15 minutes
+                - 30 minutes
+                - 1 hour
+                - 12 hours
+                - 1 day
 
         repeat_stop_at_duration_end (bool):
             Boolean value that indicates if a running instance of the task is
@@ -1872,35 +1872,35 @@ def add_trigger(name=None,
             The maximum amount of time that the task launched by the trigger is
             allowed to run. Valid values are:
 
-            - 30 minutes
-            - 1 hour
-            - 2 hours
-            - 4 hours
-            - 8 hours
-            - 12 hours
-            - 1 day
-            - 3 days (default)
+                - 30 minutes
+                - 1 hour
+                - 2 hours
+                - 4 hours
+                - 8 hours
+                - 12 hours
+                - 1 day
+                - 3 days (default)
 
         delay (str):
             The time the trigger waits after its activation to start the task.
             Valid values are:
 
-            - 15 seconds
-            - 30 seconds
-            - 1 minute
-            - 30 minutes
-            - 1 hour
-            - 8 hours
-            - 1 day
+                - 15 seconds
+                - 30 seconds
+                - 1 minute
+                - 30 minutes
+                - 1 hour
+                - 8 hours
+                - 1 day
 
             .. note::
                 This parameter applies to the following trigger types:
 
-                - OnLogon
-                - OnBoot
-                - Event
-                - OnTaskCreation
-                - OnSessionChange
+                    - OnLogon
+                    - OnBoot
+                    - Event
+                    - OnTaskCreation
+                    - OnSessionChange
 
     **kwargs**
 
@@ -1971,10 +1971,10 @@ def add_trigger(name=None,
             Sets the weeks of the month during which the task runs. Should be a
             list. ie: ``['First','Third']``. Valid options are:
 
-            - First
-            - Second
-            - Third
-            - Fourth
+                - First
+                - Second
+                - Third
+                - Fourth
 
         last_week_of_month (bool):
             Boolean value that indicates that the task runs on the last week of
@@ -2012,12 +2012,12 @@ def add_trigger(name=None,
             Sets the kind of Terminal Server session change that would trigger a
             task launch. Valid options are:
 
-            - ConsoleConnect: When you connect to a user session (switch users)
-            - ConsoleDisconnect: When you disconnect a user session (switch users)
-            - RemoteConnect: When a user connects via Remote Desktop
-            - RemoteDisconnect: When a user disconnects via Remote Desktop
-            - SessionLock: When the workstation is locked
-            - SessionUnlock: When the workstation is unlocked
+                - ConsoleConnect: When you connect to a user session (switch users)
+                - ConsoleDisconnect: When you disconnect a user session (switch users)
+                - RemoteConnect: When a user connects via Remote Desktop
+                - RemoteDisconnect: When a user disconnects via Remote Desktop
+                - SessionLock: When the workstation is locked
+                - SessionUnlock: When the workstation is unlocked
 
             .. note::
 
