@@ -82,7 +82,7 @@ if HAS_PIP is True:
 
 # pylint: enable=import-error
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'pip'
@@ -137,10 +137,10 @@ def _check_pkg_version_format(pkg):
             # vcs+URL urls are not properly parsed.
             # The next line is meant to trigger an AttributeError and
             # handle lower pip versions
-            logger.debug('Installed pip version: %s', pip.__version__)
+            log.debug('Installed pip version: %s', pip.__version__)
             install_req = _from_line(pkg)
         except AttributeError:
-            logger.debug('Installed pip version is lower than 1.2')
+            log.debug('Installed pip version is lower than 1.2')
             supported_vcs = ('git', 'svn', 'hg', 'bzr')
             if pkg.startswith(supported_vcs):
                 for vcs in supported_vcs:
@@ -293,7 +293,7 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
         if pkg_resources.parse_version(pkg1) > pkg_resources.parse_version(pkg2):
             return 1
     except Exception as exc:
-        logger.exception(exc)
+        log.exception(exc)
     return None
 
 
@@ -742,7 +742,7 @@ def installed(name,
             pip_list = __salt__['pip.list'](bin_env=bin_env, user=user, cwd=cwd)
         # If we fail, then just send False, and we'll try again in the next function call
         except Exception as exc:
-            logger.exception(exc)
+            log.exception(exc)
             pip_list = False
 
         for prefix, state_pkg_name, version_spec in pkgs_details:
