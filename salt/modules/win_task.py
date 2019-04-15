@@ -1234,8 +1234,8 @@ def run_wait(name, location='\\'):
             The name of the task to run.
 
         location (str):
-            A string value representing the location of the task. Default is ``\``
-            which is the root for the task scheduler
+            A string value representing the location of the task. Default is
+            ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
@@ -1324,7 +1324,7 @@ def stop(name, location='\\'):
     try:
         task.Stop(0)
         return True
-    except pythoncom.com_error as error:
+    except pythoncom.com_error:
         return False
 
 
@@ -1338,8 +1338,8 @@ def status(name, location='\\'):
             The name of the task for which to return the status
 
         location (str):
-            A string value representing the location of the task. Default is ``\``
-            which is the root for the task scheduler
+            A string value representing the location of the task. Default is
+            ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
@@ -1530,8 +1530,8 @@ def add_action(name=None,
             The name of the task to which to add the action.
 
         location (str):
-            A string value representing the location of the task. Default is ``\``
-            which is the root for the task scheduler
+            A string value representing the location of the task. Default is
+            ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
         action_type (str):
@@ -2310,7 +2310,8 @@ def add_trigger(name=None,
                 for week in kwargs.get('weeks_of_month'):
                     bits_weeks |= weeks[week]
                 trigger.WeeksOfMonth = bits_weeks
-            trigger.RunOnLastWeekOfMonth = kwargs.get('last_week_of_month', False)
+            trigger.RunOnLastWeekOfMonth = kwargs.get('last_week_of_month',
+                                                      False)
         else:
             return 'Monthly DOW trigger requires "weeks_of_month" or "last_' \
                    'week_of_month" parameters'
