@@ -24,7 +24,6 @@ from __future__ import absolute_import
 import re
 import types
 import logging
-import pkg_resources
 
 # Import salt libs
 import salt.utils
@@ -34,6 +33,11 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
 import salt.ext.six as six
+try:
+    import pkg_resources
+    HAS_PKG_RESOURCES = True
+except ImportError:
+    HAS_PKG_RESOURCES = False
 # pylint: disable=import-error
 try:
     import pip
@@ -273,6 +277,10 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
     and 1 if version1 > version2. Return None if there was a problem
     making the comparison.
     '''
+    if HAS_PKG_RESOURCES is False:
+        log.warning('The pkg_resources packages was not loaded. Please install setuptools.')
+        return None
+
     normalize = lambda x: str(x).split('!', 1)[-1] if ignore_epoch else str(x)
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
