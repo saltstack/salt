@@ -1804,8 +1804,7 @@ def add_trigger(name=None,
 
         end_date (str):
             The date when the trigger is deactivated. The trigger cannot start
-            the task after it is deactivated. Can be one of the following
-            formats:
+            the task after it is deactivated. Can be one of the following formats:
 
                 - %Y-%m-%d
                 - %m-%d-%y
@@ -2251,11 +2250,12 @@ def add_trigger(name=None,
                 trigger.DaysOfMonth = bits_days
             trigger.RunOnLastDayOfMonth = kwargs.get('last_day_of_month', False)
         else:
-            return 'Monthly trigger requires "days_of_month" or "last_day_of_month" parameters'
+            return 'Monthly trigger requires "days_of_month" or "last_day_of_' \
+                   'month" parameters'
 
     # Monthly Day Of Week Trigger Parameters
     elif trigger_types[trigger_type] == TASK_TRIGGER_MONTHLYDOW:
-        trigger.Id = 'Monthy_DOW_ID1'
+        trigger.Id = 'Monthly_DOW_ID1'
         if kwargs.get('months_of_year', False):
             bits_months = 0
             for month in kwargs.get('months_of_year'):
