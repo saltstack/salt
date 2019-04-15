@@ -746,6 +746,21 @@ class TestDaemon(object):
         syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
         syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
 
+        # Under windows we can't seem to properly create a virtualenv off of another
+        # virtualenv, we can on linux but we will still point to the virtualenv binary
+        # outside the virtualenv running the test suite, if that's the case.
+        try:
+            if salt.utils.is_windows():
+                virtualenv_binary = os.path.join(sys.real_prefix, 'Scripts', 'virtualenv.exe')
+            else:
+                virtualenv_binary = os.path.join(sys.real_prefix, 'bin', 'virtualenv')
+            if not os.path.exists(virtualenv_binary):
+                # It doesn't exist?!
+                virtualenv_binary = None
+        except AttributeError:
+            # We're not running inside a virtualenv
+            virtualenv_binary = None
+
         # This minion connects to master
         minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion'))
         minion_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
@@ -755,6 +770,8 @@ class TestDaemon(object):
         minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
         minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
         minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
+        if virtualenv_binary:
+            minion_opts['venv_bin'] = virtualenv_binary
 
         # This sub_minion also connects to master
         sub_minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'sub_minion'))
@@ -765,6 +782,8 @@ class TestDaemon(object):
         sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-minion', 'pki', 'minion')
         sub_minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
         sub_minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
+        if virtualenv_binary:
+            sub_minion_opts['venv_bin'] = virtualenv_binary
 
         # This is the master of masters
         syndic_master_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master'))
