@@ -8,9 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
 import socket
-import weakref
 import time
-import sys
 
 # Import 3rd-party libs
 import msgpack
@@ -20,7 +18,7 @@ import tornado
 import tornado.gen
 import tornado.netutil
 import tornado.concurrent
-from tornado.locks import Semaphore
+from tornado.locks import Lock
 from tornado.ioloop import IOLoop, TimeoutError as TornadoTimeoutError
 from tornado.iostream import IOStream
 # Import Salt libs
@@ -82,11 +80,6 @@ class FutureWithTimeout(tornado.concurrent.Future):
             self.set_result(future.result())
         except Exception as exc:
             self.set_exception(exc)
-
-
-class IPCExceptionProxy(object):
-    def __init__(self, orig_info):
-        self.orig_info = orig_info
 
 
 class IPCServer(object):
@@ -592,21 +585,23 @@ class IPCMessageSubscriber(IPCClient):
     # Wait for some data
     package = ipc_subscriber.read_sync()
     '''
-    def __singleton_init__(self, socket_path, io_loop=None):
-        super(IPCMessageSubscriber, self).__singleton_init__(
+    def __init__(self, socket_path, io_loop=None):
+        super(IPCMessageSubscriber, self).__init__(
             socket_path, io_loop=io_loop)
-        self._read_sync_future = None
         self._read_stream_future = None
-        self._sync_ioloop_running = False
-        self.saved_data = []
-        self._sync_read_in_progress = Semaphore()
+        self._saved_data = []
+        self._read_in_progress = Lock()
 
     @tornado.gen.coroutine
-    def _read_sync(self, timeout):
-        yield self._sync_read_in_progress.acquire()
+    def _read(self, timeout, callback=None):
+        try:
+            yield self._read_in_progress.acquire(timeout=0)
+        except tornado.gen.TimeoutError:
+            raise tornado.gen.Return(None)
+
+        log.debug('IPC Subscriber is starting reading')
         exc_to_raise = None
         ret = None
-
         try:
             while True:
                 if self._read_stream_future is None:
@@ -615,10 +610,9 @@ class IPCMessageSubscriber(IPCClient):
                 if timeout is None:
                     wire_bytes = yield self._read_stream_future
                 else:
-                    future_with_timeout = FutureWithTimeout(
-                        self.io_loop, self._read_stream_future, timeout)
-                    wire_bytes = yield future_with_timeout
-
+                    wire_bytes = yield FutureWithTimeout(self.io_loop,
+                                                         self._read_stream_future,
+                                                         timeout)
                 self._read_stream_future = None
 
                 # Remove the timeout once we get some data or an exception
@@ -627,15 +621,17 @@ class IPCMessageSubscriber(IPCClient):
                 timeout = None
 
                 self.unpacker.feed(wire_bytes)
-                first = True
+                first_sync_msg = True
                 for framed_msg in self.unpacker:
-                    if first:
+                    if callback:
+                        self.io_loop.spawn_callback(callback, framed_msg['body'])
+                    elif first_sync_msg:
                         ret = framed_msg['body']
-                        first = False
+                        first_sync_msg = False
                     else:
-                        self.saved_data.append(framed_msg['body'])
-                if not first:
-                    # We read at least one piece of data
+                        self._saved_data.append(framed_msg['body'])
+                if not first_sync_msg:
+                    # We read at least one piece of data and we're on sync run
                     break
         except TornadoTimeoutError:
             # In the timeout case, just return None.
@@ -650,14 +646,9 @@ class IPCMessageSubscriber(IPCClient):
             self._read_stream_future = None
             exc_to_raise = exc
 
-        if self._sync_ioloop_running:
-            # Stop the IO Loop so that self.io_loop.start() will return in
-            # read_sync().
-            self.io_loop.spawn_callback(self.io_loop.stop)
-
         if exc_to_raise is not None:
             raise exc_to_raise  # pylint: disable=E0702
-        self._sync_read_in_progress.release()
+        self._read_in_progress.release()
         raise tornado.gen.Return(ret)
 
     def read_sync(self, timeout=None):
@@ -670,34 +661,9 @@ class IPCMessageSubscriber(IPCClient):
         :return: message data if successful. None if timed out. Will raise an
                  exception for all other error conditions.
         '''
-        if self.saved_data:
-            return self.saved_data.pop(0)
-
-        self._sync_ioloop_running = True
-        self._read_sync_future = self._read_sync(timeout)
-        self.io_loop.start()
-        self._sync_ioloop_running = False
-
-        ret_future = self._read_sync_future
-        self._read_sync_future = None
-        return ret_future.result()
-
-    @tornado.gen.coroutine
-    def _read_async(self, callback):
-        while not self.stream.closed():
-            try:
-                self._read_stream_future = self.stream.read_bytes(4096, partial=True)
-                wire_bytes = yield self._read_stream_future
-                self._read_stream_future = None
-                self.unpacker.feed(wire_bytes)
-                for framed_msg in self.unpacker:
-                    body = framed_msg['body']
-                    self.io_loop.spawn_callback(callback, body)
-            except tornado.iostream.StreamClosedError:
-                log.trace('Subscriber disconnected from IPC %s', self.socket_path)
-                break
-            except Exception as exc:
-                log.error('Exception occurred while Subscriber handling stream: %s', exc)
+        if self._saved_data:
+            return self._saved_data.pop(0)
+        return self.io_loop.run_sync(lambda: self._read(timeout))
 
     @tornado.gen.coroutine
     def read_async(self, callback):
@@ -715,7 +681,7 @@ class IPCMessageSubscriber(IPCClient):
             except Exception as exc:
                 log.error('Exception occurred while Subscriber connecting: %s', exc)
                 yield tornado.gen.sleep(1)
-        yield self._read_async(callback)
+        yield self._read(None, callback)
 
     def close(self):
         '''
@@ -723,15 +689,16 @@ class IPCMessageSubscriber(IPCClient):
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
         '''
-        if not self._closing:
-            IPCClient.close(self)
-            # This will prevent this message from showing up:
-            # '[ERROR   ] Future exception was never retrieved:
-            # StreamClosedError'
-            if self._read_sync_future is not None and self._read_sync_future.done():
-                self._read_sync_future.exception()
-            if self._read_stream_future is not None and self._read_stream_future.done():
-                self._read_stream_future.exception()
+        if self._closing:
+            return
+        super(IPCMessageSubscriber, self).close()
+        # This will prevent this message from showing up:
+        # '[ERROR   ] Future exception was never retrieved:
+        # StreamClosedError'
+        if self._read_stream_future is not None and self._read_stream_future.done():
+            exc = self._read_stream_future.exception()
+            if exc and not isinstance(exc, tornado.iostream.StreamClosedError):
+                log.error("Read future returned exception %r", exc)
 
     def __del__(self):
         if IPCMessageSubscriber in globals():
