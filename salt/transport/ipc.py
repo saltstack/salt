@@ -581,7 +581,7 @@ class IPCMessageSubscriberService(IPCClient):
     of IPCMessageSubscriber instances feeding all of them with data. It closes automatically when
     there are no more subscribers.
 
-    To use this refer to IPCMessageSubscriber documentation.
+    To use this rever to IPCMessageSubscriber documentation.
     '''
     def __init__(self, socket_path, io_loop=None):
         super(IPCMessageSubscriberService, self).__init__(
