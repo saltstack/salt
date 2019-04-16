@@ -326,7 +326,7 @@ def _get_uuid(dom):
     '''
     Get uuid from a libvirt domain object.
     '''
-    uuid = ElementTree.fromstring(dom.XMLDesc(0)).find('uuid')
+    uuid = ElementTree.fromstring(dom.XMLDesc(0)).find('uuid').text
 
     return uuid
 
