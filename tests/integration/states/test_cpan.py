@@ -9,32 +9,41 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 
+log = logging.getLogger(__name__)
+
+__testcontext__ = {}
+
 
 class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
+    def setUp(self):
+        '''
+        Ensure that cpan is installed through perl
+        '''
+        super(CpanStateTest, self).setUp()
+        if 'cpan' not in __testcontext__:
+            self.run_state('pkg.installed', name='cpan')
+            __testcontext__['cpan'] = True
+
     def test_cpan_installed_removed(self):
         '''
         Tests installed and removed states
         '''
-        # Verify that cpan is installed (It's part of perl)
-        ret = self.run_state('pkg.installed', name='perl')
-        self.assertSaltTrueReturn(ret)
         name = 'Template::Alloy'
-        version = self.run_function('cpan.show', (name,))['installed version']
+        version = self.run_function('cpan.show', (name,)).get('installed version', None)
         if version and ("not installed" not in version):
             # For now this is not implemented as state because it is experimental/non-stable
-            # self.run_state('cpan.removed', name=name)
             self.run_function('cpan.remove', (name,))
 
         ret = self.run_state('cpan.installed', name=name)
         self.assertSaltTrueReturn(ret)
 
         # For now this is not implemented as state because it is experimental/non-stable
-        # self.run_state('cpan.removed', name=name)
         self.run_function('cpan.remove', module=(name,))
 
     def test_missing_cpan(self):
