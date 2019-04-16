@@ -86,6 +86,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         _reline(destpath)
         destpath = os.path.join(BASE_FILES, 'testappend', 'secondif')
         _reline(destpath)
+        cls.TIMEOUT = 600 if salt.utils.platform.is_windows() else 10
 
     def test_show_highstate(self):
         '''
@@ -1478,7 +1479,9 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         https://github.com/saltstack/salt/issues/22370
         '''
 
-        state_run = self.run_function('state.sls', mods='requisites.onfail_multiple')
+        state_run = self.run_function('state.sls',
+                                      mods='requisites.onfail_multiple',
+                                      timeout=self.TIMEOUT)
 
         retcode = state_run['cmd_|-c_|-echo itworked_|-run']['changes']['retcode']
         self.assertEqual(retcode, 0)
@@ -1678,7 +1681,9 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
 
         # Only run the state once and keep the return data
-        state_run = self.run_function('state.sls', mods='requisites.listen_names')
+        state_run = self.run_function('state.sls',
+                                      mods='requisites.listen_names',
+                                      timeout=self.TIMEOUT)
         self.assertIn('test_|-listener_service_|-nginx_|-mod_watch', state_run)
         self.assertIn('test_|-listener_service_|-crond_|-mod_watch', state_run)
 
