@@ -2626,6 +2626,26 @@ def setvcpus(vm_, vcpus, config=False, **kwargs):
     return ret1 == ret2 == 0
 
 
+def get_xml(vm_, **kwargs):
+    '''
+    Returns the XML for a given vm
+    :param vm_: domain name
+    :param connection: libvirt connection URI, overriding defaults
+        .. versionadded:: 2019.2.0
+    :param username: username to connect with, overriding defaults
+        .. versionadded:: 2019.2.0
+    :param password: password to connect with, overriding defaults
+        .. versionadded:: 2019.2.0
+    CLI Example:
+    .. code-block:: bash
+        salt '*' virt.get_xml <domain>
+    '''
+    conn = __get_conn(**kwargs)
+    xml_desc = _get_domain(conn, vm_).XMLDesc(0)
+    conn.close()
+    return xml_desc
+
+
 def _freemem(conn):
     '''
     Internal variant of freemem taking a libvirt connection as parameter
