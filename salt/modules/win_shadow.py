@@ -13,7 +13,6 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt libs
 import salt.utils.platform
-import salt.utils.win_functions
 
 # Import 3rd Party Libs
 try:
@@ -203,39 +202,6 @@ def verify_password(name, password):
             win32security.LOGON32_LOGON_NETWORK,  # Logon Type
             win32security.LOGON32_PROVIDER_DEFAULT)  # Logon Provider
     except win32security.error as exc:
-        # A failed logon attempt will increment the number of failed logon
-        # attempts. This could lock the account if the threshold is reached
-        # before the lockout counter reset time occurs. In that case, we want to
-        # unlock the account... unless the account was already locked.
-        # If the lockout counter reset time occurs first, the logon attempt
-        # counter will reset.
-        if not pre_info['account_locked']:
-            if __salt__['user.info'](name=name)['account_locked']:
-                __salt__['user.update'](name, unlock_account=True)
-        # This is the error code you get when the logon attempt fails
-        if exc.winerror == winerror.ERROR_LOGON_FAILURE:
-            # User name or password incorrect
-            return False
-        raise
-    else:
-        user_handle.close()
-        return True
-
-
-def is_password_blank(name):
-    # Get current account status
-    pre_info = __salt__['user.info'](name=name)
-    try:
-        # We'll use LOGON_NETWORK as we really don't need a handle
-        user_handle = win32security.LogonUser(
-            name,  # The name
-            '.',  # The domain, '.' means localhost
-            '',  # The password
-            win32security.LOGON32_LOGON_NETWORK,  # Logon Type
-            win32security.LOGON32_PROVIDER_DEFAULT)  # Logon Provider
-    except win32security.error as exc:
-        if exc.winerror == winerror.ERROR_ACCOUNT_RESTRICTION:
-            return True
         # A failed logon attempt will increment the number of failed logon
         # attempts. This could lock the account if the threshold is reached
         # before the lockout counter reset time occurs. In that case, we want to
