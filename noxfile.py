@@ -92,7 +92,7 @@ def _get_distro_info(session):
         distro = session._runner._distro
     except AttributeError:
         # The distro package doesn't output anything for Windows
-        session.install('distro', silent=PIP_INSTALL_SILENT)
+        session.install('--progress-bar=off', 'distro', silent=PIP_INSTALL_SILENT)
         output = session.run('distro', '-j', silent=True)
         distro = json.loads(output.strip())
         session.log('Distro information:\n%s', pprint.pformat(distro))
@@ -166,7 +166,7 @@ def _install_requirements(session, transport, *extra_requirements):
                 # Because we still install ioflo, which requires setuptools-git, which fails with a
                 # weird SSL certificate issue(weird because the requirements file requirements install
                 # fine), let's previously have setuptools-git installed
-                session.install('setuptools-git', silent=PIP_INSTALL_SILENT)
+                session.install('--progress-bar=off', 'setuptools-git', silent=PIP_INSTALL_SILENT)
             distro_requirements = _distro_requirements
     else:
         _install_system_packages(session)
@@ -229,14 +229,14 @@ def _install_requirements(session, transport, *extra_requirements):
                     continue
 
     for requirements_file in _requirements_files:
-        session.install('-r', requirements_file, silent=PIP_INSTALL_SILENT)
+        session.install('--progress-bar=off', '-r', requirements_file, silent=PIP_INSTALL_SILENT)
 
     if extra_requirements:
-        session.install(*extra_requirements, silent=PIP_INSTALL_SILENT)
+        session.install('--progress-bar=off', *extra_requirements, silent=PIP_INSTALL_SILENT)
 
 
 def _run_with_coverage(session, *test_cmd):
-    session.install('coverage==4.5.3', silent=PIP_INSTALL_SILENT)
+    session.install('--progress-bar=off', 'coverage==4.5.3', silent=PIP_INSTALL_SILENT)
     session.run('coverage', 'erase')
     python_path_env_var = os.environ.get('PYTHONPATH') or None
     if python_path_env_var is None:
@@ -269,7 +269,7 @@ def _runtests(session, coverage, cmd_args):
         # pylint: disable=unreachable
         names_file_path = os.path.join('artifacts', 'failed-tests.txt')
         session.log('Re-running failed tests if possible')
-        session.install('xunitparser==1.3.3', silent=PIP_INSTALL_SILENT)
+        session.install('--progress-bar=off', 'xunitparser==1.3.3', silent=PIP_INSTALL_SILENT)
         session.run(
             'python',
             os.path.join('tests', 'support', 'generate-names-file-from-failed-test-reports.py'),
@@ -329,7 +329,7 @@ def runtests_parametrized(session, coverage, transport, crypto):
             session.run('pip', 'uninstall', '-y', 'pycrypto', 'pycryptodome', 'pycryptodomex', silent=True)
         else:
             session.run('pip', 'uninstall', '-y', 'm2crypto', silent=True)
-        session.install(crypto, silent=PIP_INSTALL_SILENT)
+        session.install('--progress-bar=off', crypto, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         '--tests-logfile={}'.format(
@@ -521,7 +521,7 @@ def pytest_parametrized(session, coverage, transport, crypto):
             session.run('pip', 'uninstall', '-y', 'pycrypto', 'pycryptodome', 'pycryptodomex', silent=True)
         else:
             session.run('pip', 'uninstall', '-y', 'm2crypto', silent=True)
-        session.install(crypto, silent=PIP_INSTALL_SILENT)
+        session.install('--progress-bar=off', crypto, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         '--rootdir', REPO_ROOT,
@@ -726,7 +726,7 @@ def _pytest(session, coverage, cmd_args):
 def _lint(session, rcfile, flags, paths):
     _install_requirements(session, 'zeromq')
     _install_requirements(session, 'raet')
-    session.install('-r', 'requirements/static/{}/lint.txt'.format(_get_pydir(session)), silent=PIP_INSTALL_SILENT)
+    session.install('--progress-bar=off', '-r', 'requirements/static/{}/lint.txt'.format(_get_pydir(session)), silent=PIP_INSTALL_SILENT)
     session.run('pylint', '--version')
     pylint_report_path = os.environ.get('PYLINT_REPORT')
 
@@ -800,7 +800,7 @@ def docs(session):
     '''
     Build Salt's Documentation
     '''
-    session.install('-r', 'requirements/static/py2.7/docs.txt', silent=PIP_INSTALL_SILENT)
+    session.install('--progress-bar=off', '-r', 'requirements/static/py2.7/docs.txt', silent=PIP_INSTALL_SILENT)
     os.chdir('doc/')
     session.run('make', 'clean', external=True)
     session.run('make', 'html', external=True)
