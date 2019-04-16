@@ -147,6 +147,8 @@ def _find_and_process_re(_str, v, k, b, expanded):
                 expanded.append(k)
             else:
                 v_expanded = _find_value_to_expand(b, re_str)
+                if v_expanded == re_str:
+                    raise SaltException('Unable to expand {}'.format(re_str))
                 if isinstance(v_expanded, (list, dict)):
                     v_new = v_expanded
                 # Have no idea why do we need two variables of the same - _str and v

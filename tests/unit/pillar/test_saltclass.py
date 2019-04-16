@@ -20,6 +20,7 @@ fake_minion_id3 = 'fake_id3'
 fake_minion_id4 = 'fake_id4'
 fake_minion_id5 = 'fake_id5'
 fake_minion_id6 = 'fake_id6'
+fake_minion_id7 = 'fake_id7'
 
 fake_pillar = {}
 fake_args = ({'path': os.path.abspath(
@@ -161,8 +162,9 @@ class SaltclassTestCase(TestCase, LoaderModuleMockMixin):
             filtered_result[key] = result.get(key)
         self.assertDictEqual(filtered_result, expected_result)
 
-    def test_fail(self):
-        self.assertRaises(SaltException, saltclass.ext_pillar, fake_minion_id5, {}, fake_args)
+    def test_wrong_yaml_format(self):
+        self.assertRaisesRegex(SaltException, r'^Pillars in fake_id5 is not a valid dict$',
+                               saltclass.ext_pillar, fake_minion_id5, {}, fake_args)
 
     def test_globbing(self):
         result = saltclass.ext_pillar(fake_minion_id6, {}, fake_args)
@@ -213,3 +215,7 @@ class SaltclassTestCase(TestCase, LoaderModuleMockMixin):
                                                         'D1',
                                                         'D-init']}}
         self.assertDictEqual(result, expected_result)
+
+    def test_failed_expansion(self):
+        self.assertRaisesRegex(SaltException, r'^Unable to expand \${fakepillar}$',
+                               saltclass.ext_pillar, fake_minion_id7, {}, fake_args)
