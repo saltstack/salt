@@ -344,8 +344,6 @@ class _FixLoaderModuleMockMixinMroOrder(type):
 class LoaderModuleMockMixin(six.with_metaclass(_FixLoaderModuleMockMixinMroOrder, object)):
     '''
     This class will setup salt loader dunders.
-
-    Please check `set_up_loader_mocks` above
     '''
 
     # Define our setUp function decorator
