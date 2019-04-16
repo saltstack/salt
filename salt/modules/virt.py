@@ -2629,15 +2629,22 @@ def setvcpus(vm_, vcpus, config=False, **kwargs):
 def get_xml(vm_, **kwargs):
     '''
     Returns the XML for a given vm
+
     :param vm_: domain name
     :param connection: libvirt connection URI, overriding defaults
+
         .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
+
         .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
+
         .. versionadded:: 2019.2.0
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' virt.get_xml <domain>
     '''
     conn = __get_conn(**kwargs)
