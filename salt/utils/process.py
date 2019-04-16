@@ -388,7 +388,7 @@ class ProcessManager(object):
                 del self._process_map[pid]
 
     @gen.coroutine
-    def run(self, async=False):  # pylint: disable=W8606,W0111
+    def run(self, async=False):  # pylint: disable=W8606
         '''
         Load and start all available api modules
         '''
