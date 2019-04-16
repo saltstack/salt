@@ -337,7 +337,7 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
     return ret
 
 
-def cql_query_with_prepare(query, statement_name, statement_arguments, async=False,  # pylint: disable=W8606,W0111
+def cql_query_with_prepare(query, statement_name, statement_arguments, async=False,  # pylint: disable=W8606
                            callback_errors=None,
                            contact_points=None, port=None, cql_user=None, cql_pass=None):
     '''
