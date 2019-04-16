@@ -1040,5 +1040,6 @@ class DaemonMixInTestCase(TestCase):
                     mock_logger.assert_called_with(
                         'PIDfile could not be deleted: {0}'.format(self.pid))
 
+
 # Hide the class from unittest framework when it searches for TestCase classes in the module
 del LogSettingsParserTests
