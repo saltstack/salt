@@ -667,12 +667,27 @@ class MinionBase(object):
         tries = opts.get("master_tries", 1)
         attempts = 0
 
+        # This sits outside of the connection loop below because it needs to set
+        # up a list of master URIs regardless of which masters are available
+        # to connect _to_. This is primarily used for masterless mode, when
+        # we need a list of master URIs to fire calls back to.
+        opts["master_uri_list"] = []
+        if "master_list" not in opts:
+            if isinstance(opts["master"], list):
+                opts["master_list"] = copy.copy(opts["master"])
+            else:
+                opts["master_list"] = [opts["master"]]
+
+        for master in opts["master_list"]:
+            opts["master"] = master
+            opts.update(prep_ip_port(opts))
+            opts["master_uri_list"].append(resolve_dns(opts)["master_uri"])
+
         # if we have a list of masters, loop through them and be
         # happy with the first one that allows us to connect
         if isinstance(opts["master"], list):
             conn = False
             last_exc = None
-            opts["master_uri_list"] = []
             opts["local_masters"] = copy.copy(opts["master"])
 
             # shuffle the masters and then loop through them
@@ -685,16 +700,6 @@ class MinionBase(object):
                 else:
                     shuffle(opts["local_masters"])
 
-            # This sits outside of the connection loop below because it needs to set
-            # up a list of master URIs regardless of which masters are available
-            # to connect _to_. This is primarily used for masterless mode, when
-            # we need a list of master URIs to fire calls back to.
-            for master in opts["local_masters"]:
-                opts["master"] = master
-                opts.update(prep_ip_port(opts))
-                opts["master_uri_list"].append(resolve_dns(opts)["master_uri"])
-
-            pub_channel = None
             while True:
                 if attempts != 0:
                     # Give up a little time between connection attempts
