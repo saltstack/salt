@@ -25,16 +25,18 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.cpan
     '''
+
     # 'install' function tests: 2
 
     def setup_loader_modules(self):
-        return {cpan: {}}
+        return {cpan: {'_get_cpan_bin': MagicMock()}}
 
     def test_get_get_binary(self):
         mock = MagicMock()
         with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
             # Verify that the name of the default cpan executable starts with 'cpan'
-            self.assertTrue(os.path.split(cpan._get_cpan_bin())[-1].startswith('cpan'))
+            self.assertTrue(
+                os.path.split(cpan._get_cpan_bin())[-1].startswith('cpan'))
 
     def test_get_version(self):
         mock = MagicMock(return_value={'installed version': '2.26',
@@ -54,9 +56,9 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
                                           {'installed version': '3.1'}])
             with patch.object(cpan, 'show', mock):
                 self.assertDictEqual(cpan.install(module), {
-                                     'new': {'installed version': '3.1'},
-                                     'old': {'installed version': None},
-                                     'error': None})
+                    'new': {'installed version': '3.1'},
+                    'old': {'installed version': None},
+                    'error': None})
                 self.assertIn("-i", mock1.call_args[0][0])
                 self.assertIn(module, mock1.call_args[0][0])
 
@@ -66,12 +68,12 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
             with patch.object(cpan, 'show', MagicMock()):
                 # Pass a list of mirrors
-                cpan.install('Module', mirror=mirrors)
+                cpan.install('Module', mirror=mirrors, bin_env='')
                 self.assertIn("-M", mock.call_args[0][0])
                 self.assertIn(",".join(mirrors), mock.call_args[0][0])
 
                 # Same test but pass a string instead of a list
-                cpan.install('Module', mirror=",".join(mirrors))
+                cpan.install('Module', mirror=",".join(mirrors), bin_env='')
                 self.assertIn(",".join(mirrors), mock.call_args[0][0])
 
     def test_install_notest(self):
@@ -116,9 +118,9 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
                                                'installed file': '/root'})
                 with patch.object(cpan, 'show', mock):
                     self.assertDictEqual(cpan.remove(module), {
-                                         'error': None,
-                                         'new': None,
-                                         'old': None})
+                        'error': None,
+                        'new': None,
+                        'old': None})
 
     def test_remove_unexist_error(self):
         '''
@@ -139,9 +141,9 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'installed version': None})
         with patch.object(cpan, 'show', mock):
             self.assertDictEqual(cpan.remove('Template::Alloy'), {
-                                             'error': None,
-                                             'new': None,
-                                             'old': None})
+                'error': None,
+                'new': None,
+                'old': None})
 
     def test_remove_nopan_error(self):
         '''
@@ -153,9 +155,9 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
                                        'cpan build dirs': []})
         with patch.object(cpan, 'show', mock):
             self.assertDictEqual(cpan.remove('Template::Alloy'), {
-                                             'error': None,
-                                             'new': None,
-                                             'old': None})
+                'error': None,
+                'new': None,
+                'old': None})
 
     # 'list' function tests: 1
     def test_list(self):
@@ -172,21 +174,26 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         Test if it show information about a specific Perl module
         '''
         mock = MagicMock(return_value={})
-        with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(cpan.__salt__,
+                        {'cmd.run_all': mock,
+                         'cpan._grt_bin_env': 'cpan'}):
             module = 'Nonexistant::Package'
             self.assertDictEqual(cpan.show(module),
                                  {'error':
-                                  'Could not find package {}'.format(module),
+                                      'Could not find package {}'.format(
+                                          module),
                                   'name': module})
 
     def test_show_mock(self):
         '''
         Test if it show information about a specific Perl module
         '''
-        with patch('salt.modules.cpan.show', MagicMock(return_value={'Salt': 'salt'})):
+        with patch('salt.modules.cpan.show',
+                   MagicMock(return_value={'Salt': 'salt'})):
             mock = MagicMock(return_value='Salt module installed')
             with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
-                self.assertDictEqual(cpan.show('Template::Alloy'), {'Salt': 'salt'})
+                self.assertDictEqual(cpan.show('Template::Alloy'),
+                                     {'Salt': 'salt'})
 
     # 'show' function tests: 1
     def test_config(self):
