@@ -2340,7 +2340,9 @@ def get_macs(vm_, **kwargs):
 
         salt '*' virt.get_macs <domain>
     '''
+    conn = __get_conn(**kwargs)
     macs = _get_macs(_get_domain(conn, vm_))
+    conn.close()
 
     return macs
 
@@ -2420,6 +2422,7 @@ def get_disks(vm_, **kwargs):
     disks = _get_disks(_get_domain(conn, vm_))
     conn.close()
     return disks
+
 
 def get_uuid(vm_, **kwargs):
     '''
