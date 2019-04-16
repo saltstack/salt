@@ -782,6 +782,7 @@ def edit_task(name=None,
             working.
 
             .. note::
+
                 The combination of user_name and password determine how the
                 task runs. For example, if a username is passed without at
                 password the task will only run when the user is logged in. If a
@@ -1994,9 +1995,10 @@ def add_trigger(name=None,
                 of the month regardless of the actual date of that day.
 
                 .. note::
+
                     You can set the task to run on the last day of the month by
                     either including the word 'Last' in the list of days, or
-                    setting the parameter 'last_day_of_month` equal to True.
+                    setting the parameter 'last_day_of_month' equal to True.
 
     *MonthlyDay*
 
