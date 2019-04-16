@@ -598,11 +598,11 @@ def create_task_from_xml(name,
 
         xml_text (str):
             A string of xml representing the task to be created. This will be
-            overridden by `xml_path` if passed.
+            overridden by ``xml_path`` if passed.
 
         xml_path (str):
             The path to an XML file on the local system containing the xml that
-            defines the task. This will override `xml_text`
+            defines the task. This will override ``xml_text``
 
         user_name (str):
             The user account under which to run the task. To specify the
@@ -1558,7 +1558,7 @@ def add_action(name=None,
                 (optional) Arguments to be passed to the command or executable.
                 To launch a script the first command will need to be the
                 interpreter for the script. For example, to run a vbscript you
-                would pass ``cscript.exe`` in the `cmd` parameter and pass the
+                would pass ``cscript.exe`` in the ``cmd`` parameter and pass the
                 script in the ``arguments`` parameter as follows:
 
                     - ``cmd='cscript.exe' arguments='c:\scripts\myscript.vbs'``
@@ -1999,7 +1999,7 @@ def add_trigger(name=None,
 
                     You can set the task to run on the last day of the month by
                     either including the word 'Last' in the list of days, or
-                    setting the parameter 'last_day_of_month` equal to ``True``.
+                    setting the parameter 'last_day_of_month' equal to ``True``.
 
     *MonthlyDay*
 
