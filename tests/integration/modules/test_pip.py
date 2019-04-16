@@ -17,7 +17,6 @@ import tempfile
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.paths import TMP
-from tests.support.helpers import skip_if_not_root
 
 # Import salt libs
 import salt.utils
@@ -128,7 +127,6 @@ class PipModuleTest(ModuleCase):
                 ret
             )
 
-    @skip_if_not_root
     def test_requirements_as_list_of_chains__cwd_set__absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
 
@@ -171,7 +169,6 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
-    @skip_if_not_root
     def test_requirements_as_list_of_chains__cwd_not_set__absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
 
@@ -214,7 +211,6 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
-    @skip_if_not_root
     def test_requirements_as_list__absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
 
@@ -249,7 +245,6 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
-    @skip_if_not_root
     def test_requirements_as_list__non_absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
 
@@ -291,7 +286,6 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
-    @skip_if_not_root
     def test_chained_requirements__absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
 
@@ -324,7 +318,6 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
-    @skip_if_not_root
     def test_chained_requirements__non_absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
 
@@ -362,7 +355,6 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
-    @skip_if_not_root
     def test_issue_4805_nested_requirements(self):
         self._create_virtualenv(self.venv_dir)
 

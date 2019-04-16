@@ -112,7 +112,6 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             kwargs = {}
         return self.run_function('virtualenv.create', [path], **kwargs)
 
-    @skip_if_not_root
     def test_pip_installed_removed(self):
         '''
         Tests installed and removed states
