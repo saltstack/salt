@@ -2435,7 +2435,9 @@ def get_xml(vm_, **kwargs):
         salt '*' virt.get_xml <domain>
     '''
     conn = __get_conn(**kwargs)
-    xml_desc = _get_domain(conn, vm_).XMLDesc(0)
+    xml_desc = vm_.XMLDesc(0) if isinstance(
+        vm_, libvirt.virDomain
+    ) else _get_domain(conn, vm_).XMLDesc(0)
     conn.close()
     return xml_desc
 
