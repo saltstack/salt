@@ -748,7 +748,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
         a public_ip instead.
     allocate_eip:
         (bool) - Allocate and attach an EIP on-the-fly for this instance.  Note
-        you'll want to releaase this address when terminating the instance,
+        you'll want to release this address when terminating the instance,
         either manually or via the 'release_eip' flag to 'instance_absent'.
     region
         (string) - Region to connect to.
