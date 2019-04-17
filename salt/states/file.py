@@ -6846,7 +6846,7 @@ def serialize(name,
                 try:
                     existing_data = __serializers__[deserializer_name](
                         fhr,
-                        **deserializer_options.get(serializer_name, {})
+                        **deserializer_options.get(deserializer_name, {})
                     )
                 except (TypeError, DeserializationError) as exc:
                     ret['result'] = False
