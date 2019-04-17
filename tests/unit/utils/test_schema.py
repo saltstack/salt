@@ -1845,7 +1845,6 @@ class ConfigTestCase(TestCase):
         else:
             self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
 
-
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 2}, TestConf.serialize())
         self.assertIn('is not of type', excinfo.exception.message)
@@ -1900,7 +1899,6 @@ class ConfigTestCase(TestCase):
             self.assertIn('\'maybe\' is not one of [\'yes\']', excinfo.exception.message)
         else:
             self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
-
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 2}, TestConf.serialize())
