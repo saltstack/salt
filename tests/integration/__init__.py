@@ -760,6 +760,37 @@ class TestDaemon(object):
         syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
         syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
 
+        # Under windows we can't seem to properly create a virtualenv off of another
+        # virtualenv, we can on linux but we will still point to the virtualenv binary
+        # outside the virtualenv running the test suite, if that's the case.
+        try:
+            real_prefix = sys.real_prefix
+            # The above attribute exists, this is a virtualenv
+            if salt.utils.is_windows():
+                virtualenv_binary = os.path.join(real_prefix, 'Scripts', 'virtualenv.exe')
+            else:
+                # We need to remove the virtualenv from PATH or we'll get the virtualenv binary
+                # from within the virtualenv, we don't want that
+                path = os.environ.get('PATH')
+                if path is not None:
+                    path_items = path.split(os.pathsep)
+                    for item in path_items[:]:
+                        if item.startswith(sys.base_prefix):
+                            path_items.remove(item)
+                    os.environ['PATH'] = os.pathsep.join(path_items)
+                virtualenv_binary = salt.utils.which('virtualenv')
+                if path is not None:
+                    # Restore previous environ PATH
+                    os.environ['PATH'] = path
+                if not virtualenv_binary.startswith(real_prefix):
+                    virtualenv_binary = None
+            if virtualenv_binary and not os.path.exists(virtualenv_binary):
+                # It doesn't exist?!
+                virtualenv_binary = None
+        except AttributeError:
+            # We're not running inside a virtualenv
+            virtualenv_binary = None
+
         # This minion connects to master
         minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion'))
         minion_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
@@ -769,6 +800,8 @@ class TestDaemon(object):
         minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
         minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
         minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
+        if virtualenv_binary:
+            minion_opts['venv_bin'] = virtualenv_binary
 
         # This sub_minion also connects to master
         sub_minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'sub_minion'))
@@ -779,6 +812,8 @@ class TestDaemon(object):
         sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-minion', 'pki', 'minion')
         sub_minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
         sub_minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
+        if virtualenv_binary:
+            sub_minion_opts['venv_bin'] = virtualenv_binary
 
         # This is the master of masters
         syndic_master_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master'))
@@ -1128,9 +1163,10 @@ class TestDaemon(object):
         Clean out the tmp files
         '''
         def remove_readonly(func, path, excinfo):
-            # Give full permissions to owner
-            os.chmod(path, stat.S_IRWXU)
-            func(path)
+            if os.path.exists(path):
+                # Give full permissions to owner
+                os.chmod(path, stat.S_IRWXU)
+                func(path)
 
         for dirname in (TMP, RUNTIME_VARS.TMP_STATE_TREE,
                         RUNTIME_VARS.TMP_PILLAR_TREE, RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
