@@ -47,7 +47,7 @@ class SyncWrapper(object):
         kwargs['io_loop'] = self.io_loop
 
         with current_ioloop(self.io_loop):
-            self.async = method(*args, **kwargs)
+            self.async = method(*args, **kwargs)  # pylint: disable=W8606
 
     def __getattribute__(self, key):
         try:
@@ -55,7 +55,7 @@ class SyncWrapper(object):
         except AttributeError as ex:
             if key == 'async':
                 raise ex
-        attr = getattr(self.async, key)
+        attr = getattr(self.async, key)  # pylint: disable=W8606
         if hasattr(attr, '__call__'):
             def wrap(*args, **kwargs):
                 # Overload the ioloop for the func call-- since it might call .current()
@@ -79,12 +79,12 @@ class SyncWrapper(object):
         On deletion of the async wrapper, make sure to clean up the async stuff
         '''
         if hasattr(self, 'async'):
-            if hasattr(self.async, 'close'):
+            if hasattr(self.async, 'close'):  # pylint: disable=W8606
                 # Certain things such as streams should be closed before
                 # their associated io_loop is closed to allow for proper
                 # cleanup.
-                self.async.close()
-            del self.async
+                self.async.close()  # pylint: disable=W8606
+            del self.async  # pylint: disable=W8606
             self.io_loop.close()
             del self.io_loop
         elif hasattr(self, 'io_loop'):
