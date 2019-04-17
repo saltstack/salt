@@ -18,6 +18,7 @@ from tests.support.unit import skipIf
 
 
 @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
+@skipIf(salt.utils.platform.is_aix(), 'minion is AIX')
 class ManTest(ModuleCase):
     # Map filenames to search strings which should be in the manpage
     manpages = {
