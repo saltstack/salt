@@ -298,7 +298,12 @@ def list_(narrow=None,
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] != 0:
+    # Chocolatey introduced Enhanced Exit Codes starting with version 0.10.12
+    # Exit Code 2 means there were no results, but is not a failure
+    # This may start to effect other functions in the future as Chocolatey
+    # moves more functions to this new paradigm
+    # https://github.com/chocolatey/choco/issues/1758
+    if result['retcode'] not in [0, 2]:
         err = 'Running chocolatey failed: {0}'.format(result['stdout'])
         raise CommandExecutionError(err)
 
