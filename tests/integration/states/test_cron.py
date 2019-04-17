@@ -70,6 +70,9 @@ class CronTest(ModuleCase):
         id_ = 'cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file'
         for key in ignored_keys:
             _expected[key] = ret[id_].get(key)
+        retchanges = ret[id_].get('changes', {}).get('attrs', None)
+        if retchanges is not None:
+            _expected['changes']['attrs'] = retchanges
         self.assertDictEqual(
             _expected,
             ret[id_],
