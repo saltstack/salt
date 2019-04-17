@@ -5,71 +5,137 @@ Execution of Salt modules from within states
 
 .. note::
 
-    There are two styles of calling ``module.run``. To use the new style
-    you must add the following to your ``/etc/salt/minion`` config file:
+    There are two styles of calling ``module.run``. **The legacy style will no
+    longer be available starting in the Sodium release.** To opt-in early to the
+    new style you must add the following to your ``/etc/salt/minion`` config
+    file:
 
     .. code-block:: yaml
 
         use_superseded:
           - module.run
 
-.. note::
-
-    The old style of ``module.run`` will no longer be available in the Sodium
-    release.
-
 With `module.run` these states allow individual execution module calls to be
-made via states. To call a single module function use a
-:mod:`module.run <salt.states.module.run>` state:
+made via states. Here's a contrived example, to show you how it's done:
 
 .. code-block:: yaml
 
-    # Old Style
-    mine.send:
-      module.run:
-        - network.interfaces
-
     # New Style
-    mine.send:
+    test.random_hash:
       module.run:
-        # Note the trailing `:`
-        - network.interfaces:
+        - test.random_hash:
+          - size: 42
+          - hash_type: sha256
 
+    # Legacy Style
+    test.random_hash:
+      module.run:
+        - size: 42
+        - hash_type: sha256
 
-.. note::
-
-    The previous example is contrived and probably unnecessary to use in practice,
-    since the ``mine_functions`` and ``mine_interval`` config parameters
-    can be used to schedule updates for the mine (see :ref:`here <salt-mine>`
-    for more info).
-
-It is sometimes desirable to trigger a function call after a state is executed,
-for this the :mod:`module.wait <salt.states.module.wait>` state can be used:
+In the new style, the state ID (``test.random_hash``, in this case) is
+irrelevant when using ``module.run``. It could have very well been written:
 
 .. code-block:: yaml
 
-    add example to hosts:
-      file.append:
-        - name: /etc/hosts
-        - text: 203.0.113.13     example.com
+    Generate a random hash:
+      module.run:
+        - test.random_hash:
+          - size: 42
+          - hash_type: sha256
 
-    # Old Style
-    mine.send:
-      module.wait:
-        - name: hosts.list
-        - watch:
-          - file: add example to hosts
+For a simple state like that it's not a big deal, but if the module you're
+using has certain parameters, things can get cluttered, fast. Using the
+contrived custom module (stuck in ``/srv/salt/_modules/foo.py``, or your
+configured file_roots_):
 
-    # New Style
-    mine.send:
-      module.wait:
-        # Again, note the trailing `:`
-        - hosts.list_hosts:
-        - watch:
-          - file: add example to hosts
+.. code-block:: python
 
-In the old style, all arguments that the ``module`` state does not consume are
-passed through to the execution module function being executed:
+    def bar(name, names, fun, state, saltenv):
+        return "Name: {name} Names: {names} Fun: {fun} State: {state} Saltenv: {saltenv}".format(**locals())
+
+Your legacy state has to look like this:
+
+.. code-block:: yaml
+
+    # Legacy style
+    Unfortunate example:
+      module.run:
+      - name: foo.bar
+      - m_name: Some name
+      - m_names:
+        - Such names
+        - very wow
+      - m_state: Arkansas
+      - m_fun: Such fun
+      - m_saltenv: Salty
+
+With the new style it's much cleaner:
+
+.. code-block:: yaml
+
+    # New style
+    Better:
+      module.run:
+      - foo.bar:
+        - name: Some name
+        - names:
+          - Such names
+          - very wow
+        - state: Arkansas
+        - fun: Such fun
+        - saltenv: Salty
+
+The new style also allows multiple modules in one state. For instance, you can
+do this:
+
+.. code-block:: yaml
+
+    Do many things:
+      module.run:
+        - test.random_hash:
+          - size: 10
+          - hash_type: md5
+        # Note the `:` at the end
+        - test.true:
+        - test.arg:
+          - this
+          - has
+          - args
+          - and: kwargs
+          - isn't: that neat?
+        # Note the `:` at the end, too
+        - test.version:
+        - test.fib:
+          - 4
+
+Where in the legacy style you would have had to split your states like this:
+
+.. code-block:: yaml
+
+    test.random_hash:
+      module.run:
+        - size: 10
+        - hash_type: md5
+
+    test.nop:
+      module.run
+
+    test.arg:
+      module.run:
+        - args:
+          - this
+          - has
+          - args
+        - kwargs:
+            and: kwargs
+            isn't: that neat?
+
+    test.version:
+      module.run
+
+Another difference is that in the legacy style, unconsumed arguments to the
+``module`` state were simply passed into the module function being executed:
 
 .. code-block:: yaml
 
@@ -79,7 +145,8 @@ passed through to the execution module function being executed:
         - size: 42
         - hash_type: sha256
 
-In the new style, they are simply nested under the module name:
+The new style is much more explicit, with the arguments and keyword arguments
+being nested under the name of the function:
 
 .. code-block:: yaml
 
@@ -90,7 +157,7 @@ In the new style, they are simply nested under the module name:
           - size: 42
           - hash_type: sha256
 
-If the module takes ``*args``, they can be passed in as well:
+If the function takes ``*args``, they can be passed in as well:
 
 .. code-block:: yaml
 
@@ -103,6 +170,52 @@ If the module takes ``*args``, they can be passed in as well:
           - this: that
           - salt: stack
 
+Modern Examples
+---------------
+
+Here are some other examples using the modern ``module.run``:
+
+.. code-block:: yaml
+
+    fetch_out_of_band:
+      module.run:
+        - git.fetch:
+          - cwd: /path/to/my/repo
+          - user: myuser
+          - opts: '--all'
+
+A more complex example:
+
+.. code-block:: yaml
+
+    eventsviewer:
+      module.run:
+        - task.create_task:
+          - name: events-viewer
+          - user_name: System
+          - action_type: Execute
+          - cmd: 'c:\netops\scripts\events_viewer.bat'
+          - trigger_type: 'Daily'
+          - start_date: '2017-1-20'
+          - start_time: '11:59PM'
+
+It is sometimes desirable to trigger a function call after a state is executed,
+for this the :mod:`module.wait <salt.states.module.wait>` state can be used:
+
+.. code-block:: yaml
+
+    add example to hosts:
+      file.append:
+        - name: /etc/hosts
+        - text: 203.0.113.13     example.com
+
+    # New Style
+    mine.send:
+      module.wait:
+        # Again, note the trailing `:`
+        - hosts.list_hosts:
+        - watch:
+          - file: add example to hosts
 
 Legacy (Default) Examples
 -------------------------
@@ -185,59 +298,7 @@ Windows system:
               start_time: '11:59PM'
         }
 
-
-
-Modern Examples
----------------
-
-Here are some other examples using the modern ``module.run``:
-
-.. code-block:: yaml
-
-    fetch_out_of_band:
-      module.run:
-        - git.fetch:
-          - cwd: /path/to/my/repo
-          - user: myuser
-          - opts: '--all'
-
-Yet another example:
-
-.. code-block:: yaml
-
-    mine.send:
-      module.run:
-        - network.ip_addrs:
-          - interface: eth0
-
-And more complex example:
-
-.. code-block:: yaml
-
-    eventsviewer:
-      module.run:
-        - task.create_task:
-          - name: events-viewer
-          - user_name: System
-          - action_type: Execute
-          - cmd: 'c:\netops\scripts\events_viewer.bat'
-          - trigger_type: 'Daily'
-          - start_date: '2017-1-20'
-          - start_time: '11:59PM'
-
-With the modern ``module.run``, you can also run multiple different modules
-within the same state:
-
-.. code-block:: yaml
-
-    run all the things:
-      module.run:
-        - test.arg:
-          - so: cool
-        - test.version:
-        - test.true:
-        - test.fib:
-          - 4
+.. _file_roots: https://docs.saltstack.com/en/latest/ref/configuration/master.html#file-roots
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -552,7 +613,6 @@ def _run(name, **kwargs):
     nkwargs = {}
     if aspec.keywords and aspec.keywords in kwargs:
         nkwargs = kwargs.pop(aspec.keywords)
-
         if not isinstance(nkwargs, dict):
             msg = "'{0}' must be a dict."
             ret['comment'] = msg.format(aspec.keywords)
