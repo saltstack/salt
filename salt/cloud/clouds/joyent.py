@@ -60,9 +60,21 @@ import pprint
 import inspect
 import yaml
 import datetime
-from Crypto.Hash import SHA256
-from Crypto.PublicKey import RSA
-from Crypto.Signature import PKCS1_v1_5
+
+try:
+    from Cryptodome.Hash import SHA256
+    from Cryptodome.PublicKey import RSA
+    from Cryptodome.Signature import PKCS1_v1_5
+    HAS_REQUIRED_CRYPTO = True
+except ImportError:
+    try:
+        from Crypto.Hash import SHA256
+        from Crypto.PublicKey import RSA
+        from Crypto.Signature import PKCS1_v1_5
+        HAS_REQUIRED_CRYPTO = True
+    except ImportError:
+        HAS_REQUIRED_CRYPTO = False
+
 
 # Import salt libs
 import salt.ext.six as six
@@ -113,6 +125,8 @@ def __virtual__():
     '''
     Check for Joyent configs
     '''
+    if HAS_REQUIRED_CRYPTO is False:
+        return False, 'Either PyCrypto or Cryptodome needs to be installed.'
     if get_configured_provider() is False:
         return False
 

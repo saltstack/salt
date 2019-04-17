@@ -518,7 +518,7 @@ def __virtual__():
                     'could not be loaded, is GitPython installed?'
                 )
                 return False
-            if not git.__version__ > '0.3.0':
+            if git.__version__ <= '0.3.0':
                 return False
             return __virtualname__
         else:
