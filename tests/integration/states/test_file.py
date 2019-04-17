@@ -457,6 +457,21 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         changes = next(six.itervalues(ret))['changes']
         self.assertEqual('<show_changes=False>', changes['diff'])
 
+    def test_managed_show_changes_true(self):
+        '''
+        file.managed test interface
+        '''
+        name = os.path.join(RUNTIME_VARS.TMP, 'grail_not_scene33')
+        with salt.utils.files.fopen(name, 'wb') as fp_:
+            fp_.write(b'test_managed_show_changes_false\n')
+
+        ret = self.run_state(
+            'file.managed', name=name, source='salt://grail/scene33',
+        )
+
+        changes = next(six.itervalues(ret))['changes']
+        self.assertIn('diff', changes)
+
     @skipIf(IS_WINDOWS, 'Don\'t know how to fix for Windows')
     def test_managed_escaped_file_path(self):
         '''
