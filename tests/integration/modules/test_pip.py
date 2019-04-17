@@ -30,8 +30,13 @@ class PipModuleTest(ModuleCase):
 
     def setUp(self):
         super(PipModuleTest, self).setUp()
+
         # Restore the environ
-        self.addCleanup(os.environ.update, os.environ.copy())
+        def cleanup_environ(envcopy):
+            os.environ.clear()
+            os.environ.update(envcopy)
+
+        self.addCleanup(cleanup_environ, os.environ.copy())
 
         self.venv_test_dir = tempfile.mkdtemp(dir=TMP)
         # Remove the venv test directory
@@ -71,20 +76,6 @@ class PipModuleTest(ModuleCase):
             # We're running off of the system python
             kwargs = {}
         self.run_function('virtualenv.create', [path], **kwargs)
-
-    def tearDown(self):
-        super(PipModuleTest, self).tearDown()
-        if os.path.isdir(self.venv_test_dir):
-            shutil.rmtree(self.venv_test_dir, ignore_errors=True)
-        if os.path.isdir(self.pip_temp):
-            shutil.rmtree(self.pip_temp, ignore_errors=True)
-        del self.venv_dir
-        del self.venv_test_dir
-        del self.pip_temp
-        if 'PIP_SOURCE_DIR' in os.environ:
-            os.environ.pop('PIP_SOURCE_DIR')
-        if 'PIP_BUILD_DIR' in os.environ:
-            os.environ.pop('PIP_BUILD_DIR')
 
     def _check_download_error(self, ret):
         '''
