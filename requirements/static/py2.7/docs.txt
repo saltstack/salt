@@ -15,12 +15,12 @@ jinja2==2.10.1            # via sphinx
 markupsafe==1.1.1         # via jinja2
 packaging==19.0           # via sphinx
 pygments==2.3.1           # via sphinx
-pyparsing==2.3.1          # via packaging
-pytz==2018.9              # via babel
+pyparsing==2.4.0          # via packaging
+pytz==2019.1              # via babel
 requests==2.21.0          # via sphinx
 six==1.12.0               # via packaging, sphinx
 snowballstemmer==1.2.1    # via sphinx
 sphinx==1.8.5
 sphinxcontrib-websupport==1.1.0  # via sphinx
 typing==3.6.6             # via sphinx
-urllib3==1.24.1           # via requests
+urllib3==1.24.2           # via requests
