@@ -143,7 +143,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
             arg_str
         )
-        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
+        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True, timeout=timeout)
 
     def run_run(self,
                 arg_str,
@@ -904,12 +904,12 @@ class SyndicCase(TestCase, SaltClientTestCaseMixin):
     '''
     _salt_client_config_file_name_ = 'syndic_master'
 
-    def run_function(self, function, arg=()):
+    def run_function(self, function, arg=(), timeout=90):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg, timeout=25)
+        orig = self.client.cmd('minion', function, arg, timeout=timeout)
         if 'minion' not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
