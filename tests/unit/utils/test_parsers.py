@@ -1076,5 +1076,6 @@ class DaemonMixInTestCase(TestCase):
             salt.utils.parsers.logger.debug.assert_not_called()
 
 
+
 # Hide the class from unittest framework when it searches for TestCase classes in the module
 del LogSettingsParserTests
