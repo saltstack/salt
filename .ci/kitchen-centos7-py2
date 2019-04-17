@@ -57,6 +57,7 @@ timeout(time: 8, unit: 'HOURS') {
                                 }
                                 archiveArtifacts artifacts: 'artifacts/*,artifacts/**/*'
                             }
+                            /* Code coverage uploads disabled because we're not running the full test suite
                             stage('report code coverage') {
                                 script {
                                     withCredentials([[$class: 'StringBinding', credentialsId: 'codecov-upload-token-salt', variable: 'CODECOV_TOKEN']]) {
@@ -68,6 +69,7 @@ timeout(time: 8, unit: 'HOURS') {
                                     }
                                 }
                             }
+                            */
                         }
                     } catch (Exception e) {
                         currentBuild.result = 'FAILURE'
