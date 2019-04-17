@@ -10,6 +10,7 @@ Manage the shadow file
 '''
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
+import logging
 
 # Import Salt libs
 import salt.utils.platform
@@ -21,6 +22,8 @@ try:
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
+
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'shadow'
@@ -38,7 +41,7 @@ def __virtual__():
     return __virtualname__
 
 
-def info(name):
+def info(name, password=None, **kwargs):
     '''
     Return information for the specified user
     This is just returns dummy data so that salt states can work.
@@ -53,6 +56,11 @@ def info(name):
     '''
     info = __salt__['user.info'](name=name)
 
+    passwd = 'Unavailable'
+    if password is not None:
+        if verify_password(name=name, password=password):
+            passwd = password
+
     ret = {'name': name,
            'passwd': '',
            'lstchg': '',
@@ -64,7 +72,7 @@ def info(name):
 
     if info:
         ret = {'name': info['name'],
-               'passwd': 'Unavailable',
+               'passwd': passwd,
                'lstchg': info['password_changed'],
                'min': '',
                'max': '',
@@ -211,11 +219,16 @@ def verify_password(name, password):
         if not pre_info['account_locked']:
             if __salt__['user.info'](name=name)['account_locked']:
                 __salt__['user.update'](name, unlock_account=True)
+        if exc.winerror == winerror.ERROR_PASSWORD_MUST_CHANGE:
+            log.debug('shadow.verify_password: Password is valid')
+            return True
         # This is the error code you get when the logon attempt fails
         if exc.winerror == winerror.ERROR_LOGON_FAILURE:
-            # User name or password incorrect
+            log.debug('shadow.verify_password: Password is not valid')
             return False
+        log.exception('shadow.verify_password: Unknown error')
         raise
     else:
         user_handle.close()
+        log.debug('shadow.verify_password: Password is valid')
         return True
