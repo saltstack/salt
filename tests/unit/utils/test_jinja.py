@@ -52,6 +52,12 @@ try:
 except ImportError:
     HAS_TIMELIB = False
 
+try:
+    import jmespath
+    HAS_JMESPATH = True
+except ImportError:
+    HAS_JMESPATH = False
+
 BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
 
 
@@ -940,16 +946,21 @@ class TestCustomExtensions(TestCase):
         '''
         Test the `update_dict_key_value` Jinja filter.
         '''
-        rendered = render_jinja_tmpl("{{ foo | update_dict_key_value('bar:baz', {'quux': 3}) }}",
-                                     dict(foo={'bar': {'baz': {'qux': 1}}},
+        # Use OrderedDicts to avoid random key-order-switches in the rendered string.
+        expected = OrderedDict([('bar', OrderedDict([('baz', OrderedDict([('qux', 1), ('quux', 3)]))]))])
+        dataset = OrderedDict([('bar', OrderedDict([('baz', OrderedDict([('qux', 1)]))]))])
+        dataset_exp = OrderedDict([('quux', 3)])
+        rendered = render_jinja_tmpl("{{ foo | update_dict_key_value('bar:baz', exp) }}",
+                                     dict(foo=dataset,
+                                          exp=dataset_exp,
                                           opts=self.local_opts,
                                           saltenv='test',
                                           salt=self.local_salt))
         self.assertEqual(
             rendered,
-            "{u'bar': {u'baz': {u'qux': 1, 'quux': 3}}}" if six.PY2
-            else "{'bar': {'baz': {'qux': 1, 'quux': 3}}}"
-        )
+            "{u'bar': {u'baz': {u'qux': 1, u'quux': 3}}}" if six.PY2
+            else "{'bar': {'baz': {'qux': 1, 'quux': 3}}}")
+
         # Test incorrect usage
         for update_with in [42, 'foo', [42]]:
             template = "{{ {} | update_dict_key_value('bar:baz', update_with) }}"
@@ -1417,6 +1428,7 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, 'random')
 
+    @skipIf(HAS_JMESPATH is False, 'The `jmespath` library is not installed.')
     def test_json_query(self):
         '''
         Test the `json_query` Jinja filter.
