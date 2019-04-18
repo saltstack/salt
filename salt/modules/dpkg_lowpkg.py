@@ -202,11 +202,8 @@ def file_list(*packages):
         if 'No packages found' in line:
             errors.append(line)
     for pkg in pkgs:
-        files = []
-        cmd = 'dpkg -L {0}'.format(pkg)
-        for line in __salt__['cmd.run'](cmd, python_shell=False).splitlines():
-            files.append(line)
-        fileset = set(files)
+        output = __salt__["cmd.run"](["dpkg", "-L", pkg], python_shell=False)
+        fileset = set(output.splitlines())
         ret = ret.union(fileset)
     return {'errors': errors, 'files': list(ret)}
 
@@ -244,11 +241,8 @@ def file_dict(*packages):
         if 'No packages found' in line:
             errors.append(line)
     for pkg in pkgs:
-        files = []
-        cmd = 'dpkg -L {0}'.format(pkg)
-        for line in __salt__['cmd.run'](cmd, python_shell=False).splitlines():
-            files.append(line)
-        ret[pkg] = files
+        cmd = ["dpkg", "-L", pkg]
+        ret[pkg] = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
     return {'errors': errors, 'packages': ret}
 
 
