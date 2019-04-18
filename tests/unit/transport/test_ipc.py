@@ -240,3 +240,16 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
         self.assertEqual(len(call_cnt), 2)
         self.assertEqual(call_cnt[0], 'TEST')
         self.assertEqual(call_cnt[1], 'TEST')
+
+    def test_sync_reading(self):
+        # To be completely fair let's create 2 clients.
+        client1 = self.sub_channel
+        client2 = self._get_sub_channel()
+        call_cnt = []
+
+        # Now let both waiting data at once
+        self.pub_channel.publish('TEST')
+        ret1 = client1.read_sync()
+        ret2 = client2.read_sync()
+        self.assertEqual(ret1, 'TEST')
+        self.assertEqual(ret2, 'TEST')
