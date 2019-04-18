@@ -5,7 +5,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
 import salt.utils.platform
@@ -105,3 +105,14 @@ class WinFunctionsTestCase(TestCase):
         with patch('win32net.NetUserGetLocalGroups', side_effect=effect):
             ret = win_functions.get_user_groups('Administrator')
             self.assertListEqual(groups, ret)
+
+    @skipIf(not salt.utils.platform.is_windows(),
+            'WinDLL only available on Windows')
+    @skipIf(not HAS_WIN32, 'Requires pywin32 libraries')
+    def test_get_user_groups_missing_permission(self):
+        win_error = WinError()
+        win_error.winerror = 1927
+        mock_error = MagicMock(side_effect=win_error)
+        with patch('win32net.NetUserGetLocalGroups', side_effect=mock_error):
+            with self.assertRaises(WinError):
+                win_functions.get_user_groups('Administrator')
