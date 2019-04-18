@@ -313,14 +313,21 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Make sure that directories including symlinks or symlinks can be removed
         '''
-        base = temp.dir(prefix='base')
-        target = os.path.join(base, 'child 1', 'target/')
+        base = temp.dir(prefix='base-')
+        target = os.path.join(base, 'child 1', 'target\\')
         symlink = os.path.join(base, 'child 2', 'link')
-        self.assertFalse(win_file.directory_exists(target))
-        self.assertFalse(win_file.directory_exists(symlink))
-        self.assertTrue(win_file.makedirs_(target))
-        self.assertTrue(win_file.directory_exists(symlink))
-        self.assertTrue(win_file.symlink(target, symlink))
-        self.assertTrue(win_file.is_link(symlink))
-        self.assertTrue(win_file.remove(base))
-        self.assertFalse(win_file.directory_exists(base))
+        try:
+            # Create environment
+            self.assertFalse(win_file.directory_exists(target))
+            self.assertFalse(win_file.directory_exists(symlink))
+            self.assertTrue(win_file.makedirs_(target))
+            self.assertTrue(win_file.makedirs_(symlink))
+            self.assertTrue(win_file.symlink(target, symlink))
+            self.assertTrue(win_file.directory_exists(symlink))
+            self.assertTrue(win_file.is_link(symlink))
+            # Test removal of directory containing symlink
+            self.assertTrue(win_file.remove(base))
+            self.assertFalse(win_file.directory_exists(base))
+        finally:
+            if os.path.exists(base):
+                win_file.remove(base)

@@ -91,7 +91,7 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
                 self.base_ret_with({
                     'result': None,
                     'comment': comment,
-                    'pchanges': {'old': None, 'new': self.name},
+                    'changes': {'old': None, 'new': self.name},
                 }),
             )
 
@@ -191,7 +191,7 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
                 self.base_ret_with({
                     'result': None,
                     'comment': '\n'.join([header, diff]),
-                    'pchanges': {'diff': diff},
+                    'changes': {'diff': diff},
                 }),
             )
 
