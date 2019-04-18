@@ -53,7 +53,7 @@ except ImportError:
     HAS_TIMELIB = False
 
 try:
-    import jmespath
+    import jmespath # pylint: disable=W0611
     HAS_JMESPATH = True
 except ImportError:
     HAS_JMESPATH = False
