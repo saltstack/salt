@@ -150,7 +150,8 @@ def list_pkgs(*packages):
     .. code-block:: bash
 
         salt '*' lowpkg.list_pkgs
-        salt '*' lowpkg.list_pkgs httpd
+        salt '*' lowpkg.list_pkgs hostname
+        salt '*' lowpkg.list_pkgs hostname mount
     """
     cmd = [
         "dpkg-query",
@@ -179,8 +180,8 @@ def file_list(*packages):
 
     .. code-block:: bash
 
-        salt '*' lowpkg.file_list httpd
-        salt '*' lowpkg.file_list httpd postfix
+        salt '*' lowpkg.file_list hostname
+        salt '*' lowpkg.file_list hostname mount
         salt '*' lowpkg.file_list
     """
     errors = []
@@ -214,8 +215,8 @@ def file_dict(*packages):
 
     .. code-block:: bash
 
-        salt '*' lowpkg.file_dict httpd
-        salt '*' lowpkg.file_dict httpd postfix
+        salt '*' lowpkg.file_dict hostname
+        salt '*' lowpkg.file_dict hostname mount
         salt '*' lowpkg.file_dict
     """
     errors = []
