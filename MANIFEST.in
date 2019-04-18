@@ -17,7 +17,7 @@ include tests/integration/files/*
 include tests/unit/templates/files/*
 recursive-include doc *
 recursive-include scripts *
-include conf/*
+recursive-include conf *
 recursive-include pkg *
 recursive-include salt *.jinja
 recursive-include salt *.flo
