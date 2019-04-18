@@ -508,6 +508,26 @@ def runtests_raet_pycryptodomex(session, coverage):
     )
 
 
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-cloud')
+@nox.parametrize('coverage', [False, True])
+def runtests_cloud(session, coverage):
+    # Install requirements
+    _install_requirements(session, 'zeromq', 'unittest-xml-reporting==2.2.1')
+
+    pydir = _get_pydir(session)
+    cloud_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', pydir, 'cloud.txt')
+
+    session.install('--progress-bar=off', '-r', cloud_requirements, silent=PIP_INSTALL_SILENT)
+
+    cmd_args = [
+        '--tests-logfile={}'.format(
+            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
+        ),
+        '--cloud-provider-tests'
+    ] + session.posargs
+    _runtests(session, coverage, cmd_args)
+
+
 @nox.session(python=_PYTHON_VERSIONS, name='pytest-parametrized')
 @nox.parametrize('coverage', [False, True])
 @nox.parametrize('transport', ['zeromq', 'raet', 'tcp'])
@@ -702,6 +722,29 @@ def pytest_raet_pycryptodomex(session, coverage):
             coverage
         )
     )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-cloud')
+@nox.parametrize('coverage', [False, True])
+def pytest_cloud(session, coverage):
+    # Install requirements
+    _install_requirements(session, 'zeromq')
+    pydir = _get_pydir(session)
+    cloud_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', pydir, 'cloud.txt')
+
+    session.install('--progress-bar=off', '-r', cloud_requirements, silent=PIP_INSTALL_SILENT)
+
+    cmd_args = [
+        '--rootdir', REPO_ROOT,
+        '--log-file={}'.format(
+            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
+        ),
+        '--no-print-logs',
+        '-ra',
+        '-s',
+        os.path.join(REPO_ROOT, 'tests', 'integration', 'cloud', 'providers')
+    ] + session.posargs
+    _pytest(session, coverage, cmd_args)
 
 
 def _pytest(session, coverage, cmd_args):
