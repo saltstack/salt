@@ -152,19 +152,20 @@ def list_pkgs(*packages):
         salt '*' lowpkg.list_pkgs
         salt '*' lowpkg.list_pkgs httpd
     """
-    pkgs = {}
-    cmd = "dpkg -l {0}".format(" ".join(packages))
+    cmd = [
+        "dpkg-query",
+        "-f=${db:Status-Status}\t${binary:Package}\t${Version}\n",
+        "-W",
+    ] + list(packages)
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
     if out["retcode"] != 0:
         msg = "Error:  " + out["stderr"]
         log.error(msg)
         return msg
-    out = out["stdout"]
 
-    for line in out.splitlines():
-        if line.startswith("ii "):
-            comps = line.split()
-            pkgs[comps[1]] = comps[2]
+    lines = [line.split("\t", 1) for line in out["stdout"].splitlines()]
+    pkgs = dict([line.split("\t") for status, line in lines if status == "installed"])
+
     return pkgs
 
 
@@ -184,21 +185,18 @@ def file_list(*packages):
     """
     errors = []
     ret = set([])
-    pkgs = {}
-    cmd = "dpkg -l {0}".format(" ".join(packages))
+    cmd = ["dpkg-query", "-f=${db:Status-Status}\t${binary:Package}\n", "-W"] + list(
+        packages
+    )
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
     if out["retcode"] != 0:
         msg = "Error:  " + out["stderr"]
         log.error(msg)
         return msg
-    out = out["stdout"]
 
-    for line in out.splitlines():
-        if line.startswith("ii "):
-            comps = line.split()
-            pkgs[comps[1]] = {"version": comps[2], "description": " ".join(comps[3:])}
-        if "No packages found" in line:
-            errors.append(line)
+    lines = [line.split("\t") for line in out["stdout"].splitlines()]
+    pkgs = [package for (status, package) in lines if status == "installed"]
+
     for pkg in pkgs:
         output = __salt__["cmd.run"](["dpkg", "-L", pkg], python_shell=False)
         fileset = set(output.splitlines())
@@ -222,21 +220,18 @@ def file_dict(*packages):
     """
     errors = []
     ret = {}
-    pkgs = {}
-    cmd = "dpkg -l {0}".format(" ".join(packages))
+    cmd = ["dpkg-query", "-f=${db:Status-Status}\t${binary:Package}\n", "-W"] + list(
+        packages
+    )
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
     if out["retcode"] != 0:
         msg = "Error:  " + out["stderr"]
         log.error(msg)
         return msg
-    out = out["stdout"]
 
-    for line in out.splitlines():
-        if line.startswith("ii "):
-            comps = line.split()
-            pkgs[comps[1]] = {"version": comps[2], "description": " ".join(comps[3:])}
-        if "No packages found" in line:
-            errors.append(line)
+    lines = [line.split("\t") for line in out["stdout"].splitlines()]
+    pkgs = [package for (status, package) in lines if status == "installed"]
+
     for pkg in pkgs:
         cmd = ["dpkg", "-L", pkg]
         ret[pkg] = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
