@@ -237,7 +237,7 @@ class Runner(RunnerClient):
                     if self.opts.get('eauth'):
                         async_pub = self.cmd_async(low)
                     else:
-                        async_pub = self.async(self.opts['fun'],
+                        async_pub = self.async(self.opts['fun'],  # pylint: disable=W8606
                                                low,
                                                user=user,
                                                pub=async_pub)

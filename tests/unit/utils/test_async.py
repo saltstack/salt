@@ -8,7 +8,7 @@ import tornado.testing
 import tornado.gen
 from tornado.testing import AsyncTestCase
 
-from salt.utils import async
+from salt.utils import async  # pylint: disable=W8606
 
 
 class HelperA(object):
@@ -24,7 +24,7 @@ class HelperA(object):
 class HelperB(object):
     def __init__(self, a=None, io_loop=None):
         if a is None:
-            a = async.SyncWrapper(HelperA)
+            a = async.SyncWrapper(HelperA)  # pylint: disable=W8606
         self.a = a
 
     @tornado.gen.coroutine
@@ -52,7 +52,7 @@ class TestSyncWrapper(AsyncTestCase):
         '''
         Test that we can wrap an async caller.
         '''
-        sync = async.SyncWrapper(HelperA)
+        sync = async.SyncWrapper(HelperA)  # pylint: disable=W8606
         ret = sync.sleep()
         self.assertTrue(ret)
 
@@ -63,7 +63,7 @@ class TestSyncWrapper(AsyncTestCase):
         This works fine since the second wrap is based on the first's IOLoop so we
         don't have to worry about complex start/stop mechanics
         '''
-        sync = async.SyncWrapper(HelperB)
+        sync = async.SyncWrapper(HelperB)  # pylint: disable=W8606
         ret = sync.sleep()
         self.assertFalse(ret)
 
@@ -72,7 +72,7 @@ class TestSyncWrapper(AsyncTestCase):
         Test async wrappers initiated from the same IOLoop, to ensure that
         we don't wire up both to the same IOLoop (since it causes MANY problems).
         '''
-        a = async.SyncWrapper(HelperA)
-        sync = async.SyncWrapper(HelperB, (a,))
+        a = async.SyncWrapper(HelperA)  # pylint: disable=W8606
+        sync = async.SyncWrapper(HelperB, (a,))  # pylint: disable=W8606
         ret = sync.sleep()
         self.assertFalse(ret)

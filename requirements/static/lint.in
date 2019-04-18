@@ -1,0 +1,4 @@
+# Lint requirements
+
+pylint==1.6.5
+SaltPyLint>=v2017.3.6
