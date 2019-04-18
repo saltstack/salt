@@ -94,7 +94,7 @@ def creds(provider):
     ## if needed
     if provider['id'] == IROLE_CODE or provider['key'] == IROLE_CODE:
         # Check to see if we have cache credentials that are still good
-        if __Expiration__ == '' or datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ') > __Expiration__:
+        if not __Expiration__ or __Expiration__ < datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'):
             # We don't have any cached credentials, or they are expired, get them
             # Connections to instance meta-data must fail fast and never be proxied
             try:
