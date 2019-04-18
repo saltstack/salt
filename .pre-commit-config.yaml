@@ -7,7 +7,7 @@ repos:
         alias: compile-linux-py2.7-tcp-requirements
         name: Linux Py2.7 TCP Requirements
         files: ^requirements/((base|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(lint|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(lint|cloud|docs|osx|windows|)\.in$
         args:
           - -v
           - --py-version=2.7
@@ -41,7 +41,7 @@ repos:
         alias: compile-linux-py2.7-zmq-requirements
         name: Linux Py2.7 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(lint|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=2.7
@@ -81,7 +81,7 @@ repos:
         alias: compile-linux-py2.7-raet-requirements
         name: Linux Py2.7 RAET Requirements
         files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(lint|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=2.7
@@ -136,12 +136,20 @@ repos:
           - --py-version=2.7
           - --platform=linux
 
+      - id: pip-tools-compile
+        alias: compile-cloud-py2.7-requirements
+        name: Cloud Py2.7 Requirements
+        files: ^requirements/(static/cloud\.in)$
+        args:
+          - -v
+          - --py-version=2.7
+
 
       - id: pip-tools-compile
         alias: compile-linux-py3.4-tcp-requirements
         name: Linux Py3.4 TCP Requirements
         files: ^requirements/((base|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.4
@@ -153,7 +161,7 @@ repos:
         alias: compile-linux-py3.4-zmq-requirements
         name: Linux Py3.4 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.4
@@ -167,7 +175,7 @@ repos:
         alias: compile-linux-py3.4-raet-requirements
         name: Linux Py3.4 RAET Requirements
         files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.4
@@ -180,10 +188,18 @@ repos:
           - --remove-line=^enum34==(.*)$
 
       - id: pip-tools-compile
+        alias: compile-cloud-py3.4-requirements
+        name: Cloud Py3.4 Requirements
+        files: ^requirements/(static/cloud\.in)$
+        args:
+          - -v
+          - --py-version=3.4
+
+      - id: pip-tools-compile
         alias: compile-linux-py3.5-tcp-requirements
         name: Linux Py3.5 TCP Requirements
         files: ^requirements/((base|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.5
@@ -217,7 +233,7 @@ repos:
         alias: compile-linux-py3.5-zmq-requirements
         name: Linux Py3.5 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.5
@@ -257,7 +273,7 @@ repos:
         alias: compile-linux-py3.5-raet-requirements
         name: Linux Py3.5 RAET Requirements
         files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.5
@@ -298,10 +314,18 @@ repos:
           - --remove-line=^enum34==(.*)$
 
       - id: pip-tools-compile
+        alias: compile-cloud-py3.5-requirements
+        name: Cloud Py3.5 Requirements
+        files: ^requirements/(static/cloud\.in)$
+        args:
+          - -v
+          - --py-version=3.5
+
+      - id: pip-tools-compile
         alias: compile-linux-py3.6-tcp-requirements
         name: Linux Py3.6 TCP Requirements
         files: ^requirements/((base|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.6
@@ -324,7 +348,7 @@ repos:
         alias: compile-linux-py3.6-zmq-requirements
         name: Linux Py3.6 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.6
@@ -364,7 +388,7 @@ repos:
         alias: compile-linux-py3.6-raet-requirements
         name: Linux Py3.6 RAET Requirements
         files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.6
@@ -403,3 +427,11 @@ repos:
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
           - --remove-line=^enum34==(.*)$
+
+      - id: pip-tools-compile
+        alias: compile-cloud-py3.6-requirements
+        name: Cloud Py3.6 Requirements
+        files: ^requirements/(static/cloud\.in)$
+        args:
+          - -v
+          - --py-version=3.6
