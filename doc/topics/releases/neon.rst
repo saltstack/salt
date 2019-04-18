@@ -396,12 +396,28 @@ the ``beacon_module`` parameter in the beacon configuration.
 Salt Cloud Features
 ===================
 
+General
+-------
+
+The salt-cloud WinRM util has been extended to allow for an Administrator
+account rename during deployment (for example, the Administator account
+being renamed by an Active Directory group policy).
+
 GCE Driver
 ----------
 
 The GCE salt cloud driver can now be used with GCE instance credentials by
 setting the configuration paramaters ``service_account_private_key`` and
 ``service_account_private_email`` to an empty string.
+
+VMWware Driver
+--------------
+
+The VMWare driver has been updated to:
+    Allow specifying a Windows domain to join during customization.
+    Allow specifying timezone for the system during customization.
+    Allow disabling the Windows autologon after deployment.
+    Allow specifying the source template/VM's datacenter (to allow cloning between datacenters).
 
 Salt Api
 ========
