@@ -3016,7 +3016,7 @@ class GitPillar(GitBase):
                 if repo.branch == '__env__' and hasattr(repo, 'all_saltenvs'):
                     env = self.opts.get('pillarenv') \
                         or self.opts.get('saltenv') \
-                        or self.opts.get('git_pillar_base')
+                        or 'base'
                 elif repo.env:
                     env = repo.env
                 else:
