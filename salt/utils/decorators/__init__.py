@@ -344,6 +344,7 @@ class _IsDeprecated(_DeprecationDecorator):
         '''
         _DeprecationDecorator.__call__(self, function)
 
+        @wraps(function)
         def _decorate(*args, **kwargs):
             '''
             Decorator function.
@@ -518,6 +519,7 @@ class _WithDeprecated(_DeprecationDecorator):
         '''
         _DeprecationDecorator.__call__(self, function)
 
+        @wraps(function)
         def _decorate(*args, **kwargs):
             '''
             Decorator function.
