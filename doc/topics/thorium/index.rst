@@ -4,18 +4,6 @@
 Thorium Complex Reactor
 =======================
 
-.. note::
-
-    Thorium is a provisional feature of Salt and is subject to change
-    and removal if the feature proves to not be a viable solution.
-
-.. note::
-
-    Thorium was added to Salt as an experimental feature in the 2016.3.0
-    release, as of 2016.3.0 this feature is considered experimental, no
-    guarantees are made for support of any kind yet.
-
-
 The original Salt Reactor is based on the idea of listening for a specific
 event and then reacting to it. This model comes with many logical limitations,
 for instance it is very difficult (and hacky) to fire a reaction based on
