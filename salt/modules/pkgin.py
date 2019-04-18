@@ -117,7 +117,7 @@ def _splitpkg(name):
         return name.split(';', 1)[0].rsplit('-', 1)
 
 
-def search(pkg_name):
+def search(pkg_name, **kwargs):
     '''
     Searches for an exact match using pkgin ^package$
 
@@ -230,7 +230,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def refresh_db(force=False):
+def refresh_db(force=False, **kwargs):
     '''
     Use pkg update to get latest pkg_summary
 
@@ -642,7 +642,7 @@ def _rehash():
         __salt__['cmd.run']('rehash', output_loglevel='trace')
 
 
-def file_list(package):
+def file_list(package, **kwargs):
     '''
     List the files that belong to a package.
 
@@ -660,7 +660,7 @@ def file_list(package):
     return ret
 
 
-def file_dict(*packages):
+def file_dict(*packages, **kwargs):
     '''
     .. versionchanged: 2016.3.0
 
