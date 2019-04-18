@@ -17,6 +17,7 @@ from tests.support.unit import skipIf
 
 
 @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
+@skipIf(salt.utils.platform.is_aix(), 'minion is AIX')
 class ManTest(ModuleCase):
     rootdir = os.path.join(TMP, 'mantest')
     # Map filenames to search strings which should be in the manpage

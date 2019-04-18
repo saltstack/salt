@@ -59,7 +59,6 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
     ret = {'name': name,
            'result': True,
            'changes': {},
-           'pchanges': {},
            'comment': ''}
 
     _octal = {'r': 4, 'w': 2, 'x': 1, '-': 0}
@@ -132,7 +131,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
                                     acl_name,
                                     new_perms,
                                     perms),
-                                'result': None, 'pchanges': changes})
+                                'result': None, 'changes': changes})
                     return ret
                 try:
                     __salt__['acl.modfacl'](acl_type, acl_name, perms, name,
@@ -151,8 +150,8 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
 
             if __opts__['test']:
                 ret.update({'comment': 'New permissions will be applied for '
-                            '{0}: {1}'.format(acl_name, perms),
-                            'result': None, 'pchanges': changes})
+                                       '{0}: {1}'.format(acl_name, perms),
+                            'result': None, 'changes': changes})
                 ret['result'] = None
                 return ret
 
