@@ -203,7 +203,7 @@ def file_list(*packages):
         output = __salt__["cmd.run"](["dpkg", "-L", pkg], python_shell=False)
         fileset = set(output.splitlines())
         ret = ret.union(fileset)
-    return {"errors": errors, "files": list(ret)}
+    return {"errors": errors, "files": sorted(ret)}
 
 
 def file_dict(*packages):
