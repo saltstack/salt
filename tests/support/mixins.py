@@ -712,7 +712,7 @@ class SaltMinionEventAssertsMixin(object):
                 event = self.q.get(False)
             except Empty:
                 time.sleep(sleep_time)
-                if start - time.time() >= timeout:
+                if time.time() - start >= timeout:
                     break
                 continue
             if isinstance(event, dict):
@@ -720,7 +720,7 @@ class SaltMinionEventAssertsMixin(object):
             if desired_event == event:
                 self.fetch_proc.terminate()
                 return True
-            if start - time.time() >= timeout:
+            if time.time() - start >= timeout:
                 break
         self.fetch_proc.terminate()
         raise AssertionError('Event {0} was not received by minion'.format(desired_event))
