@@ -67,7 +67,7 @@ def nop(name, **kwargs):
     return succeed_without_changes(name)
 
 
-def succeed_without_changes(name, **kwargs):
+def succeed_without_changes(name, **kwargs):  # pylint: disable=unused-argument
     '''
     Returns successful.
 
@@ -85,7 +85,7 @@ def succeed_without_changes(name, **kwargs):
     return ret
 
 
-def fail_without_changes(name, **kwargs):
+def fail_without_changes(name, **kwargs):  # pylint: disable=unused-argument
     '''
     Returns failure.
 
@@ -108,7 +108,7 @@ def fail_without_changes(name, **kwargs):
     return ret
 
 
-def succeed_with_changes(name, **kwargs):
+def succeed_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     '''
     Returns successful and changes is not empty
 
@@ -141,7 +141,7 @@ def succeed_with_changes(name, **kwargs):
     return ret
 
 
-def fail_with_changes(name, **kwargs):
+def fail_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     '''
     Returns failure and changes is not empty.
 

@@ -115,7 +115,6 @@ class StdTest(ModuleCase):
             ],
             kwarg={
                 'quux': 'Quux',
-
             },
             timeout=self.TIMEOUT,
         )
