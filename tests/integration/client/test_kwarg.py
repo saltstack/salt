@@ -10,6 +10,9 @@ from tests.support.case import ModuleCase
 from salt.ext import six
 
 
+TIMEOUT = 600
+
+
 class StdTest(ModuleCase):
     '''
     Test standard client calls
@@ -81,12 +84,15 @@ class StdTest(ModuleCase):
         '''
         terrible_yaml_string = 'foo: ""\n# \''
         ret = self.client.cmd_full_return(
-                'minion',
-                'test.arg_type',
-                ['a', 1],
-                kwarg={'outer': {'a': terrible_yaml_string},
-                       'inner': 'value'}
-                )
+            'minion',
+            'test.arg_type',
+            ['a', 1],
+            kwarg={
+                'outer': {'a': terrible_yaml_string},
+                'inner': 'value'
+            },
+            timeout=TIMEOUT,
+        )
         data = ret['minion']['ret']
         self.assertIn(six.text_type.__name__, data['args'][0])
         self.assertIn('int', data['args'][1])
@@ -94,7 +100,9 @@ class StdTest(ModuleCase):
         self.assertIn(six.text_type.__name__, data['kwargs']['inner'])
 
     def test_full_return_kwarg(self):
-        ret = self.client.cmd('minion', 'test.ping', full_return=True)
+        ret = self.client.cmd(
+            'minion', 'test.ping', full_return=True, timeout=TIMEOUT,
+        )
         for mid, data in ret.items():
             self.assertIn('retcode', data)
 
@@ -107,7 +115,9 @@ class StdTest(ModuleCase):
             ],
             kwarg={
                 'quux': 'Quux',
-            })
+            },
+            timeout=TIMEOUT,
+        )
 
         self.assertEqual(ret['minion'], {
             'args': ['foo'],
