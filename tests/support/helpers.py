@@ -211,7 +211,10 @@ def flaky(caller=None, condition=True):
                 if attempt >= 3:
                     raise exc
                 backoff_time = attempt ** 2
-                log.info('Found Exception. Waiting %s seconds to retry.', backoff_time)
+                log.info(
+                    'Found Exception. Waiting %s seconds to retry.',
+                    backoff_time
+                )
                 time.sleep(backoff_time)
         return cls
     return wrap
