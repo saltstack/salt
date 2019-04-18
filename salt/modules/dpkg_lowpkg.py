@@ -214,9 +214,9 @@ def file_dict(*packages):
 
     .. code-block:: bash
 
-        salt '*' lowpkg.file_list httpd
-        salt '*' lowpkg.file_list httpd postfix
-        salt '*' lowpkg.file_list
+        salt '*' lowpkg.file_dict httpd
+        salt '*' lowpkg.file_dict httpd postfix
+        salt '*' lowpkg.file_dict
     """
     errors = []
     ret = {}
