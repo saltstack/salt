@@ -109,7 +109,7 @@ class WinFunctionsTestCase(TestCase):
     @skipIf(not salt.utils.platform.is_windows(),
             'WinDLL only available on Windows')
     @skipIf(not HAS_WIN32, 'Requires pywin32 libraries')
-    def test_get_user_groups_missing_permission(self):
+    def test_get_user_groups_error(self):
         win_error = WinError()
         win_error.winerror = 1927
         mock_error = MagicMock(side_effect=win_error)
