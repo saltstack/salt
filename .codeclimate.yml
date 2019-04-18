@@ -1,13 +1,21 @@
-languages:
-  Ruby: false
-  JavaScript: false
-  Python: true
-  PHP: false
+version: "2"
 
-engines:
+exclude_patterns:
+  - "*.js"
+  - "*.rb"
+  - "*.php"
+
+plugins:
   radon:
     enabled: true
-    exclude_paths:
+    exclude_patterns:
       - "templates/"
     config:
       threshold: "D"
+
+checks:
+  argument-count:
+    enabled: false
+  similar-code:
+    config:
+      threshold: 40
