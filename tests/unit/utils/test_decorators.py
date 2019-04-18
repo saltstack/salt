@@ -354,37 +354,25 @@ class DecoratorsTest(TestCase):
             assert depr(self.new_function)() == self.new_function()
 
     def test_with_depreciated_should_wrap_function(self):
-        def func(): pass
-
-        wrapped = decorators.with_deprecated({}, "Beryllium")(func)
-        assert wrapped.__module__ == func.__module__
+        wrapped = decorators.with_deprecated({}, "Beryllium")(self.old_function)
+        assert wrapped.__module__ == self.old_function.__module__
 
     def test_is_deprecated_should_wrap_function(self):
-        def func(): pass
-
-        wrapped = decorators.is_deprecated({}, "Beryllium")(func)
-        assert wrapped.__module__ == func.__module__
+        wrapped = decorators.is_deprecated({}, "Beryllium")(self.old_function)
+        assert wrapped.__module__ == self.old_function.__module__
 
     def test_ensure_unicode_args_should_wrap_function(self):
-        def func(): pass
-
-        wrapped = decorators.ensure_unicode_args(func)
-        assert wrapped.__module__ == func.__module__
+        wrapped = decorators.ensure_unicode_args(self.old_function)
+        assert wrapped.__module__ == self.old_function.__module__
 
     def test_ignores_kwargs_should_wrap_function(self):
-        def func(): pass
-
-        wrapped = decorators.ignores_kwargs('foo', 'bar')(func)
-        assert wrapped.__module__ == func.__module__
+        wrapped = decorators.ignores_kwargs('foo', 'bar')(self.old_function)
+        assert wrapped.__module__ == self.old_function.__module__
 
     def test_memoize_should_wrap_function(self):
-        def func(): pass
-
-        wrapped = decorators.memoize(func)
-        assert wrapped.__module__ == func.__module__
+        wrapped = decorators.memoize(self.old_function)
+        assert wrapped.__module__ == self.old_function.__module__
 
     def timing_should_wrap_function(self):
-        def func(): pass
-            
-        wrapped = decorators.timing(func)
-        assert wrapped.__module__ == func.__module__
+        wrapped = decorators.timing(self.old_function)
+        assert wrapped.__module__ == self.old_function.__module__
