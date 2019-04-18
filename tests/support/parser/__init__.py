@@ -195,6 +195,13 @@ class SaltTestingParser(optparse.OptionParser):
             help=('The location of a newline delimited file of test names to '
                   'run')
         )
+        self.test_selection_group.add_option(
+            '--from-filenames',
+            dest='from_filenames',
+            action='append',
+            default=None,
+            help='This option is only important on Salt >= 2018.3. Currently does not do anything.'
+        )
         self.add_option_group(self.test_selection_group)
 
         if self.support_docker_execution is True:
@@ -302,6 +309,10 @@ class SaltTestingParser(optparse.OptionParser):
 
     def parse_args(self, args=None, values=None):
         self.options, self.args = optparse.OptionParser.parse_args(self, args, values)
+
+        if self.options.from_filenames is not None:
+            print('The --from-filenames flag is ignored on 2017.7.x and only respected after salt 2018.3.x')
+
         if self.options.names_file:
             with open(self.options.names_file, 'rb') as fp_:  # pylint: disable=resource-leakage
                 lines = []

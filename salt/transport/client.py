@@ -10,7 +10,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Libs
-from salt.utils.async import SyncWrapper
+from salt.utils.async import SyncWrapper  # pylint: disable=W8606
 
 log = logging.getLogger(__name__)
 
