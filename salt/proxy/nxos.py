@@ -351,16 +351,16 @@ def proxy_config(commands, **kwargs):
     try:
         if CONNECTION == 'ssh':
             _sendline_ssh('config terminal')
-            single_cmd = ''
+            prev_cmds = []
             for cmd in commands:
-                single_cmd += cmd + ' ; '
-            ret = _sendline_ssh(single_cmd + 'end')
+                prev_cmds.append(cmd)
+                ret = _sendline_ssh(cmd)
             if no_save_config:
                 pass
             else:
                 _sendline_ssh(COPY_RS)
             if ret:
-                log.error(ret)
+                log.error(prev_cmds)
         elif CONNECTION == 'nxapi':
             ret = _nxapi_request(commands)
             if no_save_config:
