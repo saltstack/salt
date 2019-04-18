@@ -83,7 +83,12 @@ def get_user_groups(name, sid=False):
         # 'win32net.NetUserGetLocalGroups' will fail if you pass in 'SYSTEM'.
         groups = [name]
     else:
-        groups = win32net.NetUserGetLocalGroups(None, name)
+        try:
+            groups = win32net.NetUserGetLocalGroups(None, name)
+        except pywintypes.error as exc:
+            # Try without LG_INCLUDE_INDIRECT flag, because the user might not have
+            # permissions for it
+            groups = win32net.NetUserGetLocalGroups(None, name, 0)
 
     if not sid:
         return groups
