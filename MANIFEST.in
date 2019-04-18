@@ -21,5 +21,6 @@ recursive-include conf *
 recursive-include pkg *
 recursive-include salt *.jinja
 recursive-include salt *.flo
+recursive-include templates *
 include salt/templates/git/*
 include salt/templates/lxc/*
