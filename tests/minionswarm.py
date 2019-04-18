@@ -432,6 +432,7 @@ class MasterSwarm(Swarm):
         )
         print('Master killed')
 
+
 # pylint: disable=C0103
 if __name__ == '__main__':
     swarm = Swarm(parse())
