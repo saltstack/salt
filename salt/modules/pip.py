@@ -79,6 +79,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import logging
 import os
+
 try:
     import pkg_resources
 except ImportError:
@@ -441,7 +442,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             no_cache_dir=False,
             cache_dir=None,
             no_binary=None,
-            pip_future=None,
+            extra_args=None,
             **kwargs):
     '''
     Install packages with pip
@@ -613,17 +614,17 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     no_cache_dir
         Disable the cache.
 
-    pip_future
+    extra_args
         pip keyword and positional arguments not yet implemented in salt
 
-    .. code-block:: yaml
+        .. code-block:: yaml
 
-        pandas:
-          pip.installed:
-            - name: pandas
-            - pip_future:
-              - --latest-pip-kwarg: param
-              - --latest-pip-arg
+            salt '*' pip.install pandas extra_args="[{'--latest-pip-kwarg':'param'}, '--latest-pip-arg']"
+
+        .. warning::
+
+            If unsupported options are passed here that are not supported in a
+            minion's version of pip, a `No such option error` will be thrown.
 
     Will be translated into the following pip command:
 
@@ -914,10 +915,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if trusted_host:
         cmd.extend(['--trusted-host', trusted_host])
 
-    if pip_future:
+    if extra_args:
         # These are arguments from the latest version of pip that
         # have not yet been implemented in salt
-        for arg in pip_future:
+        for arg in extra_args:
             # It is a keyword argument
             if isinstance(arg, dict):
                 # There will only ever be one item in this dictionary
