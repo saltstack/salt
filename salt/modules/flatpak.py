@@ -36,6 +36,7 @@ def install(location, name):
         dict: The ``result`` and ``output``.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' flatpak.install flathub org.gimp.GIMP
@@ -65,6 +66,7 @@ def is_installed(name):
         bool: True if the specified package or runtime is installed.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' flatpak.is_installed org.gimp.GIMP
@@ -88,6 +90,7 @@ def uninstall(pkg):
         dict: The ``result`` and ``output``.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' flatpak.uninstall org.gimp.GIMP
@@ -108,9 +111,17 @@ def uninstall(pkg):
 
 def add_remote(name, location):
     '''
-    :noindex:
+    Adds a new location to install flatpak packages from.
+
+    Args:
+        name (str): The repository's name.
+        location (str): The location of the repository.
+
+    Returns:
+        dict: The ``result`` and ``output``.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' flatpak.add_remote flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -139,6 +150,7 @@ def is_remote_added(remote):
         bool: True if the remote has already been added.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' flatpak.is_remote_added flathub

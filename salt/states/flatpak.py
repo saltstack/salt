@@ -32,7 +32,8 @@ def installed(location, name):
         dict: The ``result`` and ``output``.
 
     Example:
-    .. code-block:: bash
+
+    .. code-block:: yaml
 
         install_package:
           flatpack.installed:
@@ -86,7 +87,8 @@ def uninstalled(name):
         dict: The ``result`` and ``output``.
 
     Example:
-    .. code-block:: bash
+
+    .. code-block:: yaml
 
         uninstall_package:
           flatpack.uninstalled:
@@ -131,7 +133,8 @@ def add_remote(name, location):
         dict: The ``result`` and ``output``.
 
     Example:
-    .. code-block:: bash
+
+    .. code-block:: yaml
 
         add_flathub:
           flatpack.add_remote:
