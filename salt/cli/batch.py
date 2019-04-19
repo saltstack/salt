@@ -85,7 +85,8 @@ class Batch(object):
         '''
         partition = lambda x: float(x) / 100.0 * len(self.minions)
         try:
-            if isinstance(self.opts['batch'], str) and '%' in self.opts['batch']:
+            if (isinstance(self.opts['batch'], str) or isinstance(self.opts['batch'], unicode)) \
+                    and '%' in self.opts['batch']:
                 res = partition(float(self.opts['batch'].strip('%')))
                 if res < 1:
                     return int(math.ceil(res))
