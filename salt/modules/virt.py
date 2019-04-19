@@ -3189,7 +3189,10 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
             shutil.rmtree(dir_)
     if getattr(libvirt, 'VIR_DOMAIN_UNDEFINE_NVRAM', False):
         # This one is only in 1.2.8+
-        dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
+        try:
+            dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
+        except Exception:
+            dom.undefine()
     else:
         dom.undefine()
     conn.close()
