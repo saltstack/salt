@@ -414,6 +414,8 @@ def _run(cmd,
         # method doesn't work properly when run as root for certain commands.
         if isinstance(cmd, (list, tuple)):
             cmd = ' '.join(map(_cmd_quote, cmd))
+            # This patch is explained on https://github.com/saltstack/salt/pull/52632#issuecomment-485046644
+            cmd = cmd.replace("'", '"')
 
         cmd = "su -l {0} -c 'cd {1} && {2}'".format(runas, cwd, cmd)
         # set runas to None, because if you try to run `su -l` as well as

@@ -360,6 +360,22 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get('stdout')
         self.assertEqual(stdout, cwd)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
+    def test_avoid_injecting_shell_code_as_root_on_darwin(self):
+        '''
+        cmd.run executes command without executing injected code as root
+        '''
+        cmd = 'echo $(id -u)'
+        cwd = '/tmp'
+        runas = 'foobar'
+
+        with patch('pwd.getpwnam') as getpwnam_mock, \
+            patch.dict(cmdmod.__grains__, {'os': 'Darwin', 'os_family': 'Solaris'}):
+            with patch('salt.utils.platform.is_darwin', MagicMock(return_value=True)):
+                root_id = cmdmod._run(cmd, cwd=cwd).get('stdout')
+                user_id = cmdmod._run(cmd, cwd=cwd, runas=runas).get('stdout')
+        self.assertNotEqual(user_id, root_id)
+
     def test_run_all_binary_replace(self):
         '''
         Test for failed decoding of binary data, for instance when doing
