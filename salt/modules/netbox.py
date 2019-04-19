@@ -164,7 +164,7 @@ def filter_(app, endpoint, **kwargs):
     )
     if nb_query:
         ret = [_strip_url_field(dict(i)) for i in nb_query]
-    return sorted(ret)
+    return ret
 
 
 def get_(app, endpoint, id=None, **kwargs):
