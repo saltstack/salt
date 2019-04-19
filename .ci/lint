@@ -36,6 +36,9 @@ pipeline {
                 python --version
                 pip install -U https://github.com/s0undt3ch/nox/archive/hotfix/py2.zip#egg=Nox==2018.10.17
                 nox --version
+                # Create the required virtualens in serial
+                nox --install-only -e lint-salt
+                nox --install-only -e lint-tests
                 '''
                 archiveArtifacts artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log,file-list-experiment.log'
             }
