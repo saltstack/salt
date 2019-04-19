@@ -704,7 +704,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs) or {}
 
 
-def version_cmp(ver1, ver2, ignore_epoch=False):
+def version_cmp(ver1, ver2, ignore_epoch=False, **kwargs):
     '''
     .. versionadded:: 2015.5.4
 
@@ -726,7 +726,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
     return __salt__['lowpkg.version_cmp'](ver1, ver2, ignore_epoch=ignore_epoch)
 
 
-def list_pkgs(versions_as_list=False, root=None, **kwargs):
+def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
     '''
     List the packages currently installed as a dict. By default, the dict
     contains versions as a comma separated string::
@@ -740,6 +740,10 @@ def list_pkgs(versions_as_list=False, root=None, **kwargs):
 
     root:
         operate on a different root directory.
+
+    includes:
+        List of types of packages to include (package, patch, pattern, product)
+        By default packages are always included
 
     attr:
         If a list of package attributes is specified, returned value will
@@ -777,6 +781,8 @@ def list_pkgs(versions_as_list=False, root=None, **kwargs):
     attr = kwargs.get('attr')
     if attr is not None:
         attr = salt.utils.args.split_input(attr)
+
+    includes = includes if includes else []
 
     contextkey = 'pkg.list_pkgs'
 
@@ -821,6 +827,28 @@ def list_pkgs(versions_as_list=False, root=None, **kwargs):
             if pkgname.startswith('gpg-pubkey'):
                 continue
             _ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
+
+        for include in includes:
+            if include in ('pattern', 'patch'):
+                if include == 'pattern':
+                    pkgs = list_installed_patterns(root=root)
+                elif include == 'patch':
+                    pkgs = list_installed_patches(root=root)
+                else:
+                    pkgs = []
+                for pkg in pkgs:
+                    pkg_extended_name = '{}:{}'.format(include, pkg)
+                    info = info_available(pkg_extended_name,
+                                          refresh=False,
+                                          root=root)
+                    _ret[pkg_extended_name] = [{
+                        'epoch': None,
+                        'version': info[pkg]['version'],
+                        'release': None,
+                        'arch': info[pkg]['arch'],
+                        'install_date': None,
+                        'install_date_time_t': None,
+                    }]
 
         __context__[contextkey] = _ret
 
@@ -999,7 +1027,7 @@ def get_repo(repo, root=None, **kwargs):  # pylint: disable=unused-argument
     return _get_repo_info(repo, root=root)
 
 
-def list_repos(root=None):
+def list_repos(root=None, **kwargs):
     '''
     Lists all repos.
 
@@ -1242,6 +1270,12 @@ def refresh_db(root=None):
     return ret
 
 
+def _find_types(pkgs):
+    '''Form a package names list, find prefixes of packages types.'''
+    return sorted({pkg.split(':', 1)[0] for pkg in pkgs
+                   if len(pkg.split(':', 1)) == 2})
+
+
 def install(name=None,
             refresh=False,
             fromrepo=None,
@@ -1426,12 +1460,15 @@ def install(name=None,
             if advisory_id not in cur_patches:
                 raise CommandExecutionError('Advisory id "{0}" not found'.format(advisory_id))
             else:
-                targets.append(advisory_id)
+                targets.append('patch:{}'.format(advisory_id))
     else:
         targets = pkg_params
 
     diff_attr = kwargs.get("diff_attr")
-    old = list_pkgs(attr=diff_attr, root=root) if not downloadonly else list_downloaded(root)
+
+    includes = _find_types(targets)
+    old = list_pkgs(attr=diff_attr, root=root, includes=includes) if not downloadonly else list_downloaded(root)
+
     downgrades = []
     if fromrepo:
         fromrepoopt = ['--force', '--force-resolution', '--from', fromrepo]
@@ -1454,8 +1491,6 @@ def install(name=None,
         cmd_install.append('--no-recommends')
 
     errors = []
-    if pkg_type == 'advisory':
-        targets = ["patch:{0}".format(t) for t in targets]
 
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
@@ -1474,8 +1509,13 @@ def install(name=None,
         __zypper__(no_repo_failure=ignore_repo_failure, root=root).call(*cmd)
 
     _clean_cache()
-    new = list_pkgs(attr=diff_attr, root=root) if not downloadonly else list_downloaded(root)
+    new = list_pkgs(attr=diff_attr, root=root, includes=includes) if not downloadonly else list_downloaded(root)
     ret = salt.utils.data.compare_dicts(old, new)
+
+    # If something else from packages are included in the search,
+    # better clean the cache.
+    if includes:
+        _clean_cache()
 
     if errors:
         raise CommandExecutionError(
@@ -1626,7 +1666,8 @@ def _uninstall(name=None, pkgs=None, root=None):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    old = list_pkgs(root=root)
+    includes = _find_types(pkg_params.keys())
+    old = list_pkgs(root=root, includes=includes)
     targets = []
     for target in pkg_params:
         # Check if package version set to be removed is actually installed:
@@ -1646,7 +1687,8 @@ def _uninstall(name=None, pkgs=None, root=None):
         targets = targets[500:]
 
     _clean_cache()
-    ret = salt.utils.data.compare_dicts(old, list_pkgs(root=root))
+    new = list_pkgs(root=root, includes=includes)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -2534,7 +2576,7 @@ def _get_patches(installed_only=False, root=None):
     return patches
 
 
-def list_patches(refresh=False, root=None):
+def list_patches(refresh=False, root=None, **kwargs):
     '''
     .. versionadded:: 2017.7.0
 
@@ -2560,7 +2602,7 @@ def list_patches(refresh=False, root=None):
     return _get_patches(root=root)
 
 
-def list_installed_patches(root=None):
+def list_installed_patches(root=None, **kwargs):
     '''
     .. versionadded:: 2017.7.0
 
