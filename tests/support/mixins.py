@@ -653,6 +653,14 @@ def _fetch_events(q):
     atexit.register(_clean_queue)
     opts = RUNTIME_VARS.RUNTIME_CONFIGS['minion']
     event = salt.utils.event.get_event('minion', sock_dir=opts['sock_dir'], opts=opts)
+
+    # Wait for event bus to be connected
+    while not event.connect_pull(30):
+        time.sleep(1)
+
+    # Notify parent process that the event bus is connected
+    q.put('CONNECTED')
+
     while True:
         try:
             events = event.get_event(full=False)
@@ -675,6 +683,11 @@ class SaltMinionEventAssertsMixin(object):
             target=_fetch_events, args=(cls.q,)
         )
         cls.fetch_proc.start()
+        # Wait for the event bus to be connected
+        msg = cls.q.get(block=True)
+        if msg != 'CONNECTED':
+            # Just in case something very bad happens
+            raise RuntimeError('Unexpected message in test\'s event queue')
         return object.__new__(cls)
 
     def __exit__(self, *args, **kwargs):
