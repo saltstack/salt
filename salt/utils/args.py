@@ -88,7 +88,7 @@ def condition_input(args, kwargs):
     return ret
 
 
-def parse_input(args, kwargs=None, condition=True, no_parse=None):
+def parse_input(args, kwargs=None, condition=True, no_parse=None, yamlify=True):
     '''
     Parse out the args and kwargs from a list of input values. Optionally,
     return the args and kwargs without passing them to condition_input().
@@ -101,15 +101,16 @@ def parse_input(args, kwargs=None, condition=True, no_parse=None):
         kwargs = {}
     _args = []
     _kwargs = {}
+    yamlify_fun = yamlify_arg if yamlify else lambda arg: arg
     for arg in args:
         if isinstance(arg, six.string_types):
             arg_name, arg_value = parse_kwarg(arg)
             if arg_name:
-                _kwargs[arg_name] = yamlify_arg(arg_value) \
+                _kwargs[arg_name] = yamlify_fun(arg_value) \
                     if arg_name not in no_parse \
                     else arg_value
             else:
-                _args.append(yamlify_arg(arg))
+                _args.append(yamlify_fun(arg))
         elif isinstance(arg, dict):
             # Yes, we're popping this key off and adding it back if
             # condition_input is called below, but this is the only way to

@@ -263,7 +263,7 @@ class CMDModuleTest(ModuleCase):
         cmd.exec_code
         '''
         code = textwrap.dedent('''\
-               import sys
+               import sys\n
                sys.stdout.write('cheese')''')
         self.assertEqual(self.run_function('cmd.exec_code',
                                            [AVAILABLE_PYTHON_EXECUTABLE,
@@ -275,7 +275,7 @@ class CMDModuleTest(ModuleCase):
         cmd.exec_code
         '''
         code = textwrap.dedent('''\
-               import sys
+               import sys\n
                sys.stdout.write(sys.argv[1])''')
         arg = 'cheese'
         self.assertEqual(self.run_function('cmd.exec_code',
@@ -289,7 +289,7 @@ class CMDModuleTest(ModuleCase):
         cmd.exec_code
         '''
         code = textwrap.dedent('''\
-               import sys
+               import sys\n
                sys.stdout.write(sys.argv[1])''')
         arg = 'cheese'
         self.assertEqual(self.run_function('cmd.exec_code',

@@ -431,7 +431,7 @@ class LocalClient(object):
             >>> local.cmd_async('*', 'test.sleep', [300])
             '20131219215921857715'
         '''
-        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg, yamlify=False)
         pub_data = self.run_job(tgt,
                                 fun,
                                 arg,
@@ -685,7 +685,7 @@ class LocalClient(object):
             minion ID. A compound command will return a sub-dictionary keyed by
             function name.
         '''
-        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg, yamlify=False)
         was_listening = self.event.cpub
 
         try:
@@ -745,7 +745,7 @@ class LocalClient(object):
         :param verbose: Print extra information about the running command
         :returns: A generator
         '''
-        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg, yamlify=False)
         was_listening = self.event.cpub
 
         if fun.startswith('state.'):
@@ -850,7 +850,7 @@ class LocalClient(object):
             {'dave': {'ret': True}}
             {'stewart': {'ret': True}}
         '''
-        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg, yamlify=False)
         was_listening = self.event.cpub
 
         try:
@@ -917,7 +917,7 @@ class LocalClient(object):
             None
             {'stewart': {'ret': True}}
         '''
-        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg, yamlify=False)
         was_listening = self.event.cpub
 
         try:
@@ -965,7 +965,7 @@ class LocalClient(object):
         '''
         Execute a salt command and return
         '''
-        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg, yamlify=False)
         was_listening = self.event.cpub
 
         try:
