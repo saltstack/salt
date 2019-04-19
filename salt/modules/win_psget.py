@@ -59,7 +59,6 @@ def _pshell(cmd, cwd=None, json_depth=2):
         cmd = '{0} | ConvertTo-Json -Depth {1}'.format(cmd, json_depth)
     log.debug('DSC: %s', cmd)
     results = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd, python_shell=True)
-
     if 'pid' in results:
         del results['pid']
 
@@ -86,8 +85,8 @@ def bootstrap():
 
         salt 'win01' psget.bootstrap
     '''
-    cmd = 'Get-PackageProvider -Name NuGet -ForceBootstrap'
-    ret = _pshell(cmd)
+    cmd = 'Get-PackageProvider -Name NuGet -ForceBootstrap | Select Name, Version, ProviderPath'
+    ret = _pshell(cmd, json_depth = 1)
     return ret
 
 
@@ -105,8 +104,8 @@ def avail_modules(desc=False):
         salt 'win01' psget.avail_modules
         salt 'win01' psget.avail_modules desc=True
     '''
-    cmd = 'Find-Module'
-    modules = _pshell(cmd)
+    cmd = 'Find-Module | Select Name, Description'
+    modules = _pshell(cmd, json_depth = 1)
     names = []
     if desc:
         names = {}
