@@ -120,6 +120,17 @@ log = logging.getLogger(__name__)
 DEVICE_DETAILS = {'grains_cache': {}}
 COPY_RS = 'copy running-config startup-config'
 
+CONNECTION_ERROR_MSG = '''
+    Unable to send command to the NX-OS device.
+
+    Please verify the following and re-try:
+
+    - 'feature ssh' must be enabled for SSH proxy minions.
+    - 'feature nxapi' must be enabled for NX-API proxy minions.
+    - Settings in the proxy minion configuration file must match device settings.
+    - NX-OS device is reachable from the Salt Master.
+'''
+
 
 def __virtual__():
     return __virtualname__
@@ -345,9 +356,9 @@ def sendline(command, method='cli_show_ascii', **kwargs):
         else:
             return _nxapi_request(command, method, **kwargs)
     except socket_error as e:
-        return e.strerror
+        return e.strerror + "\n" + CONNECTION_ERROR_MSG
     except NxosError as e:
-        return e.strerror
+        return e.strerror + "\n" + CONNECTION_ERROR_MSG
 
 
 def show(commands, raw_text=True, **kwargs):
@@ -552,9 +563,9 @@ def config(commands=None,
     try:
         config_result = _configure_device(commands, **kwargs)
     except socket_error as e:
-        return e.strerror
+        return e.strerror + "\n" + CONNECTION_ERROR_MSG
     except NxosError as e:
-        return e.strerror
+        return e.strerror + "\n" + CONNECTION_ERROR_MSG
 
     config_result = _parse_config_result(config_result)
     current_config = show('show running-config', **kwargs)
