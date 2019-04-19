@@ -560,6 +560,7 @@ class _WithDeprecated(_DeprecationDecorator):
             return self._call_function(kwargs)
 
         _decorate.__doc__ = self._function.__doc__
+        _decorate.__wrapped__ = self._function
         return _decorate
 
 
