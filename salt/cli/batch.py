@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import math
 import time
 import copy
+import sys
 from datetime import datetime, timedelta
 
 # Import salt libs
@@ -85,8 +86,11 @@ class Batch(object):
         '''
         partition = lambda x: float(x) / 100.0 * len(self.minions)
         try:
-            if (isinstance(self.opts['batch'], str) or isinstance(self.opts['batch'], unicode)) \
-                    and '%' in self.opts['batch']:
+            if sys.version_info.major == 3:
+                batch_is_str = isinstance(self.opts['batch'], str)
+            else:
+                batch_is_str = isinstance(self.opts['batch'], str) or isinstance(self.opts['batch'], unicode)
+            if batch_is_str and '%' in self.opts['batch']:
                 res = partition(float(self.opts['batch'].strip('%')))
                 if res < 1:
                     return int(math.ceil(res))
