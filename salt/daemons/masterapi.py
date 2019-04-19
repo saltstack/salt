@@ -1093,7 +1093,7 @@ class LocalFuncs(object):
         try:
             fun = load.pop('fun')
             runner_client = salt.runner.RunnerClient(self.opts)
-            return runner_client.async(fun,
+            return runner_client.async(fun,  # pylint: disable=W8606
                                        load.get('kwarg', {}),
                                        username)
         except Exception as exc:

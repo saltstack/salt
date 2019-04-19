@@ -10,7 +10,7 @@ from tests.support.unit import skipIf
 # Import Salt Libs
 import salt.utils
 
-URL = 'repo.saltstack.com'
+URL = 'google-public-dns-a.google.com'
 
 
 class NetworkTest(ModuleCase):

@@ -205,7 +205,7 @@ def returner(ret):
         __salt__['cassandra_cql.cql_query_with_prepare'](query,
                                                          'returner_return',
                                                          tuple(statement_arguments),
-                                                         async=True)
+                                                         async=True)  # pylint: disable=W8606
     except CommandExecutionError:
         log.critical('Could not insert into salt_returns with Cassandra returner.')
         raise
@@ -229,7 +229,7 @@ def returner(ret):
         __salt__['cassandra_cql.cql_query_with_prepare'](query,
                                                          'returner_minion',
                                                          tuple(statement_arguments),
-                                                         async=True)
+                                                         async=True)  # pylint: disable=W8606
     except CommandExecutionError:
         log.critical('Could not store minion ID with Cassandra returner.')
         raise
@@ -268,7 +268,7 @@ def event_return(events):
         try:
             __salt__['cassandra_cql.cql_query_with_prepare'](query, 'salt_events',
                                                              statement_arguments,
-                                                             async=True)
+                                                             async=True)  # pylint: disable=W8606
         except CommandExecutionError:
             log.critical('Could not store events with Cassandra returner.')
             raise
@@ -297,7 +297,7 @@ def save_load(jid, load, minions=None):
     try:
         __salt__['cassandra_cql.cql_query_with_prepare'](query, 'save_load',
                                                          statement_arguments,
-                                                         async=True)
+                                                         async=True)  # pylint: disable=W8606
     except CommandExecutionError:
         log.critical('Could not save load in jids table.')
         raise
