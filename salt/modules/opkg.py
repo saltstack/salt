@@ -1067,7 +1067,7 @@ def list_repos(**kwargs):  # pylint: disable=unused-argument
     return repos
 
 
-def get_repo(alias, **kwargs):  # pylint: disable=unused-argument
+def get_repo(repo, **kwargs):  # pylint: disable=unused-argument
     '''
     Display a repo from the ``/etc/opkg/*.conf``
 
@@ -1075,19 +1075,19 @@ def get_repo(alias, **kwargs):  # pylint: disable=unused-argument
 
     .. code-block:: bash
 
-        salt '*' pkg.get_repo alias
+        salt '*' pkg.get_repo repo
     '''
     repos = list_repos()
 
     if repos:
         for source in six.itervalues(repos):
             for sub in source:
-                if sub['name'] == alias:
+                if sub['name'] == repo:
                     return sub
     return {}
 
 
-def _del_repo_from_file(alias, filepath):
+def _del_repo_from_file(repo, filepath):
     '''
     Remove a repo from filepath
     '''
@@ -1100,30 +1100,30 @@ def _del_repo_from_file(alias, filepath):
                 if line.startswith('#'):
                     line = line[1:]
                 cols = salt.utils.args.shlex_split(line.strip())
-                if alias != cols[1]:
+                if repo != cols[1]:
                     output.append(salt.utils.stringutils.to_str(line))
     with salt.utils.files.fopen(filepath, 'w') as fhandle:
         fhandle.writelines(output)
 
 
-def _add_new_repo(alias, uri, compressed, enabled=True):
+def _add_new_repo(repo, uri, compressed, enabled=True):
     '''
     Add a new repo entry
     '''
     repostr = '# ' if not enabled else ''
     repostr += 'src/gz ' if compressed else 'src '
-    if ' ' in alias:
-        repostr += '"' + alias + '" '
+    if ' ' in repo:
+        repostr += '"' + repo + '" '
     else:
-        repostr += alias + ' '
+        repostr += repo + ' '
     repostr += uri + '\n'
-    conffile = os.path.join(OPKG_CONFDIR, alias + '.conf')
+    conffile = os.path.join(OPKG_CONFDIR, repo + '.conf')
 
     with salt.utils.files.fopen(conffile, 'a') as fhandle:
         fhandle.write(salt.utils.stringutils.to_str(repostr))
 
 
-def _mod_repo_in_file(alias, repostr, filepath):
+def _mod_repo_in_file(repo, repostr, filepath):
     '''
     Replace a repo entry in filepath with repostr
     '''
@@ -1133,7 +1133,7 @@ def _mod_repo_in_file(alias, repostr, filepath):
             cols = salt.utils.args.shlex_split(
                 salt.utils.stringutils.to_unicode(line).strip()
             )
-            if alias not in cols:
+            if repo not in cols:
                 output.append(line)
             else:
                 output.append(salt.utils.stringutils.to_str(repostr + '\n'))
@@ -1141,7 +1141,7 @@ def _mod_repo_in_file(alias, repostr, filepath):
         fhandle.writelines(output)
 
 
-def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
+def del_repo(repo, **kwargs):  # pylint: disable=unused-argument
     '''
     Delete a repo from ``/etc/opkg/*.conf``
 
@@ -1152,21 +1152,22 @@ def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
 
     .. code-block:: bash
 
-        salt '*' pkg.del_repo alias
+        salt '*' pkg.del_repo repo
     '''
+    refresh = salt.utils.data.is_true(kwargs.get('refresh', True))
     repos = list_repos()
     if repos:
         deleted_from = dict()
-        for repo in repos:
-            source = repos[repo][0]
-            if source['name'] == alias:
+        for repository in repos:
+            source = repos[repository][0]
+            if source['name'] == repo:
                 deleted_from[source['file']] = 0
-                _del_repo_from_file(alias, source['file'])
+                _del_repo_from_file(repo, source['file'])
 
         if deleted_from:
             ret = ''
-            for repo in repos:
-                source = repos[repo][0]
+            for repository in repos:
+                source = repos[repository][0]
                 if source['file'] in deleted_from:
                     deleted_from[source['file']] += 1
             for repo_file, count in six.iteritems(deleted_from):
@@ -1178,22 +1179,22 @@ def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
                         os.remove(repo_file)
                     except OSError:
                         pass
-                ret += msg.format(alias, repo_file)
-            # explicit refresh after a repo is deleted
-            refresh_db()
+                ret += msg.format(repo, repo_file)
+            if refresh:
+                refresh_db()
             return ret
 
-    return "Repo {0} doesn't exist in the opkg repo lists".format(alias)
+    return "Repo {0} doesn't exist in the opkg repo lists".format(repo)
 
 
-def mod_repo(alias, **kwargs):
+def mod_repo(repo, **kwargs):
     '''
     Modify one or more values for a repo.  If the repo does not exist, it will
     be created, so long as uri is defined.
 
     The following options are available to modify a repo definition:
 
-    alias
+    repo
         alias by which opkg refers to the repo.
     uri
         the URI to the repo.
@@ -1209,8 +1210,8 @@ def mod_repo(alias, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' pkg.mod_repo alias uri=http://new/uri
-        salt '*' pkg.mod_repo alias enabled=False
+        salt '*' pkg.mod_repo repo uri=http://new/uri
+        salt '*' pkg.mod_repo repo enabled=False
     '''
     repos = list_repos()
     found = False
@@ -1218,9 +1219,9 @@ def mod_repo(alias, **kwargs):
     if 'uri' in kwargs:
         uri = kwargs['uri']
 
-    for repo in repos:
-        source = repos[repo][0]
-        if source['name'] == alias:
+    for repository in repos:
+        source = repos[repository][0]
+        if source['name'] == repo:
             found = True
             repostr = ''
             if 'enabled' in kwargs and not kwargs['enabled']:
@@ -1229,13 +1230,13 @@ def mod_repo(alias, **kwargs):
                 repostr += 'src/gz ' if kwargs['compressed'] else 'src'
             else:
                 repostr += 'src/gz' if source['compressed'] else 'src'
-            repo_alias = kwargs['alias'] if 'alias' in kwargs else alias
+            repo_alias = kwargs['alias'] if 'alias' in kwargs else repo
             if ' ' in repo_alias:
                 repostr += ' "{0}"'.format(repo_alias)
             else:
                 repostr += ' {0}'.format(repo_alias)
             repostr += ' {0}'.format(kwargs['uri'] if 'uri' in kwargs else source['uri'])
-            _mod_repo_in_file(alias, repostr, source['file'])
+            _mod_repo_in_file(repo, repostr, source['file'])
         elif uri and source['uri'] == uri:
             raise CommandExecutionError(
                 'Repository \'{0}\' already exists as \'{1}\'.'.format(uri, source['name']))
@@ -1244,12 +1245,12 @@ def mod_repo(alias, **kwargs):
         # Need to add a new repo
         if 'uri' not in kwargs:
             raise CommandExecutionError(
-                'Repository \'{0}\' not found and no URI passed to create one.'.format(alias))
+                'Repository \'{0}\' not found and no URI passed to create one.'.format(repo))
         # If compressed is not defined, assume True
         compressed = kwargs['compressed'] if 'compressed' in kwargs else True
         # If enabled is not defined, assume True
         enabled = kwargs['enabled'] if 'enabled' in kwargs else True
-        _add_new_repo(alias, kwargs['uri'], compressed, enabled)
+        _add_new_repo(repo, kwargs['uri'], compressed, enabled)
 
     if 'refresh' in kwargs:
         refresh_db()
