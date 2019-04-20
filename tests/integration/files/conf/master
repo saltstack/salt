@@ -28,7 +28,8 @@ tcp_master_workers: 64515
 
 peer:
   '.*':
-    - 'test.*'
+    - '(x509|test).*'
+    #- 'x509.sign_remote_certificate'
 
 ext_pillar:
   - ext_pillar_opts:
