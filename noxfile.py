@@ -244,7 +244,11 @@ def _run_with_coverage(session, *test_cmd):
     if python_path_env_var is None:
         python_path_env_var = SITECUSTOMIZE_DIR
     else:
-        python_path_env_var = '{}:{}'.format(SITECUSTOMIZE_DIR, python_path_env_var)
+        python_path_entries = python_path_env_var.split(os.pathsep)
+        if SITECUSTOMIZE_DIR in python_path_entries:
+            python_path_entries.remove(SITECUSTOMIZE_DIR)
+        python_path_entries.insert(0, SITECUSTOMIZE_DIR)
+        python_path_env_var = os.pathsep.join(python_path_entries)
     try:
         session.run(
             *test_cmd,
