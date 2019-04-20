@@ -1391,10 +1391,13 @@ def create_certificate(
         for ignore in list(_STATE_INTERNAL_KEYWORDS) + \
                 ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
+        # TODO: Make timeout configurable in Neon
         certs = __salt__['publish.publish'](
             tgt=ca_server,
             fun='x509.sign_remote_certificate',
-            arg=salt.utils.data.decode_dict(kwargs, to_str=True))
+            arg=salt.utils.data.decode_dict(kwargs, to_str=True),
+            timeout=30
+        )
 
         if not any(certs):
             raise salt.exceptions.SaltInvocationError(

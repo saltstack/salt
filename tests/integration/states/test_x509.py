@@ -60,6 +60,9 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         os.remove(os.path.join(TMP_PILLAR_TREE, 'signing_policies.sls'))
         os.remove(os.path.join(TMP_PILLAR_TREE, 'top.sls'))
+        certs_path = os.path.join(TMP, 'pki')
+        if os.path.exists(certs_path):
+            salt.utils.files.rm_rf(certs_path)
         self.run_function('saltutil.refresh_pillar')
 
     def run_function(self, *args, **kwargs):
