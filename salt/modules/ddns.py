@@ -197,14 +197,19 @@ def update(
         salt ns1 ddns.update example.com host1 60 A 10.0.0.1
     """
     name = six.text_type(name)
+    log.info('Updating record %s.%s for nameserver %s', name, zone, nameserver)
 
     if name[-1:] == ".":
         fqdn = name
     else:
         fqdn = "{0}.{1}".format(name, zone)
 
+    log.debug('Querying dns server %s for a record', nameserver)
+
     request = dns.message.make_query(fqdn, rdtype)
     answer = dns.query.udp(request, nameserver, timeout, port)
+
+    log.debug('Query Answer: %s', answer)
 
     rdtype = dns.rdatatype.from_text(rdtype)
     rdata = dns.rdata.from_text(dns.rdataclass.IN, rdtype, data)
@@ -212,6 +217,12 @@ def update(
     keyring = _get_keyring(_config("keyfile", **kwargs))
     keyname = _config("keyname", **kwargs)
     keyalgorithm = _config("keyalgorithm", **kwargs) or "HMAC-MD5.SIG-ALG.REG.INT"
+
+    if keyring is None:
+        log.warning('Insecure dns configuration detected! Keyring is not provided in configuration.')
+
+    if keyname is None:
+        log.warning('Insecure dns configuration detected! Keyname is not provided in configuration.')
 
     is_exist = False
     for rrset in answer.answer:
@@ -221,17 +232,25 @@ def update(
                     is_exist = True
                     break
 
-    dns_update = dns.update.Update(
-        zone, keyring=keyring, keyname=keyname, keyalgorithm=keyalgorithm
-    )
+    log.debug('Record exists: %s', is_exist)
+
+    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname,
+                                   keyalgorithm=keyalgorithm)
     if replace:
+        log.info('Replacing record %s', name)
         dns_update.replace(name, ttl, rdata)
     elif not is_exist:
+        log.info('Creating record %s', name)
         dns_update.add(name, ttl, rdata)
     else:
+        log.info('Not doing anything, record %s exists and in correct state', name)
         return None
+
+    log.debug('Validating record')
     answer = dns.query.udp(dns_update, nameserver, timeout, port)
+
     if answer.rcode() > 0:
+        log.debug('Validation returned error')
         return False
     return True
 
@@ -256,20 +275,32 @@ def delete(
         salt ns1 ddns.delete example.com host1 A
     """
     name = six.text_type(name)
+    log.info('Deleting record %s.%s for nameserver %s', name, zone, nameserver)
 
     if name[-1:] == ".":
         fqdn = name
     else:
         fqdn = "{0}.{1}".format(name, zone)
 
+    log.debug('Querying dns server %s for a record', nameserver)
+
     request = dns.message.make_query(fqdn, (rdtype or "ANY"))
     answer = dns.query.udp(request, nameserver, timeout, port)
+    log.debug('Query Answer: %s', answer)
+
     if not answer.answer:
+        log.info('Record do not exist, skipping deletion procedure')
         return None
 
     keyring = _get_keyring(_config("keyfile", **kwargs))
     keyname = _config("keyname", **kwargs)
     keyalgorithm = _config("keyalgorithm", **kwargs) or "HMAC-MD5.SIG-ALG.REG.INT"
+
+    if keyring is None:
+        log.warning('Insecure dns configuration detected! Keyring is not provided in configuration.')
+
+    if keyname is None:
+        log.warning('Insecure dns configuration detected! Keyname is not provided in configuration.')
 
     dns_update = dns.update.Update(
         zone, keyring=keyring, keyname=keyname, keyalgorithm=keyalgorithm
@@ -285,7 +316,9 @@ def delete(
     else:
         dns_update.delete(name)
 
+    log.debug('Validating record')
     answer = dns.query.udp(dns_update, nameserver, timeout, port)
     if answer.rcode() > 0:
+        log.debug('Validation returned error')
         return False
     return True
