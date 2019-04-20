@@ -7,13 +7,13 @@ Support for RFC 2136 dynamic DNS updates.
     are a couple of optional configuration parameters made available to
     support this (the keyname is only needed if the keyring contains more
     than one key)::
-
-        keyfile: keyring file (default=None)
-        keyname: key name in file (default=None)
-        keyalgorithm: algorithm used to create the key
-                      (default='HMAC-MD5.SIG-ALG.REG.INT').
-            Other possible values: hmac-sha1, hmac-sha224, hmac-sha256,
-                hmac-sha384, hmac-sha512
+        ddns:
+          keyfile: keyring file (default=None)
+          keyname: key name in file (default=None)
+          keyalgorithm: algorithm used to create the key
+                        (default='HMAC-MD5.SIG-ALG.REG.INT').
+              Other possible values: hmac-sha1, hmac-sha224, hmac-sha256,
+                  hmac-sha384, hmac-sha512
 
 
     The keyring file needs to be in json format and the key name needs to end
@@ -62,7 +62,7 @@ def _config(name, key=None, **kwargs):
     if name in kwargs:
         value = kwargs[name]
     else:
-        value = __salt__['config.option']('ddns.{0}'.format(key))
+        value = __salt__['config.get']('ddns:{0}'.format(key))
         if not value:
             value = None
     return value
