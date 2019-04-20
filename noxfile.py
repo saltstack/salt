@@ -253,7 +253,12 @@ def _run_with_coverage(session, *test_cmd):
         session.run(
             *test_cmd,
             env={
+                # The updated python path so that sitecustomize is importable
                 'PYTHONPATH': python_path_env_var,
+                # The full path to the .coverage data file. Makes sure we always write
+                # them to the same directory
+                'COVERAGE_FILE': os.path.abspath(os.path.join(REPO_ROOT, '.coverage')),
+                # Instruct sub processes to also run under coverage
                 'COVERAGE_PROCESS_START': os.path.join(REPO_ROOT, '.coveragerc')
             }
         )
