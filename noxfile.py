@@ -273,7 +273,7 @@ def _runtests(session, coverage, cmd_args):
     _create_ci_directories()
     try:
         if coverage is True:
-            _run_with_coverage(session, 'coverage', 'run', '-m', 'tests.runtests', *cmd_args)
+            _run_with_coverage(session, 'coverage', 'run', os.path.join('tests', 'runtests.py'), *cmd_args)
         else:
             session.run('python', os.path.join('tests', 'runtests.py'), *cmd_args)
     except CommandFailed:
