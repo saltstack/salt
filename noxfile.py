@@ -245,15 +245,18 @@ def _run_with_coverage(session, *test_cmd):
         python_path_env_var = SITECUSTOMIZE_DIR
     else:
         python_path_env_var = '{}:{}'.format(SITECUSTOMIZE_DIR, python_path_env_var)
-    session.run(
-        *test_cmd,
-        env={
-            'PYTHONPATH': python_path_env_var,
-            'COVERAGE_PROCESS_START': os.path.join(REPO_ROOT, '.coveragerc')
-        }
-    )
-    session.run('coverage', 'combine')
-    session.run('coverage', 'xml', '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'coverage.xml'))
+    try:
+        session.run(
+            *test_cmd,
+            env={
+                'PYTHONPATH': python_path_env_var,
+                'COVERAGE_PROCESS_START': os.path.join(REPO_ROOT, '.coveragerc')
+            }
+        )
+    finally:
+        # Always combine and generate the XML coverage report
+        session.run('coverage', 'combine')
+        session.run('coverage', 'xml', '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'coverage.xml'))
 
 
 def _runtests(session, coverage, cmd_args):
