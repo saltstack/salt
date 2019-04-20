@@ -103,6 +103,7 @@ SCRIPT_TEMPLATES = {
     'coverage': textwrap.dedent(
         '''
         SITECUSTOMIZE_DIR = os.path.join(CODE_DIR, 'tests', 'support', 'coverage')
+        COVERAGE_FILE = os.path.join(CODE_DIR, '.coverage')
         COVERAGE_PROCESS_START = os.path.join(CODE_DIR, '.coveragerc')
         PYTHONPATH = os.environ.get('PYTHONPATH') or None
         if PYTHONPATH is None:
@@ -114,6 +115,7 @@ SCRIPT_TEMPLATES = {
             PYTHON_PATH_ENTRIES.insert(0, SITECUSTOMIZE_DIR)
             PYTHONPATH_ENV_VAR = os.pathsep.join(PYTHON_PATH_ENTRIES)
         os.environ['PYTHONPATH'] = PYTHONPATH_ENV_VAR
+        os.environ['COVERAGE_FILE'] = COVERAGE_FILE
         os.environ['COVERAGE_PROCESS_START'] = COVERAGE_PROCESS_START
         '''
     )
