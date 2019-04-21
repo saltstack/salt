@@ -2061,12 +2061,18 @@ class ChattrVersionTests(TestCase):
          '                          CHATTR(1)'
     )
 
-    def test_chattr_version(self):
+    def test__parse_chattr_version(self):
+        '''
+        Validate we can parse the E2fsprogs version from the chattr man page
+        '''
         man_out = dedent(self.CHATTR_MAN)
         parsed_version = filemod._parse_chattr_man(man_out)
         assert parsed_version == '1.43.4', parsed_version
 
-    def test_chattr_version(self):
+    def test__chattr_version(self):
+        '''
+        The _chattr_version method works
+        '''
         with patch('subprocess.check_output', return_value=self.CHATTR_MAN):
             parsed_version = filemod._chattr_version()
         assert parsed_version == '1.43.4', parsed_version

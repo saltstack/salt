@@ -172,7 +172,7 @@ def _parse_chattr_man(man):
     '''
     Parse the contents of a chattr man page to find the E2fsprogs version
     '''
-    match = re.search('E2fsprogs version [0-9\.]+', man)
+    match = re.search(r'E2fsprogs version [0-9\.]+', man)
     if match:
         version = match.group().strip('E2fsprogs version ')
     else:
@@ -608,7 +608,7 @@ def lsattr(path):
             needed_version = salt.utils.versions.LooseVersion('1.41.12')
             chattr_version = salt.utils.versions.LooseVersion(_chattr_version())
             # The version of chattr on Centos 6 does not support extended
-            # attributes. 
+            # attributes.
             if chattr_version > needed_version:
                 results[vals[1]] = re.findall(r"[aAcCdDeijPsStTu]", vals[0])
             else:
