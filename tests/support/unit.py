@@ -268,6 +268,19 @@ class TestCase(_TestCase):
         )
         # return _TestCase.assertNotAlmostEquals(self, *args, **kwargs)
 
+    def repack_state_returns(self, state_ret):
+        '''
+        Accepts a state return dict and returns it back with the top level key
+        names rewritten such that the ID declaration is the key instead of the
+        State's unique tag. For example: 'foo' instead of
+        'file_|-foo_|-/etc/foo.conf|-managed'
+
+        This makes it easier to work with state returns when crafting asserts
+        after running states.
+        '''
+        assert isinstance(state_ret, dict), state_ret
+        return {x.split('_|-')[1]: y for x, y in six.iteritems(state_ret)}
+
     def failUnlessEqual(self, *args, **kwargs):
         raise DeprecationWarning(
             'The {0}() function is deprecated. Please start using {1}() '
