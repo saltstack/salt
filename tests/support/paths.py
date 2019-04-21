@@ -134,7 +134,7 @@ class ScriptPathMixin(object):
                                    'cli_{0}.py'.format(script_name.replace('-', '_')))
 
         if not os.path.isfile(script_path):
-            log.info('Generating {0}'.format(script_path))
+            log.info('Generating %s', script_path)
 
             # Late import
             import salt.utils.files
@@ -150,8 +150,15 @@ class ScriptPathMixin(object):
                             script_name
                         )
                     )
+
+                shebang = sys.executable
+                if len(shebang) > 128:
+                    # Too long for a shebang, let's use /usr/bin/env and hope
+                    # the right python is picked up
+                    shebang = '/usr/bin/env python'
+
                 sfh.write(
-                    '#!{0}\n\n'.format(sys.executable) +
+                    '#!{0}\n\n'.format(shebang) +
                     'import sys\n' +
                     'CODE_DIR = r"{0}"\n'.format(CODE_DIR) +
                     'if CODE_DIR not in sys.path:\n' +

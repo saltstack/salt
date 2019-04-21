@@ -63,9 +63,18 @@ try:
     from M2Crypto import EVP
     HAS_M2 = True
 except ImportError:
-    from Crypto.Hash import SHA256
-    from Crypto.Signature import PKCS1_v1_5
     HAS_M2 = False
+    try:
+        from Cryptodome.Hash import SHA256
+        from Cryptodome.Signature import PKCS1_v1_5
+        HAS_REQUIRED_CRYPTO = True
+    except ImportError:
+        try:
+            from Crypto.Hash import SHA256
+            from Crypto.Signature import PKCS1_v1_5
+            HAS_REQUIRED_CRYPTO = True
+        except ImportError:
+            HAS_REQUIRED_CRYPTO = False
 
 # Import salt libs
 from salt.ext import six
@@ -118,6 +127,8 @@ def __virtual__():
     '''
     Check for Joyent configs
     '''
+    if HAS_REQUIRED_CRYPTO is False:
+        return False, 'Either PyCrypto or Cryptodome needs to be installed.'
     if get_configured_provider() is False:
         return False
 
