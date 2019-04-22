@@ -206,6 +206,8 @@ class TestDaemon(object):
         # Set up PATH to mockbin
         self._enter_mockbin()
 
+        self.minion_targets = set(['minion', 'sub_minion'])
+
         if self.parser.options.transport == 'zeromq':
             self.start_zeromq_daemons()
         elif self.parser.options.transport == 'raet':
@@ -213,7 +215,6 @@ class TestDaemon(object):
         elif self.parser.options.transport == 'tcp':
             self.start_tcp_daemons()
 
-        self.minion_targets = set(['minion', 'sub_minion'])
         self.pre_setup_minions()
         self.setup_minions()
 
@@ -460,6 +461,7 @@ class TestDaemon(object):
             sys.stdout.flush()
 
         if self.parser.options.proxy:
+            self.minion_targets.add(self.proxy_opts['id'])
             try:
                 sys.stdout.write(
                     ' * {LIGHT_YELLOW}Starting salt-proxy ... {ENDC}'.format(**self.colors)
@@ -467,7 +469,7 @@ class TestDaemon(object):
                 sys.stdout.flush()
                 self.proxy_process = start_daemon(
                     daemon_name='salt-proxy',
-                    daemon_id=self.master_opts['id'],
+                    daemon_id=self.proxy_opts['id'],
                     daemon_log_prefix='salt-proxy/{}'.format(self.proxy_opts['id']),
                     daemon_cli_script_name='proxy',
                     daemon_config=self.proxy_opts,
@@ -970,6 +972,7 @@ class TestDaemon(object):
                 conf['log_handlers_dirs'] = []
             conf['log_handlers_dirs'].insert(0, LOG_HANDLERS_DIR)
             conf['runtests_log_port'] = SALT_LOG_PORT
+            conf['runtests_log_level'] = os.environ.get('TESTS_MIN_LOG_LEVEL_NAME') or 'debug'
 
         # ----- Transcribe Configuration ---------------------------------------------------------------------------->
         for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
@@ -1321,7 +1324,7 @@ class TestDaemon(object):
                 ret = None
             if ret and 'minions' not in ret:
                 continue
-            if ret and sorted(ret['minions']) == ['minion', 'sub_minion']:
+            if ret and sorted(ret['minions']) == sorted(self.minion_targets):
                 break
             if time.time() - start >= timeout:
                 raise RuntimeError("Ping Minions Failed")
