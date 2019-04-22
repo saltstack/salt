@@ -244,16 +244,28 @@ def _run_with_coverage(session, *test_cmd):
     if python_path_env_var is None:
         python_path_env_var = SITECUSTOMIZE_DIR
     else:
-        python_path_env_var = '{}:{}'.format(SITECUSTOMIZE_DIR, python_path_env_var)
-    session.run(
-        *test_cmd,
-        env={
-            'PYTHONPATH': python_path_env_var,
-            'COVERAGE_PROCESS_START': os.path.join(REPO_ROOT, '.coveragerc')
-        }
-    )
-    session.run('coverage', 'combine')
-    session.run('coverage', 'xml', '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'coverage.xml'))
+        python_path_entries = python_path_env_var.split(os.pathsep)
+        if SITECUSTOMIZE_DIR in python_path_entries:
+            python_path_entries.remove(SITECUSTOMIZE_DIR)
+        python_path_entries.insert(0, SITECUSTOMIZE_DIR)
+        python_path_env_var = os.pathsep.join(python_path_entries)
+    try:
+        session.run(
+            *test_cmd,
+            env={
+                # The updated python path so that sitecustomize is importable
+                'PYTHONPATH': python_path_env_var,
+                # The full path to the .coverage data file. Makes sure we always write
+                # them to the same directory
+                'COVERAGE_FILE': os.path.abspath(os.path.join(REPO_ROOT, '.coverage')),
+                # Instruct sub processes to also run under coverage
+                'COVERAGE_PROCESS_START': os.path.join(REPO_ROOT, '.coveragerc')
+            }
+        )
+    finally:
+        # Always combine and generate the XML coverage report
+        session.run('coverage', 'combine')
+        session.run('coverage', 'xml', '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'coverage.xml'))
 
 
 def _runtests(session, coverage, cmd_args):
@@ -261,7 +273,7 @@ def _runtests(session, coverage, cmd_args):
     _create_ci_directories()
     try:
         if coverage is True:
-            _run_with_coverage(session, 'coverage', 'run', '-m', 'tests.runtests', *cmd_args)
+            _run_with_coverage(session, 'coverage', 'run', os.path.join('tests', 'runtests.py'), *cmd_args)
         else:
             session.run('python', os.path.join('tests', 'runtests.py'), *cmd_args)
     except CommandFailed:
