@@ -261,7 +261,7 @@ def set_(name,
                     for p_name in current_policy[policy_data['output_section']]:
                         if policy_name.lower() == p_name.lower():
                             currently_set = True
-                            pol_id = policy_name
+                            pol_id = p_name
                             break
                 # Check aliases
                 else:
