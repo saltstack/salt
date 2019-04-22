@@ -42,6 +42,7 @@ import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.serializers.configparser
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 HAS_PWD = True
@@ -1710,16 +1711,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test the serializer_opts and deserializer_opts options
         '''
-        data1 = {'foo': {'bar': 'baz'}}
+        data1 = {'foo': {'bar': '%(x)s'}}
         data2 = {'foo': {'abc': 123}}
-        merged = {'foo': {'bar': 'baz', 'abc': 123}}
+        merged = {'foo': {'y': 'not_used', 'x': 'baz', 'abc': 123, 'bar': u'baz'}}
 
         ret = self.run_state(
             'file.serialize',
             name=name,
             dataset=data1,
-            formatter='json',
-            deserializer_opts=[{'encoding': 'latin-1'}])
+            formatter='configparser',
+            deserializer_opts=[{'defaults': {'y': 'not_used'}}])
         ret = ret[next(iter(ret))]
         assert ret['result'], ret
         # We should have warned about deserializer_opts being used when
@@ -1727,25 +1728,31 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         assert 'warnings' in ret
 
         # Run with merge_if_exists, as well as serializer and deserializer opts
+        # deserializer opts will be used for string interpolation of the %(x)s
+        # that was written to the file with data1 (i.e. bar should become baz)
         ret = self.run_state(
             'file.serialize',
             name=name,
             dataset=data2,
-            formatter='json',
+            formatter='configparser',
             merge_if_exists=True,
-            serializer_opts=[{'indent': 8}],
-            deserializer_opts=[{'encoding': 'latin-1'}])
+            serializer_opts=[{'defaults': {'y': 'not_used'}}],
+            deserializer_opts=[{'defaults': {'x': 'baz'}}])
         ret = ret[next(iter(ret))]
         assert ret['result'], ret
 
         with salt.utils.files.fopen(name) as fp_:
-            serialized_data = salt.utils.json.load(fp_)
+            serialized_data = salt.serializers.configparser.deserialize(fp_)
 
         # If this test fails, this debug logging will help tell us how the
         # serialized data differs from what was serialized.
         log.debug('serialized_data = %r', serialized_data)
         log.debug('merged = %r', merged)
-        assert serialized_data == merged
+        # serializing with a default of 'y' will add y = not_used into foo
+        assert serialized_data['foo']['y'] == merged['foo']['y']
+        # deserializing with default of x = baz will perform interpolation on %(x)s
+        # and bar will then = baz
+        assert serialized_data['foo']['bar'] == merged['foo']['bar']
 
     @with_tempdir()
     def test_replace_issue_18841_omit_backup(self, base_dir):
