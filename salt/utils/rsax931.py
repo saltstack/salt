@@ -45,6 +45,14 @@ def _load_libcrypto():
             # two checks below
             lib = glob.glob('/opt/local/lib/libcrypto.so*') + glob.glob('/opt/tools/lib/libcrypto.so*')
             lib = lib[0] if len(lib) > 0 else None
+        if not lib and salt.utils.platform.is_aix():
+            if os.path.isdir('/opt/salt/lib'):
+                # preference for Salt installed fileset
+                lib = glob.glob('/opt/salt/lib/libcrypto.so*')
+                lib = lib[0] if len(lib) > 0 else None
+            else:
+                lib = glob.glob('/opt/freeware/lib/libcrypto.so*')
+                lib = lib[0] if len(lib) > 0 else None
         if lib:
             return cdll.LoadLibrary(lib)
         raise OSError('Cannot locate OpenSSL libcrypto')
@@ -55,6 +63,13 @@ def _init_libcrypto():
     Set up libcrypto argtypes and initialize the library
     '''
     libcrypto = _load_libcrypto()
+
+    try:
+        libcrypto.OPENSSL_init_crypto()
+    except AttributeError:
+        # Support for OpenSSL < 1.1 (OPENSSL_API_COMPAT < 0x10100000L)
+        libcrypto.OPENSSL_no_config()
+        libcrypto.OPENSSL_add_all_algorithms_noconf()
 
     libcrypto.RSA_new.argtypes = ()
     libcrypto.RSA_new.restype = c_void_p
@@ -69,15 +84,6 @@ def _init_libcrypto():
     libcrypto.PEM_read_bio_RSA_PUBKEY.restype = c_void_p
     libcrypto.RSA_private_encrypt.argtypes = (c_int, c_char_p, c_char_p, c_void_p, c_int)
     libcrypto.RSA_public_decrypt.argtypes = (c_int, c_char_p, c_char_p, c_void_p, c_int)
-
-    try:
-        libcrypto.OPENSSL_init_crypto(OPENSSL_INIT_NO_LOAD_CONFIG |
-                                      OPENSSL_INIT_ADD_ALL_CIPHERS |
-                                      OPENSSL_INIT_ADD_ALL_DIGESTS, None)
-    except AttributeError:
-        # Support for OpenSSL < 1.1 (OPENSSL_API_COMPAT < 0x10100000L)
-        libcrypto.OPENSSL_no_config()
-        libcrypto.OPENSSL_add_all_algorithms_noconf()
 
     return libcrypto
 

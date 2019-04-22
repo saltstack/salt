@@ -81,6 +81,19 @@ from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 __hostname__ = socket.gethostname()
+__virtualname__ = 'netsh'
+
+
+# Although utils are often directly imported, it is also possible to use the
+# loader.
+def __virtual__():
+    '''
+    Only load if on a Windows system
+    '''
+    if not salt.utils.platform.is_windows():
+        return False, 'This utility only available on Windows'
+
+    return __virtualname__
 
 
 def _netsh_file(content):

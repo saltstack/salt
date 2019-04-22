@@ -3,8 +3,8 @@
 source 'https://rubygems.org'
 
 # Point this back at the test-kitchen package after 1.23.3 is relased
-gem 'test-kitchen', :git => 'https://github.com/dwoz/test-kitchen.git', :branch => 'winrm_opts'
-gem 'kitchen-salt', '~>0.2'
+gem 'test-kitchen', '~>1.23.3'
+gem 'kitchen-salt', :git => 'https://github.com/s0undt3ch/kitchen-salt.git', :branch => 'features/nox'
 gem 'kitchen-sync'
 gem 'git'
 
@@ -14,7 +14,8 @@ end
 
 group :windows do
   gem 'winrm', '~>2.0'
-  gem 'winrm-fs', '~>1.3.1' 
+#  gem 'winrm-fs', '~>1.3.1'
+  gem 'winrm-fs', :git => 'https://github.com/s0undt3ch/winrm-fs.git', :branch => 'hotfix/saltstack-ci'
 end
 
 group :ec2 do

@@ -283,7 +283,7 @@ def _run(cmd,
     '''
     if 'pillar' in kwargs and not pillar_override:
         pillar_override = kwargs['pillar']
-    if _is_valid_shell(shell) is False:
+    if output_loglevel != 'quiet' and _is_valid_shell(shell) is False:
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
             'Check to ensure that the shell <%s> is valid for this user.',
@@ -570,7 +570,11 @@ def _run(cmd,
         run_env = env
 
     else:
-        run_env = os.environ.copy()
+        if salt.utils.platform.is_windows():
+            import nt
+            run_env = nt.environ.copy()
+        else:
+            run_env = os.environ.copy()
         run_env.update(env)
 
     if prepend_path:
@@ -3035,12 +3039,16 @@ def run_chroot(root,
     '''
     __salt__['mount.mount'](
         os.path.join(root, 'dev'),
-        'udev',
+        'devtmpfs',
         fstype='devtmpfs')
     __salt__['mount.mount'](
         os.path.join(root, 'proc'),
         'proc',
         fstype='proc')
+    __salt__['mount.mount'](
+        os.path.join(root, 'sys'),
+        'sysfs',
+        fstype='sysfs')
 
     # Execute chroot routine
     sh_ = '/bin/sh'
@@ -3092,6 +3100,7 @@ def run_chroot(root,
         log.error('Processes running in chroot could not be killed, '
                   'filesystem will remain mounted')
 
+    __salt__['mount.umount'](os.path.join(root, 'sys'))
     __salt__['mount.umount'](os.path.join(root, 'proc'))
     __salt__['mount.umount'](os.path.join(root, 'dev'))
     if hide_output:
@@ -3279,7 +3288,12 @@ def shell_info(shell, list_modules=False):
         # salt-call will general have home set, the salt-minion service may not
         # We need to assume ports of unix shells to windows will look after
         # themselves in setting HOME as they do it in many different ways
-        newenv = os.environ
+        if salt.utils.platform.is_windows():
+            import nt
+            newenv = nt.environ
+        else:
+            newenv = os.environ
+
         if ('HOME' not in newenv) and (not salt.utils.platform.is_windows()):
             newenv['HOME'] = os.path.expanduser('~')
             log.debug('HOME environment set to %s', newenv['HOME'])
