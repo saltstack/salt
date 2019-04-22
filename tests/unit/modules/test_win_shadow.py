@@ -16,14 +16,17 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.win_shadow as win_shadow
+from salt.exceptions import CommandExecutionError
 
 
 try:
     import win32security
+    import winerror
 
     class WinError(win32security.error):
         def __init__(self):
             self.winerror = 0
+            self.strerror = ''
 
     HAS_WIN32 = True
 except ImportError:
@@ -109,7 +112,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
                                            password='P@ssW0rd'))
 
     @skipIf(not HAS_WIN32, 'Requires win32 libraries')
-    def test_verify_password_invalid_account_locked(self):
+    def test_verify_password_invalid_account_gets_locked(self):
         '''
         Test verify_password with an invalid password that locks the account
         '''
@@ -118,7 +121,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
         mock_update = MagicMock(return_value=True)
 
         win_error = WinError()
-        win_error.winerror = 1326
+        win_error.winerror = winerror.ERROR_LOGON_FAILURE
 
         mock_logon_user = MagicMock(side_effect=win_error)
 
@@ -130,6 +133,44 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
                                              password='P@ssW0rd')
             mock_update.called_once_with('spongebob', unlock_account=True)
             self.assertFalse(ret)
+
+    @skipIf(not HAS_WIN32, 'Requires win32 libraries')
+    def test_verify_password_disabled_account(self):
+        '''
+        Test verify_password where LogonUser encounters another error
+        '''
+        mock_info = MagicMock(return_value={'account_locked': False})
+
+        win_error = WinError()
+        win_error.winerror = winerror.ERROR_ACCOUNT_DISABLED
+
+        mock_logon_user = MagicMock(side_effect=win_error)
+
+        with patch.dict(win_shadow.__salt__, {'user.info': mock_info}), \
+                patch('salt.modules.win_shadow.win32security.LogonUser',
+                      mock_logon_user):
+            ret = win_shadow.verify_password(name='spongebob',
+                                             password='P@ssW0rd')
+            self.assertTrue(ret)
+
+    @skipIf(not HAS_WIN32, 'Requires win32 libraries')
+    def test_verify_password_locked_account(self):
+        '''
+        Test verify_password where LogonUser encounters another error
+        '''
+        mock_info = MagicMock(return_value={'account_locked': False})
+
+        win_error = WinError()
+        win_error.winerror = winerror.ERROR_ACCOUNT_LOCKED_OUT
+
+        mock_logon_user = MagicMock(side_effect=win_error)
+
+        with patch.dict(win_shadow.__salt__, {'user.info': mock_info}), \
+             patch('salt.modules.win_shadow.win32security.LogonUser',
+                   mock_logon_user):
+            with self.assertRaises(CommandExecutionError):
+                win_shadow.verify_password(name='spongebob',
+                                           password='P@ssW0rd')
 
     @skipIf(not HAS_WIN32, 'Requires win32 libraries')
     def test_verify_password_unknown_error(self):
@@ -146,6 +187,6 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_shadow.__salt__, {'user.info': mock_info}), \
                 patch('salt.modules.win_shadow.win32security.LogonUser',
                       mock_logon_user):
-            with self.assertRaises(WinError):
+            with self.assertRaises(CommandExecutionError):
                 win_shadow.verify_password(name='spongebob',
                                            password='P@ssW0rd')
