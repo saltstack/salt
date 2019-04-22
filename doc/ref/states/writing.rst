@@ -256,10 +256,6 @@ A State Module must return a dict containing the following keys/values:
   Prefer to keep line lengths short (use multiple lines as needed),
   and end with punctuation (e.g. a period) to delimit multiple comments.
 
-The return data can also, include the **pchanges** key, this stands for
-`predictive changes`. The **pchanges** key informs the State system what
-changes are predicted to occur.
-
 .. note::
 
     States should not return data which cannot be serialized such as frozensets.
@@ -445,7 +441,6 @@ Example state module
             'changes': {},
             'result': False,
             'comment': '',
-            'pchanges': {},
             }
 
         # Start with basic error-checking. Do all the passed parameters make sense
@@ -466,7 +461,7 @@ Example state module
         # in ``test=true`` mode.
         if __opts__['test'] == True:
             ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
-            ret['pchanges'] = {
+            ret['changes'] = {
                 'old': current_state,
                 'new': 'Description, diff, whatever of the new state',
             }

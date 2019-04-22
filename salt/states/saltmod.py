@@ -442,7 +442,8 @@ def function(
         kwarg=None,
         timeout=None,
         batch=None,
-        subset=None):
+        subset=None,
+        **kwargs):  # pylint: disable=unused-argument
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
 
@@ -497,15 +498,15 @@ def function(
 
     '''
     func_ret = {'name': name,
-           'changes': {},
-           'comment': '',
-           'result': True}
+                'changes': {},
+                'comment': '',
+                'result': True}
     if kwarg is None:
         kwarg = {}
     if isinstance(arg, six.string_types):
-        func_ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
-                           'Modifying in place, but please update SLS file '
-                           'to remove this warning.']
+        func_ret['warnings'] = [
+            'Please specify \'arg\' as a list of arguments.'
+        ]
         arg = arg.split()
 
     cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
@@ -539,9 +540,8 @@ def function(
 
     fun = name
     if __opts__['test'] is True:
-        func_ret['comment'] = (
-                'Function {0} will be executed on target {1} as test={2}'
-                ).format(fun, tgt, six.text_type(False))
+        func_ret['comment'] = \
+            'Function {0} would be executed on target {1}'.format(fun, tgt)
         func_ret['result'] = None
         return func_ret
     try:
@@ -783,7 +783,7 @@ def runner(name, **kwargs):
     return ret
 
 
-def parallel_runners(name, runners):
+def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argument
     '''
     Executes multiple runner modules on the master in parallel.
 

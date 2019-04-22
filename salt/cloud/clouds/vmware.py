@@ -138,7 +138,7 @@ import salt.config as config
 from salt.ext import six
 try:
     # Attempt to import pyVmomi libs
-    from pyVmomi import vim
+    from pyVmomi import vim  # pylint: disable=no-name-in-module
     HAS_PYVMOMI = True
 except Exception:
     HAS_PYVMOMI = False
