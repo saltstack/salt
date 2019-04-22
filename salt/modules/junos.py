@@ -35,6 +35,7 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 from salt.ext import six
+from salt.exceptions import MinionError
 
 # Juniper interface libraries
 # https://github.com/Juniper/py-junos-eznc
@@ -1040,14 +1041,13 @@ def zeroize():
 @timeoutDecorator
 def install_os(path=None, **kwargs):
     '''
-    Installs the given image on the device. After the installation is complete\
-     the device is rebooted,
-    if reboot=True is given as a keyworded argument.
+    Installs the given image on the device. After the installation is complete
+    the device is rebooted, if reboot=True is given as a keyworded argument.
 
     path (required)
         Path where the image file is present on the proxy minion
 
-    remote_path :
+    remote_path : /var/tmp
         If the value of path  is a file path on the local
         (Salt host's) filesystem, then the image is copied from the local
         filesystem to the :remote_path: directory on the target Junos
@@ -1112,19 +1112,25 @@ def install_os(path=None, **kwargs):
         return ret
 
     if not no_copy_:
-        image_cached_path = salt.utils.files.mkstemp()
-        __salt__['cp.get_file'](path, image_cached_path)
+        # To handle invalid image path scenario
+        try:
+            image_cached_path = salt.utils.files.mkstemp()
+            __salt__['cp.get_file'](path, image_cached_path)
 
-        if not os.path.isfile(image_cached_path):
-            ret['message'] = 'Invalid image path.'
+            if not os.path.isfile(image_cached_path):
+                ret['message'] = 'Invalid image path.'
+                ret['out'] = False
+                return ret
+
+            if os.path.getsize(image_cached_path) == 0:
+                ret['message'] = 'Failed to copy image'
+                ret['out'] = False
+                return ret
+            path = image_cached_path
+        except MinionError:
+            ret['message'] = 'Invalid path. Please provide a valid image path'
             ret['out'] = False
             return ret
-
-        if os.path.getsize(image_cached_path) == 0:
-            ret['message'] = 'Failed to copy image'
-            ret['out'] = False
-            return ret
-        path = image_cached_path
 
     try:
         conn.sw.install(path, progress=True, **op)
