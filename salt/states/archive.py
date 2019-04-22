@@ -1350,7 +1350,10 @@ def extracted(name,
                         )
                         return ret
 
-                    tar_opts = shlex.split(options)
+                    # Ignore verbose file list options as we are already using
+                    # "v" below in tar_shortopts
+                    tar_opts = [x for x in shlex.split(options)
+                                if x not in ('v', '-v', '--verbose')]
 
                     tar_cmd = ['tar']
                     tar_shortopts = 'xv'
