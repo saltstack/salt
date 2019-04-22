@@ -2048,7 +2048,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
 
 
 class ChattrVersionTests(TestCase):
-    CHATTR_MAN = (
+    CHATTR_MAN = salt.utils.stringutils.to_bytes((
          'AVAILABILITY\n'
          'chattr is part of the e2fsprogs package and is available '
          'from http://e2fsprogs.sourceforge.net.\n'
@@ -2059,7 +2059,7 @@ class ChattrVersionTests(TestCase):
          'January 2017                              '
          '                                          '
          '                          CHATTR(1)'
-    )
+    ))
 
     def test__parse_chattr_version(self):
         '''

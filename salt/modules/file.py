@@ -172,7 +172,10 @@ def _parse_chattr_man(man):
     '''
     Parse the contents of a chattr man page to find the E2fsprogs version
     '''
-    match = re.search(r'E2fsprogs version [0-9\.]+', man)
+    match = re.search(
+        r'E2fsprogs version [0-9\.]+',
+        salt.utils.string_utils.to_str(man),
+    )
     if match:
         version = match.group().strip('E2fsprogs version ')
     else:
