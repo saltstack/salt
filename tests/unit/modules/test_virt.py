@@ -2663,3 +2663,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.storagePoolLookupByName.return_value = mock_pool
         # pylint: enable=no-member
         self.assertEqual(names, virt.pool_list_volumes('default'))
+
+    def test_get_uuid(self):
+        '''
+        Test virt.get_uuid()
+        '''
+        mock = MagicMock(return_value={})
+        with patch.dict(virt.__salt__, {'config.get': mock}):  # pylint: disable=no-member
+            ret = virt.get_uuid()
+            self.assertTrue(len(ret) == 1)
+            uuid = ret[0]
+            print uuid
+
