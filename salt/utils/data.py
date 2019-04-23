@@ -13,9 +13,9 @@ import logging
 import re
 
 try:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, MutableMapping, Sequence
 except ImportError:
-    from collections import Mapping
+    from collections import Mapping, MutableMapping, Sequence
 
 # Import Salt libs
 import salt.utils.dictupdate
@@ -24,12 +24,99 @@ import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.utils.decorators.jinja import jinja_filter
+from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
+try:
+    import jmespath
+except ImportError:
+    jmespath = None
+
 log = logging.getLogger(__name__)
+
+
+class CaseInsensitiveDict(MutableMapping):
+    '''
+    Inspired by requests' case-insensitive dict implementation, but works with
+    non-string keys as well.
+    '''
+    def __init__(self, init=None, **kwargs):
+        '''
+        Force internal dict to be ordered to ensure a consistent iteration
+        order, irrespective of case.
+        '''
+        self._data = OrderedDict()
+        self.update(init or {}, **kwargs)
+
+    def __len__(self):
+        return len(self._data)
+
+    def __setitem__(self, key, value):
+        # Store the case-sensitive key so it is available for dict iteration
+        self._data[to_lowercase(key)] = (key, value)
+
+    def __delitem__(self, key):
+        del self._data[to_lowercase(key)]
+
+    def __getitem__(self, key):
+        return self._data[to_lowercase(key)][1]
+
+    def __iter__(self):
+        return (item[0] for item in six.itervalues(self._data))
+
+    def __eq__(self, rval):
+        if not isinstance(rval, Mapping):
+            # Comparing to non-mapping type (e.g. int) is always False
+            return False
+        return dict(self.items_lower()) == dict(CaseInsensitiveDict(rval).items_lower())
+
+    def __repr__(self):
+        return repr(dict(six.iteritems(self)))
+
+    def items_lower(self):
+        '''
+        Returns a generator iterating over keys and values, with the keys all
+        being lowercase.
+        '''
+        return ((key, val[1]) for key, val in six.iteritems(self._data))
+
+    def copy(self):
+        '''
+        Returns a copy of the object
+        '''
+        return CaseInsensitiveDict(six.iteritems(self._data))
+
+
+def __change_case(data, attr, preserve_dict_class=False):
+    try:
+        return getattr(data, attr)()
+    except AttributeError:
+        pass
+
+    data_type = data.__class__
+
+    if isinstance(data, Mapping):
+        return (data_type if preserve_dict_class else dict)(
+            (__change_case(key, attr, preserve_dict_class),
+             __change_case(val, attr, preserve_dict_class))
+            for key, val in six.iteritems(data)
+        )
+    elif isinstance(data, Sequence):
+        return data_type(
+            __change_case(item, attr, preserve_dict_class) for item in data)
+    else:
+        return data
+
+
+def to_lowercase(data, preserve_dict_class=False):
+    return __change_case(data, 'lower', preserve_dict_class)
+
+
+def to_uppercase(data, preserve_dict_class=False):
+    return __change_case(data, 'upper', preserve_dict_class)
 
 
 @jinja_filter('compare_dicts')
@@ -455,13 +542,14 @@ def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
     data['foo']['bar']['baz'] if this value exists, and will otherwise return
     the dict in the default argument.
     '''
+    ptr = data
     try:
         for each in key.split(delimiter):
-            data = data[each]
+            ptr = ptr[each]
     except (KeyError, IndexError, TypeError):
         # Encountered a non-indexable value in the middle of traversing
         return default
-    return data
+    return ptr
 
 
 @jinja_filter('traverse')
@@ -476,16 +564,17 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
     {'foo':{'bar':['baz']}} , if data like {'foo':{'bar':{'0':'baz'}}}
     then return data['foo']['bar']['0']
     '''
+    ptr = data
     for each in key.split(delimiter):
-        if isinstance(data, list):
+        if isinstance(ptr, list):
             try:
                 idx = int(each)
             except ValueError:
                 embed_match = False
                 # Index was not numeric, lets look at any embedded dicts
-                for embedded in (x for x in data if isinstance(x, dict)):
+                for embedded in (x for x in ptr if isinstance(x, dict)):
                     try:
-                        data = embedded[each]
+                        ptr = embedded[each]
                         embed_match = True
                         break
                     except KeyError:
@@ -495,15 +584,15 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
                     return default
             else:
                 try:
-                    data = data[idx]
+                    ptr = ptr[idx]
                 except IndexError:
                     return default
         else:
             try:
-                data = data[each]
+                ptr = ptr[each]
             except (KeyError, TypeError):
                 return default
-    return data
+    return ptr
 
 
 def subdict_match(data,
@@ -515,20 +604,37 @@ def subdict_match(data,
     Check for a match in a dictionary using a delimiter character to denote
     levels of subdicts, and also allowing the delimiter character to be
     matched. Thus, 'foo:bar:baz' will match data['foo'] == 'bar:baz' and
-    data['foo']['bar'] == 'baz'. The former would take priority over the
-    latter.
+    data['foo']['bar'] == 'baz'. The latter would take priority over the
+    former, as more deeply-nested matches are tried first.
     '''
     def _match(target, pattern, regex_match=False, exact_match=False):
+        # The reason for using six.text_type first and _then_ using
+        # to_unicode as a fallback is because we want to eventually have
+        # unicode types for comparison below. If either value is numeric then
+        # six.text_type will turn it into a unicode string. However, if the
+        # value is a PY2 str type with non-ascii chars, then the result will be
+        # a UnicodeDecodeError. In those cases, we simply use to_unicode to
+        # decode it to unicode. The reason we can't simply use to_unicode to
+        # begin with is that (by design) to_unicode will raise a TypeError if a
+        # non-string/bytestring/bytearray value is passed.
+        try:
+            target = six.text_type(target).lower()
+        except UnicodeDecodeError:
+            target = salt.utils.stringutils.to_unicode(target).lower()
+        try:
+            pattern = six.text_type(pattern).lower()
+        except UnicodeDecodeError:
+            pattern = salt.utils.stringutils.to_unicode(pattern).lower()
+
         if regex_match:
             try:
-                return re.match(pattern.lower(), six.text_type(target).lower())
+                return re.match(pattern, target)
             except Exception:
                 log.error('Invalid regex \'%s\' in match', pattern)
                 return False
-        elif exact_match:
-            return six.text_type(target).lower() == pattern.lower()
         else:
-            return fnmatch.fnmatch(six.text_type(target).lower(), pattern.lower())
+            return target == pattern if exact_match \
+                else fnmatch.fnmatch(target, pattern)
 
     def _dict_match(target, pattern, regex_match=False, exact_match=False):
         wildcard = pattern.startswith('*:')
@@ -548,11 +654,6 @@ def subdict_match(data,
             return True
         if wildcard:
             for key in target:
-                if _match(key,
-                          pattern,
-                          regex_match=regex_match,
-                          exact_match=exact_match):
-                    return True
                 if isinstance(target[key], dict):
                     if _dict_match(target[key],
                                    pattern,
@@ -566,15 +667,39 @@ def subdict_match(data,
                                   regex_match=regex_match,
                                   exact_match=exact_match):
                             return True
+                elif _match(target[key],
+                            pattern,
+                            regex_match=regex_match,
+                            exact_match=exact_match):
+                    return True
         return False
 
-    for idx in range(1, expr.count(delimiter) + 1):
-        splits = expr.split(delimiter)
+    splits = expr.split(delimiter)
+    num_splits = len(splits)
+    if num_splits == 1:
+        # Delimiter not present, this can't possibly be a match
+        return False
+
+    splits = expr.split(delimiter)
+    num_splits = len(splits)
+    if num_splits == 1:
+        # Delimiter not present, this can't possibly be a match
+        return False
+
+    # If we have 4 splits, then we have three delimiters. Thus, the indexes we
+    # want to use are 3, 2, and 1, in that order.
+    for idx in range(num_splits - 1, 0, -1):
         key = delimiter.join(splits[:idx])
-        matchstr = delimiter.join(splits[idx:])
+        if key == '*':
+            # We are matching on everything under the top level, so we need to
+            # treat the match as the entire data being passed in
+            matchstr = expr
+            match = data
+        else:
+            matchstr = delimiter.join(splits[idx:])
+            match = traverse_dict_and_list(data, key, {}, delimiter=delimiter)
         log.debug("Attempting to match '%s' in '%s' using delimiter '%s'",
                   matchstr, key, delimiter)
-        match = traverse_dict_and_list(data, key, {}, delimiter=delimiter)
         if match == {}:
             continue
         if isinstance(match, dict):
@@ -856,3 +981,15 @@ def stringify(data):
             item = six.text_type(item)
         ret.append(item)
     return ret
+
+
+@jinja_filter('json_query')
+def json_query(data, expr):
+    '''
+    Query data using JMESPath language (http://jmespath.org).
+    '''
+    if jmespath is None:
+        err = 'json_query requires jmespath module installed'
+        log.error(err)
+        raise RuntimeError(err)
+    return jmespath.search(expr, data)

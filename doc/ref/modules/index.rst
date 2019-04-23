@@ -137,7 +137,7 @@ call functions available in other execution modules.
 The variable ``__salt__`` is packed into the modules after they are loaded into
 the Salt minion.
 
-The ``__salt__`` variable is a :ref:`Python dictionary <typesmapping>`
+The ``__salt__`` variable is a :ref:`Python dictionary <python:typesmapping>`
 containing all of the Salt functions. Dictionary keys are strings representing
 the names of the modules and the values are the functions themselves.
 
@@ -176,7 +176,7 @@ Grains Data
 -----------
 
 The values detected by the Salt Grains on the minion are available in a
-:ref:`Python dictionary <typesmapping>` named ``__grains__`` and can be
+:ref:`Python dictionary <python:typesmapping>` named ``__grains__`` and can be
 accessed from within callable objects in the Python modules.
 
 To see the contents of the grains dictionary for a given system in your
@@ -288,7 +288,7 @@ Virtual module names are set using the ``__virtual__`` function and the
 ``__virtual__`` Function
 ========================
 
-The ``__virtual__`` function returns either a :ref:`string <typesseq>`,
+The ``__virtual__`` function returns either a :ref:`string <python:typesseq>`,
 :py:data:`True`, :py:data:`False`, or :py:data:`False` with an :ref:`error
 string <modules-error-info>`. If a string is returned then the module is loaded
 using the name of the string as the virtual name. If ``True`` is returned the

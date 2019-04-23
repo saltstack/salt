@@ -11,7 +11,7 @@ import sys
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
-from tests.support.paths import TESTS_DIR
+from tests.support.runtests import RUNTIME_VARS
 
 
 # Import Salt libs
@@ -28,7 +28,7 @@ from tests.unit.modules.test_boto_vpc import BotoVpcTestCaseMixin
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 try:
     import boto
-    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     import boto3
     from boto.exception import BotoServerError
 
@@ -89,7 +89,10 @@ def _has_required_boto():
 class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         ctx = {}
-        utils = salt.loader.utils(self.opts, whitelist=['boto', 'boto3'], context=ctx)
+        utils = salt.loader.utils(
+            self.opts,
+            whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform'],
+            context=ctx)
         serializers = salt.loader.serializers(self.opts)
         self.funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_vpc', 'config'])
         self.salt_states = salt.loader.states(opts=self.opts, functions=self.funcs, utils=utils, whitelist=['boto_vpc'],
@@ -107,7 +110,7 @@ class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     @classmethod

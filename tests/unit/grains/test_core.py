@@ -36,10 +36,7 @@ import salt.grains.core as core
 
 # Import 3rd-party libs
 from salt.ext import six
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 
 log = logging.getLogger(__name__)
 
@@ -89,6 +86,50 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "VERSION_CODENAME": "artful",
             "UBUNTU_CODENAME": "artful",
         })
+
+    def test_parse_cpe_name_wfn(self):
+        '''
+        Parse correct CPE_NAME data WFN formatted
+        :return:
+        '''
+        for cpe, cpe_ret in [('cpe:/o:opensuse:leap:15.0',
+                              {'phase': None, 'version': '15.0', 'product': 'leap',
+                               'vendor': 'opensuse', 'part': 'operating system'}),
+                             ('cpe:/o:vendor:product:42:beta',
+                              {'phase': 'beta', 'version': '42', 'product': 'product',
+                               'vendor': 'vendor', 'part': 'operating system'})]:
+            ret = core._parse_cpe_name(cpe)
+            for key in cpe_ret:
+                assert key in ret
+                assert cpe_ret[key] == ret[key]
+
+    def test_parse_cpe_name_v23(self):
+        '''
+        Parse correct CPE_NAME data v2.3 formatted
+        :return:
+        '''
+        for cpe, cpe_ret in [('cpe:2.3:o:microsoft:windows_xp:5.1.601:beta:*:*:*:*:*:*',
+                              {'phase': 'beta', 'version': '5.1.601', 'product': 'windows_xp',
+                               'vendor': 'microsoft', 'part': 'operating system'}),
+                             ('cpe:2.3:h:corellian:millenium_falcon:1.0:*:*:*:*:*:*:*',
+                              {'phase': None, 'version': '1.0', 'product': 'millenium_falcon',
+                               'vendor': 'corellian', 'part': 'hardware'}),
+                             ('cpe:2.3:*:dark_empire:light_saber:3.0:beta:*:*:*:*:*:*',
+                              {'phase': 'beta', 'version': '3.0', 'product': 'light_saber',
+                               'vendor': 'dark_empire', 'part': None})]:
+            ret = core._parse_cpe_name(cpe)
+            for key in cpe_ret:
+                assert key in ret
+                assert cpe_ret[key] == ret[key]
+
+    def test_parse_cpe_name_broken(self):
+        '''
+        Parse broken CPE_NAME data
+        :return:
+        '''
+        for cpe in ['cpe:broken', 'cpe:broken:in:all:ways:*:*:*:*',
+                    'cpe:x:still:broken:123', 'who:/knows:what:is:here']:
+            assert core._parse_cpe_name(cpe) == {}
 
     def test_missing_os_release(self):
         with patch('salt.utils.files.fopen', mock_open(read_data={})):
@@ -542,6 +583,27 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
 
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_windows_platform_data(self):
+        '''
+        Test the _windows_platform_data function
+        '''
+        grains = ['biosversion', 'kernelrelease', 'kernelversion',
+                  'manufacturer', 'motherboard', 'osfullname', 'osmanufacturer',
+                  'osrelease', 'osservicepack', 'osversion', 'productname',
+                  'serialnumber', 'timezone', 'virtual', 'windowsdomain',
+                  'windowsdomaintype']
+        returned_grains = core._windows_platform_data()
+        for grain in grains:
+            self.assertIn(grain, returned_grains)
+
+        valid_types = ['Unknown', 'Unjoined', 'Workgroup', 'Domain']
+        self.assertIn(returned_grains['windowsdomaintype'], valid_types)
+        valid_releases = ['Vista', '7', '8', '8.1', '10', '2008Server',
+                          '2008ServerR2', '2012Server', '2012ServerR2',
+                          '2016Server', '2019Server']
+        self.assertIn(returned_grains['osrelease'], valid_releases)
+
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_linux_memdata(self):
         '''
@@ -646,6 +708,22 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                 core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
                                 'Docker'
                             )
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_xen_virtual(self):
+        '''
+        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        '''
+        with patch.object(os.path, 'isfile', MagicMock(return_value=False)):
+            with patch.dict(core.__salt__, {'cmd.run': MagicMock(return_value='')}), \
+                patch.object(os.path,
+                             'isfile',
+                             MagicMock(side_effect=lambda x: True if x == '/sys/bus/xen/drivers/xenconsole' else False)):
+                log.debug('Testing Xen')
+                self.assertEqual(
+                    core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                    'Xen PV DomU'
+                )
 
     def _check_ipaddress(self, value, ip_v):
         '''
@@ -786,9 +864,32 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ret = {'fqdns': ['bluesniff.foo.bar', 'foo.bar.baz', 'rinzler.evil-corp.com']}
         with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
             fqdns = core.fqdns()
-            self.assertIn('fqdns', fqdns)
-            self.assertEqual(len(fqdns['fqdns']), len(ret['fqdns']))
-            self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))
+            assert "fqdns" in fqdns
+            assert len(fqdns['fqdns']) == len(ret['fqdns'])
+            assert set(fqdns['fqdns']) == set(ret['fqdns'])
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch.object(salt.utils.platform, 'is_windows', MagicMock(return_value=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
+    @patch('salt.utils.network.ip_addrs6',
+           MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef']))
+    @patch('salt.utils.network.socket.getfqdn', MagicMock(side_effect=lambda v: v))  # Just pass-through
+    def test_fqdns_aliases(self):
+        '''
+        FQDNs aliases
+        '''
+        reverse_resolv_mock = [('foo.bar.baz', ["throwmeaway", "this.is.valid.alias"], ['1.2.3.4']),
+                               ('rinzler.evil-corp.com', ["false-hostname", "badaliass"], ['5.6.7.8']),
+                               ('foo.bar.baz', [], ['fe80::a8b2:93ff:fe00:0']),
+                               ('bluesniff.foo.bar', ["alias.bluesniff.foo.bar"], ['fe80::a8b2:93ff:dead:beef'])]
+        with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
+            fqdns = core.fqdns()
+            assert "fqdns" in fqdns
+            for alias in ["this.is.valid.alias", "alias.bluesniff.foo.bar"]:
+                assert alias in fqdns["fqdns"]
+
+            for alias in ["throwmeaway", "false-hostname", "badaliass"]:
+                assert alias not in fqdns["fqdns"]
 
     def test_core_virtual(self):
         '''
@@ -1004,3 +1105,32 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 assert ret[count]['model'] == device[2]
                 assert ret[count]['vendor'] == device[3]
                 count += 1
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_kernelparams_return(self):
+        expectations = [
+            ('BOOT_IMAGE=/vmlinuz-3.10.0-693.2.2.el7.x86_64',
+             {'kernelparams': [('BOOT_IMAGE', '/vmlinuz-3.10.0-693.2.2.el7.x86_64')]}),
+            ('root=/dev/mapper/centos_daemon-root',
+             {'kernelparams': [('root', '/dev/mapper/centos_daemon-root')]}),
+            ('rhgb quiet ro',
+             {'kernelparams': [('rhgb', None), ('quiet', None), ('ro', None)]}),
+            ('param="value1"',
+             {'kernelparams': [('param', 'value1')]}),
+            ('param="value1 value2 value3"',
+             {'kernelparams': [('param', 'value1 value2 value3')]}),
+            ('param="value1 value2 value3" LANG="pl" ro',
+             {'kernelparams': [('param', 'value1 value2 value3'), ('LANG', 'pl'), ('ro', None)]}),
+            ('ipv6.disable=1',
+             {'kernelparams': [('ipv6.disable', '1')]}),
+            ('param="value1:value2:value3"',
+             {'kernelparams': [('param', 'value1:value2:value3')]}),
+            ('param="value1,value2,value3"',
+             {'kernelparams': [('param', 'value1,value2,value3')]}),
+            ('param="value1" param="value2" param="value3"',
+             {'kernelparams': [('param', 'value1'), ('param', 'value2'), ('param', 'value3')]}),
+        ]
+
+        for cmdline, expectation in expectations:
+            with patch('salt.utils.files.fopen', mock_open(read_data=cmdline)):
+                self.assertEqual(core.kernelparams(), expectation)

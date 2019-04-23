@@ -224,7 +224,7 @@ def version(*names, **kwargs):
 info = salt.utils.functools.alias_function(version, 'info')
 
 
-def refresh_db(jail=None, chroot=None, root=None, force=False):
+def refresh_db(jail=None, chroot=None, root=None, force=False, **kwargs):
     '''
     Refresh PACKAGESITE contents
 
@@ -290,7 +290,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name> jail=<jail name or id>
         salt '*' pkg.latest_version <package name> chroot=/path/to/chroot
     '''
-    if len(names) == 0:
+    if not names:
         return ''
     ret = {}
 
@@ -820,7 +820,7 @@ def install(name=None,
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     env = {}
@@ -2441,7 +2441,7 @@ def _parse_upgrade(stdout):
     return result
 
 
-def version_cmp(pkg1, pkg2, ignore_epoch=False):
+def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem

@@ -143,6 +143,24 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.multiple(opkg, **patch_kwargs):
                 self.assertEqual(opkg.install('vim:7.4'), INSTALLED)
 
+    def test_install_noaction(self):
+        '''
+        Test - Install packages.
+        '''
+        with patch('salt.modules.opkg.list_pkgs', MagicMock(side_effect=({}, {}))):
+            std_out = 'Downloading http://feedserver/feeds/test/vim_7.4_arch.ipk.\n\nInstalling vim (7.4) on root\n'
+            ret_value = {'retcode': 0, 'stdout': std_out}
+            mock = MagicMock(return_value=ret_value)
+            patch_kwargs = {
+                '__salt__': {
+                    'cmd.run_all': mock,
+                    'pkg_resource.parse_targets': MagicMock(return_value=({'vim': '7.4'}, 'repository')),
+                    'restartcheck.restartcheck': MagicMock(return_value='No packages seem to need to be restarted')
+                }
+            }
+            with patch.multiple(opkg, **patch_kwargs):
+                self.assertEqual(opkg.install('vim:7.4', test=True), INSTALLED)
+
     def test_remove(self):
         '''
         Test - Remove packages.
@@ -159,6 +177,24 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
             }
             with patch.multiple(opkg, **patch_kwargs):
                 self.assertEqual(opkg.remove('vim'), REMOVED)
+
+    def test_remove_noaction(self):
+        '''
+        Test - Remove packages.
+        '''
+        with patch('salt.modules.opkg.list_pkgs', MagicMock(side_effect=[PACKAGES, PACKAGES])):
+            std_out = '\nRemoving vim (7.4) from root...\n'
+            ret_value = {'retcode': 0, 'stdout': std_out}
+            mock = MagicMock(return_value=ret_value)
+            patch_kwargs = {
+                '__salt__': {
+                    'cmd.run_all': mock,
+                    'pkg_resource.parse_targets': MagicMock(return_value=({'vim': '7.4'}, 'repository')),
+                    'restartcheck.restartcheck': MagicMock(return_value='No packages seem to need to be restarted')
+                }
+            }
+            with patch.multiple(opkg, **patch_kwargs):
+                self.assertEqual(opkg.remove('vim:7.4', test=True), REMOVED)
 
     def test_info_installed(self):
         '''

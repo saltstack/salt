@@ -144,8 +144,7 @@ def latest_active(name, at_time=None, **kwargs):  # pylint: disable=unused-argum
 
         if __opts__['test']:
             ret['result'] = None
-            ret['changes'] = {}
-            ret['pchanges'] = {'kernel': {
+            ret['changes'] = {'kernel': {
                 'old': active,
                 'new': latest
             }}
@@ -204,7 +203,14 @@ def latest_wait(name, at_time=None, **kwargs):  # pylint: disable=unused-argumen
 
 def mod_watch(name, sfun, **kwargs):
     '''
-    Execute a kernelpkg state based on a watch or listen call
+    The kernerpkg watcher, called to invoke the watch command.
+    When called, execute a kernelpkg state based on a watch or listen call.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
     '''
     if sfun in ('latest_active', 'latest_wait'):
         return latest_active(name, **kwargs)

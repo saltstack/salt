@@ -15,8 +15,8 @@ import os
 import time
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP
 
 
 class LoaderOverridesTest(ModuleCase):
@@ -29,7 +29,7 @@ class LoaderOverridesTest(ModuleCase):
         # `override_test.py` file is present in the _modules directory before
         # trying to list all functions. This test may execute before the
         # minion has finished syncing down the files it needs.
-        module = os.path.join(TMP, 'rootdir', 'cache', 'files',
+        module = os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache', 'files',
                               'base', '_modules', 'override_test.py')
         tries = 0
         while not os.path.exists(module):

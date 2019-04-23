@@ -90,9 +90,9 @@ shorthand for having to type out complicated compound expressions.
 .. code-block:: yaml
 
     nodegroups:
-      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
-      group2: 'G@os:Debian and foo.domain.com'
-      group3: 'G@os:Debian and N@group1'
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group2: 'G@os:Debian and foo.domain.com'
+      group3: 'G@os:Debian and N@group1'
 
 
 Advanced Targeting Methods
@@ -111,3 +111,19 @@ There are many ways to target individual minions or groups of minions in Salt:
     nodegroups
     batch
     range
+
+
+Loadable Matchers
+=================
+
+.. versionadded:: 2019.2.0
+
+Internally targeting is implemented with chunks of code called Matchers.  As of
+the 2019.2.0 release, matchers can be loaded dynamically.  Currently new matchers
+cannot be created, but existing matchers can have their functionality altered or
+extended.  For more information on Matchers see
+
+.. toctree::
+    :maxdepth: 2
+
+    Loadable Matchers <../matchers/index.rst>

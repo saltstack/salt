@@ -12,10 +12,10 @@ import subprocess
 import tempfile
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
 from tests.support.docker import with_network, random_name
-from tests.support.paths import FILES, TMP
 from tests.support.helpers import destructiveTest, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
 
@@ -63,12 +63,11 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         '''
         '''
         # Create temp dir
-        cls.image_build_rootdir = tempfile.mkdtemp(dir=TMP)
+        cls.image_build_rootdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         # Generate image name
         cls.image = random_name(prefix='salt_busybox_')
 
-        script_path = \
-            os.path.join(FILES, 'file/base/mkimage-busybox-static')
+        script_path = os.path.join(RUNTIME_VARS.BASE_FILES, 'mkimage-busybox-static')
         cmd = [script_path, cls.image_build_rootdir, cls.image]
         log.debug('Running \'%s\' to build busybox image', ' '.join(cmd))
         process = subprocess.Popen(
@@ -594,6 +593,33 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue('VAR1=value1' in ret['Config']['Env'])
         self.assertTrue('VAR2=value2' in ret['Config']['Env'])
         self.assertTrue('VAR3=value3' not in ret['Config']['Env'])
+
+    @with_network(subnet='10.247.197.96/27', create=True)
+    @container_name
+    def test_static_ip_one_network(self, container_name, net):
+        '''
+        Ensure that if a network is created and specified as network_mode, that is the only network, and
+        the static IP is applied.
+        '''
+        requested_ip = '10.247.197.100'
+        kwargs = {
+            'name': container_name,
+            'image': self.image,
+            'network_mode': net.name,
+            'networks': [{net.name: [{'ipv4_address': requested_ip}]}],
+            'shutdown_timeout': 1,
+        }
+        # Create a container
+        ret = self.run_state('docker_container.running', **kwargs)
+        self.assertSaltTrueReturn(ret)
+
+        inspect_result = self.run_function('docker.inspect_container',
+                                           [container_name])
+        connected_networks = inspect_result['NetworkSettings']['Networks']
+
+        self.assertEqual(list(connected_networks.keys()), [net.name])
+        self.assertEqual(inspect_result['HostConfig']['NetworkMode'], net.name)
+        self.assertEqual(connected_networks[net.name]['IPAMConfig']['IPv4Address'], requested_ip)
 
     def _test_running(self, container_name, *nets):
         '''

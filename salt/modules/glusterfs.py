@@ -58,6 +58,8 @@ def _gluster_output_cleanup(result):
     for line in result.splitlines():
         if line.startswith('gluster>'):
             ret += line[9:].strip()
+        elif line.startswith('Welcome to gluster prompt'):
+            pass
         else:
             ret += line.strip()
 
@@ -244,7 +246,7 @@ def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
         Gluster documentation. Every third brick in the brick list \
         is used as an arbiter brick.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     device_vg
         If true, specifies volume should use block backend instead of regular \
@@ -580,7 +582,7 @@ def add_volume_bricks(name, bricks):
         else:
             new_bricks.append(brick)
 
-    if len(new_bricks) > 0:
+    if new_bricks:
         for brick in new_bricks:
             cmd += ' {0}'.format(brick)
         return _gluster(cmd)
@@ -718,7 +720,7 @@ def list_quota_volume(name):
 
 def get_op_version(name):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Returns the glusterfs volume op-version
 
@@ -753,7 +755,7 @@ def get_op_version(name):
 
 def get_max_op_version():
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Returns the glusterfs volume's max op-version value
     Requires Glusterfs version > 3.9
@@ -787,7 +789,7 @@ def get_max_op_version():
 
 def set_op_version(version):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Set the glusterfs volume op-version
 
@@ -812,7 +814,7 @@ def set_op_version(version):
 
 def get_version():
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Returns the version of glusterfs.
     CLI Example:

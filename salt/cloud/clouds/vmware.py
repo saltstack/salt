@@ -1642,6 +1642,52 @@ def list_datastores(kwargs=None, call=None):
     return {'Datastores': salt.utils.vmware.list_datastores(_get_si())}
 
 
+def list_datastores_full(kwargs=None, call=None):
+    '''
+    List all the datastores for this VMware environment, with extra information
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_datastores_full my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_datastores_full function must be called with '
+            '-f or --function.'
+        )
+
+    return {'Datastores': salt.utils.vmware.list_datastores_full(_get_si())}
+
+
+def list_datastore_full(kwargs=None, call=None, datastore=None):
+    '''
+    Returns a dictionary with basic information for the given datastore
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_datastore_full my-vmware-config datastore=datastore-name
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_datastore_full function must be called with '
+            '-f or --function.'
+        )
+
+    if kwargs:
+        datastore = kwargs.get('datastore', None)
+
+    if not datastore:
+        raise SaltCloudSystemExit(
+            'The list_datastore_full function requires a datastore'
+        )
+
+    return {datastore: salt.utils.vmware.list_datastore_full(_get_si(), datastore)}
+
+
 def list_hosts(kwargs=None, call=None):
     '''
     List all the hosts for this VMware environment
@@ -2587,11 +2633,33 @@ def create(vm_):
     win_run_once = config.get_cloud_config_value(
         'win_run_once', vm_, __opts__, search_global=False, default=None
     )
+    win_ad_domain = config.get_cloud_config_value(
+        'win_ad_domain', vm_, __opts__, search_global=False, default=''
+    )
+    win_ad_user = config.get_cloud_config_value(
+        'win_ad_user', vm_, __opts__, search_global=False, default=''
+    )
+    win_ad_password = config.get_cloud_config_value(
+        'win_ad_password', vm_, __opts__, search_global=False, default=''
+    )
+    win_autologon = config.get_cloud_config_value(
+        'win_autologon', vm_, __opts__, search_global=False, default=True
+    )
+    timezone = config.get_cloud_config_value(
+        'timezone', vm_, __opts__, search_global=False, default=''
+    )
+    hw_clock_utc = config.get_cloud_config_value(
+        'hw_clock_utc', vm_, __opts__, search_global=False, default=''
+    )
+    clonefrom_datacenter = config.get_cloud_config_value(
+        'clonefrom_datacenter', vm_, __opts__, search_global=False, default=datacenter
+    )
 
     # Get service instance object
     si = _get_si()
 
     container_ref = None
+    clonefrom_datacenter_ref = None
 
     # If datacenter is specified, set the container reference to start search from it instead
     if datacenter:
@@ -2607,13 +2675,22 @@ def create(vm_):
                                  datacenter
                              )
             container_ref = datacenter_ref if datacenter_ref else None
+            clonefrom_container_ref = datacenter_ref if datacenter_ref else None
+        # allow specifying a different datacenter that the template lives in
+        if clonefrom_datacenter:
+            clonefrom_datacenter_ref = salt.utils.vmware.get_mor_by_property(
+                                           si,
+                                           vim.Datacenter,
+                                           clonefrom_datacenter
+                                       )
+            clonefrom_container_ref = clonefrom_datacenter_ref if clonefrom_datacenter_ref else None
 
         # Clone VM/template from specified VM/template
         object_ref = salt.utils.vmware.get_mor_by_property(
                          si,
                          vim.VirtualMachine,
                          vm_['clonefrom'],
-                         container_ref=container_ref
+                         container_ref=clonefrom_container_ref
                      )
         if object_ref:
             clone_type = "template" if object_ref.config.template else "vm"
@@ -2851,14 +2928,23 @@ def create(vm_):
                 identity = vim.vm.customization.LinuxPrep()
                 identity.hostName = vim.vm.customization.FixedName(name=host_name)
                 identity.domain = domain_name
+                if timezone:
+                    identity.timeZone = timezone
+                if isinstance(hw_clock_utc, bool):
+                    identity.hwClockUTC = hw_clock_utc
             else:
                 identity = vim.vm.customization.Sysprep()
                 identity.guiUnattended = vim.vm.customization.GuiUnattended()
-                identity.guiUnattended.autoLogon = True
-                identity.guiUnattended.autoLogonCount = 1
+                identity.guiUnattended.autoLogon = win_autologon
+                if win_autologon:
+                    identity.guiUnattended.autoLogonCount = 1
+                else:
+                    identity.guiUnattended.autoLogonCount = 0
                 identity.guiUnattended.password = vim.vm.customization.Password()
                 identity.guiUnattended.password.value = win_password
                 identity.guiUnattended.password.plainText = plain_text
+                if timezone:
+                    identity.guiUnattended.timeZone = timezone
                 if win_run_once:
                     identity.guiRunOnce = vim.vm.customization.GuiRunOnce()
                     identity.guiRunOnce.commandList = win_run_once
@@ -2868,6 +2954,12 @@ def create(vm_):
                 identity.userData.computerName = vim.vm.customization.FixedName()
                 identity.userData.computerName.name = host_name
                 identity.identification = vim.vm.customization.Identification()
+                if win_ad_domain and win_ad_user and win_ad_password:
+                    identity.identification.joinDomain = win_ad_domain
+                    identity.identification.domainAdmin = win_ad_user
+                    identity.identification.domainAdminPassword = vim.vm.customization.Password()
+                    identity.identification.domainAdminPassword.value = win_ad_password
+                    identity.identification.domainAdminPassword.plainText = plain_text
             custom_spec = vim.vm.customization.Specification(
                 globalIPSettings=global_ip,
                 identity=identity,
@@ -2889,7 +2981,8 @@ def create(vm_):
         log.debug('config_spec set to:\n%s', pprint.pformat(config_spec))
 
     event_kwargs = vm_.copy()
-    del event_kwargs['password']
+    if event_kwargs.get('password'):
+        del event_kwargs['password']
 
     try:
         __utils__['cloud.fire_event'](
@@ -3079,7 +3172,7 @@ def create_datacenter(kwargs=None, call=None):
             'You must specify name of the new datacenter to be created.'
         )
 
-    if len(datacenter_name) >= 80 or len(datacenter_name) <= 0:
+    if not datacenter_name or len(datacenter_name) >= 80:
         raise SaltCloudSystemExit(
             'The datacenter name must be a non empty string of less than 80 characters.'
         )
@@ -4373,7 +4466,7 @@ def reboot_host(kwargs=None, call=None):
             'Specified host system does not support reboot.'
         )
 
-    if not host_ref.runtime.inMaintenanceMode:
+    if not host_ref.runtime.inMaintenanceMode and not force:
         raise SaltCloudSystemExit(
             'Specified host system is not in maintenance mode. Specify force=True to '
             'force reboot even if there are virtual machines running or other operations '
@@ -4419,7 +4512,7 @@ def create_datastore_cluster(kwargs=None, call=None):
             'You must specify name of the new datastore cluster to be created.'
         )
 
-    if len(datastore_cluster_name) >= 80 or len(datastore_cluster_name) <= 0:
+    if not datastore_cluster_name or len(datastore_cluster_name) >= 80:
         raise SaltCloudSystemExit(
             'The datastore cluster name must be a non empty string of less than 80 characters.'
         )
@@ -4455,3 +4548,73 @@ def create_datastore_cluster(kwargs=None, call=None):
         return False
 
     return {datastore_cluster_name: 'created'}
+
+
+def shutdown_host(kwargs=None, call=None):
+    '''
+    Shut down the specified host system in this VMware environment
+
+    .. note::
+
+        If the host system is not in maintenance mode, it will not be shut down. If you
+        want to shut down the host system regardless of whether it is in maintenance mode,
+        set ``force=True``. Default is ``force=False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f shutdown_host my-vmware-config host="myHostSystemName" [force=True]
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The shutdown_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+    force = _str_to_bool(kwargs.get('force')) if kwargs and 'force' in kwargs else False
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must specify name of the host system.'
+        )
+
+    # Get the service instance
+    si = _get_si()
+
+    host_ref = salt.utils.vmware.get_mor_by_property(si, vim.HostSystem, host_name)
+    if not host_ref:
+        raise SaltCloudSystemExit(
+            'Specified host system does not exist.'
+        )
+
+    if host_ref.runtime.connectionState == 'notResponding':
+        raise SaltCloudSystemExit(
+            'Specified host system cannot be shut down in it\'s current state (not responding).'
+        )
+
+    if not host_ref.capability.rebootSupported:
+        raise SaltCloudSystemExit(
+            'Specified host system does not support shutdown.'
+        )
+
+    if not host_ref.runtime.inMaintenanceMode and not force:
+        raise SaltCloudSystemExit(
+            'Specified host system is not in maintenance mode. Specify force=True to '
+            'force reboot even if there are virtual machines running or other operations '
+            'in progress.'
+        )
+
+    try:
+        host_ref.ShutdownHost_Task(force)
+    except Exception as exc:
+        log.error(
+            'Error while shutting down host %s: %s',
+            host_name, exc,
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return {host_name: 'failed to shut down host'}
+
+    return {host_name: 'shut down host'}

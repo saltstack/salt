@@ -17,6 +17,7 @@ from tests.support.mock import (
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
+import salt.modules.rpm_lowpkg as rpm
 import salt.modules.yumpkg as yumpkg
 import salt.modules.pkg_resource as pkg_resource
 
@@ -580,6 +581,51 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     ignore_retcode=False,
                     redirect_stderr=True,
                 )
+
+    def test_install_with_epoch(self):
+        '''
+        Tests that we properly identify a version containing an epoch as an
+        upgrade instead of a downgrade.
+        '''
+        name = 'foo'
+        old = '8:3.8.12-6.n.el7'
+        new = '9:3.8.12-4.n.el7'
+        list_pkgs_mock = MagicMock(side_effect=lambda **kwargs: {name: [old] if kwargs.get('versions_as_list', False) else old})
+        cmd_mock = MagicMock(return_value={
+            'pid': 12345,
+            'retcode': 0,
+            'stdout': '',
+            'stderr': '',
+        })
+        salt_mock = {
+            'cmd.run_all': cmd_mock,
+            'lowpkg.version_cmp': rpm.version_cmp,
+            'pkg_resource.parse_targets': MagicMock(return_value=(
+                {name: new}, 'repository'
+            )),
+        }
+        full_pkg_string = '-'.join((name, new[2:]))
+        with patch.object(yumpkg, 'list_pkgs', list_pkgs_mock), \
+                patch('salt.utils.systemd.has_scope',
+                      MagicMock(return_value=False)), \
+                patch.dict(yumpkg.__salt__, salt_mock):
+
+            # Test yum
+            expected = ['yum', '-y', 'install', full_pkg_string]
+            with patch.dict(yumpkg.__grains__, {'os': 'CentOS', 'osrelease': 7}):
+                yumpkg.install('foo', version=new)
+                call = cmd_mock.mock_calls[0][1][0]
+                assert call == expected, call
+
+            # Test dnf
+            expected = ['dnf', '-y', '--best', '--allowerasing',
+                        'install', full_pkg_string]
+            yumpkg.__context__.pop('yum_bin')
+            cmd_mock.reset_mock()
+            with patch.dict(yumpkg.__grains__, {'os': 'Fedora', 'osrelease': 27}):
+                yumpkg.install('foo', version=new)
+                call = cmd_mock.mock_calls[0][1][0]
+                assert call == expected, call
 
     def test_upgrade_with_options(self):
         with patch.object(yumpkg, 'list_pkgs', MagicMock(return_value={})), \

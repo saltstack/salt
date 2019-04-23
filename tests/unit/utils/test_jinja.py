@@ -14,11 +14,11 @@ import re
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf, TestCase
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, Mock
-from tests.support.paths import BASE_FILES, TMP, TMP_CONF_DIR
 
 # Import Salt libs
 import salt.config
@@ -52,7 +52,6 @@ try:
 except ImportError:
     HAS_TIMELIB = False
 
-CACHEDIR = os.path.join(TMP, 'jinja-template-cache')
 BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
 
 
@@ -112,7 +111,7 @@ class TestSaltCacheLoader(TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.template_dir = os.path.join(self.tempdir, 'files', 'test')
         _setup_test_dir(
-            os.path.join(BASE_FILES, 'templates'),
+            os.path.join(RUNTIME_VARS.BASE_FILES, 'templates'),
             self.template_dir
         )
         self.opts = {
@@ -152,7 +151,7 @@ class TestSaltCacheLoader(TestCase):
         tmpl_dir = os.path.join(self.template_dir, 'hello_simple')
         self.assertEqual(res[1], tmpl_dir)
         assert res[2](), 'Template up to date?'
-        assert len(loader._file_client.requests)
+        assert loader._file_client.requests
         self.assertEqual(loader._file_client.requests[0]['path'], 'salt://hello_simple')
 
     def get_loader(self, opts=None, saltenv='base'):
@@ -192,12 +191,12 @@ class TestSaltCacheLoader(TestCase):
         issue-13889
         '''
         fc, jinja = self.get_test_saltenv()
-        tmpl = jinja.get_template('relative/rhello')
+        tmpl = jinja.get_template(os.path.join('relative', 'rhello'))
         result = tmpl.render()
         self.assertEqual(result, 'Hey world !a b !')
         assert len(fc.requests) == 3
-        self.assertEqual(fc.requests[0]['path'], 'salt://relative/rhello')
-        self.assertEqual(fc.requests[1]['path'], 'salt://relative/rmacro')
+        self.assertEqual(fc.requests[0]['path'], os.path.join('salt://relative', 'rhello'))
+        self.assertEqual(fc.requests[1]['path'], os.path.join('salt://relative', 'rmacro'))
         self.assertEqual(fc.requests[2]['path'], 'salt://macro')
         # This must fail when rendered: attempts to import from outside file root
         template = jinja.get_template('relative/rescape')
@@ -230,7 +229,7 @@ class TestGetTemplate(TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.template_dir = os.path.join(self.tempdir, 'files', 'test')
         _setup_test_dir(
-            os.path.join(BASE_FILES, 'templates'),
+            os.path.join(RUNTIME_VARS.BASE_FILES, 'templates'),
             self.template_dir
         )
         self.local_opts = {
@@ -566,15 +565,15 @@ class TestJinjaDefaultOptions(TestCase):
     def __init__(self, *args, **kws):
         TestCase.__init__(self, *args, **kws)
         self.local_opts = {
-            'cachedir': CACHEDIR,
+            'cachedir': os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache'),
             'file_client': 'local',
             'file_ignore_regex': None,
             'file_ignore_glob': None,
             'file_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'pillar_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'fileserver_backend': ['roots'],
             'hash_type': 'md5',
@@ -627,15 +626,15 @@ class TestCustomExtensions(TestCase):
     def __init__(self, *args, **kws):
         super(TestCustomExtensions, self).__init__(*args, **kws)
         self.local_opts = {
-            'cachedir': CACHEDIR,
+            'cachedir': os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache'),
             'file_client': 'local',
             'file_ignore_regex': None,
             'file_ignore_glob': None,
             'file_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'pillar_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'fileserver_backend': ['roots'],
             'hash_type': 'md5',
@@ -984,6 +983,10 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, 'False')
 
+        rendered = render_jinja_tmpl("{{ 'fe80::20d:b9ff:fe01:ea8%eth0' | is_ipv6 }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, 'True')
+
         rendered = render_jinja_tmpl("{{ 'FE80::' | is_ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, 'True')
@@ -996,6 +999,10 @@ class TestCustomExtensions(TestCase):
         '''
         Test the `ipaddr` Jinja filter.
         '''
+        rendered = render_jinja_tmpl("{{ '::' | ipaddr }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, '::')
+
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | ipaddr }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, '192.168.0.1')
@@ -1223,6 +1230,33 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, '1, 4')
 
+    def test_method_call(self):
+        '''
+        Test the `method_call` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl("{{ 6|method_call('bit_length') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "3")
+        rendered = render_jinja_tmpl("{{ 6.7|method_call('is_integer') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "False")
+        rendered = render_jinja_tmpl("{{ 'absaltba'|method_call('strip', 'ab') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "salt")
+        rendered = render_jinja_tmpl("{{ [1, 2, 1, 3, 4]|method_call('index', 1, 1, 3) }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "2")
+
+        # have to use `dictsort` to keep test result deterministic
+        rendered = render_jinja_tmpl("{{ {}|method_call('fromkeys', ['a', 'b', 'c'], 0)|dictsort }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "[('a', 0), ('b', 0), ('c', 0)]")
+
+        # missing object method test
+        rendered = render_jinja_tmpl("{{ 6|method_call('bit_width') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "None")
+
     def test_md5(self):
         '''
         Test the `md5` Jinja filter.
@@ -1277,6 +1311,16 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, 'random')
 
+    def test_json_query(self):
+        '''
+        Test the `json_query` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl(
+            "{{ [1, 2, 3] | json_query('[1]')}}",
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
+        )
+        self.assertEqual(rendered, '2')
+
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])
     #     source = '{% import_yaml "toto.foo" as docu %}'
@@ -1298,7 +1342,7 @@ class TestDotNotationLookup(ModuleCase):
             'mocktest.ping': lambda: True,
             'mockgrains.get': lambda x: 'jerry',
         }
-        minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
+        minion_opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
         render = salt.loader.render(minion_opts, functions)
         self.jinja = render.get('jinja')
 

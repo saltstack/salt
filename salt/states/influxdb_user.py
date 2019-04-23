@@ -119,9 +119,10 @@ def present(name,
             ret['changes'][name] = 'User created'
         else:
             if __opts__['test']:
+                ret['result'] = None
                 ret['comment'] = 'User {0} will be updated with the ' \
                         'following changes:'.format(name)
-                for k, v in ret['changes']:
+                for k, v in ret['changes'].items():
                     ret['comment'] += '\n{0} => {1}'.format(k, v)
                 ret['changes'] = {}
             else:

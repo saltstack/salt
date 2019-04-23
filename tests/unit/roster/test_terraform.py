@@ -3,7 +3,7 @@
 unittests for terraform roster
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import os.path
 
 # Import Salt Testing Libs
@@ -52,25 +52,25 @@ class TerraformTestCase(TestCase, LoaderModuleMockMixin):
                     'user': 'root',
                     'passwd': 'dbpw',
                     'tty': True,
-                    'priv': os.path.join(pki_dir, 'ssh/salt-ssh.rsa')},
+                    'priv': os.path.join(pki_dir, 'ssh', 'salt-ssh.rsa')},
                 'db1': {
                     'host': '192.168.122.190',
                     'user': 'root',
                     'passwd': 'dbpw',
                     'tty': True,
-                    'priv': os.path.join(pki_dir, 'ssh/salt-ssh.rsa')},
+                    'priv': os.path.join(pki_dir, 'ssh', 'salt-ssh.rsa')},
                 'web0': {
                     'host': '192.168.122.106',
                     'user': 'root',
                     'passwd': 'linux',
                     'timeout': 22,
-                    'priv': os.path.join(pki_dir, 'ssh/salt-ssh.rsa')},
+                    'priv': os.path.join(pki_dir, 'ssh', 'salt-ssh.rsa')},
                 'web1': {
                     'host': '192.168.122.235',
                     'user': 'root',
                     'passwd': 'linux',
                     'timeout': 22,
-                    'priv': os.path.join(pki_dir, 'ssh/salt-ssh.rsa')}
+                    'priv': os.path.join(pki_dir, 'ssh', 'salt-ssh.rsa')}
             }
 
             ret = terraform.targets('*')
@@ -91,13 +91,13 @@ class TerraformTestCase(TestCase, LoaderModuleMockMixin):
                     'user': 'root',
                     'passwd': 'linux',
                     'timeout': 22,
-                    'priv': os.path.join(pki_dir, 'ssh/salt-ssh.rsa')},
+                    'priv': os.path.join(pki_dir, 'ssh', 'salt-ssh.rsa')},
                 'web1': {
                     'host': '192.168.122.235',
                     'user': 'root',
                     'passwd': 'linux',
                     'timeout': 22,
-                    'priv': os.path.join(pki_dir, 'ssh/salt-ssh.rsa')}
+                    'priv': os.path.join(pki_dir, 'ssh', 'salt-ssh.rsa')}
             }
 
             ret = terraform.targets('*web*')

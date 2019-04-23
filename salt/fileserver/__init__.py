@@ -131,7 +131,20 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                 if os.path.exists(list_cache):
                     # calculate filelist age is possible
                     cache_stat = os.stat(list_cache)
-                    age = time.time() - cache_stat.st_mtime
+                    # st_time can have a greater precision than time, removing
+                    # float precision makes sure age will never be a negative
+                    # number.
+                    current_time = int(time.time())
+                    file_mtime = int(cache_stat.st_mtime)
+                    if file_mtime > current_time:
+                        log.debug(
+                            'Cache file modified time is in the future, ignoring. '
+                            'file=%s mtime=%s current_time=%s',
+                            list_cache, current_time, file_mtime
+                        )
+                        age = 0
+                    else:
+                        age = current_time - file_mtime
                 else:
                     # if filelist does not exists yet, mark it as expired
                     age = opts.get('fileserver_list_cache_time', 20) + 1
@@ -141,9 +154,9 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                 if 0 <= age < opts.get('fileserver_list_cache_time', 20):
                     # Young enough! Load this sucker up!
                     with salt.utils.files.fopen(list_cache, 'rb') as fp_:
-                        log.trace(
-                            'Returning file_lists cache data from %s',
-                            list_cache
+                        log.debug(
+                            "Returning file list from cache: age=%s cache_time=%s %s",
+                            age, opts.get('fileserver_list_cache_time', 20), list_cache
                         )
                         return salt.utils.data.decode(serial.load(fp_).get(form, [])), False, False
                 elif _lock_cache(w_lock):
@@ -363,7 +376,7 @@ class Fileserver(object):
 
         # Avoid error logging when performing lookups in the LazyDict by
         # instead doing the membership check on the result of a call to its
-        # .keys() attribute rather than on the LaztDict itself.
+        # .keys() attribute rather than on the LazyDict itself.
         server_funcs = self.servers.keys()
         try:
             subtract_only = all((x.startswith('-') for x in back))
@@ -891,3 +904,6 @@ class FSChan(object):
             log.error('Malformed request, invalid cmd: %s', load)
             return {}
         return getattr(self.fs, cmd)(load)
+
+    def close(self):
+        pass

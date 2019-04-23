@@ -384,7 +384,7 @@ def running(name,
     **NETWORK MANAGEMENT**
 
     .. versionadded:: 2018.3.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         If the ``networks`` option is used, any networks (including the default
         ``bridge`` network) which are not specified will be disconnected.
 
@@ -424,7 +424,7 @@ def running(name,
     .. _`connect_container_to_network`: https://docker-py.readthedocs.io/en/stable/api.html#docker.api.network.NetworkApiMixin.connect_container_to_network
 
     To start a container with no network connectivity (only possible in
-    Fluorine and later) pass this option as an empty list. For example:
+    2019.2.0 and later) pass this option as an empty list. For example:
 
     .. code-block:: yaml
 
@@ -1692,6 +1692,8 @@ def running(name,
         # value here.
         configured_networks = networks
         networks = _parse_networks(networks)
+        if networks:
+            kwargs['networks'] = networks
         image_id = _resolve_image(ret, image, client_timeout)
     except CommandExecutionError as exc:
         ret['result'] = False
@@ -2614,6 +2616,15 @@ def mod_run_check(onlyif, unless, creates):
 
 
 def mod_watch(name, sfun=None, **kwargs):
+    '''
+    The docker_container watcher, called to invoke the watch command.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
+    '''
     if sfun == 'running':
         watch_kwargs = copy.deepcopy(kwargs)
         if watch_kwargs.get('watch_action', 'force') == 'force':

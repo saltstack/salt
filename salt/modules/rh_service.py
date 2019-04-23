@@ -37,7 +37,7 @@ if salt.utils.path.which('initctl'):
     try:
         # Don't re-invent the wheel, import the helper functions from the
         # upstart module.
-        from salt.modules.upstart import _upstart_enable, _upstart_disable, _upstart_is_enabled
+        from salt.modules.upstart_service import _upstart_enable, _upstart_disable, _upstart_is_enabled
     except Exception as exc:
         log.error('Unable to import helper functions from '
                   'salt.modules.upstart: %s', exc)
@@ -57,6 +57,7 @@ def __virtual__():
     # Enable on these platforms only.
     enable = set((
         'XenServer',
+        'XCP-ng',
         'RedHat',
         'CentOS',
         'ScientificLinux',
@@ -80,11 +81,11 @@ def __virtual__():
 
         osrelease_major = __grains__.get('osrelease_info', [0])[0]
 
-        if __grains__['os'] == 'XenServer':
+        if __grains__['os'] in ('XenServer', 'XCP-ng'):
             if osrelease_major >= 7:
                 return (
                     False,
-                    'XenServer >= 7 uses systemd, will not load rh_service.py '
+                    'XenServer and XCP-ng >= 7 use systemd, will not load rh_service.py '
                     'as virtual \'service\''
                 )
             return __virtualname__

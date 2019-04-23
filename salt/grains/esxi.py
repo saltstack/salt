@@ -2,7 +2,7 @@
 '''
 Generate baseline proxy minion grains for ESXi hosts.
 
-., versionadded:: 2015.8.4
+.. versionadded:: 2015.8.4
 
 '''
 

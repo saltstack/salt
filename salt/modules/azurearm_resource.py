@@ -2,7 +2,7 @@
 '''
 Azure (ARM) Resource Execution Module
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 :maintainer: <devops@decisionlab.io>
 :maturity: new
@@ -20,7 +20,7 @@ Azure (ARM) Resource Execution Module
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as keyword arguments
-to every function in order to work properly.
+    to every function in order to work properly.
 
     Required provider parameters:
 
@@ -37,7 +37,7 @@ to every function in order to work properly.
 
     Optional provider parameters:
 
-    **cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
+**cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
     Possible values:
       * ``AZURE_PUBLIC_CLOUD`` (default)
       * ``AZURE_CHINA_CLOUD``
@@ -80,7 +80,7 @@ def __virtual__():
 
 def resource_groups_list(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all resource groups within a subscription.
 
@@ -107,7 +107,7 @@ def resource_groups_list(**kwargs):
 
 def resource_group_check_existence(name, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Check for the existence of a named resource group in the current subscription.
 
@@ -133,7 +133,7 @@ def resource_group_check_existence(name, **kwargs):
 
 def resource_group_get(name, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get a dictionary representing a resource group's properties.
 
@@ -161,7 +161,7 @@ def resource_group_get(name, **kwargs):
 
 def resource_group_create_or_update(name, location, **kwargs):  # pylint: disable=invalid-name
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a resource group in a given location.
 
@@ -196,7 +196,7 @@ def resource_group_create_or_update(name, location, **kwargs):  # pylint: disabl
 
 def resource_group_delete(name, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a resource group from the subscription.
 
@@ -223,7 +223,7 @@ def resource_group_delete(name, **kwargs):
 
 def deployment_operation_get(operation, deployment, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get a deployment operation within a deployment.
 
@@ -259,7 +259,7 @@ def deployment_operation_get(operation, deployment, resource_group, **kwargs):
 
 def deployment_operations_list(name, resource_group, result_limit=10, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all deployment operations within a deployment.
 
@@ -300,7 +300,7 @@ def deployment_operations_list(name, resource_group, result_limit=10, **kwargs):
 
 def deployment_delete(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a deployment.
 
@@ -333,7 +333,7 @@ def deployment_delete(name, resource_group, **kwargs):
 
 def deployment_check_existence(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Check the existence of a deployment.
 
@@ -367,7 +367,7 @@ def deployment_create_or_update(name, resource_group, deploy_mode='incremental',
                                 parameters_link=None, deploy_template=None,
                                 template_link=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Deploys resources to a resource group.
 
@@ -472,7 +472,7 @@ def deployment_create_or_update(name, resource_group, deploy_mode='incremental',
 
 def deployment_get(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a specific deployment.
 
@@ -504,7 +504,7 @@ def deployment_get(name, resource_group, **kwargs):
 
 def deployment_cancel(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Cancel a deployment if in 'Accepted' or 'Running' state.
 
@@ -542,7 +542,7 @@ def deployment_validate(name, resource_group, deploy_mode=None,
                         parameters_link=None, deploy_template=None,
                         template_link=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Validates whether the specified template is syntactically correct
     and will be accepted by Azure Resource Manager.
@@ -642,7 +642,7 @@ def deployment_validate(name, resource_group, deploy_mode=None,
 
 def deployment_export_template(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Exports the template used for the specified deployment.
 
@@ -674,7 +674,7 @@ def deployment_export_template(name, resource_group, **kwargs):
 
 def deployments_list(resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all deployments within a resource group.
 
@@ -705,7 +705,7 @@ def deployments_list(resource_group, **kwargs):
 
 def subscriptions_list_locations(subscription_id=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all locations for a subscription.
 
@@ -744,7 +744,7 @@ def subscriptions_list_locations(subscription_id=None, **kwargs):
 
 def subscription_get(subscription_id=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a subscription.
 
@@ -780,7 +780,7 @@ def subscription_get(subscription_id=None, **kwargs):
 
 def subscriptions_list(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all subscriptions for a tenant.
 
@@ -807,7 +807,7 @@ def subscriptions_list(**kwargs):
 
 def tenants_list(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all tenants for your account.
 
@@ -834,7 +834,7 @@ def tenants_list(**kwargs):
 
 def policy_assignment_delete(name, scope, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a policy assignment.
 
@@ -867,7 +867,7 @@ def policy_assignment_delete(name, scope, **kwargs):
 
 def policy_assignment_create(name, scope, definition_name, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create a policy assignment.
 
@@ -945,7 +945,7 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
 
 def policy_assignment_get(name, scope, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a specific policy assignment.
 
@@ -977,7 +977,7 @@ def policy_assignment_get(name, scope, **kwargs):
 
 def policy_assignments_list_for_resource_group(resource_group, **kwargs):  # pylint: disable=invalid-name
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all policy assignments for a resource group.
 
@@ -1011,7 +1011,7 @@ def policy_assignments_list_for_resource_group(resource_group, **kwargs):  # pyl
 
 def policy_assignments_list(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all policy assignments for a subscription.
 
@@ -1038,7 +1038,7 @@ def policy_assignments_list(**kwargs):
 
 def policy_definition_create_or_update(name, policy_rule, **kwargs):  # pylint: disable=invalid-name
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a policy definition.
 
@@ -1093,7 +1093,7 @@ def policy_definition_create_or_update(name, policy_rule, **kwargs):  # pylint: 
 
 def policy_definition_delete(name, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete a policy definition.
 
@@ -1122,7 +1122,7 @@ def policy_definition_delete(name, **kwargs):
 
 def policy_definition_get(name, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get details about a specific policy definition.
 
@@ -1150,7 +1150,7 @@ def policy_definition_get(name, **kwargs):
 
 def policy_definitions_list(hide_builtin=False, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all policy definitions for a subscription.
 

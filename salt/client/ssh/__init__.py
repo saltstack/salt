@@ -1055,10 +1055,10 @@ class Single(object):
             opts_pkg['module_dirs'] = self.opts['module_dirs']
             opts_pkg['_ssh_version'] = self.opts['_ssh_version']
             opts_pkg['__master_opts__'] = self.context['master_opts']
-            if '_caller_cachedir' in self.opts:
-                opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
             if 'known_hosts_file' in self.opts:
                 opts_pkg['known_hosts_file'] = self.opts['known_hosts_file']
+            if '_caller_cachedir' in self.opts:
+                opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
             else:
                 opts_pkg['_caller_cachedir'] = self.opts['cachedir']
             # Use the ID defined in the roster file
@@ -1075,8 +1075,22 @@ class Single(object):
                     opts_pkg['grains'][grain] = self.target['grains'][grain]
 
             popts = {}
-            popts.update(opts_pkg['__master_opts__'])
             popts.update(opts_pkg)
+
+            # Master centric operations such as mine.get must have master option loaded.
+            # The pillar must then be compiled by passing master opts found in opts_pkg['__master_opts__']
+            # which causes the pillar renderer to loose track of salt master options
+            #
+            # Depending on popts merge order, it will overwrite some options found in opts_pkg['__master_opts__']
+            master_centric_funcs = [
+              "pillar.items",
+              "mine.get"
+            ]
+
+            # Pillar compilation is a master centric operation.
+            # Master options take precedence during Pillar compilation
+            popts.update(opts_pkg['__master_opts__'])
+
             pillar = salt.pillar.Pillar(
                     popts,
                     opts_pkg['grains'],
@@ -1084,6 +1098,13 @@ class Single(object):
                     opts_pkg.get('saltenv', 'base')
                     )
             pillar_data = pillar.compile_pillar()
+
+            # Once pillar has been compiled, restore priority of minion opts
+            if self.fun not in master_centric_funcs:
+                log.debug('%s is a minion function', self.fun)
+                popts.update(opts_pkg)
+            else:
+                log.debug('%s is a master function', self.fun)
 
             # TODO: cache minion opts in datap in master.py
             data = {'opts': opts_pkg,
@@ -1351,12 +1372,20 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
                     if not self.tty:
                         # If RSTR is not seen in both stdout and stderr then there
                         # was a thin deployment problem.
-                        log.error('ERROR: Failure deploying thin, retrying: %s\n%s', stdout, stderr)
+                        log.error(
+                            'ERROR: Failure deploying thin, retrying:\n'
+                            'STDOUT:\n%s\nSTDERR:\n%s\nRETCODE: %s',
+                            stdout, stderr, retcode
+                        )
                         return self.cmd_block()
                     elif not re.search(RSTR_RE, stdout):
                         # If RSTR is not seen in stdout with tty, then there
                         # was a thin deployment problem.
-                        log.error('ERROR: Failure deploying thin, retrying: %s\n%s', stdout, stderr)
+                        log.error(
+                            'ERROR: Failure deploying thin, retrying:\n'
+                            'STDOUT:\n%s\nSTDERR:\n%s\nRETCODE: %s',
+                            stdout, stderr, retcode
+                        )
                 while re.search(RSTR_RE, stdout):
                     stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 if self.tty:

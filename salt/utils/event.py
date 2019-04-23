@@ -88,6 +88,7 @@ import salt.utils.zeromq
 import salt.log.setup
 import salt.defaults.exitcodes
 import salt.transport.ipc
+import salt.transport.client
 
 log = logging.getLogger(__name__)
 
@@ -128,41 +129,29 @@ def get_event(
     '''
     sock_dir = sock_dir or opts['sock_dir']
     # TODO: AIO core is separate from transport
-    if transport in ('zeromq', 'tcp'):
-        if node == 'master':
-            return MasterEvent(sock_dir,
-                               opts,
-                               listen=listen,
-                               io_loop=io_loop,
-                               keep_loop=keep_loop,
-                               raise_errors=raise_errors)
-        return SaltEvent(node,
-                         sock_dir,
-                         opts,
-                         listen=listen,
-                         io_loop=io_loop,
-                         keep_loop=keep_loop,
-                         raise_errors=raise_errors)
-    elif transport == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.RAETEvent(node,
-                                              sock_dir=sock_dir,
-                                              listen=listen,
-                                              opts=opts)
+    if node == 'master':
+        return MasterEvent(sock_dir,
+                           opts,
+                           listen=listen,
+                           io_loop=io_loop,
+                           keep_loop=keep_loop,
+                           raise_errors=raise_errors)
+    return SaltEvent(node,
+                     sock_dir,
+                     opts,
+                     listen=listen,
+                     io_loop=io_loop,
+                     keep_loop=keep_loop,
+                     raise_errors=raise_errors)
 
 
-def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=False):
+def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=False, keep_loop=False):
     '''
     Return an event object suitable for the named transport
     '''
     # TODO: AIO core is separate from transport
     if opts['transport'] in ('zeromq', 'tcp', 'detect'):
-        return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors)
-    elif opts['transport'] == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.MasterEvent(
-            opts=opts, sock_dir=sock_dir, listen=listen
-        )
+        return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors, keep_loop=keep_loop)
 
 
 def fire_args(opts, jid, tag_data, prefix=''):
@@ -210,6 +199,32 @@ def tagify(suffix='', prefix='', base=SALT):
         except TypeError:
             parts[index] = str(parts[index])
     return TAGPARTER.join([part for part in parts if part])
+
+
+def update_stats(stats, start_time, data):
+    '''
+    Calculate the master stats and return the updated stat info
+    '''
+    end_time = time.time()
+    cmd = data['cmd']
+    # the jid is used as the create time
+    try:
+        jid = data['jid']
+    except KeyError:
+        try:
+            jid = data['data']['__pub_jid']
+        except KeyError:
+            log.info('jid not found in data, stats not updated')
+            return stats
+    create_time = int(time.mktime(time.strptime(jid, '%Y%m%d%H%M%S%f')))
+    latency = start_time - create_time
+    duration = end_time - start_time
+
+    stats[cmd]['runs'] += 1
+    stats[cmd]['latency'] = (stats[cmd]['latency'] * (stats[cmd]['runs'] - 1) + latency) / stats[cmd]['runs']
+    stats[cmd]['mean'] = (stats[cmd]['mean'] * (stats[cmd]['runs'] - 1) + duration) / stats[cmd]['runs']
+
+    return stats
 
 
 class SaltEvent(object):
@@ -319,12 +334,8 @@ class SaltEvent(object):
                     sock_dir,
                     'minion_event_{0}_pull.ipc'.format(id_hash)
                 )
-        log.debug(
-            '{0} PUB socket URI: {1}'.format(self.__class__.__name__, puburi)
-        )
-        log.debug(
-            '{0} PULL socket URI: {1}'.format(self.__class__.__name__, pulluri)
-        )
+        log.debug('%s PUB socket URI: %s', self.__class__.__name__, puburi)
+        log.debug('%s PULL socket URI: %s', self.__class__.__name__, pulluri)
         return puburi, pulluri
 
     def subscribe(self, tag=None, match_type=None):
@@ -862,6 +873,10 @@ class SaltEvent(object):
                     # Minion fired a bad retcode, fire an event
                     self._fire_ret_load_specific_fun(load)
 
+    def remove_event_handler(self, event_handler):
+        if event_handler in self.subscriber.callbacks:
+            self.subscriber.callbacks.remove(event_handler)
+
     def set_event_handler(self, event_handler):
         '''
         Invoke the event_handler callback each time an event arrives.
@@ -870,8 +885,11 @@ class SaltEvent(object):
 
         if not self.cpub:
             self.connect_pub()
-        # This will handle reconnects
-        return self.subscriber.read_async(event_handler)
+
+        self.subscriber.callbacks.add(event_handler)
+        if not self.subscriber.reading:
+            # This will handle reconnects
+            return self.subscriber.read_async()
 
     def __del__(self):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
@@ -981,16 +999,8 @@ class AsyncEventPublisher(object):
             epub_uri = epub_sock_path
             epull_uri = epull_sock_path
 
-        log.debug(
-            '{0} PUB socket URI: {1}'.format(
-                self.__class__.__name__, epub_uri
-            )
-        )
-        log.debug(
-            '{0} PULL socket URI: {1}'.format(
-                self.__class__.__name__, epull_uri
-            )
-        )
+        log.debug('%s PUB socket URI: %s', self.__class__.__name__, epub_uri)
+        log.debug('%s PULL socket URI: %s', self.__class__.__name__, epull_uri)
 
         minion_sock_dir = self.opts['sock_dir']
 
@@ -1000,7 +1010,7 @@ class AsyncEventPublisher(object):
             try:
                 os.makedirs(minion_sock_dir, 0o755)
             except OSError as exc:
-                log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                log.error('Could not create SOCK_DIR: %s', exc)
                 # Let's not fail yet and try using the default path
                 if minion_sock_dir == default_minion_sock_dir:
                     # We're already trying the default system path, stop now!
@@ -1010,7 +1020,7 @@ class AsyncEventPublisher(object):
                     try:
                         os.makedirs(default_minion_sock_dir, 0o755)
                     except OSError as exc:
-                        log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                        log.error('Could not create SOCK_DIR: %s', exc)
                         # Let's stop at this stage
                         raise
 
@@ -1021,12 +1031,13 @@ class AsyncEventPublisher(object):
         )
 
         self.puller = salt.transport.ipc.IPCMessageServer(
+            self.opts,
             epull_uri,
             io_loop=self.io_loop,
             payload_handler=self.handle_publish
         )
 
-        log.info('Starting pull socket on {0}'.format(epull_uri))
+        log.info('Starting pull socket on %s', epull_uri)
         with salt.utils.files.set_umask(0o177):
             self.publisher.start()
             self.puller.start()
@@ -1113,6 +1124,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
             )
 
             self.puller = salt.transport.ipc.IPCMessageServer(
+                self.opts,
                 epull_uri,
                 io_loop=self.io_loop,
                 payload_handler=self.handle_publish,
@@ -1177,7 +1189,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
             # forked, the module namespace is copied and the current process
             # gets all of sys.modules from where the fork happens.  This is not
             # the case for Windows.
-            import salt.minion
+            import salt.minion  # pylint: disable=unused-import
         instance = super(EventReturn, cls).__new__(cls, *args, **kwargs)
         return instance
 
@@ -1226,13 +1238,13 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         if isinstance(self.opts['event_return'], list):
             # Multiple event returners
             for r in self.opts['event_return']:
-                log.debug('Calling event returner {0}, one of many.'.format(r))
+                log.debug('Calling event returner %s, one of many.', r)
                 event_return = '{0}.event_return'.format(r)
                 self._flush_event_single(event_return)
         else:
             # Only a single event returner
-            log.debug('Calling event returner {0}, only one '
-                      'configured.'.format(self.opts['event_return']))
+            log.debug('Calling event returner %s, only one configured.',
+                      self.opts['event_return'])
             event_return = '{0}.event_return'.format(
                 self.opts['event_return']
                 )
@@ -1244,13 +1256,13 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
             try:
                 self.minion.returners[event_return](self.event_queue)
             except Exception as exc:
-                log.error('Could not store events - returner \'{0}\' raised '
-                          'exception: {1}'.format(event_return, exc))
+                log.error('Could not store events - returner \'%s\' raised '
+                          'exception: %s', event_return, exc)
                 # don't waste processing power unnecessarily on converting a
                 # potentially huge dataset to a string
                 if log.level <= logging.DEBUG:
-                    log.debug('Event data that caused an exception: {0}'.format(
-                        self.event_queue))
+                    log.debug('Event data that caused an exception: %s',
+                              self.event_queue)
         else:
             log.error('Could not store return for event(s) - returner '
                       '\'%s\' not found.', event_return)
@@ -1334,11 +1346,13 @@ class StateFire(object):
             'tok': self.auth.gen_token(b'salt'),
         })
 
-        channel = salt.transport.Channel.factory(self.opts)
+        channel = salt.transport.client.ReqChannel.factory(self.opts)
         try:
             channel.send(load)
         except Exception:
             pass
+        finally:
+            channel.close()
         return True
 
     def fire_running(self, running):
@@ -1364,9 +1378,11 @@ class StateFire(object):
                 'tag': tag,
                 'data': running[stag],
             })
-        channel = salt.transport.Channel.factory(self.opts)
+        channel = salt.transport.client.ReqChannel.factory(self.opts)
         try:
             channel.send(load)
         except Exception:
             pass
+        finally:
+            channel.close()
         return True

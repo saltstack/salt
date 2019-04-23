@@ -77,11 +77,11 @@ deeply-nested dict can be declared with curly braces:
         - group: root
         - mode: 644
         - template: jinja
-        - context:
-          custom_var: "override"
-        - defaults:
-            custom_var: "default value"
-            other_var: 123
+        - context: {
+          custom_var: "override" }
+        - defaults: {
+          custom_var: "default value",
+          other_var: 123 }
 
 Here is a more concrete example of how YAML actually handles these
 indentations, using the Python interpreter on the command line:

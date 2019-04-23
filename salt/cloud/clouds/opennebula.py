@@ -782,7 +782,7 @@ def get_template_image(kwargs=None, call=None):
         ret = list_templates()[name]['template']['disk']['image']
     except KeyError:
         raise SaltCloudSystemExit(
-            'The image for template \'{1}\' could not be found.'.format(name)
+            'The image for template \'{0}\' could not be found.'.format(name)
         )
 
     return ret
@@ -1142,7 +1142,6 @@ def create(vm_):
                 # if IPv6 is used try this as last resort
                 # OpenNebula does not yet show ULA address here so take global
                 private_ip = data['template']['nic']['ip6_global']
-
             vm_['ssh_host'] = private_ip
 
     ssh_username = config.get_cloud_config_value(

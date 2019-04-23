@@ -156,6 +156,10 @@ with their default settings listed.
     # Network interfaces, netX
     net0: name=eth0,bridge=vmbr0,ip=dhcp
 
+    # Public key to add to /root/.ssh/authorized_keys.
+    pubkey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABA...'
+
+
 QEMU
 ====
 
@@ -199,6 +203,9 @@ QEMU profile file (for a new VM):
 
     # Enable QEMU Guest Agent (0 / 1)
     agent: 1
+
+    # Use the QEMU Guest agent to determine the VM's IP (0 / 1)
+    agent_get_ip: 1
 
     # VM name
     name: Test

@@ -2,7 +2,7 @@
 '''
 A module that adds data to the Pillar structure from a NetBox API.
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Configuring the NetBox ext_pillar
 ---------------------------------
@@ -53,7 +53,7 @@ import logging
 
 # Import Salt libs
 import salt.utils.http
-import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 
 log = logging.getLogger(__name__)
 

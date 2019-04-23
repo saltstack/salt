@@ -903,7 +903,7 @@ def replication_group_present(name, wait=900, security_groups=None, region=None,
                     ret['comment'] += ' ... and then immediately modified.'
                 else:
                     ret['comment'] = 'Replication group {0} was modified.'.format(name)
-                    ret['changes']['old'] = current[0] if len(current) else None
+                    ret['changes']['old'] = current[0] if current else None
                 ret['changes']['new'] = new[0]
             else:
                 ret['result'] = False
@@ -1180,6 +1180,7 @@ def cache_parameter_group_present(name, region=None, key=None, keyid=None, profi
         and a value.
 
     .. code-block:: yaml
+
         ParameterNameValues:
         - ParameterName: timeout
           # Amazon requires ALL VALUES to be strings...
