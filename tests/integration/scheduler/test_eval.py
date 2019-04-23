@@ -47,7 +47,7 @@ DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
 
 class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
     '''
-    Validate the pkg module
+    Validate the scheduler
     '''
     def setUp(self):
         with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):

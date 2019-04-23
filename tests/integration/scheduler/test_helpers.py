@@ -66,3 +66,23 @@ class SchedulerHelpersTest(ModuleCase, SaltReturnAssertsMixin):
 
         ret = self.schedule._get_schedule(remove_hidden=True)
         self.assertEqual(job['schedule'], ret)
+
+    def test_run_job(self):
+        '''
+        verify that the run_job function runs the job
+        '''
+        job_name = 'test_run_job'
+        job = {
+          'schedule': {
+            'enabled': True,
+            job_name: {
+              'function': 'test.ping',
+              'seconds': 60
+            }
+          }
+        }
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        ret = self.schedule.run_job('test_run_job')
+        self.assertIn('_last_run', job['schedule']['test_run_job'])
