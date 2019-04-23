@@ -1441,7 +1441,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         vm_info = virt.vm_info('test-vm-info')['test-vm-info']
 
         self.assertEqual('e6e3f990-8997-4a5e-8cb7-ea835eae4bbe', vm_info['uuid'])
-        self.assertEqual("destroy", vm_info['on_poweroff'])
+        self.assertEqual('destroy', vm_info['on_poweroff'])
 
     def test_get_uuid(self):
         '''
@@ -1454,8 +1454,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </domain>
         '''
 
-        domain = self.set_mock_vm("test-vm-info", xml)
-        self.assertEqual("e6e3f990-8997-4a5e-8cb7-ea835eae4bbe", virt.get_uuid('test-vm-info'))
+        domain = self.set_mock_vm('test-vm-info', xml)
+        self.assertEqual('e6e3f990-8997-4a5e-8cb7-ea835eae4bbe', virt.get_uuid('test-vm-info'))
 
     def test_get_on_poweroff(self):
         '''
@@ -1471,8 +1471,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </domain>
         '''
 
-        domain = self.set_mock_vm("test-vm-info", xml)
-        self.assertEqual("destroy", virt.get_on_poweroff('test-vm-info'))
+        domain = self.set_mock_vm('test-vm-info', xml)
+        self.assertEqual('destroy', virt.get_on_poweroff('test-vm-info'))
 
     def test_get_on_reboot(self):
         '''
@@ -1488,8 +1488,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </domain>
         '''
 
-        domain = self.set_mock_vm("test-vm-info", xml)
-        self.assertEqual("restart", virt.get_on_reboot('test-vm-info'))
+        domain = self.set_mock_vm('test-vm-info', xml)
+        self.assertEqual('restart', virt.get_on_reboot('test-vm-info'))
 
     def test_get_on_crash(self):
         '''
@@ -1505,8 +1505,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </domain>
         '''
 
-        domain = self.set_mock_vm("test-vm-info", xml)
-        self.assertEqual("destroy", virt.get_on_crash('test-vm-info'))
+        domain = self.set_mock_vm('test-vm-info', xml)
+        self.assertEqual('destroy', virt.get_on_crash('test-vm-info'))
 
     def test_get_graphics(self):
         '''
