@@ -2668,10 +2668,14 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt.get_uuid()
         '''
-        mock = MagicMock(return_value={})
-        with patch.dict(virt.__salt__, {'config.get': mock}):  # pylint: disable=no-member
-            ret = virt.get_uuid()
-            self.assertTrue(len(ret) == 1)
-            uuid = ret[0]
-            print uuid
+        root_dir = os.path.join(salt.syspaths.ROOT_DIR, 'srv', 'salt-images')
+        xml = '''
+            <domain type='qemu'>
+              <name>minion-1</name>
+              <uuid>e6e3f990-8997-4a5e-8cb7-ea835eae4bbe</uuid>
+            </domain>
+        '''
+
+        domain = self.set_mock_vm("test-vm-info", xml)
+        self.assertEqual("e6e3f990-8997-4a5e-8cb7-ea835eae4bbe", virt.get_uuid('test-vm-info'))
 
