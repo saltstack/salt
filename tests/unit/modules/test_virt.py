@@ -2773,4 +2773,3 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.storagePoolLookupByName.return_value = mock_pool
         # pylint: enable=no-member
         self.assertEqual(names, virt.pool_list_volumes('default'))
-

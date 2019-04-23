@@ -3613,7 +3613,6 @@ def vm_diskstats(vm_=None, **kwargs):
         '''
         return [target.get('dev') for target in dom.XMLDesc(0).findall('devices/disk/target')]
 
-
     def _info(dom):
         '''
         Compute the disk stats of a domain
