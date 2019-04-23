@@ -811,7 +811,7 @@ def get_multiprocessing_logging_queue():
         return __MP_LOGGING_QUEUE
 
     if __MP_LOGGING_QUEUE is None:
-        __MP_LOGGING_QUEUE = multiprocessing.Queue()
+        __MP_LOGGING_QUEUE = multiprocessing.Queue(100000)
     return __MP_LOGGING_QUEUE
 
 

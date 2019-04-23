@@ -18,13 +18,13 @@ mock>=2.0.0; python_version < '3.0'
 more-itertools==5.0.0
 moto
 msgpack-python >= 0.4.2, != 0.5.5
+psutil
 # Let's install cryptodome instead of pycrupto because of it's ourstanding security issues
 # PyCrypto, if pulled, will be removed from the generated static requirements
 pycryptodome
-psutil
 pyinotify
 pyopenssl
-python-etcd==0.4.2
+python-etcd>0.4.2
 python-gnupg
 pyvmomi
 requests

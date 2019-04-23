@@ -100,7 +100,7 @@ flask==1.0.2              # via impacket
 future==0.17.1            # via ldapdomaindump
 futures==3.2.0            # via azure-cosmosdb-table, azure-datalake-store, azure-storage-blob, azure-storage-file
 idna==2.8                 # via requests
-impacket==0.9.19
+impacket==0.9.19 ; python_version < "3.0"
 ipaddress==1.0.22         # via cryptography
 isodate==0.6.0            # via msrest
 itsdangerous==1.1.0       # via flask
