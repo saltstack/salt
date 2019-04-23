@@ -56,9 +56,15 @@ def setup_handlers():
             pass
         sock.close()
 
-    queue = Queue()
+    # One million log messages is more than enough to queue.
+    # Above that value, if `process_queue` can't process fast enough,
+    # start dropping. This will contain a memory leak in case `process_queue`
+    # can't process fast enough of in case it can't deliver the log records at all.
+    queue_size = 10000000
+    queue = Queue(queue_size)
     handler = salt.log.setup.QueueHandler(queue)
-    handler.setLevel(1)
+    level = salt.log.setup.LOG_LEVELS[(__opts__.get('runtests_log_level') or 'error').lower()]
+    handler.setLevel(level)
     process_queue_thread = threading.Thread(target=process_queue, args=(port, queue))
     process_queue_thread.daemon = True
     process_queue_thread.start()
