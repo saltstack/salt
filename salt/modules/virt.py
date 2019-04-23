@@ -2403,6 +2403,7 @@ def full_info(**kwargs):
     conn.close()
     return info
 
+
 def get_uuid(vm_, **kwargs):
     '''
     Return a uuid from the named vm

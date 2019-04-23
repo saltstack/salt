@@ -2774,4 +2774,3 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # pylint: enable=no-member
         self.assertEqual(names, virt.pool_list_volumes('default'))
 
-
