@@ -24,6 +24,21 @@ from tests.support.mock import (
 from salt.ext import six
 import salt.runners.vault as vault
 
+
+class PillarMock(object):
+    '''
+    Generate mock pillar data to satisfy the Vault runner
+    '''
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def compile_pillar(self):
+        return {}
+
+
+vault.salt.pillar.Pillar = PillarMock
+
 log = logging.getLogger(__name__)
 
 

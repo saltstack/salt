@@ -32,10 +32,10 @@ def vault_config():
     Generates vault config dict based on pillar data first. If pillar data is
     not available, the config will default back to looking for it in __opts__.
     '''
-    saltenv = __salt__['config.get']('saltenv')
-    minion_id = __salt__['config.get']('grains:fqdn')
+    saltenv = __opts__.get('saltenv')
+    minion_id = __opts__.get('grains', {}).get('fqdn', '')
     opts = __opts__
-    grains = __salt__['config.get']('grains')
+    grains = __opts__.get('grains', {})
     pillar = salt.pillar.Pillar(opts, grains, minion_id, saltenv)
     compiled_pillar = pillar.compile_pillar()
     if 'vault' in compiled_pillar.keys():
@@ -44,7 +44,7 @@ def vault_config():
         log.debug('Vault config set to: %s', config)
         return config
     else:
-        config = __opts__.get('vault')
+        config = __opts__['vault']
         return config
 
 
