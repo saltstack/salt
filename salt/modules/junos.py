@@ -1371,6 +1371,15 @@ def load(path=None, **kwargs):
 
         op['format'] = template_format
 
+    # Currently, four config_actions are supported: overwrite, replace, update, merge
+    # Allow only one config_action, providing multiple config_action value is not allowed
+    actions = filter(lambda item: op.get(item, False),
+                     ('overwrite', 'replace', 'update', 'merge'))
+    if len(list(actions)) > 1:
+        ret['message'] = 'Only one config_action is allowed. Provided: {0}'.format(actions)
+        ret['out'] = False
+        return ret
+
     if 'replace' in op and op['replace']:
         op['merge'] = False
         del op['replace']
