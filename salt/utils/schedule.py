@@ -210,7 +210,7 @@ class Schedule(object):
         # dict we treat it like it was there and is True
 
         # Check if we're able to run
-        if not data.get('run', True):
+        if not data['run']:
             return data
         if 'jid_include' not in data or data['jid_include']:
             jobcount = 0
@@ -459,6 +459,8 @@ class Schedule(object):
 
         if 'name' not in data:
             data['name'] = name
+        if 'run' not in data:
+            data['run'] = True
         log.info('Running Job: %s', name)
 
         now = datetime.datetime.now()
