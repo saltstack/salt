@@ -85,7 +85,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_domain.XMLDesc.return_value = xml  # pylint: disable=no-member
 
         # Return state as shutdown
-        mock_domain.info.return_value = [4, 0, 0, 0]  # pylint: disable=no-member
+        mock_domain.info.return_value = [4, 0, 0, 0, 0]  # pylint: disable=no-member
         return mock_domain
 
     def test_disk_profile_merge(self):
@@ -1439,7 +1439,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         domain = self.set_mock_vm("test-vm-info", xml)
         vm_info = virt.vm_info('test-vm-info')['test-vm-info']
-
         self.assertEqual('e6e3f990-8997-4a5e-8cb7-ea835eae4bbe', vm_info['uuid'])
         self.assertEqual('destroy', vm_info['on_poweroff'])
 
