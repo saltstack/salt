@@ -1,3 +1,14 @@
+properties([
+    [
+        $class: 'ScannerJobProperty', doNotScan: false
+    ],
+    [
+        $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
+    ],
+    parameters([
+        booleanParam(defaultValue: false, description: 'Run full test suite', name: 'runFull')
+    ])
+])
 timeout(time: 6, unit: 'HOURS') {
     node('kitchen-slave') {
         timestamps {
@@ -16,6 +27,7 @@ timeout(time: 6, unit: 'HOURS') {
                     'TEST_SUITE=py3',
                     'TEST_PLATFORM=centos-7',
                     'PY_COLORS=1',
+                    "FORCE_FULL=${params.runFull}",
                 ]) {
                     stage('checkout-scm') {
                         cleanWs notFailBuild: true
