@@ -163,7 +163,7 @@ def _uptodate(ret, target, comments=None, local_changes=False):
         # report on them so we are alerted to potential problems with our
         # logic.
         ret["comment"] += "\n\nChanges {0}made: {1}".format(
-            "that would be " if __opts__["test"] else "", _format_comments(comments)
+            "that would be " if __opts__["test"] else "", comments
         )
     return ret
 
