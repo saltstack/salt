@@ -476,7 +476,6 @@ class Schedule(object):
         run = data.get('run', True)
         if run:
             self._run_job(func, data)
-            data['_last_run'] = now
 
     def enable_schedule(self):
         '''
