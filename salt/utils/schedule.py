@@ -211,7 +211,8 @@ class Schedule(object):
 
         # Check if we're able to run, default to False
         # in case the `run` value is not present.
-        if not data.get('run'):
+        log.info('==== run %s ===', data['run'])
+        if not data['run']:
             return data
         if 'jid_include' not in data or data['jid_include']:
             jobcount = 0
