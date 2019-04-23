@@ -20,7 +20,6 @@ from tests.support.helpers import destructiveTest
 # Import Salt Libs
 import salt.modules.win_file as win_file
 import salt.utils.win_dacl as win_dacl
-import salt.modules.temp as temp
 import salt.utils.platform
 import salt.utils.win_functions
 import salt.utils.win_dacl
