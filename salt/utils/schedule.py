@@ -209,8 +209,9 @@ class Schedule(object):
         # NOTE--jid_include defaults to True, thus if it is missing from the data
         # dict we treat it like it was there and is True
 
-        # Check if we're able to run
-        if not data['run']:
+        # Check if we're able to run, default to False
+        # in case the `run` value is not present.
+        if not data.get('run'):
             return data
         if 'jid_include' not in data or data['jid_include']:
             jobcount = 0
