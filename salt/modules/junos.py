@@ -1279,6 +1279,9 @@ def load(path=None, **kwargs):
         ``True``, only those statements under the ``replace`` tag will be
         changed.
 
+    merge : False
+        If set to ``True`` will set the load-config action to merge.
+
     format
         Determines the format of the contents
 
@@ -1373,6 +1376,8 @@ def load(path=None, **kwargs):
         del op['replace']
     elif 'overwrite' in op and op['overwrite']:
         op['overwrite'] = True
+    elif 'merge' in op and op['merge']:
+        op['merge'] = True
     elif 'overwrite' in op and not op['overwrite']:
         op['merge'] = True
         del op['overwrite']
