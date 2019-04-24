@@ -89,7 +89,7 @@ pytest-tempdir==2018.8.11
 pytest-timeout==1.3.3
 pytest==4.4.1
 python-dateutil==2.8.0    # via botocore, croniter, kubernetes, moto
-python-etcd==0.4.2
+python-etcd==0.4.5
 python-gnupg==0.4.4
 python-jose==2.0.2        # via moto
 pytz==2019.1              # via moto, tempora

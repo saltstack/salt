@@ -25,7 +25,7 @@ psutil
 pycryptodome
 pyinotify
 pyopenssl
-python-etcd==0.4.2
+python-etcd>0.4.2
 python-gnupg
 pyvmomi
 rfc3987
