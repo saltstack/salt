@@ -36,6 +36,10 @@ def _load_result(response, ret):
         ret['comment'] = '401 Forbidden: Authentication required!'
     #Not found?
     elif response['code'] == 404:
+        if(response['content']):
+            ret['comment'] = response['content']
+    #F5 Internal Error
+    elif response['code'] == 400:
         ret['comment'] = response['content']['message']
     #200?
     elif response['code'] == 200:
@@ -133,7 +137,7 @@ def _test_output(ret, action, params):
     return ret
 
 
-def list_node(hostname, username, password, name):
+def list_node(hostname, username, password, name, partition=None):
     '''
     A function to connect to a bigip device and list a specific node.
 
@@ -145,6 +149,8 @@ def list_node(hostname, username, password, name):
         The iControl REST password
     name
         The name of the node to list.
+    partition
+        The name of the partition to consider
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -158,11 +164,11 @@ def list_node(hostname, username, password, name):
         }
         )
 
-    response = __salt__['bigip.list_node'](hostname, username, password, name)
+    response = __salt__['bigip.list_node'](hostname, username, password, name, partition)
     return _load_result(response, ret)
 
 
-def create_node(hostname, username, password, name, address):
+def create_node(hostname, username, password, name, address, partition=None):
     '''
     Create a new node if it does not already exist.
 
@@ -176,6 +182,8 @@ def create_node(hostname, username, password, name, address):
         The name of the node to create
     address
         The address of the node
+    partition
+        The name of the partition to consider
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -191,7 +199,7 @@ def create_node(hostname, username, password, name, address):
         )
 
     #is this node currently configured?
-    existing = __salt__['bigip.list_node'](hostname, username, password, name)
+    existing = __salt__['bigip.list_node'](hostname, username, password, name, partition)
 
     # if it exists
     if existing['code'] == 200:
@@ -201,7 +209,7 @@ def create_node(hostname, username, password, name, address):
 
     # if it doesn't exist
     elif existing['code'] == 404:
-        response = __salt__['bigip.create_node'](hostname, username, password, name, address)
+        response = __salt__['bigip.create_node'](hostname, username, password, name, address, partition)
 
         ret['result'] = True
         ret['changes']['old'] = {}
@@ -216,6 +224,7 @@ def create_node(hostname, username, password, name, address):
 
 
 def manage_node(hostname, username, password, name, address,
+                partition=None,
                 connection_limit=None,
                 description=None,
                 dynamic_ratio=None,
@@ -239,6 +248,8 @@ def manage_node(hostname, username, password, name, address,
         The name of the node to manage.
     address
         The address of the node
+    partition
+        The name of the partition to consider
     connection_limit
         [integer]
     description
@@ -267,6 +278,7 @@ def manage_node(hostname, username, password, name, address,
             'username': username,
             'password': password,
             'name': name,
+            'partition': partition,
             'address': address,
             'connection_limit': connection_limit,
             'description': description,
@@ -281,7 +293,7 @@ def manage_node(hostname, username, password, name, address,
         )
 
     #is this node currently configured?
-    existing = __salt__['bigip.list_node'](hostname, username, password, name)
+    existing = __salt__['bigip.list_node'](hostname, username, password, name, partition)
 
     # if it exists by name
     if existing['code'] == 200:
@@ -296,6 +308,7 @@ def manage_node(hostname, username, password, name, address,
                                                  username=username,
                                                  password=password,
                                                  name=name,
+                                                 partition=partition,
                                                  connection_limit=connection_limit,
                                                  description=description,
                                                  dynamic_ratio=dynamic_ratio,
@@ -315,7 +328,7 @@ def manage_node(hostname, username, password, name, address,
     # not found, attempt to create it
     elif existing['code'] == 404:
 
-        new = __salt__['bigip.create_node'](hostname, username, password, name, address)
+        new = __salt__['bigip.create_node'](hostname, username, password, name, address, partition)
 
         # were we able to create it?
         if new['code'] == 200:
@@ -325,6 +338,7 @@ def manage_node(hostname, username, password, name, address,
                                                      username=username,
                                                      password=password,
                                                      name=name,
+                                                     partition=partition,
                                                      connection_limit=connection_limit,
                                                      description=description,
                                                      dynamic_ratio=dynamic_ratio,
@@ -346,7 +360,7 @@ def manage_node(hostname, username, password, name, address,
             # roll it back
             else:
 
-                deleted = __salt__['bigip.delete_node'](hostname, username, password, name)
+                deleted = __salt__['bigip.delete_node'](hostname, username, password, name, partition)
                 # did we get rid of it?
                 if deleted['code'] == 200:
                     ret['comment'] = 'Node was successfully created but an error occurred during modification. ' \
@@ -370,6 +384,7 @@ def manage_node(hostname, username, password, name, address,
 
 
 def modify_node(hostname, username, password, name,
+                partition=None,
                 connection_limit=None,
                 description=None,
                 dynamic_ratio=None,
@@ -391,6 +406,8 @@ def modify_node(hostname, username, password, name,
         The iControl REST password
     name
         The name of the node to modify
+    partition
+        The name of the partition to consider
     connection_limit
         [integer]
     description
@@ -419,6 +436,7 @@ def modify_node(hostname, username, password, name,
             'username': username,
             'password': password,
             'name': name,
+            'partition': partition,
             'connection_limit': connection_limit,
             'description': description,
             'dynamic_ratio': dynamic_ratio,
@@ -432,7 +450,7 @@ def modify_node(hostname, username, password, name,
         )
 
     #is this node currently configured?
-    existing = __salt__['bigip.list_node'](hostname, username, password, name)
+    existing = __salt__['bigip.list_node'](hostname, username, password, name, partition)
 
     # if it exists by name
     if existing['code'] == 200:
@@ -441,6 +459,7 @@ def modify_node(hostname, username, password, name,
                                                  username=username,
                                                  password=password,
                                                  name=name,
+                                                 partition=partition,
                                                  connection_limit=connection_limit,
                                                  description=description,
                                                  dynamic_ratio=dynamic_ratio,
@@ -459,6 +478,7 @@ def modify_node(hostname, username, password, name,
 
     # not found, attempt to create it
     elif existing['code'] == 404:
+        ret['result'] = False
         ret['comment'] = 'A node with this name was not found.'
     # an error occurred
     else:
@@ -467,7 +487,7 @@ def modify_node(hostname, username, password, name,
     return ret
 
 
-def delete_node(hostname, username, password, name):
+def delete_node(hostname, username, password, name, partition=None):
     '''
     Delete an existing node.
 
@@ -479,6 +499,8 @@ def delete_node(hostname, username, password, name):
         The iControl REST password
     name
         The name of the node which will be deleted.
+    partition
+        The name of the partition to consider
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -489,15 +511,16 @@ def delete_node(hostname, username, password, name):
             'username': username,
             'password': password,
             'name': name,
+            'partition': partition
         }
         )
 
     #is this node currently configured?
-    existing = __salt__['bigip.list_node'](hostname, username, password, name)
+    existing = __salt__['bigip.list_node'](hostname, username, password, name, partition)
     # if it exists by name
     if existing['code'] == 200:
 
-        deleted = __salt__['bigip.delete_node'](hostname, username, password, name)
+        deleted = __salt__['bigip.delete_node'](hostname, username, password, name, partition)
         # did we get rid of it?
         if deleted['code'] == 200:
             ret['result'] = True
@@ -513,16 +536,13 @@ def delete_node(hostname, username, password, name):
     elif existing['code'] == 404:
         ret['result'] = True
         ret['comment'] = 'This node already does not exist. No changes made.'
-        ret['changes']['old'] = {}
-        ret['changes']['new'] = {}
-
     else:
         ret = _load_result(existing, ret)
 
     return ret
 
 
-def list_pool(hostname, username, password, name):
+def list_pool(hostname, username, password, name, partition=None):
     '''
     A function to connect to a bigip device and list a specific pool.
 
@@ -547,11 +567,11 @@ def list_pool(hostname, username, password, name):
         }
         )
 
-    response = __salt__['bigip.list_pool'](hostname, username, password, name)
+    response = __salt__['bigip.list_pool'](hostname, username, password, name, partition)
     return _load_result(response, ret)
 
 
-def create_pool(hostname, username, password, name, members=None,
+def create_pool(hostname, username, password, name, partition=None, members=None,
                 allow_nat=None,
                 allow_snat=None,
                 description=None,
@@ -585,6 +605,8 @@ def create_pool(hostname, username, password, name, members=None,
         The iControl REST password
     name
         The name of the pool to create
+    partition
+        The name of the partition to consider
     members
         List of members to be added to the pool
     allow_nat
@@ -652,6 +674,7 @@ def create_pool(hostname, username, password, name, members=None,
             'username': username,
             'password': password,
             'name': name,
+            'partition': partition,
             'members': members,
             'allow_nat': allow_nat,
             'allow_snat': allow_snat,
@@ -678,13 +701,13 @@ def create_pool(hostname, username, password, name, members=None,
         )
 
     #is this pool currently configured?
-    existing = __salt__['bigip.list_pool'](hostname, username, password, name)
+    existing = __salt__['bigip.list_pool'](hostname, username, password, name, partition)
 
     # if it exists
     if existing['code'] == 200:
 
         ret['result'] = True
-        ret['comment'] = 'A pool by this name currently exists.  No change made.'
+        ret['comment'] = 'A pool by this name currently exists. No change made.'
 
     # if it doesn't exist
     elif existing['code'] == 404:
@@ -693,6 +716,7 @@ def create_pool(hostname, username, password, name, members=None,
                                                  username=username,
                                                  password=password,
                                                  name=name,
+                                                 partition=partition,
                                                  members=members,
                                                  allow_nat=allow_nat,
                                                  allow_snat=allow_snat,
@@ -732,6 +756,7 @@ def create_pool(hostname, username, password, name, members=None,
 
 
 def manage_pool(hostname, username, password, name,
+                partition=None,
                 allow_nat=None,
                 allow_snat=None,
                 description=None,
@@ -766,6 +791,8 @@ def manage_pool(hostname, username, password, name,
         The iControl REST password
     name
         The name of the pool to create
+    partition
+        The name of the partition to consider
     allow_nat
         [yes | no]
     allow_snat
@@ -832,6 +859,7 @@ def manage_pool(hostname, username, password, name,
             'username': username,
             'password': password,
             'name': name,
+            'partition': partition,
             'allow_nat': allow_nat,
             'allow_snat': allow_snat,
             'description': description,
@@ -857,7 +885,7 @@ def manage_pool(hostname, username, password, name,
         )
 
     #is this pool currently configured?
-    existing = __salt__['bigip.list_pool'](hostname, username, password, name)
+    existing = __salt__['bigip.list_pool'](hostname, username, password, name, partition)
 
     # if it exists
     if existing['code'] == 200:
@@ -866,6 +894,7 @@ def manage_pool(hostname, username, password, name,
                                                  username=username,
                                                  password=password,
                                                  name=name,
+                                                 partition=partition,
                                                  allow_nat=allow_nat,
                                                  allow_snat=allow_snat,
                                                  description=description,
@@ -909,6 +938,7 @@ def manage_pool(hostname, username, password, name,
                                             username=username,
                                             password=password,
                                             name=name,
+                                            partition=partition,
                                             allow_nat=allow_nat,
                                             allow_snat=allow_snat,
                                             description=description,
@@ -952,6 +982,7 @@ def manage_pool(hostname, username, password, name,
 
 
 def modify_pool(hostname, username, password, name,
+                partition=None,
                 allow_nat=None,
                 allow_snat=None,
                 description=None,
@@ -986,6 +1017,8 @@ def modify_pool(hostname, username, password, name,
         The iControl REST password
     name
         The name of the pool to create
+    partition
+        The name of the partition to consider
     allow_nat
         [yes | no]
     allow_snat
@@ -1052,6 +1085,7 @@ def modify_pool(hostname, username, password, name,
             'username': username,
             'password': password,
             'name': name,
+            'partition': partition,
             'allow_nat': allow_nat,
             'allow_snat': allow_snat,
             'description': description,
@@ -1077,7 +1111,7 @@ def modify_pool(hostname, username, password, name,
         )
 
     #is this pool currently configured?
-    existing = __salt__['bigip.list_pool'](hostname, username, password, name)
+    existing = __salt__['bigip.list_pool'](hostname, username, password, name, partition)
 
     # if it exists
     if existing['code'] == 200:
@@ -1086,6 +1120,7 @@ def modify_pool(hostname, username, password, name,
                                                  username=username,
                                                  password=password,
                                                  name=name,
+                                                 partition=partition,
                                                  allow_nat=allow_nat,
                                                  allow_snat=allow_snat,
                                                  description=description,
@@ -1124,6 +1159,7 @@ def modify_pool(hostname, username, password, name,
 
     # if it doesn't exist
     elif existing['code'] == 404:
+        ret['result'] = False
         ret['comment'] = 'A pool with this name was not found.'
     # else something else was returned
     else:
@@ -1132,7 +1168,7 @@ def modify_pool(hostname, username, password, name,
     return ret
 
 
-def delete_pool(hostname, username, password, name):
+def delete_pool(hostname, username, password, name, partition=None):
     '''
     Delete an existing pool.
 
@@ -1144,6 +1180,8 @@ def delete_pool(hostname, username, password, name):
         The iControl REST password
     name
         The name of the pool which will be deleted
+    partition
+        The name of the partition to consider
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -1154,15 +1192,16 @@ def delete_pool(hostname, username, password, name):
             'username': username,
             'password': password,
             'name': name,
+            'partition': partition
         }
         )
 
     #is this pool currently configured?
-    existing = __salt__['bigip.list_pool'](hostname, username, password, name)
+    existing = __salt__['bigip.list_pool'](hostname, username, password, name, partition)
     # if it exists by name
     if existing['code'] == 200:
 
-        deleted = __salt__['bigip.delete_pool'](hostname, username, password, name)
+        deleted = __salt__['bigip.delete_pool'](hostname, username, password, name, partition)
         # did we get rid of it?
         if deleted['code'] == 200:
             ret['result'] = True
@@ -1178,16 +1217,13 @@ def delete_pool(hostname, username, password, name):
     elif existing['code'] == 404:
         ret['result'] = True
         ret['comment'] = 'This pool already does not exist. No changes made.'
-        ret['changes']['old'] = {}
-        ret['changes']['new'] = {}
-
     else:
         ret = _load_result(existing, ret)
 
     return ret
 
 
-def manage_pool_members(hostname, username, password, name, members):
+def manage_pool_members(hostname, username, password, name, members, partition=None):
     '''
     Manage the members of an existing pool.  This function replaces all current pool members.
     Only the parameters specified are enforced.
@@ -1200,6 +1236,8 @@ def manage_pool_members(hostname, username, password, name, members):
         The iControl REST password
     name
         The name of the pool to modify
+    partition
+        The name of the partition to consider
     members
         list of pool members to manage.
 
@@ -1213,26 +1251,30 @@ def manage_pool_members(hostname, username, password, name, members):
             'username': username,
             'password': password,
             'name': name,
+            'partition': partition,
             'members': members
         }
         )
 
     #is this pool currently configured?
-    existing = __salt__['bigip.list_pool'](hostname, username, password, name)
+    existing = __salt__['bigip.list_pool'](hostname, username, password, name, partition)
 
     # if it exists
     if existing['code'] == 200:
 
         #what are the current members?
-        current_members = existing['content']['membersReference']['items']
+        if 'items' in existing['content']['membersReference']:
+            current_members = existing['content']['membersReference']['items']
+        else:
+            current_members = None
 
-        modified = __salt__['bigip.replace_pool_members'](hostname, username, password, name, members)
+        modified = __salt__['bigip.replace_pool_members'](hostname, username, password, name, members, partition)
 
         #was the modification successful?
         if modified['code'] == 200:
 
             #re-list the pool with new membership
-            new_listing = __salt__['bigip.list_pool'](hostname, username, password, name)
+            new_listing = __salt__['bigip.list_pool'](hostname, username, password, name, partition)
 
             #just in case something happened...
             if new_listing['code'] != 200:
@@ -1258,6 +1300,7 @@ def manage_pool_members(hostname, username, password, name, members):
 
     #pool does not exists
     elif existing['code'] == 404:
+        ret['result'] = False
         ret['comment'] = 'A pool with this name was not found.'
 
     else:
@@ -1266,7 +1309,7 @@ def manage_pool_members(hostname, username, password, name, members):
     return ret
 
 
-def add_pool_member(hostname, username, password, name, member):
+def add_pool_member(hostname, username, password, name, member, partition=None):
     '''
     A function to connect to a bigip device and add a new member to an existing pool.
 
@@ -1280,6 +1323,8 @@ def add_pool_member(hostname, username, password, name, member):
         The name of the pool to modify
     member
         The member to add to the pool
+    partition
+        The name of the partition to consider
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -1290,12 +1335,13 @@ def add_pool_member(hostname, username, password, name, member):
             'username': username,
             'password': password,
             'name': name,
+            'partition': partition,
             'members': member
-        }
+            }
         )
 
     #is this pool member currently configured?
-    existing_pool = __salt__['bigip.list_pool'](hostname, username, password, name)
+    existing_pool = __salt__['bigip.list_pool'](hostname, username, password, name, partition)
 
     if existing_pool['code'] == 200:
 
@@ -1304,44 +1350,35 @@ def add_pool_member(hostname, username, password, name, member):
         # because of this we have to do some rather "unnecessary" searching within a pool.
 
         #what are the current members?
-        current_members = existing_pool['content']['membersReference']['items']
 
-        #loop through them
         exists = False
-        for current_member in current_members:
-            if current_member['name'] == member['name']:
-                exists = True
-                break
+        if 'items' in existing_pool['content']['membersReference']:
+            current_members = existing_pool['content']['membersReference']['items']
 
+            #loop through them
+            for current_member in current_members:
+                # Check if the name is equal and if there's a partition that the partion is also equal
+                if current_member['name'] in member['name'] and (not partition or current_member['partition'] == partition):
+                    exists = True
+                    break
         if exists:
             ret['result'] = True
-            ret['comment'] = 'Member: {name} already exists within this pool.  No changes made.'.format(name=member['name'])
-            ret['changes']['old'] = {}
-            ret['changes']['new'] = {}
+            ret['comment'] = 'Member: {name} already exists within this pool. No changes made.'.format(name=member['name'])
         else:
-            new_member = __salt__['bigip.add_pool_member'](hostname, username, password, name, member)
+            new_member = __salt__['bigip.add_pool_member'](hostname, username, password, name, member_name, partition)
 
             if new_member['code'] == 200:
                 ret['result'] = True
-                ret['comment'] = 'Member: {name} has been successfully added to the pool.'.format(name=member['name'])
-                ret['changes']['old'] = {}
+                ret['comment'] = 'Member: {name} has been successfully added to the pool.'.format(name=member_name)
 
                 #look up the member again...
-                pool_listing = __salt__['bigip.list_pool'](hostname, username, password, name)
-
+                pool_listing = __salt__['bigip.list_pool'](hostname, username, password, name, partition)
                 if pool_listing['code'] != 200:
                     ret = _load_result(new_member, ret)
                     return ret
-
-                members = pool_listing['content']['membersReference']['items']
-                #loop through them
-                for current_member in members:
-                    if current_member['name'] == member['name']:
-                        added_member = current_member
-                        break
-
-                ret['changes']['new'] = added_member
-
+                
+                # Return the changes
+                ret = _check_for_changes('Member: {name}'.format(name=member['name']),ret,existing_pool,pool_listing)
             # member wasn't added
             else:
                 ret = _load_result(new_member, ret)
@@ -1355,7 +1392,7 @@ def add_pool_member(hostname, username, password, name, member):
     return ret
 
 
-def modify_pool_member(hostname, username, password, name, member,
+def modify_pool_member(hostname, username, password, name, member, partition=None,
                        connection_limit=None,
                        description=None,
                        dynamic_ratio=None,
@@ -1379,6 +1416,8 @@ def modify_pool_member(hostname, username, password, name, member,
         The iControl REST password
     name
         The name of the pool to modify
+    partition
+        The name of the partition to consider
     member
         The member modify
     connection_limit
@@ -1416,12 +1455,13 @@ def modify_pool_member(hostname, username, password, name, member,
             'username': username,
             'password': password,
             'name': name,
-            'members': member
-        }
+            'members': member,
+            'partition': partition
+            }
         )
 
     #is this pool member currently configured?
-    existing_pool = __salt__['bigip.list_pool'](hostname, username, password, name)
+    existing_pool = __salt__['bigip.list_pool'](hostname, username, password, name, partition)
 
     if existing_pool['code'] == 200:
 
@@ -1433,12 +1473,13 @@ def modify_pool_member(hostname, username, password, name, member,
         current_members = existing_pool['content']['membersReference']['items']
 
         #loop through them
-        exists = False
+        exists = False        
         for current_member in current_members:
-            if current_member['name'] == member:
-                exists = True
-                existing_member = current_member
-                break
+                #names are ~partition~name
+                if current_member['name'] in member_name and (not partition or current_member['partition'] == partition):
+                    exists = True                    
+                    existing_member = current_member
+                    break
 
         if exists:
 
@@ -1448,6 +1489,7 @@ def modify_pool_member(hostname, username, password, name, member,
                                                             password=password,
                                                             name=name,
                                                             member=member,
+                                                            partition=partition,
                                                             connection_limit=connection_limit,
                                                             description=description,
                                                             dynamic_ratio=dynamic_ratio,
@@ -1462,16 +1504,16 @@ def modify_pool_member(hostname, username, password, name, member,
                                                             state=member_state)
 
             #re-list the pool
-            new_pool = __salt__['bigip.list_pool'](hostname, username, password, name)
+            new_pool = __salt__['bigip.list_pool'](hostname, username, password, name, partition)
 
             if modified['code'] == 200 and modified['code'] == 200:
 
                 #what are the new members?
                 new_members = new_pool['content']['membersReference']['items']
 
-                #loop through them
+                #loop through them              
                 for new_member in new_members:
-                    if new_member['name'] == member:
+                    if new_member['name'] == member or (not partition or new_member['partition'] == partition):
                         modified_member = new_member
                         break
 
@@ -1494,7 +1536,7 @@ def modify_pool_member(hostname, username, password, name, member,
     return ret
 
 
-def delete_pool_member(hostname, username, password, name, member):
+def delete_pool_member(hostname, username, password, name, member, partition=None):
     '''
     Delete an existing pool member.
 
@@ -1506,6 +1548,8 @@ def delete_pool_member(hostname, username, password, name, member):
         The iControl REST password
     name
         The name of the pool to be modified
+    partition
+        The name of the partition to consider
     member
         The name of the member to delete from the pool
     '''
@@ -1523,13 +1567,15 @@ def delete_pool_member(hostname, username, password, name, member):
         )
 
     #is this pool currently configured?
-    existing = __salt__['bigip.list_pool'](hostname, username, password, name)
+    existing = __salt__['bigip.list_pool'](hostname, username, password, name, partition)
 
     # if it exists by name
     if existing['code'] == 200:
 
-       #what are the current members?
-        current_members = existing['content']['membersReference']['items']
+        #what are the current members?
+        current_members = None
+        if 'items' in existing_pool['content']['membersReference']:
+            current_members = existing['content']['membersReference']['items']
 
         #loop through them
         exists = False
@@ -1540,7 +1586,7 @@ def delete_pool_member(hostname, username, password, name, member):
                 break
 
         if exists:
-            deleted = __salt__['bigip.delete_pool_member'](hostname, username, password, name, member)
+            deleted = __salt__['bigip.delete_pool_member'](hostname, username, password, name, member, partition)
             # did we get rid of it?
             if deleted['code'] == 200:
                 ret['result'] = True
@@ -1561,7 +1607,7 @@ def delete_pool_member(hostname, username, password, name, member):
     return ret
 
 
-def list_virtual(hostname, username, password, name):
+def list_virtual(hostname, username, password, name=None, partition=None):
     '''
     A function to list a specific virtual.
 
@@ -1573,6 +1619,8 @@ def list_virtual(hostname, username, password, name):
         The iControl REST password
     name
         The name of the virtual to list
+    partition
+        The name of the partition to consider
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -1582,15 +1630,16 @@ def list_virtual(hostname, username, password, name):
             'hostname': hostname,
             'username': username,
             'password': password,
-            'name': name
+            'name': name,
+            'partition': partition
         }
         )
 
-    response = __salt__['bigip.list_virtual'](hostname, username, password, name)
+    response = __salt__['bigip.list_virtual'](hostname, username, password, name, partition)
     return _load_result(response, ret)
 
 
-def create_virtual(hostname, username, password, name, destination,
+def create_virtual(hostname, username, password, name, destination, partition=None,
                    pool=None,
                    address_status=None,
                    auto_lasthop=None,
@@ -1640,6 +1689,8 @@ def create_virtual(hostname, username, password, name, destination,
         The iControl REST password
     name
         The name of the virtual to create
+    partition
+        The name of the partition to consider
     destination
         [ [virtual_address_name:port] | [ipv4:port] | [ipv6.port] ]
     pool
@@ -1738,6 +1789,7 @@ def create_virtual(hostname, username, password, name, destination,
             'password': password,
             'name': name,
             'destination': destination,
+            'partition': partition,
             'pool': pool,
             'address_status': address_status,
             'auto_lasthop': auto_lasthop,
@@ -1779,7 +1831,7 @@ def create_virtual(hostname, username, password, name, destination,
         }
         )
 
-    existing = __salt__['bigip.list_virtual'](hostname, username, password, name)
+    existing = __salt__['bigip.list_virtual'](hostname, username, password, name, partition)
 
     # does this virtual exist?
     if existing['code'] == 200:
@@ -1794,6 +1846,7 @@ def create_virtual(hostname, username, password, name, destination,
                                                    username=username,
                                                    password=password,
                                                    name=name,
+                                                   partition=partition,
                                                    destination=destination,
                                                    description=description,
                                                    pool=pool,
@@ -1839,8 +1892,7 @@ def create_virtual(hostname, username, password, name, destination,
             ret['changes']['new'] = virtual['content']
             ret['comment'] = 'Virtual was successfully created.'
         else:
-            ret = _load_result(existing, ret)
-
+            ret = _load_result(virtual, ret)
     # else something else was returned
     else:
         ret = _load_result(existing, ret)
@@ -1848,7 +1900,7 @@ def create_virtual(hostname, username, password, name, destination,
     return ret
 
 
-def manage_virtual(hostname, username, password, name, destination,
+def manage_virtual(hostname, username, password, name, destination, partition=None,
                    pool=None,
                    address_status=None,
                    auto_lasthop=None,
@@ -1899,6 +1951,8 @@ def manage_virtual(hostname, username, password, name, destination,
         The iControl REST password
     name
         The name of the virtual to create
+    partition
+        The name of the partition to consider
     destination
         [ [virtual_address_name:port] | [ipv4:port] | [ipv6.port] ]
     pool
@@ -1997,6 +2051,7 @@ def manage_virtual(hostname, username, password, name, destination,
             'password': password,
             'name': name,
             'destination': destination,
+            'partition': partition,
             'pool': pool,
             'address_status': address_status,
             'auto_lasthop': auto_lasthop,
@@ -2038,7 +2093,7 @@ def manage_virtual(hostname, username, password, name, destination,
         }
         )
 
-    existing = __salt__['bigip.list_virtual'](hostname, username, password, name)
+    existing = __salt__['bigip.list_virtual'](hostname, username, password, name, partition)
 
     # does this virtual exist?
     if existing['code'] == 200:
@@ -2048,6 +2103,7 @@ def manage_virtual(hostname, username, password, name, destination,
                                                     username=username,
                                                     password=password,
                                                     name=name,
+                                                    partition=partition,
                                                     destination=destination,
                                                     description=description,
                                                     pool=pool,
@@ -2092,7 +2148,7 @@ def manage_virtual(hostname, username, password, name, destination,
         if modified['code'] == 200:
 
             #relist it to compare
-            relisting = __salt__['bigip.list_virtual'](hostname, username, password, name)
+            relisting = __salt__['bigip.list_virtual'](hostname, username, password, name, partition)
 
             if relisting['code'] == 200:
 
@@ -2113,6 +2169,7 @@ def manage_virtual(hostname, username, password, name, destination,
                                                    username=username,
                                                    password=password,
                                                    name=name,
+                                                   partition=partition,
                                                    destination=destination,
                                                    description=description,
                                                    pool=pool,
@@ -2169,7 +2226,7 @@ def manage_virtual(hostname, username, password, name, destination,
     return ret
 
 
-def modify_virtual(hostname, username, password, name, destination,
+def modify_virtual(hostname, username, password, name, destination, partition=None,
                    pool=None,
                    address_status=None,
                    auto_lasthop=None,
@@ -2219,6 +2276,8 @@ def modify_virtual(hostname, username, password, name, destination,
         The iControl REST password
     name
         The name of the virtual to create
+    partition
+        The name of the partition to consider
     destination
         [ [virtual_address_name:port] | [ipv4:port] | [ipv6.port] ]
     pool
@@ -2317,6 +2376,7 @@ def modify_virtual(hostname, username, password, name, destination,
             'username': username,
             'password': password,
             'name': name,
+            'partition': partition,
             'destination': destination,
             'pool': pool,
             'address_status': address_status,
@@ -2359,7 +2419,7 @@ def modify_virtual(hostname, username, password, name, destination,
         }
         )
 
-    existing = __salt__['bigip.list_virtual'](hostname, username, password, name)
+    existing = __salt__['bigip.list_virtual'](hostname, username, password, name, partition)
 
     # does this virtual exist?
     if existing['code'] == 200:
@@ -2369,6 +2429,7 @@ def modify_virtual(hostname, username, password, name, destination,
                                                     username=username,
                                                     password=password,
                                                     name=name,
+                                                    partition=partition,
                                                     destination=destination,
                                                     description=description,
                                                     pool=pool,
@@ -2413,7 +2474,7 @@ def modify_virtual(hostname, username, password, name, destination,
         if modified['code'] == 200:
 
             #relist it to compare
-            relisting = __salt__['bigip.list_virtual'](hostname, username, password, name)
+            relisting = __salt__['bigip.list_virtual'](hostname, username, password, name, partition)
 
             if relisting['code'] == 200:
 
@@ -2428,6 +2489,7 @@ def modify_virtual(hostname, username, password, name, destination,
             ret = _load_result(modified, ret)
 
     elif existing['code'] == 404:
+        ret['result'] = False
         ret['comment'] = 'A Virtual with this name was not found.'
         # else something else was returned
     else:
@@ -2436,7 +2498,7 @@ def modify_virtual(hostname, username, password, name, destination,
     return ret
 
 
-def delete_virtual(hostname, username, password, name):
+def delete_virtual(hostname, username, password, name, partition=None):
     '''
     Delete an existing virtual.
 
@@ -2448,6 +2510,8 @@ def delete_virtual(hostname, username, password, name):
         The iControl REST password
     name
         The name of the virtual which will be deleted
+    partition
+        The name of the partition to consider
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -2462,11 +2526,11 @@ def delete_virtual(hostname, username, password, name):
         )
 
     #is this virtual currently configured?
-    existing = __salt__['bigip.list_virtual'](hostname, username, password, name)
+    existing = __salt__['bigip.list_virtual'](hostname, username, password, name, partition)
     # if it exists by name
     if existing['code'] == 200:
 
-        deleted = __salt__['bigip.delete_virtual'](hostname, username, password, name)
+        deleted = __salt__['bigip.delete_virtual'](hostname, username, password, name, partition)
         # did we get rid of it?
         if deleted['code'] == 200:
             ret['result'] = True
@@ -2481,17 +2545,15 @@ def delete_virtual(hostname, username, password, name):
     elif existing['code'] == 404:
         ret['result'] = True
         ret['comment'] = 'This virtual already does not exist. No changes made.'
-        ret['changes']['old'] = {}
-        ret['changes']['new'] = {}
     else:
         ret = _load_result(existing, ret)
 
     return ret
 
 
-def list_monitor(hostname, username, password, monitor_type, name):
+def list_monitor(hostname, username, password, monitor_type, name, partition=None):
     '''
-    A function to list an existing monitor.
+    A function to list an exsiting monitor.
 
     hostname
         The host/address of the bigip device
@@ -2503,6 +2565,8 @@ def list_monitor(hostname, username, password, monitor_type, name):
         The type of monitor to list
     name
         The name of the monitor to list
+    partition
+        The name of the partition to consider
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -2513,15 +2577,15 @@ def list_monitor(hostname, username, password, monitor_type, name):
             'username': username,
             'password': password,
             'monitor_type': monitor_type,
-            'name': name
-        }
-        )
+            'name': name,
+            'partition': partition
+        })
 
-    response = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name)
+    response = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name, partition)
     return _load_result(response, ret)
 
 
-def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
+def create_monitor(hostname, username, password, monitor_type, name, partition=None, **kwargs):
     '''
     A function to connect to a bigip device and create a monitor.
 
@@ -2535,6 +2599,8 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
         The type of monitor to create
     name
         The name of the monitor to create
+    partition
+        The name of the partition to consider
     kwargs
         [ arg=val ] ...
 
@@ -2551,7 +2617,8 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
             'username': username,
             'password': password,
             'monitor_type': monitor_type,
-            'name': name
+            'name': name,
+            'partition': partition
         }
 
         for key, value in six.iteritems(kwargs):
@@ -2560,7 +2627,7 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
         return _test_output(ret, 'create', params)
 
     #is this monitor currently configured?
-    existing = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name)
+    existing = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name, partition)
 
     # if it exists
     if existing['code'] == 200:
@@ -2571,7 +2638,7 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
     # if it doesn't exist
     elif existing['code'] == 404:
 
-        response = __salt__['bigip.create_monitor'](hostname, username, password, monitor_type, name, **kwargs)
+        response = __salt__['bigip.create_monitor'](hostname, username, password, monitor_type, name, partition, **kwargs)
         if response['code'] == 200:
             ret['result'] = True
             ret['changes']['old'] = {}
@@ -2587,7 +2654,7 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
     return ret
 
 
-def manage_monitor(hostname, username, password, monitor_type, name, **kwargs):
+def manage_monitor(hostname, username, password, monitor_type, name, partition=None, **kwargs):
     '''
     Create a new monitor if a monitor of this type and name does not already exists.  If it does exists, only
     the parameters specified will be enforced.
@@ -2602,6 +2669,8 @@ def manage_monitor(hostname, username, password, monitor_type, name, **kwargs):
         The type of monitor to create
     name
         The name of the monitor to create
+    partition
+        The name of the partition to consider
     kwargs
         [ arg=val ] ...
 
@@ -2618,7 +2687,8 @@ def manage_monitor(hostname, username, password, monitor_type, name, **kwargs):
             'username': username,
             'password': password,
             'monitor_type': monitor_type,
-            'name': name
+            'name': name,
+            'partition': partition
         }
 
         for key, value in six.iteritems(kwargs):
@@ -2627,13 +2697,13 @@ def manage_monitor(hostname, username, password, monitor_type, name, **kwargs):
         return _test_output(ret, 'manage', params)
 
     #is this monitor currently configured?
-    existing = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name)
+    existing = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name, partition)
 
     # if it exists
     if existing['code'] == 200:
 
         #modify the monitor
-        modified = __salt__['bigip.modify_monitor'](hostname, username, password, monitor_type, name, **kwargs)
+        modified = __salt__['bigip.modify_monitor'](hostname, username, password, monitor_type, name, partition, **kwargs)
 
         #was the modification successful?
         if modified['code'] == 200:
@@ -2646,7 +2716,7 @@ def manage_monitor(hostname, username, password, monitor_type, name, **kwargs):
     # if it doesn't exist
     elif existing['code'] == 404:
 
-        response = __salt__['bigip.create_monitor'](hostname, username, password, monitor_type, name, **kwargs)
+        response = __salt__['bigip.create_monitor'](hostname, username, password, monitor_type, name, partition, **kwargs)
         if response['code'] == 200:
             ret['result'] = True
             ret['changes']['old'] = {}
@@ -2662,7 +2732,7 @@ def manage_monitor(hostname, username, password, monitor_type, name, **kwargs):
     return ret
 
 
-def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
+def modify_monitor(hostname, username, password, monitor_type, name, partition=None, **kwargs):
     '''
     Modify an existing monitor.  If it does exists, only
     the parameters specified will be enforced.
@@ -2677,6 +2747,8 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
         The type of monitor to create
     name
         The name of the monitor to create
+    partition
+        The name of the partition to consider
     kwargs
         [ arg=val ] ...
 
@@ -2693,7 +2765,8 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
             'username': username,
             'password': password,
             'monitor_type': monitor_type,
-            'name': name
+            'name': name,
+            'partition': partition
         }
 
         for key, value in six.iteritems(kwargs):
@@ -2702,13 +2775,13 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
         return _test_output(ret, 'modify', params)
 
     #is this monitor currently configured?
-    existing = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name)
+    existing = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name, partition)
 
     # if it exists
     if existing['code'] == 200:
 
         #modify the monitor
-        modified = __salt__['bigip.modify_monitor'](hostname, username, password, monitor_type, name, **kwargs)
+        modified = __salt__['bigip.modify_monitor'](hostname, username, password, monitor_type, name, partition, **kwargs)
 
         #was the modification successful?
         if modified['code'] == 200:
@@ -2720,6 +2793,7 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
 
     # if it doesn't exist
     elif existing['code'] == 404:
+        ret['result'] = False
         ret['comment'] = 'A Monitor with this name was not found.'
     # else something else was returned
     else:
@@ -2728,7 +2802,7 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
     return ret
 
 
-def delete_monitor(hostname, username, password, monitor_type, name):
+def delete_monitor(hostname, username, password, monitor_type, name, partition=None):
     '''
     Modify an existing monitor.  If it does exists, only
     the parameters specified will be enforced.
@@ -2743,6 +2817,8 @@ def delete_monitor(hostname, username, password, monitor_type, name):
         The type of monitor to create
     name
         The name of the monitor to create
+    partition
+        The name of the partition to consider
     kwargs
         [ arg=val ] ...
 
@@ -2758,15 +2834,16 @@ def delete_monitor(hostname, username, password, monitor_type, name):
             'username': username,
             'password': password,
             'monitor_type': monitor_type,
-            'name': name
+            'name': name,
+            'partition': partition
         })
 
     #is this profile currently configured?
-    existing = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name)
+    existing = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name, partition)
     # if it exists by name
     if existing['code'] == 200:
 
-        deleted = __salt__['bigip.delete_monitor'](hostname, username, password, monitor_type, name)
+        deleted = __salt__['bigip.delete_monitor'](hostname, username, password, monitor_type, name, partition)
         # did we get rid of it?
         if deleted['code'] == 200:
             ret['result'] = True
@@ -2781,15 +2858,13 @@ def delete_monitor(hostname, username, password, monitor_type, name):
     elif existing['code'] == 404:
         ret['result'] = True
         ret['comment'] = 'This Monitor already does not exist. No changes made.'
-        ret['changes']['old'] = {}
-        ret['changes']['new'] = {}
     else:
         ret = _load_result(existing, ret)
 
     return ret
 
 
-def list_profile(hostname, username, password, profile_type, name):
+def list_profile(hostname, username, password, profile_type, name, partition=None):
     '''
     A function to list an existing profile.
 
@@ -2803,6 +2878,8 @@ def list_profile(hostname, username, password, profile_type, name):
         The type of profile to list
     name
         The name of the profile to list
+    partition
+        The name of the partition to consider
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -2813,15 +2890,16 @@ def list_profile(hostname, username, password, profile_type, name):
             'username': username,
             'password': password,
             'profile_type': profile_type,
-            'name': name
+            'name': name,
+            'partition': partition
         })
 
-    response = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name)
+    response = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name, partition)
     return _load_result(response, ret)
 
 
-def create_profile(hostname, username, password, profile_type, name, **kwargs):
-    r'''
+def create_profile(hostname, username, password, profile_type, name, partition=None, **kwargs):
+    '''
     A function to connect to a bigip device and create a profile.
 
     hostname
@@ -2834,6 +2912,8 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
         The type of profile to create
     name
         The name of the profile to create
+    partition
+        The name of the partition to consider
     kwargs
         [ arg=val ] ...
 
@@ -2853,11 +2933,12 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
             'username': username,
             'password': password,
             'profile_type': profile_type,
-            'name': name
+            'name': name,
+            'partition': partition
         })
 
     #is this profile currently configured?
-    existing = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name)
+    existing = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name, partition)
 
     # if it exists
     if existing['code'] == 200:
@@ -2868,7 +2949,7 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
     # if it doesn't exist
     elif existing['code'] == 404:
 
-        response = __salt__['bigip.create_profile'](hostname, username, password, profile_type, name, **kwargs)
+        response = __salt__['bigip.create_profile'](hostname, username, password, profile_type, name, partition, **kwargs)
 
         if response['code'] == 200:
             ret['result'] = True
@@ -2885,7 +2966,7 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
     return ret
 
 
-def manage_profile(hostname, username, password, profile_type, name, **kwargs):
+def manage_profile(hostname, username, password, profile_type, name, partition=None, **kwargs):
     '''
     Create a new profile if a monitor of this type and name does not already exists.  If it does exists, only
     the parameters specified will be enforced.
@@ -2900,6 +2981,8 @@ def manage_profile(hostname, username, password, profile_type, name, **kwargs):
         The type of profile to create
     name
         The name of the profile to create
+    partition
+        The name of the partition to consider
     kwargs
         [ arg=val ] ...
 
@@ -2916,7 +2999,8 @@ def manage_profile(hostname, username, password, profile_type, name, **kwargs):
             'username': username,
             'password': password,
             'profile_type': profile_type,
-            'name': name
+            'name': name,
+            'partition': partition
         }
 
         for key, value in six.iteritems(kwargs):
@@ -2925,13 +3009,13 @@ def manage_profile(hostname, username, password, profile_type, name, **kwargs):
         return _test_output(ret, 'manage', params)
 
     #is this profile currently configured?
-    existing = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name)
+    existing = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name, partition)
 
     # if it exists
     if existing['code'] == 200:
 
         #modify the profile
-        modified = __salt__['bigip.modify_profile'](hostname, username, password, profile_type, name, **kwargs)
+        modified = __salt__['bigip.modify_profile'](hostname, username, password, profile_type, name, partition, **kwargs)
 
         #was the modification successful?
         if modified['code'] == 200:
@@ -2944,7 +3028,7 @@ def manage_profile(hostname, username, password, profile_type, name, **kwargs):
     # if it doesn't exist
     elif existing['code'] == 404:
 
-        response = __salt__['bigip.create_profile'](hostname, username, password, profile_type, name, **kwargs)
+        response = __salt__['bigip.create_profile'](hostname, username, password, profile_type, name, partition, **kwargs)
         if response['code'] == 200:
             ret['result'] = True
             ret['changes']['old'] = {}
@@ -2960,7 +3044,7 @@ def manage_profile(hostname, username, password, profile_type, name, **kwargs):
     return ret
 
 
-def modify_profile(hostname, username, password, profile_type, name, **kwargs):
+def modify_profile(hostname, username, password, profile_type, name, partition=None, **kwargs):
     '''
     Modify an existing profile.  If it does exists, only
     the parameters specified will be enforced.
@@ -2975,6 +3059,8 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
         The type of profile to create
     name
         The name of the profile to create
+    partition
+        The name of the partition to consider
     kwargs
         [ arg=val ] ...
 
@@ -2991,7 +3077,8 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
             'username': username,
             'password': password,
             'profile_type': profile_type,
-            'name': name
+            'name': name,
+            'partition': partition
         }
 
         for key, value in six.iteritems(kwargs):
@@ -3000,13 +3087,13 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
         return _test_output(ret, 'modify', params)
 
     #is this profile currently configured?
-    existing = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name)
+    existing = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name, partition)
 
     # if it exists
     if existing['code'] == 200:
 
         #modify the profile
-        modified = __salt__['bigip.modify_profile'](hostname, username, password, profile_type, name, **kwargs)
+        modified = __salt__['bigip.modify_profile'](hostname, username, password, profile_type, name, partition, **kwargs)
 
         #was the modification successful?
         if modified['code'] == 200:
@@ -3018,6 +3105,7 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
 
     # if it doesn't exist
     elif existing['code'] == 404:
+        ret['return'] = False
         ret['comment'] = 'A Profile with this name was not found.'
     # else something else was returned
     else:
@@ -3026,9 +3114,9 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
     return ret
 
 
-def delete_profile(hostname, username, password, profile_type, name):
+def delete_profile(hostname, username, password, profile_type, name, partition=None):
     '''
-    Modify an existing profile.  If it does exists, only
+    Delete an existing profile.  If it does exists, only
     the parameters specified will be enforced.
 
     hostname
@@ -3041,6 +3129,8 @@ def delete_profile(hostname, username, password, profile_type, name):
         The type of profile to create
     name
         The name of the profile to create
+    partition
+        The name of the partition to consider
     kwargs
         [ arg=val ] ...
 
@@ -3056,16 +3146,16 @@ def delete_profile(hostname, username, password, profile_type, name):
             'username': username,
             'password': password,
             'profile_type': profile_type,
-            'name': name
+            'name': name,
+            'partition': partition
         })
 
     #is this profile currently configured?
-    existing = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name)
-
+    existing = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name, partition)
     # if it exists by name
     if existing['code'] == 200:
 
-        deleted = __salt__['bigip.delete_profile'](hostname, username, password, profile_type, name)
+        deleted = __salt__['bigip.delete_profile'](hostname, username, password, profile_type, name, partition)
         # did we get rid of it?
         if deleted['code'] == 200:
             ret['result'] = True
@@ -3080,8 +3170,262 @@ def delete_profile(hostname, username, password, profile_type, name):
     elif existing['code'] == 404:
         ret['result'] = True
         ret['comment'] = 'This Profile already does not exist. No changes made.'
-        ret['changes']['old'] = {}
-        ret['changes']['new'] = {}
+    else:
+        ret = _load_result(existing, ret)
+
+    return ret
+
+def modify_irule(hostname, username, password, name, api_anonymous, partition=None):
+    '''
+    Modify an existing iRule. Only a iRule which already exists will be modified and only
+    the parameters specified will be enforced.
+
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    api_anonymous
+        The code that defines the conditions, behavior, and actions of the iRule
+    name
+        The name of the profile to create
+    partition
+        The name of the partition to consider
+    kwargs
+        [ arg=val ] ...
+
+        Consult F5 BIGIP user guide for specific options for each profile type.
+        Typically, tmsh arg names are used.
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    
+    if __opts__['test']:
+        return _test_output(ret, 'manage', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'partition': partition,
+            'api_anonymous': api_anonymous,
+            'partition': partition
+        }
+        )
+    
+    # get the existing one
+    existing = __salt__['bigip.list_irule'](hostname, username, password, name, partition)
+    
+    # if it exists
+    if(existing["code"] == 200):
+        modified = __salt__['bigip.modify_irule'](hostname, username, password, name, api_anonymous, partition)
+        # was the modification successful?
+        if modified['code'] == 200:
+            ret = _check_for_changes('iRule', ret, existing, modified)
+        # unable to update it
+        else:
+            ret = _load_result(modified, ret)
+    
+    # if it doesn't exist
+    elif existing['code'] == 404:
+        ret['return'] = False
+        ret['comment'] = 'An iRule with this name was not found.'
+
+    # an error occurred    
+    else:
+            ret = _load_result(response, ret)
+    return ret
+
+def manage_irule(hostname, username, password, name, api_anonymous, partition=None):
+    '''
+    Manage an iRule. If an iRules does not already exists, it will be created. If it does exists, only
+    the parameters specified will be enforced.
+
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    api_anonymous
+        The code that defines the conditions, behavior, and actions of the iRule
+    name
+        The name of the profile to create
+    partition
+        The name of the partition to consider
+    kwargs
+        [ arg=val ] ...
+
+        Consult F5 BIGIP user guide for specific options for each profile type.
+        Typically, tmsh arg names are used.
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    
+    if __opts__['test']:
+        return _test_output(ret, 'manage', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'partition': partition,
+            'api_anonymous': api_anonymous,
+            'partition': partition
+        }
+        )
+    
+    # get the existing one
+    existing = __salt__['bigip.list_irule'](hostname, username, password, name, partition)
+    
+    # if it exists
+    if(existing["code"] == 200):
+        modified = __salt__['bigip.modify_irule'](hostname, username, password, name, api_anonymous, partition)
+        # was the modification successful?
+        if modified['code'] == 200:
+            ret = _check_for_changes('iRule', ret, existing, modified)
+        # unable to update it
+        else:
+            ret = _load_result(modified, ret)
+    
+    # if it doesn't exist
+    elif existing['code'] == 404:
+        response = __salt__['bigip.create_irule'](hostname, username, password, name, api_anonymous, partition)
+        
+        # check if successful
+        if response['code'] == 200:
+            ret['result'] = True
+            ret['changes']['old'] = {}
+            ret['changes']['new'] = response['content']
+            ret['comment'] = 'Monitor was successfully created.'
+        
+        # unable to create it
+        else:
+            ret = _load_result(response, ret)
+    
+    # an error occurred    
+    else:
+            ret = _load_result(response, ret)
+    return ret
+
+def create_irule(hostname, username, password, name, api_anonymous, partition=None):
+    '''
+    Create a new iRule if does not already exist.
+
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    api_anonymous
+        The code that defines the conditions, behavior, and actions of the iRule
+    name
+        The name of the profile to create
+    partition
+        The name of the partition to consider
+    kwargs
+        [ arg=val ] ...
+
+        Consult F5 BIGIP user guide for specific options for each profile type.
+        Typically, tmsh arg names are used.
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    
+    if __opts__['test']:
+        return _test_output(ret, 'manage', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'partition': partition,
+            'api_anonymous': api_anonymous,
+            'partition': partition
+        }
+        )
+    
+    # get the existing one
+    existing = __salt__['bigip.list_irule'](hostname, username, password, name, partition)
+    
+    # if it exists
+    if(existing["code"] == 200):
+        modified = __salt__['bigip.modify_irule'](hostname, username, password, name, api_anonymous, partition)
+        # was the modification successful?
+        if modified['code'] == 200:
+            ret = _check_for_changes('iRule', ret, existing, modified)
+        # unable to update it
+        else:
+            ret = _load_result(modified, ret)
+    
+    # if it doesn't exist
+    elif existing['code'] == 404:
+        response = __salt__['bigip.create_irule'](hostname, username, password, name, api_anonymous, partition)
+        
+        # check if successful
+        if response['code'] == 200:
+            ret['result'] = True
+            ret['changes']['old'] = {}
+            ret['changes']['new'] = response['content']
+            ret['comment'] = 'Monitor was successfully created.'
+        
+        # unable to create it
+        else:
+            ret = _load_result(response, ret)
+    
+    # an error occurred    
+    else:
+            ret = _load_result(response, ret)
+    return ret
+
+def delete_irule(hostname, username, password, name, partition=None):
+    '''
+    Delete an existing iRule.
+
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the iRule to delete
+    partition
+        The name of the partition to consider
+    kwargs
+        [ arg=val ] ...
+
+        Consult F5 BIGIP user guide for specific options for each profile type.
+        Typically, tmsh arg names are used.
+    '''
+
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'delete', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'partition': partition
+        })
+
+    #does it exist ?
+    existing = __salt__['bigip.list_irule'](hostname, username, password, name, partition)
+    
+    # if it exists by name
+    if existing['code'] == 200:
+        deleted = __salt__['bigip.delete_irule'](hostname, username, password, name, partition)
+        # did we get rid of it?
+        if deleted['code'] == 200:
+            ret['result'] = True
+            ret['comment'] = 'iRule was successfully deleted.'
+            ret['changes']['old'] = existing['content']
+            ret['changes']['new'] = {}
+        # something bad happened
+        else:
+            ret = _load_result(deleted, ret)
+
+    # not found
+    elif existing['code'] == 404:
+        ret['result'] = True
+        ret['comment'] = 'This iRule already does not exist. No changes made.'
     else:
         ret = _load_result(existing, ret)
 

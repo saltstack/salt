@@ -13,6 +13,7 @@ import salt.utils.json
 try:
     import requests
     import requests.exceptions
+    import re
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
@@ -161,7 +162,7 @@ def _determine_toggles(payload, toggles):
 
 def _set_value(value):
     '''
-    A function to detect if user is trying to pass a dictionary or list.  parse it and return a
+    A function to detect if user is trying to pass a dictionary or list. Parse the value and return a
     dictionary list or a string
     '''
     #don't continue if already an acceptable data-type
@@ -389,7 +390,7 @@ def delete_transaction(hostname, username, password, label):
                ' bigip.start_transaction function'
 
 
-def list_node(hostname, username, password, name=None, trans_label=None):
+def list_node(hostname, username, password, name=None, partition=None, trans_label=None):
     '''
     A function to connect to a bigip device and list all nodes or a specific node.
 
@@ -402,7 +403,9 @@ def list_node(hostname, username, password, name=None, trans_label=None):
         The iControl REST password
     name
         The name of the node to list. If no name is specified than all nodes
-        will be listed.
+        will be listed
+    partition
+        The name of the partition to consider
     trans_label
         The label of the transaction stored within the grain:
         ``bigip_f5_trans:<label>``
@@ -417,17 +420,21 @@ def list_node(hostname, username, password, name=None, trans_label=None):
 
     #get to REST
     try:
-        if name:
-            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/{name}'.format(name=name))
+        if name and partition:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/~{partition}~{name}'.format(name=name, partition=partition))
+        elif partition:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/?$filter="partition eq {partition}"'.format(partition=partition))
+        elif name:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/{name}/?expandSubcollections=true'.format(name=name))
         else:
-            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node')
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/')
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
 
-def create_node(hostname, username, password, name, address, trans_label=None):
+def create_node(hostname, username, password, name, address, partition=None, trans_label=None):
     '''
     A function to connect to a bigip device and create a node.
 
@@ -441,6 +448,8 @@ def create_node(hostname, username, password, name, address, trans_label=None):
         The name of the node
     address
         The address of the node
+    partition
+        The name of the partition to consider
     trans_label
         The label of the transaction stored within the grain:
         ``bigip_f5_trans:<label>``
@@ -449,7 +458,7 @@ def create_node(hostname, username, password, name, address, trans_label=None):
 
         salt '*' bigip.create_node bigip admin admin 10.1.1.2
     '''
-
+    
     #build session
     bigip_session = _build_session(username, password, trans_label)
 
@@ -457,6 +466,10 @@ def create_node(hostname, username, password, name, address, trans_label=None):
     payload = {}
     payload['name'] = name
     payload['address'] = address
+    
+    #check if there's a partition
+    if partition:
+        payload['partition'] = partition
 
     #post to REST
     try:
@@ -469,7 +482,8 @@ def create_node(hostname, username, password, name, address, trans_label=None):
     return _load_response(response)
 
 
-def modify_node(hostname, username, password, name,
+def modify_node(hostname, username, password, name, 
+                partition=None,
                 connection_limit=None,
                 description=None,
                 dynamic_ratio=None,
@@ -491,6 +505,8 @@ def modify_node(hostname, username, password, name,
         The iControl REST password
     name
         The name of the node to modify
+    partition
+        The name of the partition to consider
     connection_limit
         [integer]
     description
@@ -523,6 +539,7 @@ def modify_node(hostname, username, password, name,
         'description': description,
         'dynamic-ratio': dynamic_ratio,
         'logging': logging,
+        'partition': partition,
         'monitor': monitor,
         'rate-limit': rate_limit,
         'ratio': ratio,
@@ -536,9 +553,17 @@ def modify_node(hostname, username, password, name,
     #build payload
     payload = _loop_payload(params)
     payload['name'] = name
+    
+    #check if there's a partition
+    if partition:
+        payload['partition'] = partition
 
     #put to REST
     try:
+        #check if there's a partition
+        if partition:
+            name = '~{partition}~{name}'.format(name=name, partition=partition)
+
         response = bigip_session.put(
             BIG_IP_URL_BASE.format(host=hostname) + '/ltm/node/{name}'.format(name=name),
             data=salt.utils.json.dumps(payload)
@@ -549,7 +574,7 @@ def modify_node(hostname, username, password, name,
     return _load_response(response)
 
 
-def delete_node(hostname, username, password, name, trans_label=None):
+def delete_node(hostname, username, password, name, partition=None, trans_label=None):
     '''
     A function to connect to a bigip device and delete a specific node.
 
@@ -560,7 +585,9 @@ def delete_node(hostname, username, password, name, trans_label=None):
     password
         The iControl REST password
     name
-        The name of the node which will be deleted.
+        The name of the node which will be deleted
+    partition
+        The name of the partition to consider
     trans_label
         The label of the transaction stored within the grain:
         ``bigip_f5_trans:<label>``
@@ -575,7 +602,11 @@ def delete_node(hostname, username, password, name, trans_label=None):
 
     #delete to REST
     try:
-        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/{name}'.format(name=name))
+        #check if there's a partition
+        if partition:
+            name = '~{partition}~{name}'.format(name=name, partition=partition)
+
+        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/' + rest_name)
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -585,7 +616,7 @@ def delete_node(hostname, username, password, name, trans_label=None):
         return _load_response(response)
 
 
-def list_pool(hostname, username, password, name=None):
+def list_pool(hostname, username, password, name=None, partition=None):
     '''
     A function to connect to a bigip device and list all pools or a specific pool.
 
@@ -597,7 +628,9 @@ def list_pool(hostname, username, password, name=None):
         The iControl REST password
     name
         The name of the pool to list. If no name is specified then all pools
-        will be listed.
+        will be listed
+    partition
+        The name of the partition to consider
 
     CLI Example::
 
@@ -609,17 +642,21 @@ def list_pool(hostname, username, password, name=None):
 
     #get to REST
     try:
-        if name:
+        if name and partition:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/~{partition}~{name}/?expandSubcollections=true'.format(name=name, partition=partition))
+        elif partition:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/?$filter=partition eq {partition}'.format(partition=partition))
+        elif name:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}/?expandSubcollections=true'.format(name=name))
         else:
-            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool')
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/')
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
 
-def create_pool(hostname, username, password, name, members=None,
+def create_pool(hostname, username, password, name, partition=None, members=None,
                 allow_nat=None,
                 allow_snat=None,
                 description=None,
@@ -652,7 +689,9 @@ def create_pool(hostname, username, password, name, members=None,
     password
         The iControl REST password
     name
-        The name of the pool to create.
+        The name of the pool to create
+    partition
+        The name of the partition to consider
     members
         List of comma delimited pool members to add to the pool.
         i.e. 10.1.1.1:80,10.1.1.2:80,10.1.1.3:80
@@ -750,6 +789,10 @@ def create_pool(hostname, username, password, name, members=None,
     #build payload
     payload = _loop_payload(params)
     payload['name'] = name
+    
+    # Check if there's a partition
+    if partition:
+        payload['partition'] = partition
 
     #determine toggles
     payload = _determine_toggles(payload, toggles)
@@ -773,7 +816,7 @@ def create_pool(hostname, username, password, name, members=None,
     return _load_response(response)
 
 
-def modify_pool(hostname, username, password, name,
+def modify_pool(hostname, username, password, name, partition=None,
                 allow_nat=None,
                 allow_snat=None,
                 description=None,
@@ -806,7 +849,9 @@ def modify_pool(hostname, username, password, name,
     password
         The iControl REST password
     name
-        The name of the pool to modify.
+        The name of the pool to modify
+    partition
+        The name of the partition to consider
     allow_nat
         [yes | no]
     allow_snat
@@ -869,6 +914,7 @@ def modify_pool(hostname, username, password, name,
     '''
 
     params = {
+        'partition': partition,
         'description': description,
         'gateway-failsafe-device': gateway_failsafe_device,
         'ignore-persisted-weight': ignore_persisted_weight,
@@ -910,6 +956,10 @@ def modify_pool(hostname, username, password, name,
 
     #post to REST
     try:
+        # Check if there's a partition
+        if partition:
+            name = '~{partition}~{name}'.format(name=name, partition=partition)
+        
         response = bigip_session.put(
             BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}'.format(name=name),
             data=salt.utils.json.dumps(payload)
@@ -920,7 +970,7 @@ def modify_pool(hostname, username, password, name,
     return _load_response(response)
 
 
-def delete_pool(hostname, username, password, name):
+def delete_pool(hostname, username, password, name, partition=None):
     '''
     A function to connect to a bigip device and delete a specific pool.
 
@@ -932,6 +982,8 @@ def delete_pool(hostname, username, password, name):
         The iControl REST password
     name
         The name of the pool which will be deleted
+    partition
+        The name of the partition to consider
 
     CLI Example::
 
@@ -943,6 +995,10 @@ def delete_pool(hostname, username, password, name):
 
     #delete to REST
     try:
+        # Check if there's a partition
+        if partition:
+            name = '~{partition}~{name}'.format(name=name, partition=partition)
+        
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}'.format(name=name))
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
@@ -953,7 +1009,7 @@ def delete_pool(hostname, username, password, name):
         return _load_response(response)
 
 
-def replace_pool_members(hostname, username, password, name, members):
+def replace_pool_members(hostname, username, password, name, members, partition=None):
     '''
     A function to connect to a bigip device and replace members of an existing pool with new members.
 
@@ -968,10 +1024,12 @@ def replace_pool_members(hostname, username, password, name, members):
     members
         List of comma delimited pool members to replace existing members with.
         i.e. 10.1.1.1:80,10.1.1.2:80,10.1.1.3:80
+    partition
+        The name of the partition to consider
 
     CLI Example::
 
-        salt '*' bigip.replace_pool_members bigip admin admin my-pool 10.2.2.1:80,10.2.2.2:80,10.2.2.3:80
+        salt '*' bigip.replace_pool_members bigip admin admin my-pool 10.2.2.1:80,10.2.2.2:80,10.2.2.3:80 my-partition
     '''
 
     payload = {}
@@ -1010,6 +1068,10 @@ def replace_pool_members(hostname, username, password, name, members):
 
     #put to REST
     try:
+        #check if there's a partition
+        if partition:
+            name = '~{partition}~{name}'.format(name=name, partition=partition)
+        
         response = bigip_session.put(
             BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}'.format(name=name),
             data=salt.utils.json.dumps(payload)
@@ -1020,7 +1082,7 @@ def replace_pool_members(hostname, username, password, name, members):
     return _load_response(response)
 
 
-def add_pool_member(hostname, username, password, name, member):
+def add_pool_member(hostname, username, password, name, member, partition=None):
     '''
     A function to connect to a bigip device and add a new member to an existing pool.
 
@@ -1035,12 +1097,14 @@ def add_pool_member(hostname, username, password, name, member):
     member
         The name of the member to add
         i.e. 10.1.1.2:80
+    partition
+        The name of the partition to consider
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' bigip.add_pool_members bigip admin admin my-pool 10.2.2.1:80
+        salt '*' bigip.add_pool_members bigip admin admin my-pool 10.2.2.1:80 my-partition
     '''
 
     # for states
@@ -1058,16 +1122,25 @@ def add_pool_member(hostname, username, password, name, member):
         payload = member
     # for execution
     else:
-
-        payload = {'name': member, 'address': member.split(':')[0]}
+        payload = {}
+        address = member.split(':')[0]
+        if re.match(r'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', address):
+            payload['address'] = address
+        if partition:
+            payload['partition'] = partition
+            member = member.replace(partition,'')
+            member = member.replace('/','')
+        payload['name'] = member
 
     #build session
     bigip_session = _build_session(username, password)
 
     #post to REST
     try:
+        if partition:
+            name = '~{partition}~{name}'.format(name=name, partition=partition)
         response = bigip_session.post(
-            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}/members'.format(name=name),
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}/members'.format(name=rest_name),
             data=salt.utils.json.dumps(payload)
         )
     except requests.exceptions.ConnectionError as e:
@@ -1076,7 +1149,7 @@ def add_pool_member(hostname, username, password, name, member):
     return _load_response(response)
 
 
-def modify_pool_member(hostname, username, password, name, member,
+def modify_pool_member(hostname, username, password, name, member, partition=None,
                        connection_limit=None,
                        description=None,
                        dynamic_ratio=None,
@@ -1102,6 +1175,8 @@ def modify_pool_member(hostname, username, password, name, member,
         The name of the pool to modify
     member
         The name of the member to modify i.e. 10.1.1.2:80
+    partition
+        The name of the partition to consider
     connection_limit
         [integer]
     description
@@ -1129,10 +1204,11 @@ def modify_pool_member(hostname, username, password, name, member,
 
     CLI Example::
 
-        salt '*' bigip.modify_pool_member bigip admin admin my-pool 10.2.2.1:80 state=use-down session=user-disabled
+        salt '*' bigip.modify_pool_member bigip admin admin my-pool 10.2.2.1:80 partition=my-partition state=use-down session=user-disabled
     '''
 
     params = {
+        'partition': partition,
         'connection-limit': connection_limit,
         'description': description,
         'dynamic-ratio': dynamic_ratio,
@@ -1155,8 +1231,13 @@ def modify_pool_member(hostname, username, password, name, member,
 
     #put to REST
     try:
+        if partition:
+            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
+            member = '~{partition}~{member}'.format(member=member, partition=partition)
+        else:
+            rest_name = '{name}'.format(name=name)
         response = bigip_session.put(
-            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}/members/{member}'.format(name=name, member=member),
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/' + rest_name + '/members/{member}'.format(member=member),
             data=salt.utils.json.dumps(payload)
         )
     except requests.exceptions.ConnectionError as e:
@@ -1165,7 +1246,7 @@ def modify_pool_member(hostname, username, password, name, member,
     return _load_response(response)
 
 
-def delete_pool_member(hostname, username, password, name, member):
+def delete_pool_member(hostname, username, password, name, member, partition=None):
     '''
     A function to connect to a bigip device and delete a specific pool.
 
@@ -1179,10 +1260,12 @@ def delete_pool_member(hostname, username, password, name, member):
         The name of the pool to modify
     member
         The name of the pool member to delete
+    partition
+        The name of the partition to consider
 
     CLI Example::
 
-        salt '*' bigip.delete_pool_member bigip admin admin my-pool 10.2.2.2:80
+        salt '*' bigip.delete_pool_member bigip admin admin my-pool 10.2.2.2:80 partition=my-partition
     '''
 
     #build session
@@ -1190,7 +1273,11 @@ def delete_pool_member(hostname, username, password, name, member):
 
     #delete to REST
     try:
-        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}/members/{member}'.format(name=name, member=member))
+        if partition:
+            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
+        else:
+            rest_name = '{name}'.format(name=name)
+        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/' + rest_name + '/members/{member}'.format(member=member))
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -1200,7 +1287,7 @@ def delete_pool_member(hostname, username, password, name, member):
         return _load_response(response)
 
 
-def list_virtual(hostname, username, password, name=None):
+def list_virtual(hostname, username, password, name=None, partition=None):
     '''
     A function to connect to a bigip device and list all virtuals or a specific virtual.
 
@@ -1212,11 +1299,13 @@ def list_virtual(hostname, username, password, name=None):
         The iControl REST password
     name
         The name of the virtual to list. If no name is specified than all
-        virtuals will be listed.
+        virtuals will be listed
+    partition
+        The name of the partition to consider
 
     CLI Example::
 
-        salt '*' bigip.list_virtual bigip admin admin my-virtual
+        salt '*' bigip.list_virtual bigip admin admin my-virtual partition=my-partition
     '''
 
     #build sessions
@@ -1224,17 +1313,21 @@ def list_virtual(hostname, username, password, name=None):
 
     #get to REST
     try:
-        if name:
+        if name and partition:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/~{partition}~{name}/?expandSubcollections=true'.format(name=name, partition=partition))
+        elif partition:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/?$filter=partition eq {partition}'.format(partition=partition))
+        elif name:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/{name}/?expandSubcollections=true'.format(name=name))
         else:
-            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual')
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/')
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
 
-def create_virtual(hostname, username, password, name, destination,
+def create_virtual(hostname, username, password, name, destination, partition=None,
                    pool=None,
                    address_status=None,
                    auto_lasthop=None,
@@ -1273,7 +1366,7 @@ def create_virtual(hostname, username, password, name, destination,
                    translate_address=None,
                    translate_port=None,
                    vlans=None):
-    r'''
+    '''
     A function to connect to a bigip device and create a virtual server.
 
     hostname
@@ -1286,6 +1379,8 @@ def create_virtual(hostname, username, password, name, destination,
         The name of the virtual to create
     destination
         [ [virtual_address_name:port] | [ipv4:port] | [ipv6.port] ]
+    partition
+        The name of the partition to consider
     pool
         [ [pool_name] | none]
     address_status
@@ -1343,7 +1438,7 @@ def create_virtual(hostname, username, password, name, destination,
         source | source-destination]
     rate_limit_dst
         [integer]
-    rate_limitçsrc
+    rate_limitsrc
         [integer]
     rules
         [none | [rule_one,rule_two ...] ]
@@ -1431,6 +1526,10 @@ def create_virtual(hostname, username, password, name, destination,
 
     payload['name'] = name
     payload['destination'] = destination
+    
+    #check if there's a partition
+    if partition:
+        payload['partition'] = partition
 
     #determine toggles
     payload = _determine_toggles(payload, toggles)
@@ -1477,7 +1576,7 @@ def create_virtual(hostname, username, password, name, destination,
 
     #handle vlans
     if vlans is not None:
-        #ceck to see if vlans is a dictionary (used when state makes use of function)
+        #check to see if vlans is a dictionary (used when state makes use of function)
         if isinstance(vlans, dict):
             try:
                 payload['vlans'] = vlans['vlan_ids']
@@ -1523,7 +1622,7 @@ def create_virtual(hostname, username, password, name, destination,
     return _load_response(response)
 
 
-def modify_virtual(hostname, username, password, name,
+def modify_virtual(hostname, username, password, name, partition=None,
                    destination=None,
                    pool=None,
                    address_status=None,
@@ -1574,6 +1673,8 @@ def modify_virtual(hostname, username, password, name,
         The iControl REST password
     name
         The name of the virtual to modify
+    partition
+        The name of the partition to consider
     destination
         [ [virtual_address_name:port] | [ipv4:port] | [ipv6.port] ]
     pool
@@ -1667,6 +1768,7 @@ def modify_virtual(hostname, username, password, name,
     params = {
         'destination': destination,
         'pool': pool,
+        'partition': partition,
         'auto-lasthop': auto_lasthop,
         'bwc-policy': bwc_policy,
         'connection-limit': connection_limit,
@@ -1751,7 +1853,7 @@ def modify_virtual(hostname, username, password, name,
 
     #handle vlans
     if vlans is not None:
-        #ceck to see if vlans is a dictionary (used when state makes use of function)
+        #check to see if vlans is a dictionary (used when state makes use of function)
         if isinstance(vlans, dict):
             try:
                 payload['vlans'] = vlans['vlan_ids']
@@ -1795,7 +1897,7 @@ def modify_virtual(hostname, username, password, name,
     return _load_response(response)
 
 
-def delete_virtual(hostname, username, password, name):
+def delete_virtual(hostname, username, password, name, partition=None):
     '''
     A function to connect to a bigip device and delete a specific virtual.
 
@@ -1807,6 +1909,8 @@ def delete_virtual(hostname, username, password, name):
         The iControl REST password
     name
         The name of the virtual to delete
+    partition
+        The name of the partition to consider
 
     CLI Example::
 
@@ -1818,7 +1922,11 @@ def delete_virtual(hostname, username, password, name):
 
     #delete to REST
     try:
-        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/{name}'.format(name=name))
+        if partition:
+            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
+        else:
+            rest_name = '{name}'.format(name=name)
+        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/' + rest_name)
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -1828,7 +1936,7 @@ def delete_virtual(hostname, username, password, name):
         return _load_response(response)
 
 
-def list_monitor(hostname, username, password, monitor_type, name=None, ):
+def list_monitor(hostname, username, password, monitor_type, name=None, partition=None):
     '''
     A function to connect to a bigip device and list an existing monitor.  If no name is provided than all
     monitors of the specified type will be listed.
@@ -1843,6 +1951,8 @@ def list_monitor(hostname, username, password, monitor_type, name=None, ):
         The type of monitor(s) to list
     name
         The name of the monitor to list
+    partition
+        The name of the partition to consider
 
     CLI Example::
 
@@ -1855,8 +1965,12 @@ def list_monitor(hostname, username, password, monitor_type, name=None, ):
 
     #get to REST
     try:
-        if name:
-            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/{name}?expandSubcollections=true'.format(type=monitor_type, name=name))
+        if name and partition:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/~{partition}~{name}?expandSubcollections=true'.format(type=monitor_type, name=name, partition=partition))
+        elif partition:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/?$filter=partition eq {partition}'.format(type=monitor_type, partition=partition))
+        elif name:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/{name}/?expandSubcollections=true'.format(type=monitor_type, name=name))
         else:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}'.format(type=monitor_type))
     except requests.exceptions.ConnectionError as e:
@@ -1865,7 +1979,7 @@ def list_monitor(hostname, username, password, monitor_type, name=None, ):
     return _load_response(response)
 
 
-def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
+def create_monitor(hostname, username, password, monitor_type, name, partition=None, **kwargs):
     '''
     A function to connect to a bigip device and create a monitor.
 
@@ -1879,6 +1993,8 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
         The type of monitor to create
     name
         The name of the monitor to create
+    partition
+        The name of the partition to consider
     kwargs
         Consult F5 BIGIP user guide for specific options for each monitor type.
         Typically, tmsh arg names are used.
@@ -1894,6 +2010,10 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
     #construct the payload
     payload = {}
     payload['name'] = name
+    
+    # Check if there's a partion
+    if partition:
+        payload['partition'] = partition
 
     #there's a ton of different monitors and a ton of options for each type of monitor.
     #this logic relies that the end user knows which options are meant for which monitor types
@@ -1915,7 +2035,7 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
     return _load_response(response)
 
 
-def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
+def modify_monitor(hostname, username, password, monitor_type, name, partition=None, **kwargs):
     '''
     A function to connect to a bigip device and modify an existing monitor.
 
@@ -1929,6 +2049,8 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
         The type of monitor to modify
     name
         The name of the monitor to modify
+    partition
+        The name of the partition to consider
     kwargs
         Consult F5 BIGIP user guide for specific options for each monitor type.
         Typically, tmsh arg names are used.
@@ -1944,6 +2066,8 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
 
     #construct the payload
     payload = {}
+    if partition:
+        payload['partition'] = partition
 
     #there's a ton of different monitors and a ton of options for each type of monitor.
     #this logic relies that the end user knows which options are meant for which monitor types
@@ -1955,8 +2079,12 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
 
     #put to REST
     try:
+        if partition:
+            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
+        else:
+            rest_name = '{name}'.format(name=name)
         response = bigip_session.put(
-            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/monitor/{type}/{name}'.format(type=monitor_type, name=name),
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/monitor/{type}/'.format(type=monitor_type) + rest_name,
             data=salt.utils.json.dumps(payload)
         )
     except requests.exceptions.ConnectionError as e:
@@ -1965,7 +2093,7 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
     return _load_response(response)
 
 
-def delete_monitor(hostname, username, password, monitor_type, name):
+def delete_monitor(hostname, username, password, monitor_type, name, partition=None):
     '''
     A function to connect to a bigip device and delete an existing monitor.
 
@@ -1979,6 +2107,8 @@ def delete_monitor(hostname, username, password, monitor_type, name):
         The type of monitor to delete
     name
         The name of the monitor to delete
+    partition
+        The name of the partition to consider
 
     CLI Example::
 
@@ -1991,7 +2121,11 @@ def delete_monitor(hostname, username, password, monitor_type, name):
 
     #delete to REST
     try:
-        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/{name}'.format(type=monitor_type, name=name))
+        if partition:
+            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
+        else:
+            rest_name = '{name}'.format(name=name)
+        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/{rest_name}'.format(type=monitor_type, rest_name=rest_name))
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -2001,7 +2135,7 @@ def delete_monitor(hostname, username, password, monitor_type, name):
         return _load_response(response)
 
 
-def list_profile(hostname, username, password, profile_type, name=None, ):
+def list_profile(hostname, username, password, profile_type, name=None, partition=None):
     '''
     A function to connect to a bigip device and list an existing profile.  If no name is provided than all
     profiles of the specified type will be listed.
@@ -2016,20 +2150,26 @@ def list_profile(hostname, username, password, profile_type, name=None, ):
         The type of profile(s) to list
     name
         The name of the profile to list
+    partition
+        The name of the partition to consider
 
     CLI Example::
 
         salt '*' bigip.list_profile bigip admin admin http my-http-profile
 
     '''
-
+    # print(*[hostname, username, password, profile_type, name, partition])
     #build sessions
     bigip_session = _build_session(username, password)
 
     #get to REST
     try:
-        if name:
-            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/{name}?expandSubcollections=true'.format(type=profile_type, name=name))
+        if name and partition:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/~{partition}~{name}?expandSubcollections=true'.format(type=profile_type, name=name, partition=partition))
+        elif partition:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}?$filter=partition eq {partition}'.format(type=profile_type, partition=partition))
+        elif name:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/{name}/?expandSubcollections=true'.format(type=profile_type, name=name))
         else:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}'.format(type=profile_type))
     except requests.exceptions.ConnectionError as e:
@@ -2038,7 +2178,7 @@ def list_profile(hostname, username, password, profile_type, name=None, ):
     return _load_response(response)
 
 
-def create_profile(hostname, username, password, profile_type, name, **kwargs):
+def create_profile(hostname, username, password, profile_type, name, partition=None, **kwargs):
     r'''
     A function to connect to a bigip device and create a profile.
 
@@ -2052,6 +2192,8 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
         The type of profile to create
     name
         The name of the profile to create
+    partition
+        The name of the partition to consider
     kwargs
         ``[ arg=val ] ... [arg=key1:val1,key2:val2] ...``
 
@@ -2082,8 +2224,8 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
 
     CLI Examples::
 
-        salt '*' bigip.create_profile bigip admin admin http my-http-profile defaultsFrom='/Common/http'
-        salt '*' bigip.create_profile bigip admin admin http my-http-profile defaultsFrom='/Common/http' \
+        salt '*' bigip.create_profile bigip admin admin http my-http-profile defaultsFrom='Common/http'
+        salt '*' bigip.create_profile bigip admin admin http my-http-profile defaultsFrom='Common/http' \
             enforcement=maxHeaderCount:3200,maxRequests:10
 
     '''
@@ -2095,13 +2237,16 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
     payload = {}
     payload['name'] = name
 
+    # Check if there's partition
+    if partition:
+        payload['partition'] = partition
+
     #there's a ton of different profiles and a ton of options for each type of profile.
     #this logic relies that the end user knows which options are meant for which profile types
     for key, value in six.iteritems(kwargs):
         if not key.startswith('__'):
             if key not in ['hostname', 'username', 'password', 'profile_type']:
                 key = key.replace('_', '-')
-
                 try:
                     payload[key] = _set_value(value)
                 except salt.exceptions.CommandExecutionError:
@@ -2109,6 +2254,10 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
 
     #post to REST
     try:
+        if partition:
+            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
+        else:
+            rest_name = '{name}'.format(name=name)
         response = bigip_session.post(
             BIG_IP_URL_BASE.format(host=hostname) + '/ltm/profile/{type}'.format(type=profile_type),
             data=salt.utils.json.dumps(payload)
@@ -2119,7 +2268,7 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
     return _load_response(response)
 
 
-def modify_profile(hostname, username, password, profile_type, name, **kwargs):
+def modify_profile(hostname, username, password, profile_type, name, partition=None, **kwargs):
     r'''
     A function to connect to a bigip device and create a profile.
 
@@ -2135,6 +2284,8 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
         The type of profile to create
     name
         The name of the profile to create
+    partition
+        The name of the partition to consider
     kwargs
         ``[ arg=val ] ... [arg=key1:val1,key2:val2] ...``
 
@@ -2166,9 +2317,9 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
 
     CLI Examples::
 
-        salt '*' bigip.modify_profile bigip admin admin http my-http-profile defaultsFrom='/Common/http'
+        salt '*' bigip.modify_profile bigip admin admin http my-http-profile defaultsFrom='Common/http'
 
-        salt '*' bigip.modify_profile bigip admin admin http my-http-profile defaultsFrom='/Common/http' \
+        salt '*' bigip.modify_profile bigip admin admin http my-http-profile defaultsFrom='Common/http' \
             enforcement=maxHeaderCount:3200,maxRequests:10
 
         salt '*' bigip.modify_profile bigip admin admin client-ssl my-client-ssl-1 retainCertificate=false \
@@ -2182,12 +2333,14 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
     #construct the payload
     payload = {}
     payload['name'] = name
+    if partition:
+        payload['partition'] = partition
 
     #there's a ton of different profiles and a ton of options for each type of profile.
     #this logic relies that the end user knows which options are meant for which profile types
     for key, value in six.iteritems(kwargs):
         if not key.startswith('__'):
-            if key not in ['hostname', 'username', 'password', 'profile_type']:
+            if key not in ['hostname', 'username', 'password', 'profile_type','partition']:
                 key = key.replace('_', '-')
 
                 try:
@@ -2197,8 +2350,12 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
 
     #put to REST
     try:
+        if partition:
+            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
+        else:
+            rest_name = '{name}'.format(name=name)
         response = bigip_session.put(
-            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/profile/{type}/{name}'.format(type=profile_type, name=name),
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/profile/{type}/'.format(type=profile_type) + rest_name,
             data=salt.utils.json.dumps(payload)
         )
     except requests.exceptions.ConnectionError as e:
@@ -2207,7 +2364,7 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
     return _load_response(response)
 
 
-def delete_profile(hostname, username, password, profile_type, name):
+def delete_profile(hostname, username, password, profile_type, name, partition=None):
     '''
     A function to connect to a bigip device and delete an existing profile.
 
@@ -2221,6 +2378,8 @@ def delete_profile(hostname, username, password, profile_type, name):
         The type of profile to delete
     name
         The name of the profile to delete
+    partition
+        The name of the partition to consider
 
     CLI Example::
 
@@ -2233,7 +2392,11 @@ def delete_profile(hostname, username, password, profile_type, name):
 
     #delete to REST
     try:
-        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/{name}'.format(type=profile_type, name=name))
+        if partition:
+            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
+        else:
+            rest_name = '{name}'.format(name=name)
+        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/'.format(type=profile_type) + rest_name)
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -2241,3 +2404,143 @@ def delete_profile(hostname, username, password, profile_type, name):
         return True
     else:
         return _load_response(response)
+
+def list_irule(hostname, username, password, name=None, partition=None):
+    '''
+    A function to connect to a bigip device and list iRules.
+
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    [name]
+        The name of the irules
+    partition
+        The name of the partition to consider
+
+    CLI Example::
+
+        salt '*' bigip.list_irule bigip admin admin custom_cas_irules partition3
+    '''
+    bigip_session = _build_session(username, password)
+    #get the list of irules depending on the parameters passed as argument
+    try:
+        if name and partition:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/~{partition}~{name}'.format(name=name, partition=partition))
+        elif name:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/~{name}'.format(name=name))
+        elif partition:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/?$filter=partition eq {partition}'.format(partition=partition))
+        else:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/')
+    except requests.exceptions.ConnectionError as e:
+        return _load_connection_error(hostname, e)
+
+    return _load_response(response)
+
+
+def create_irule(hostname, username, password, name, api_anonymous, partition=None):
+    '''
+    A function to connect to a bigip device and create an iRule.
+
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the irules
+    api_anonymous
+        The code that defines the conditions, behavior, and actions of the iRule
+    partition
+        The name of the partition to consider
+
+    CLI Example::
+
+        salt '*' bigip.create_irule bigip admin admin custom_cas_irules "when HTTP_REQUEST { pool \"pool_name2\"}"  partition3
+    '''
+    bigip_session = _build_session(username, password)
+
+    #create the payload
+    payload = {}
+    payload["apiAnonymous"] = api_anonymous
+    
+    #send patch rest api request
+    if partition:
+        response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/~{partition}~{name}'.format(name=name, partition=partition),
+                                    data=salt.utils.json.dumps(payload))
+    else:
+        response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/~{name}'.format(name=name, partition=partition),
+                                    data=salt.utils.json.dumps(payload))
+    return _load_response(response)
+
+def modify_irule(hostname, username, password, name, api_anonymous, partition=None):
+    '''
+    A function to connect to a bigip device and modify an iRule.
+
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the irules
+    api_anonymous
+        The code that defines the conditions, behavior, and actions of the iRule
+    partition
+        The name of the partition to consider
+
+    CLI Example::
+
+        salt '*' bigip.modify_irule bigip admin admin custom_cas_irules "when HTTP_REQUEST { pool \"pool_name2\"}"  partition3
+    '''
+    bigip_session = _build_session(username, password)
+
+    # Create the payload
+    payload = {}
+    payload["apiAnonymous"] = api_anonymous
+
+    # Send patch rest api request
+    if partition:
+        response = bigip_session.patch(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/~{partition}~{name}'.format(name=name, partition=partition),
+                                    data=salt.utils.json.dumps(payload))
+    else:
+        response = bigip_session.patch(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/~{name}'.format(name=name, partition=partition),
+                                    data=salt.utils.json.dumps(payload))
+    return _load_response(response)
+
+def delete_irule(hostname, username, password, name, partition=None, **kwargs):
+    '''
+    A function to connect to a bigip device and create an iRule.
+
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the irule
+    partition
+        The name of the partition to consider
+
+    CLI Example::
+
+        salt '*' bigip.delete_irule bigip admin admin custom_cas_irules "when HTTP_REQUEST { pool \"pool_name\"}"  partition3
+    '''
+    bigip_session = _build_session(username, password)
+    
+    #check if there's a partition
+    if partition:
+        name = '~{partition}~{name}'.format(partition=partition,name=name)
+
+    try:
+        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname) + '/ltm/rule/' + name)
+    except requests.exceptions.ConnectionError as e:
+        return _load_connection_error(hostname, e)
+    
+    return _load_response(response)
