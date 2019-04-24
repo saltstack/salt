@@ -1060,7 +1060,7 @@ def _virtual(osdata):
 
     # If we have a virtual_subtype, we're virtual, but maybe we couldn't
     # figure out what specific virtual type we were?
-    if grains['virtual_subtype'] and grains['virtual'] == 'physical':
+    if grains.get('virtual_subtype') and grains['virtual'] == 'physical':
         grains['virtual'] = 'virtual'
 
     for command in failed_commands:
