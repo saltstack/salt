@@ -696,6 +696,7 @@ VALID_OPTS = immutabletypes.freeze({
     # because gitfs will normalize them to strings. But rather than include all
     # the possible types they could be, we'll just skip type-checking.
     'gitfs_remotes': list,
+    'gitfs_fallback_branch': (type(None), six.string_types),
     'gitfs_insecure_auth': bool,
     'gitfs_privkey': six.string_types,
     'gitfs_pubkey': six.string_types,
@@ -1336,6 +1337,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'git_pillar_passphrase': '',
     'git_pillar_refspecs': _DFLT_REFSPECS,
     'git_pillar_includes': True,
+    'gitfs_fallback_branch': None,
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -1593,6 +1595,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'git_pillar_refspecs': _DFLT_REFSPECS,
     'git_pillar_includes': True,
     'git_pillar_verify_config': True,
+    'gitfs_fallback_branch': None,
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',

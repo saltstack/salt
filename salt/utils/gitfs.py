@@ -160,6 +160,7 @@ def enforce_types(key, val):
         'disable_saltenv_mapping': bool,
         'env_whitelist': 'stringlist',
         'env_blacklist': 'stringlist',
+        'fallback_branch': 'None or str',
         'saltenv_whitelist': 'stringlist',
         'saltenv_blacklist': 'stringlist',
         'refspecs': 'stringlist',
@@ -193,6 +194,11 @@ def enforce_types(key, val):
         if isinstance(val, six.string_types):
             return [x.strip() for x in val.split(',')]
         return [six.text_type(x) for x in val]
+    elif expected == 'None or str':
+        if val is None:
+            return val
+        else:
+            return six.text_type(val)
     else:
         try:
             return expected(val)
@@ -557,8 +563,12 @@ class GitProvider(object):
                             self.role, self.id, tgt_env
                         )
                     return per_saltenv_ref
+                elif per_saltenv_ref:
+                    return per_saltenv_ref
+                elif self.fallback_branch and tgt_env not in self.envs():
+                    return self.fallback_branch
                 else:
-                    return per_saltenv_ref or tgt_env
+                    return tgt_env
 
             if name in saltenv_conf:
                 return strip_sep(saltenv_conf[name])
