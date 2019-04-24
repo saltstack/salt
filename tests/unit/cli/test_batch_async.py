@@ -151,6 +151,8 @@ class AsyncBatchTestCase(AsyncTestCase, TestCase):
         future = tornado.gen.Future()
         future.set_result({'minions': ['foo', 'bar']})
         self.batch.local.run_job_async.return_value = future
+        self.batch.eauth = {'username': 'user#1', 'password': 'pass'}
+        self.batch.metadata = {'mykey': 'myvalue'}
         ret = self.batch.schedule_next().result()
         self.assertEqual(
             self.batch.local.run_job_async.call_args[0],
@@ -159,6 +161,18 @@ class AsyncBatchTestCase(AsyncTestCase, TestCase):
         self.assertEqual(
             self.batch.event.io_loop.call_later.call_args[0],
             (self.batch.opts['timeout'], self.batch.find_job, {'foo', 'bar'})
+        )
+        self.assertEqual(
+            self.batch.local.run_job_async.call_args[1],
+            {
+                'username': 'user#1',
+                'password': 'pass',
+                'jid': self.batch.batch_jid,
+                'ret': u'',
+                'gather_job_timeout': self.batch.opts['gather_job_timeout'],
+                'raw': False,
+                'metadata': {'mykey': 'myvalue'}
+            }
         )
         self.assertEqual(self.batch.active, {'bar', 'foo'})
 
