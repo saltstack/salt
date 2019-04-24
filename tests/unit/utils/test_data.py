@@ -268,12 +268,6 @@ class DataTestCase(TestCase):
         expected = {'old': ['a', 'b', 'c']}
         self.assertDictEqual(ret, expected)
 
-    def test_compare_lists_changes(self):
-        ret = salt.utils.data.compare_lists(old=[1, 2, 3, 'a', 'b', 'c'],
-                                            new=[1, 2, 4, 'x', 'y', 'z'])
-        expected = {'new': [4, 'x', 'y', 'z'], 'old': [3, 'a', 'b', 'c']}
-        self.assertDictEqual(ret, expected)
-
     def test_decode(self):
         '''
         Companion to test_decode_to_str, they should both be kept up-to-date
