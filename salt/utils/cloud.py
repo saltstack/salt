@@ -46,6 +46,9 @@ except ImportError:
 try:
     import winrm
     from winrm.exceptions import WinRMTransportError
+    from winrm.exceptions import InvalidCredentialsError
+    from requests.exceptions import ReadTimeout
+    from requests.exceptions import ConnectionError
 
     HAS_WINRM = True
 except ImportError:
@@ -1064,6 +1067,24 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True, ve
             log.debug('Return code was %s', r.status_code)
         except WinRMTransportError as exc:
             log.debug('Caught exception in wait_for_winrm: %s', exc)
+        except InvalidCredentialsError as exc:
+            log.error((
+                'Caught Invalid Credentials error in wait_for_winrm.  '
+                'You may have an incorrect username/password, '
+                'the new minion\'s WinRM configuration is not correct, '
+                'the customization spec has not finished, '
+                'or we are waiting for an account rename policy to take effect.  '
+                'Connection attempts will continue to be made until the WinRM timeout '
+                'has been exceeded.'
+            ))
+        except ReadTimeout as exc:
+            log.error('Caught Read Timeout while waiting for winrm.')
+        except ConnectionError as exc:
+            log.error((
+                'Caught Connection Error while waiting for winrm.  '
+                'Connection attempts will continue to be made until the WinRM timeout '
+                'has been exceeded.'
+            ))
 
         if time.time() - start > timeout:
             log.error('WinRM connection timed out: %s', timeout)
@@ -2286,6 +2307,8 @@ def winrm_cmd(session, command, flags, **kwargs):
     Wrapper for commands to be run against Windows boxes using WinRM.
     '''
     log.debug('Executing WinRM command: %s %s', command, flags)
+    # rebuild the session to ensure we haven't timed out
+    session.protocol.transport.build_session()
     r = session.run_cmd(command, flags)
     return r.status_code
 
