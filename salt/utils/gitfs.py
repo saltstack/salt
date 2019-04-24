@@ -196,7 +196,7 @@ def enforce_types(key, val):
     else:
         try:
             return expected(val)
-        except Exception as exc:
+        except Exception:
             log.error(
                 'Failed to enforce type for key=%s with val=%s, falling back '
                 'to a string', key, val
