@@ -21,14 +21,14 @@ import os.path
 import logging
 
 __PLATFORM = sys.platform.lower()
-typo_warning = False
+typo_warning = True
 log = logging.getLogger(__name__)
-svl = ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',  # salt variable list
-    'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'HOME_DIR',
-    'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
-    'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
-    'SPM_PARENT_PATH', 'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH',
-    'SPM_REACTOR_PATH', 'SHARE_DIR')
+EXPECTED_VARIABLES = ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',
+                      'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'HOME_DIR',
+                      'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
+                      'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
+                      'SPM_PARENT_PATH', 'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH',
+                      'SPM_REACTOR_PATH', 'SHARE_DIR')
 
 try:
     # Let's try loading the system paths from the generated module at
@@ -37,18 +37,18 @@ try:
 except ImportError:
     import types
     __generated_syspaths = types.ModuleType(str('salt._syspaths'))  # future lint: blacklisted-function
-    for key in svl:
+    for key in EXPECTED_VARIABLES:
         setattr(__generated_syspaths, key, None)
 else:
-    for key in svl:
+    for key in EXPECTED_VARIABLES:
         if hasattr(__generated_syspaths, key):
             continue
         else:
-            if not typo_warning:
+            if typo_warning:
                 log.warning('Possible Typo?')
                 log.warning('To dissolve this warning add `[variable] = None` to _syspaths.py')
-            typo_warning = True
-            log.warning('Variable "' + key + '" is missing, value set to None')
+            typo_warning = False
+            log.warning('Variable %s is missing, value set to None', key)
             setattr(__generated_syspaths, key, None)  # missing variables defaulted to None
 
 # Let's find out the path of this module
