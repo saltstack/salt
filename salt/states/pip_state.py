@@ -22,6 +22,7 @@ requisite to a pkg.installed state for the package which provides pip
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import re
+import types
 import logging
 try:
     import pkg_resources
@@ -37,6 +38,11 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
 from salt.ext import six
+try:
+    import pkg_resources
+    HAS_PKG_RESOURCES = True
+except ImportError:
+    HAS_PKG_RESOURCES = False
 # pylint: disable=import-error
 try:
     import pip
@@ -60,9 +66,19 @@ if HAS_PIP is True:
             HAS_PIP = False
             # Remove references to the loaded pip module above so reloading works
             import sys
+            pip_related_entries = [
+                (k, v) for (k, v) in sys.modules.items()
+                or getattr(v, '__module__', '').startswith('pip.')
+                or (isinstance(v, types.ModuleType) and v.__name__.startswith('pip.'))
+            ]
+            for name, entry in pip_related_entries:
+                sys.modules.pop(name)
+                del entry
+
             del pip
-            if 'pip' in sys.modules:
-                del sys.modules['pip']
+            sys_modules_pip = sys.modules.pop('pip', None)
+            if sys_modules_pip is not None:
+                del sys_modules_pip
 
     try:
         from pip.exceptions import InstallationError
@@ -279,8 +295,10 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
     and 1 if version1 > version2. Return None if there was a problem
     making the comparison.
     '''
-    normalize = lambda x: six.text_type(x).split('!', 1)[-1] \
-        if ignore_epoch else six.text_type(x)
+    if HAS_PKG_RESOURCES is False:
+        log.warning('The pkg_resources packages was not loaded. Please install setuptools.')
+        return None
+    normalize = lambda x: six.text_type(x).split('!', 1)[-1] if ignore_epoch else six.text_type(x)
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 

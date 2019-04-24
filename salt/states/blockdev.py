@@ -193,5 +193,7 @@ def _checkblk(name):
     Check if the blk exists and return its fstype if ok
     '''
 
-    blk = __salt__['cmd.run']('blkid -o value -s TYPE {0}'.format(name))
+    blk = __salt__['cmd.run'](
+        ['blkid', '-o', 'value', '-s', 'TYPE', name],
+        ignore_retcode=True)
     return '' if not blk else blk

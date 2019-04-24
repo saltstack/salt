@@ -276,8 +276,8 @@ def minion_mods(
                         ret[f_key] = funcs[func]
 
     if notify:
-        evt = salt.utils.event.get_event('minion', opts=opts, listen=False)
-        evt.fire_event({'complete': True}, tag='/salt/minion/minion_mod_complete')
+        with salt.utils.event.get_event('minion', opts=opts, listen=False) as evt:
+            evt.fire_event({'complete': True}, tag='/salt/minion/minion_mod_complete')
 
     return ret
 
