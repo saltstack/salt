@@ -410,12 +410,17 @@ class WinSystemModuleTest(ModuleCase):
         now = datetime.datetime.now()
         self.assertEqual(now.strftime("%I:%M"), ret.rsplit(':', 1)[0])
 
-    @skipIf(True, 'This test fails due to NTP settings')
     @destructiveTest
     def test_set_system_time(self):
         '''
         Test setting the system time
+
+        .. note::
+
+            In order for this test to pass, time sync must be disabled for the
+            VM in the hypervisor
         '''
+        self.run_function('service.stop', ['w32time'])
         test_time = '10:55'
         current_time = self.run_function('system.get_system_time')
         try:
@@ -424,6 +429,7 @@ class WinSystemModuleTest(ModuleCase):
             self.assertEqual(get_time, test_time)
         finally:
             self.run_function('system.set_system_time', [current_time])
+            self.run_function('service.start', ['w32time'])
 
     def test_get_system_date(self):
         '''
@@ -433,12 +439,17 @@ class WinSystemModuleTest(ModuleCase):
         date = datetime.datetime.now().date().strftime("%m/%d/%Y")
         self.assertEqual(date, ret)
 
-    @skipIf(True, 'This test fails due to NTP settings')
     @destructiveTest
     def test_set_system_date(self):
         '''
         Test setting system date
+
+        .. note::
+
+            In order for this test to pass, time sync must be disabled for the
+            VM in the hypervisor
         '''
+        self.run_function('service.stop', ['w32time'])
         current_date = self.run_function('system.get_system_date')
         try:
             self.run_function('system.set_system_date', ['03/25/2018'])
@@ -446,3 +457,4 @@ class WinSystemModuleTest(ModuleCase):
             self.assertEqual(ret, '03/25/2018')
         finally:
             self.run_function('system.set_system_date', [current_date])
+            self.run_function('service.start', ['w32time'])
