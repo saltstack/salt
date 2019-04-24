@@ -85,7 +85,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_domain.XMLDesc.return_value = xml  # pylint: disable=no-member
 
         # Return state as shutdown
-        mock_domain.info.return_value = [4, 0, 0, 0]  # pylint: disable=no-member
+        mock_domain.info.return_value = [4, 0, 0, 0, 0]  # pylint: disable=no-member
         return mock_domain
 
     def test_disk_profile_merge(self):
@@ -1397,6 +1397,115 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertTrue(
                     re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$',
                              interface_attrs['mac'], re.I))
+
+    def test_vm_info(self):
+        '''
+        Test virt.vm_info(vm_name)
+        '''
+        xml = '''
+            <domain type='qemu'>
+              <name>minion-1</name>
+              <uuid>e6e3f990-8997-4a5e-8cb7-ea835eae4bbe</uuid>
+              <metadata>
+                <libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
+                  <libosinfo:os id="http://ubuntu.com/ubuntu/16.04"/>
+                </libosinfo:libosinfo>
+              </metadata>
+              <memory unit='KiB'>819200</memory>
+              <currentMemory unit='KiB'>819200</currentMemory>
+              <vcpu placement='static'>1</vcpu>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-bionic'>hvm</type>
+                <boot dev='hd'/>
+              </os>
+              <features>
+                <acpi/>
+                <apic/>
+                <vmport state='off'/>
+              </features>
+              <clock offset='utc'>
+                <timer name='rtc' tickpolicy='catchup'/>
+                <timer name='pit' tickpolicy='delay'/>
+                <timer name='hpet' present='no'/>
+              </clock>
+              <on_poweroff>destroy</on_poweroff>
+              <on_reboot>restart</on_reboot>
+              <on_crash>destroy</on_crash>
+              <pm>
+                <suspend-to-mem enabled='no'/>
+                <suspend-to-disk enabled='no'/>
+              </pm>
+            </domain>
+        '''
+        domain = self.set_mock_vm("test-vm-info", xml)
+        vm_info = virt.vm_info('test-vm-info')['test-vm-info']
+        self.assertEqual('e6e3f990-8997-4a5e-8cb7-ea835eae4bbe', vm_info['uuid'])
+        self.assertEqual('destroy', vm_info['on_poweroff'])
+
+    def test_get_uuid(self):
+        '''
+        Test virt.get_uuid(vm_name)
+        '''
+        xml = '''
+            <domain type='qemu'>
+              <name>minion-1</name>
+              <uuid>e6e3f990-8997-4a5e-8cb7-ea835eae4bbe</uuid>
+            </domain>
+        '''
+
+        domain = self.set_mock_vm('test-vm-info', xml)
+        self.assertEqual('e6e3f990-8997-4a5e-8cb7-ea835eae4bbe', virt.get_uuid('test-vm-info'))
+
+    def test_get_on_poweroff(self):
+        '''
+        Test virt.get_on_poweroff(vm_name)
+        '''
+        xml = '''
+            <domain type='qemu'>
+              <name>minion-1</name>
+              <uuid>e6e3f990-8997-4a5e-8cb7-ea835eae4bbe</uuid>
+              <on_poweroff>destroy</on_poweroff>
+              <on_reboot>restart</on_reboot>
+              <on_crash>destroy</on_crash>
+            </domain>
+        '''
+
+        domain = self.set_mock_vm('test-vm-info', xml)
+        self.assertEqual('destroy', virt.get_on_poweroff('test-vm-info'))
+
+    def test_get_on_reboot(self):
+        '''
+        Test virt.get_on_poweroff(vm_name)
+        '''
+        xml = '''
+            <domain type='qemu'>
+              <name>minion-1</name>
+              <uuid>e6e3f990-8997-4a5e-8cb7-ea835eae4bbe</uuid>
+              <on_poweroff>destroy</on_poweroff>
+              <on_reboot>restart</on_reboot>
+              <on_crash>destroy</on_crash>
+            </domain>
+        '''
+
+        domain = self.set_mock_vm('test-vm-info', xml)
+        self.assertEqual('restart', virt.get_on_reboot('test-vm-info'))
+
+    def test_get_on_crash(self):
+        '''
+        Test virt.get_uuid(vm_name)
+        '''
+        xml = '''
+            <domain type='qemu'>
+              <name>minion-1</name>
+              <uuid>e6e3f990-8997-4a5e-8cb7-ea835eae4bbe</uuid>
+              <on_poweroff>destroy</on_poweroff>
+              <on_reboot>restart</on_reboot>
+              <on_crash>destroy</on_crash>
+            </domain>
+        '''
+
+        domain = self.set_mock_vm('test-vm-info', xml)
+        self.assertEqual('destroy', virt.get_on_crash('test-vm-info'))
 
     def test_get_graphics(self):
         '''

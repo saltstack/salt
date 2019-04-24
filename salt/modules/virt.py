@@ -323,57 +323,45 @@ def _parse_qemu_img_info(info):
 
 def _get_uuid(dom):
     '''
-    Return a uuid from the named vm
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.get_uuid <domain>
+    Get uuid from a libvirt domain object.
     '''
-    return ElementTree.fromstring(get_xml(dom)).find('uuid').text
+    uuid = ElementTree.fromstring(dom.XMLDesc(0)).find('uuid').text
+
+    return uuid
 
 
 def _get_on_poweroff(dom):
     '''
-    Return `on_poweroff` setting from the named vm
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.get_on_restart <domain>
+    Get on_poweroff from a libvirt domain object.
     '''
-    node = ElementTree.fromstring(get_xml(dom)).find('on_poweroff')
+    node = ElementTree.fromstring(dom.XMLDesc(0)).find('on_poweroff')
+
     return node.text if node is not None else ''
 
 
 def _get_on_reboot(dom):
     '''
-    Return `on_reboot` setting from the named vm
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.get_on_reboot <domain>
+    Get on_reboot from a libvirt domain object.
     '''
-    node = ElementTree.fromstring(get_xml(dom)).find('on_reboot')
+    node = ElementTree.fromstring(dom.XMLDesc(0)).find('on_reboot')
+
     return node.text if node is not None else ''
 
 
 def _get_on_crash(dom):
     '''
-    Return `on_crash` setting from the named vm
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.get_on_crash <domain>
+    Get on_crash from a libvirt domain object.
     '''
-    node = ElementTree.fromstring(get_xml(dom)).find('on_crash')
+    node = ElementTree.fromstring(dom.XMLDesc(0)).find('on_crash')
+
     return node.text if node is not None else ''
+
+
+def _get_macs(dom):
+    '''
+    Get mac addresses (macs) from a libvirt domain object.
+    '''
+    return [node.get('address') for node in dom.XMLDesc(0).findall('devices/interface/mac')]
 
 
 def _get_nics(dom):
@@ -458,7 +446,7 @@ def _get_disks(dom):
             if driver is not None and driver.get('type') == 'qcow2':
                 try:
                     stdout = subprocess.Popen(
-                                ['qemu-img', 'info', '--output', 'json', '--backing-chain', disk['file']],
+                                ['qemu-img', 'info', '--force-share', '--output', 'json', '--backing-chain', disk['file']],
                                 shell=False,
                                 stdout=subprocess.PIPE).communicate()[0]
                     qemu_output = salt.utils.stringutils.to_str(stdout)
@@ -2155,8 +2143,11 @@ def get_macs(vm_, **kwargs):
 
         salt '*' virt.get_macs <domain>
     '''
-    doc = ElementTree.fromstring(get_xml(vm_, **kwargs))
-    return [node.get('address') for node in doc.findall('devices/interface/mac')]
+    conn = __get_conn(**kwargs)
+    macs = _get_macs(_get_domain(conn, vm_))
+    conn.close()
+
+    return macs
 
 
 def get_graphics(vm_, **kwargs):
@@ -2411,6 +2402,115 @@ def full_info(**kwargs):
             'vm_info': vm_info()}
     conn.close()
     return info
+
+
+def get_uuid(vm_, **kwargs):
+    '''
+    Return a uuid from the named vm
+
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_uuid <domain>
+    '''
+    conn = __get_conn(**kwargs)
+    uuid = _get_uuid(_get_domain(conn, vm_))
+
+    return uuid
+
+
+def get_on_poweroff(vm_, **kwargs):
+    '''
+    Return a on_poweroff from the named vm
+
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_on_poweroff <domain>
+    '''
+    conn = __get_conn(**kwargs)
+    on_poweroff = _get_on_poweroff(_get_domain(conn, vm_))
+
+    return on_poweroff
+
+
+def get_on_reboot(vm_, **kwargs):
+    '''
+    Return a on_reboot from the named vm
+
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_on_reboot <domain>
+    '''
+    conn = __get_conn(**kwargs)
+    on_reboot = _get_on_reboot(_get_domain(conn, vm_))
+
+    return on_reboot
+
+
+def get_on_crash(vm_, **kwargs):
+    '''
+    Return a on_crash from the named vm
+
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_on_crash <domain>
+    '''
+    conn = __get_conn(**kwargs)
+    on_crash = _get_on_crash(_get_domain(conn, vm_))
+
+    return on_crash
 
 
 def get_xml(vm_, **kwargs):
@@ -3505,14 +3605,13 @@ def vm_diskstats(vm_=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' virt.vm_blockstats
+        salt '*' virt.vm_diskstats
     '''
-    def get_disk_devs(dom):
+    def _get_disk_devs(dom):
         '''
-        Extract the disk devices names from the domain XML definition
+        Get the disk devices names from a libvirt domain object.
         '''
-        doc = ElementTree.fromstring(get_xml(dom, **kwargs))
-        return [target.get('dev') for target in doc.findall('devices/disk/target')]
+        return [target.get('dev') for target in dom.XMLDesc(0).findall('devices/disk/target')]
 
     def _info(dom):
         '''
@@ -3520,7 +3619,7 @@ def vm_diskstats(vm_=None, **kwargs):
         '''
         # Do not use get_disks, since it uses qemu-img and is very slow
         # and unsuitable for any sort of real time statistics
-        disks = get_disk_devs(dom)
+        disks = _get_disk_devs(dom)
         ret = {'rd_req': 0,
                'rd_bytes': 0,
                'wr_req': 0,
