@@ -1,0 +1,7 @@
+states:
+  - Z
+
+pillars:
+  list:
+    - foo
+    - bar

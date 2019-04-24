@@ -21,6 +21,7 @@ fake_minion_id4 = 'fake_id4'
 fake_minion_id5 = 'fake_id5'
 fake_minion_id6 = 'fake_id6'
 fake_minion_id7 = 'fake_id7'
+fake_minion_id8 = 'fake_id8'
 
 fake_pillar = {}
 fake_args = ({'path': os.path.abspath(
@@ -219,3 +220,28 @@ class SaltclassTestCase(TestCase, LoaderModuleMockMixin):
     def test_failed_expansion(self):
         self.assertRaisesRegex(SaltException, r'^Unable to expand \${fakepillar}$',
                                saltclass.ext_pillar, fake_minion_id7, {}, fake_args)
+
+    def test_complex_expansion(self):
+        result = saltclass.ext_pillar(fake_minion_id8, {}, fake_args)
+        expected_result = {'A': {'B': {'C': {'tree': {'pillar': 'abracadabra'}}}},
+                           'X': {'X': 'abra', 'head': 'ab', 'tail': 'ra'},
+                           'Y': {'Y': 'cadabra',
+                                 'aux': {'part1': 'dab', 'part2': 'ra'},
+                                 'head': 'ca',
+                                 'tail': 'dabra'},
+                           '__saltclass__': {'classes': ['M0.A', 'M0.Z', 'M0.B'],
+                                             'environment': '',
+                                             'nodename': 'fake_id8',
+                                             'states': ['A', 'Z', 'B']},
+                           'key1': 'abc',
+                           'key2': 'def',
+                           'key3': 'abcdef',
+                           'key4': 'key1: abc, key2: def, key3: abcdef \\${nonexistent}',
+                           'list': ['foo', 'bar'],
+                           'nested-expansion': 'abracadabra',
+                           'network': {'interfaces': {'eth0': {'ipaddr': '1.1.1.1'}},
+                                       'iptables': {'rules': [
+                                           '-A PREROUTING -s 1.2.3.4/32 -d 1.1.1.1 -p tcp --dport 1234 5.6.7.8:1234']}},
+                           'other_pillar': {'B': {'C': {'tree': {'pillar': 'abracadabra'}}}},
+                           'some': {'tree': {'pillar': 'abracadabra'}}}
+        self.assertDictEqual(result, expected_result)

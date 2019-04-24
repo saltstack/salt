@@ -1,2 +1,3 @@
 pillars:
-  nonexistent: ${fakepillar}
+  _exists: _exists
+  nonexistent: 'blah ${_exists} blah ${fakepillar}'

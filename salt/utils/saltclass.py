@@ -65,7 +65,7 @@ def _dict_merge(m_target, m_object, path=None, reverse=False):
                 else:
                     # In reverse=True mode if target list (from higher level class)
                     # already has ^ , then we do nothing
-                    if m_target[key][0] == '^':
+                    if m_target[key] and m_target[key][0] == '^':
                         pass
                     # if it doesn't - merge to the beginning
                     else:
@@ -87,128 +87,118 @@ def _dict_merge(m_target, m_object, path=None, reverse=False):
     return m_target
 
 
-def _dict_search_and_replace(d, old, new, expanded):
-    '''
-    Recursive search and replace in a dict. Used to expand ${xx:yy:zz}.
-    '''
-    for (k, v) in six.iteritems(d):
-        if isinstance(v, dict):
-            _dict_search_and_replace(d[k], old, new, expanded)
-
-        if isinstance(v, list):
-            x = 0
-            for i in v:
-                if isinstance(i, dict):
-                    _dict_search_and_replace(v[x], old, new, expanded)
-                if isinstance(i, six.string_types):
-                    if i == old:
-                        v[x] = new
-                x = x + 1
-        if v == old:
-            d[k] = new
-
-    return d
-
-
-def _find_value_to_expand(x, v):
+def _get_variable_value(variable, pillar_data):
     '''
     Retrieve original value from ${xx:yy:zz} to be expanded
     '''
-    a = x
-    for i in v[2:-1].split(':'):
-        if a is None:
-            return v
-        if i in a:
-            a = a.get(i)
+    rv = pillar_data
+    for i in variable[2:-1].split(':'):
+        try:
+            rv = rv[i]
+        except KeyError:
+            raise SaltException('Unable to expand {}'.format(variable))
+    return rv
+
+
+def _get_variables_from_pillar(text_pillar, escaped=True):
+    '''
+    Get variable names from this pillar.
+    'blah blah ${key1}${key2} blah ${key1}' will result in {'${key1}', '${key2}'}
+    :param text_pillar: string pillar
+    :param escaped: should we match \${escaped:reference} or ${not}
+    :return: set of matched substrings from pillar
+    '''
+    matches_iter = re.finditer(r'(\\)?\${.*?}', six.text_type(text_pillar))
+    result = set()
+    if not matches_iter:
+        pass
+    for match in matches_iter:
+        if escaped or not six.text_type(match.group()).startswith('\\'):
+            result.add(match.group())
+    return result
+
+
+def _update_pillar(pillar_path, variable, value, pillar_data):
+    rv = pillar_data
+    for key in pillar_path[:-1]:
+        rv = rv[key]
+    if isinstance(value, (list, dict)):
+        if rv[pillar_path[-1]] == variable:
+            rv[pillar_path[-1]] = value
         else:
-            return v
-    return a
+            raise SaltException('Type mismatch on variable {} expansion'.format(variable))
+    else:
+        rv[pillar_path[-1]] = six.text_type(rv[pillar_path[-1]]).replace(variable, six.text_type(value))
+    return rv[pillar_path[-1]]
 
 
-# TODO: refactor this please!
-# Look for regexes and expand them
-def _find_and_process_re(_str, v, k, b, expanded):
+def _find_expandable_pillars(pillar_data, **kwargs):
     '''
-    Look for regexes and expand them
+    Recursively look for variable to expand in nested dicts, lists, strings
+    :param pillar_data: structure to look in
+    :return: list of tuples [(path, variable), ... ] where for pillar X:Y:Z path is ['X', 'Y', 'Z']
+    and variable is a single ${A:B:C} expression. For a text pillar with several different variables inside
+    will return several entries in result.
     '''
-    vre = re.finditer(r'(^|.)\$\{.*?\}', _str)
-    if vre:
-        for re_v in vre:
-            re_str = str(re_v.group())
-            if re_str.startswith('\\'):
-                v_new = _str.replace(re_str, re_str.lstrip('\\'))
-                b = _dict_search_and_replace(b, _str, v_new, expanded)
-                expanded.append(k)
-            elif not re_str.startswith('$'):
-                v_expanded = _find_value_to_expand(b, re_str[1:])
-                v_new = _str.replace(re_str[1:], v_expanded)
-                b = _dict_search_and_replace(b, _str, v_new, expanded)
-                _str = v_new
-                expanded.append(k)
-            else:
-                v_expanded = _find_value_to_expand(b, re_str)
-                if v_expanded == re_str:
-                    raise SaltException('Unable to expand {}'.format(re_str))
-                if isinstance(v_expanded, (list, dict)):
-                    v_new = v_expanded
-                # Have no idea why do we need two variables of the same - _str and v
-                elif isinstance(v, six.string_types):
-                    v_new = v.replace(re_str, v_expanded)
-                else:
-                    v_new = _str.replace(re_str, v_expanded)
-                b = _dict_search_and_replace(b, _str, v_new, expanded)
-                _str = v_new
-                v = v_new
-                expanded.append(k)
-    return b
+    pillar = kwargs.get('pillar', pillar_data)
+    path = kwargs.get('path', [])
+    result = kwargs.get('result', [])
+    escaped = kwargs.get('escaped', True)
+
+    if isinstance(pillar, dict):
+        for k, v in pillar.items():
+            _find_expandable_pillars(pillar_data=pillar_data, pillar=v, path=path + [k],
+                                     result=result, escaped=escaped)
+    elif isinstance(pillar, list):
+        # here is the cheapest place to pop orphaned ^
+        if len(pillar) > 0 and pillar[0] == '^':
+            pillar.pop(0)
+        elif len(pillar) > 0 and pillar[0] == r'\^':
+            pillar[0] = '^'
+        for i, elem in enumerate(pillar):
+            _find_expandable_pillars(pillar_data=pillar_data, pillar=elem, path=path + [i],
+                                     result=result, escaped=escaped)
+    else:
+        for variable in _get_variables_from_pillar(six.text_type(pillar), escaped):
+            result.append((path, variable))
+
+    return result
 
 
-# TODO: refactor this please!
-def _expand_variables(a, b, expanded, path=None):
+def expand_variables(pillar_data):
     '''
-    :return: dict that contains expanded variables if found
+    Open every ${A:B:C} variable in pillar_data
     '''
-    if path is None:
-        b = a.copy()
-        path = []
+    path_var_mapping = _find_expandable_pillars(pillar_data, escaped=False)
+    # TODO: remove hardcoded 5 into options
+    for i in range(5):
+        new_path_var_mapping = []
+        for path, variable in path_var_mapping:
+            # get value of ${A:B:C}
+            value = _get_variable_value(variable, pillar_data)
 
-    for (k, v) in six.iteritems(a):
-        if isinstance(v, dict):
-            _expand_variables(v, b, expanded, path + [six.text_type(k)])
-        else:
-            if isinstance(v, list):
-                for i in v:
-                    if isinstance(i, dict):
-                        _expand_variables(i, b, expanded, path + [str(k)])
-                    if isinstance(i, six.string_types):
-                        b = _find_and_process_re(i, v, k, b, expanded)
+            # update pillar '${A:B:C}' -> value of ${A:B:C}
+            pillar = _update_pillar(path, variable, value, pillar_data)
 
-            if isinstance(v, six.string_types):
-                b = _find_and_process_re(v, v, k, b, expanded)
-    return b
+            # check if we got more expandable variable (in case of nested expansion)
+            new_variables = _find_expandable_pillars(pillar, escaped=False)
 
+            # update next iteration's variable
+            new_path_var_mapping.extend([(path + p, v) for p, v in new_variables])
 
-def _pop_override_markers(b):
-    '''
-    Remove orphaned list override markers (^) if found
-    '''
-    if isinstance(b, list):
-        if len(b) > 0 and b[0] == '^':
-            b.pop(0)
-        elif len(b) > 0 and b[0] == r'\^':
-            b[0] = '^'
-        for sub in b:
-            _pop_override_markers(sub)
-    elif isinstance(b, dict):
-        for sub in b.values():
-            _pop_override_markers(sub)
-    return b
+        # break if didn't find any cases of nested expansion
+        if not new_path_var_mapping:
+            break
+        path_var_mapping = new_path_var_mapping
+
+    return pillar_data
 
 
 def _validate(name, data):
     '''
     Make sure classes, pillars, states and environment are of appropriate data types
     '''
+    # TODO: looks awful, there's a better way to write this
     if 'classes' in data:
         data['classes'] = [] if data['classes'] is None else data['classes']  # None -> []
         if not isinstance(data['classes'], list):
@@ -350,7 +340,7 @@ def get_saltclass_data(node_data, salt_data):
                         resolved_classes.append(c)
                 else:
                     raise SaltException('Nonstring item in classes list in class {} - {}. '.format(cls, str(c)))
-                expanded_class['classes'] = reversed(resolved_classes)
+            expanded_class['classes'] = resolved_classes[::-1]
 
     # Get ordered class and state lists from expanded_classes and minion_classes (traverse expanded_classes tree)
     def traverse(this_class, result_list):
@@ -385,7 +375,7 @@ def get_saltclass_data(node_data, salt_data):
                 ordered_state_list.append(state)
 
     # Expand ${xx:yy:zz} here and pop override (^) markers
-    salt_data['__pillar__'] = _expand_variables(_pop_override_markers(salt_data['__pillar__']), {}, [])
+    salt_data['__pillar__'] = expand_variables(salt_data['__pillar__'])
     salt_data['__classes__'] = ordered_class_list
     salt_data['__states__'] = ordered_state_list
     return salt_data['__pillar__'], salt_data['__classes__'], salt_data['__states__'], environment
@@ -419,15 +409,15 @@ def get_node_classes(node_data, salt_data):
     :return: deque with extracted classes
     '''
     result = deque()
-    for c in node_data.get('classes', []):
+    for c in reversed(node_data.get('classes', [])):
         if c.startswith('.'):
             raise SaltException('Unsupported glob type in {} - \'{}\'. '
                                 'Only A.B* type globs are supported in node definition. '
                                 .format(salt_data['minion_id'], c))
         elif c.endswith('*'):
             resolved_node_glob = _resolve_prefix_glob(c, salt_data)
-            for resolved_node_class in sorted(resolved_node_glob):
-                result.append(resolved_node_class)
+            for resolved_node_class in reversed(sorted(resolved_node_glob)):
+                result.appendleft(resolved_node_class)
         else:
             result.appendleft(c)
     return result

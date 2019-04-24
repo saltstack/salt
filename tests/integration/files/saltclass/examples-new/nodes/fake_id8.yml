@@ -1,0 +1,35 @@
+classes:
+  - M0.A
+  - M0.B
+
+pillars:
+  key1: abc
+  key2: def
+  key3: ${key1}${key2}
+  key4: 'key1: ${key1}, key2: ${key2}, key3: ${key3} \${nonexistent}'
+  network:
+    interfaces:
+      eth0:
+        ipaddr: 1.1.1.1
+    iptables:
+      rules:
+        - '-A PREROUTING -s 1.2.3.4/32 -d ${network:interfaces:eth0:ipaddr} -p tcp --dport 1234 5.6.7.8:1234'
+  nested-expansion: "${X:X}${Y:Y}"
+  X:
+    X: "${X:head}${X:tail}"
+    head: ab
+    tail: ra
+  Y:
+    Y: "${Y:head}${Y:tail}"
+    head: ca
+    tail: "${Y:aux:part1}${Y:aux:part2}"
+    aux:
+      part1: dab
+      part2: ra
+  some:
+    tree:
+      pillar: ${nested-expansion}
+  A:
+    B:
+      C: ${some}
+  other_pillar: ${A}
