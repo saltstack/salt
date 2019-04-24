@@ -316,6 +316,7 @@ state modules
     win_wua
     winrepo
     x509
+    xml
     xmpp
     zabbix_action
     zabbix_host
