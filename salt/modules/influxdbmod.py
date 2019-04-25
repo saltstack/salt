@@ -407,6 +407,7 @@ def create_retention_policy(database,
                             duration,
                             replication,
                             default=False,
+                            shard_duration="0s",
                             **client_args):
     '''
     Create a retention policy.
@@ -434,6 +435,18 @@ def create_retention_policy(database,
     default : False
         Whether or not the policy as default will be set as default.
 
+    shard_duration : 0s
+        New shard duration of given retention policy.
+
+        Durations such as 1h, 90m, 12h, 7d, and 4w, are all supported
+        and mean 1 hour, 90 minutes, 12 hours, 7 day, and 4 weeks,
+        respectively. Infinite retention is not supported.
+        As a workaround, specify a “1000w” duration to achieve an extremely
+        long shard group duration.
+        Defaults to “0s”, which is interpreted by the database to mean the
+        default value given the duration.
+        The minimum shard group duration is 1 hour.
+
     CLI Example:
 
     .. code-block:: bash
@@ -442,7 +455,7 @@ def create_retention_policy(database,
     '''
     client = _client(**client_args)
     client.create_retention_policy(name, duration, replication, database,
-                                   default)
+                                   default, shard_duration)
 
     return True
 
@@ -452,6 +465,7 @@ def alter_retention_policy(database,
                            duration=None,
                            replication=None,
                            default=None,
+                           shard_duration=None,
                            **client_args):
     '''
     Modify an existing retention policy.
@@ -480,6 +494,16 @@ def alter_retention_policy(database,
     default : None
         Whether or not to set the modified policy as default.
 
+    shard_duration : None
+        New shard duration of given retention policy.
+
+        Durations such as 1h, 90m, 12h, 7d, and 4w, are all supported
+        and mean 1 hour, 90 minutes, 12 hours, 7 day, and 4 weeks,
+        respectively. Infinite retention is not supported.
+        As a workaround, specify a “1000w” duration to achieve an extremely
+        long shard group duration.
+        The minimum shard group duration is 1 hour.
+
     CLI Example:
 
     .. code-block:: bash
@@ -488,7 +512,7 @@ def alter_retention_policy(database,
     '''
     client = _client(**client_args)
     client.alter_retention_policy(name, database, duration, replication,
-                                  default)
+                                  default, shard_duration)
     return True
 
 
