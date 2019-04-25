@@ -340,7 +340,7 @@ SDB
 
 * :ref:`Writing SDB Modules <sdb-writing-modules>`
 
-SDB is a way to store data that's not associated with a minion. See 
+SDB is a way to store data that's not associated with a minion. See
 :ref:`Storing Data in Other Databases <sdb>`.
 
 Serializer
@@ -383,6 +383,12 @@ pkgfiles modules handle the actual installation.
 
 SSH Wrapper
 -----------
+
+.. toctree::
+    :maxdepth: 1
+    :glob:
+
+    ssh_wrapper
 
 Replacement execution modules for :ref:`Salt SSH <salt-ssh>`.
 
