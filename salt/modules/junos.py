@@ -1115,6 +1115,7 @@ def install_os(path=None, **kwargs):
     # This is a temporary fix for issue , will track the issue via
     # https://github.com/Juniper/salt/issues/116
     op.pop('dev_timeout', None)
+    timeout = max(1800, conn.timeout)
     no_copy_ = op.get('no_copy', False)
     # Reboot should not be passed as a keyword argument to install(),
     # Please refer to https://github.com/Juniper/salt/issues/115 for more details
@@ -1149,7 +1150,7 @@ def install_os(path=None, **kwargs):
 
     # install() should not reboot the device, reboot is handled in the next block
     try:
-        conn.sw.install(path, progress=True, **op)
+        conn.sw.install(path, progress=True, timeout=timeout, **op)
         ret['message'] = 'Installed the os.'
     except Exception as exception:
         ret['message'] = 'Installation failed due to: "{0}"'.format(exception)
