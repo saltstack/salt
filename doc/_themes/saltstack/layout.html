@@ -81,7 +81,7 @@
     </script>
     {%- for scriptfile in script_files %}
     {% if scriptfile not in js_blacklist %}
-    <script src="{{ pathto(scriptfile, 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto(scriptfile, 1) }}"></script>
     {% endif %}
     {%- endfor %}
 {%- endmacro %}
@@ -159,7 +159,7 @@
         {%- endblock %}
 
         {%- block extrahead %} {% endblock %}
-        <script src="{{ pathto('_static/js/vendor/modernizr-2.6.2-respond-1.1.0.min.js', 1) }}"></script>
+        <script type="text/javascript" src="{{ pathto('_static/js/vendor/modernizr-2.6.2-respond-1.1.0.min.js', 1) }}"></script>
 
         {%- block analytics %}
         {% endblock %}
@@ -258,7 +258,7 @@
             </footer>
         {%- endblock %}
 
-        <script src="{{ pathto('_static/js/main.js', 1) }}"></script>
+        <script type="text/javascript" src="{{ pathto('_static/js/main.js', 1) }}"></script>
 
         {% if on_saltstack %}
         <script type="text/javascript" language="javascript">llactid=23943</script>

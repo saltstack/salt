@@ -57,7 +57,7 @@
     </script>
     {%- for scriptfile in script_files %}
 
-    <script src="{{ pathto(scriptfile, 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto(scriptfile, 1) }}"></script>
 
     {%- endfor %}
 {%- endmacro %}
@@ -98,7 +98,7 @@
         {%- endif %}
 
         <!--[if lt IE 9]>
-        <script src="{{ pathto('_static/js/respond.min.js', 1) }}"></script>
+        <script type="text/javascript" src="{{ pathto('_static/js/respond.min.js', 1) }}"></script>
         <![endif]-->
 
         {%- block linktags %}
