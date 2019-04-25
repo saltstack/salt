@@ -1104,6 +1104,8 @@ def install_os(path=None, **kwargs):
         op.update(kwargs)
 
     no_copy_ = op.get('no_copy', False)
+    # Reboot should not be passed as a keyword argument to install(),
+    # Please refer to https://github.com/Juniper/salt/issues/115 for more details
     reboot = op.pop('reboot', False)
 
     if path is None:
@@ -1133,6 +1135,7 @@ def install_os(path=None, **kwargs):
             ret['out'] = False
             return ret
 
+    # install() should not reboot the device, reboot is handled in the next block
     try:
         conn.sw.install(path, progress=True, **op)
         ret['message'] = 'Installed the os.'
@@ -1144,6 +1147,7 @@ def install_os(path=None, **kwargs):
         if not no_copy_:
             salt.utils.files.safe_rm(image_cached_path)
 
+    # Handle reboot, after the install has finished
     if reboot is True:
         try:
             conn.sw.reboot()
