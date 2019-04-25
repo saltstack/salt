@@ -1112,6 +1112,9 @@ def install_os(path=None, **kwargs):
     else:
         op.update(kwargs)
 
+    # This is a temporary fix for issue , will track the issue via
+    # https://github.com/Juniper/salt/issues/116
+    op.pop('dev_timeout', None)
     no_copy_ = op.get('no_copy', False)
     # Reboot should not be passed as a keyword argument to install(),
     # Please refer to https://github.com/Juniper/salt/issues/115 for more details
