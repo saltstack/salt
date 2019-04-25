@@ -51,6 +51,7 @@ def convert_duration(duration):
 
 def present(name, database, duration="7d",
             replication=1, default=False,
+            shard_duration="0s",
             **client_args):
     '''
     Ensure that given retention policy is present.
@@ -76,7 +77,7 @@ def present(name, database, duration="7d",
             return ret
         if __salt__['influxdb.create_retention_policy'](
             database, name,
-            duration, replication, default, **client_args
+            duration, replication, default, shard_duration, **client_args
         ):
             ret['comment'] = 'retention policy {0} has been created'\
                 .format(name)
@@ -103,6 +104,10 @@ def present(name, database, duration="7d",
             update_policy = True
             ret['changes']['default'] = "Default changed from {0} to {1}.".format(current_policy['default'], default)
 
+        if current_policy['shardGroupDuration'] != convert_duration(shard_duration):
+            update_policy = True
+            ret['changes']['shard_duration'] = "Retention changed from {0} to {1}.".format(current_policy['shardGroupDuration'], shard_duration)
+
         if update_policy:
             if __opts__['test']:
                 ret['result'] = None
@@ -111,8 +116,8 @@ def present(name, database, duration="7d",
                 return ret
             else:
                 if __salt__['influxdb.alter_retention_policy'](
-                    database, name,
-                    duration, replication, default, **client_args
+                    database, name, duration, replication, default,
+                    shard_duration, **client_args
                 ):
                     ret['comment'] = 'retention policy {0} has been changed'\
                         .format(name)
