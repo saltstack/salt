@@ -4,7 +4,7 @@ source 'https://rubygems.org'
 
 # Point this back at the test-kitchen package after 1.23.3 is relased
 gem 'test-kitchen', '~>1.23.3'
-gem 'kitchen-salt', :git => 'https://github.com/s0undt3ch/kitchen-salt.git', :branch => 'features/nox', :ref => '7a8854f'
+gem 'kitchen-salt', :git => 'https://github.com/s0undt3ch/kitchen-salt.git', :branch => 'features/nox'
 gem 'kitchen-sync'
 gem 'git'
 

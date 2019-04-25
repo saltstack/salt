@@ -16,9 +16,9 @@ from tests.support.unit import TestCase, skipIf
 # Import Salt Libs
 import salt.modules.temp as temp
 import salt.modules.win_file as win_file
-import salt.utils.win_dacl as win_dacl
 import salt.utils.platform
 import salt.utils.win_dacl
+import salt.utils.win_functions
 from salt.exceptions import CommandExecutionError
 
 
@@ -101,9 +101,6 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         self.current_user = salt.utils.win_functions.get_current_user(False)
         return {
             win_file: {
-                '__utils__': {'dacl.check_perms': win_dacl.check_perms}
-            },
-            win_dacl: {
                 '__opts__': {'test': False},
             }
         }
@@ -130,7 +127,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                     'changes': {'owner': 'Administrators'},
                     'name': self.temp_file.name,
                     'result': None}
-        with patch.dict(win_dacl.__opts__, {'test': True}):
+        with patch.dict(win_file.__opts__, {'test': True}):
             ret = win_file.check_perms(path=self.temp_file.name,
                                        owner='Administrators',
                                        inheritance=None)
@@ -154,10 +151,10 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test setting deny perms on a file with test=True
         '''
         expected = {'comment': '',
-                    'changes': {'perms': {'Users': {'deny': 'read_execute'}}},
+                    'changes': {'deny_perms': {'Users': {'perms': 'read_execute'}}},
                     'name': self.temp_file.name,
                     'result': None}
-        with patch.dict(win_dacl.__opts__, {'test': True}):
+        with patch.dict(win_file.__opts__, {'test': True}):
             ret = win_file.check_perms(
                 path=self.temp_file.name,
                 deny_perms={'Users': {'perms': 'read_execute'}},
@@ -169,7 +166,8 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test setting deny perms on a file
         '''
         expected = {'comment': '',
-                    'changes': {'perms': {'Users': {'deny': 'read_execute'}}},
+                    'changes': {
+                        'deny_perms': {'Users': {'perms': 'read_execute'}}},
                     'name': self.temp_file.name,
                     'result': True}
         ret = win_file.check_perms(
@@ -183,10 +181,10 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test setting grant perms on a file with test=True
         '''
         expected = {'comment': '',
-                    'changes': {'perms': {'Users': {'grant': 'read_execute'}}},
+                    'changes': {'grant_perms': {'Users': {'perms': 'read_execute'}}},
                     'name': self.temp_file.name,
                     'result': None}
-        with patch.dict(win_dacl.__opts__, {'test': True}):
+        with patch.dict(win_file.__opts__, {'test': True}):
             ret = win_file.check_perms(
                 path=self.temp_file.name,
                 grant_perms={'Users': {'perms': 'read_execute'}},
@@ -198,7 +196,8 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test setting grant perms on a file
         '''
         expected = {'comment': '',
-                    'changes': {'perms': {'Users': {'grant': 'read_execute'}}},
+                    'changes': {
+                        'grant_perms': {'Users': {'perms': 'read_execute'}}},
                     'name': self.temp_file.name,
                     'result': True}
         ret = win_file.check_perms(
@@ -215,7 +214,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                     'changes': {'inheritance': False},
                     'name': self.temp_file.name,
                     'result': None}
-        with patch.dict(win_dacl.__opts__, {'test': True}):
+        with patch.dict(win_file.__opts__, {'test': True}):
             ret = win_file.check_perms(path=self.temp_file.name,
                                        inheritance=False)
             self.assertDictEqual(expected, ret)
@@ -258,16 +257,17 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                                             permissions='full_control')
         expected = {'comment': '',
                     'changes': {
-                        'perms': {
-                            'Administrators': {'grant': 'full_control'},
-                            'Users': {'grant': 'read_execute'}},
+                        'grant_perms': {
+                            'Administrators': {'perms': 'full_control'},
+                            'Users': {'perms': 'read_execute'}},
                         'remove_perms': {
                             'Administrator': {
                                 'grant': {'applies to': 'Not Inherited (file)',
-                                          'permissions': 'Full control'}}}},
+                                          'inherited': False,
+                                          'permissions': ['Full control']}}}},
                     'name': self.temp_file.name,
                     'result': None}
-        with patch.dict(win_dacl.__opts__, {'test': True}):
+        with patch.dict(win_file.__opts__, {'test': True}):
             ret = win_file.check_perms(
                 path=self.temp_file.name,
                 grant_perms={'Users': {'perms': 'read_execute'},
@@ -290,13 +290,14 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                                             permissions='full_control')
         expected = {'comment': '',
                     'changes': {
-                        'perms': {
-                            'Administrators': {'grant': 'full_control'},
-                            'Users': {'grant': 'read_execute'}},
+                        'grant_perms': {
+                            'Administrators': {'perms': 'full_control'},
+                            'Users': {'perms': 'read_execute'}},
                         'remove_perms': {
                             'Administrator': {
                                 'grant': {'applies to': 'Not Inherited (file)',
-                                          'permissions': 'Full control'}}}},
+                                          'inherited': False,
+                                          'permissions': ['Full control']}}}},
                     'name': self.temp_file.name,
                     'result': True}
         ret = win_file.check_perms(
