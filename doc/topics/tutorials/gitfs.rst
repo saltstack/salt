@@ -318,6 +318,7 @@ configured gitfs remotes):
 * :conf_master:`gitfs_disable_saltenv_mapping` (new in 2018.3.0)
 * :conf_master:`gitfs_ref_types` (new in 2018.3.0)
 * :conf_master:`gitfs_update_interval` (new in 2018.3.0)
+* :conf_master:`gitfs_fallback_branch` (new in 2018.3.5)
 
 .. note::
     pygit2 only supports disabling SSL verification in versions 0.23.2 and
@@ -344,6 +345,7 @@ tremendous amount of customization. Here's some example usage:
         - root: other/salt
         - mountpoint: salt://other/bar
         - base: salt-base
+        - fallback_branch: stable
         - ref_types:
           - branch
       - http://foo.com/baz.git:
@@ -554,6 +556,37 @@ single branch.
     gitfs_remotes:
       - http://foo.com/quux.git:
         - all_saltenvs: anything
+
+
+.. versionadded:: 2018.3.5
+
+Fallback branch
+===============
+
+The ``fallback_branch`` configuration parameter overrides the logic Salt uses to
+map branches/tags to fileserver environments. This allows existing branches to be
+targeted while non-existing branches will use the branch defined as fallback.
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - http://foo.com/quux.git:
+        - fallback_branch: master
+
+
+The ``fallback_branch`` parameter can be used per-remote or globally. Per-remote
+configuration overrides the global configuration
+
+.. code-block:: yaml
+
+   gitfs_fallback_branch: foobar
+
+   gitfs_remotes:
+     - http://foo.com/quux.git:
+     - http://foo.com/quax.git:
+       - fallback_branch: master
+
+
 
 .. _gitfs-update-intervals:
 
