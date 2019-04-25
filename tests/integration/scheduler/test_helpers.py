@@ -5,7 +5,6 @@ from __future__ import absolute_import
 import copy
 import logging
 import os
-import time
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase

@@ -48,7 +48,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.schedule.reset()
 
-	del self.schedule
+        del self.schedule
 
     def test_skip(self):
         '''
@@ -79,8 +79,8 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret['_skipped_time'], run_time)
 
         # Give the job a chance to finish
-	while self.schedule.job_running(ret):
-          time.sleep(1)
+        while self.schedule.job_running(ret):
+            time.sleep(1)
 
         # Run 11/29/2017 at 5pm
         run_time = dateutil_parser.parse('11/29/2017 5:00pm')
