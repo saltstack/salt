@@ -958,6 +958,8 @@ def install_config(path=None, **kwargs):
             if 'comment' in op:
                 commit_params['comment'] = op['comment']
 
+            # Assume commit_check succeeds and initialize variable check
+            check = True
             if db_mode != 'dynamic':
                 try:
                     check = cu.commit_check()
@@ -969,7 +971,7 @@ def install_config(path=None, **kwargs):
                     ret['out'] = False
                     return ret
 
-            if db_mode == 'dynamic' or check and not test:
+            if check and not test:
                 try:
                     cu.commit(**commit_params)
                     ret['message'] = 'Successfully loaded and committed!'
@@ -1112,8 +1114,9 @@ def install_os(path=None, **kwargs):
     else:
         op.update(kwargs)
 
-    # This is a temporary fix for issue , will track the issue via
-    # https://github.com/Juniper/salt/issues/116
+    # timeout value is not honoured by sw.install if not passed as argument
+    # currently, timeout is set to be maximum of default 1800 and user passed timeout value
+    # For info: https://github.com/Juniper/salt/issues/116
     op.pop('dev_timeout', None)
     timeout = max(1800, conn.timeout)
     no_copy_ = op.get('no_copy', False)
@@ -1555,7 +1558,7 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
     except Exception as err:
         ret['message'] = 'Uncaught exception - please report: {0}'.format(
             str(err))
-
+        traceback.print_exc()
         ret['out'] = False
         return ret
     return ret
