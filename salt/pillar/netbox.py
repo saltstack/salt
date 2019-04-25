@@ -46,6 +46,14 @@ site_details: ``True``
 
 site_prefixes: ``True``
     Whether should retrieve the prefixes of the site the device belongs to.
+
+device_interfaces: ``False``
+    Whether should retrieve the interfaces of the device.
+
+ip_addresses: ``False``
+    Whether should retrieve the IPv4/IPv6 addresses of the device.  If
+    both ip_addresses and device_interfaces are enabled, addresses will be
+    collated with each interface.
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals
@@ -70,6 +78,8 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     api_token = kwargs.get('api_token')
     site_details = kwargs.get('site_details', True)
     site_prefixes = kwargs.get('site_prefixes', True)
+    device_interfaces = kwargs.get('device_interfaces', False)
+    ip_addresses = kwargs.get('ip_addresses', False)
     proxy_username = kwargs.get('proxy_username', None)
     proxy_return = kwargs.get('proxy_return', True)
     ret = {}
@@ -87,7 +97,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                                            params={'name': minion_id},
                                            header_dict=headers,
                                            decode=True)
-   # Check status code for API call
+    # Check status code for API call
     if 'error' in device_results:
         log.error('API query failed for "%s", status code: %d',
                   minion_id, device_results['status'])
@@ -103,6 +113,57 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     else:
         log.error('Unable to pull NetBox data for "%s"', minion_id)
         return ret
+    device_id = ret['netbox']['id']
+    interfaces = {}
+    if device_interfaces:
+        log.debug('Retrieving interface details for "%s" device_id=%d', minion_id, device_id)
+        interfaces_url = '{api_url}/{app}/{endpoint}/'
+        interfaces_url = interfaces_url.format(api_url=api_url,
+                                               app='dcim',
+                                               endpoint='interfaces')
+        while interfaces_url:
+            interfaces_ret = salt.utils.http.query(interfaces_url,
+                                                   params={'device_id': device_id},
+                                                   header_dict=headers,
+                                                   decode=True)
+            if 'error' in interfaces_ret:
+                log.error('API query failed for "%s", status code: %d',
+                          minion_id, interfaces_ret['status'])
+                log.error(interfaces_ret['error'])
+                return ret
+            for interface in interfaces_ret['dict']['results']:
+                if ip_addresses:
+                    interface['addresses'] = []
+                interfaces[interface['name']] = interface
+            interfaces_url = interfaces_ret['dict']['next']
+        ret['netbox']['interfaces'] = interfaces
+    if ip_addresses:
+        log.debug('Retrieving address details for "%s" device_id=%d', minion_id, device_id)
+        addresses = [] # if not gathering interfaces, addresses go here
+        addresses_url = '{api_url}/{app}/{endpoint}/'
+        addresses_url = addresses_url.format(api_url=api_url,
+                                             app='ipam',
+                                             endpoint='ip-addresses')
+        while addresses_url:
+            addresses_ret = salt.utils.http.query(addresses_url,
+                                                  params={'device_id': device_id},
+                                                  header_dict=headers,
+                                                  decode=True)
+            if 'error' in addresses_ret:
+                log.error('API query failed for "%s", status code: %d',
+                          minion_id, addresses_ret['status'])
+                log.error(addresses_ret['error'])
+                return ret
+            for address in addresses_ret['dict']['results']:
+                interface_name = address['interface']['name']
+                if interface_name in interfaces:
+                    if 'interface' in address:
+                        del address['interface'] # remove nested repetition
+                    interfaces[interface_name]['addresses'].append(address)
+                else:
+                    addresses.append(address)
+            addresses_url = addresses_ret['dict']['next']
+        ret['netbox']['addresses'] = addresses
     site_id = ret['netbox']['site']['id']
     site_name = ret['netbox']['site']['name']
     if site_details:
