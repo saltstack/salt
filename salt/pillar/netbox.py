@@ -139,7 +139,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         ret['netbox']['interfaces'] = interfaces
     if ip_addresses:
         log.debug('Retrieving address details for "%s" device_id=%d', minion_id, device_id)
-        addresses = [] # if not gathering interfaces, addresses go here
+        addresses = []  # if not gathering interfaces, addresses go here
         addresses_url = '{api_url}/{app}/{endpoint}/'
         addresses_url = addresses_url.format(api_url=api_url,
                                              app='ipam',
@@ -158,7 +158,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                 interface_name = address['interface']['name']
                 if interface_name in interfaces:
                     if 'interface' in address:
-                        del address['interface'] # remove nested repetition
+                        del address['interface']  # remove nested repetition
                     interfaces[interface_name]['addresses'].append(address)
                 else:
                     addresses.append(address)
