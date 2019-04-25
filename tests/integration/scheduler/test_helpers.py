@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import copy
 import logging
 import os
+import time
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -41,6 +42,7 @@ class SchedulerHelpersTest(ModuleCase, SaltReturnAssertsMixin):
             functions = {'test.ping': ping}
             self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
         self.schedule.opts['loop_interval'] = 1
+        self.schedule.opts['run_schedule_jobs_in_background'] = False
 
     def tearDown(self):
         self.schedule.reset()

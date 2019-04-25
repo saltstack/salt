@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import copy
 import logging
 import os
+import time
 
 import dateutil.parser as dateutil_parser
 
@@ -49,11 +50,14 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
             functions = {'test.ping': ping}
             self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
         self.schedule.opts['loop_interval'] = 1
+        self.schedule.opts['run_schedule_jobs_in_background'] = False
 
         self.schedule.opts['grains']['whens'] = {'tea time': '11/29/2017 12:00pm'}
 
     def tearDown(self):
         self.schedule.reset()
+
+        del self.schedule
 
     @skipIf(not HAS_CRONITER, 'Cannot find croniter python module')
     def test_eval_cron_invalid(self):

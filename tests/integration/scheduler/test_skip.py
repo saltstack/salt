@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import copy
 import logging
 import os
+import time
 
 import dateutil.parser as dateutil_parser
 
@@ -42,9 +43,12 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
             functions = {'test.ping': ping}
             self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
         self.schedule.opts['loop_interval'] = 1
+        self.schedule.opts['run_schedule_jobs_in_background'] = False
 
     def tearDown(self):
         self.schedule.reset()
+
+	del self.schedule
 
     def test_skip(self):
         '''
@@ -73,6 +77,10 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertNotIn('_last_run', ret)
         self.assertEqual(ret['_skip_reason'], 'skip_explicit')
         self.assertEqual(ret['_skipped_time'], run_time)
+
+        # Give the job a chance to finish
+	while self.schedule.job_running(ret):
+          time.sleep(1)
 
         # Run 11/29/2017 at 5pm
         run_time = dateutil_parser.parse('11/29/2017 5:00pm')

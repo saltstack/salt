@@ -211,7 +211,6 @@ class Schedule(object):
 
         # Check if we're able to run, default to False
         # in case the `run` value is not present.
-        log.info('==== run %s ===', data['run'])
         if not data['run']:
             return data
         if 'jid_include' not in data or data['jid_include']:
@@ -618,6 +617,34 @@ class Schedule(object):
 
         schedule = self._get_schedule()
         return schedule.get(name, {})
+
+    def job_running(self, data):
+        '''
+        Return the schedule data structure
+        '''
+        # Check to see if there are other jobs with this
+        # signature running.  If there are more than maxrunning
+        # jobs present then don't start another.
+        # If jid_include is False for this job we can ignore all this
+        # NOTE--jid_include defaults to True, thus if it is missing from the data
+        # dict we treat it like it was there and is True
+
+        # Check if we're able to run, default to False
+        # in case the `run` value is not present.
+        running = False
+        if 'jid_include' not in data or data['jid_include']:
+            if self.opts['__role'] == 'master':
+                current_jobs = salt.utils.master.get_running_jobs(self.opts)
+            else:
+                current_jobs = salt.utils.minion.running(self.opts)
+            for job in current_jobs:
+                if 'schedule' in job:
+                    log.info('=== data %s ===', data)
+                    log.info('=== job %s ===', job)
+                    if data['name'] in job['schedule'] \
+                            and salt.utils.process.os_is_running(job['pid']):
+                        running = True
+        return running
 
     def handle_func(self, multiprocessing_enabled, func, data):
         '''
