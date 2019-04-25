@@ -35,6 +35,7 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 from salt.ext import six
+from salt.exceptions import MinionError
 
 # Juniper interface libraries
 # https://github.com/Juniper/py-junos-eznc
@@ -189,8 +190,8 @@ def rpc(cmd=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device' junos.rpc get_config /var/log/config.txt format=text filter='<configuration><system/></configuration>'
-        salt 'device' junos.rpc get-interface-information /home/user/interface.xml interface_name='lo0' terse=True
+        salt 'device' junos.rpc get_config dest=/var/log/config.txt format=text filter='<configuration><system/></configuration>'
+        salt 'device' junos.rpc get-interface-information dest=/home/user/interface.xml interface_name='lo0' terse=True
         salt 'device' junos.rpc get-chassis-inventory
     '''
 
@@ -924,6 +925,11 @@ def install_config(path=None, **kwargs):
         del op['overwrite']
 
     db_mode = op.pop('mode', 'exclusive')
+    if write_diff and db_mode == 'dynamic:':
+        ret['message'] = 'Write diff is not supported with dynamic configuration mode'
+        ret['out'] = False
+        return ret
+
     try:
         with Config(conn, mode=db_mode) as cu:
             try:
@@ -939,11 +945,12 @@ def install_config(path=None, **kwargs):
             finally:
                 salt.utils.files.safe_rm(template_cached_path)
 
-            config_diff = cu.diff()
-            if config_diff is None:
-                ret['message'] = 'Configuration already applied!'
-                ret['out'] = True
-                return ret
+            if db_mode != 'dynamic':
+                config_diff = cu.diff()
+                if config_diff is None:
+                    ret['message'] = 'Configuration already applied!'
+                    ret['out'] = True
+                    return ret
 
             commit_params = {}
             if 'confirm' in op:
@@ -951,15 +958,18 @@ def install_config(path=None, **kwargs):
             if 'comment' in op:
                 commit_params['comment'] = op['comment']
 
-            try:
-                check = cu.commit_check()
-            except Exception as exception:
-                ret['message'] = \
-                    'Commit check threw the following exception: "{0}"'\
-                    .format(exception)
+            # Assume commit_check succeeds and initialize variable check
+            check = True
+            if db_mode != 'dynamic':
+                try:
+                    check = cu.commit_check()
+                except Exception as exception:
+                    ret['message'] = \
+                        'Commit check threw the following exception: "{0}"'\
+                        .format(exception)
 
-                ret['out'] = False
-                return ret
+                    ret['out'] = False
+                    return ret
 
             if check and not test:
                 try:
@@ -1033,14 +1043,13 @@ def zeroize():
 @timeoutDecorator
 def install_os(path=None, **kwargs):
     '''
-    Installs the given image on the device. After the installation is complete\
-     the device is rebooted,
-    if reboot=True is given as a keyworded argument.
+    Installs the given image on the device. After the installation is complete
+    the device is rebooted, if reboot=True is given as a keyworded argument.
 
     path (required)
         Path where the image file is present on the proxy minion
 
-    remote_path :
+    remote_path : /var/tmp
         If the value of path  is a file path on the local
         (Salt host's) filesystem, then the image is copied from the local
         filesystem to the :remote_path: directory on the target Junos
@@ -1064,18 +1073,27 @@ def install_os(path=None, **kwargs):
         When ``True`` this method will perform a config validation against
         the new image
 
-    bool issu:
+    bool issu: False
         When ``True`` allows unified in-service software upgrade
         (ISSU) feature enables you to upgrade between two different Junos OS
         releases with no disruption on the control plane and with minimal
         disruption of traffic.
 
-    bool nssu:
+    bool nssu: False
         When ``True`` allows nonstop software upgrade (NSSU)
         enables you to upgrade the software running on a Juniper Networks
         EX Series Virtual Chassis or a Juniper Networks EX Series Ethernet
         Switch with redundant Routing Engines with a single command and
         minimal disruption to network traffic.
+
+    bool all_re: True
+        When True (default), executes the software install on all Routing Engines of the Junos
+        device. When False, execute the software install only on the current Routing Engine.
+
+    .. note::
+    Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
+    Please refer to below URl for PyEZ sw.install() documentaion:
+    https://pyez.readthedocs.io/en/latest/jnpr.junos.utils.html#jnpr.junos.utils.sw.SW.install
 
     CLI Examples:
 
@@ -1096,7 +1114,15 @@ def install_os(path=None, **kwargs):
     else:
         op.update(kwargs)
 
+    # timeout value is not honoured by sw.install if not passed as argument
+    # currently, timeout is set to be maximum of default 1800 and user passed timeout value
+    # For info: https://github.com/Juniper/salt/issues/116
+    op.pop('dev_timeout', None)
+    timeout = max(1800, conn.timeout)
     no_copy_ = op.get('no_copy', False)
+    # Reboot should not be passed as a keyword argument to install(),
+    # Please refer to https://github.com/Juniper/salt/issues/115 for more details
+    reboot = op.pop('reboot', False)
 
     if path is None:
         ret['message'] = \
@@ -1105,22 +1131,29 @@ def install_os(path=None, **kwargs):
         return ret
 
     if not no_copy_:
-        image_cached_path = salt.utils.files.mkstemp()
-        __salt__['cp.get_file'](path, image_cached_path)
+        # To handle invalid image path scenario
+        try:
+            image_cached_path = salt.utils.files.mkstemp()
+            __salt__['cp.get_file'](path, image_cached_path)
 
-        if not os.path.isfile(image_cached_path):
-            ret['message'] = 'Invalid image path.'
+            if not os.path.isfile(image_cached_path):
+                ret['message'] = 'Invalid image path.'
+                ret['out'] = False
+                return ret
+
+            if os.path.getsize(image_cached_path) == 0:
+                ret['message'] = 'Failed to copy image'
+                ret['out'] = False
+                return ret
+            path = image_cached_path
+        except MinionError:
+            ret['message'] = 'Invalid path. Please provide a valid image path'
             ret['out'] = False
             return ret
 
-        if os.path.getsize(image_cached_path) == 0:
-            ret['message'] = 'Failed to copy image'
-            ret['out'] = False
-            return ret
-        path = image_cached_path
-
+    # install() should not reboot the device, reboot is handled in the next block
     try:
-        conn.sw.install(path, progress=True, **op)
+        conn.sw.install(path, progress=True, timeout=timeout, **op)
         ret['message'] = 'Installed the os.'
     except Exception as exception:
         ret['message'] = 'Installation failed due to: "{0}"'.format(exception)
@@ -1130,7 +1163,8 @@ def install_os(path=None, **kwargs):
         if not no_copy_:
             salt.utils.files.safe_rm(image_cached_path)
 
-    if 'reboot' in op and op['reboot'] is True:
+    # Handle reboot, after the install has finished
+    if reboot is True:
         try:
             conn.sw.reboot()
         except Exception as exception:
@@ -1266,6 +1300,9 @@ def load(path=None, **kwargs):
         ``True``, only those statements under the ``replace`` tag will be
         changed.
 
+    merge : False
+        If set to ``True`` will set the load-config action to merge.
+
     format
         Determines the format of the contents
 
@@ -1355,11 +1392,22 @@ def load(path=None, **kwargs):
 
         op['format'] = template_format
 
+    # Currently, four config_actions are supported: overwrite, replace, update, merge
+    # Allow only one config_action, providing multiple config_action value is not allowed
+    actions = filter(lambda item: op.get(item, False),
+                     ('overwrite', 'replace', 'update', 'merge'))
+    if len(list(actions)) > 1:
+        ret['message'] = 'Only one config_action is allowed. Provided: {0}'.format(actions)
+        ret['out'] = False
+        return ret
+
     if 'replace' in op and op['replace']:
         op['merge'] = False
         del op['replace']
     elif 'overwrite' in op and op['overwrite']:
         op['overwrite'] = True
+    elif 'merge' in op and op['merge']:
+        op['merge'] = True
     elif 'overwrite' in op and not op['overwrite']:
         op['merge'] = True
         del op['overwrite']
