@@ -42,13 +42,14 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'btrfs'
 
 
-def _mount(device):
+def _mount(device, use_default):
     '''
     Mount the device in a temporary place.
     '''
+    opts = 'defaults' if use_default else 'subvol=/'
     dest = tempfile.mkdtemp()
     res = __states__['mount.mounted'](dest, device=device, fstype='btrfs',
-                                      opts='subvol=/', persist=False)
+                                      opts=opts, persist=False)
     if not res['result']:
         log.error('Cannot mount device %s in %s', device, dest)
         _umount(dest)
@@ -105,6 +106,7 @@ def __mount_device(action):
     def wrapper(*args, **kwargs):
         name = kwargs['name']
         device = kwargs['device']
+        use_default = kwargs.get('use_default', False)
 
         ret = {
             'name': name,
@@ -114,13 +116,13 @@ def __mount_device(action):
         }
         try:
             if device:
-                dest = _mount(device)
+                dest = _mount(device, use_default)
                 if not dest:
                     msg = 'Device {} cannot be mounted'.format(device)
                     ret['comment'].append(msg)
                 kwargs['__dest'] = dest
             ret = action(*args, **kwargs)
-        except Exception as e:
+        except Exception:
             tb = six.text_type(traceback.format_exc())
             log.exception('Exception captured in wrapper %s', tb)
             ret['comment'].append(tb)
@@ -257,6 +259,128 @@ def subvolume_deleted(name, device, commit=False, __dest=None):
             return ret
 
         ret['changes'][name] = 'Removed subvolume {}'.format(name)
+
+    ret['result'] = True
+    return ret
+
+
+def _diff_properties(expected, current):
+    '''Calculate the difference between the current and the expected
+    properties
+
+    * 'expected' is expressed in a dictionary like: {'property': value}
+
+    * 'current' contains the same format retuned by 'btrfs.properties'
+
+    If the property is not available, will throw an exception.
+
+    '''
+    difference = {}
+    for _property, value in expected.items():
+        current_value = current[_property]['value']
+        if value is False and current_value == 'N/A':
+            needs_update = False
+        elif value != current_value:
+            needs_update = True
+        else:
+            needs_update = False
+        if needs_update:
+            difference[_property] = value
+    return difference
+
+
+@__mount_device
+def properties(name, device, use_default=False, __dest=None, **properties):
+    '''
+    Makes sure that a list of properties are set in a subvolume, file
+    or device.
+
+    name
+        Name of the object to change
+
+    device
+        Device where the object lives, if None, the device will be in
+        name
+
+    use_default
+        If True, this subvolume will be resolved to the default
+        subvolume assigned during the create operation
+
+    properties
+        Dictionary of properties
+
+    Valid properties are 'ro', 'label' or 'compression'. Check the
+    documentation to see where those properties are valid for each
+    object.
+
+    '''
+    ret = {
+        'name': name,
+        'result': False,
+        'changes': {},
+        'comment': [],
+    }
+
+    # 'name' will have always the name of the object that we want to
+    # change, but if the object is a device, we do not repeat it again
+    # in 'device'. This makes device sometimes optional.
+    if device:
+        if os.path.isabs(name):
+            path = os.path.join(__dest, os.path.relpath(name, os.path.sep))
+        else:
+            path = os.path.join(__dest, name)
+    else:
+        path = name
+
+    if not os.path.exists(path):
+        ret['comment'].append('Object {} not found'.format(name))
+        return ret
+
+    # Convert the booleans to lowercase
+    properties = {k: v if type(v) is not bool else str(v).lower()
+                  for k, v in properties.items()}
+
+    current_properties = {}
+    try:
+        current_properties = __salt__['btrfs.properties'](path)
+    except CommandExecutionError as e:
+        ret['comment'].append('Error reading properties from {}'.format(name))
+        ret['comment'].append('Current error {}'.format(e))
+        return ret
+
+    try:
+        properties_to_set = _diff_properties(properties, current_properties)
+    except KeyError:
+        ret['comment'].append('Some property not found in {}'.format(name))
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        if properties_to_set:
+            msg = 'Properties {} will be changed in {}'.format(
+                properties_to_set, name)
+        else:
+            msg = 'No properties will be changed in {}'.format(name)
+        ret['comment'].append(msg)
+        return ret
+
+    if properties_to_set:
+        _properties = ','.join(
+            '{}={}'.format(k, v) for k, v in properties_to_set.items())
+        __salt__['btrfs.properties'](path, set=_properties)
+
+        current_properties = __salt__['btrfs.properties'](path)
+        properties_failed = _diff_properties(properties, current_properties)
+        if properties_failed:
+            msg = 'Properties {} failed to be changed in {}'.format(
+                properties_failed, name)
+            ret['comment'].append(msg)
+            return ret
+
+        ret['comment'].append('Properties changed in {}'.format(name))
+        ret['changes'] = properties_to_set
+    else:
+        ret['comment'].append('Properties not changed in {}'.format(name))
 
     ret['result'] = True
     return ret

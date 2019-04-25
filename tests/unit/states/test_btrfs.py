@@ -41,6 +41,8 @@ from salt.exceptions import CommandExecutionError
 import salt.utils.platform
 import salt.states.btrfs as btrfs
 
+import pytest
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), 'No BTRFS on Windows')
@@ -69,7 +71,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             'mount.mounted': MagicMock(return_value={'result': False}),
         }
         with patch.dict(btrfs.__states__, states_mock):
-            assert btrfs._mount('/dev/sda1') is None
+            assert btrfs._mount('/dev/sda1', use_default=False) is None
             mkdtemp.assert_called_once()
             states_mock['mount.mounted'].assert_called_with('/tmp/xxx',
                                                             device='/dev/sda1',
@@ -89,12 +91,32 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             'mount.mounted': MagicMock(return_value={'result': True}),
         }
         with patch.dict(btrfs.__states__, states_mock):
-            assert btrfs._mount('/dev/sda1') == '/tmp/xxx'
+            assert btrfs._mount('/dev/sda1', use_default=False) == '/tmp/xxx'
             mkdtemp.assert_called_once()
             states_mock['mount.mounted'].assert_called_with('/tmp/xxx',
                                                             device='/dev/sda1',
                                                             fstype='btrfs',
                                                             opts='subvol=/',
+                                                            persist=False)
+            umount.assert_not_called()
+
+    @patch('salt.states.btrfs._umount')
+    @patch('tempfile.mkdtemp')
+    def test__mount_use_default(self, mkdtemp, umount):
+        '''
+        Test mounting a device in a temporary place.
+        '''
+        mkdtemp.return_value = '/tmp/xxx'
+        states_mock = {
+            'mount.mounted': MagicMock(return_value={'result': True}),
+        }
+        with patch.dict(btrfs.__states__, states_mock):
+            assert btrfs._mount('/dev/sda1', use_default=True) == '/tmp/xxx'
+            mkdtemp.assert_called_once()
+            states_mock['mount.mounted'].assert_called_with('/tmp/xxx',
+                                                            device='/dev/sda1',
+                                                            fstype='btrfs',
+                                                            opts='defaults',
                                                             persist=False)
             umount.assert_not_called()
 
@@ -510,5 +532,288 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             }
             salt_mock['btrfs.subvolume_exists'].assert_called_with('/tmp/xxx/@/var')
             salt_mock['btrfs.subvolume_create'].assert_called_once()
+            mount.assert_called_once()
+            umount.assert_called_once()
+
+    def test_diff_properties_fails(self):
+        '''
+        Test when diff_properties do not found a property
+        '''
+        expected = {
+            'wrong_property': True
+        }
+        current = {
+            'compression': {
+                'description': 'Set/get compression for a file or directory',
+                'value': 'N/A',
+            },
+            'label': {
+                'description': 'Set/get label of device.',
+                'value': 'N/A',
+            },
+            'ro': {
+                'description': 'Set/get read-only flag or subvolume',
+                'value': 'N/A',
+            },
+        }
+        with pytest.raises(Exception):
+            btrfs._diff_properties(expected, current)
+
+    def test_diff_properties_enable_ro(self):
+        '''
+        Test when diff_properties enable one single property
+        '''
+        expected = {
+            'ro': True
+        }
+        current = {
+            'compression': {
+                'description': 'Set/get compression for a file or directory',
+                'value': 'N/A',
+            },
+            'label': {
+                'description': 'Set/get label of device.',
+                'value': 'N/A',
+            },
+            'ro': {
+                'description': 'Set/get read-only flag or subvolume',
+                'value': 'N/A',
+            },
+        }
+        assert btrfs._diff_properties(expected, current) == {'ro': True}
+
+    def test_diff_properties_only_enable_ro(self):
+        '''
+        Test when diff_properties is half ready
+        '''
+        expected = {
+            'ro': True,
+            'label': 'mylabel'
+        }
+        current = {
+            'compression': {
+                'description': 'Set/get compression for a file or directory',
+                'value': 'N/A',
+            },
+            'label': {
+                'description': 'Set/get label of device.',
+                'value': 'mylabel',
+            },
+            'ro': {
+                'description': 'Set/get read-only flag or subvolume',
+                'value': 'N/A',
+            },
+        }
+        assert btrfs._diff_properties(expected, current) == {'ro': True}
+
+    def test_diff_properties_disable_ro(self):
+        '''
+        Test when diff_properties enable one single property
+        '''
+        expected = {
+            'ro': False
+        }
+        current = {
+            'compression': {
+                'description': 'Set/get compression for a file or directory',
+                'value': 'N/A',
+            },
+            'label': {
+                'description': 'Set/get label of device.',
+                'value': 'N/A',
+            },
+            'ro': {
+                'description': 'Set/get read-only flag or subvolume',
+                'value': True,
+            },
+        }
+        assert btrfs._diff_properties(expected, current) == {'ro': False}
+
+    def test_diff_properties_emty_na(self):
+        '''
+        Test when diff_properties is already disabled as N/A
+        '''
+        expected = {
+            'ro': False
+        }
+        current = {
+            'compression': {
+                'description': 'Set/get compression for a file or directory',
+                'value': 'N/A',
+            },
+            'label': {
+                'description': 'Set/get label of device.',
+                'value': 'N/A',
+            },
+            'ro': {
+                'description': 'Set/get read-only flag or subvolume',
+                'value': 'N/A',
+            },
+        }
+        assert btrfs._diff_properties(expected, current) == {}
+
+    @patch('salt.states.btrfs._umount')
+    @patch('salt.states.btrfs._mount')
+    @patch('os.path.exists')
+    def test_properties_subvolume_not_exists(self, exists, mount, umount):
+        '''
+        Test when subvolume is not present
+        '''
+        exists.return_value = False
+        mount.return_value = '/tmp/xxx'
+        assert btrfs.properties(name='@/var',
+                                device='/dev/sda1') == {
+                'name': '@/var',
+                'result': False,
+                'changes': {},
+                'comment': ['Object @/var not found'],
+            }
+        mount.assert_called_once()
+        umount.assert_called_once()
+
+    @patch('salt.states.btrfs._umount')
+    @patch('salt.states.btrfs._mount')
+    @patch('os.path.exists')
+    def test_properties_default_root_subvolume(self, exists, mount, umount):
+        '''
+        Test when root subvolume resolves to another subvolume
+        '''
+        exists.return_value = False
+        mount.return_value = '/tmp/xxx'
+        assert btrfs.properties(name='/',
+                                device='/dev/sda1') == {
+                'name': '/',
+                'result': False,
+                'changes': {},
+                'comment': ['Object / not found'],
+            }
+        exists.assert_called_with('/tmp/xxx/.')
+
+    @patch('os.path.exists')
+    def test_properties_device_fail(self, exists):
+        '''
+        Test when we try to set a device that is not pressent
+        '''
+        exists.return_value = False
+        assert btrfs.properties(name='/dev/sda1',
+                                device=None) == {
+                'name': '/dev/sda1',
+                'result': False,
+                'changes': {},
+                'comment': ['Object /dev/sda1 not found'],
+            }
+
+    @patch('salt.states.btrfs._umount')
+    @patch('salt.states.btrfs._mount')
+    @patch('os.path.exists')
+    def test_properties_subvolume_fail(self, exists, mount, umount):
+        '''
+        Test setting a wrong property in a subvolume
+        '''
+        exists.return_value = True
+        mount.return_value = '/tmp/xxx'
+        salt_mock = {
+            'btrfs.properties': MagicMock(side_effect=[
+                {
+                    'ro': {
+                        'description': 'Set/get read-only flag or subvolume',
+                        'value': 'N/A',
+                    },
+                }
+            ]),
+        }
+        opts_mock = {
+            'test': False,
+        }
+        with patch.dict(btrfs.__salt__, salt_mock), \
+                patch.dict(btrfs.__opts__, opts_mock):
+            assert btrfs.properties(name='@/var',
+                                    device='/dev/sda1',
+                                    wrond_property=True) == {
+                'name': '@/var',
+                'result': False,
+                'changes': {},
+                'comment': ['Some property not found in @/var'],
+            }
+            salt_mock['btrfs.properties'].assert_called_with('/tmp/xxx/@/var')
+            mount.assert_called_once()
+            umount.assert_called_once()
+
+    @patch('salt.states.btrfs._umount')
+    @patch('salt.states.btrfs._mount')
+    @patch('os.path.exists')
+    def test_properties_enable_ro_subvolume(self, exists, mount, umount):
+        '''
+        Test setting a ro property in a subvolume
+        '''
+        exists.return_value = True
+        mount.return_value = '/tmp/xxx'
+        salt_mock = {
+            'btrfs.properties': MagicMock(side_effect=[
+                {
+                    'ro': {
+                        'description': 'Set/get read-only flag or subvolume',
+                        'value': 'N/A',
+                    },
+                },
+                None,
+                {
+                    'ro': {
+                        'description': 'Set/get read-only flag or subvolume',
+                        'value': 'true',
+                    },
+                }
+            ]),
+        }
+        opts_mock = {
+            'test': False,
+        }
+        with patch.dict(btrfs.__salt__, salt_mock), \
+                patch.dict(btrfs.__opts__, opts_mock):
+            assert btrfs.properties(name='@/var',
+                                    device='/dev/sda1', ro=True) == {
+                'name': '@/var',
+                'result': True,
+                'changes': {'ro': 'true'},
+                'comment': ['Properties changed in @/var'],
+            }
+            salt_mock['btrfs.properties'].assert_any_call('/tmp/xxx/@/var')
+            salt_mock['btrfs.properties'].assert_any_call('/tmp/xxx/@/var',
+                                                          set='ro=true')
+            mount.assert_called_once()
+            umount.assert_called_once()
+
+    @patch('salt.states.btrfs._umount')
+    @patch('salt.states.btrfs._mount')
+    @patch('os.path.exists')
+    def test_properties_test(self, exists, mount, umount):
+        '''
+        Test setting a property in test mode.
+        '''
+        exists.return_value = True
+        mount.return_value = '/tmp/xxx'
+        salt_mock = {
+            'btrfs.properties': MagicMock(side_effect=[
+                {
+                    'ro': {
+                        'description': 'Set/get read-only flag or subvolume',
+                        'value': 'N/A',
+                    },
+                },
+            ]),
+        }
+        opts_mock = {
+            'test': True,
+        }
+        with patch.dict(btrfs.__salt__, salt_mock), \
+                patch.dict(btrfs.__opts__, opts_mock):
+            assert btrfs.properties(name='@/var',
+                                    device='/dev/sda1', ro=True) == {
+                'name': '@/var',
+                'result': None,
+                'changes': {},
+                'comment': ["Properties {'ro': 'true'} will be changed in @/var"],
+            }
+            salt_mock['btrfs.properties'].assert_called_with('/tmp/xxx/@/var')
             mount.assert_called_once()
             umount.assert_called_once()
