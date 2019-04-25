@@ -1104,6 +1104,7 @@ def install_os(path=None, **kwargs):
         op.update(kwargs)
 
     no_copy_ = op.get('no_copy', False)
+    reboot = op.pop('reboot', False)
 
     if path is None:
         ret['message'] = \
@@ -1143,7 +1144,7 @@ def install_os(path=None, **kwargs):
         if not no_copy_:
             salt.utils.files.safe_rm(image_cached_path)
 
-    if 'reboot' in op and op['reboot'] is True:
+    if reboot is True:
         try:
             conn.sw.reboot()
         except Exception as exception:
@@ -1537,7 +1538,7 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
     except Exception as err:
         ret['message'] = 'Uncaught exception - please report: {0}'.format(
             str(err))
-        traceback.print_exc()
+
         ret['out'] = False
         return ret
     return ret
