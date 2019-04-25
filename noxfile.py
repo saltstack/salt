@@ -170,6 +170,16 @@ def _install_requirements(session, transport, *extra_requirements):
                 # fine), let's previously have setuptools-git installed
                 session.install('--progress-bar=off', 'setuptools-git', silent=PIP_INSTALL_SILENT)
             distro_requirements = _distro_requirements
+        if distro_requirements:
+            with open(distro_requirements) as rfh:
+                for line in rfh.read().strip().splitlines():
+                    # There are some SSL issues with distutils when installing pylxd which
+                    # tries to install pbr, so lets just install pbr first
+                    if line.startswith('pbr='):
+                        session.install(
+                            '--progress-bar=off',
+                            line.split()[0].strip(),
+                            silent=PIP_INSTALL_SILENT)
     else:
         _install_system_packages(session)
         distro = _get_distro_info(session)
