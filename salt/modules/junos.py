@@ -1071,18 +1071,27 @@ def install_os(path=None, **kwargs):
         When ``True`` this method will perform a config validation against
         the new image
 
-    bool issu:
+    bool issu: False
         When ``True`` allows unified in-service software upgrade
         (ISSU) feature enables you to upgrade between two different Junos OS
         releases with no disruption on the control plane and with minimal
         disruption of traffic.
 
-    bool nssu:
+    bool nssu: False
         When ``True`` allows nonstop software upgrade (NSSU)
         enables you to upgrade the software running on a Juniper Networks
         EX Series Virtual Chassis or a Juniper Networks EX Series Ethernet
         Switch with redundant Routing Engines with a single command and
         minimal disruption to network traffic.
+
+    bool all_re: True
+        When True (default), executes the software install on all Routing Engines of the Junos
+        device. When False, execute the software install only on the current Routing Engine.
+
+    .. note::
+    Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
+    Please refer to below URl for PyEZ sw.install() documentaion:
+    https://pyez.readthedocs.io/en/latest/jnpr.junos.utils.html#jnpr.junos.utils.sw.SW.install
 
     CLI Examples:
 
