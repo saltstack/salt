@@ -449,9 +449,9 @@ def create_retention_policy(database,
 
 def alter_retention_policy(database,
                            name,
-                           duration,
-                           replication,
-                           default=False,
+                           duration=None,
+                           replication=None,
+                           default=None,
                            **client_args):
     '''
     Modify an existing retention policy.
@@ -462,7 +462,7 @@ def alter_retention_policy(database,
     database
         Name of the database for which the retention policy was defined.
 
-    duration
+    duration : None
         New duration of given retention policy.
 
         Durations such as 1h, 90m, 12h, 7d, and 4w, are all supported
@@ -471,13 +471,13 @@ def alter_retention_policy(database,
         never be deleted – use 'INF' for duration.
         The minimum retention period is 1 hour.
 
-    replication
+    replication : None
         New replication of given retention policy.
 
         This determines how many independent copies of each data point are
         stored in a cluster.
 
-    default : False
+    default : None
         Whether or not to set the modified policy as default.
 
     CLI Example:
