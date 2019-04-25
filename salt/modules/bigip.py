@@ -558,12 +558,12 @@ def modify_node(hostname, username, password, name,
     if partition:
         payload['partition'] = partition
 
+    #check if there's a partition
+    if partition:
+        name = '~{partition}~{name}'.format(name=name, partition=partition)
+
     #put to REST
     try:
-        #check if there's a partition
-        if partition:
-            name = '~{partition}~{name}'.format(name=name, partition=partition)
-
         response = bigip_session.put(
             BIG_IP_URL_BASE.format(host=hostname) + '/ltm/node/{name}'.format(name=name),
             data=salt.utils.json.dumps(payload)
@@ -600,13 +600,13 @@ def delete_node(hostname, username, password, name, partition=None, trans_label=
     #build session
     bigip_session = _build_session(username, password, trans_label)
 
+    #check if there's a partition
+    if partition:
+        name = '~{partition}~{name}'.format(name=name, partition=partition)
+
     #delete to REST
     try:
-        #check if there's a partition
-        if partition:
-            name = '~{partition}~{name}'.format(name=name, partition=partition)
-
-        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/' + rest_name)
+        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname) + '/ltm/node/{name}'.format(name=name))
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -953,13 +953,13 @@ def modify_pool(hostname, username, password, name, partition=None,
 
     #build session
     bigip_session = _build_session(username, password)
-
+    
+    #check if there's a partition
+    if partition:
+        name = '~{partition}~{name}'.format(name=name, partition=partition)
+    
     #post to REST
-    try:
-        # Check if there's a partition
-        if partition:
-            name = '~{partition}~{name}'.format(name=name, partition=partition)
-        
+    try:        
         response = bigip_session.put(
             BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}'.format(name=name),
             data=salt.utils.json.dumps(payload)
@@ -993,12 +993,12 @@ def delete_pool(hostname, username, password, name, partition=None):
     #build session
     bigip_session = _build_session(username, password)
 
+    #check if there's a partition
+    if partition:
+        name = '~{partition}~{name}'.format(name=name, partition=partition)
+
     #delete to REST
-    try:
-        # Check if there's a partition
-        if partition:
-            name = '~{partition}~{name}'.format(name=name, partition=partition)
-        
+    try:       
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}'.format(name=name))
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
@@ -1122,6 +1122,7 @@ def add_pool_member(hostname, username, password, name, member, partition=None):
         payload = member
     # for execution
     else:
+        # TODO DOC
         payload = {}
         address = member.split(':')[0]
         if re.match(r'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', address):
@@ -1135,12 +1136,14 @@ def add_pool_member(hostname, username, password, name, member, partition=None):
     #build session
     bigip_session = _build_session(username, password)
 
+    #check if there's a partition
+    if partition:
+        name = '~{partition}~{name}'.format(partition=partition, name=name)
+
     #post to REST
     try:
-        if partition:
-            name = '~{partition}~{name}'.format(name=name, partition=partition)
         response = bigip_session.post(
-            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}/members'.format(name=rest_name),
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}/members'.format(name=name),
             data=salt.utils.json.dumps(payload)
         )
     except requests.exceptions.ConnectionError as e:
@@ -1229,15 +1232,15 @@ def modify_pool_member(hostname, username, password, name, member, partition=Non
     #build payload
     payload = _loop_payload(params)
 
+    #check if there's a partition
+    if partition:
+        name = '~{partition}~{name}'.format(name=name, partition=partition)
+        member = '~{partition}~{member}'.format(partition=partition ,member=member)
+
     #put to REST
     try:
-        if partition:
-            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
-            member = '~{partition}~{member}'.format(member=member, partition=partition)
-        else:
-            rest_name = '{name}'.format(name=name)
         response = bigip_session.put(
-            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/' + rest_name + '/members/{member}'.format(member=member),
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}/members/{member}'.format(name=name, member=member),
             data=salt.utils.json.dumps(payload)
         )
     except requests.exceptions.ConnectionError as e:
@@ -1271,13 +1274,14 @@ def delete_pool_member(hostname, username, password, name, member, partition=Non
     #build session
     bigip_session = _build_session(username, password)
 
+    #check if there's a partition
+    if partition:
+        name = '~{partition}~{name}'.format(name=name, partition=partition)
+        member = '~{partition}~{member}'.format(partition=partition ,member=member)
+
     #delete to REST
     try:
-        if partition:
-            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
-        else:
-            rest_name = '{name}'.format(name=name)
-        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/' + rest_name + '/members/{member}'.format(member=member))
+        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}/members/{member}'.format(name=name, member=member))
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -1526,10 +1530,6 @@ def create_virtual(hostname, username, password, name, destination, partition=No
 
     payload['name'] = name
     payload['destination'] = destination
-    
-    #check if there's a partition
-    if partition:
-        payload['partition'] = partition
 
     #determine toggles
     payload = _determine_toggles(payload, toggles)
@@ -1609,6 +1609,10 @@ def create_virtual(hostname, username, password, name, destination, partition=No
             payload['enabled'] = True
         elif state == 'disabled':
             payload['disabled'] = True
+
+    #check if there's a partition
+    if partition:
+        payload['partition'] = partition
 
     #post to REST
     try:
@@ -1885,6 +1889,11 @@ def modify_virtual(hostname, username, password, name, partition=None,
         elif state == 'disabled':
             payload['disabled'] = True
 
+    #check if there's a partition
+    if partition:
+        name = '~{partition}~{name}'.format(name=name, partition=partition)
+        payload['partition'] = partition
+
     #put to REST
     try:
         response = bigip_session.put(
@@ -1920,13 +1929,13 @@ def delete_virtual(hostname, username, password, name, partition=None):
     #build session
     bigip_session = _build_session(username, password)
 
+    #check if there's a partition
+    if partition:
+        name = '~{partition}~{name}'.format(name=name, partition=partition)
+
     #delete to REST
     try:
-        if partition:
-            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
-        else:
-            rest_name = '{name}'.format(name=name)
-        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/' + rest_name)
+        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/{name}'.format(name=name))
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -2077,14 +2086,14 @@ def modify_monitor(hostname, username, password, monitor_type, name, partition=N
                 key = key.replace('_', '-')
                 payload[key] = value
 
+    #check if there's a partition
+    if partition:
+        name = '~{partition}~{name}'.format(name=name, partition=partition)
+
     #put to REST
     try:
-        if partition:
-            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
-        else:
-            rest_name = '{name}'.format(name=name)
         response = bigip_session.put(
-            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/monitor/{type}/'.format(type=monitor_type) + rest_name,
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/monitor/{type}/{name}'.format(type=monitor_type,name=name),
             data=salt.utils.json.dumps(payload)
         )
     except requests.exceptions.ConnectionError as e:
@@ -2118,14 +2127,13 @@ def delete_monitor(hostname, username, password, monitor_type, name, partition=N
 
     #build sessions
     bigip_session = _build_session(username, password)
+    # Check if there's a partition
+    if partition:
+        name = '~{partition}~{name}'.format(name=name, partition=partition)
 
     #delete to REST
     try:
-        if partition:
-            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
-        else:
-            rest_name = '{name}'.format(name=name)
-        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/{rest_name}'.format(type=monitor_type, rest_name=rest_name))
+        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/{name}'.format(type=monitor_type, name=name))
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -2251,13 +2259,9 @@ def create_profile(hostname, username, password, profile_type, name, partition=N
                     payload[key] = _set_value(value)
                 except salt.exceptions.CommandExecutionError:
                     return 'Error: Unable to Parse JSON data for parameter: {key}\n{value}'.format(key=key, value=value)
-
+                        
     #post to REST
     try:
-        if partition:
-            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
-        else:
-            rest_name = '{name}'.format(name=name)
         response = bigip_session.post(
             BIG_IP_URL_BASE.format(host=hostname) + '/ltm/profile/{type}'.format(type=profile_type),
             data=salt.utils.json.dumps(payload)
@@ -2347,15 +2351,15 @@ def modify_profile(hostname, username, password, profile_type, name, partition=N
                     payload[key] = _set_value(value)
                 except salt.exceptions.CommandExecutionError:
                     return 'Error: Unable to Parse JSON data for parameter: {key}\n{value}'.format(key=key, value=value)
-
+    
+    #check if there's a partition
+    if partition:
+        name = '~{partition}~{name}'.format(name=name, partition=partition)
+    
     #put to REST
     try:
-        if partition:
-            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
-        else:
-            rest_name = '{name}'.format(name=name)
         response = bigip_session.put(
-            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/profile/{type}/'.format(type=profile_type) + rest_name,
+            BIG_IP_URL_BASE.format(host=hostname) + '/ltm/profile/{type}/{name}'.format(type=profile_type,name=name),
             data=salt.utils.json.dumps(payload)
         )
     except requests.exceptions.ConnectionError as e:
@@ -2390,13 +2394,13 @@ def delete_profile(hostname, username, password, profile_type, name, partition=N
     #build sessions
     bigip_session = _build_session(username, password)
 
+    #check if there's a partition
+    if partition:
+        name = '~{partition}~{name}'.format(name=name, partition=partition)
+
     #delete to REST
     try:
-        if partition:
-            rest_name = '~{partition}~{name}'.format(name=name, partition=partition)
-        else:
-            rest_name = '{name}'.format(name=name)
-        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/'.format(type=profile_type) + rest_name)
+        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/{name}'.format(type=profile_type, name=name))
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
 
@@ -2466,15 +2470,19 @@ def create_irule(hostname, username, password, name, api_anonymous, partition=No
 
     #create the payload
     payload = {}
+    payload['name'] = name
     payload["apiAnonymous"] = api_anonymous
     
-    #send patch rest api request
+    #check if there's a partition
     if partition:
-        response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/~{partition}~{name}'.format(name=name, partition=partition),
-                                    data=salt.utils.json.dumps(payload))
-    else:
-        response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/~{name}'.format(name=name, partition=partition),
-                                    data=salt.utils.json.dumps(payload))
+        payload['partition'] = partition
+    
+    #post to REST    
+    try:
+        response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/',
+                    data=salt.utils.json.dumps(payload))
+    except requests.exceptions.ConnectionError as e:
+        return _load_connection_error(hostname, e)
     return _load_response(response)
 
 def modify_irule(hostname, username, password, name, api_anonymous, partition=None):
@@ -2500,17 +2508,22 @@ def modify_irule(hostname, username, password, name, api_anonymous, partition=No
     '''
     bigip_session = _build_session(username, password)
 
-    # Create the payload
+    #create the payload
     payload = {}
+    payload['name'] = name
     payload["apiAnonymous"] = api_anonymous
-
-    # Send patch rest api request
+    
+    #check if there's a partition
     if partition:
-        response = bigip_session.patch(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/~{partition}~{name}'.format(name=name, partition=partition),
-                                    data=salt.utils.json.dumps(payload))
-    else:
-        response = bigip_session.patch(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/~{name}'.format(name=name, partition=partition),
-                                    data=salt.utils.json.dumps(payload))
+        payload['partition'] = partition
+        name='~{partition}~{name}'.format(partition=partition,name=name)
+
+    #post to REST    
+    try:
+        response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/{name}'.format(name),
+                    data=salt.utils.json.dumps(payload))
+    except requests.exceptions.ConnectionError as e:
+        return _load_connection_error(hostname, e)
     return _load_response(response)
 
 def delete_irule(hostname, username, password, name, partition=None, **kwargs):
@@ -2539,7 +2552,7 @@ def delete_irule(hostname, username, password, name, partition=None, **kwargs):
         name = '~{partition}~{name}'.format(partition=partition,name=name)
 
     try:
-        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname) + '/ltm/rule/' + name)
+        response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname) + '/ltm/rule/{name}'.format(name=name))
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
     
