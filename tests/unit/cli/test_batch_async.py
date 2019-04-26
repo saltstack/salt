@@ -21,6 +21,7 @@ class AsyncBatchTestCase(AsyncTestCase, TestCase):
                 'tgt': '*',
                 'timeout': 5,
                 'gather_job_timeout': 5,
+                'batch_presence_ping_timeout': 1,
                 'transport': None,
                 'sock_dir': ''}
 
@@ -28,7 +29,17 @@ class AsyncBatchTestCase(AsyncTestCase, TestCase):
             with patch('salt.cli.batch_async.batch_get_opts',
                 MagicMock(return_value=opts)
             ):
-                self.batch = BatchAsync(opts, MagicMock(side_effect=['1234', '1235', '1236']), MagicMock())
+                self.batch = BatchAsync(
+                    opts,
+                    MagicMock(side_effect=['1234', '1235', '1236']),
+                    {
+                        'tgt': '',
+                        'fun': '',
+                        'kwargs': {
+                            'batch': '',
+                            'batch_presence_ping_timeout': 1
+                        }
+                    })
 
     def test_ping_jid(self):
         self.assertEqual(self.batch.ping_jid, '1234')
@@ -49,16 +60,16 @@ class AsyncBatchTestCase(AsyncTestCase, TestCase):
         self.assertEqual(self.batch.batch_size, 2)
 
     @tornado.testing.gen_test
-    def test_batch_start(self):
+    def test_batch_start_on_batch_presence_ping_timeout(self):
         self.batch.event = MagicMock()
         future = tornado.gen.Future()
         future.set_result({'minions': ['foo', 'bar']})
         self.batch.local.run_job_async.return_value = future
         ret = self.batch.start()
-        # assert start_batch is called later with gather_job_timeout as param
+        # assert start_batch is called later with batch_presence_ping_timeout as param
         self.assertEqual(
             self.batch.event.io_loop.call_later.call_args[0],
-            (5, self.batch.start_batch))
+            (self.batch.batch_presence_ping_timeout, self.batch.start_batch))
         # assert test.ping called
         self.assertEqual(
             self.batch.local.run_job_async.call_args[0],
@@ -66,6 +77,19 @@ class AsyncBatchTestCase(AsyncTestCase, TestCase):
         )
         # assert down_minions == all minions matched by tgt
         self.assertEqual(self.batch.down_minions, set(['foo', 'bar']))
+
+    @tornado.testing.gen_test
+    def test_batch_start_on_gather_job_timeout(self):
+        self.batch.event = MagicMock()
+        future = tornado.gen.Future()
+        future.set_result({'minions': ['foo', 'bar']})
+        self.batch.local.run_job_async.return_value = future
+        self.batch.batch_presence_ping_timeout = None
+        ret = self.batch.start()
+        # assert start_batch is called later with gather_job_timeout as param
+        self.assertEqual(
+            self.batch.event.io_loop.call_later.call_args[0],
+            (self.batch.opts['gather_job_timeout'], self.batch.start_batch))
 
     def test_batch_fire_start_event(self):
         self.batch.minions = set(['foo', 'bar'])
@@ -127,6 +151,8 @@ class AsyncBatchTestCase(AsyncTestCase, TestCase):
         future = tornado.gen.Future()
         future.set_result({'minions': ['foo', 'bar']})
         self.batch.local.run_job_async.return_value = future
+        self.batch.eauth = {'username': 'user#1', 'password': 'pass'}
+        self.batch.metadata = {'mykey': 'myvalue'}
         ret = self.batch.schedule_next().result()
         self.assertEqual(
             self.batch.local.run_job_async.call_args[0],
@@ -135,6 +161,18 @@ class AsyncBatchTestCase(AsyncTestCase, TestCase):
         self.assertEqual(
             self.batch.event.io_loop.call_later.call_args[0],
             (self.batch.opts['timeout'], self.batch.find_job, {'foo', 'bar'})
+        )
+        self.assertEqual(
+            self.batch.local.run_job_async.call_args[1],
+            {
+                'username': 'user#1',
+                'password': 'pass',
+                'jid': self.batch.batch_jid,
+                'ret': u'',
+                'gather_job_timeout': self.batch.opts['gather_job_timeout'],
+                'raw': False,
+                'metadata': {'mykey': 'myvalue'}
+            }
         )
         self.assertEqual(self.batch.active, {'bar', 'foo'})
 
