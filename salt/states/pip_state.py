@@ -34,7 +34,6 @@ except ImportError:
 # Import salt libs
 import salt.utils.data
 import salt.utils.versions
-from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
