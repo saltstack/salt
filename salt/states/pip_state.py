@@ -21,8 +21,10 @@ requisite to a pkg.installed state for the package which provides pip
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import re
+
 import logging
+import re
+
 try:
     import pkg_resources
     HAS_PKG_RESOURCES = True
@@ -341,6 +343,7 @@ def installed(name,
               no_cache_dir=False,
               cache_dir=None,
               no_binary=None,
+              extra_args=None,
               **kwargs):
     '''
     Make sure the package is installed
@@ -602,6 +605,23 @@ def installed(name,
                 - reload_modules: True
                 - exists_action: i
 
+    extra_args
+        pip keyword and positional arguments not yet implemented in salt
+
+        .. code-block:: yaml
+
+            pandas:
+              pip.installed:
+                - name: pandas
+                - extra_args:
+                  - --latest-pip-kwarg: param
+                  - --latest-pip-arg
+
+        .. warning::
+
+            If unsupported options are passed here that are not supported in a
+            minion's version of pip, a `No such option error` will be thrown.
+
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
@@ -838,6 +858,7 @@ def installed(name,
         use_vt=use_vt,
         trusted_host=trusted_host,
         no_cache_dir=no_cache_dir,
+        extra_args=extra_args,
         **kwargs
     )
 
@@ -1065,3 +1086,51 @@ def uptodate(name,
         ret['comment'] = 'Upgrade failed.'
 
     return ret
+
+
+def mod_aggregate(low, chunks, running):
+    '''
+    The mod_aggregate function which looks up all packages in the available
+    low chunks and merges them into a single pkgs ref in the present low data
+    '''
+    pkgs = []
+    pkg_type = None
+    agg_enabled = [
+        'installed',
+        'removed',
+    ]
+    if low.get('fun') not in agg_enabled:
+        return low
+    for chunk in chunks:
+        tag = __utils__['state.gen_tag'](chunk)
+        if tag in running:
+            # Already ran the pkg state, skip aggregation
+            continue
+        if chunk.get('state') == 'pip':
+            if '__agg__' in chunk:
+                continue
+            # Check for the same function
+            if chunk.get('fun') != low.get('fun'):
+                continue
+            # Check first if 'sources' was passed so we don't aggregate pkgs
+            # and sources together.
+            if pkg_type is None:
+                pkg_type = 'pkgs'
+            if pkg_type == 'pkgs':
+                # Pull out the pkg names!
+                if 'pkgs' in chunk:
+                    pkgs.extend(chunk['pkgs'])
+                    chunk['__agg__'] = True
+                elif 'name' in chunk:
+                    version = chunk.pop('version', None)
+                    if version is not None:
+                        pkgs.append({chunk['name']: version})
+                    else:
+                        pkgs.append(chunk['name'])
+                    chunk['__agg__'] = True
+    if pkg_type is not None and pkgs:
+        if pkg_type in low:
+            low[pkg_type].extend(pkgs)
+        else:
+            low[pkg_type] = pkgs
+    return low

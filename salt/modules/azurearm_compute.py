@@ -20,7 +20,7 @@ Azure (ARM) Compute Execution Module
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as keyword arguments
-to every function in order to work properly.
+    to every function in order to work properly.
 
     Required provider parameters:
 
@@ -37,7 +37,7 @@ to every function in order to work properly.
 
     Optional provider parameters:
 
-    **cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
+**cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
     Possible values:
       * ``AZURE_PUBLIC_CLOUD`` (default)
       * ``AZURE_CHINA_CLOUD``

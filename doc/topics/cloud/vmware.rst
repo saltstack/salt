@@ -227,6 +227,13 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Enter the name of the VM/template to clone from. If not specified, the VM will be created
     without cloning.
 
+``clonefrom_datacenter``
+    If the VM/template to clone exists in a different datacenter than the destination
+    datacenter, supply the source VM/template's datacenter here.
+    This defaults to the same value as ``datacenter``.
+
+    .. versionadded:: neon
+
 ``num_cpus``
     Enter the number of vCPUS that you want the VM/template to have. If not specified,
     the current VM/template\'s vCPU count is used.
@@ -525,7 +532,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 
     .. note::
 
-    	Windows template should have "administrator" account.
+        Windows template should have "administrator" account.
 
 ``win_password``
     Specify windows vm administrator account password.
@@ -547,10 +554,10 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.UserData.html
 
 ``plain_text``
-	Flag to specify whether or not the password is in plain text, rather than encrypted.
-	VMware vSphere documentation:
+    Flag to specify whether or not the password is in plain text, rather than encrypted.
+    VMware vSphere documentation:
 
-	https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.Password.html
+    https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.Password.html
 
 ``win_installer``
     Specify windows minion client installer path
@@ -559,6 +566,54 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Specify a list of commands to run on first login to a windows minion
 
     https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.GuiRunOnce.html
+
+``win_ad_domain``
+    Specify the AD domain to join during customization.  ``win_ad_user`` and ``win_ad_password``
+    must also be specified.
+
+    Default is not set.
+
+    .. versionadded:: neon
+
+``win_ad_user``
+    Specify the user from ``win_ad_domain`` that will be used to join the computer to the domain
+    during customization.
+
+    Default is not set.
+
+    .. versionadded:: neon
+
+``win_ad_password``
+    Specify the password for the ``win_ad_user``.
+
+    Default is not set.
+
+    .. versionadded:: neon
+
+``win_autologon``
+    Specify if the local "Administrator" account should be logged in to the Windows machine
+    after the cloning process.
+
+    Defaults to 'True', must be 'True' for ``win_run_once`` to be executed.
+
+    .. versionadded:: neon
+
+``timezone``
+    Specify the timezone to apply to the VM during customization.
+
+    See https://www.vmware.com/support/developer/vc-sdk/visdk400pubs/ReferenceGuide/vim.vm.customization.LinuxPrep.html for Linux timezone information.
+    See https://www.vmware.com/support/developer/vc-sdk/visdk400pubs/ReferenceGuide/vim.vm.customization.GuiUnattended.html for Windows timezone information.
+
+    Default is not set.
+
+    .. versionadded:: neon
+
+``hw_clock_utc``
+    Specify whether the hardware clock is in UTC or local time.
+
+    Default is not set.
+
+    .. versionadded:: neon
 
 Cloning a VM
 ============

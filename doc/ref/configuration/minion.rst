@@ -900,6 +900,23 @@ A value of 10 minutes is a reasonable default.
 
     grains_refresh_every: 0
 
+.. conf_minion:: metadata_server_grains
+
+``metadata_server_grains``
+--------------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``False``
+
+Set this option to enable gathering of cloud metadata from
+``http://169.254.169.254/latest`` for use in grains (see :py:mod:`here
+<salt.grains.metadata>` for more information).
+
+.. code-block:: yaml
+
+    metadata_server_grains: True
+
 .. conf_minion:: fibre_channel_grains
 
 ``fibre_channel_grains``
@@ -3085,6 +3102,34 @@ Default: ``{}``
 
 This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
+
+
+.. conf_minion:: log_rotate_max_bytes
+
+``log_rotate_max_bytes``
+------------------------
+
+Default:  ``0``
+
+The maximum number of bytes a single log file may contain before it is rotated.
+A value of 0 disables this feature. Currently only supported on Windows. On
+other platforms, use an external tool such as 'logrotate' to manage log files.
+:conf_log:`log_rotate_max_bytes`
+
+
+.. conf_minion:: log_rotate_backup_count
+
+``log_rotate_backup_count``
+---------------------------
+
+Default:  ``0``
+
+The number of backup files to keep when rotating log files. Only used if
+:conf_minion:`log_rotate_max_bytes` is greater than 0. Currently only supported
+on Windows. On other platforms, use an external tool such as 'logrotate' to
+manage log files.
+:conf_log:`log_rotate_backup_count`
+
 
 .. conf_minion:: zmq_monitor
 
