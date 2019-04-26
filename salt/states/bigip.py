@@ -1373,7 +1373,7 @@ def add_pool_member(hostname, username, password, name, member, partition=None):
 
                 #look up the member again...
                 pool_listing = __salt__['bigip.list_pool'](hostname, username, password, name, partition)
-                
+
                 if pool_listing['code'] != 200:
                     ret = _load_result(new_member, ret)
                     return ret
@@ -1474,12 +1474,12 @@ def modify_pool_member(hostname, username, password, name, member, partition=Non
         current_members = existing_pool['content']['membersReference']['items']
 
         #loop through them
-        exists = False        
+        exists = False
         for current_member in current_members:
-                if current_member['name'] in member and (not partition or current_member['partition'] == partition):
-                    exists = True                    
-                    existing_member = current_member
-                    break
+            if current_member['name'] in member and (not partition or current_member['partition'] == partition):
+                exists = True                    
+                existing_member = current_member
+                break
 
         if exists:
 
@@ -1511,7 +1511,7 @@ def modify_pool_member(hostname, username, password, name, member, partition=Non
                 #what are the new members?
                 new_members = new_pool['content']['membersReference']['items']
 
-                #loop through them              
+                #loop through them
                 for new_member in new_members:
                     if new_member['name'] == member or (not partition or new_member['partition'] == partition):
                         modified_member = new_member
@@ -2579,7 +2579,8 @@ def list_monitor(hostname, username, password, monitor_type, name, partition=Non
             'monitor_type': monitor_type,
             'name': name,
             'partition': partition
-        })
+        }
+        )
 
     response = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name, partition)
     return _load_result(response, ret)

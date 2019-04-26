@@ -1008,7 +1008,7 @@ def delete_pool(hostname, username, password, name, partition=None):
     name = _add_partition_value(name, partition)
 
     #delete to REST
-    try:       
+    try:
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}'.format(name=name))
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
@@ -1083,7 +1083,7 @@ def replace_pool_members(hostname, username, password, name, members, partition=
     name = _add_partition_value(name, partition)
 
     #put to REST
-    try:        
+    try:
         response = bigip_session.put(
             BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}'.format(name=name),
             data=salt.utils.json.dumps(payload)
@@ -2172,7 +2172,6 @@ def list_profile(hostname, username, password, profile_type, name=None, partitio
         salt '*' bigip.list_profile bigip admin admin http my-http-profile
 
     '''
-    # print(*[hostname, username, password, profile_type, name, partition])
     #build sessions
     bigip_session = _build_session(username, password)
 
