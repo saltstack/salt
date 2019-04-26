@@ -35,18 +35,15 @@ def convert_duration(duration):
     # durations must be specified in days, weeks or hours
 
     if duration.endswith('h'):
-        hours = int(duration.split('h'))
+        return duration + '0m0s'
+    if duration.endswith('d'):
+        return '{0}h0m0s'.format(int(duration.split('d')[0]) * 24)
+    if duration.endswith('w'):
+        return '{0}h0m0s'.format(int(duration.split('w')[0]) * 24 * 7)
+    if duration == 'INF':
+        return '0s'
 
-    elif duration.endswith('d'):
-        days = duration.split('d')
-        hours = int(days[0]) * 24
-
-    elif duration.endswith('w'):
-        weeks = duration.split('w')
-        hours = int(weeks[0]) * 24 * 7
-
-    duration_string = str(hours)+'h0m0s'
-    return duration_string
+    return duration
 
 
 def present(name, database, duration="7d",
