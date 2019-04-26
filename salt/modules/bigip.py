@@ -970,7 +970,7 @@ def modify_pool(hostname, username, password, name, partition=None,
     name = _add_partition_value(name, partition)
     
     #post to REST
-    try:        
+    try:
         response = bigip_session.put(
             BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}'.format(name=name),
             data=salt.utils.json.dumps(payload)
