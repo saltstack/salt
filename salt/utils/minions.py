@@ -149,7 +149,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
             # No compound operators found in nodegroup definition. Check for
             # group type specifiers
             group_type_re = re.compile('^[A-Z]@')
-            regex_chars = ['(', '[', '{', '\\', '?''}])']
+            regex_chars = ['(', '[', '{', '\\', '?', '}', ']', ')']
             if not [x for x in ret if '*' in x or group_type_re.match(x)]:
                 # No group type specifiers and no wildcards.
                 # Treat this as an expression.
@@ -271,9 +271,10 @@ class CkMinions(object):
                              regex_match=False,
                              exact_match=False):
         '''
-        Helper function to search for minions in master caches
-        If 'greedy' return accepted minions that matched by the condition or absend in the cache.
-        If not 'greedy' return the only minions have cache data and matched by the condition.
+        Helper function to search for minions in master caches If 'greedy',
+        then return accepted minions matched by the condition or those absent
+        from the cache.  If not 'greedy' return the only minions have cache
+        data and matched by the condition.
         '''
         cache_enabled = self.opts.get('minion_data_cache', False)
 

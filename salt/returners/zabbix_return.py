@@ -1,36 +1,202 @@
 # -*- coding: utf-8 -*-
-'''
-Return salt data to Zabbix
+r'''
+Return salt data to Zabbix with keys of the form `salt.return.<fun>`
 
-The following Type: "Zabbix trapper" with "Type of information" Text items are required:
+Missing items will be ignored.
+The value will be either OK or FAILED, followed by the formatted return data:
 
-.. code-block:: cfg
+.. code-block
 
-    Key: salt.trap.info
-    Key: salt.trap.average
-    Key: salt.trap.warning
-    Key: salt.trap.high
-    Key: salt.trap.disaster
+    salt.return.test.ping: OK True
 
-To use the Zabbix returner, append '--return zabbix' to the salt command. ex:
+To use the Zabbix returner, append '--return zabbix' to the salt command:
 
 .. code-block:: bash
 
     salt '*' test.ping --return zabbix
+
+An example Zabbix template:
+
+.. code-block:: xml
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <zabbix_export>
+      <version>4.0</version>
+      <date>2019-01-21T19:16:50Z</date>
+      <groups><group><name>Templates/Applications</name></group></groups>
+      <templates>
+        <template>
+          <template>Template App Saltstack</template>
+          <name>Template App Saltstack</name>
+          <description/>
+          <groups><group><name>Templates/Applications</name></group></groups>
+          <applications><application><name>Saltstack</name></application></applications>
+          <items>
+            <item>
+              <name>Salt state.apply</name>
+              <type>2</type>
+              <snmp_community/>
+              <snmp_oid/>
+              <key>salt.return.state.apply</key>
+              <delay>0</delay>
+              <history>90d</history>
+              <trends>0</trends>
+              <status>0</status>
+              <value_type>4</value_type>
+              <allowed_hosts/>
+              <units/>
+              <snmpv3_contextname/>
+              <snmpv3_securityname/>
+              <snmpv3_securitylevel>0</snmpv3_securitylevel>
+              <snmpv3_authprotocol>0</snmpv3_authprotocol>
+              <snmpv3_authpassphrase/>
+              <snmpv3_privprotocol>0</snmpv3_privprotocol>
+              <snmpv3_privpassphrase/>
+              <params/>
+              <ipmi_sensor/>
+              <authtype>0</authtype>
+              <username/>
+              <password/>
+              <publickey/>
+              <privatekey/>
+              <port/>
+              <description/>
+              <inventory_link>0</inventory_link>
+              <applications><application><name>Saltstack</name></application></applications>
+              <valuemap/>
+              <logtimefmt/>
+              <preprocessing/>
+              <jmx_endpoint/>
+              <timeout>3s</timeout>
+              <url/>
+              <query_fields/>
+              <posts/>
+              <status_codes>200</status_codes>
+              <follow_redirects>1</follow_redirects>
+              <post_type>0</post_type>
+              <http_proxy/>
+              <headers/>
+              <retrieve_mode>0</retrieve_mode>
+              <request_method>0</request_method>
+              <output_format>0</output_format>
+              <allow_traps>0</allow_traps>
+              <ssl_cert_file/>
+              <ssl_key_file/>
+              <ssl_key_password/>
+              <verify_peer>0</verify_peer>
+              <verify_host>0</verify_host>
+              <master_item/>
+            </item>
+            <item>
+              <name>Salt test.ping</name>
+              <type>2</type>
+              <snmp_community/>
+              <snmp_oid/>
+              <key>salt.return.test.ping</key>
+              <delay>0</delay>
+              <history>90d</history>
+              <trends>0</trends>
+              <status>0</status>
+              <value_type>4</value_type>
+              <allowed_hosts/>
+              <units/>
+              <snmpv3_contextname/>
+              <snmpv3_securityname/>
+              <snmpv3_securitylevel>0</snmpv3_securitylevel>
+              <snmpv3_authprotocol>0</snmpv3_authprotocol>
+              <snmpv3_authpassphrase/>
+              <snmpv3_privprotocol>0</snmpv3_privprotocol>
+              <snmpv3_privpassphrase/>
+              <params/>
+              <ipmi_sensor/>
+              <authtype>0</authtype>
+              <username/>
+              <password/>
+              <publickey/>
+              <privatekey/>
+              <port/>
+              <description/>
+              <inventory_link>0</inventory_link>
+              <applications><application><name>Saltstack</name></application></applications>
+              <valuemap/>
+              <logtimefmt/>
+              <preprocessing/>
+              <jmx_endpoint/>
+              <timeout>3s</timeout>
+              <url/>
+              <query_fields/>
+              <posts/>
+              <status_codes>200</status_codes>
+              <follow_redirects>1</follow_redirects>
+              <post_type>0</post_type>
+              <http_proxy/>
+              <headers/>
+              <retrieve_mode>0</retrieve_mode>
+              <request_method>0</request_method>
+              <output_format>0</output_format>
+              <allow_traps>0</allow_traps>
+              <ssl_cert_file/>
+              <ssl_key_file/>
+              <ssl_key_password/>
+              <verify_peer>0</verify_peer>
+              <verify_host>0</verify_host>
+              <master_item/>
+            </item>
+          </items>
+          <discovery_rules/>
+          <httptests/>
+          <macros/>
+          <templates/>
+          <screens/>
+        </template>
+      </templates>
+      <triggers>
+        <trigger>
+          <expression>{Template App Saltstack:salt.return.test.ping.str(True)}=0</expression>
+          <recovery_mode>0</recovery_mode>
+          <recovery_expression/>
+          <name>Salt ping failed</name>
+          <correlation_mode>0</correlation_mode>
+          <correlation_tag/>
+          <url/>
+          <status>0</status>
+          <priority>2</priority>
+          <description/>
+          <type>0</type>
+          <manual_close>0</manual_close>
+          <dependencies/>
+          <tags/>
+        </trigger>
+        <trigger>
+          <expression>{Template App Saltstack:salt.return.state.apply.regexp(Failed:\s*0)}=0</expression>
+          <recovery_mode>0</recovery_mode>
+          <recovery_expression/>
+          <name>Salt state failed</name>
+          <correlation_mode>0</correlation_mode>
+          <correlation_tag/>
+          <url/>
+          <status>0</status>
+          <priority>4</priority>
+          <description/>
+          <type>1</type>
+          <manual_close>1</manual_close>
+          <dependencies/>
+          <tags/>
+        </trigger>
+      </triggers>
+    </zabbix_export>
+
 '''
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
+
 import os
+import shlex
 
 # Import Salt libs
-from salt.ext import six
-import salt.utils.files
-
-# Get logging started
-log = logging.getLogger(__name__)
-
+import salt.output
+from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
 __virtualname__ = 'zabbix'
@@ -55,41 +221,28 @@ def zbx():
         return False
 
 
-def zabbix_send(key, host, output):
-    with salt.utils.files.fopen(zbx()['zabbix_config'], 'r') as file_handle:
-        for line in file_handle:
-            if "ServerActive" in line:
-                flag = "true"
-                server = line.rsplit('=')
-                server = server[1].rsplit(',')
-                for s in server:
-                    cmd = zbx()['sender'] + " -z " + s.replace('\n', '') + " -s " + host + " -k " + key + " -o \"" + output +"\""
-                    __salt__['cmd.shell'](cmd)
-                break
-            else:
-                flag = "false"
-        if flag == 'false':
-            cmd = zbx()['sender'] + " -c " + zbx()['config'] + " -s " + host + " -k " + key + " -o \"" + output +"\""
+def zabbix_send(key, value):
+    cmd = '{} -c {} -k {} -o {}'.format(
+        zbx()['sender'], zbx()['config'],
+        shlex.quote(key), shlex.quote(value))
 
-
-def save_load(jid, load, minions=None):
-    pass
+    retcode = __salt__['cmd.retcode'](cmd, ignore_retcode=True)
+    if retcode == 1:
+        msg = 'Command \'{}\' failed with return code: {}'.format(cmd, retcode)
+        raise CommandExecutionError(msg)
 
 
 def returner(ret):
-    changes = False
-    errors = False
-    job_minion_id = ret['id']
-    host = job_minion_id
+    if ret['fun'].split('.')[0] == 'state':
+        out = 'highstate'
+        data = {ret['id']: ret['return']}
+    else:
+        out = 'nested'
+        data = ret['return']
 
-    if type(ret['return']) is dict:
-        for state, item in six.iteritems(ret['return']):
-            if 'comment' in item and 'name' in item and not item['result']:
-                errors = True
-                zabbix_send("salt.trap.high", host, 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'], item['comment']))
-            if 'comment' in item and 'name' in item and item['changes']:
-                changes = True
-                zabbix_send("salt.trap.warning", host, 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'], item['comment']))
+    opts = __opts__.copy()
+    opts['color'] = False
 
-    if not changes and not errors:
-        zabbix_send("salt.trap.info", host, 'SALT {0} OK'.format(job_minion_id))
+    key = 'salt.return.{}'.format(ret['fun'])
+    value = salt.output.try_printout(data, ret.get('out', out), opts)
+    zabbix_send(key, value)

@@ -270,3 +270,15 @@ class FileModuleTest(ModuleCase):
         with salt.utils.files.fopen(self.myfile, 'r') as fp:
             content = fp.read()
         self.assertEqual(content, 'Hello' + os.linesep + 'Goodbye' + os.linesep)
+
+    def test_file_tail(self):
+        """
+        Test file.tail.
+
+        Issue #50578
+        """
+        with salt.utils.files.fopen(self.myfile, 'a') as fp:
+            fp.write(salt.utils.stringutils.to_str('Goodbye' + os.linesep))
+        ret = self.run_function('file.tail', 'file://' + self.myfile, 2)
+
+        self.assertEqual(list(ret), ['file://' + self.myfile])

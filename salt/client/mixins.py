@@ -11,6 +11,7 @@ import logging
 import weakref
 import traceback
 import collections
+import os
 import copy as pycopy
 
 # Import Salt libs
@@ -28,8 +29,13 @@ import salt.utils.process
 import salt.utils.state
 import salt.utils.user
 import salt.utils.versions
+import salt.utils.files
+import salt.serializers.json
 import salt.transport.client
 import salt.log.setup
+import salt.output
+import salt.utils.text
+
 from salt.ext import six
 
 # Import 3rd-party libs
@@ -317,7 +323,7 @@ class SyncClientMixin(object):
             print_func=print_func
         )
 
-        # TODO: document these, and test that they exist
+        # TODO: test that they exist
         # TODO: Other things to inject??
         func_globals = {'__jid__': jid,
                         '__user__': data['user'],
@@ -370,13 +376,24 @@ class SyncClientMixin(object):
             data['fun_args'] = list(args) + ([kwargs] if kwargs else [])
             func_globals['__jid_event__'].fire_event(data, 'new')
 
+            # Track the job locally so we know what is running on the master
+            serial = salt.payload.Serial(self.opts)
+            jid_proc_file = os.path.join(*[self.opts['cachedir'], 'proc', jid])
+            data['pid'] = os.getpid()
+            with salt.utils.files.fopen(jid_proc_file, 'w+b') as fp_:
+                fp_.write(serial.dumps(data))
+            del data['pid']
+
             # Initialize a context for executing the method.
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):
                 func = self.functions[fun]
                 try:
                     data['return'] = func(*args, **kwargs)
                 except TypeError as exc:
-                    data['return'] = '\nPassed invalid arguments: {0}\n\nUsage:\n{1}'.format(exc, func.__doc__)
+                    data['return'] = salt.utils.text.cli_info('Error: {exc}\nUsage:\n{doc}'.format(
+                        exc=exc, doc=func.__doc__), 'Passed invalid arguments')
+                except Exception as exc:
+                    data['return'] = salt.utils.text.cli_info(six.text_type(exc), 'General error occurred')
                 try:
                     data['success'] = self.context.get('retcode', 0) == 0
                 except AttributeError:
@@ -389,12 +406,15 @@ class SyncClientMixin(object):
             if isinstance(ex, salt.exceptions.NotImplemented):
                 data['return'] = six.text_type(ex)
             else:
-                data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
-                    self.client,
-                    fun,
-                    traceback.format_exc(),
-                    )
+                data['return'] = 'Exception occurred in {client} {fun}: {tb}'.format(
+                    client=self.client, fun=fun, tb=traceback.format_exc())
             data['success'] = False
+        finally:
+            # Job has finished or issue found, so let's clean up after ourselves
+            try:
+                os.remove(jid_proc_file)
+            except OSError as err:
+                log.error("Error attempting to remove master job tracker: %s", err)
 
         if self.store_job:
             try:

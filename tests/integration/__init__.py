@@ -174,7 +174,7 @@ class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
     '''
-    MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 300
+    MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 500
 
     def __init__(self, parser):
         self.parser = parser
@@ -710,6 +710,20 @@ class TestDaemon(object):
         with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
             wfh.write('')
         master_opts['pytest_stop_sending_events_file'] = pytest_stop_sending_events_file
+        file_tree = {
+            'root_dir':  os.path.join(FILES, 'pillar', 'base', 'file_tree'),
+            'follow_dir_links': False,
+            'keep_newline': True,
+        }
+        master_opts['ext_pillar'].append({'file_tree': file_tree})
+
+        # This is the syndic for master
+        # Let's start with a copy of the syndic master configuration
+        syndic_opts = copy.deepcopy(master_opts)
+        # Let's update with the syndic configuration
+        syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
+        syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
 
         # This minion connects to master
         minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion'))
@@ -739,14 +753,6 @@ class TestDaemon(object):
         with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
             wfh.write('')
         syndic_master_opts['pytest_stop_sending_events_file'] = pytest_stop_sending_events_file
-
-        # This is the syndic for master
-        # Let's start with a copy of the syndic master configuration
-        syndic_opts = copy.deepcopy(syndic_master_opts)
-        # Let's update with the syndic configuration
-        syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
-        syndic_opts['cachedir'] = 'cache'
-        syndic_opts['root_dir'] = os.path.join(TMP_ROOT_DIR)
 
         # This proxy connects to master
         proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'proxy'))

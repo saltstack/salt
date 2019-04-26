@@ -49,10 +49,13 @@ def _check_valid_version():
     Check the version of npm to ensure this module will work. Currently
     npm must be at least version 1.2.
     '''
+
+    # Locate the full path to npm
+    npm_path = salt.utils.path.which('npm')
+
     # pylint: disable=no-member
-    npm_version = _LooseVersion(
-        salt.modules.cmdmod.run('npm --version', output_loglevel='quiet'))
-    valid_version = _LooseVersion('1.2')
+    res = salt.modules.cmdmod.run('{npm} --version'.format(npm=npm_path), output_loglevel='quiet')
+    npm_version, valid_version = _LooseVersion(res), _LooseVersion('1.2')
     # pylint: enable=no-member
     if npm_version < valid_version:
         raise CommandExecutionError(

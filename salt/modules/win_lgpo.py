@@ -5083,8 +5083,8 @@ def _findOptionValueAdvAudit(option):
                 field_names = _get_audit_defaults('fieldnames')
                 # If the file doesn't exist anywhere, create it with default
                 # fieldnames
-                __salt__['file.touch'](f_audit)
-                __salt__['file.append'](f_audit, ','.join(field_names))
+                __salt__['file.makedirs'](f_audit)
+                __salt__['file.write'](f_audit, ','.join(field_names))
 
         audit_settings = {}
         with salt.utils.files.fopen(f_audit, mode='r') as csv_file:
@@ -5187,6 +5187,7 @@ def _set_audit_file_data(option, value):
             # Copy the temporary csv file over the existing audit.csv in both
             # locations if a value was written
             __salt__['file.copy'](f_temp.name, f_audit, remove_existing=True)
+            __salt__['file.makedirs'](f_audit_gpo)
             __salt__['file.copy'](f_temp.name, f_audit_gpo, remove_existing=True)
     finally:
         f_temp.close()
@@ -5604,7 +5605,7 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
                                                        )
                                         ].split(encoded_semicolon)
                 if len(pol_entry) >= 2:
-                    valueName = pol_entry[1]
+                    valueName = pol_entry[1].decode('utf-16-le').rstrip(chr(0))
                 if len(pol_entry) >= 5:
                     value = pol_entry[4]
                     if vtype == 'REG_DWORD' or vtype == 'REG_QWORD':
@@ -5856,7 +5857,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                 check_deleted = True
             if not check_deleted:
                 this_vtype = 'REG_DWORD'
-            this_element_value = chr(1).encode('utf-16-le')
+            this_element_value = struct.pack('I', 1)
             standard_element_expected_string = False
         elif etree.QName(element).localname == 'decimal':
             # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
@@ -5922,18 +5923,18 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                          ']'.encode('utf-16-le')])
             if 'expandable' in element.attrib:
                 this_vtype = 'REG_EXPAND_SZ'
-            if 'explicitValue' in element.attrib and element.attrib['explicitValue'].lower() == 'true':
+            if element.attrib.get('explicitValue', 'false').lower() == 'true':
                 if this_element_value is not None:
-                    element_valuenames = this_element_value.keys()
-                    element_values = this_element_value.values()
-            if 'valuePrefix' in element.attrib:
+                    element_valuenames = [str(k) for k in this_element_value.keys()]
+                    element_values = [str(v) for v in this_element_value.values()]
+            elif 'valuePrefix' in element.attrib:
                 # if the valuePrefix attribute exists, the valuenames are <prefix><number>
                 # most prefixes attributes are empty in the admx files, so the valuenames
                 # end up being just numbers
                 if element.attrib['valuePrefix'] != '':
                     if this_element_value is not None:
-                        element_valuenames = ['{0}{1}'.format(element.attrib['valuePrefix'],
-                                                              k) for k in element_valuenames]
+                        element_valuenames = ['{0}{1}'.format(
+                            element.attrib['valuePrefix'], k) for k in element_valuenames]
             else:
                 # if there is no valuePrefix attribute, the valuename is the value
                 if element_values is not None:
@@ -7639,7 +7640,7 @@ def get(policy_class=None, return_full_policy_names=True,
 
     if policy_class is None or policy_class.lower() == 'both':
         policy_class = _policydata.policies.keys()
-    elif policy_class.lower() not in [z.lower() for z in _policydata.policies]:
+    elif policy_class.lower() not in [z.lower() for z in _policydata.policies.keys()]:
         msg = 'The policy_class {0} is not an available policy class, please ' \
               'use one of the following: {1}, Both'
         raise SaltInvocationError(
@@ -7664,7 +7665,7 @@ def get(policy_class=None, return_full_policy_names=True,
                 vals_key_name = policy_name
                 if 'Registry' in _pol:
                     # get value from registry
-                    class_vals[policy_name] = __salt__['reg.read_value'](
+                    class_vals[policy_name] = __utils__['reg.read_value'](
                         _pol['Registry']['Hive'],
                         _pol['Registry']['Path'],
                         _pol['Registry']['Value'])['vdata']
@@ -8098,19 +8099,19 @@ def set_(computer_policy=None,
                         log.debug('%s is a Registry policy', regedit)
                         # if the value setting is None or "(value not set)", we will delete the value from the registry
                         if _regedits[regedit]['value'] is not None and _regedits[regedit]['value'] != '(value not set)':
-                            _ret = __salt__['reg.set_value'](
+                            _ret = __utils__['reg.set_value'](
                                     _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'],
                                     _regedits[regedit]['value'],
                                     _regedits[regedit]['policy']['Registry']['Type'])
                         else:
-                            _ret = __salt__['reg.read_value'](
+                            _ret = __utils__['reg.read_value'](
                                     _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'])
                             if _ret['success'] and _ret['vdata'] != '(value not set)':
-                                _ret = __salt__['reg.delete_value'](
+                                _ret = __utils__['reg.delete_value'](
                                         _regedits[regedit]['policy']['Registry']['Hive'],
                                         _regedits[regedit]['policy']['Registry']['Path'],
                                         _regedits[regedit]['policy']['Registry']['Value'])

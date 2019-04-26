@@ -23,6 +23,7 @@ import uuid
 import zlib
 from errno import EACCES, EPERM
 import datetime
+import warnings
 
 # pylint: disable=import-error
 try:
@@ -41,16 +42,15 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
                      'slamd64', 'ovs', 'system', 'mint', 'oracle', 'void')
 
 # linux_distribution deprecated in py3.7
-LINUX_DIST_AVAIL = True
-if sys.version_info[:2] >= (3, 7):
-    USE_DISTRO_LINUX_DIST = True
-    try:
-        from distro import linux_distribution
-    except ImportError:
-        LINUX_DIST_AVAIL = False
-else:
-    USE_DISTRO_LINUX_DIST = False
-    from platform import linux_distribution
+try:
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
+except ImportError:
+    from distro import linux_distribution
 
 # Import salt libs
 import salt.exceptions
@@ -1885,29 +1885,13 @@ def os_data():
 
         # Use the already intelligent platform module to get distro info
         # (though apparently it's not intelligent enough to strip quotes)
-        if USE_DISTRO_LINUX_DIST:
-            if LINUX_DIST_AVAIL:
-                log.trace(
-                    'Getting OS name, release, and codename from '
-                    'distro.linux_distribution()'
-                )
-                (osname, osrelease, oscodename) = \
-                    [x.strip('"').strip("'") for x in
-                     linux_distribution()]
-            else:
-                log.warning('distro library unavailable.')
-                (osname, osrelease, oscodename) = \
-                    ('Unknown OS Name',
-                     'Unknown OS Release',
-                     'Unknown OS Codename')
-        else:
-            log.trace(
-                'Getting OS name, release, and codename from '
-                'platform.linux_distribution()'
-            )
-            (osname, osrelease, oscodename) = \
-                [x.strip('"').strip("'") for x in
-                 linux_distribution(supported_dists=_supported_dists)]
+        log.trace(
+            'Getting OS name, release, and codename from '
+            'distro.linux_distribution()'
+        )
+        (osname, osrelease, oscodename) = \
+            [x.strip('"').strip("'") for x in
+             linux_distribution(supported_dists=_supported_dists)]
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
@@ -2188,14 +2172,13 @@ def fqdns():
     grains = {}
     fqdns = set()
 
-    addresses = salt.utils.network.ip_addrs(include_loopback=False,
-                                            interface_data=_INTERFACES)
-    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False,
-                                                  interface_data=_INTERFACES))
+    addresses = salt.utils.network.ip_addrs(include_loopback=False, interface_data=_get_interfaces())
+    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False, interface_data=_get_interfaces()))
     err_message = 'Exception during resolving address: %s'
     for ip in addresses:
         try:
-            fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
+            name, aliaslist, addresslist = socket.gethostbyaddr(ip)
+            fqdns.update([socket.getfqdn(name)] + [als for als in aliaslist if salt.utils.network.is_fqdn(als)])
         except socket.herror as err:
             if err.errno == 0:
                 # No FQDN for this IP address, so we don't need to know this all the time.
@@ -2205,8 +2188,7 @@ def fqdns():
         except (socket.error, socket.gaierror, socket.timeout) as err:
             log.error(err_message, err)
 
-    grains['fqdns'] = sorted(list(fqdns))
-    return grains
+    return {"fqdns": sorted(list(fqdns))}
 
 
 def ip_fqdn():
@@ -2373,6 +2355,13 @@ def get_machine_id():
     else:
         with salt.utils.files.fopen(existing_locations[0]) as machineid:
             return {'machine_id': machineid.read().strip()}
+
+
+def cwd():
+    '''
+    Current working directory
+    '''
+    return {'cwd': os.getcwd()}
 
 
 def path():

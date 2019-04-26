@@ -954,7 +954,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
 
         serial_number = rev_item['serial_number'].replace(':', '')
         # OpenSSL bindings requires this to be a non-unicode string
-        serial_number = salt.utils.stringutils.to_str(serial_number)
+        serial_number = salt.utils.stringutils.to_bytes(serial_number)
 
         if 'not_after' in rev_item and not include_expired:
             not_after = datetime.datetime.strptime(
@@ -968,6 +968,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         rev_date = datetime.datetime.strptime(
             rev_item['revocation_date'], '%Y-%m-%d %H:%M:%S')
         rev_date = rev_date.strftime('%Y%m%d%H%M%SZ')
+        rev_date = salt.utils.stringutils.to_bytes(rev_date)
 
         rev = OpenSSL.crypto.Revoked()
         rev.set_serial(salt.utils.stringutils.to_bytes(serial_number))
@@ -1581,7 +1582,7 @@ def create_certificate(
             pem_type='CERTIFICATE'
         )
     else:
-        return cert.as_pem()
+        return salt.utils.stringutils.to_str(cert.as_pem())
 # pylint: enable=too-many-locals
 
 

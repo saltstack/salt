@@ -1835,7 +1835,7 @@ def create_disk(kwargs=None, call=None):
         )
         return False
 
-    if 'size' is None and 'image' is None and 'snapshot' is None:
+    if size is None and image is None and snapshot is None:
         log.error(
             'Must specify image, snapshot, or size.'
         )
@@ -2520,6 +2520,27 @@ def request_instance(vm_):
                 'The value of \'ex_disk_type\' needs to be one of: '
                 '\'pd-standard\', \'pd-ssd\''
             )
+
+    # GCE accelerator options are only supported as of libcloud >= 2.3.0
+    # and Python 3+ is required so that libcloud will detect a type of
+    # 'string' rather than 'unicode'
+    if LIBCLOUD_VERSION_INFO >= (2, 3, 0) and isinstance(u'test', str):
+
+        kwargs.update({
+            'ex_accelerator_type': config.get_cloud_config_value(
+                'ex_accelerator_type', vm_, __opts__, default=None),
+            'ex_accelerator_count': config.get_cloud_config_value(
+                'ex_accelerator_count', vm_, __opts__, default=None)
+        })
+        if kwargs.get('ex_accelerator_type'):
+            log.warning(
+                'An accelerator is being attached to this instance, '
+                'the ex_on_host_maintenance setting is being set to '
+                '\'TERMINATE\' as a result'
+            )
+            kwargs.update({
+                'ex_on_host_maintenance': 'TERMINATE'
+            })
 
     log.info(
         'Creating GCE instance %s in %s',

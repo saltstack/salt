@@ -29,7 +29,7 @@ execution modules
     apache
     apcups
     apf
-    apk
+    apkpkg
     aptpkg
     archive
     arista_pyeapi
@@ -38,12 +38,15 @@ execution modules
     at_solaris
     augeas_cfg
     aws_sqs
+    azurearm_compute
+    azurearm_network
+    azurearm_resource
     bamboohr
     bcache
     beacons
     bigip
     bluecoat_sslv
-    bluez
+    bluez_bluetooth
     boto3_elasticache
     boto3_route53
     boto_apigateway
@@ -108,7 +111,7 @@ execution modules
     ddns
     deb_apache
     deb_postgres
-    debbuild
+    debuild_pkgbuild
     debconfmod
     debian_ip
     debian_service
@@ -121,13 +124,13 @@ execution modules
     dnsutil
     dockercompose
     dockermod
-    dpkg
+    dpkg_lowpkg
     drac
     dracr
     drbd
-    dummyproxy_package
+    dummyproxy_pkg
     dummyproxy_service
-    ebuild
+    ebuildpkg
     eix
     elasticsearch
     environ
@@ -139,6 +142,7 @@ execution modules
     extfs
     file
     firewalld
+    flatpak
     freebsd_sysctl
     freebsd_update
     freebsdjail
@@ -168,16 +172,14 @@ execution modules
     hashutil
     heat
     hg
-    hipchat
     hosts
-    htpasswd
     http
     ifttt
     ilo
     icinga2
     incron
-    influx
-    influx08
+    influxdbmod
+    influxdb08mod
     infoblox
     ini_manage
     inspectlib
@@ -210,9 +212,10 @@ execution modules
     keyboard
     keystone
     keystoneng
+    keystore
     kmod
-    kubernetes
-    launchctl
+    kubernetesmod
+    launchctl_service
     layman
     ldap3
     ldapmod
@@ -233,14 +236,14 @@ execution modules
     lxc
     lxd
     mac_assistive
-    mac_brew
-    mac_defaults
+    mac_brew_pkg
+    macdefaults
     mac_desktop
     mac_group
     mac_keychain
-    mac_package
+    macpackage
     mac_pkgutil
-    mac_ports
+    mac_portspkg
     mac_power
     mac_service
     mac_shadow
@@ -255,7 +258,7 @@ execution modules
     marathon
     match
     mattermost
-    mdadm
+    mdadm_raid
     mdata
     memcached
     mine
@@ -273,12 +276,13 @@ execution modules
     nacl
     nagios
     nagios_rpc
-    namecheap_dns
+    namecheap_domains_dns
     namecheap_domains
-    namecheap_ns
+    namecheap_domains_ns
     namecheap_ssl
     namecheap_users
-    napalm_acl
+    napalm_mod
+    napalm_netacl
     napalm_bgp
     napalm_formula
     napalm_mod
@@ -311,7 +315,7 @@ execution modules
     omapi
     openbsd_sysctl
     openbsdpkg
-    openbsdrcctl
+    openbsdrcctl_service
     openbsdservice
     openscap
     openstack_config
@@ -322,13 +326,13 @@ execution modules
     oracle
     osquery
     out
-    pacman
+    pacmanpkg
     pagerduty
     pagerduty_util
     pam
     panos
     parallels
-    parted
+    parted_partition
     pcs
     pdbedit
     pecl
@@ -368,7 +372,7 @@ execution modules
     rdp
     redismod
     reg
-    rest_package
+    rest_pkg
     rest_sample_utils
     rest_service
     restartcheck
@@ -376,8 +380,8 @@ execution modules
     rh_ip
     rh_service
     riak
-    rpm
-    rpmbuild
+    rpm_lowpkg
+    rpmbuild_pkgbuild
     rsync
     runit
     rvm
@@ -406,14 +410,14 @@ execution modules
     smartos_virt
     smartos_vmadm
     smbios
-    smf
+    smf_service
     smtp
     solaris_fmadm
     solaris_group
     solaris_shadow
     solaris_system
     solaris_user
-    solarisips
+    solarisipspkg
     solarispkg
     solr
     solrcloud
@@ -421,8 +425,9 @@ execution modules
     splunk_search
     sqlite3
     ssh
-    ssh_package
+    ssh_pkg
     ssh_service
+    snap
     snapper
     state
     status
@@ -439,7 +444,7 @@ execution modules
     sysrc
     system
     system_profiler
-    systemd
+    systemd_service
     telegram
     telemetry
     temp
@@ -455,7 +460,7 @@ execution modules
     tuned
     twilio_notify
     udev
-    upstart
+    upstart_service
     uptime
     useradd
     uwsgi
@@ -469,6 +474,7 @@ execution modules
     virtualenv_mod
     vmctl
     vsphere
+    webutil
     win_autoruns
     win_certutil
     win_dacl
@@ -490,7 +496,7 @@ execution modules
     win_pki
     win_powercfg
     win_psget
-    win_repo
+    winrepo
     win_servermanager
     win_service
     win_shadow
@@ -503,9 +509,10 @@ execution modules
     win_useradd
     win_wua
     x509
-    xapi
+    xapi_virt
     xbpspkg
     xfs
+    xml
     xmpp
     yumpkg
     zabbix
@@ -518,4 +525,4 @@ execution modules
     zonecfg
     zookeeper
     zpool
-    zypper
+    zypperpkg
