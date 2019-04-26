@@ -496,7 +496,7 @@ def create_node(hostname, username, password, name, address, partition=None, tra
     return _load_response(response)
 
 
-def modify_node(hostname, username, password, name, 
+def modify_node(hostname, username, password, name,
                 partition=None,
                 connection_limit=None,
                 description=None,
@@ -969,7 +969,7 @@ def modify_pool(hostname, username, password, name, partition=None,
 
     #add partition to the name if it exists
     name = _add_partition_value(name, partition)
-    
+
     #post to REST
     try:
         response = bigip_session.put(
@@ -1896,7 +1896,7 @@ def modify_virtual(hostname, username, password, name, partition=None,
             payload['enabled'] = True
         elif state == 'disabled':
             payload['disabled'] = True
-    
+
     #add partition to the payload if partition exists
     _add_partition_payload(payload, partition)
 
@@ -2027,7 +2027,7 @@ def create_monitor(hostname, username, password, monitor_type, name, partition=N
     #construct the payload
     payload = {}
     payload['name'] = name
-    
+
     #there's a ton of different monitors and a ton of options for each type of monitor.
     #this logic relies that the end user knows which options are meant for which monitor types
     for key, value in six.iteritems(kwargs):
@@ -2193,7 +2193,7 @@ def list_profile(hostname, username, password, profile_type, name=None, partitio
 
 
 def create_profile(hostname, username, password, profile_type, name, partition=None, **kwargs):
-    '''
+    r'''
     A function to connect to a bigip device and create a profile.
 
     hostname
@@ -2278,7 +2278,7 @@ def create_profile(hostname, username, password, profile_type, name, partition=N
 
 
 def modify_profile(hostname, username, password, profile_type, name, partition=None, **kwargs):
-    '''
+    r'''
     A function to connect to a bigip device and create a profile.
 
     A function to connect to a bigip device and create a profile.
@@ -2354,13 +2354,13 @@ def modify_profile(hostname, username, password, profile_type, name, partition=N
                     payload[key] = _set_value(value)
                 except salt.exceptions.CommandExecutionError:
                     return 'Error: Unable to Parse JSON data for parameter: {key}\n{value}'.format(key=key, value=value)
-    
+
     #add partition to the payload if partition exists
     _add_partition_payload(payload, partition)
 
     #add partition to the name if it exists
     name = _add_partition_value(name, partition)
-    
+
     #put to REST
     try:
         response = bigip_session.put(
@@ -2477,11 +2477,11 @@ def create_irule(hostname, username, password, name, api_anonymous, partition=No
     payload = {}
     payload['name'] = name
     payload["apiAnonymous"] = api_anonymous
-    
+
     #add partition to the payload if partition exists
     _add_partition_payload(payload, partition)
-    
-    #post to REST    
+
+    #post to REST
     try:
         response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/',
                     data=salt.utils.json.dumps(payload))
@@ -2517,14 +2517,14 @@ def modify_irule(hostname, username, password, name, api_anonymous, partition=No
     payload = {}
     payload['name'] = name
     payload["apiAnonymous"] = api_anonymous
-    
+
     #add partition to the payload if partition exists
     _add_partition_payload(payload, partition)
 
     #add partition to the name if it exists
     name = _add_partition_value(name, partition)
 
-    #post to REST    
+    #post to REST
     try:
         response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/{name}'.format(name=name),
                     data=salt.utils.json.dumps(payload))
@@ -2561,5 +2561,5 @@ def delete_irule(hostname, username, password, name, partition=None, **kwargs):
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname) + '/ltm/rule/{name}'.format(name=name))
     except requests.exceptions.ConnectionError as e:
         return _load_connection_error(hostname, e)
-    
+
     return _load_response(response)

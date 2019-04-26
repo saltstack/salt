@@ -36,7 +36,7 @@ def _load_result(response, ret):
         ret['comment'] = '401 Forbidden: Authentication required!'
     #Not found?
     elif response['code'] == 404:
-        if(response['content']):
+        if response['content']:
             ret['comment'] = response['content']
     #F5 Internal Error
     elif response['code'] == 400:
@@ -395,7 +395,7 @@ def modify_node(hostname, username, password, name,
                 session=None,
                 node_state=None):
     '''
-    Modify an existing node. Only a node which already exists will be modified 
+    Modify an existing node. Only a node which already exists will be modified
     and only the parameters specified will be enforced.
 
     hostname
@@ -1378,9 +1378,9 @@ def add_pool_member(hostname, username, password, name, member, partition=None):
                 if pool_listing['code'] != 200:
                     ret = _load_result(new_member, ret)
                     return ret
-                
+
                 # Return the changes
-                ret = _check_for_changes('Member: {name}'.format(name=member['name']),ret,existing_pool,pool_listing)
+                ret = _check_for_changes('Member: {name}'.format(name=member['name']), ret, existing_pool, pool_listing)
             # member wasn't added
             else:
                 ret = _load_result(new_member, ret)
@@ -1478,7 +1478,7 @@ def modify_pool_member(hostname, username, password, name, member, partition=Non
         exists = False
         for current_member in current_members:
             if current_member['name'] in member and (not partition or current_member['partition'] == partition):
-                exists = True                    
+                exists = True
                 existing_member = current_member
                 break
 
@@ -2901,7 +2901,7 @@ def list_profile(hostname, username, password, profile_type, name, partition=Non
 
 
 def create_profile(hostname, username, password, profile_type, name, partition=None, **kwargs):
-    '''
+    r'''
     A function to connect to a bigip device and create a profile.
 
     hostname
@@ -3177,6 +3177,7 @@ def delete_profile(hostname, username, password, profile_type, name, partition=N
 
     return ret
 
+
 def modify_irule(hostname, username, password, name, api_anonymous, partition=None):
     '''
     Modify an existing iRule. Only a iRule which already exists will be modified and only
@@ -3201,7 +3202,7 @@ def modify_irule(hostname, username, password, name, api_anonymous, partition=No
         Typically, tmsh arg names are used.
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-    
+
     if __opts__['test']:
         return _test_output(ret, 'manage', params={
             'hostname': hostname,
@@ -3213,12 +3214,12 @@ def modify_irule(hostname, username, password, name, api_anonymous, partition=No
             'partition': partition
         }
         )
-    
+
     # get the existing one
     existing = __salt__['bigip.list_irule'](hostname, username, password, name, partition)
-    
+
     # if it exists
-    if(existing["code"] == 200):
+    if existing["code"] == 200:
         modified = __salt__['bigip.modify_irule'](hostname, username, password, name, api_anonymous, partition)
         # was the modification successful?
         if modified['code'] == 200:
@@ -3226,16 +3227,17 @@ def modify_irule(hostname, username, password, name, api_anonymous, partition=No
         # unable to update it
         else:
             ret = _load_result(modified, ret)
-    
+
     # if it doesn't exist
     elif existing['code'] == 404:
         ret['return'] = False
         ret['comment'] = 'An iRule with this name was not found.'
 
-    # an error occurred    
+    # an error occurred 
     else:
-            ret = _load_result(response, ret)
+            ret = _load_result(existing, ret)
     return ret
+
 
 def manage_irule(hostname, username, password, name, api_anonymous, partition=None):
     '''
@@ -3261,7 +3263,7 @@ def manage_irule(hostname, username, password, name, api_anonymous, partition=No
         Typically, tmsh arg names are used.
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-    
+
     if __opts__['test']:
         return _test_output(ret, 'manage', params={
             'hostname': hostname,
@@ -3269,16 +3271,15 @@ def manage_irule(hostname, username, password, name, api_anonymous, partition=No
             'password': password,
             'name': name,
             'partition': partition,
-            'api_anonymous': api_anonymous,
-            'partition': partition
+            'api_anonymous': api_anonymous
         }
         )
-    
+
     # get the existing one
     existing = __salt__['bigip.list_irule'](hostname, username, password, name, partition)
-    
+
     # if it exists
-    if(existing["code"] == 200):
+    if existing["code"] == 200:
         modified = __salt__['bigip.modify_irule'](hostname, username, password, name, api_anonymous, partition)
         # was the modification successful?
         if modified['code'] == 200:
@@ -3286,26 +3287,27 @@ def manage_irule(hostname, username, password, name, api_anonymous, partition=No
         # unable to update it
         else:
             ret = _load_result(modified, ret)
-    
+
     # if it doesn't exist
     elif existing['code'] == 404:
         response = __salt__['bigip.create_irule'](hostname, username, password, name, api_anonymous, partition)
-        
+
         # check if successful
         if response['code'] == 200:
             ret['result'] = True
             ret['changes']['old'] = {}
             ret['changes']['new'] = response['content']
             ret['comment'] = 'Monitor was successfully created.'
-        
+
         # unable to create it
         else:
             ret = _load_result(response, ret)
-    
-    # an error occurred    
+
+    # an error occurred
     else:
-            ret = _load_result(response, ret)
+        ret = _load_result(response, ret)
     return ret
+
 
 def create_irule(hostname, username, password, name, api_anonymous, partition=None):
     '''
@@ -3330,7 +3332,7 @@ def create_irule(hostname, username, password, name, api_anonymous, partition=No
         Typically, tmsh arg names are used.
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-    
+
     if __opts__['test']:
         return _test_output(ret, 'manage', params={
             'hostname': hostname,
@@ -3338,16 +3340,15 @@ def create_irule(hostname, username, password, name, api_anonymous, partition=No
             'password': password,
             'name': name,
             'partition': partition,
-            'api_anonymous': api_anonymous,
-            'partition': partition
+            'api_anonymous': api_anonymous
         }
         )
-    
+
     # get the existing one
     existing = __salt__['bigip.list_irule'](hostname, username, password, name, partition)
-    
+
     # if it exists
-    if(existing["code"] == 200):
+    if existing["code"] == 200:
         modified = __salt__['bigip.modify_irule'](hostname, username, password, name, api_anonymous, partition)
         # was the modification successful?
         if modified['code'] == 200:
@@ -3355,26 +3356,27 @@ def create_irule(hostname, username, password, name, api_anonymous, partition=No
         # unable to update it
         else:
             ret = _load_result(modified, ret)
-    
+
     # if it doesn't exist
     elif existing['code'] == 404:
         response = __salt__['bigip.create_irule'](hostname, username, password, name, api_anonymous, partition)
-        
+
         # check if successful
         if response['code'] == 200:
             ret['result'] = True
             ret['changes']['old'] = {}
             ret['changes']['new'] = response['content']
             ret['comment'] = 'Monitor was successfully created.'
-        
+
         # unable to create it
         else:
             ret = _load_result(response, ret)
-    
-    # an error occurred    
+
+    # an error occurred
     else:
             ret = _load_result(response, ret)
     return ret
+
 
 def delete_irule(hostname, username, password, name, partition=None):
     '''
@@ -3410,7 +3412,7 @@ def delete_irule(hostname, username, password, name, partition=None):
 
     #does it exist ?
     existing = __salt__['bigip.list_irule'](hostname, username, password, name, partition)
-    
+
     # if it exists by name
     if existing['code'] == 200:
         deleted = __salt__['bigip.delete_irule'](hostname, username, password, name, partition)
