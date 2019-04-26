@@ -16,6 +16,7 @@ except ImportError:
 import copy
 import logging
 import salt.ext.six as six
+from salt.utils.decorators.jinja import jinja_filter
 
 log = logging.getLogger(__name__)
 
@@ -104,6 +105,7 @@ def merge_overwrite(obj_a, obj_b, merge_lists=False):
     return merge_recurse(obj_a, obj_b, merge_lists=merge_lists)
 
 
+@jinja_filter('merge')
 def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
     if strategy == 'smart':
         if renderer.split('|')[-1] == 'yamlex' or renderer.startswith('yamlex_'):
