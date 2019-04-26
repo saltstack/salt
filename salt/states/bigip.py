@@ -1365,14 +1365,15 @@ def add_pool_member(hostname, username, password, name, member, partition=None):
             ret['result'] = True
             ret['comment'] = 'Member: {name} already exists within this pool. No changes made.'.format(name=member['name'])
         else:
-            new_member = __salt__['bigip.add_pool_member'](hostname, username, password, name, member_name, partition)
+            new_member = __salt__['bigip.add_pool_member'](hostname, username, password, name, member, partition)
 
             if new_member['code'] == 200:
                 ret['result'] = True
-                ret['comment'] = 'Member: {name} has been successfully added to the pool.'.format(name=member_name)
+                ret['comment'] = 'Member: {name} has been successfully added to the pool.'.format(name=member['name'])
 
                 #look up the member again...
                 pool_listing = __salt__['bigip.list_pool'](hostname, username, password, name, partition)
+                
                 if pool_listing['code'] != 200:
                     ret = _load_result(new_member, ret)
                     return ret
@@ -1475,8 +1476,7 @@ def modify_pool_member(hostname, username, password, name, member, partition=Non
         #loop through them
         exists = False        
         for current_member in current_members:
-                #names are ~partition~name
-                if current_member['name'] in member_name and (not partition or current_member['partition'] == partition):
+                if current_member['name'] in member and (not partition or current_member['partition'] == partition):
                     exists = True                    
                     existing_member = current_member
                     break
@@ -1513,7 +1513,7 @@ def modify_pool_member(hostname, username, password, name, member, partition=Non
 
                 #loop through them              
                 for new_member in new_members:
-                    if new_member['name'] == member or (not partition or new_member['partition'] == partition):
+                    if new_member['name'] == member['name'] or (not partition or new_member['partition'] == partition):
                         modified_member = new_member
                         break
 
@@ -1574,7 +1574,7 @@ def delete_pool_member(hostname, username, password, name, member, partition=Non
 
         #what are the current members?
         current_members = None
-        if 'items' in existing_pool['content']['membersReference']:
+        if 'items' in existing['content']['membersReference']:
             current_members = existing['content']['membersReference']['items']
 
         #loop through them
