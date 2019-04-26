@@ -102,8 +102,15 @@ def present(name, database, duration="7d",
             ret['changes']['default'] = "Default changed from {0} to {1}.".format(current_policy['default'], default)
 
         if current_policy['shardGroupDuration'] != convert_duration(shard_duration):
-            update_policy = True
-            ret['changes']['shard_duration'] = "Retention changed from {0} to {1}.".format(current_policy['shardGroupDuration'], shard_duration)
+            # do not trigger false positive when shard_duration is set to 0s:
+            # in that case, shard_duration will be automatically computed based
+            # the retention policy duration. See:
+            # https://docs.influxdata.com/influxdb/v1.7/query_language/database_management/#shard-duration
+            if not (shard_duration == '0s' and
+                    current_policy['shardGroupDuration'] in (
+                        '1h0m0s', '24h0m0s', '168h0m0s')):
+                update_policy = True
+                ret['changes']['shard_duration'] = "Shard duration changed from {0} to {1}.".format(current_policy['shardGroupDuration'], shard_duration)
 
         if update_policy:
             if __opts__['test']:
