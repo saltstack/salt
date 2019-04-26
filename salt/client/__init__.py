@@ -319,7 +319,7 @@ class LocalClient(object):
             >>> local.run_job('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
 
         try:
             pub_data = self.pub(
@@ -379,7 +379,7 @@ class LocalClient(object):
             >>> local.run_job_async('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
 
         try:
             pub_data = yield self.pub_async(
@@ -431,7 +431,7 @@ class LocalClient(object):
             >>> local.cmd_async('*', 'test.sleep', [300])
             '20131219215921857715'
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
         pub_data = self.run_job(tgt,
                                 fun,
                                 arg,
@@ -534,6 +534,37 @@ class LocalClient(object):
             tgt, fun, batch, self.opts,
             arg=arg, tgt_type=tgt_type, ret=ret, kwarg=kwarg, **kwargs)
         eauth = salt.cli.batch.batch_get_eauth(kwargs)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
+        opts = {'tgt': tgt,
+                'fun': fun,
+                'arg': arg,
+                'tgt_type': tgt_type,
+                'ret': ret,
+                'batch': batch,
+                'failhard': kwargs.get('failhard', False),
+                'raw': kwargs.get('raw', False)}
+
+        if 'timeout' in kwargs:
+            opts['timeout'] = kwargs['timeout']
+        if 'gather_job_timeout' in kwargs:
+            opts['gather_job_timeout'] = kwargs['gather_job_timeout']
+        if 'batch_wait' in kwargs:
+            opts['batch_wait'] = int(kwargs['batch_wait'])
+
+        eauth = {}
+        if 'eauth' in kwargs:
+            eauth['eauth'] = kwargs.pop('eauth')
+        if 'username' in kwargs:
+            eauth['username'] = kwargs.pop('username')
+        if 'password' in kwargs:
+            eauth['password'] = kwargs.pop('password')
+        if 'token' in kwargs:
+            eauth['token'] = kwargs.pop('token')
+
+        for key, val in six.iteritems(self.opts):
+            if key not in opts:
+                opts[key] = val
+                
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret in batch.run():
             yield ret
@@ -652,7 +683,7 @@ class LocalClient(object):
             minion ID. A compound command will return a sub-dictionary keyed by
             function name.
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
         was_listening = self.event.cpub
 
         try:
@@ -712,7 +743,7 @@ class LocalClient(object):
         :param verbose: Print extra information about the running command
         :returns: A generator
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
         was_listening = self.event.cpub
 
         if fun.startswith('state.'):
@@ -817,7 +848,7 @@ class LocalClient(object):
             {'dave': {'ret': True}}
             {'stewart': {'ret': True}}
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
         was_listening = self.event.cpub
 
         try:
@@ -884,7 +915,7 @@ class LocalClient(object):
             None
             {'stewart': {'ret': True}}
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
         was_listening = self.event.cpub
 
         try:
@@ -932,7 +963,7 @@ class LocalClient(object):
         '''
         Execute a salt command and return
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
         was_listening = self.event.cpub
 
         try:
@@ -2013,8 +2044,7 @@ class Caller(object):
         func = self.sminion.functions[fun]
         args, kwargs = salt.minion.load_args_and_kwargs(
             func,
-            salt.utils.args.parse_input(args),
-            kwargs)
+            salt.utils.args.parse_input(args, kwargs=kwargs),)
         return func(*args, **kwargs)
 
 
