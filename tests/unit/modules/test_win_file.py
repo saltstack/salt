@@ -14,11 +14,11 @@ from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
-import salt.modules.temp as temp
-import salt.modules.win_file as win_file
-import salt.utils.platform
-import salt.utils.win_dacl
 import salt.utils.win_functions
+import salt.modules.win_file as win_file
+import salt.utils.win_dacl as win_dacl
+import salt.modules.temp as temp
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 
@@ -36,9 +36,7 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             win_file: {
-                '__utils__': {
-                    'dacl.set_perms': salt.utils.win_dacl.set_perms
-                }
+                '__utils__': {'dacl.set_perms': win_dacl.set_perms}
             }
         }
 
@@ -101,6 +99,9 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         self.current_user = salt.utils.win_functions.get_current_user(False)
         return {
             win_file: {
+                '__utils__': {'dacl.check_perms': win_dacl.check_perms},
+            },
+            win_dacl: {
                 '__opts__': {'test': False},
             }
         }
@@ -108,12 +109,12 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         self.temp_file = tempfile.NamedTemporaryFile(delete=False)
         self.temp_file.close()
-        salt.utils.win_dacl.set_owner(obj_name=self.temp_file.name,
-                                      principal=self.current_user)
-        salt.utils.win_dacl.set_inheritance(obj_name=self.temp_file.name,
-                                            enabled=True)
+        win_dacl.set_owner(obj_name=self.temp_file.name,
+                           principal=self.current_user)
+        win_dacl.set_inheritance(obj_name=self.temp_file.name,
+                                 enabled=True)
         self.assertEqual(
-            salt.utils.win_dacl.get_owner(obj_name=self.temp_file.name),
+            win_dacl.get_owner(obj_name=self.temp_file.name),
             self.current_user)
 
     def tearDown(self):
@@ -127,7 +128,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                     'changes': {'owner': 'Administrators'},
                     'name': self.temp_file.name,
                     'result': None}
-        with patch.dict(win_file.__opts__, {'test': True}):
+        with patch.dict(win_dacl.__opts__, {'test': True}):
             ret = win_file.check_perms(path=self.temp_file.name,
                                        owner='Administrators',
                                        inheritance=None)
@@ -151,10 +152,10 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test setting deny perms on a file with test=True
         '''
         expected = {'comment': '',
-                    'changes': {'deny_perms': {'Users': {'perms': 'read_execute'}}},
+                    'changes': {'perms': {'Users': {'deny': 'read_execute'}}},
                     'name': self.temp_file.name,
                     'result': None}
-        with patch.dict(win_file.__opts__, {'test': True}):
+        with patch.dict(win_dacl.__opts__, {'test': True}):
             ret = win_file.check_perms(
                 path=self.temp_file.name,
                 deny_perms={'Users': {'perms': 'read_execute'}},
@@ -166,8 +167,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test setting deny perms on a file
         '''
         expected = {'comment': '',
-                    'changes': {
-                        'deny_perms': {'Users': {'perms': 'read_execute'}}},
+                    'changes': {'perms': {'Users': {'deny': 'read_execute'}}},
                     'name': self.temp_file.name,
                     'result': True}
         ret = win_file.check_perms(
@@ -181,10 +181,10 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test setting grant perms on a file with test=True
         '''
         expected = {'comment': '',
-                    'changes': {'grant_perms': {'Users': {'perms': 'read_execute'}}},
+                    'changes': {'perms': {'Users': {'grant': 'read_execute'}}},
                     'name': self.temp_file.name,
                     'result': None}
-        with patch.dict(win_file.__opts__, {'test': True}):
+        with patch.dict(win_dacl.__opts__, {'test': True}):
             ret = win_file.check_perms(
                 path=self.temp_file.name,
                 grant_perms={'Users': {'perms': 'read_execute'}},
@@ -196,8 +196,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test setting grant perms on a file
         '''
         expected = {'comment': '',
-                    'changes': {
-                        'grant_perms': {'Users': {'perms': 'read_execute'}}},
+                    'changes': {'perms': {'Users': {'grant': 'read_execute'}}},
                     'name': self.temp_file.name,
                     'result': True}
         ret = win_file.check_perms(
@@ -214,7 +213,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                     'changes': {'inheritance': False},
                     'name': self.temp_file.name,
                     'result': None}
-        with patch.dict(win_file.__opts__, {'test': True}):
+        with patch.dict(win_dacl.__opts__, {'test': True}):
             ret = win_file.check_perms(path=self.temp_file.name,
                                        inheritance=False)
             self.assertDictEqual(expected, ret)
@@ -248,26 +247,25 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test resetting perms with test=True. This shows minimal changes
         '''
         # Turn off inheritance
-        salt.utils.win_dacl.set_inheritance(obj_name=self.temp_file.name,
-                                            enabled=False,
-                                            clear=True)
+        win_dacl.set_inheritance(obj_name=self.temp_file.name,
+                                 enabled=False,
+                                 clear=True)
         # Set some permissions
-        salt.utils.win_dacl.set_permissions(obj_name=self.temp_file.name,
-                                            principal='Administrator',
-                                            permissions='full_control')
+        win_dacl.set_permissions(obj_name=self.temp_file.name,
+                                 principal='Administrator',
+                                 permissions='full_control')
         expected = {'comment': '',
                     'changes': {
-                        'grant_perms': {
-                            'Administrators': {'perms': 'full_control'},
-                            'Users': {'perms': 'read_execute'}},
+                        'perms': {
+                            'Administrators': {'grant': 'full_control'},
+                            'Users': {'grant': 'read_execute'}},
                         'remove_perms': {
                             'Administrator': {
                                 'grant': {'applies to': 'Not Inherited (file)',
-                                          'inherited': False,
-                                          'permissions': ['Full control']}}}},
+                                          'permissions': 'Full control'}}}},
                     'name': self.temp_file.name,
                     'result': None}
-        with patch.dict(win_file.__opts__, {'test': True}):
+        with patch.dict(win_dacl.__opts__, {'test': True}):
             ret = win_file.check_perms(
                 path=self.temp_file.name,
                 grant_perms={'Users': {'perms': 'read_execute'},
@@ -281,23 +279,22 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         Test resetting perms on a File
         '''
         # Turn off inheritance
-        salt.utils.win_dacl.set_inheritance(obj_name=self.temp_file.name,
-                                            enabled=False,
-                                            clear=True)
+        win_dacl.set_inheritance(obj_name=self.temp_file.name,
+                                 enabled=False,
+                                 clear=True)
         # Set some permissions
-        salt.utils.win_dacl.set_permissions(obj_name=self.temp_file.name,
-                                            principal='Administrator',
-                                            permissions='full_control')
+        win_dacl.set_permissions(obj_name=self.temp_file.name,
+                                 principal='Administrator',
+                                 permissions='full_control')
         expected = {'comment': '',
                     'changes': {
-                        'grant_perms': {
-                            'Administrators': {'perms': 'full_control'},
-                            'Users': {'perms': 'read_execute'}},
+                        'perms': {
+                            'Administrators': {'grant': 'full_control'},
+                            'Users': {'grant': 'read_execute'}},
                         'remove_perms': {
                             'Administrator': {
                                 'grant': {'applies to': 'Not Inherited (file)',
-                                          'inherited': False,
-                                          'permissions': ['Full control']}}}},
+                                          'permissions': 'Full control'}}}},
                     'name': self.temp_file.name,
                     'result': True}
         ret = win_file.check_perms(
