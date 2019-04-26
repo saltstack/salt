@@ -48,8 +48,6 @@ class SchedulerPostponeTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.schedule.reset()
 
-        del self.schedule
-
     def test_postpone(self):
         '''
         verify that scheduled job is postponed until the specified time.

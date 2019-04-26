@@ -5,7 +5,6 @@ from __future__ import absolute_import
 import copy
 import logging
 import os
-import time
 
 import dateutil.parser as dateutil_parser
 
@@ -48,8 +47,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.schedule.reset()
 
-        del self.schedule
-
     def test_skip(self):
         '''
         verify that scheduled job is skipped at the specified time
@@ -77,10 +74,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertNotIn('_last_run', ret)
         self.assertEqual(ret['_skip_reason'], 'skip_explicit')
         self.assertEqual(ret['_skipped_time'], run_time)
-
-        # Give the job a chance to finish
-        while self.schedule.job_running(ret):
-            time.sleep(1)
 
         # Run 11/29/2017 at 5pm
         run_time = dateutil_parser.parse('11/29/2017 5:00pm')

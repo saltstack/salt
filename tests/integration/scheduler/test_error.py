@@ -56,8 +56,6 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.schedule.reset()
 
-        del self.schedule
-
     @skipIf(not HAS_CRONITER, 'Cannot find croniter python module')
     def test_eval_cron_invalid(self):
         '''
