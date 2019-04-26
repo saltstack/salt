@@ -3210,8 +3210,7 @@ def modify_irule(hostname, username, password, name, api_anonymous, partition=No
             'password': password,
             'name': name,
             'partition': partition,
-            'api_anonymous': api_anonymous,
-            'partition': partition
+            'api_anonymous': api_anonymous
         }
         )
 
@@ -3233,9 +3232,9 @@ def modify_irule(hostname, username, password, name, api_anonymous, partition=No
         ret['return'] = False
         ret['comment'] = 'An iRule with this name was not found.'
 
-    # an error occurred 
+    # an error occurred
     else:
-            ret = _load_result(existing, ret)
+        ret = _load_result(existing, ret)
     return ret
 
 
@@ -3374,7 +3373,7 @@ def create_irule(hostname, username, password, name, api_anonymous, partition=No
 
     # an error occurred
     else:
-            ret = _load_result(response, ret)
+        ret = _load_result(response, ret)
     return ret
 
 
