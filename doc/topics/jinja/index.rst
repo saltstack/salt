@@ -1212,6 +1212,28 @@ Returns:
 
   'default'
 
+
+.. jinja_ref:: merge
+
+``merge``
+------------
+
+.. versionadded:: 2019.2.1
+
+Deeply merge a dict with another dict.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ {'a1': {'b1': 'foo'}, 'a2': 'bar'} | merge({'a1': {'b1': 'foo2'}, 'a3': 'bar3'}) }}
+
+Returns:
+
+.. code-block:: python
+
+  {'a1': {'b1': 'foo2'}, 'a2': 'bar', 'a3': 'bar3'}
+
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
 
