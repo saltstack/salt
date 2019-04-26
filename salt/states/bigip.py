@@ -91,9 +91,9 @@ def _check_for_changes(entity_type, ret, existing, modified):
             del existing['content']['generation']
 
         if modified['content'] == existing['content']:
-            ret['comment'] = '{entity_type} is currently enforced to the desired state.  No changes made.'.format(entity_type=entity_type)
+            ret['comment'] = '{entity_type} is currently enforced to the desired state. No changes made.'.format(entity_type=entity_type)
         else:
-            ret['comment'] = '{entity_type} was enforced to the desired state.  Note: Only parameters specified ' \
+            ret['comment'] = '{entity_type} was enforced to the desired state. Note: Only parameters specified ' \
                              'were enforced. See changes for details.'.format(entity_type=entity_type)
             ret['changes']['old'] = existing['content']
             ret['changes']['new'] = modified['content']
@@ -395,8 +395,8 @@ def modify_node(hostname, username, password, name,
                 session=None,
                 node_state=None):
     '''
-    Modify an existing node. Only a node which already exists will be modified and
-    only the parameters specified will be enforced.
+    Modify an existing node. Only a node which already exists will be modified 
+    and only the parameters specified will be enforced.
 
     hostname
         The host/address of the bigip device
@@ -571,7 +571,8 @@ def list_pool(hostname, username, password, name, partition=None):
     return _load_result(response, ret)
 
 
-def create_pool(hostname, username, password, name, partition=None, members=None,
+def create_pool(hostname, username, password, name, partition=None,
+                members=None,
                 allow_nat=None,
                 allow_snat=None,
                 description=None,
