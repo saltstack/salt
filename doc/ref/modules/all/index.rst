@@ -38,6 +38,9 @@ execution modules
     at_solaris
     augeas_cfg
     aws_sqs
+    azurearm_compute
+    azurearm_network
+    azurearm_resource
     bamboohr
     bcache
     beacons
@@ -139,6 +142,7 @@ execution modules
     extfs
     file
     firewalld
+    flatpak
     freebsd_sysctl
     freebsd_update
     freebsdjail
@@ -168,7 +172,6 @@ execution modules
     hashutil
     heat
     hg
-    hipchat
     hosts
     http
     ifttt
@@ -209,8 +212,9 @@ execution modules
     keyboard
     keystone
     keystoneng
+    keystore
     kmod
-    kubernetes
+    kubernetesmod
     launchctl_service
     layman
     ldap3
@@ -508,6 +512,7 @@ execution modules
     xapi_virt
     xbpspkg
     xfs
+    xml
     xmpp
     yumpkg
     zabbix

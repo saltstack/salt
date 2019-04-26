@@ -157,14 +157,13 @@ def _windows_disks():
 
     namespace = r'\\root\microsoft\windows\storage'
     path = 'MSFT_PhysicalDisk'
-    where = '(MediaType=3 or MediaType=4)'
     get = 'DeviceID,MediaType'
 
     ret = {'disks': [], 'SSDs': []}
 
     cmdret = __salt__['cmd.run_all'](
-        '{0} /namespace:{1} path {2} where {3} get {4} /format:table'.format(
-            wmic, namespace, path, where, get))
+        '{0} /namespace:{1} path {2} get {3} /format:table'.format(
+            wmic, namespace, path, get))
 
     if cmdret['retcode'] != 0:
         log.trace('Disk grain does not support this version of Windows')
@@ -181,10 +180,12 @@ def _windows_disks():
             elif mediatype == '4':
                 log.trace('Device %s reports itself as an SSD', device)
                 ret['SSDs'].append(device)
+                ret['disks'].append(device)
+            elif mediatype == '5':
+                log.trace('Device %s reports itself as an SCM', device)
+                ret['disks'].append(device)
             else:
-                log.trace(
-                    'Unable to identify device %s as an SSD or HDD. It does '
-                    'not report 3 or 4', device
-                )
+                log.trace('Device %s reports itself as Unspecified', device)
+                ret['disks'].append(device)
 
     return ret

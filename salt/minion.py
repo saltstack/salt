@@ -1575,7 +1575,7 @@ class Minion(MinionBase):
         if multiprocessing_enabled and not salt.utils.platform.is_windows():
             # we only want to join() immediately if we are daemonizing a process
             process.join()
-        else:
+        elif salt.utils.platform.is_windows():
             self.win_proc.append(process)
 
     def ctx(self):
@@ -2278,11 +2278,11 @@ class Minion(MinionBase):
                  'disable_job': ('disable_job', (name, persist)),
                  'postpone_job': ('postpone_job', (name, data)),
                  'skip_job': ('skip_job', (name, data)),
-                 'reload': ('reload', (schedule)),
-                 'list': ('list', (where)),
+                 'reload': ('reload', (schedule,)),
+                 'list': ('list', (where,)),
                  'save_schedule': ('save_schedule', ()),
                  'get_next_fire_time': ('get_next_fire_time',
-                                        (name))}
+                                        (name,))}
 
         # Call the appropriate schedule function
         try:
