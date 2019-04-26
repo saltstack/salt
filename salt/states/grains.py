@@ -44,6 +44,13 @@ def exists(name, delimiter=DEFAULT_TARGET_DELIM):
         ret['comment'] = 'Grain does not exist'
     return ret
 
+def flatten(li, flattened = list()):
+    for subli in li:
+        if type(subli) == list:
+            flatten(subli, flattened)
+        else:
+            flattened.append(frozenset(subli))
+    return set(flattened)
 
 def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
     '''
@@ -174,7 +181,7 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
             ret['comment'] = 'Grain {0} is not a valid list'.format(name)
             return ret
         if isinstance(value, list):
-            if set(value).issubset(set(__salt__['grains.get'](name))):
+            if flatten(value).issubset(flatten(__salt__['grains.get'](name))):
                 ret['comment'] = 'Value {1} is already in grain {0}'.format(name, value)
                 return ret
             elif name in __context__.get('pending_grains', {}):
