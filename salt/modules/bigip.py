@@ -1240,6 +1240,10 @@ def modify_pool_member(hostname, username, password, name, member, partition=Non
     #add partition to the name if it exists
     name = _add_partition_value(name, partition)
 
+    #transform /partition/member_name -> ~partition~member_name
+    #needed beacause passed in the uri
+    member = member.replace('/','~')
+
     #put to REST
     try:
         response = bigip_session.put(

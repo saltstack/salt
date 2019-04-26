@@ -1513,7 +1513,7 @@ def modify_pool_member(hostname, username, password, name, member, partition=Non
 
                 #loop through them              
                 for new_member in new_members:
-                    if new_member['name'] == member['name'] or (not partition or new_member['partition'] == partition):
+                    if new_member['name'] == member or (not partition or new_member['partition'] == partition):
                         modified_member = new_member
                         break
 
