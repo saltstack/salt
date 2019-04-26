@@ -5263,3 +5263,131 @@ def pool_list_volumes(name, **kwargs):
         return pool.listVolumes()
     finally:
         conn.close()
+
+
+def _get_storage_vol(conn, pool, vol):
+    '''
+    Helper function getting a storage volume. Will throw a libvirtError
+    if the pool or the volume couldn't be found.
+    '''
+    pool_obj = conn.storagePoolLookupByName(pool)
+    return pool_obj.storageVolLookupByName(vol)
+
+
+def _is_valid_volume(vol):
+    '''
+    Checks whether a volume is valid for further use since those may have disappeared since
+    the last pool refresh.
+    '''
+    try:
+        # Getting info on an invalid volume raises error
+        vol.info()
+        return True
+    except libvirt.libvirtError as err:
+        return False
+
+
+def _get_all_volumes_paths(conn):
+    '''
+    Extract the path and backing stores path of all volumes.
+
+    :param conn: libvirt connection to use
+    '''
+    volumes = [vol for l in [obj.listAllVolumes() for obj in conn.listAllStoragePools()] for vol in l]
+    return {vol.path(): [path.text for path in ElementTree.fromstring(vol.XMLDesc()).findall('.//backingStore/path')]
+            for vol in volumes if _is_valid_volume(vol)}
+
+
+def volume_infos(pool=None, volume=None, **kwargs):
+    '''
+    Provide details on a storage volume. If no volume name is provided, the infos
+    all the volumes contained in the pool are provided. If no pool is provided,
+    the infos of the volumes of all pools are output.
+
+    :param pool: libvirt storage pool name (default: ``None``)
+    :param volume: name of the volume to get infos from (default: ``None``)
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: Neon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.volume_infos <pool> <volume>
+    '''
+    result = {}
+    conn = __get_conn(**kwargs)
+    try:
+        backing_stores = _get_all_volumes_paths(conn)
+        domains = _get_domain(conn)
+        domains_list = domains if isinstance(domains, list) else [domains]
+        disks = {domain.name():
+                 {node.get('file') for node
+                  in ElementTree.fromstring(domain.XMLDesc(0)).findall('.//disk/source/[@file]')}
+                 for domain in domains_list}
+
+        def _volume_extract_infos(vol):
+            '''
+            Format the volume info dictionary
+
+            :param vol: the libvirt storage volume object.
+            '''
+            types = ['file', 'block', 'dir', 'network', 'netdir', 'ploop']
+            infos = vol.info()
+
+            # If we have a path, check its use.
+            used_by = []
+            if vol.path():
+                as_backing_store = {path for (path, all_paths) in backing_stores.items() if vol.path() in all_paths}
+                used_by = [vm_name for (vm_name, vm_disks) in disks.items()
+                           if vm_disks & as_backing_store or vol.path() in vm_disks]
+
+            return {
+                'type': types[infos[0]] if infos[0] < len(types) else 'unknown',
+                'key': vol.key(),
+                'path': vol.path(),
+                'capacity': infos[1],
+                'allocation': infos[2],
+                'used_by': used_by,
+            }
+
+        pools = [obj for obj in conn.listAllStoragePools() if pool is None or obj.name() == pool]
+        vols = {pool_obj.name(): {vol.name(): _volume_extract_infos(vol)
+                                  for vol in pool_obj.listAllVolumes()
+                                  if (volume is None or vol.name() == volume) and _is_valid_volume(vol)}
+                for pool_obj in pools}
+        return {pool_name: volumes for (pool_name, volumes) in vols.items() if volumes}
+    except libvirt.libvirtError as err:
+        log.debug('Silenced libvirt error: %s', str(err))
+    finally:
+        conn.close()
+    return result
+
+
+def volume_delete(pool, volume, **kwargs):
+    '''
+    Delete a libvirt managed volume.
+
+    :param pool: libvirt storage pool name
+    :param volume: name of the volume to delete
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: Neon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.volume_delete <pool> <volume>
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        vol = _get_storage_vol(conn, pool, volume)
+        return not bool(vol.delete())
+    finally:
+        conn.close()
