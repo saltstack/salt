@@ -159,6 +159,19 @@ def _determine_toggles(payload, toggles):
 
     return payload
 
+def _add_partition_value(value, partition):
+    '''
+    A function that detects if partition is defined and if so return "~partition~value"
+    '''
+    if partition:
+        return '~{partition}~{value}'.format(partition=partition, value=value)
+
+def _add_partition_payload(payload, partition):
+    '''
+    A function that dectects if partition is defined and add it to the payload
+    '''
+    if partition:
+        payload['partition'] = partition
 
 def _set_value(value):
     '''
@@ -421,7 +434,7 @@ def list_node(hostname, username, password, name=None, partition=None, trans_lab
     #get to REST
     try:
         if name and partition:
-            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/~{partition}~{name}'.format(name=name, partition=partition))
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/{name_with_partition}'.format(name_with_partition=_add_partition_value(name, partition)))
         elif partition:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/?$filter="partition eq {partition}"'.format(partition=partition))
         elif name:
@@ -467,9 +480,8 @@ def create_node(hostname, username, password, name, address, partition=None, tra
     payload['name'] = name
     payload['address'] = address
     
-    #check if there's a partition
-    if partition:
-        payload['partition'] = partition
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
 
     #post to REST
     try:
@@ -554,13 +566,11 @@ def modify_node(hostname, username, password, name,
     payload = _loop_payload(params)
     payload['name'] = name
     
-    #check if there's a partition
-    if partition:
-        payload['partition'] = partition
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
 
-    #check if there's a partition
-    if partition:
-        name = '~{partition}~{name}'.format(name=name, partition=partition)
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
 
     #put to REST
     try:
@@ -600,9 +610,8 @@ def delete_node(hostname, username, password, name, partition=None, trans_label=
     #build session
     bigip_session = _build_session(username, password, trans_label)
 
-    #check if there's a partition
-    if partition:
-        name = '~{partition}~{name}'.format(name=name, partition=partition)
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
 
     #delete to REST
     try:
@@ -643,7 +652,7 @@ def list_pool(hostname, username, password, name=None, partition=None):
     #get to REST
     try:
         if name and partition:
-            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/~{partition}~{name}/?expandSubcollections=true'.format(name=name, partition=partition))
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name_with_partition}/?expandSubcollections=true'.format(name_with_partition=_add_partition_value(name, partition)))
         elif partition:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/?$filter=partition eq {partition}'.format(partition=partition))
         elif name:
@@ -789,10 +798,6 @@ def create_pool(hostname, username, password, name, partition=None, members=None
     #build payload
     payload = _loop_payload(params)
     payload['name'] = name
-    
-    # Check if there's a partition
-    if partition:
-        payload['partition'] = partition
 
     #determine toggles
     payload = _determine_toggles(payload, toggles)
@@ -803,6 +808,10 @@ def create_pool(hostname, username, password, name, partition=None, members=None
 
     #build session
     bigip_session = _build_session(username, password)
+
+
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
 
     #post to REST
     try:
@@ -954,9 +963,11 @@ def modify_pool(hostname, username, password, name, partition=None,
     #build session
     bigip_session = _build_session(username, password)
     
-    #check if there's a partition
-    if partition:
-        name = '~{partition}~{name}'.format(name=name, partition=partition)
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
+
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
     
     #post to REST
     try:        
@@ -993,9 +1004,8 @@ def delete_pool(hostname, username, password, name, partition=None):
     #build session
     bigip_session = _build_session(username, password)
 
-    #check if there's a partition
-    if partition:
-        name = '~{partition}~{name}'.format(name=name, partition=partition)
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
 
     #delete to REST
     try:       
@@ -1066,12 +1076,14 @@ def replace_pool_members(hostname, username, password, name, members, partition=
     #build session
     bigip_session = _build_session(username, password)
 
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
+
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
+
     #put to REST
-    try:
-        #check if there's a partition
-        if partition:
-            name = '~{partition}~{name}'.format(name=name, partition=partition)
-        
+    try:        
         response = bigip_session.put(
             BIG_IP_URL_BASE.format(host=hostname) + '/ltm/pool/{name}'.format(name=name),
             data=salt.utils.json.dumps(payload)
@@ -1122,23 +1134,16 @@ def add_pool_member(hostname, username, password, name, member, partition=None):
         payload = member
     # for execution
     else:
-        # TODO DOC
-        payload = {}
-        address = member.split(':')[0]
-        if re.match(r'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', address):
-            payload['address'] = address
-        if partition:
-            payload['partition'] = partition
-            member = member.replace(partition,'')
-            member = member.replace('/','')
-        payload['name'] = member
+        payload = {'name': member, 'address': member.split(':')[0]}
 
     #build session
     bigip_session = _build_session(username, password)
 
-    #check if there's a partition
-    if partition:
-        name = '~{partition}~{name}'.format(partition=partition, name=name)
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
+
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
 
     #post to REST
     try:
@@ -1232,10 +1237,11 @@ def modify_pool_member(hostname, username, password, name, member, partition=Non
     #build payload
     payload = _loop_payload(params)
 
-    #check if there's a partition
-    if partition:
-        name = '~{partition}~{name}'.format(name=name, partition=partition)
-        member = '~{partition}~{member}'.format(partition=partition ,member=member)
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
+
+    #add partition to the member if it exists
+    member = _add_partition_value(member, partition)
 
     #put to REST
     try:
@@ -1274,10 +1280,11 @@ def delete_pool_member(hostname, username, password, name, member, partition=Non
     #build session
     bigip_session = _build_session(username, password)
 
-    #check if there's a partition
-    if partition:
-        name = '~{partition}~{name}'.format(name=name, partition=partition)
-        member = '~{partition}~{member}'.format(partition=partition ,member=member)
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
+
+    #add partition to the member if it exists
+    member = _add_partition_value(member, partition)
 
     #delete to REST
     try:
@@ -1318,7 +1325,7 @@ def list_virtual(hostname, username, password, name=None, partition=None):
     #get to REST
     try:
         if name and partition:
-            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/~{partition}~{name}/?expandSubcollections=true'.format(name=name, partition=partition))
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/{name_with_partition}/?expandSubcollections=true'.format(name_with_partition=_add_partition_value(name, partition)))
         elif partition:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/?$filter=partition eq {partition}'.format(partition=partition))
         elif name:
@@ -1610,9 +1617,8 @@ def create_virtual(hostname, username, password, name, destination, partition=No
         elif state == 'disabled':
             payload['disabled'] = True
 
-    #check if there's a partition
-    if partition:
-        payload['partition'] = partition
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
 
     #post to REST
     try:
@@ -1888,11 +1894,12 @@ def modify_virtual(hostname, username, password, name, partition=None,
             payload['enabled'] = True
         elif state == 'disabled':
             payload['disabled'] = True
+    
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
 
-    #check if there's a partition
-    if partition:
-        name = '~{partition}~{name}'.format(name=name, partition=partition)
-        payload['partition'] = partition
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
 
     #put to REST
     try:
@@ -1929,9 +1936,8 @@ def delete_virtual(hostname, username, password, name, partition=None):
     #build session
     bigip_session = _build_session(username, password)
 
-    #check if there's a partition
-    if partition:
-        name = '~{partition}~{name}'.format(name=name, partition=partition)
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
 
     #delete to REST
     try:
@@ -1975,7 +1981,7 @@ def list_monitor(hostname, username, password, monitor_type, name=None, partitio
     #get to REST
     try:
         if name and partition:
-            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/~{partition}~{name}?expandSubcollections=true'.format(type=monitor_type, name=name, partition=partition))
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/{name_with_partition}/?expandSubcollections=true'.format(name_with_partition=_add_partition_value(name, partition)))
         elif partition:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/?$filter=partition eq {partition}'.format(type=monitor_type, partition=partition))
         elif name:
@@ -2020,10 +2026,6 @@ def create_monitor(hostname, username, password, monitor_type, name, partition=N
     payload = {}
     payload['name'] = name
     
-    # Check if there's a partion
-    if partition:
-        payload['partition'] = partition
-
     #there's a ton of different monitors and a ton of options for each type of monitor.
     #this logic relies that the end user knows which options are meant for which monitor types
     for key, value in six.iteritems(kwargs):
@@ -2031,6 +2033,9 @@ def create_monitor(hostname, username, password, monitor_type, name, partition=N
             if key not in ['hostname', 'username', 'password', 'type']:
                 key = key.replace('_', '-')
                 payload[key] = value
+
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
 
     #post to REST
     try:
@@ -2075,8 +2080,6 @@ def modify_monitor(hostname, username, password, monitor_type, name, partition=N
 
     #construct the payload
     payload = {}
-    if partition:
-        payload['partition'] = partition
 
     #there's a ton of different monitors and a ton of options for each type of monitor.
     #this logic relies that the end user knows which options are meant for which monitor types
@@ -2086,9 +2089,11 @@ def modify_monitor(hostname, username, password, monitor_type, name, partition=N
                 key = key.replace('_', '-')
                 payload[key] = value
 
-    #check if there's a partition
-    if partition:
-        name = '~{partition}~{name}'.format(name=name, partition=partition)
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
+
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
 
     #put to REST
     try:
@@ -2127,9 +2132,12 @@ def delete_monitor(hostname, username, password, monitor_type, name, partition=N
 
     #build sessions
     bigip_session = _build_session(username, password)
-    # Check if there's a partition
-    if partition:
-        name = '~{partition}~{name}'.format(name=name, partition=partition)
+
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
+
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
 
     #delete to REST
     try:
@@ -2173,7 +2181,7 @@ def list_profile(hostname, username, password, profile_type, name=None, partitio
     #get to REST
     try:
         if name and partition:
-            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/~{partition}~{name}?expandSubcollections=true'.format(type=profile_type, name=name, partition=partition))
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/{name_with_partition}/?expandSubcollections=true'.format(name_with_partition=_add_partition_value(name, partition)))
         elif partition:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}?$filter=partition eq {partition}'.format(type=profile_type, partition=partition))
         elif name:
@@ -2245,10 +2253,6 @@ def create_profile(hostname, username, password, profile_type, name, partition=N
     payload = {}
     payload['name'] = name
 
-    # Check if there's partition
-    if partition:
-        payload['partition'] = partition
-
     #there's a ton of different profiles and a ton of options for each type of profile.
     #this logic relies that the end user knows which options are meant for which profile types
     for key, value in six.iteritems(kwargs):
@@ -2259,7 +2263,10 @@ def create_profile(hostname, username, password, profile_type, name, partition=N
                     payload[key] = _set_value(value)
                 except salt.exceptions.CommandExecutionError:
                     return 'Error: Unable to Parse JSON data for parameter: {key}\n{value}'.format(key=key, value=value)
-                        
+
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
+
     #post to REST
     try:
         response = bigip_session.post(
@@ -2337,8 +2344,6 @@ def modify_profile(hostname, username, password, profile_type, name, partition=N
     #construct the payload
     payload = {}
     payload['name'] = name
-    if partition:
-        payload['partition'] = partition
 
     #there's a ton of different profiles and a ton of options for each type of profile.
     #this logic relies that the end user knows which options are meant for which profile types
@@ -2352,9 +2357,12 @@ def modify_profile(hostname, username, password, profile_type, name, partition=N
                 except salt.exceptions.CommandExecutionError:
                     return 'Error: Unable to Parse JSON data for parameter: {key}\n{value}'.format(key=key, value=value)
     
-    #check if there's a partition
-    if partition:
-        name = '~{partition}~{name}'.format(name=name, partition=partition)
+
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
+
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
     
     #put to REST
     try:
@@ -2394,9 +2402,8 @@ def delete_profile(hostname, username, password, profile_type, name, partition=N
     #build sessions
     bigip_session = _build_session(username, password)
 
-    #check if there's a partition
-    if partition:
-        name = '~{partition}~{name}'.format(name=name, partition=partition)
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
 
     #delete to REST
     try:
@@ -2432,7 +2439,7 @@ def list_irule(hostname, username, password, name=None, partition=None):
     #get the list of irules depending on the parameters passed as argument
     try:
         if name and partition:
-            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/~{partition}~{name}'.format(name=name, partition=partition))
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/{name_with_partition}'.format(name_with_partition=_add_partition_value(name, partition)))
         elif name:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/rule/~{name}'.format(name=name))
         elif partition:
@@ -2473,9 +2480,8 @@ def create_irule(hostname, username, password, name, api_anonymous, partition=No
     payload['name'] = name
     payload["apiAnonymous"] = api_anonymous
     
-    #check if there's a partition
-    if partition:
-        payload['partition'] = partition
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
     
     #post to REST    
     try:
@@ -2513,10 +2519,11 @@ def modify_irule(hostname, username, password, name, api_anonymous, partition=No
     payload['name'] = name
     payload["apiAnonymous"] = api_anonymous
     
-    #check if there's a partition
-    if partition:
-        payload['partition'] = partition
-        name='~{partition}~{name}'.format(partition=partition,name=name)
+    #add partition to the payload if partition exists
+    _add_partition_payload(payload, partition)
+
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
 
     #post to REST    
     try:
@@ -2546,10 +2553,9 @@ def delete_irule(hostname, username, password, name, partition=None, **kwargs):
         salt '*' bigip.delete_irule bigip admin admin custom_cas_irules "when HTTP_REQUEST { pool \"pool_name\"}"  partition3
     '''
     bigip_session = _build_session(username, password)
-    
-    #check if there's a partition
-    if partition:
-        name = '~{partition}~{name}'.format(partition=partition,name=name)
+
+    #add partition to the name if it exists
+    name = _add_partition_value(name, partition)
 
     try:
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname) + '/ltm/rule/{name}'.format(name=name))
