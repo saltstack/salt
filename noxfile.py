@@ -7,9 +7,12 @@ Nox configuration script
 '''
 
 # Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import sys
 import json
+import pprint
+
 
 if __name__ == '__main__':
     sys.stderr.write('Do not execute this file directly. Use nox instead, it will know how to handle this file\n')
@@ -22,9 +25,6 @@ import nox
 # Global Path Definitions
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
 SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, 'tests', 'support', 'coverage')
-
-# We can't just import salt because if this is running under a frozen nox, there
-# will be no salt to import
 IS_WINDOWS = sys.platform.lower().startswith('win')
 REQUIREMENTS_OVERRIDES = {
     None: [
@@ -44,6 +44,7 @@ nox.options.reuse_existing_virtualenvs = True
 #  Don't fail on missing interpreters
 nox.options.error_on_missing_interpreters = False
 
+
 def _create_ci_directories():
     for dirname in ('logs', 'coverage', 'xml-unittests-output'):
         path = os.path.join(REPO_ROOT, 'artifacts', dirname)
@@ -51,42 +52,46 @@ def _create_ci_directories():
             os.makedirs(path)
 
 
-def _install_requirements_overrides(session, *extra_requirements):
-    session.install('distro')
-    output = session.run('distro', '-j', silent=True)
-    distro_data = json.loads(output.strip())
-
-    requirements_overrides = REQUIREMENTS_OVERRIDES[None]
-    requirements_overrides.extend(
-        REQUIREMENTS_OVERRIDES.get(
-            '{id}-{version}'.format(**distro_data),
-            []
-        )
-    )
-    if requirements_overrides:
-        for requirement in requirements_overrides:
-            session.install(requirement)
-
-
 def _install_requirements(session, *extra_requirements):
-    _install_requirements_overrides(session)
     # Install requirements
-    _requirements_files = [
-        os.path.join(REPO_ROOT, 'requirements', 'pytest.txt')
-    ]
-    if sys.platform.startswith('linux'):
-        requirements_files = [
-            os.path.join(REPO_ROOT, 'requirements', 'tests.txt')
+    distro_requirements = None
+
+    if not IS_WINDOWS:
+        # The distro package doesn't output anything for Windows
+        session.install('distro')
+        output = session.run('distro', '-j', silent=True)
+        distro = json.loads(output.strip())
+        session.log('Distro information:\n%s', pprint.pformat(distro))
+        distro_keys = [
+            '{id}-{version}'.format(**distro),
+            '{id}-{version_parts[major]}'.format(**distro)
         ]
-    elif sys.platform.startswith('win'):
-        requirements_files = [
-            os.path.join(REPO_ROOT, 'pkg', 'windows', 'req.txt'),
+        for distro_key in distro_keys:
+            _distro_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', '{}.txt'.format(distro_key))
+            if os.path.exists(_distro_requirements):
+                distro_requirements = _distro_requirements
+                break
+
+    if distro_requirements is not None:
+        _requirements_files = [distro_requirements]
+        requirements_files = []
+    else:
+        _requirements_files = [
+            os.path.join(REPO_ROOT, 'requirements', 'pytest.txt')
         ]
-    elif sys.platform.startswith('darwin'):
-        requirements_files = [
-            os.path.join(REPO_ROOT, 'pkg', 'osx', 'req.txt'),
-            os.path.join(REPO_ROOT, 'pkg', 'osx', 'req_ext.txt'),
-        ]
+        if sys.platform.startswith('linux'):
+            requirements_files = [
+                os.path.join(REPO_ROOT, 'requirements', 'tests.txt')
+            ]
+        elif sys.platform.startswith('win'):
+            requirements_files = [
+                os.path.join(REPO_ROOT, 'pkg', 'windows', 'req.txt'),
+            ]
+        elif sys.platform.startswith('darwin'):
+            requirements_files = [
+                os.path.join(REPO_ROOT, 'pkg', 'osx', 'req.txt'),
+                os.path.join(REPO_ROOT, 'pkg', 'osx', 'req_ext.txt'),
+            ]
 
     while True:
         if not requirements_files:
@@ -122,7 +127,7 @@ def _install_requirements(session, *extra_requirements):
 
 
 def _run_with_coverage(session, *test_cmd):
-    session.install('coverage')
+    session.install('coverage==4.5.3')
     session.run('coverage', 'erase')
     python_path_env_var = os.environ.get('PYTHONPATH') or None
     if python_path_env_var is None:
@@ -144,12 +149,11 @@ def _run_with_coverage(session, *test_cmd):
 @nox.parametrize('coverage', [False, True])
 def runtests(session, coverage):
     # Install requirements
-    _install_requirements(session, 'unittest-xml-reporting')
+    _install_requirements(session, 'unittest-xml-reporting<2.4.0')
     # Create required artifacts directories
     _create_ci_directories()
 
     cmd_args = [
-        '-v',
         '--tests-logfile={}'.format(
             os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
         )
@@ -176,7 +180,7 @@ def pytest(session, coverage):
         ),
         '--no-print-logs',
         '-ra',
-        '-sv'
+        '-s'
     ] + session.posargs
 
     if coverage is True:
