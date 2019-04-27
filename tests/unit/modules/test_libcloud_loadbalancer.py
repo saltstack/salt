@@ -22,11 +22,10 @@ try:
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
-    MockLBDriver = object
 
 if HASLIBCLOUD:
     class MockLBDriver(BaseDriver):
-        def __init__(self):
+        def __init__(self):  # pylint: disable=W0231
             self._TEST_BALANCER = LoadBalancer(
                 id='test_id', name='test_balancer',
                 state=0,  # RUNNING
@@ -78,6 +77,10 @@ if HASLIBCLOUD:
             assert isinstance(balancer, LoadBalancer)
             assert balancer.id == 'test_id'
             return [self._TEST_MEMBER]
+
+
+else:
+    MockLBDriver = object
 
 
 def get_mock_driver():
