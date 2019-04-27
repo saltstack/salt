@@ -1338,7 +1338,7 @@ def add_pool_member(hostname, username, password, name, member, partition=None):
             'name': name,
             'partition': partition,
             'members': member
-            }
+        }
         )
 
     #is this pool member currently configured?
@@ -1379,8 +1379,14 @@ def add_pool_member(hostname, username, password, name, member, partition=None):
                     ret = _load_result(new_member, ret)
                     return ret
 
-                # Return the changes
-                ret = _check_for_changes('Member: {name}'.format(name=member['name']), ret, existing_pool, pool_listing)
+                members = pool_listing['content']['membersReference']['items']
+                #loop through them
+                for current_member in members:
+                    if current_member['name'] == member['name']:
+                        added_member = current_member
+                        break
+
+                ret['changes']['new'] = added_member
             # member wasn't added
             else:
                 ret = _load_result(new_member, ret)
