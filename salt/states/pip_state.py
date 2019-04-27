@@ -64,11 +64,11 @@ if HAS_PIP is True:
     if salt.utils.versions.compare(ver1=pip.__version__,
                                    oper='>=',
                                    ver2='18.1'):
-        from pip._internal.exceptions import InstallationError
+        from pip._internal.exceptions import InstallationError  # pylint: disable=E0611,E0401
     elif salt.utils.versions.compare(ver1=pip.__version__,
                                    oper='>=',
                                    ver2='10.0'):
-        from pip.exceptions import InstallationError
+        from pip.exceptions import InstallationError  # pylint: disable=E0611,E0401
     else:
         InstallationError = ValueError
 
@@ -86,15 +86,15 @@ def _from_line(*args, **kwargs):
     if salt.utils.versions.compare(ver1=pip.__version__,
                                    oper='>=',
                                    ver2='18.1'):
-        import pip._internal.req.constructors
+        import pip._internal.req.constructors  # pylint: disable=E0611,E0401
         return pip._internal.req.constructors.install_req_from_line(*args, **kwargs)
     elif salt.utils.versions.compare(ver1=pip.__version__,
                                    oper='>=',
                                    ver2='10.0'):
-        import pip._internal.req
+        import pip._internal.req  # pylint: disable=E0611,E0401
         return pip._internal.req.InstallRequirement.from_line(*args, **kwargs)
     else:
-        import pip.req
+        import pip.req  # pylint: disable=E0611,E0401
         return pip.req.InstallRequirement.from_line(*args, **kwargs)
 
 
