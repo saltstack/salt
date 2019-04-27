@@ -5,6 +5,9 @@
 
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
+import logging
+
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
