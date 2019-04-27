@@ -145,6 +145,27 @@ def start_daemon(daemon_cli_script_name,
         )
     return process
 
+    def find_proc(self, name=None, search=None):
+        def _search(proc):
+            return any([search in x for x in proc.cmdline()])
+        if name is None and search is None:
+            raise ValueError('one of name or search is required')
+        for proc in psutil.process_iter():
+            if name is not None:
+                try:
+                    if search is None:
+                        if name in proc.name():
+                            return proc
+                    elif name in proc.name() and _search(proc):
+                        return proc
+                except psutil.NoSuchProcess:
+                    # Whichever process we are interigating is no longer alive.
+                    # Skip it and keep searching.
+                    continue
+            else:
+                if _search(proc):
+                    return proc
+        return None
 
 class SaltDaemonScriptBase(_SaltDaemonScriptBase):
 
