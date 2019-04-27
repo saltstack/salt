@@ -1267,7 +1267,7 @@ def manage_pool_members(hostname, username, password, name, members, partition=N
         if 'items' in existing['content']['membersReference']:
             current_members = existing['content']['membersReference']['items']
         else:
-            current_members = None
+            current_members = []
 
         modified = __salt__['bigip.replace_pool_members'](hostname, username, password, name, members, partition)
 
