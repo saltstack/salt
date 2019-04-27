@@ -18,7 +18,6 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.states.pip_state as pip_state
-import salt.utils.versions
 
 # Import 3rd-party libs
 try:
