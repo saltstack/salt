@@ -20,6 +20,22 @@ Example profile:
       # points back at provider configuration e.g. the libvirt daemon to talk to
       provider: my-libvirt-config
       base_domain: base-image
+      # Number of virtual cpus
+      num_cpus: 2
+      # Amount of virtual memory (unit: MB or GB)
+      memory: 2048MB
+      # Network interfaces
+      devices:
+        network:
+          eth0:
+            # Type of networking: [bridge | network]
+            type: network
+            # Mac address (optional)
+            mac: '52:54:00:12:34:56'
+            # Host bridge name or host network name, as defined in libvirt
+            source: default
+            # NIC model, as defined in libvirt: [e1000 | rtl8139 | virtio]
+            model: virtio
       # ip_source = [ ip-learning | qemu-agent ]
       ip_source: ip-learning
       # clone_strategy = [ quick | full ]
@@ -55,6 +71,7 @@ Tested on:
 
 import logging
 import os
+import re
 import uuid
 from xml.etree import ElementTree
 
@@ -340,6 +357,18 @@ def create(vm_):
         transport=__opts__["transport"],
     )
 
+    num_cpus = config.get_cloud_config_value(
+        'num_cpus', vm_, __opts__, default=None
+    )
+
+    memory = config.get_cloud_config_value(
+        'memory', vm_, __opts__, default=None
+    )
+
+    devices = config.get_cloud_config_value(
+        'devices', vm_, __opts__, default=None
+    )
+
     key_filename = config.get_cloud_config_value(
         "private_key", vm_, __opts__, search_global=False, default=None
     )
@@ -395,8 +424,87 @@ def create(vm_):
             description.text = "Cloned from {}".format(base)
             domain_xml.remove(domain_xml.find("./uuid"))
 
-            for iface_xml in domain_xml.findall("./devices/interface"):
-                iface_xml.remove(iface_xml.find("./mac"))
+            # Configure number of CPU
+            if num_cpus:
+                vcpu_xml = domain_xml.find('./vcpu')
+                vcpu_xml.text = str(num_cpus)
+                log.debug("Setting CPU number to: %s", num_cpus)
+
+            # Configure amount of memory
+            if memory:
+                try:
+                    memory_num, memory_unit = re.findall(r"[^\W\d_]+|\d+.\d+|\d+",
+                                                         memory)
+                    if memory_unit.lower() == "mb":
+                        memory_mb = int(memory_num)
+                    elif memory_unit.lower() == "gb":
+                        memory_mb = int(float(memory_num)*1024.0)
+                    else:
+                        err_msg = "Invalid memory type specified: '{0}'".format(memory_unit)
+                        log.error(err_msg)
+                        return {'Error': err_msg}
+                except (TypeError, ValueError):
+                    memory_mb = int(memory)
+
+                memory_xml = domain_xml.find('./memory')
+                memory_xml.text = str(memory_mb)
+                memory_xml.set('unit', 'Mib')
+                currentMemory_xml = domain_xml.find('./currentMemory')
+                currentMemory_xml.text = str(memory_mb)
+                currentMemory_xml.set('unit', 'Mib')
+                log.debug("Setting memory to: %s MB", memory_mb)
+
+            # Configure network interfaces
+            devices_xml = domain_xml.find('./devices')
+            if 'network' in list(devices.keys()):
+                # Remove any existing network interface from cloned domain
+                for iface_xml in devices_xml.findall('./interface'):
+                    devices_xml.remove(iface_xml)
+
+                # Add new network interfaces to cloned domain
+                for network in sorted(devices['network']):
+                    # Interface type: should be 'bridge' or 'network' (default)
+                    if 'type' in devices['network'][network]:
+                        type = devices['network'][network]['type']
+                    else:
+                        type = 'network'
+
+                    # Add network interface to new domain
+                    devices_xml.append(ElementTree.Element('interface', type=type))
+                    iface_xml = devices_xml.findall('./interface')[-1]
+
+                    # Interface source: should be either the host bridge name or host network name (default network name is 'default')
+                    if 'source' in devices['network'][network]:
+                        source = devices['network'][network]['source']
+                    else:
+                        source = 'default'
+
+                    # Associate domain network interface to host networking connection
+                    if type == 'bridge':
+                        iface_xml.append(ElementTree.Element('source', bridge=source))
+                    elif type == 'network':
+                        iface_xml.append(ElementTree.Element('source', network=source))
+
+                    # Define the network interface mac address (optional)
+                    if 'mac' in devices['network'][network]:
+                        mac = devices['network'][network]['mac']
+                        iface_xml.append(ElementTree.Element('mac', address=mac))
+
+                    # Define the network interface model (optional, default: virtio)
+                    if 'model' in devices['network'][network]:
+                        model = devices['network'][network]['model']
+                    else:
+                        model = 'virtio'
+                    iface_xml.append(ElementTree.Element('model', type=devices['network'][network]['model']))
+
+                    log.debug("Adding NIC '%s', type '%s', source '%s', model '%s'", network, type, source, model)
+
+            else:
+                # Keep existing network interfaces from domain template, just remove mac address
+                for iface_xml in domain_xml.findall("./devices/interface"):
+                    iface_xml.remove(iface_xml.find("./mac"))
+
+            for iface_xml in domain_xml.findall('./devices/interface'):
                 # enable IP learning, this might be a default behaviour...
                 # Don't always enable since it can cause problems through libvirt-4.5
                 if (
