@@ -55,6 +55,8 @@ if HAS_LIBCLOUD:
             assert container_name == 'test_container'
             assert object_name == 'test_obj'
             return self._TEST_OBJECT
+else:
+    MockStorageDriver = object
 
 
 def get_mock_driver():
