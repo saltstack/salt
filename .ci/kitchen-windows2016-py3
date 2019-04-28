@@ -9,7 +9,7 @@ properties([
         booleanParam(defaultValue: false, description: 'Run full test suite', name: 'runFull')
     ])
 ])
-timeout(time: 6, unit: 'HOURS') {
+timeout(time: 8, unit: 'HOURS') {
     node('kitchen-slave') {
         timestamps {
             ansiColor('xterm') {
