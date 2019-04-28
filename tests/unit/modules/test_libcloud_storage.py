@@ -26,7 +26,7 @@ except ImportError:
 
 if HAS_LIBCLOUD:
     class MockStorageDriver(BaseDriver):
-        def __init__(self):
+        def __init__(self):  # pylint: disable=W0231
             self._TEST_CONTAINER = Container(name='test_container', extra={}, driver=self)
             self._TEST_OBJECT = Object(name='test_obj',
                                        size=1234,
