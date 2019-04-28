@@ -106,7 +106,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False, force=False):
            'changes': {},
            'comment': ''}
 
-    _octal = {'r': 4, 'w': 2, 'x': 1, '-': 0}
+    _octal = {'r': 4, 'w': 2, 'x': 1, 'X': 1, '-': 0}
 
     if not os.path.exists(name):
         ret['comment'] = '{0} does not exist'.format(name)
@@ -148,10 +148,23 @@ def present(name, acl_type, acl_name='', perms='', recurse=False, force=False):
             need_refresh = False
             for path in __current_perms:
                 acl_found = False
-                for user_acl in __current_perms[path].get(_acl_type, []):
-                    if _search_name in user_acl and user_acl[_search_name]['octal'] == octal_sum:
+                if 'X' in perms:
+                    execute_bit_found = False
+                    for user_acl in __current_perms[path].get(_acl_type, []):
+                        for username_acl in user_acl:
+                            if user_acl[username_acl]['octal'] % 2 == 1:
+                                execute_bit_found = True
+                            if _search_name in user_acl:
+                                acl_found = True
+                    if acl_found and user_acl[_search_name]['octal'] == octal_sum - int(not execute_bit_found):
                         acl_found = True
-                        break
+                    else:
+                        acl_found = False
+                else:
+                    for user_acl in __current_perms[path].get(_acl_type, []):
+                        if _search_name in user_acl and user_acl[_search_name]['octal'] == octal_sum:
+                            acl_found = True
+                            break
                 if not acl_found:
                     need_refresh = True
                     break
