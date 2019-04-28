@@ -43,7 +43,7 @@ class DocTestCase(TestCase):
         if salt.utils.platform.is_windows():
             if salt.utils.path.which('bash'):
                 # Use grep from git-bash when it exists.
-                cmd = 'bash -c \'grep -r :doc: ./salt/'.format(salt_dir)
+                cmd = 'bash -c \'grep -r :doc: ./salt/'
                 grep_call = salt.modules.cmdmod.run_stdout(cmd=cmd, cwd=salt_dir).split(os.linesep)
             else:
                 # No grep in Windows, use findstr
