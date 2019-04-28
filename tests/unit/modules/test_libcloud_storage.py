@@ -17,39 +17,46 @@ from tests.support.mock import (
 )
 import salt.modules.libcloud_storage as libcloud_storage
 
-from libcloud.storage.base import Container, BaseDriver, Object
+try:
+    from libcloud.storage.base import Container, BaseDriver, Object
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
 
 
-class MockStorageDriver(BaseDriver):
-    def __init__(self):
-        self._TEST_CONTAINER = Container(name='test_container', extra={}, driver=self)
-        self._TEST_OBJECT = Object(name='test_obj',
-                                   size=1234,
-                                   hash='123sdfsdf',
-                                   extra={},
-                                   meta_data={'key': 'value'},
-                                   container=self._TEST_CONTAINER,
-                                   driver=self)
+if HAS_LIBCLOUD:
+    class MockStorageDriver(BaseDriver):
+        def __init__(self):  # pylint: disable=W0231
+            self._TEST_CONTAINER = Container(name='test_container', extra={}, driver=self)
+            self._TEST_OBJECT = Object(name='test_obj',
+                                       size=1234,
+                                       hash='123sdfsdf',
+                                       extra={},
+                                       meta_data={'key': 'value'},
+                                       container=self._TEST_CONTAINER,
+                                       driver=self)
 
-    def list_containers(self):
-        return [self._TEST_CONTAINER]
+        def list_containers(self):
+            return [self._TEST_CONTAINER]
 
-    def get_container(self, container_name):
-        assert container_name == 'test_container'
-        return self._TEST_CONTAINER
+        def get_container(self, container_name):
+            assert container_name == 'test_container'
+            return self._TEST_CONTAINER
 
-    def list_container_objects(self, container):
-        assert container.name == 'test_container'
-        return [self._TEST_OBJECT]
+        def list_container_objects(self, container):
+            assert container.name == 'test_container'
+            return [self._TEST_OBJECT]
 
-    def create_container(self, container_name):
-        assert container_name == 'new_test_container'
-        return self._TEST_CONTAINER
+        def create_container(self, container_name):
+            assert container_name == 'new_test_container'
+            return self._TEST_CONTAINER
 
-    def get_container_object(self, container_name, object_name):
-        assert container_name == 'test_container'
-        assert object_name == 'test_obj'
-        return self._TEST_OBJECT
+        def get_container_object(self, container_name, object_name):
+            assert container_name == 'test_container'
+            assert object_name == 'test_obj'
+            return self._TEST_OBJECT
+else:
+    MockStorageDriver = object
 
 
 def get_mock_driver():
@@ -57,6 +64,7 @@ def get_mock_driver():
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_LIBCLOUD, 'No libcloud installed')
 @patch('salt.modules.libcloud_storage._get_driver',
        MagicMock(return_value=MockStorageDriver()))
 class LibcloudStorageModuleTestCase(TestCase, LoaderModuleMockMixin):
