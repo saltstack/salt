@@ -34,7 +34,7 @@ import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
 from salt.ext import six
-from salt.exceptions import SaltReqTimeoutError
+from salt.exceptions import SaltReqTimeoutError, SaltException
 from salt._compat import ipaddress
 
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO, LIBZMQ_VERSION_INFO
@@ -260,12 +260,18 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
     @property
     def master_uri(self):
+        if 'master_uri' in self.opts:
+            return self.opts['master_uri']
+
+        # if by chance master_uri is not there..
         if 'master_ip' in self.opts:
             return _get_master_uri(self.opts['master_ip'],
                                    self.opts['master_port'],
                                    source_ip=self.opts.get('source_ip'),
                                    source_port=self.opts.get('source_ret_port'))
-        return self.opts['master_uri']
+
+        # if we've reached here something is very abnormal
+        raise SaltException('ReqChannel: missing master_uri/master_ip in self.opts')
 
     def _package_load(self, load):
         return {
