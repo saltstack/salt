@@ -12,6 +12,7 @@ import logging
 import os
 import re
 import sys
+import pprint
 import shutil
 import stat
 import tempfile
@@ -355,11 +356,21 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.
         '''
         grain_path = os.path.join(TMP, 'file-grain-test')
-        self.run_function('grains.set', ['grain_path', grain_path])
+        set_grain_ret = self.run_function('grains.set', ['grain_path', grain_path])
         state_file = 'file-grainget'
 
-        self.run_function('state.sls', [state_file])
-        self.assertTrue(os.path.exists(grain_path))
+        # Sync grains
+        self.run_function('saltutil.sync_grains', refresh=True)
+
+        state_sls_ret = self.run_function('state.sls', [state_file])
+        self.assertTrue(
+            os.path.exists(grain_path),
+            msg='Path \'{}\' does not exist.\nReturn from \'grains.set\':\n{}\nReturn from \'state.sls\':\n{}'.format(
+                grain_path,
+                pprint.pformat(set_grain_ret),
+                pprint.pformat(state_sls_ret)
+            )
+        )
 
         with salt.utils.fopen(grain_path, 'r') as fp_:
             file_contents = fp_.readlines()
