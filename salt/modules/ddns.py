@@ -152,7 +152,7 @@ def delete_host(zone, name, nameserver='127.0.0.1', timeout=5, port=53,
 
 
 def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', timeout=5,
-           replace=False, port=53, **kwargs):
+           replace=False, replace_on_change=False, port=53, **kwargs):
     '''
     Add, replace, or update a DNS record.
     nameserver must be an IP address and the minion running this module
@@ -190,6 +190,15 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', timeout=5,
                 if len(answer.answer) >= 1 or len(rrset.items) >= 1:
                     is_exist = True
                     break
+
+    if replace_on_change:
+        # If there are multiple RRs we delete them and add our new one
+        if len(answer.answer) >= 2:
+            replace = True
+        # If there is one entry and it's not the one we expected replace it
+        elif len(answer.answer) == 1 and rdata not in rrset.items:
+            replace = True
+        # If there is no entry usual dns_update.add() happens
 
     dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname,
                                    keyalgorithm=keyalgorithm)
