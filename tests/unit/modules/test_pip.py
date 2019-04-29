@@ -2,18 +2,18 @@
 
 # Import python libs
 from __future__ import absolute_import
+
 import os
 import sys
 
-# Import Salt Testing libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-
+import salt.modules.pip as pip
 # Import salt libs
 import salt.utils.platform
-import salt.modules.pip as pip
 from salt.exceptions import CommandExecutionError
+# Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import skipIf, TestCase
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -802,6 +802,41 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     use_vt=False,
                     python_shell=False,
                 )
+
+    def test_install_extra_args_arguments_in_resulting_command(self):
+        pkg = 'pep8'
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(pkg, extra_args=[
+                {"--latest-pip-kwarg": "param"},
+                "--latest-pip-arg"
+            ])
+            expected = [
+                sys.executable, '-m', 'pip', 'install', pkg,
+                "--latest-pip-kwarg", "param", "--latest-pip-arg"
+            ]
+            mock.assert_called_with(
+                expected,
+                saltenv='base',
+                runas=None,
+                use_vt=False,
+                python_shell=False,
+            )
+
+    def test_install_extra_args_arguments_recursion_error(self):
+        pkg = 'pep8'
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+
+            self.assertRaises(TypeError, lambda: pip.install(
+                pkg, extra_args=[
+                    {"--latest-pip-kwarg": ["param1", "param2"]},
+                ]))
+
+            self.assertRaises(TypeError, lambda: pip.install(
+                pkg, extra_args=[
+                    {"--latest-pip-kwarg": [{"--too-deep": dict()}]},
+                ]))
 
     def test_uninstall_multiple_requirements_arguments_in_resulting_command(self):
         with patch('salt.modules.pip._get_cached_requirements') as get_cached_requirements:
