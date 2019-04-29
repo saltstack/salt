@@ -242,7 +242,7 @@ class CPModuleTest(ModuleCase):
         self.assertEqual(ret, False)
 
     @skipIf(not SSL3_SUPPORT, 'Requires python with SSL3 support')
-    @with_tempfile()
+    @with_tempfile
     def test_get_url_https(self, tgt):
         '''
         cp.get_url with https:// source given
