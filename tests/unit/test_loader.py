@@ -981,7 +981,7 @@ class LoaderGlobalsTest(ModuleCase):
             # only find salty globals
             if val.__module__.startswith('salt.loaded'):
                 if hasattr(val, '__globals__'):
-                    if '__wrapped__' in val.__globals__:
+                    if hasattr(val, '__wrapped__'):
                         global_vars.append(sys.modules[val.__module__].__dict__)
                     else:
                         global_vars.append(val.__globals__)
