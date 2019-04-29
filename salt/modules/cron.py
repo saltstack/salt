@@ -310,7 +310,7 @@ def raw_cron(user):
     if __grains__.get('os_family') in ('Solaris', 'AIX'):
         cmd = 'crontab -l'
         # Preserve line endings
-        lines = salt.utils.data.sdecode(
+        lines = salt.utils.data.decode(
             __salt__['cmd.run_stdout'](cmd,
                                        runas=user,
                                        ignore_retcode=True,
@@ -320,7 +320,7 @@ def raw_cron(user):
     elif _check_instance_uid_match(user):
         cmd = 'crontab -l'
         # Preserve line endings
-        lines = salt.utils.data.sdecode(
+        lines = salt.utils.data.decode(
             __salt__['cmd.run_stdout'](cmd,
                                        ignore_retcode=True,
                                        rstrip=False,
@@ -329,7 +329,7 @@ def raw_cron(user):
     elif _check_instance_uid_match('root'):
         cmd = 'crontab -u {0} -l'.format(user)
         # Preserve line endings
-        lines = salt.utils.data.sdecode(
+        lines = salt.utils.data.decode(
             __salt__['cmd.run_stdout'](cmd,
                                        ignore_retcode=True,
                                        rstrip=False,
@@ -338,7 +338,7 @@ def raw_cron(user):
     else:
         cmd = 'crontab -l'
         # Preserve line endings
-        lines = salt.utils.data.sdecode(
+        lines = salt.utils.data.decode(
             __salt__['cmd.run_stdout'](cmd,
                                        runas=user,
                                        ignore_retcode=True,
