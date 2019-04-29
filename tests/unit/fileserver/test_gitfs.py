@@ -79,7 +79,7 @@ def _clear_instance_map():
 
 
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
-class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
+class GitfsConfigTestBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         opts = {
@@ -148,6 +148,9 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
                 if exc.errno != errno.EEXIST:
                     raise
 
+
+@skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
+class GitfsConfigTestCase(GitfsConfigTestBase):
     def test_per_saltenv_config(self):
         opts_override = textwrap.dedent('''
             gitfs_root: salt
@@ -186,6 +189,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(git_fs.remotes[0].mountpoint('foo'), '')
         self.assertEqual(git_fs.remotes[0].ref('foo'), 'foo_branch')
         self.assertEqual(git_fs.remotes[0].root('foo'), 'foo_root')
+        self.assertEqual(git_fs.remotes[0].fallback_branch, None)
 
         # repo1 (branch: bar)
         # The 'bar' branch does not have a per-saltenv configuration set, so
@@ -193,6 +197,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(git_fs.remotes[0].mountpoint('bar'), '')
         self.assertEqual(git_fs.remotes[0].ref('bar'), 'bar')
         self.assertEqual(git_fs.remotes[0].root('bar'), 'salt')
+        self.assertEqual(git_fs.remotes[0].fallback_branch, None)
 
         # repo1 (branch: baz)
         # The 'baz' branch does not have a per-saltenv configuration set, but
@@ -201,6 +206,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(git_fs.remotes[0].mountpoint('baz'), 'baz_mountpoint')
         self.assertEqual(git_fs.remotes[0].ref('baz'), 'baz_branch')
         self.assertEqual(git_fs.remotes[0].root('baz'), 'baz_root')
+        self.assertEqual(git_fs.remotes[0].fallback_branch, None)
 
         # repo2 (branch: foo)
         # The mountpoint should take the per-remote mountpoint value of
@@ -208,6 +214,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(git_fs.remotes[1].mountpoint('foo'), 'repo2')
         self.assertEqual(git_fs.remotes[1].ref('foo'), 'foo')
         self.assertEqual(git_fs.remotes[1].root('foo'), 'salt')
+        self.assertEqual(git_fs.remotes[1].fallback_branch, None)
 
         # repo2 (branch: bar)
         # The 'bar' branch does not have a per-saltenv configuration set, so
@@ -216,6 +223,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(git_fs.remotes[1].mountpoint('bar'), 'repo2')
         self.assertEqual(git_fs.remotes[1].ref('bar'), 'bar')
         self.assertEqual(git_fs.remotes[1].root('bar'), 'salt')
+        self.assertEqual(git_fs.remotes[1].fallback_branch, None)
 
         # repo2 (branch: baz)
         # The 'baz' branch has the mountpoint configured as a per-saltenv
@@ -224,6 +232,43 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(git_fs.remotes[1].mountpoint('baz'), 'abc')
         self.assertEqual(git_fs.remotes[1].ref('baz'), 'baz_branch')
         self.assertEqual(git_fs.remotes[1].root('baz'), 'baz_root')
+        self.assertEqual(git_fs.remotes[1].fallback_branch, None)
+
+
+@skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
+class GitfsFallbackBranchTestCase(GitfsConfigTestBase):
+    def test_per_fallback_branch_config(self):
+        opts_override = textwrap.dedent('''
+            gitfs_fallback_branch: uwaga
+
+            gitfs_saltenv:
+              - baz:
+                # when loaded, the "salt://" prefix will be removed
+                - mountpoint: salt://baz_mountpoint
+                - ref: baz_branch
+                - root: baz_root
+            gitfs_remotes:
+
+              - file://tmp/repo3
+              - file://tmp/repo4:
+                - fallback_branch: foo
+        ''')
+        with patch.dict(gitfs.__opts__, salt.utils.yaml.safe_load(opts_override)):
+            git_fs = salt.utils.gitfs.GitFS(
+                gitfs.__opts__,
+                gitfs.__opts__['gitfs_remotes'],
+                per_remote_overrides=gitfs.PER_REMOTE_OVERRIDES,
+                per_remote_only=gitfs.PER_REMOTE_ONLY)
+
+            # Test if fallback_branch resolves to a the specified branch per
+            # env.
+            self.assertEqual(git_fs.remotes[0].fallback_branch, 'uwaga')
+            self.assertEqual(git_fs.remotes[0].ref('uwaga'), 'uwaga')
+            self.assertEqual(git_fs.remotes[0].ref('baz'), 'baz_branch')
+            #
+            self.assertEqual(git_fs.remotes[1].fallback_branch, 'foo')
+            self.assertEqual(git_fs.remotes[1].ref('uwaga'), 'foo')
+            self.assertEqual(git_fs.remotes[1].ref('baz'), 'baz_branch')
 
 
 LOAD = {'saltenv': 'base'}
@@ -380,6 +425,55 @@ class GitFSTestFuncs(object):
             # Since we are restricting to tags only, the tag should appear in
             # the envs list, but the branches should not.
             self.assertEqual(ret, ['base', 'world'])
+
+    def test_fallback_branch_defined_globally_and_locally(self):
+        '''
+        Test the gitfs_fallback_branch config option set both globally and
+        locally.
+        '''
+        opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
+            gitfs_fallback_branch: master
+            gitfs_remotes:
+              - file://{0}:
+                - fallback_branch: stable
+            '''.format(self.tmp_repo_dir)))
+        with patch.dict(gitfs.__opts__, opts):
+            gitfs.update()
+            ret = gitfs.__opts__['gitfs_remotes']
+            ret = ret[0][list(ret[0].keys())[0]][0]['fallback_branch']
+            self.assertEqual(ret, 'stable')
+            ret = gitfs.__opts__['gitfs_fallback_branch']
+            self.assertEqual(ret, 'master')
+
+    def test_fallback_branch_defined_globally(self):
+        '''
+        Test the gitfs_fallback_branch config option set globally
+        '''
+        opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
+            gitfs_fallback_branch: live
+            gitfs_remotes:
+              - file://{0}:
+                - root: foo
+            '''.format(self.tmp_repo_dir)))
+        with patch.dict(gitfs.__opts__, opts):
+            gitfs.update()
+            ret = gitfs.__opts__['gitfs_fallback_branch']
+            self.assertEqual(ret, 'live')
+
+    def test_fallback_branch_defined_locally(self):
+        '''
+        Test the gitfs_fallback_branch config option.
+        '''
+        opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
+            gitfs_remotes:
+              - file://{0}:
+                - fallback_branch: 'love'
+            '''.format(self.tmp_repo_dir)))
+        with patch.dict(gitfs.__opts__, opts):
+            gitfs.update()
+            ret = gitfs.__opts__['gitfs_remotes']
+            ret = ret[0][list(ret[0].keys())[0]][0]['fallback_branch']
+            self.assertEqual(ret, 'love')
 
 
 class GitFSTestBase(object):
