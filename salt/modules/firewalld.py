@@ -918,6 +918,29 @@ def remove_interface(zone, interface, permanent=True):
     return __firewall_cmd(cmd)
 
 
+def change_interface(zone, interface, permanent=True):
+    '''
+    Change zone the interface bound to
+
+    .. versionadded:: 2019.?.?
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.change_interface zone eth0
+    '''
+    if interface in get_interfaces(zone, permanent):
+        log.info('Interface is already bound to zone.')
+
+    cmd = '--zone={0} --change-interface={1}'.format(zone, interface)
+
+    if permanent:
+        cmd += ' --permanent'
+
+    return __firewall_cmd(cmd)
+
+
 def get_sources(zone, permanent=True):
     """
     List sources bound to a zone
