@@ -147,7 +147,7 @@ pdf: check_sphinx-build translations
 	fi
 	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) $(BUILDDIR)/latex
 	@echo "Running LaTeX files through xelatex..."
-	$(MAKE) -C $(BUILDDIR)/latex -i "PDFLATEX=latexmk" "LATEXMKOPTS=-xelatex -interaction=nonstopmode -f"
+	$(MAKE) -C $(BUILDDIR)/latex -i "PDFLATEX=latexmk" "LATEXMKOPTS=-xelatex -interaction=nonstopmode -f -quiet"
 	@echo "xelatex finished; the PDF files are in $(BUILDDIR)/latex."
 
 cheatsheet: translations
