@@ -14,8 +14,8 @@ jsonschema<=2.6.0
 junos-eznc
 jxmlease
 keyring==5.7.1
-kubernetes<=4.0
-mock>=2.0.0; python_version < '3.0'
+kubernetes<4.0
+mock>=2.0.0; python_version < '3.6'
 more-itertools==5.0.0
 moto
 msgpack-python >= 0.4.2, != 0.5.5
