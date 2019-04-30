@@ -42,7 +42,7 @@ from distro import linux_distribution
 from salt.ext import six
 from salt.ext.six.moves import range
 
-from multiprocessing.dummy import Pool as ThreadPool
+from multiprocessing.pool import ThreadPool
 
 try:
     import dateutil.tz  # pylint: disable=import-error
@@ -2379,10 +2379,14 @@ def fqdns():
     # Create a ThreadPool to process the underlying calls to 'socket.gethostbyaddr' in parallel.
     # This avoid blocking the execution when the "fqdn" is not defined for certains IP addresses, which was causing
     # that "socket.timeout" was reached multiple times secuencially, blocking execution for several seconds.
-    pool = ThreadPool(8)
-    results = pool.map(_lookup_fqdn, addresses)
-    pool.close()
-    pool.join()
+
+    try:
+       pool = ThreadPool(8)
+       results = pool.map(_lookup_fqdn, addresses)
+       pool.close()
+       pool.join()
+    except Exception as exc:
+       log.error("Exception while creating a ThreadPool for resolving FQDNs: %s", exc)
 
     for item in results:
         if item:
