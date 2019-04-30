@@ -34,7 +34,7 @@ def _check_preservecase_option(**options):
         options.pop('preserve_case')
     return options, preserve_case
 
-    
+
 def deserialize(stream_or_string, **options):
     '''
     Deserialize any string or stream like object into a Python data structure.

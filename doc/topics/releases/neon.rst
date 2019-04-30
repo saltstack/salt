@@ -410,8 +410,9 @@ Serializer Changes
 - The configparser serializer and deserializer functions can now be made to preserve
   case of item names by passing 'preserve_case=True' in the options parameter of the function.
 
-  .. note:: This is a parameter consumed only by the salt.serializer.configparser serialize and
-  deserialize functions and not the low-level configparser python object.
+  .. note::
+      This is a parameter consumed only by the salt.serializer.configparser serialize and
+      deserialize functions and not the low-level configparser python object.
 
   For example, in a file.serialze state:
 
