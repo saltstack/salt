@@ -497,7 +497,6 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
 
-
     def test_zeromq_zeromq_filtering_decode_message_no_match(self):
         '''
         test AsyncZeroMQPubChannel _decode_messages when
@@ -585,7 +584,6 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         gather.join()
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
-
 
     def test_publish_to_pubserv_tcp(self):
         '''
