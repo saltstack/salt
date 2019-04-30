@@ -63,7 +63,7 @@ def make_hashable(list_grain, result=None):
     result = result or set()
     for sublist in list_grain:
         if type(sublist) == list:
-            make_hashable(sublist,result)
+            make_hashable(sublist, result)
         else:
             result.add(frozenset(sublist))
     return result
