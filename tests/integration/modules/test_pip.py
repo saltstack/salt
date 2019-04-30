@@ -28,8 +28,13 @@ class PipModuleTest(ModuleCase):
 
     def setUp(self):
         super(PipModuleTest, self).setUp()
+
         # Restore the environ
-        self.addCleanup(os.environ.update, os.environ.copy())
+        def cleanup_environ(environ):
+            os.environ.clear()
+            os.environ.update(environ)
+
+        self.addCleanup(cleanup_environ, os.environ.copy())
 
         self.venv_test_dir = tempfile.mkdtemp(dir=TMP)
         # Remove the venv test directory
