@@ -32,9 +32,9 @@ class PipModuleTest(ModuleCase):
         super(PipModuleTest, self).setUp()
 
         # Restore the environ
-        def cleanup_environ(envcopy):
+        def cleanup_environ(environ):
             os.environ.clear()
-            os.environ.update(envcopy)
+            os.environ.update(environ)
 
         self.addCleanup(cleanup_environ, os.environ.copy())
 

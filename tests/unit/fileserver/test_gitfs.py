@@ -405,39 +405,40 @@ class GitFSTestBase(object):
 
         username_key = str('USERNAME')
         orig_username = os.environ.get(username_key)
-        try:
-            if username_key not in os.environ:
-                try:
-                    if salt.utils.platform.is_windows():
-                        os.environ[username_key] = \
-                            salt.utils.win_functions.get_current_user()
-                    else:
-                        os.environ[username_key] = \
-                            pwd.getpwuid(os.geteuid()).pw_name
-                except AttributeError:
-                    log.error(
-                        'Unable to get effective username, falling back to '
-                        '\'root\'.'
-                    )
-                    os.environ[username_key] = str('root')
+        if username_key not in os.environ:
 
-            repo.index.add([x for x in os.listdir(TMP_REPO_DIR)
-                            if x != '.git'])
-            repo.index.commit('Test')
+            def cleanup_environ(environ):
+                os.environ.clear()
+                os.environ.update(environ)
 
-            # Add another branch with unicode characters in the name
-            repo.create_head(UNICODE_ENVNAME, 'HEAD')
+            self.addCleanup(cleanup_environ, os.environ.copy())
 
-            # Add a tag
-            repo.create_tag(TAG_NAME, 'HEAD')
-            # Older GitPython versions do not have a close method.
-            if hasattr(repo, 'close'):
-                repo.close()
-        finally:
-            if orig_username is not None:
-                os.environ[username_key] = orig_username
-            else:
-                os.environ.pop(username_key, None)
+            try:
+                if salt.utils.platform.is_windows():
+                    os.environ[username_key] = \
+                        salt.utils.win_functions.get_current_user()
+                else:
+                    os.environ[username_key] = \
+                        pwd.getpwuid(os.geteuid()).pw_name
+            except AttributeError:
+                log.error(
+                    'Unable to get effective username, falling back to '
+                    '\'root\'.'
+                )
+                os.environ[username_key] = str('root')
+
+        repo.index.add([x for x in os.listdir(TMP_REPO_DIR)
+                        if x != '.git'])
+        repo.index.commit('Test')
+
+        # Add another branch with unicode characters in the name
+        repo.create_head(UNICODE_ENVNAME, 'HEAD')
+
+        # Add a tag
+        repo.create_tag(TAG_NAME, 'HEAD')
+        # Older GitPython versions do not have a close method.
+        if hasattr(repo, 'close'):
+            repo.close()
 
     @classmethod
     def tearDownClass(cls):
