@@ -60,13 +60,13 @@ def make_hashable(list_grain, result=None):
     Make it possible to compare two list grains to each other if the list
     contains complex objects.
     '''
-    result = result or list()
+    result = result or set()
     for sublist in list_grain:
         if type(sublist) == list:
-            make_hashable(sublist, result)
+            make_hashable(sublist,result)
         else:
-            result.append(frozenset(sublist))
-    return set(result)
+            result.add(frozenset(sublist))
+    return result
 
 
 def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):

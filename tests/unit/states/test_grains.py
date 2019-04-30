@@ -104,8 +104,8 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_make_hashable(self):
         with self.setGrains({'cmplx_lst_grain': [{'a': 'aval'}, {'foo': 'bar'}]}):
-            hashable_list = grains.make_hashable([{'a': 'aval'}, {'foo': 'bar'}])
-            self.assertEqual(hashable_list.issubset(grains.make_hashable(grains.__grains__)), True)
+            hashable_list = {'cmplx_lst_grain': [{'a': 'aval'}, {'foo': 'bar'}]}
+            self.assertEqual(grains.make_hashable(grains.__grains__).issubset(grains.make_hashable(hashable_list)), True)
 
     # 'present' function tests: 12
 
