@@ -76,7 +76,7 @@ def ext_pillar(
     :param list fieldnames: (Optional) if the first row of the CSV is not
         column names they may be specified here instead.
     '''
-    with salt.utils.files.fopen(path, 'rb') as f:
+    with salt.utils.files.fopen(path, 'r') as f:
         sheet = csv.DictReader(f, fieldnames,
                 restkey=restkey, restval=restval, dialect=dialect)
 
