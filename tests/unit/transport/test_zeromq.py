@@ -436,7 +436,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         del self.process_manager
 
     @staticmethod
-    def _gather_results(opts, pub_uri, results, timeout=20, messages=None):
+    def _gather_results(opts, pub_uri, results, timeout=120, messages=None):
         '''
         Gather results until then number of seconds specified by timeout passes
         without reveiving a message
