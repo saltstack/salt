@@ -344,7 +344,7 @@ def purge(name=None, pkgs=None, **kwargs):
     return remove(name=name, pkgs=pkgs, purge=True)
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
 
