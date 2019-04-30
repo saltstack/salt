@@ -350,7 +350,7 @@ def _get_svc_path(name='*', status=None):
     ena = set()
     for el in glob.glob(os.path.join(SERVICE_DIR, name)):
         if _is_svc(el):
-            ena.add(os.readlink(el))
+            ena.add(os.readlink(el) if os.path.islink(el) else el)
             log.trace('found enabled service path: %s', el)
 
     if status == 'ENABLED':
