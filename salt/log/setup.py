@@ -83,6 +83,10 @@ class SaltLogQueueHandler(QueueHandler):
     Subclassed just to differentiate when debugging
     """
 
+    def prepare(self, record):
+        record = QueueHandler.prepare(self, record)
+        return record.__dict__.copy()
+
 
 @_deprecated_warning
 def getLogger(name):
