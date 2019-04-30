@@ -275,7 +275,7 @@ class SREQTestCase(TestCase):
         idata = {dtvalue: 'strval'}
         sdata = payload.dumps(idata.copy())
         odata = payload.loads(sdata, encoding=None)
-        assert isinstance(odata[dtvalue], six.binary_type)
+        assert isinstance(odata[dtvalue], six.string_types)
 
     def test_raw_vs_encoding_utf8(self):
         '''
