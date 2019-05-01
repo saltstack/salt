@@ -192,6 +192,9 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
             for policy_list in lb_policy_lists:
                 policies += [p.policy_name for p in policy_list]
             ret["policies"] = policies
+            ret["canonical_hosted_zone_name"] = lb.canonical_hosted_zone_name
+            ret["canonical_hosted_zone_name_id"] = lb.canonical_hosted_zone_name_id
+            ret["vpc_id"] = lb.vpc_id
             return ret
         except boto.exception.BotoServerError as error:
             if error.error_code == "Throttling":
