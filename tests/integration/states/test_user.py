@@ -270,6 +270,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_state('user.absent', name=self.user_name)
         )
 
+
 @destructiveTest
 @skip_if_not_root
 @skipIf(not salt.utils.platform.is_windows(), 'Windows only tests')
@@ -277,7 +278,6 @@ class WinUserTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     test for user absent
     '''
-
     def tearDown(self):
         self.assertSaltTrueReturn(
             self.run_state('user.absent', name=USER)
