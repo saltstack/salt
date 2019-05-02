@@ -56,7 +56,9 @@ def _init_libcrypto():
     libcrypto = _load_libcrypto()
 
     try:
-        libcrypto.OPENSSL_init_crypto()
+        # If we're greater than OpenSSL 1.1.0, no need to to the init
+        if libcrypto.OpenSSL_version_num < 0x10100000L:
+            libcrypto.OPENSSL_init_crypto()
     except AttributeError:
         # Support for OpenSSL < 1.1 (OPENSSL_API_COMPAT < 0x10100000L)
         libcrypto.OPENSSL_no_config()
