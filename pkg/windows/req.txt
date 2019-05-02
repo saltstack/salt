@@ -36,4 +36,5 @@ singledispatch==3.4.0.3
 smmap==0.9.0
 timelib==0.2.4
 tornado==4.5.3
+watchdog==0.9.0
 wheel==0.33.4
