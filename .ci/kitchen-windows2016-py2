@@ -68,19 +68,17 @@ timeout(time: 6, unit: 'HOURS') {
                                 }
                                 archiveArtifacts artifacts: 'artifacts/*,artifacts/**/*'
                             }
-                            /* Code coverage uploads disabled because we're not running the full test suite
                             stage('report code coverage') {
                                 script {
                                     withCredentials([[$class: 'StringBinding', credentialsId: 'codecov-upload-token-salt', variable: 'CODECOV_TOKEN']]) {
                                       sh '''
-                                      if [ -f artifacts/coverage/coverage.xml ]; then
+                                      if [ -n "${FORCE_FULL}" -a "${FORCE_FULL}" = "true" -a -f artifacts/coverage/coverage.xml ]; then
                                           curl -L https://codecov.io/bash | /bin/sh -s -- -R $(pwd) -s artifacts/coverage/ -F "${CODECOV_FLAGS}"
                                       fi
                                       '''
                                     }
                                 }
                             }
-                            */
                         }
                     } catch (Exception e) {
                         currentBuild.result = 'FAILURE'
@@ -115,3 +113,5 @@ timeout(time: 6, unit: 'HOURS') {
         }
     }
 }
+
+// vi: ft=groovy
