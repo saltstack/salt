@@ -218,8 +218,8 @@ def get(key, default='', delimiter=':', merge=None, omit_opts=False,
     '''
     .. versionadded: 0.14.0
 
-    Attempt to retrieve the named value from the minion config file, pillar,
-    grains or the master config. If the named value is not available, return the
+    Attempt to retrieve the named value from the minion config file, grains,
+    pillar or the master config. If the named value is not available, return the
     value specified by ``default``. If not specified, the default is an empty
     string.
 
