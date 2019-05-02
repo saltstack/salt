@@ -76,7 +76,6 @@ def _salt_configuration_error(filename):
 
 class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
-
     def _cleanup_environ(self, environ):
         os.environ.clear()
         os.environ.update(environ)
