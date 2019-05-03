@@ -25,7 +25,7 @@ timeout(time: 6, unit: 'HOURS') {
                     'PATH=/usr/local/rbenv/shims/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin:/root/bin',
                     'RBENV_VERSION=2.4.2',
                     'TEST_SUITE=py2',
-                    'TEST_PLATFORM=fedora28',
+                    'TEST_PLATFORM=fedora-28',
                     'PY_COLORS=1',
                     "FORCE_FULL=${params.runFull}",
                 ]) {
