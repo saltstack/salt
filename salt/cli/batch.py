@@ -46,7 +46,6 @@ def get_bnum(opts, minions, quiet):
                       'form of %10, 10% or 3'.format(opts['batch']))
 
 
-
 def batch_get_opts(
         tgt,
         fun,
