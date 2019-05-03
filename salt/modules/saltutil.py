@@ -920,7 +920,7 @@ def sync_pillar(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
 
 def sync_executors(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: neon
+    .. versionadded:: 2019.2.1
 
     Sync executors from ``salt://_executors`` to the minion
 
