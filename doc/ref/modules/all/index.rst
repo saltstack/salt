@@ -142,6 +142,7 @@ execution modules
     extfs
     file
     firewalld
+    flatpak
     freebsd_sysctl
     freebsd_update
     freebsdjail
