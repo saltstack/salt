@@ -47,23 +47,25 @@ Connection module for Amazon EFS
 
 :depends: boto3
 '''
-# keep lint from choking on Unused argument 'kwargs' (unused-argument).
-# pylint: disable=W0612,W0613
+
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+from __future__ import absolute_import
 import logging
+import time
 
 
-# Import salt libs
-import salt.utils.versions
 # Import 3rd-party libs
-from salt.ext import six
+import salt.ext.six as six
 try:
     import boto3
+    from botocore.exceptions import WaiterError
     HAS_BOTO3 = True
 except ImportError:
     HAS_BOTO3 = False
+
+# Import salt libs
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -73,10 +75,18 @@ def __virtual__():
     Only load if boto3 libraries exist and if boto3 libraries are greater than
     a given version.
     '''
-    return salt.utils.versions.check_boto_reqs(
-        boto3_ver='1.0.0',
-        check_boto=False
-    )
+
+    required_boto_version = '1.0.0'
+
+    if not HAS_BOTO3:
+        return (False, "The boto3.efs module cannot be loaded: " +
+                "boto3 library not found")
+    elif _LooseVersion(boto3.__version__) < \
+         _LooseVersion(required_boto_version):
+        return (False, "The boto3.efs module cannot be loaded:" +
+                "boto3 library version incorrect")
+    else:
+        return True
 
 
 def _get_conn(key=None,
@@ -89,7 +99,7 @@ def _get_conn(key=None,
     '''
     client = None
     if profile:
-        if isinstance(profile, six.string_types):
+        if isinstance(profile, str):
             if profile in __pillar__:
                 profile = __pillar__[profile]
             elif profile in __opts__:
@@ -127,7 +137,6 @@ def create_file_system(name,
                        key=None,
                        profile=None,
                        region=None,
-                       creation_token=None,
                        **kwargs):
     '''
     Creates a new, empty file system.
@@ -139,24 +148,19 @@ def create_file_system(name,
         (string) - The PerformanceMode of the file system. Can be either
         generalPurpose or maxIO
 
-    creation_token
-        (string) - A unique name to be used as reference when creating an EFS.
-        This will ensure idempotency. Set to name if not specified otherwise
-
     returns
         (dict) - A dict of the data for the elastic file system
 
     CLI Example:
 
-    .. code-block:: bash
+    .. code-block::
 
         salt 'my-minion' boto_efs.create_file_system efs-name generalPurpose
     '''
-
-    if creation_token is None:
-        creation_token = name
-
-    tags = {"Key": "Name", "Value": name}
+    import os
+    import base64
+    creation_token = base64.b64encode(os.urandom(46), ['-', '_'])
+    tags = [{"Key": "Name", "Value": name}]
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
@@ -169,9 +173,13 @@ def create_file_system(name,
     if 'Name' in response:
         response['Name'] = name
 
-    waiter = client.get_waiter('efs_available')
+    waiter = __utils__['boto3_efs_waiter.get_waiter'](client, 'EfsAvailable',
+                        keyid=keyid,
+                        key=key,
+                        profile=profile,
+                        region=region,
+            ) 
     waiter.wait(CreationToken=creation_token)
-
     return response
 
 
@@ -217,7 +225,7 @@ def create_mount_target(filesystemid,
 
     CLI Example:
 
-    .. code-block:: bash
+    .. code-block::
 
         salt 'my-minion' boto_efs.create_mount_target filesystemid subnetid
     '''
@@ -225,34 +233,31 @@ def create_mount_target(filesystemid,
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     if ipaddress is None and securitygroups is None:
-        res = client.create_mount_target(
-                FileSystemId=filesystemid,
-                SubnetId=subnetid)
+        res = client.create_mount_target(FileSystemId=filesystemid,
+                                          SubnetId=subnetid)
 
     elif ipaddress is None:
-        res = client.create_mount_target(
-                FileSystemId=filesystemid,
-                SubnetId=subnetid,
-                SecurityGroups=securitygroups)
-
+        res = client.create_mount_target(FileSystemId=filesystemid,
+                                          SubnetId=subnetid,
+                                          SecurityGroups=securitygroups)
     elif securitygroups is None:
-        res = client.create_mount_target(
-                FileSystemId=filesystemid,
-                SubnetId=subnetid,
-                IpAddress=ipaddress)
-
+        res = client.create_mount_target(FileSystemId=filesystemid,
+                                          SubnetId=subnetid,
+                                          IpAddress=ipaddress)
     else:
-        res = client.create_mount_target(
-                FileSystemId=filesystemid,
-                SubnetId=subnetid,
-                IpAddress=ipaddress,
-                SecurityGroups=securitygroups)
+        res = client.create_mount_target(FileSystemId=filesystemid,
+                                          SubnetId=subnetid,
+                                          IpAddress=ipaddress,
+                                          SecurityGroups=securitygroups)
 
-    waiter = client.get_waiter('mount_target_available')
+    waiter = __utils__['boto3_efs_waiter.get_waiter'](client, 'MountTargetAvailable',
+                        keyid=keyid,
+                        key=key,
+                        profile=profile,
+                        region=region,
+            ) 
     waiter.wait(MountTargetId=res['MountTargetId'])
-
     return res
-
 
 def create_tags(filesystemid,
                 tags,
@@ -275,7 +280,7 @@ def create_tags(filesystemid,
 
     CLI Example:
 
-    .. code-block:: bash
+    .. code-block::
 
         salt 'my-minion' boto_efs.create_tags
     '''
@@ -283,8 +288,8 @@ def create_tags(filesystemid,
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     new_tags = []
-    for k__, v__ in six.iteritems(tags):
-        new_tags.append({'Key': k__, 'Value': v__})
+    for k, v in six.iteritems(tags):
+        new_tags.append({'Key': k, 'Value': v})
 
     client.create_tags(FileSystemId=filesystemid, Tags=new_tags)
 
@@ -307,27 +312,35 @@ def delete_file_system(filesystemid,
 
     CLI Example:
 
-    .. code-block:: bash
+    .. code-block::
 
         salt 'my-minion' boto_efs.delete_file_system filesystemid
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
     res = client.delete_file_system(FileSystemId=filesystemid)
+
+    waiter = __utils__['boto3_efs_waiter.get_waiter'](client, 'EfsDeleted',
+                        keyid=keyid,
+                        key=key,
+                        profile=profile,
+                        region=region,
+            ) 
     try:
-        waiter = client.get_waiter('efs_deleted')
         waiter.wait(FileSystemId=filesystemid)
-    except boto3.exceptions.botocore.exceptions.WaiterError:
-        pass
+    except WaiterError as exp:
+        if exp.__str__().endswith('does not exist.'):
+            return True
+        return False, exp.__str__()
     return res
 
 
 def delete_mount_target(mounttargetid,
-                        keyid=None,
-                        key=None,
-                        profile=None,
-                        region=None,
-                        **kwargs):
+                       keyid=None,
+                       key=None,
+                       profile=None,
+                       region=None,
+                       **kwargs):
     '''
     Deletes the specified mount target.
 
@@ -346,20 +359,26 @@ def delete_mount_target(mounttargetid,
 
     CLI Example:
 
-    .. code-block:: bash
+    .. code-block::
 
         salt 'my-minion' boto_efs.delete_mount_target mounttargetid
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
-
     res = client.delete_mount_target(MountTargetId=mounttargetid)
 
+    waiter = __utils__['boto3_efs_waiter.get_waiter'](client, 'MountTargetDeleted',
+                        keyid=keyid,
+                        key=key,
+                        profile=profile,
+                        region=region,
+            ) 
     try:
-        waiter = client.get_waiter('mount_target_deleted')
         waiter.wait(MountTargetId=mounttargetid)
-    except boto3.exceptions.botocore.exceptions.WaiterError:
-        pass
+    except WaiterError as exp:
+        if exp.__str__().endswith('Mount target does not exist.'):
+            return True
+        return False, exp.__str__()
     return res['ResponseMetadata']['HTTPStatusCode'] == 204
 
 
@@ -381,7 +400,7 @@ def delete_tags(filesystemid,
 
     CLI Example:
 
-    .. code-block:: bash
+    .. code-block::
 
         salt 'my-minion' boto_efs.delete_tags
     '''
@@ -396,7 +415,6 @@ def get_file_systems(filesystemid=None,
                      key=None,
                      profile=None,
                      region=None,
-                     creation_token=None,
                      **kwargs):
     '''
     Get all EFS properties or a specific instance property
@@ -405,18 +423,12 @@ def get_file_systems(filesystemid=None,
     filesystemid
         (string) - ID of the file system to retrieve properties
 
-    creation_token
-        (string) - A unique token that identifies an EFS.
-        If fileysystem created via create_file_system this would
-        either be explictitly passed in or set to name.
-        You can limit your search with this.
-
     returns
         (list[dict]) - list of all elastic file system properties
 
     CLI Example:
 
-    .. code-block:: bash
+    .. code-block::
 
         salt 'my-minion' boto_efs.get_file_systems efs-id
     '''
@@ -424,15 +436,8 @@ def get_file_systems(filesystemid=None,
     result = None
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
-    if filesystemid and creation_token:
-        response = client.describe_file_systems(FileSystemId=filesystemid,
-                                                CreationToken=creation_token)
-        result = response["FileSystems"]
-    elif filesystemid:
+    if filesystemid:
         response = client.describe_file_systems(FileSystemId=filesystemid)
-        result = response["FileSystems"]
-    elif creation_token:
-        response = client.describe_file_systems(CreationToken=creation_token)
         result = response["FileSystems"]
     else:
         response = client.describe_file_systems()
@@ -472,7 +477,7 @@ def get_mount_targets(filesystemid=None,
 
     CLI Example:
 
-    .. code-block:: bash
+    .. code-block::
 
         salt 'my-minion' boto_efs.get_mount_targets
     '''
@@ -484,9 +489,8 @@ def get_mount_targets(filesystemid=None,
         response = client.describe_mount_targets(FileSystemId=filesystemid)
         result = response["MountTargets"]
         while "NextMarker" in response:
-            response = client.describe_mount_targets(
-                    FileSystemId=filesystemid,
-                    Marker=response["NextMarker"])
+            response = client.describe_mount_targets(FileSystemId=filesystemid,
+                                                 Marker=response["NextMarker"])
             result.extend(response["MountTargets"])
     elif mounttargetid:
         response = client.describe_mount_targets(MountTargetId=mounttargetid)
@@ -512,7 +516,7 @@ def get_tags(filesystemid,
 
     CLI Example:
 
-    .. code-block:: bash
+    .. code-block::
 
         salt 'my-minion' boto_efs.get_tags efs-id
     '''
@@ -546,7 +550,7 @@ def set_security_groups(mounttargetid,
 
     CLI Example:
 
-    .. code-block:: bash
+    .. code-block::
 
         salt 'my-minion' boto_efs.set_security_groups my-mount-target-id my-sec-group
     '''
@@ -554,3 +558,4 @@ def set_security_groups(mounttargetid,
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
     client.modify_mount_target_security_groups(MountTargetId=mounttargetid,
                                                SecurityGroups=securitygroup)
+
