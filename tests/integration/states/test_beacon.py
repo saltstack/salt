@@ -21,10 +21,12 @@ class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         '''
         '''
-        self.run_function('beacons.reset', f_timeout=300)
+        self.run_function('beacons.reset')
+        self.wait_for_all_jobs()
 
     def tearDown(self):
-        self.run_function('beacons.reset', f_timeout=300)
+        self.run_function('beacons.reset')
+        self.wait_for_all_jobs()
 
     def test_present_absent(self):
         kwargs = {'/': '38%', 'interval': 5}
