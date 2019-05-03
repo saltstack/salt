@@ -86,7 +86,7 @@ def _pshell(cmd, cwd=None, depth=2):
     log.debug('DSC: %s', cmd)
 
     results = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd, python_shell=True)
-    
+
     if 'pid' in results:
         del results['pid']
 
