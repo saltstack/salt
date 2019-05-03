@@ -4,12 +4,12 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-import pprint
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase, ShellCase
 
 log = logging.getLogger(__name__)
+
 
 class ExecutorTest(ModuleCase, ShellCase):
 
