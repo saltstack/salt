@@ -83,11 +83,15 @@ def _pshell(cmd, cwd=None, depth=2):
     log.debug('DSC: %s', cmd)
 
     results = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd, python_shell=True)
+    
+    if 'pid' in results:
+        del results['pid']
 
     if 'retcode' not in results or results['retcode'] != 0:
         # run_all logs an error to log.error, fail hard back to the user
         raise CommandExecutionError('Issue executing powershell {0}'.format(cmd), info=results)
     
+    xml.etree.ElementTree.fromstring(bytes(results['stdout'], encoding = 'utf-8'))
     try:
         ret = _ps_xml_to_dict(xml.etree.ElementTree.fromstring(bytes(results['stdout'], encoding = 'utf-8')))
     except xml.etree.ElementTree.ParseError:
