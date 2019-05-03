@@ -2,6 +2,7 @@
 '''
     :codeauthor: Jochen Breuer <jbreuer@suse.de>
 '''
+# pylint: disable=no-value-for-parameter
 
 # Import Python Libs
 from __future__ import absolute_import
@@ -18,7 +19,7 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-from salt.modules import kubernetes
+from salt.modules import kubernetesmod as kubernetes
 
 
 @contextmanager
@@ -28,7 +29,7 @@ def mock_kubernetes_library():
     it caused kubernetes._cleanup() to get called for virtually every
     test, which blows up. This prevents that specific blow-up once
     """
-    with patch('salt.modules.kubernetes.kubernetes') as mock_kubernetes_lib:
+    with patch('salt.modules.kubernetesmod.kubernetes') as mock_kubernetes_lib:
         mock_kubernetes_lib.client.configuration.ssl_ca_cert = ''
         mock_kubernetes_lib.client.configuration.cert_file = ''
         mock_kubernetes_lib.client.configuration.key_file = ''
@@ -40,7 +41,7 @@ def mock_kubernetes_library():
                                  "Skipping test_kubernetes.py")
 class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
     '''
-    Test cases for salt.modules.kubernetes
+    Test cases for salt.modules.kubernetesmod
     '''
 
     def setup_loader_modules(self):
@@ -114,7 +115,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         with mock_kubernetes_library() as mock_kubernetes_lib:
-            with patch('salt.modules.kubernetes.show_deployment', Mock(return_value=None)):
+            with patch('salt.modules.kubernetesmod.show_deployment', Mock(return_value=None)):
                 with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
                     mock_kubernetes_lib.client.V1DeleteOptions = Mock(return_value="")
                     mock_kubernetes_lib.client.ExtensionsV1beta1Api.return_value = Mock(
@@ -164,7 +165,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         Test kubernetes.node_labels
         :return:
         '''
-        with patch('salt.modules.kubernetes.node') as mock_node:
+        with patch('salt.modules.kubernetesmod.node') as mock_node:
             mock_node.return_value = {
                 'metadata': {
                     'labels': {
@@ -184,7 +185,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         kubectl [apply|create|replace] --record does
         :return:
         '''
-        with patch('salt.modules.kubernetes.sys.argv', ['/usr/bin/salt-call', 'state.apply']) as mock_sys:
+        with patch('salt.modules.kubernetesmod.sys.argv', ['/usr/bin/salt-call', 'state.apply']) as mock_sys:
             func = getattr(kubernetes, '__dict_to_object_meta')
             data = func(name='test-pod', namespace='test', metadata={})
 
