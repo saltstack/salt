@@ -14,6 +14,9 @@ class MineTest(ModuleCase):
     '''
     Test the mine system
     '''
+    def setUp(self):
+        self.wait_for_all_jobs()
+
     def test_get(self):
         '''
         test mine.get and mine.update
