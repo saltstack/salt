@@ -17,6 +17,7 @@ import xml.etree.ElementTree
 # Import Salt libs
 import salt.utils.platform
 import salt.utils.versions
+from salt.exceptions import CommandExecutionError
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ def __virtual__():
         return False, 'Module PSGet: Requires PowerShell 5 or newer.'
 
     return __virtualname__
+
 
 def _ps_xml_to_dict(parent, dic=None):
     '''
@@ -79,7 +81,7 @@ def _pshell(cmd, cwd=None, depth=2):
     Execute the desired powershell command and ensure that it returns data
     in Xml format and load that into python
     '''
-    
+
     cmd = '{0} | ConvertTo-Xml -Depth {1} -As \"stream\"'.format(cmd, depth)
     log.debug('DSC: %s', cmd)
 
