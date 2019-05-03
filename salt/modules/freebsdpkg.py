@@ -238,7 +238,7 @@ def version(*names, **kwargs):
     ])
 
 
-def refresh_db():
+def refresh_db(**kwargs):
     '''
     ``pkg_add(1)`` does not use a local database of available packages, so this
     function simply returns ``True``. it exists merely for API compatibility.
@@ -503,7 +503,7 @@ def _rehash():
         __salt__['cmd.shell']('rehash', output_loglevel='trace')
 
 
-def file_list(*packages):
+def file_list(*packages, **kwargs):
     '''
     List the files that belong to a package. Not specifying any packages will
     return a list of _every_ file on the system's package database (not
@@ -525,7 +525,7 @@ def file_list(*packages):
     return ret
 
 
-def file_dict(*packages):
+def file_dict(*packages, **kwargs):
     '''
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of _every_ file on the

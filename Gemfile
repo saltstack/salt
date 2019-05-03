@@ -25,3 +25,9 @@ group :vagrant do
   gem 'vagrant-wrapper'
   gem 'kitchen-vagrant'
 end
+
+group :macos do
+  gem 'rbnacl', '< 5.0', :require => false
+  gem 'rbnacl-libsodium', :require => false
+  gem 'bcrypt_pbkdf', '< 2.0', :require => false
+end
