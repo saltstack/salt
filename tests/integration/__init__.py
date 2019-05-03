@@ -1040,7 +1040,10 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        self.sub_minion_process.terminate()
+        try:
+            self.sub_minion_process.terminate()
+        except AttributeError:
+            pass
         self.minion_process.terminate()
         if hasattr(self, 'proxy_process'):
             self.proxy_process.terminate()
