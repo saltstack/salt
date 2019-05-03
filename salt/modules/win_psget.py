@@ -49,11 +49,11 @@ def __virtual__():
     return __virtualname__
 
 def _ps_xml_to_dict(parent, dic=None):
-    """
+    '''
     Formats Powershell XML to a Dict
     Note: This func is not perfect with powershell XML 
-    """
-    if dic == None:
+    '''
+    if dic is None:
         dic = {}
 
     for child in parent:
@@ -64,7 +64,7 @@ def _ps_xml_to_dict(parent, dic=None):
             else:
                 try:
                     dic[[name for ps_type, name in child.items() if ps_type == "Type"][0]] = new_dic
-                except:
+                except IndexError:
                     dic[child.text] = new_dic
         else:
             for xml_type, name in child.items():
@@ -90,7 +90,7 @@ def _pshell(cmd, cwd=None, depth=2):
     if 'retcode' not in results or results['retcode'] != 0:
         # run_all logs an error to log.error, fail hard back to the user
         raise CommandExecutionError('Issue executing powershell {0}'.format(cmd), info=results)
-    
+
     try:
         ret = _ps_xml_to_dict(xml.etree.ElementTree.fromstring(results['stdout'].encode('utf-8')))
     except xml.etree.ElementTree.ParseError:
@@ -112,7 +112,7 @@ def bootstrap():
         salt 'win01' psget.bootstrap
     '''
     cmd = 'Get-PackageProvider -Name NuGet -ForceBootstrap | Select Name, Version, ProviderPath'
-    ret = _pshell(cmd, depth = 1)
+    ret = _pshell(cmd, depth=1)
     return ret
 
 def avail_modules(desc=False):
@@ -130,13 +130,12 @@ def avail_modules(desc=False):
         salt 'win01' psget.avail_modules desc=True
     '''
     cmd = 'Find-Module | Select Name, Description'
-    modules = _pshell(cmd, depth = 1)
+    modules = _pshell(cmd, depth=1)
     names = []
     if desc:
         names = {}
     for key in modules:
         module = modules[key]
-        log.debug(module)
         if desc:
             names[module['Name']] = module['Description']
             continue
