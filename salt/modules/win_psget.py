@@ -91,9 +91,8 @@ def _pshell(cmd, cwd=None, depth=2):
         # run_all logs an error to log.error, fail hard back to the user
         raise CommandExecutionError('Issue executing powershell {0}'.format(cmd), info=results)
     
-    xml.etree.ElementTree.fromstring(bytes(results['stdout'], encoding = 'utf-8'))
     try:
-        ret = _ps_xml_to_dict(xml.etree.ElementTree.fromstring(bytes(results['stdout'], encoding = 'utf-8')))
+        ret = _ps_xml_to_dict(xml.etree.ElementTree.fromstring(results['stdout'].encode('utf-8')))
     except xml.etree.ElementTree.ParseError:
         results['stdout'] = results['stdout'][:1000] + ". . ."
         raise CommandExecutionError('No XML results from powershell', info=results)
