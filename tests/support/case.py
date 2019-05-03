@@ -788,6 +788,19 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
     Execute a module function
     '''
 
+    def wait_for_all_jobs(self, minions=('minion', 'sub_minion',), sleep=.3):
+        '''
+        Wait for all jobs currently running on the list of minions to finish
+        '''
+        for minion in minions:
+            while True:
+                ret = self.run_function('saltutil.running', minion_tgt=minion, timeout=300)
+                if ret:
+                    log.debug('Waiting for minion\'s jobs: %s', minion)
+                    time.sleep(sleep)
+                else:
+                    break
+
     def minion_run(self, _function, *args, **kw):
         '''
         Run a single salt function on the 'minion' target and condition
@@ -800,8 +813,13 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        know_to_return_none = (
-            'file.chown', 'file.chgrp', 'ssh.recv_known_host_entries'
+        known_to_return_none = (
+            'data.get',
+            'file.chown',
+            'file.chgrp',
+            'pkg.refresh_db',
+            'ssh.recv_known_host_entries',
+            'time.sleep'
         )
         if 'f_arg' in kwargs:
             kwargs['arg'] = kwargs.pop('f_arg')
