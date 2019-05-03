@@ -17,7 +17,6 @@ import xml.etree.ElementTree
 # Import Salt libs
 import salt.utils.platform
 import salt.utils.versions
-from salt.exceptions import CommandExecutionError
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -50,9 +49,10 @@ def __virtual__():
 
 def _ps_xml_to_dict(parent, dic=None):
     '''
-    Formats Powershell XML to a Dict
-    Note: This func is not perfect with powershell XML 
+    Formats powershell Xml to a dict.
+    Note: This _ps_xml_to_dict is not perfect with powershell Xml.
     '''
+
     if dic is None:
         dic = {}
 
@@ -73,10 +73,11 @@ def _ps_xml_to_dict(parent, dic=None):
 
     return dic
 
+
 def _pshell(cmd, cwd=None, depth=2):
     '''
     Execute the desired powershell command and ensure that it returns data
-    in XML format and load that into python
+    in Xml format and load that into python
     '''
     
     cmd = '{0} | ConvertTo-Xml -Depth {1} -As \"stream\"'.format(cmd, depth)
@@ -114,6 +115,7 @@ def bootstrap():
     cmd = 'Get-PackageProvider -Name NuGet -ForceBootstrap | Select Name, Version, ProviderPath'
     ret = _pshell(cmd, depth=1)
     return ret
+
 
 def avail_modules(desc=False):
     '''
