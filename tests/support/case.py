@@ -800,7 +800,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                 ret = self.run_function('saltutil.running', minion_tgt=minion, timeout=300)
                 if ret:
                     log.debug('Waiting for minion\'s jobs: %s', minion)
-                    time.sleep()
+                    time.sleep(sleep)
                 else:
                     break
 
