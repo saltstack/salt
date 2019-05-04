@@ -98,6 +98,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
+                           'executors': [],
                            'output': [],
                            'thorium': [],
                            'serializers': []}
@@ -121,6 +122,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
+                           'executors': [],
                            'output': [],
                            'thorium': [],
                            'serializers': []}
@@ -147,6 +149,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
+                           'executors': [],
                            'output': [],
                            'thorium': [],
                            'serializers': []}
@@ -163,8 +166,10 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'beacons': [],
                            'utils': [],
                            'returners': [],
+                           'executors': [],
                            'modules': [],
                            'renderers': [],
+                           'executors': [],
                            'log_handlers': [],
                            'matchers': [],
                            'states': [],
