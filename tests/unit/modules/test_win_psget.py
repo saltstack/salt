@@ -21,7 +21,7 @@ BOOTSTRAP_PS_STR = '''<?xml version="1.0" encoding="utf-8"?>
       <Property Name="Build" Type="System.UInt16">5</Property>
       <Property Name="Revision" Type="System.UInt16">208</Property>
     </Property>
-    <Property Name="ProviderPath" Type="System.String">C:\Program Files\PackageManagement\ProviderAssemblies\\nuget\\2.8.5
+    <Property Name="ProviderPath" Type="System.String">C:\\Program Files\\PackageManagement\\ProviderAssemblies\\nuget\\2.8.5
 .208\Microsoft.PackageManagement.NuGetProvider.dll</Property>
   </Object>
 </Objects>'''
@@ -68,7 +68,7 @@ class WinPsgetCase(TestCase, LoaderModuleMockMixin):
             'retcode': 0,
             'stderr': '',
             'stdout': AVAIL_MODULES_PS_STR})
-        
+
         with patch.dict(win_psget.__salt__, {'cmd.run_all': mock_read_ok}):
             self.assertTrue('DHCPMigration' in win_psget.avail_modules(False))
             self.assertTrue('DHCPMigration' in win_psget.avail_modules(True))
