@@ -22,7 +22,7 @@ BOOTSTRAP_PS_STR = '''<?xml version="1.0" encoding="utf-8"?>
       <Property Name="Revision" Type="System.UInt16">208</Property>
     </Property>
     <Property Name="ProviderPath" Type="System.String">C:\\Program Files\\PackageManagement\\ProviderAssemblies\\nuget\\2.8.5
-.208\Microsoft.PackageManagement.NuGetProvider.dll</Property>
+.208\\Microsoft.PackageManagement.NuGetProvider.dll</Property>
   </Object>
 </Objects>'''
 
