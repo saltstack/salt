@@ -46,6 +46,7 @@ AVAIL_MODULES_PS_STR = '''<?xml version="1.0" encoding="utf-8"?>
   </Object>
 </Objects>'''
 
+
 class WinPsgetCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_psget
@@ -54,20 +55,20 @@ class WinPsgetCase(TestCase, LoaderModuleMockMixin):
         return {win_psget: {}}
 
     def test_bootstrap(self):
-        mock_read_ok = MagicMock(return_value={'pid':78,
+        mock_read_ok = MagicMock(return_value={'pid': 78,
             'retcode': 0,
             'stderr': '',
             'stdout': BOOTSTRAP_PS_STR})
 
-        with patch.dict(win_psget.__salt__, {'cmd.run_all' : mock_read_ok}):
+        with patch.dict(win_psget.__salt__, {'cmd.run_all': mock_read_ok}):
             self.assertTrue('NuGet' in win_psget.bootstrap())
 
     def test_avail_modules(self):
-        mock_read_ok = MagicMock(return_value={'pid':78,
+        mock_read_ok = MagicMock(return_value={'pid': 78,
             'retcode': 0,
             'stderr': '',
             'stdout': AVAIL_MODULES_PS_STR})
         
-        with patch.dict(win_psget.__salt__, {'cmd.run_all' : mock_read_ok}):
+        with patch.dict(win_psget.__salt__, {'cmd.run_all': mock_read_ok}):
             self.assertTrue('DHCPMigration' in win_psget.avail_modules(False))
             self.assertTrue('DHCPMigration' in win_psget.avail_modules(True))
