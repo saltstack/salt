@@ -256,29 +256,6 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                         {'test': ret}
                     )
 
-            # Test VCS installations with version info like >= 0.1
-            with patch.object(pip, '__version__', MagicMock(side_effect=AttributeError(
-                                                        'Faked missing __version__ attribute'))):
-                mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-                pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})
-                pip_install = MagicMock(return_value={
-                    'retcode': 0,
-                    'stderr': '',
-                    'stdout': 'Cloned!'
-                })
-                with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
-                                                     'pip.list': pip_list,
-                                                     'pip.install': pip_install}):
-                    with patch.dict(pip_state.__opts__, {'test': False}):
-                        ret = pip_state.installed(
-                            'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting>=0.5.0'
-                        )
-                        self.assertSaltTrueReturn({'test': ret})
-                        self.assertInSaltComment(
-                            'packages are already installed',
-                            {'test': ret}
-                        )
-
     def test_install_in_editable_mode(self):
         '''
         Check that `name` parameter containing bad characters is not parsed by
