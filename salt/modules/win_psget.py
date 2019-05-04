@@ -59,7 +59,7 @@ def _ps_xml_to_dict(parent, dic=None):
         dic = {}
 
     for child in parent:
-        if list(child) :
+        if list(child):
             new_dic = _ps_xml_to_dict(child, {})
             if "Name" in new_dic:
                 dic[new_dic["Name"]] = new_dic
