@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+  # pylint: disable=import-error
 '''
 Functions to work with MessagePack
 '''

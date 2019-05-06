@@ -173,6 +173,8 @@ class CacheDisk(CacheDict):
         '''
         Read in from disk
         '''
+        log.error("MSGPACK debug")
+        log.error(msgpack)
         if msgpack is None:
             log.error('Cache cannot be read from the disk: msgpack is missing')
         elif not os.path.exists(self._path):
