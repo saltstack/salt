@@ -52,7 +52,6 @@ Connection module for Amazon EFS
 # Import python libs
 from __future__ import absolute_import
 import logging
-import time
 
 
 # Import 3rd-party libs
@@ -178,7 +177,7 @@ def create_file_system(name,
                         key=key,
                         profile=profile,
                         region=region,
-            ) 
+            )
     waiter.wait(CreationToken=creation_token)
     return response
 
@@ -255,9 +254,10 @@ def create_mount_target(filesystemid,
                         key=key,
                         profile=profile,
                         region=region,
-            ) 
+            )
     waiter.wait(MountTargetId=res['MountTargetId'])
     return res
+
 
 def create_tags(filesystemid,
                 tags,
@@ -325,7 +325,7 @@ def delete_file_system(filesystemid,
                         key=key,
                         profile=profile,
                         region=region,
-            ) 
+            )
     try:
         waiter.wait(FileSystemId=filesystemid)
     except WaiterError as exp:
@@ -372,7 +372,7 @@ def delete_mount_target(mounttargetid,
                         key=key,
                         profile=profile,
                         region=region,
-            ) 
+            )
     try:
         waiter.wait(MountTargetId=mounttargetid)
     except WaiterError as exp:
@@ -558,4 +558,3 @@ def set_security_groups(mounttargetid,
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
     client.modify_mount_target_security_groups(MountTargetId=mounttargetid,
                                                SecurityGroups=securitygroup)
-
