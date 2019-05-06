@@ -155,7 +155,7 @@ def create_file_system(name,
 
     .. code-block::
 
-        salt 'my-minion' boto_efs.create_file_system efs-name generalPurpose
+        salt 'my-minion' boto3_efs.create_file_system efs-name generalPurpose
     '''
     import os
     import base64
@@ -227,7 +227,7 @@ def create_mount_target(filesystemid,
 
     .. code-block::
 
-        salt 'my-minion' boto_efs.create_mount_target filesystemid subnetid
+        salt 'my-minion' boto3_efs.create_mount_target filesystemid subnetid
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
@@ -283,7 +283,7 @@ def create_tags(filesystemid,
 
     .. code-block::
 
-        salt 'my-minion' boto_efs.create_tags
+        salt 'my-minion' boto3_efs.create_tags
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
@@ -315,7 +315,7 @@ def delete_file_system(filesystemid,
 
     .. code-block::
 
-        salt 'my-minion' boto_efs.delete_file_system filesystemid
+        salt 'my-minion' boto3_efs.delete_file_system filesystemid
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
@@ -362,7 +362,7 @@ def delete_mount_target(mounttargetid,
 
     .. code-block::
 
-        salt 'my-minion' boto_efs.delete_mount_target mounttargetid
+        salt 'my-minion' boto3_efs.delete_mount_target mounttargetid
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
@@ -403,7 +403,7 @@ def delete_tags(filesystemid,
 
     .. code-block::
 
-        salt 'my-minion' boto_efs.delete_tags
+        salt 'my-minion' boto3_efs.delete_tags
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
@@ -431,7 +431,7 @@ def get_file_systems(filesystemid=None,
 
     .. code-block::
 
-        salt 'my-minion' boto_efs.get_file_systems efs-id
+        salt 'my-minion' boto3_efs.get_file_systems efs-id
     '''
 
     result = None
@@ -480,7 +480,7 @@ def get_mount_targets(filesystemid=None,
 
     .. code-block::
 
-        salt 'my-minion' boto_efs.get_mount_targets
+        salt 'my-minion' boto3_efs.get_mount_targets
     '''
 
     result = None
@@ -519,7 +519,7 @@ def get_tags(filesystemid,
 
     .. code-block::
 
-        salt 'my-minion' boto_efs.get_tags efs-id
+        salt 'my-minion' boto3_efs.get_tags efs-id
     '''
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
     response = client.describe_tags(FileSystemId=filesystemid)
@@ -553,7 +553,7 @@ def set_security_groups(mounttargetid,
 
     .. code-block::
 
-        salt 'my-minion' boto_efs.set_security_groups my-mount-target-id my-sec-group
+        salt 'my-minion' boto3_efs.set_security_groups my-mount-target-id my-sec-group
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
