@@ -163,7 +163,6 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'executors': [],
                            'modules': [],
                            'renderers': [],
-                           'executors': [],
                            'log_handlers': [],
                            'states': [],
                            'sdb': [],
