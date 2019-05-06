@@ -60,7 +60,7 @@ execution modules
     boto_datapipeline
     boto_dynamodb
     boto_ec2
-    boto_efs
+    boto3_efs
     boto_elasticache
     boto_elasticsearch_domain
     boto_elb
