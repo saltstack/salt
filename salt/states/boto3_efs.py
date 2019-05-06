@@ -17,14 +17,14 @@ def __virtual__():
     '''
     Checks if all the required Salt functions are present.
     '''
-    for requirement in ['boto_efs.get_file_systems',
-                        'boto_efs.create_file_system',
+    for requirement in ['boto3_efs.get_file_systems',
+                        'boto3_efs.create_file_system',
                         'boto_vpc.describe_subnet',
                         'boto_secgroup.convert_to_group_ids',
-                        'boto_efs.get_mount_targets',
-                        'boto_efs.create_mount_target',
-                        'boto_efs.delete_file_system',
-                        'boto_efs.delete_mount_target']:
+                        'boto3_efs.get_mount_targets',
+                        'boto3_efs.create_mount_target',
+                        'boto3_efs.delete_file_system',
+                        'boto3_efs.delete_mount_target']:
         if requirement not in __salt__:
             return False, 'Salt function "{}" not found'.format(requirement)
     return True
@@ -60,7 +60,7 @@ def efs_present(
     if performance_mode is not None:
         fs_opts.update({'performance_mode': performance_mode})
 
-    res = __salt__['boto_efs.get_file_systems'](
+    res = __salt__['boto3_efs.get_file_systems'](
         keyid=keyid,
         key=key,
         profile=profile,
@@ -74,7 +74,7 @@ def efs_present(
             ret['pchanges'] = {'old': None,
                                'new': 'EFS named "{}"'.format(name)}
         else:
-            new_efs = __salt__['boto_efs.create_file_system'](
+            new_efs = __salt__['boto3_efs.create_file_system'](
                 name,
                 keyid=keyid,
                 key=key,
@@ -132,7 +132,7 @@ def mount_target_present(
         )
         mnt_opts.update({'securitygroups': security_group_ids})
 
-    efs_res = __salt__['boto_efs.get_file_systems'](
+    efs_res = __salt__['boto3_efs.get_file_systems'](
             keyid=keyid,
             key=key,
             profile=profile,
@@ -144,7 +144,7 @@ def mount_target_present(
                           ' mountpoint'.format(name))
         return ret
     fs_id = current_efs[name]['FileSystemId']
-    get_mount_targets = __salt__['boto_efs.get_mount_targets'](
+    get_mount_targets = __salt__['boto3_efs.get_mount_targets'](
             filesystemid=fs_id
             )
     current_mount_targets = {mt_['SubnetId']: mt_ for mt_ in get_mount_targets}
@@ -157,7 +157,7 @@ def mount_target_present(
                                'new': 'Mount target for "{}" in subnet "{}"'
                                       ''.format(name, subnet_name)}
         else:
-            mnt_tgt = __salt__['boto_efs.create_mount_target'](
+            mnt_tgt = __salt__['boto3_efs.create_mount_target'](
                 filesystemid=fs_id,
                 subnetid=subnet_info['id'],
                 keyid=keyid,
@@ -193,7 +193,7 @@ def efs_absent(
     '''
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
 
-    efs_res = __salt__['boto_efs.get_file_systems'](
+    efs_res = __salt__['boto3_efs.get_file_systems'](
                 keyid=keyid,
                 key=key,
                 profile=profile,
@@ -206,7 +206,7 @@ def efs_absent(
             ret['comment'] = 'The EFS "{}" would have been deleted.'.format(name)
             ret['pchanges'] = {'old': name, 'new': None}
         else:
-            res = __salt__['boto_efs.delete_file_system'](
+            res = __salt__['boto3_efs.delete_file_system'](
                     filesystemid=current_efs[name]['FileSystemId'],
                     keyid=keyid,
                     key=key,
@@ -244,7 +244,7 @@ def mount_target_absent(
             region=region,
             subnet_name=subnet_name
             ).get('subnet', {})
-    efs_res = __salt__['boto_efs.get_file_systems'](
+    efs_res = __salt__['boto3_efs.get_file_systems'](
             keyid=keyid,
             key=key,
             profile=profile,
@@ -257,7 +257,7 @@ def mount_target_absent(
                           'mount targets already absent'.format(name))
         return ret
     fs_id = current_efs[name]['FileSystemId']
-    get_mount_targets = __salt__['boto_efs.get_mount_targets'](
+    get_mount_targets = __salt__['boto3_efs.get_mount_targets'](
             filesystemid=fs_id
             )
     current_mount_targets = {mt_['SubnetId']: mt_ for mt_ in get_mount_targets}
@@ -269,7 +269,7 @@ def mount_target_absent(
                               'would have been deleted'.format(name, subnet_name))
             ret['pchanges'] = {'old': mount_target_id, 'new': None}
         else:
-            res = __salt__['boto_efs.delete_mount_target'](
+            res = __salt__['boto3_efs.delete_mount_target'](
                 mount_target_id,
                 keyid=keyid,
                 key=key,
