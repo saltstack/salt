@@ -31,6 +31,7 @@ state modules
     bigip
     blockdev
     bluecoat_sslv
+    boto3_budgets
     boto3_elasticache
     boto3_route53
     boto_apigateway

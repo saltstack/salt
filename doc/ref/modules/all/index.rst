@@ -47,6 +47,7 @@ execution modules
     bigip
     bluecoat_sslv
     bluez_bluetooth
+    boto3_budgets
     boto3_elasticache
     boto3_route53
     boto_apigateway

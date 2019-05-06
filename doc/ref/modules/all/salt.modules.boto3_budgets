@@ -1,0 +1,6 @@
+salt.modules.boto3_budgets module
+=================================
+
+.. automodule:: salt.modules.boto3_budgets
+    :members:
+    :undoc-members:
