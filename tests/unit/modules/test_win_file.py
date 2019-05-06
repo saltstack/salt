@@ -325,7 +325,6 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(expected, ret)
 
     def test_stat(self):
-        # sys.getwindowsversion = MagicMock(name='getwindowsversion')
         with patch('os.path.exists', MagicMock(return_value=True)), \
                 patch('sys.getwindowsversion', MagicMock(return_value=winver)), \
                 patch('salt.modules.win_file._resolve_symlink', MagicMock(side_effect=lambda path: path)), \
