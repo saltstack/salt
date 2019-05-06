@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
 This module provides access to the Elastic File System (EFS) service from AWS.
