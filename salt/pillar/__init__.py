@@ -57,7 +57,6 @@ def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
     # If local pillar and we're caching, run through the cache system first
     log.debug('Determining pillar cache')
     if opts['pillar_cache']:
-        log.info('Compiling pillar from cache')
         log.debug('get_pillar using pillar cache with ext: %s', ext)
         return PillarCache(opts, grains, minion_id, saltenv, ext=ext, functions=funcs,
                 pillar_override=pillar_override, pillarenv=pillarenv)
