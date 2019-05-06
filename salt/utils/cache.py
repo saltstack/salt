@@ -9,12 +9,11 @@ import re
 import time
 import logging
 try:
-    from salt.utils.msgpack import msgpack, UnpackValueError, PackValueError  # pylint: disable=unused-import
+    from salt.utils.msgpack import msgpack
+    (UnpackValueError, PackValueError) = (msgpack.UnpackValueError, msgpack.PackValueError)
 except ImportError:
     msgpack = None
-
-# Import salt libs
-import salt.config
+    (UnpackValueError, PackValueError) = (Exception, Exception)
 import salt.payload
 import salt.utils.data
 import salt.utils.dictupdate
@@ -173,8 +172,6 @@ class CacheDisk(CacheDict):
         '''
         Read in from disk
         '''
-        log.error("MSGPACK debug")
-        log.error(msgpack)
         if msgpack is None:
             log.error('Cache cannot be read from the disk: msgpack is missing')
         elif not os.path.exists(self._path):
