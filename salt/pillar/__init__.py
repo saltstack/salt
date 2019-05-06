@@ -662,6 +662,9 @@ class Pillar(object):
 
         Returns:
         {'saltenv': ['state1', 'state2', ...]}
+
+        reload
+            Reload the matcher loader
         '''
         matches = {}
         if reload:
