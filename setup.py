@@ -204,6 +204,11 @@ def _check_ver(pyver, op, wanted):
     '''
     pyver = distutils.version.LooseVersion(pyver)
     wanted = distutils.version.LooseVersion(wanted)
+    if IS_PY3:
+        if not isinstance(pyver, str):
+            pyver = str(pyver)
+        if not isinstance(wanted, str):
+            wanted = str(wanted)
     return getattr(operator, '__{}__'.format(op))(pyver, wanted)
 
 
