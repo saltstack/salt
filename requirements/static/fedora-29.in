@@ -17,7 +17,12 @@ mock<1.1.0
 more-itertools==5.0.0
 moto
 msgpack-python >= 0.4.2, != 0.5.5
-# Let's install cryptodome instead of pycrupto because of it's ourstanding security issues
+<<<<<<< HEAD
+# Let's install cryptodome instead of pycrypto because of pycrypto's outstanding security issues
+=======
+psutil
+# Let's install cryptodome instead of pycrypto because of pycrypto's outstanding security issues
+>>>>>>> 7e7281b13d... Proper english in requirements comments
 # PyCrypto, if pulled, will be removed from the generated static requirements
 pycryptodome
 psutil
