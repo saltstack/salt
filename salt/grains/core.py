@@ -667,6 +667,9 @@ def _windows_virtual(osdata):
     elif 'CloudStack KVM Hypervisor' in productname:
         grains['virtual'] = 'kvm'
         grains['virtual_subtype'] = 'cloudstack'
+    # Google Compute Engine
+    elif 'Google Compute Engine' in productname:
+        grains['virtual'] = 'gce'
     return grains
 
 
