@@ -100,6 +100,28 @@ or zip file of the repository. The directory structure is designed to work with
 3.  Restart the Salt Master.
 
 
+Maintaining formula dependencies using git submodules
+=====================================================
+
+If you want to incorporate others' formulas into your salt repo, using git submodules is a great option.
+
+An overview of git submodules can be found here: https://git-scm.com/book/en/v2/Git-Tools-Submodules
+
+From the docs, "Submodules allow you to keep a Git repository as a subdirectory of another Git repository. This lets you clone another repository into your project and keep your commits separate."
+
+The benefit of submodules for formulas is that you can manage others' forumlas within your own saltstack repo. You have the ability to pull down newer commits, revert to old commits, and switch branches. You DO NOT have to fork the repo, and by default, those submodules will lock to the commit that you imported them at. This means there should be no failures due to a configuration change on the master branch of the formula repo.
+
+As a working example, consider that you have a salt project that currently manages your web servers. You are tasked with setting up a mongodb cluster, and you find a pre-built formula that suits your needs.
+
+You could simply copy that formula into your project, but you'd have to manually update the formula if you ever wanted the latest changes. Also, any changes you made to that formula would show in your git history along with changes you made to your own states. Instead, you can use a git submodule. 
+
+.. code-block:: bash
+     
+    git submodule add https://github.com/saltstack-formulas/mongodb-formula formulas/mongodb-formula
+
+
+This command clones the repo to formulas/mongodb-formula. It also creates a file in your projects root directory called .gitmodules, which keeps track of all the submodules in your project. Now, changing to a different branch or commit in the child formula is registered as a change in your salt project. This means that the state of the child is managed
+
 Usage
 =====
 
