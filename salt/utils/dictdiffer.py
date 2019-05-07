@@ -54,7 +54,7 @@ def deep_diff(old, new, ignore=None):
     new = copy.deepcopy(new)
     stack = [(old, new, False)]
 
-    while stack:
+    while len(stack) > 0:
         tmps = []
         tmp_old, tmp_new, reentrant = stack.pop()
         for key in set(list(tmp_old) + list(tmp_new)):
@@ -383,3 +383,34 @@ class RecursiveDictDiffer(DictDiffer):
     def changes_str(self):
         '''Returns a string describing the changes'''
         return '\n'.join(self._get_changes(self._diffs))
+
+
+def recursive_diff2(old, new, ignore=None):
+    ignore = ignore or []
+    res = {}
+    old = copy.deepcopy(old)
+    new = copy.deepcopy(new)
+    if isinstance(old, Mapping) and isinstance(new, Mapping):
+        for key in set(list(old) + list(new)):
+            if key in ignore:
+                if key in old:
+                    del old[key]
+                if key in new:
+                    del new[key]
+                continue
+            if key in old and key in new:
+                res = recursive_diff2(old[key], new[key])
+                if not res:
+                    del old[key]
+                    del new[key]
+                else:
+                    old[key] = res['old']
+                    new[key] = res['new']
+        return {'old': old, 'new': new} if old or new else {}
+    elif isinstance(old, list) and isinstance(new, list):
+        for list_old, list_new in zip(old, new):
+            if not recursive_diff2(list_old, list_new):
+                old.pop(0)
+                new.pop(0)
+        return {'old': old, 'new': new} if old or new else {}
+    return {} if old == new else {'old': old, 'new': new}
