@@ -1460,7 +1460,7 @@ def _parse_tcp_line(line):
 
 def _netlink_tool_remote_on(port, which_end):
     '''
-    Returns set of ipv4 host addresses of remote established connections
+    Returns set of IPv4/IPv6 host addresses of remote established connections
     on local or remote tcp port.
 
     Parses output of shell 'ss' to get connections
@@ -1470,6 +1470,7 @@ def _netlink_tool_remote_on(port, which_end):
     LISTEN     0      511                              *:80                              *:*
     LISTEN     0      128                              *:22                              *:*
     ESTAB      0      0                      127.0.0.1:56726                  127.0.0.1:4505
+    ESTAB      0      0             [::ffff:127.0.0.1]:41323         [::ffff:127.0.0.1]:4505
     '''
     remotes = set()
     valid = False
