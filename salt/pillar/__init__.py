@@ -57,7 +57,6 @@ def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
     # If local pillar and we're caching, run through the cache system first
     log.debug('Determining pillar cache')
     if opts['pillar_cache']:
-        log.info('Compiling pillar from cache')
         log.debug('get_pillar using pillar cache with ext: %s', ext)
         return PillarCache(opts, grains, minion_id, saltenv, ext=ext, functions=funcs,
                 pillar_override=pillar_override, pillarenv=pillarenv)
@@ -257,7 +256,7 @@ class RemotePillar(RemotePillarMixin):
         return ret_pillar
 
     def destroy(self):
-        if self._closing:
+        if hasattr(self, '_closing') and self._closing:
             return
 
         self._closing = True
@@ -712,7 +711,8 @@ class Pillar(object):
             defaults = {}
         err = ''
         errors = []
-        fn_ = self.client.get_state(sls, saltenv).get('dest', False)
+        state_data = self.client.get_state(sls, saltenv)
+        fn_ = state_data.get('dest', False)
         if not fn_:
             if sls in self.ignored_pillars.get(saltenv, []):
                 log.debug('Skipping ignored and missing SLS \'%s\' in '
@@ -795,7 +795,17 @@ class Pillar(object):
                                 key = None
 
                             try:
-                                matched_pstates += fnmatch.filter(self.avail[saltenv], sub_sls)
+                                if sub_sls.startswith('.'):
+                                    if state_data.get('source', '').endswith('/init.sls'):
+                                        include_parts = sls.split('.')
+                                    else:
+                                        include_parts = sls.split('.')[:-1]
+                                    sub_sls = '.'.join(include_parts+[sub_sls[1:]])
+                                matches = fnmatch.filter(
+                                    self.avail[saltenv],
+                                    sub_sls,
+                                )
+                                matched_pstates.extend(matches)
                             except KeyError:
                                 errors.extend(
                                     ['No matching pillar environment for environment '
