@@ -1,13 +1,25 @@
 # -*- coding: utf-8 -*-
 '''
-DRBD administration module
+Module to provide DRBD functionality to Salt
+
+.. versionadded:: pending
+
+:maintainer:    Nick Wang <nwang@suse.com>
+:maturity:      alpha
+:depends:       ``drbdadm`` drbd utils
+:platform:      all
+
+:configuration: This module requires drbd kernel module and drbd utils tool
+
+.. code-block:: yaml
+
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 from salt.ext import six
 
-log = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def _analyse_overview_field(content):
@@ -64,24 +76,24 @@ def _analyse_status_type(line):
         if x in line:
             return ret[x]
 
-    return 'UNKNOWN'
-
 
 def _add_res(line):
     '''
     Analyse the line of local resource of ``drbdadm status``
     '''
-    global resource
     fields = line.strip().split()
 
-    if resource:
-        ret.append(resource)
-        resource = {}
+    if __context__['drbd.resource']:
+        __context__['drbd.statusret'].append(__context__['drbd.resource'])
+        __context__['drbd.resource'] = {}
 
+    resource = {}
     resource["resource name"] = fields[0]
     resource["local role"] = fields[1].split(":")[1]
     resource["local volumes"] = []
     resource["peer nodes"] = []
+
+    __context__['drbd.resource'] = resource
 
 
 def _add_volume(line):
@@ -96,18 +108,27 @@ def _add_volume(line):
         volume[field.split(':')[0]] = field.split(':')[1]
 
     if section == 'LOCALDISK':
-        resource['local volumes'].append(volume)
+        if 'drbd.resource' not in __context__:  # pragma: no cover
+            # Should always be called after _add_res
+            __context__['drbd.resource'] = {}
+            __context__['drbd.resource']['local volumes'] = []
+
+        __context__['drbd.resource']['local volumes'].append(volume)
     else:
         # 'PEERDISK'
-        lastpnodevolumes.append(volume)
+        if 'drbd.lastpnodevolumes' not in __context__:  # pragma: no cover
+            # Insurance refer to:
+            # https://docs.saltstack.com/en/latest/topics/development/modules/developing.html#context
+            # Should always be called after _add_peernode
+            __context__['drbd.lastpnodevolumes'] = []
+
+        __context__['drbd.lastpnodevolumes'].append(volume)
 
 
 def _add_peernode(line):
     '''
     Analyse the line of peer nodes of ``drbdadm status``
     '''
-    global lastpnodevolumes
-
     fields = line.strip().split()
 
     peernode = {}
@@ -115,31 +136,36 @@ def _add_peernode(line):
     #Could be role or connection:
     peernode[fields[1].split(":")[0]] = fields[1].split(":")[1]
     peernode["peer volumes"] = []
-    resource["peer nodes"].append(peernode)
-    lastpnodevolumes = peernode["peer volumes"]
+
+    if 'drbd.resource' not in __context__:  # pragma: no cover
+        # Should always be called after _add_res
+        __context__['drbd.resource'] = {}
+        __context__['drbd.resource']['peer nodes'] = []
+
+    __context__['drbd.resource']["peer nodes"].append(peernode)
+
+    __context__['drbd.lastpnodevolumes'] = peernode["peer volumes"]
 
 
 def _empty(dummy):
     '''
     Action of empty line of ``drbdadm status``
     '''
-    pass
 
 
 def _unknown_parser(line):
     '''
     Action of unsupported line of ``drbdadm status``
     '''
-    global ret
-    ret = {"Unknown parser": line}
+    __context__['drbd.statusret'] = {"Unknown parser": line}
 
 
 def _line_parser(line):
     '''
     Call action for different lines
     '''
+    # Should always be called via status()
     section = _analyse_status_type(line)
-    fields = line.strip().split()
 
     switch = {
         '': _empty,
@@ -228,23 +254,17 @@ def overview():
     return ret
 
 
-# Global para for func status
-ret = []
-resource = {}
-lastpnodevolumes = None
-
-
 def status(name='all'):
     '''
     Using drbdadm to show status of the DRBD devices,
-    available in the latest drbd9.
+    available in the latest DRBD9.
     Support multiple nodes, multiple volumes.
 
     :type name: str
     :param name:
         Resource name.
 
-    :return: drbd status of resource.
+    :return: DRBD status of resource.
     :rtype: list(dict(res))
 
     CLI Example:
@@ -256,13 +276,10 @@ def status(name='all'):
     '''
 
     # Initialize for multiple times test cases
-    global ret
-    global resource
-    ret = []
-    resource = {}
+    __context__['drbd.statusret'] = []
+    __context__['drbd.resource'] = {}
 
-    cmd = ['drbdadm', 'status']
-    cmd.append(name)
+    cmd = 'drbdadm status {}'.format(name)
 
     #One possible output: (number of resource/node/vol are flexible)
     #resource role:Secondary
@@ -274,10 +291,16 @@ def status(name='all'):
     #  drbd-node2 role:Secondary
     #    volume:0 peer-disk:Inconsistent resync-suspended:peer
     #    volume:1 peer-disk:Inconsistent resync-suspended:peer
-    for line in __salt__['cmd.run'](cmd).splitlines():
+
+    result = __salt__['cmd.run_all'](cmd)
+    if result['retcode'] != 0:
+        LOGGER.info('No status due to %s (%s).', result['stderr'], result['retcode'])
+        return None
+
+    for line in result['stdout'].splitlines():
         _line_parser(line)
 
-    if resource:
-        ret.append(resource)
+    if __context__['drbd.resource']:
+        __context__['drbd.statusret'].append(__context__['drbd.resource'])
 
-    return ret
+    return __context__['drbd.statusret']
