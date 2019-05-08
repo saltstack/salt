@@ -1835,7 +1835,7 @@ def create_disk(kwargs=None, call=None):
         )
         return False
 
-    if 'size' is None and 'image' is None and 'snapshot' is None:
+    if size is None and image is None and snapshot is None:
         log.error(
             'Must specify image, snapshot, or size.'
         )

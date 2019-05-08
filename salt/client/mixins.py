@@ -11,6 +11,7 @@ import logging
 import weakref
 import traceback
 import collections
+import os
 import copy as pycopy
 
 # Import Salt libs
@@ -28,6 +29,8 @@ import salt.utils.process
 import salt.utils.state
 import salt.utils.user
 import salt.utils.versions
+import salt.utils.files
+import salt.serializers.json
 import salt.transport.client
 import salt.log.setup
 import salt.output
@@ -373,6 +376,14 @@ class SyncClientMixin(object):
             data['fun_args'] = list(args) + ([kwargs] if kwargs else [])
             func_globals['__jid_event__'].fire_event(data, 'new')
 
+            # Track the job locally so we know what is running on the master
+            serial = salt.payload.Serial(self.opts)
+            jid_proc_file = os.path.join(*[self.opts['cachedir'], 'proc', jid])
+            data['pid'] = os.getpid()
+            with salt.utils.files.fopen(jid_proc_file, 'w+b') as fp_:
+                fp_.write(serial.dumps(data))
+            del data['pid']
+
             # Initialize a context for executing the method.
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):
                 func = self.functions[fun]
@@ -398,6 +409,12 @@ class SyncClientMixin(object):
                 data['return'] = 'Exception occurred in {client} {fun}: {tb}'.format(
                     client=self.client, fun=fun, tb=traceback.format_exc())
             data['success'] = False
+        finally:
+            # Job has finished or issue found, so let's clean up after ourselves
+            try:
+                os.remove(jid_proc_file)
+            except OSError as err:
+                log.error("Error attempting to remove master job tracker: %s", err)
 
         if self.store_job:
             try:

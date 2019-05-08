@@ -1212,16 +1212,17 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util
         lopts = ','.join(opts)
         args = '-o {0}'.format(lopts)
 
-    # use of fstype on AIX differs from typical Linux use of -t functionality
-    # AIX uses -v vfsname, -t fstype mounts all with fstype in /etc/filesystems
-    if 'AIX' in __grains__['os']:
-        if fstype:
+    if fstype:
+        # use of fstype on AIX differs from typical Linux use of -t
+        # functionality AIX uses -v vfsname, -t fstype mounts all with
+        # fstype in /etc/filesystems
+        if 'AIX' in __grains__['os']:
             args += ' -v {0}'.format(fstype)
-    elif 'solaris' in __grains__['os'].lower():
-        if fstype:
+        elif 'solaris' in __grains__['os'].lower():
             args += ' -F {0}'.format(fstype)
-    else:
-        args += ' -t {0}'.format(fstype)
+        else:
+            args += ' -t {0}'.format(fstype)
+
     cmd = 'mount {0} {1} {2} '.format(args, device, name)
     out = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
     if out['retcode']:
@@ -1249,7 +1250,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
 
     if 'AIX' in __grains__['os']:
         if opts == 'defaults':
-            opts = ''
+            opts = []
 
     if isinstance(opts, six.string_types):
         opts = opts.split(',')
@@ -1264,14 +1265,16 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
         lopts = ','.join(opts)
         args = '-o {0}'.format(lopts)
 
-        # use of fstype on AIX differs from typical Linux use of -t functionality
-        # AIX uses -v vfsname, -t fstype mounts all with fstype in /etc/filesystems
-        if 'AIX' in __grains__['os']:
-            if fstype:
+        if fstype:
+            # use of fstype on AIX differs from typical Linux use of
+            # -t functionality AIX uses -v vfsname, -t fstype mounts
+            # all with fstype in /etc/filesystems
+            if 'AIX' in __grains__['os']:
                 args += ' -v {0}'.format(fstype)
-            args += ' -o remount'
-        else:
-            args += ' -t {0}'.format(fstype)
+            elif 'solaris' in __grains__['os'].lower():
+                args += ' -F {0}'.format(fstype)
+            else:
+                args += ' -t {0}'.format(fstype)
 
         if __grains__['os'] not in ['OpenBSD', 'MacOS', 'Darwin'] or force_mount:
             cmd = 'mount {0} {1} {2} '.format(args, device, name)

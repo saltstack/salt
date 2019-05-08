@@ -131,7 +131,7 @@ def destroy(device):
     stop_cmd = ['mdadm', '--stop', device]
     zero_cmd = ['mdadm', '--zero-superblock']
 
-    if __salt__['cmd.retcode'](stop_cmd, python_shell=False):
+    if __salt__['cmd.retcode'](stop_cmd, python_shell=False) == 0:
         for number in details['members']:
             zero_cmd.append(details['members'][number]['device'])
         __salt__['cmd.retcode'](zero_cmd, python_shell=False)
@@ -247,7 +247,7 @@ def create(name,
            '-v',
            '-l', six.text_type(level),
            ] + opts + [
-           '-e', metadata,
+           '-e', six.text_type(metadata),
            '-n', six.text_type(raid_devices),
            ] + devices
 
@@ -360,9 +360,15 @@ def assemble(name,
         return __salt__['cmd.run'](cmd, python_shell=False)
 
 
-def examine(device):
+def examine(device, quiet=False):
     '''
     Show detail for a specified RAID component device
+
+    device
+        Device to examine, that is part of the RAID
+
+    quiet
+        If the device is not part of the RAID, do not show any error
 
     CLI Example:
 
@@ -370,7 +376,9 @@ def examine(device):
 
         salt '*' raid.examine '/dev/sda1'
     '''
-    res = __salt__['cmd.run_stdout']('mdadm -Y -E {0}'.format(device), output_loglevel='trace', python_shell=False)
+    res = __salt__['cmd.run_stdout']('mdadm -Y -E {0}'.format(device),
+                                     python_shell=False,
+                                     ignore_retcode=quiet)
     ret = {}
 
     for line in res.splitlines():

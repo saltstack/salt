@@ -234,6 +234,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
+                salt.daemons.masterapi.clean_proc_dir(self.opts)
             self.handle_git_pillar()
             self.handle_schedule()
             self.handle_key_cache()
@@ -2035,7 +2036,7 @@ class ClearFuncs(object):
             return False
         return self.loadauth.get_tok(clear_load['token'])
 
-    def publish_batch(self, clear_load, minions, missing):
+    def publish_batch(self, clear_load, extra, minions, missing):
         batch_load = {}
         batch_load.update(clear_load)
         import salt.cli.batch_async
@@ -2045,6 +2046,9 @@ class ClearFuncs(object):
             batch_load
         )
         ioloop = tornado.ioloop.IOLoop.current()
+
+        self._prep_pub(minions, batch.batch_jid, clear_load, extra, missing)
+
         ioloop.add_callback(batch.start)
 
         return {
@@ -2148,7 +2152,7 @@ class ClearFuncs(object):
                     }
                 }
         if extra.get('batch', None):
-            return self.publish_batch(clear_load, minions, missing)
+            return self.publish_batch(clear_load, extra, minions, missing)
 
         jid = self._prep_jid(clear_load, extra)
         if jid is None:
