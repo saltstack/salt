@@ -819,6 +819,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 '__grains__': {'kernel': 'Linux'},
                 '__utils__': {
                     'stringutils.get_diff': salt.utils.stringutils.get_diff,
+                    'files.get_encoding': salt.utils.files.get_encoding,
                 },
             }
         }
@@ -1004,6 +1005,13 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             } if hash_type != 'sha256' else None
             self.assertEqual(result, expected)
         os.remove(tfile.name)
+
+        for encoding in ['utf-8', 'utf-16']:
+            with tempfile.NamedTemporaryFile(mode='w+', delete=True, encoding=encoding) as tfile:
+                tfile.write('1F24BD4853AFA233E8D4305CDCC9D32857B13C6FEA8BE45830C8A19EA3365253 Salt-Minion-2019.2.0-Py3-AMD64-Setup.exe')
+                tfile.flush()
+                hsum = filemod.extract_hash(tfile.name, '', 'Salt-Minion-2019.2.0-Py3-AMD64-Setup.exe')
+
 
     def test_user_to_uid_int(self):
         '''
