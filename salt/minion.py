@@ -1568,6 +1568,49 @@ class Minion(MinionBase):
             else:
                 Minion._thread_return(minion_instance, opts, data)
 
+    @staticmethod
+    def _execute_job_function(function_name, function_args, minion_instance, executors, opts, data):
+        minion_blackout_violation = False
+        if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
+            whitelist = minion_instance.opts['pillar'].get('minion_blackout_whitelist', [])
+            # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
+            if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
+                minion_blackout_violation = True
+        elif minion_instance.opts['grains'].get('minion_blackout', False):
+            whitelist = minion_instance.opts['grains'].get('minion_blackout_whitelist', [])
+            if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
+                minion_blackout_violation = True
+        if minion_blackout_violation:
+            raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
+                                        'to False in pillar or grains to resume operations. Only '
+                                        'saltutil.refresh_pillar allowed in blackout mode.')
+
+        func = minion_instance.functions[function_name]
+        args, kwargs = load_args_and_kwargs(
+            func,
+            function_args,
+            data)
+        minion_instance.functions.pack['__context__']['retcode'] = 0
+
+        if isinstance(executors, six.string_types):
+            executors = [executors]
+        elif not isinstance(executors, list) or not executors:
+            raise SaltInvocationError("Wrong executors specification: {0}. String or non-empty list expected".
+                format(executors))
+        if opts.get('sudo_user', '') and executors[-1] != 'sudo':
+            executors[-1] = 'sudo'  # replace the last one with sudo
+        log.trace('Executors list %s', executors)  # pylint: disable=no-member
+
+        for name in executors:
+            fname = '{0}.execute'.format(name)
+            if fname not in minion_instance.executors:
+                raise SaltInvocationError("Executor '{0}' is not available".format(name))
+            return_data = minion_instance.executors[fname](opts, data, func, args, kwargs)
+            if return_data is not None:
+                return return_data
+
+        return None
+
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
         '''
@@ -1587,6 +1630,8 @@ class Minion(MinionBase):
 
         salt.utils.process.appendproctitle('{0}._thread_return {1}'.format(cls.__name__, data['jid']))
 
+        executors = data.get('module_executors') or opts.get('module_executors', ['direct_call'])
+
         sdata = {'pid': os.getpid()}
         sdata.update(data)
         log.info('Starting a new job %s with PID %s', data['jid'], sdata['pid'])
@@ -1594,47 +1639,16 @@ class Minion(MinionBase):
             fp_.write(minion_instance.serial.dumps(sdata))
         ret = {'success': False}
         function_name = data['fun']
+        function_args = data['arg']
         if function_name in minion_instance.functions:
             try:
-                minion_blackout_violation = False
-                if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
-                    whitelist = minion_instance.opts['pillar'].get('minion_blackout_whitelist', [])
-                    # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
-                    if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
-                        minion_blackout_violation = True
-                elif minion_instance.opts['grains'].get('minion_blackout', False):
-                    whitelist = minion_instance.opts['grains'].get('minion_blackout_whitelist', [])
-                    if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
-                        minion_blackout_violation = True
-                if minion_blackout_violation:
-                    raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
-                                             'to False in pillar or grains to resume operations. Only '
-                                             'saltutil.refresh_pillar allowed in blackout mode.')
-
-                func = minion_instance.functions[function_name]
-                args, kwargs = load_args_and_kwargs(
-                    func,
-                    data['arg'],
+                return_data = Minion._execute_job_function(
+                    function_name,
+                    function_args,
+                    minion_instance,
+                    executors,
+                    opts,
                     data)
-                minion_instance.functions.pack['__context__']['retcode'] = 0
-
-                executors = data.get('module_executors') or opts.get('module_executors', ['direct_call'])
-                if isinstance(executors, six.string_types):
-                    executors = [executors]
-                elif not isinstance(executors, list) or not executors:
-                    raise SaltInvocationError("Wrong executors specification: {0}. String or non-empty list expected".
-                        format(executors))
-                if opts.get('sudo_user', '') and executors[-1] != 'sudo':
-                    executors[-1] = 'sudo'  # replace the last one with sudo
-                log.trace('Executors list %s', executors)  # pylint: disable=no-member
-
-                for name in executors:
-                    fname = '{0}.execute'.format(name)
-                    if fname not in minion_instance.executors:
-                        raise SaltInvocationError("Executor '{0}' is not available".format(name))
-                    return_data = minion_instance.executors[fname](opts, data, func, args, kwargs)
-                    if return_data is not None:
-                        break
 
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0
@@ -1779,6 +1793,8 @@ class Minion(MinionBase):
 
         salt.utils.process.appendproctitle('{0}._thread_multi_return {1}'.format(cls.__name__, data['jid']))
 
+        executors = data.get('module_executors') or opts.get('module_executors', ['direct_call'])
+
         sdata = {'pid': os.getpid()}
         sdata.update(data)
         log.info('Starting a new job with PID %s', sdata['pid'])
@@ -1801,40 +1817,28 @@ class Minion(MinionBase):
             }
 
         for ind in range(0, num_funcs):
+            function_name = data['fun'][ind]
+            function_args = data['arg'][ind]
             if not multifunc_ordered:
-                ret['success'][data['fun'][ind]] = False
+                ret['success'][function_name] = False
             try:
-                minion_blackout_violation = False
-                if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
-                    whitelist = minion_instance.opts['pillar'].get('minion_blackout_whitelist', [])
-                    # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
-                    if data['fun'][ind] != 'saltutil.refresh_pillar' and data['fun'][ind] not in whitelist:
-                        minion_blackout_violation = True
-                elif minion_instance.opts['grains'].get('minion_blackout', False):
-                    whitelist = minion_instance.opts['grains'].get('minion_blackout_whitelist', [])
-                    if data['fun'][ind] != 'saltutil.refresh_pillar' and data['fun'][ind] not in whitelist:
-                        minion_blackout_violation = True
-                if minion_blackout_violation:
-                    raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
-                                             'to False in pillar or grains to resume operations. Only '
-                                             'saltutil.refresh_pillar allowed in blackout mode.')
-
-                func = minion_instance.functions[data['fun'][ind]]
-
-                args, kwargs = load_args_and_kwargs(
-                    func,
-                    data['arg'][ind],
+                return_data = Minion._execute_job_function(
+                    function_name,
+                    function_args,
+                    minion_instance,
+                    executors,
+                    opts,
                     data)
-                minion_instance.functions.pack['__context__']['retcode'] = 0
+
                 if multifunc_ordered:
-                    ret['return'][ind] = func(*args, **kwargs)
+                    ret['return'][ind] = return_data
                     ret['retcode'][ind] = minion_instance.functions.pack['__context__'].get(
                         'retcode',
                         0
                     )
                     ret['success'][ind] = True
                 else:
-                    ret['return'][data['fun'][ind]] = func(*args, **kwargs)
+                    ret['return'][data['fun'][ind]] = return_data
                     ret['retcode'][data['fun'][ind]] = minion_instance.functions.pack['__context__'].get(
                         'retcode',
                         0
