@@ -17,9 +17,31 @@ Module to provide DRBD functionality to Salt
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+
+from salt.exceptions import CommandExecutionError
 from salt.ext import six
 
+import salt.utils.json
+import salt.utils.path
+
 LOGGER = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'drbd'
+
+DRBD_COMMAND = 'drbdadm'
+
+
+def __virtual__():  # pragma: no cover
+    '''
+    Only load this module if drbdadm(drbd-utils) is installed
+    '''
+    if bool(salt.utils.path.which(DRBD_COMMAND)):
+        return __virtualname__
+    return (
+        False,
+        'The drbd execution module failed to load: the drbdadm'
+        ' binary is not available.')
 
 
 def _analyse_overview_field(content):
@@ -180,6 +202,52 @@ def _line_parser(line):
     func(line)
 
 
+def _is_local_all_uptodated(name):
+    '''
+    Check whether all local volumes are UpToDate.
+    '''
+
+    res = status(name)
+    if not res:
+        return False
+
+    # Since name is not all, res only have one element
+    for vol in res[0]['local volumes']:
+        if vol['disk'] != 'UpToDate':
+            return False
+
+    return True
+
+
+def _is_peers_uptodated(name, peernode='all'):
+    '''
+    Check whether all volumes of peer node are UpToDate.
+
+    .. note::
+
+        If peernode is not match, will return None, same as False.
+    '''
+    ret = None
+
+    res = status(name)
+    if not res:
+        return ret
+
+    # Since name is not all, res only have one element
+    for node in res[0]['peer nodes']:
+        if peernode != 'all' and node['peernode name'] != peernode:
+            continue
+
+        for vol in node['peer volumes']:
+            if vol['peer-disk'] != 'UpToDate':
+                return False
+            else:
+                # At lease one volume is 'UpToDate'
+                ret = True
+
+    return ret
+
+
 def overview():
     '''
     Show status of the DRBD devices, support two nodes only.
@@ -304,3 +372,272 @@ def status(name='all'):
         __context__['drbd.statusret'].append(__context__['drbd.resource'])
 
     return __context__['drbd.statusret']
+
+
+def createmd(name='all', force=True):
+    '''
+    Create the metadata of DRBD resource.
+
+    :type name: str
+    :param name:
+        Resource name.
+
+    :type force: bool
+    :param force:
+        Force create metadata.
+
+    :return: result of creating metadata.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' drbd.create
+        salt '*' drbd.create name=<resource name>
+    '''
+
+    cmd = 'drbdadm create-md {}'.format(name)
+
+    if force:
+        cmd += ' --force'
+
+    return __salt__['cmd.retcode'](cmd)
+
+
+def up(name='all'):
+    '''
+    Start of drbd resource.
+
+    :type name: str
+    :param name:
+        Resource name.
+
+    :return: result of start resource.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' drbd.up
+        salt '*' drbd.up name=<resource name>
+    '''
+
+    cmd = 'drbdadm up {}'.format(name)
+
+    return __salt__['cmd.retcode'](cmd)
+
+
+def down(name='all'):
+    '''
+    Stop of DRBD resource.
+
+    :type name: str
+    :param name:
+        Resource name.
+
+    :return: result of stop resource.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' drbd.down
+        salt '*' drbd.down name=<resource name>
+    '''
+
+    cmd = 'drbdadm down {}'.format(name)
+
+    return __salt__['cmd.retcode'](cmd)
+
+
+def primary(name='all', force=False):
+    '''
+    Promote the DRBD resource.
+
+    :type name: str
+    :param name:
+        Resource name.
+
+    :type force: bool
+    :param force:
+        Force to promote the resource.
+        Needed in the initial sync.
+
+    :return: result of promote resource.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' drbd.primary
+        salt '*' drbd.primary name=<resource name>
+    '''
+
+    cmd = 'drbdadm primary {}'.format(name)
+
+    if force:
+        cmd += ' --force'
+
+    return __salt__['cmd.retcode'](cmd)
+
+
+def secondary(name='all'):
+    '''
+    Demote the DRBD resource.
+
+    :type name: str
+    :param name:
+        Resource name.
+
+    :return: result of demote resource.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' drbd.secondary
+        salt '*' drbd.secondary name=<resource name>
+    '''
+
+    cmd = 'drbdadm secondary {}'.format(name)
+
+    return __salt__['cmd.retcode'](cmd)
+
+
+def adjust(name='all'):
+    '''
+    Adjust the DRBD resource while running.
+
+    :type name: str
+    :param name:
+        Resource name.
+
+    :return: result of adjust resource.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' drbd.adjust
+        salt '*' drbd.adjust name=<resource name>
+    '''
+
+    cmd = 'drbdadm adjust {}'.format(name)
+
+    return __salt__['cmd.retcode'](cmd)
+
+
+def setup_show(name='all'):
+    '''
+    Show the DRBD resource via drbdsetup directly.
+    Only support the json format so far.
+
+    :type name: str
+    :param name:
+        Resource name.
+
+    :return: The resource configuration.
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' drbd.setup_show
+        salt '*' drbd.setup_show name=<resource name>
+    '''
+
+    ret = {'name': name,
+           'result': False,
+           'comment': ''}
+
+    # Only support json format
+    cmd = 'drbdsetup show --json {}'.format(name)
+
+    results = __salt__['cmd.run_all'](cmd)
+
+    if 'retcode' not in results or results['retcode'] != 0:
+        ret['comment'] = 'Error({}) happend when show resource via drbdsetup.'.format(
+            results['retcode'])
+        return ret
+
+    try:
+        ret = salt.utils.json.loads(results['stdout'], strict=False)
+    except ValueError:
+        raise CommandExecutionError('Error happens when try to load the json output.',
+                                    info=results)
+
+    return ret
+
+
+def setup_status(name='all'):
+    '''
+    Show the DRBD running status.
+    Only support enable the json format so far.
+
+    :type name: str
+    :param name:
+        Resource name.
+
+    :return: The resource configuration.
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' drbd.setup_status
+        salt '*' drbd.setup_status name=<resource name>
+    '''
+
+    ret = {'name': name,
+           'result': False,
+           'comment': ''}
+
+    cmd = 'drbdsetup status --json {}'.format(name)
+
+    results = __salt__['cmd.run_all'](cmd)
+
+    if 'retcode' not in results or results['retcode'] != 0:
+        ret['comment'] = 'Error({}) happend when show resource via drbdsetup.'.format(
+            results['retcode'])
+        return ret
+
+    try:
+        ret = salt.utils.json.loads(results['stdout'], strict=False)
+    except ValueError:
+        raise CommandExecutionError('Error happens when try to load the json output.',
+                                    info=results)
+
+    return ret
+
+
+def check_sync_status(name, peernode='all'):
+    '''
+    Query a drbd resource until fully synced for all volumes.
+
+    :type name: str
+    :param name:
+        Resource name. Not support all.
+
+    :type peernode: str
+    :param peernode:
+        Peer node name. Default: all
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' drbd.check_sync_status <resource name> <peernode name>
+    '''
+    if _is_local_all_uptodated(name) and _is_peers_uptodated(
+            name, peernode=peernode):
+        return True
+
+    return False
