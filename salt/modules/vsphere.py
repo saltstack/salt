@@ -210,10 +210,10 @@ try:
     # We check the supported vim versions to infer the pyVmomi version
     import ssl
     if 'vim25/6.0' in VmomiSupport.versionMap \
-        and not hasattr(ssl, '_cert_verification_config'):
-            log.debug('pyVmomi not loaded: Incompatible versions '
+       and not hasattr(ssl, '_cert_verification_config'):
+        log.debug('pyVmomi not loaded: Incompatible versions '
                     'of Python. See Issue #29537.')
-            raise ImportError()
+        raise ImportError()
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
