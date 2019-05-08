@@ -228,9 +228,9 @@ def __virtual__():
         return False, 'State module did not load: pyVmomi not found'
 
     # We check the supported vim versions to infer the pyVmomi version
-    if 'vim25/6.0' in VmomiSupport.versionMap and \
-        sys.version_info > (2, 7) and sys.version_info < (2, 7, 9):
-
+    import ssl
+    if 'vim25/6.0' in VmomiSupport.versionMap \
+       and not hasattr(ssl, '_cert_verification_config'):
         return False, ('State module did not load: Incompatible versions '
                        'of Python and pyVmomi present. See Issue #29537.')
     return 'dvs'
