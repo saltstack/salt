@@ -4438,7 +4438,12 @@ def extract_hash(hash_fn,
     partial = None
     found = {}
 
-    with salt.utils.files.fopen(hash_fn, 'r') as fp_:
+    try:
+        hash_file_encoding = __utils__['files.get_encoding'](hash_fn)
+    except (CommandExecutionError, Exception):
+        hash_file_encoding = None
+
+    with salt.utils.files.fopen(hash_fn, 'r', encoding=hash_file_encoding) as fp_:
         for line in fp_:
             line = salt.utils.stringutils.to_unicode(line.strip())
             hash_re = r'(?i)(?<![a-z0-9])([a-f0-9]{' + hash_len_expr + '})(?![a-z0-9])'
