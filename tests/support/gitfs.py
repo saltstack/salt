@@ -93,7 +93,7 @@ class ProcessManager(object):
                     elif name in proc.name() and _search(proc):
                         return proc
                 except psutil.NoSuchProcess:
-                    # Whichever process we are interigating is no longer alive.
+                    # Whichever process we are interrogating is no longer alive.
                     # Skip it and keep searching.
                     continue
             else:
