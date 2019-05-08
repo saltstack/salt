@@ -100,27 +100,39 @@ or zip file of the repository. The directory structure is designed to work with
 3.  Restart the Salt Master.
 
 
-Maintaining formula dependencies using git submodules
+Incorporating Community Formulas Using Git Submodules
 =====================================================
 
 If you want to incorporate others' formulas into your salt repo, using git submodules is a great option.
 
-An overview of git submodules can be found here: https://git-scm.com/book/en/v2/Git-Tools-Submodules
+https://git-scm.com/book/en/v2/Git-Tools-Submodules
 
-From the docs, "Submodules allow you to keep a Git repository as a subdirectory of another Git repository. This lets you clone another repository into your project and keep your commits separate."
+Some of the benefits of using a submodule over simply copying a formula into your repo are as follows:
 
-The benefit of submodules for formulas is that you can manage others' forumlas within your own saltstack repo. You have the ability to pull down newer commits, revert to old commits, and switch branches. You DO NOT have to fork the repo, and by default, those submodules will lock to the commit that you imported them at. This means there should be no failures due to a configuration change on the master branch of the formula repo.
+1. You retain in the git history of the project.
 
-As a working example, consider that you have a salt project that currently manages your web servers. You are tasked with setting up a mongodb cluster, and you find a pre-built formula that suits your needs.
+2. Your  salt repository maintains the commit of the submodule, which means you never run into any surprises when the author makes changes. When you're ready to pull in new changes, your parent project will maintain the submodules version.
 
-You could simply copy that formula into your project, but you'd have to manually update the formula if you ever wanted the latest changes. Also, any changes you made to that formula would show in your git history along with changes you made to your own states. Instead, you can use a git submodule. 
+3. Any changes you make to the submodule are versioned in that submodule, separately from your project.
+
+4. Anyone who clones your repo will have the same commit of each submodule, so all of your team members are on the same page.
+
+All of these factors make salt formulas great candidates for git submodules. Let's look at an example.
 
 .. code-block:: bash
      
     git submodule add https://github.com/saltstack-formulas/mongodb-formula formulas/mongodb-formula
 
 
-This command clones the repo to formulas/mongodb-formula. It also creates a file in your projects root directory called .gitmodules, which keeps track of all the submodules in your project. Now, changing to a different branch or commit in the child formula is registered as a change in your salt project. This means that the state of the child is managed
+This command clones the repo to formulas/mongodb-formula. It also creates a file in your projects root directory called .gitmodules, which keeps track of all the submodules in your project. Now, changing to a different branch or commit in the child formula is registered as a change in your salt project. 
+
+One thing to note: 
+If you are using git submodules, be sure to include in your README that it should be cloned with the following flag
+
+.. code-block:: bash
+
+    git clone --recurse-submodules https://github.com/testing/my-salt-project-with-submodules.git 
+
 
 Usage
 =====
