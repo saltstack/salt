@@ -290,7 +290,7 @@ class SaltDomain(python_domain.PythonDomain):
                     type, target, node, contnode)
 
 # Monkey-patch the Python domain remove the python module index
-python_domain.PythonDomain.indices = []
+python_domain.PythonDomain.indices = [SaltModuleIndex]
 
 
 def setup(app):
