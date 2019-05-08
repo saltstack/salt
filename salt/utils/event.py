@@ -889,7 +889,7 @@ class SaltEvent(object):
         self.subscriber.callbacks.add(event_handler)
         if not self.subscriber.reading:
             # This will handle reconnects
-            self.subscriber.read_async()
+            return self.subscriber.read_async()
 
     def __del__(self):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
