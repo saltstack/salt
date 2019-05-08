@@ -1568,16 +1568,19 @@ class Minion(MinionBase):
             else:
                 Minion._thread_return(minion_instance, opts, data)
 
-    @staticmethod
-    def _execute_job_function(function_name, function_args, minion_instance, executors, opts, data):
+    def _execute_job_function(self, function_name, function_args, executors, opts, data):
+        '''
+        Executes a function within a job given it's name, the args and the executors.
+        It also checks if the function is allowed to run if 'blackout mode' is enabled.
+        '''
         minion_blackout_violation = False
-        if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
-            whitelist = minion_instance.opts['pillar'].get('minion_blackout_whitelist', [])
+        if self.connected and self.opts['pillar'].get('minion_blackout', False):
+            whitelist = self.opts['pillar'].get('minion_blackout_whitelist', [])
             # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
             if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
                 minion_blackout_violation = True
-        elif minion_instance.opts['grains'].get('minion_blackout', False):
-            whitelist = minion_instance.opts['grains'].get('minion_blackout_whitelist', [])
+        elif self.opts['grains'].get('minion_blackout', False):
+            whitelist = self.opts['grains'].get('minion_blackout_whitelist', [])
             if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
                 minion_blackout_violation = True
         if minion_blackout_violation:
@@ -1585,12 +1588,12 @@ class Minion(MinionBase):
                                         'to False in pillar or grains to resume operations. Only '
                                         'saltutil.refresh_pillar allowed in blackout mode.')
 
-        func = minion_instance.functions[function_name]
+        func = self.functions[function_name]
         args, kwargs = load_args_and_kwargs(
             func,
             function_args,
             data)
-        minion_instance.functions.pack['__context__']['retcode'] = 0
+        self.functions.pack['__context__']['retcode'] = 0
 
         if isinstance(executors, six.string_types):
             executors = [executors]
@@ -1603,9 +1606,9 @@ class Minion(MinionBase):
 
         for name in executors:
             fname = '{0}.execute'.format(name)
-            if fname not in minion_instance.executors:
+            if fname not in self.executors:
                 raise SaltInvocationError("Executor '{0}' is not available".format(name))
-            return_data = minion_instance.executors[fname](opts, data, func, args, kwargs)
+            return_data = self.executors[fname](opts, data, func, args, kwargs)
             if return_data is not None:
                 return return_data
 
@@ -1642,10 +1645,9 @@ class Minion(MinionBase):
         function_args = data['arg']
         if function_name in minion_instance.functions:
             try:
-                return_data = Minion._execute_job_function(
+                return_data = minion_instance._execute_job_function(
                     function_name,
                     function_args,
-                    minion_instance,
                     executors,
                     opts,
                     data)
@@ -1822,10 +1824,9 @@ class Minion(MinionBase):
             if not multifunc_ordered:
                 ret['success'][function_name] = False
             try:
-                return_data = Minion._execute_job_function(
+                return_data = minion_instance._execute_job_function(
                     function_name,
                     function_args,
-                    minion_instance,
                     executors,
                     opts,
                     data)
