@@ -17,7 +17,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class YamlDumperTestCase(TestCase):
     '''
-    TestCase for salt.utils.yamlloader module
+    TestCase for salt.utils.yamldumper module
     '''
     def test_yaml_dump(self):
         '''
