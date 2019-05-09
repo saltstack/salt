@@ -11,7 +11,7 @@ import salt.utils.yamldumper
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON, mock_open
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
