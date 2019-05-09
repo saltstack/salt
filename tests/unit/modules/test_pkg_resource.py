@@ -239,7 +239,7 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
                 }
             ]
         }
-        with patch.dict(pkg_resource.__salt__, {'pkg.parse_arch_from_name': NAME_ARCH_MAPPING.get}):
+        with patch.dict(pkg_resource.__salt__, {'pkg.parse_arch': NAME_ARCH_MAPPING.get}):
             if six.PY3:
                 self.assertCountEqual(pkg_resource.format_pkg_list(packages, False, attr=['epoch', 'release']), expected_pkg_list)
             else:
