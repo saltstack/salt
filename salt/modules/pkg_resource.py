@@ -319,12 +319,11 @@ def format_pkg_list(packages, versions_as_list, attr):
 
         for name in ret:
             if 'pkg.parse_arch' in __salt__:
-                _parse_arch = __salt__['pkg.parse_arch'](pkgname)
+                _parse_arch = __salt__['pkg.parse_arch'](name)
             else:
-                _parse_arch = {'name': pkgname, 'arch': None}
-            name_arch_d = _parse_arch(name)
-            _name = name_arch_d['name']
-            _arch = name_arch_d['arch']
+                _parse_arch = {'name': name, 'arch': None}
+            _name = _parse_arch['name']
+            _arch = _parse_arch['arch']
 
             versions = []
             pkgname = None
