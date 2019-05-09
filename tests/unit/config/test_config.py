@@ -76,6 +76,10 @@ def _salt_configuration_error(filename):
 
 class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
+    def _cleanup_environ(self, environ):
+        os.environ.clear()
+        os.environ.update(environ)
+
     def test_sha256_is_default_for_master(self):
         fpath = tempfile.mktemp()
         try:
@@ -151,6 +155,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         salt.utils.is_windows(),
         'You can\'t set an environment dynamically in Windows')
     def test_load_master_config_from_environ_var(self):
+        self.addCleanup(self._cleanup_environ, os.environ.copy())
         original_environ = os.environ.copy()
 
         tempdir = tempfile.mkdtemp(dir=TMP)
@@ -198,6 +203,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         salt.utils.is_windows(),
         'You can\'t set an environment dynamically in Windows')
     def test_load_minion_config_from_environ_var(self):
+        self.addCleanup(self._cleanup_environ, os.environ.copy())
         original_environ = os.environ.copy()
 
         tempdir = tempfile.mkdtemp(dir=TMP)
@@ -241,6 +247,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 shutil.rmtree(tempdir)
 
     def test_load_client_config_from_environ_var(self):
+        self.addCleanup(self._cleanup_environ, os.environ.copy())
         original_environ = os.environ.copy()
         try:
             tempdir = tempfile.mkdtemp(dir=TMP)
@@ -1010,6 +1017,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         salt.utils.is_windows(),
         'You can\'t set an environment dynamically in Windows')
     def test_load_cloud_config_from_environ_var(self):
+        self.addCleanup(self._cleanup_environ, os.environ.copy())
         original_environ = os.environ.copy()
 
         tempdir = tempfile.mkdtemp(dir=TMP)
