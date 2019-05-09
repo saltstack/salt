@@ -161,13 +161,13 @@ def _changes(name,
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
     if win_homedrive and lusr['homedrive'] != win_homedrive:
-        change['homedrive'] = win_homedrive
+        change['win_homedrive'] = win_homedrive
     if win_profile and lusr['profile'] != win_profile:
-        change['profile'] = win_profile
+        change['win_profile'] = win_profile
     if win_logonscript and lusr['logonscript'] != win_logonscript:
-        change['logonscript'] = win_logonscript
+        change['win_logonscript'] = win_logonscript
     if win_description and lusr['description'] != win_description:
-        change['description'] = win_description
+        change['win_description'] = win_description
 
     # MacOS doesn't have full GECOS support, so check for the "ch" functions
     # and ignore these parameters if these functions do not exist.

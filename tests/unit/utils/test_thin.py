@@ -17,6 +17,7 @@ import salt.exceptions
 from salt.utils import thin
 from salt.utils import json
 import salt.utils.stringutils
+import salt.utils.platform
 from salt.utils.stringutils import to_bytes as bts
 from salt.ext.six.moves import range
 from salt.ext.six import PY2

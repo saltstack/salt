@@ -18,6 +18,7 @@ from tests.support.unit import skipIf
 from salt.config import cloud_providers_config
 from salt.ext import six
 
+
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'vultr'

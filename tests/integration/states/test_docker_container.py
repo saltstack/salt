@@ -76,10 +76,12 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         output = process.communicate()[0]
-        log.debug('Output from mkimge-busybox-static:\n%s', output)
 
+        log.debug('Output from mkimge-busybox-static:\n%s', output)
         if process.returncode != 0:
-            raise Exception('Failed to build image')
+            raise Exception(
+                'Failed to build image. Output from mkimge-busybox-static:\n{}'.format(output)
+            )
 
         try:
             salt.utils.files.rm_rf(cls.image_build_rootdir)
@@ -228,6 +230,33 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # Check to make sure that the state is not the changes dict, since
         # it should not have changed
         self.assertTrue('state' not in ret['changes'])
+
+    @with_network(subnet='10.247.197.96/27', create=True)
+    @container_name
+    def test_running_no_changes_hostname_network(self, container_name, net):
+        '''
+        Test that changes are not detected when a hostname is specified for a container
+        on a custom network
+        '''
+        # Create a container
+        kwargs = {
+            'name': container_name,
+            'image': self.image,
+            'shutdown_timeout': 1,
+            'network_mode': net.name,
+            'networks': [net.name],
+            'hostname': 'foo'
+        }
+        ret = self.run_state('docker_container.running', **kwargs)
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('docker_container.running', **kwargs)
+        self.assertSaltTrueReturn(ret)
+        # Discard the outer dict with the state compiler data to make below
+        # asserts easier to read/write
+        ret = ret[next(iter(ret))]
+        # Should be no changes
+        self.assertFalse(ret['changes'])
 
     @container_name
     def test_running_start_false_with_replace(self, name):

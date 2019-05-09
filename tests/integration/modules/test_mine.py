@@ -76,6 +76,9 @@ class MineTest(ModuleCase):
         '''
         Test mine.flush
         '''
+        # TODO The calls to sleep were added in an attempt to make this tests
+        # less flaky. If we still see it fail we need to look for a more robust
+        # solution.
         for minion_id in ('minion', 'sub_minion'):
             self.assertTrue(
                 self.run_function(
@@ -84,7 +87,7 @@ class MineTest(ModuleCase):
                     minion_tgt=minion_id
                 )
             )
-        time.sleep(1)
+            time.sleep(1)
         for minion_id in ('minion', 'sub_minion'):
             ret = self.run_function(
                 'mine.get',
@@ -92,12 +95,14 @@ class MineTest(ModuleCase):
                 minion_tgt=minion_id
             )
             self.assertEqual(ret[minion_id]['id'], minion_id)
+            time.sleep(1)
         self.assertTrue(
             self.run_function(
                 'mine.flush',
                 minion_tgt='minion'
             )
         )
+        time.sleep(1)
         ret_flushed = self.run_function(
             'mine.get',
             ['*', 'grains.items']
@@ -109,12 +114,16 @@ class MineTest(ModuleCase):
         '''
         Test mine.delete
         '''
+        # TODO The calls to sleep were added in an attempt to make this tests
+        # less flaky. If we still see it fail we need to look for a more robust
+        # solution.
         self.assertTrue(
             self.run_function(
                 'mine.send',
                 ['grains.items']
             )
         )
+        time.sleep(1)
         # Smoke testing that grains should now exist in the mine
         ret_grains = self.run_function(
             'mine.get',
@@ -127,6 +136,7 @@ class MineTest(ModuleCase):
                 ['test.arg', 'foo=bar', 'fnord=roscivs'],
             )
         )
+        time.sleep(1)
         ret_args = self.run_function(
             'mine.get',
             ['minion', 'test.arg']
@@ -148,6 +158,7 @@ class MineTest(ModuleCase):
                 ['test.echo', 'foo']
             )
         )
+        time.sleep(1)
         ret_echo = self.run_function(
             'mine.get',
             ['minion', 'test.echo']
@@ -160,6 +171,7 @@ class MineTest(ModuleCase):
                 ['test.arg']
             )
         )
+        time.sleep(1)
         ret_arg_deleted = self.run_function(
             'mine.get',
             ['minion', 'test.arg']
