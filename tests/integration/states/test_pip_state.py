@@ -143,37 +143,34 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         venv_dir = os.path.join(
             RUNTIME_VARS.TMP, 'pip-installed-errors'
         )
-        orig_shell = os.environ.get('SHELL')
-        try:
-            # Since we don't have the virtualenv created, pip.installed will
-            # throw an error.
-            # Example error strings:
-            #  * "Error installing 'pep8': /tmp/pip-installed-errors: not found"
-            #  * "Error installing 'pep8': /bin/sh: 1: /tmp/pip-installed-errors: not found"
-            #  * "Error installing 'pep8': /bin/bash: /tmp/pip-installed-errors: No such file or directory"
-            os.environ['SHELL'] = '/bin/sh'
-            ret = self.run_function('state.sls', mods='pip-installed-errors')
-            self.assertSaltFalseReturn(ret)
-            self.assertSaltCommentRegexpMatches(
-                ret,
-                'Error installing \'pep8\':'
-            )
 
-            # We now create the missing virtualenv
-            ret = self._create_virtualenv(venv_dir)
-            self.assertEqual(ret['retcode'], 0)
+        def cleanup_environ(environ):
+            os.environ.clear()
+            os.environ.update(environ)
 
-            # The state should not have any issues running now
-            ret = self.run_function('state.sls', mods='pip-installed-errors')
-            self.assertSaltTrueReturn(ret)
-        finally:
-            if orig_shell is None:
-                # Didn't exist before, don't leave it there. This should never
-                # happen, but if it does, we don't want this test to affect
-                # others elsewhere in the suite.
-                os.environ.pop('SHELL')
-            else:
-                os.environ['SHELL'] = orig_shell
+        self.addCleanup(cleanup_environ, os.environ.copy())
+
+        # Since we don't have the virtualenv created, pip.installed will
+        # throw an error.
+        # Example error strings:
+        #  * "Error installing 'pep8': /tmp/pip-installed-errors: not found"
+        #  * "Error installing 'pep8': /bin/sh: 1: /tmp/pip-installed-errors: not found"
+        #  * "Error installing 'pep8': /bin/bash: /tmp/pip-installed-errors: No such file or directory"
+        os.environ['SHELL'] = '/bin/sh'
+        ret = self.run_function('state.sls', mods='pip-installed-errors')
+        self.assertSaltFalseReturn(ret)
+        self.assertSaltCommentRegexpMatches(
+            ret,
+            'Error installing \'pep8\':'
+        )
+
+        # We now create the missing virtualenv
+        ret = self._create_virtualenv(venv_dir)
+        self.assertEqual(ret['retcode'], 0)
+
+        # The state should not have any issues running now
+        ret = self.run_function('state.sls', mods='pip-installed-errors')
+        self.assertSaltTrueReturn(ret)
 
     @skipIf(six.PY3, 'Issue is specific to carbon module, which is PY2-only')
     @skipIf(salt.utils.platform.is_windows(), "Carbon does not install in Windows")
