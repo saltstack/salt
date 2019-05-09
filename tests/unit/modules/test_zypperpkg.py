@@ -606,7 +606,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
              patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
              patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
              patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}), \
-             patch.dict(pkg_resource.__salt__, {'pkg.parse_arch_from_name': zypper.parse_arch_from_name}):
+             patch.dict(pkg_resource.__salt__, {'pkg.parse_arch': zypper.parse_arch}):
             pkgs = zypper.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
             self.assertFalse(pkgs.get('gpg-pubkey', False))
             for pkg_name, pkg_attr in {
@@ -697,7 +697,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
              patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
              patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
              patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}), \
-             patch.dict(pkg_resource.__salt__, {'pkg.parse_arch_from_name': zypper.parse_arch_from_name}):
+             patch.dict(pkg_resource.__salt__, {'pkg.parse_arch': zypper.parse_arch}):
             pkgs = zypper.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
             expected_pkg_list = {
                 'glibc': [
