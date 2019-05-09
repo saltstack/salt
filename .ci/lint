@@ -3,7 +3,7 @@ pipeline {
     options {
         timestamps()
         ansiColor('xterm')
-        timeout(time: 3, unit: 'HOURS') 
+        timeout(time: 3, unit: 'HOURS')
     }
     environment {
         PYENV_ROOT = "/usr/local/pyenv"
@@ -29,17 +29,16 @@ pipeline {
                 gawk 'BEGIN {FS="\\t"} {if ($1 != "D") {print $NF}}' file-list-status.log > file-list-changed.log
                 gawk 'BEGIN {FS="\\t"} {if ($1 == "D") {print $NF}}' file-list-status.log > file-list-deleted.log
                 (git diff --name-status -l99999 -C "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME";echo "---";git diff --name-status -l99999 -C "origin/$BRANCH_NAME";printenv|grep -E '=[0-9a-z]{40,}+$|COMMIT=|BRANCH') > file-list-experiment.log
-                echo 254 > pylint-salt-chg.exit # assume failure
-                echo 254 > pylint-salt-full.exit # assume failure
-                echo 254 > pylint-tests-chg.exit # assume failure
-                echo 254 > pylint-tests-full.exit # assume failure
                 eval "$(pyenv init -)"
                 pyenv --version
-                pyenv install --skip-existing 2.7.14
-                pyenv local 2.7.14
-                pyenv shell 2.7.14
+                pyenv install --skip-existing 2.7.15
+                pyenv shell 2.7.15
                 python --version
-                pip install tox
+                pip install -U https://github.com/s0undt3ch/nox/archive/hotfix/py2.zip#egg=Nox==2018.10.17
+                nox --version
+                # Create the required virtualens in serial
+                nox --install-only -e lint-salt
+                nox --install-only -e lint-tests
                 '''
                 archiveArtifacts artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log,file-list-experiment.log'
             }
@@ -53,12 +52,12 @@ pipeline {
                     steps {
                         sh '''
                         eval "$(pyenv init - --no-rehash)"
-                        # tee makes the exit/return code always 0
-                        grep -Ei '^salt/.*\\.py$|^setup\\.py$' file-list-changed.log | (xargs -r '--delimiter=\\n' tox -e pylint-salt ; echo "$?" >  pylint-salt-chg.exit) | tee pylint-report-salt-chg.log
-                        # remove color escape coding
-                        sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-salt-chg.log
-                        read rc_exit < pylint-salt-chg.exit
-                        exit "$rc_exit"
+                        pyenv shell 2.7.15
+                        EC=254
+                        export PYLINT_REPORT=pylint-report-salt-chg.log
+                        grep -Ei '^salt/.*\\.py$|^setup\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' nox -e lint-salt --
+                        EC=$?
+                        exit $EC
                         '''
                     }
                 }
@@ -69,12 +68,12 @@ pipeline {
                     steps {
                         sh '''
                         eval "$(pyenv init - --no-rehash)"
-                        # tee makes the exit/return code always 0
-                        grep -Ei '^tests/.*\\.py$' file-list-changed.log | (xargs -r '--delimiter=\\n' tox -e pylint-tests ; echo "$?" > pylint-tests-chg.exit) | tee pylint-report-tests-chg.log
-                        # remove color escape coding
-                        sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-tests-chg.log
-                        read rc_exit < pylint-tests-chg.exit
-                        exit "$rc_exit"
+                        pyenv shell 2.7.15
+                        EC=254
+                        export PYLINT_REPORT=pylint-report-tests-chg.log
+                        grep -Ei '^tests/.*\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' nox -e lint-tests --
+                        EC=$?
+                        exit $EC
                         '''
                     }
                 }
@@ -113,11 +112,12 @@ pipeline {
                     steps {
                         sh '''
                         eval "$(pyenv init - --no-rehash)"
-                        (tox -e pylint-salt ; echo "$?" > pylint-salt-full.exit) | tee pylint-report-salt-full.log
-                        # remove color escape coding
-                        sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-salt-full.log
-                        read rc_exit <  pylint-salt-full.exit
-                        exit "$rc_exit"
+                        pyenv shell 2.7.15
+                        EC=254
+                        export PYLINT_REPORT=pylint-report-salt-full.log
+                        nox -e lint-salt
+                        EC=$?
+                        exit $EC
                         '''
                     }
                 }
@@ -125,11 +125,12 @@ pipeline {
                     steps {
                         sh '''
                         eval "$(pyenv init - --no-rehash)"
-                        (tox -e pylint-tests ; echo "$?" > pylint-tests-full.exit) | tee pylint-report-tests-full.log
-                        # remove color escape coding
-                        sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-tests-full.log
-                        read rc_exit <  pylint-tests-full.exit
-                        exit "$rc_exit"
+                        pyenv shell 2.7.15
+                        EC=254
+                        export PYLINT_REPORT=pylint-report-tests-full.log
+                        nox -e lint-salt
+                        EC=$?
+                        exit $EC
                         '''
                     }
                 }
@@ -166,8 +167,8 @@ pipeline {
                 description: 'Python lint test has failed',
                 status: 'FAILURE',
                 context: "jenkins/pr/lint"
-            slackSend channel: "#jenkins-prod-pr", 
-                color: '#FF0000', 
+            slackSend channel: "#jenkins-prod-pr",
+                color: '#FF0000',
                 message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
         }
     }
