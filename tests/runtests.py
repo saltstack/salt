@@ -195,6 +195,7 @@ TEST_SUITES = collections.OrderedDict(sorted(TEST_SUITES_UNORDERED.items(),
 class SaltTestsuiteParser(SaltCoverageTestingParser):
     support_docker_execution = True
     support_destructive_tests_selection = True
+    support_expensive_tests_selection = True
     source_code_basedir = SALT_ROOT
 
     def _get_suites(self, include_unit=False, include_cloud_provider=False,

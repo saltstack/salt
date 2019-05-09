@@ -1341,6 +1341,8 @@ def _windows_platform_data():
                 grains['virtual_subtype'] = 'HVM domU'
         elif 'OpenStack' in systeminfo.Model:
             grains['virtual'] = 'OpenStack'
+        elif 'AMAZON' in biosinfo.Version:
+            grains['virtual'] = 'EC2'
 
     return grains
 
