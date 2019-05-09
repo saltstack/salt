@@ -442,7 +442,7 @@ def normalize_name(name):
     return name
 
 
-def parse_arch_from_name(name):
+def parse_arch(name):
     '''
     Parse name and architecture from the specified package name.
 
@@ -450,7 +450,7 @@ def parse_arch_from_name(name):
 
     .. code-block:: bash
 
-        salt '*' pkg.parse_arch_from_name zsh.x86_64
+        salt '*' pkg.parse_arch zsh.x86_64
     '''
     _name, _arch = None, None
     try:
