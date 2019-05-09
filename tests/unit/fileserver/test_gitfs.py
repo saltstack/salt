@@ -405,39 +405,39 @@ class GitFSTestBase(object):
 
         username_key = str('USERNAME')
         orig_username = os.environ.get(username_key)
-        if username_key not in os.environ:
+        environ_copy = os.environ.copy()
+        try:
+            if username_key not in os.environ:
 
-            def cleanup_environ(environ):
-                os.environ.clear()
-                os.environ.update(environ)
+                try:
+                    if salt.utils.platform.is_windows():
+                        os.environ[username_key] = \
+                            salt.utils.win_functions.get_current_user()
+                    else:
+                        os.environ[username_key] = \
+                            pwd.getpwuid(os.geteuid()).pw_name
+                except AttributeError:
+                    log.error(
+                        'Unable to get effective username, falling back to '
+                        '\'root\'.'
+                    )
+                    os.environ[username_key] = str('root')
 
-            self.addCleanup(cleanup_environ, os.environ.copy())
-            try:
-                if salt.utils.platform.is_windows():
-                    os.environ[username_key] = \
-                        salt.utils.win_functions.get_current_user()
-                else:
-                    os.environ[username_key] = \
-                        pwd.getpwuid(os.geteuid()).pw_name
-            except AttributeError:
-                log.error(
-                    'Unable to get effective username, falling back to '
-                    '\'root\'.'
-                )
-                os.environ[username_key] = str('root')
+            repo.index.add([x for x in os.listdir(TMP_REPO_DIR)
+                            if x != '.git'])
+            repo.index.commit('Test')
 
-        repo.index.add([x for x in os.listdir(TMP_REPO_DIR)
-                        if x != '.git'])
-        repo.index.commit('Test')
+            # Add another branch with unicode characters in the name
+            repo.create_head(UNICODE_ENVNAME, 'HEAD')
 
-        # Add another branch with unicode characters in the name
-        repo.create_head(UNICODE_ENVNAME, 'HEAD')
-
-        # Add a tag
-        repo.create_tag(TAG_NAME, 'HEAD')
-        # Older GitPython versions do not have a close method.
-        if hasattr(repo, 'close'):
-            repo.close()
+            # Add a tag
+            repo.create_tag(TAG_NAME, 'HEAD')
+            # Older GitPython versions do not have a close method.
+            if hasattr(repo, 'close'):
+                repo.close()
+        finally:
+            os.environ.clear()
+            os.environ.update(environ_copy)
 
     @classmethod
     def tearDownClass(cls):
