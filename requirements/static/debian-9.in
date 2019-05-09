@@ -19,12 +19,7 @@ moto
 msgpack-python >= 0.4.2, != 0.5.5
 paramiko==2.1.2
 psutil
-<<<<<<< HEAD
 # Let's install cryptodome instead of pycrypto because of pycrypto's outstanding security issues
-=======
-paramiko==2.1.2
-# Let's install cryptodome instead of pycrypto because of pycrypto's outstanding security issues
->>>>>>> 7e7281b13d... Proper english in requirements comments
 # PyCrypto, if pulled, will be removed from the generated static requirements
 pycryptodome
 pyinotify
