@@ -426,23 +426,18 @@ class GitFSTestBase(object):
                 )
                 os.environ[username_key] = str('root')
 
-            repo.index.add([x for x in os.listdir(TMP_REPO_DIR)
-                            if x != '.git'])
-            repo.index.commit('Test')
+        repo.index.add([x for x in os.listdir(TMP_REPO_DIR)
+                        if x != '.git'])
+        repo.index.commit('Test')
 
-            # Add another branch with unicode characters in the name
-            repo.create_head(UNICODE_ENVNAME, 'HEAD')
+        # Add another branch with unicode characters in the name
+        repo.create_head(UNICODE_ENVNAME, 'HEAD')
 
-            # Add a tag
-            repo.create_tag(TAG_NAME, 'HEAD')
-            # Older GitPython versions do not have a close method.
-            if hasattr(repo, 'close'):
-                repo.close()
-        finally:
-            if orig_username is not None:
-                os.environ[username_key] = orig_username
-            else:
-                os.environ.pop(username_key, None)
+        # Add a tag
+        repo.create_tag(TAG_NAME, 'HEAD')
+        # Older GitPython versions do not have a close method.
+        if hasattr(repo, 'close'):
+            repo.close()
 
     @classmethod
     def tearDownClass(cls):
