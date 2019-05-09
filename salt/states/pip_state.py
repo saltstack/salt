@@ -37,12 +37,7 @@ from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
-from salt.ext import six
-try:
-    import pkg_resources
-    HAS_PKG_RESOURCES = True
-except ImportError:
-    HAS_PKG_RESOURCES = False
+import salt.ext.six as six
 # pylint: disable=import-error
 try:
     import pip

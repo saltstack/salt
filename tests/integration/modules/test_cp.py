@@ -16,7 +16,6 @@ import textwrap
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    flaky,
     get_unused_localhost_port,
     skip_if_not_root,
     with_tempfile)
@@ -397,7 +396,6 @@ class CPModuleTest(ModuleCase):
             ])
         self.assertEqual(ret, False)
 
-    @flaky
     @skipIf(not SSL3_SUPPORT, 'Requires python with SSL3 support')
     def test_get_file_str_https(self):
         '''
