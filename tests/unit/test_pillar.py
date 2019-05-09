@@ -355,7 +355,7 @@ class PillarTestCase(TestCase):
             'kernel': 'Linux'
         }
 
-        tempdir = tempfile.mkdtemp(dir=TMP)
+        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         try:
             sls_files = self._setup_test_topfile_sls_pillar_match(
                 tempdir,)

@@ -32,6 +32,7 @@ log = logging.getLogger(__name__)
 
 SIGKILL = 9
 
+
 @pytest.mark.usefixtures('session_salt_syndic')
 class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     '''

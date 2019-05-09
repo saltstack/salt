@@ -18,7 +18,6 @@ import re
 import sys
 import logging
 import tempfile
-import textwrap
 
 import salt.utils.path
 

@@ -194,7 +194,6 @@ def add(name, beacon_data, **kwargs):
                     event_ret = event_bus.get_event(
                        tag='/salt/minion/minion_beacon_validation_complete',
                        wait=kwargs.get('timeout', 30))
-                    )
                     valid = event_ret['valid']
                     vcomment = event_ret['vcomment']
 
@@ -219,7 +218,6 @@ def add(name, beacon_data, **kwargs):
                     event_ret = event_bus.get_event(
                         tag='/salt/minion/minion_beacon_add_complete',
                         wait=kwargs.get('timeout', 30))
-                    )
                     if event_ret and event_ret['complete']:
                         beacons = event_ret['beacons']
                         if name in beacons and beacons[name] == beacon_data:

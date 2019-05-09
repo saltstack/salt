@@ -119,7 +119,7 @@ def fire(data, tag, timeout=None):
                                         opts=__opts__,
                                         keep_loop=True,
                                         listen=False) as event:
-        return event.fire_event(data, tag, timeout=timeout)
+            return event.fire_event(data, tag, timeout=timeout)
     except Exception:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
