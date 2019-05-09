@@ -4,7 +4,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 import tests.support.mock as mock
 
 import salt.config
