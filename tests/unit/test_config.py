@@ -564,7 +564,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         expected = salt.config._expand_glob_path(
             [salt.syspaths.BASE_FILE_ROOTS_DIR]
         )
-        with mock.patch('salt.config._normalize_roots') as mk:
+        with patch('salt.config._normalize_roots') as mk:
             ret = salt.config._validate_file_roots(None)
             assert not mk.called
         assert ret == {'base': expected}
@@ -596,7 +596,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         expected = salt.config._expand_glob_path(
             [salt.syspaths.BASE_PILLAR_ROOTS_DIR]
         )
-        with mock.patch('salt.config._normalize_roots') as mk:
+        with patch('salt.config._normalize_roots') as mk:
             ret = salt.config._validate_pillar_roots(None)
             assert not mk.called
         assert ret == {'base': expected}
