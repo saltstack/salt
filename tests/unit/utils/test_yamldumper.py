@@ -7,6 +7,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
+import salt.ext.six
 import salt.utils.yamldumper
 
 # Import Salt Testing Libs
@@ -24,9 +25,15 @@ class YamlDumperTestCase(TestCase):
         Test yaml.dump a dict
         '''
         data = {'foo': 'bar'}
-        assert salt.utils.yamldumper.dump(data) == '{!!python/unicode \'foo\': !!python/unicode \'bar\'}\n'
 
-        assert salt.utils.yamldumper.dump(data, default_flow_style=False) == '!!python/unicode \'foo\': !!python/unicode \'bar\'\n'
+        if salt.ext.six.PY2:
+            exp_yaml = '{!!python/unicode \'foo\': !!python/unicode \'bar\'}\n'
+        else:
+            exp_yaml = '{foo: bar}\n'
+
+        assert salt.utils.yamldumper.dump(data) == exp_yaml
+
+        assert salt.utils.yamldumper.dump(data, default_flow_style=False) == exp_yaml.replace('{', '').replace('}', '')
 
     def test_yaml_safe_dump(self):
         '''
