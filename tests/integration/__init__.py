@@ -144,7 +144,13 @@ class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer):
 
 class SocketServerRequestHandler(socketserver.StreamRequestHandler):
     def handle(self):
-        unpacker = msgpack.Unpacker(encoding='utf-8')
+        encoding = 'utf-8'
+        unpacker_kwargs = {}
+        if msgpack.version >= (0, 5, 2):
+            unpacker_kwargs['raw'] = False
+        else:
+            unpacker_kwargs['encoding'] = encoding
+        unpacker = msgpack.Unpacker(**unpacker_kwargs)
         while not self.server.shutting_down.is_set():
             try:
                 wire_bytes = self.request.recv(1024)
