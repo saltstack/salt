@@ -94,8 +94,8 @@ def _from_line(*args, **kwargs):
         import pip._internal.req.constructors  # pylint: disable=E0611,E0401
         return pip._internal.req.constructors.install_req_from_line(*args, **kwargs)
     elif salt.utils.versions.compare(ver1=pip.__version__,
-                                   oper='>=',
-                                   ver2='10.0'):
+                                     oper='>=',
+                                     ver2='10.0'):
         import pip._internal.req  # pylint: disable=E0611,E0401
         return pip._internal.req.InstallRequirement.from_line(*args, **kwargs)
     else:
