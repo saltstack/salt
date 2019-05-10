@@ -96,8 +96,12 @@ def process_queue(port, queue):
             sock.sendall(salt.utils.msgpack.dumps(record.__dict__,
                                                   encoding='utf-8'))
         except (IOError, EOFError, KeyboardInterrupt, SystemExit):
-            sock.shutdown(socket.SHUT_RDWR)
-            sock.close()
+            try:
+                sock.shutdown(socket.SHUT_RDWR)
+                sock.close()
+            except socket.error as exc:
+                if exc.errno != errno.ENOTCONN:
+                    raise
             break
         except socket.error as exc:
             if exc.errno == errno.EPIPE:
