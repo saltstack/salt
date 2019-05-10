@@ -70,6 +70,7 @@ pycparser==2.19           # via cffi
 # Next line explicitly commented out by pip-tools-compile because of the following regex: '^pycrypto==(.*)$'
 # pycrypto==2.6.1 ; sys_platform != "win32"
 pycryptodome==3.8.1
+pygit2==0.28.1
 pyinotify==0.9.6
 pyopenssl==19.0.0
 pyserial==3.4             # via junos-eznc
@@ -99,7 +100,7 @@ scp==0.13.2               # via junos-eznc
 selectors2==2.0.1         # via ncclient
 setproctitle==1.1.10
 singledispatch==3.4.0.3   # via tornado
-six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kazoo, kubernetes, mock, more-itertools, moto, ncclient, pathlib2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
+six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kazoo, kubernetes, mock, more-itertools, moto, ncclient, pathlib2, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
 smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
