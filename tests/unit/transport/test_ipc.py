@@ -86,13 +86,14 @@ class IPCMessageClient(BaseIPCReqCase):
     '''
 
     def _get_channel(self):
-        channel = salt.transport.ipc.IPCMessageClient(
-            socket_path=self.socket_path,
-            io_loop=self.io_loop,
-        )
-        channel.connect(callback=self.stop)
-        self.wait()
-        return channel
+        if not hasattr(self, 'channel') or self.channel is None:
+            self.channel = salt.transport.ipc.IPCMessageClient(
+                socket_path=self.socket_path,
+                io_loop=self.io_loop,
+            )
+            self.channel.connect(callback=self.stop)
+            self.wait()
+        return self.channel
 
     def setUp(self):
         super(IPCMessageClient, self).setUp()
@@ -106,6 +107,8 @@ class IPCMessageClient(BaseIPCReqCase):
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
+        finally:
+            self.channel = None
 
     def test_basic_send(self):
         msg = {'foo': 'bar', 'stop': True}
@@ -237,3 +240,16 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
         self.assertEqual(len(call_cnt), 2)
         self.assertEqual(call_cnt[0], 'TEST')
         self.assertEqual(call_cnt[1], 'TEST')
+
+    def test_sync_reading(self):
+        # To be completely fair let's create 2 clients.
+        client1 = self.sub_channel
+        client2 = self._get_sub_channel()
+        call_cnt = []
+
+        # Now let both waiting data at once
+        self.pub_channel.publish('TEST')
+        ret1 = client1.read_sync()
+        ret2 = client2.read_sync()
+        self.assertEqual(ret1, 'TEST')
+        self.assertEqual(ret2, 'TEST')
