@@ -161,14 +161,14 @@ class Serial(object):
                 else:
                     loads_kwargs['encoding'] = encoding
                 try:
-                    ret = msgpack.loads(msg, **loads_kwargs)
+                    ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
                 except UnicodeDecodeError:
                     # msg contains binary data
                     loads_kwargs.pop('raw', None)
                     loads_kwargs.pop('encoding', None)
-                    ret = msgpack.loads(msg, **loads_kwargs)
+                    ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
             else:
-                ret = msgpack.loads(msg, **loads_kwargs)
+                ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
             if six.PY3 and encoding is None and not raw:
                 ret = salt.transport.frame.decode_embedded_strs(ret)
         except Exception as exc:
