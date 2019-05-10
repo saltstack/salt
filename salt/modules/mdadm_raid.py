@@ -247,7 +247,7 @@ def create(name,
            '-v',
            '-l', six.text_type(level),
            ] + opts + [
-           '-e', metadata,
+           '-e', six.text_type(metadata),
            '-n', six.text_type(raid_devices),
            ] + devices
 

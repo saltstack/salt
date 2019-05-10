@@ -2700,11 +2700,8 @@ def managed(name,
                 'to True to allow the managed file to be empty.'
                 .format(contents_id)
             )
-        if isinstance(use_contents, six.binary_type) and b'\0' in use_contents:
-            contents = use_contents
-        elif isinstance(use_contents, six.text_type) and str('\0') in use_contents:
-            contents = use_contents
-        else:
+
+        try:
             validated_contents = _validate_str_list(use_contents)
             if not validated_contents:
                 return _error(
@@ -2719,6 +2716,17 @@ def managed(name,
                     contents += line.rstrip('\n').rstrip('\r') + os.linesep
             if contents_newline and not contents.endswith(os.linesep):
                 contents += os.linesep
+        except UnicodeDecodeError:
+            # Either something terrible happened, or we have binary data.
+            if template:
+                return _error(
+                    ret,
+                    'Contents specified by contents/contents_pillar/'
+                    'contents_grains appears to be binary data, and'
+                    ' as will not be able to be treated as a Jinja'
+                    ' template.'
+                )
+            contents = use_contents
         if template:
             contents = __salt__['file.apply_template_on_contents'](
                 contents,
@@ -2864,13 +2872,15 @@ def managed(name,
                         reset=win_perms_reset)
                 except CommandExecutionError as exc:
                     if exc.strerror.startswith('Path not found'):
-                        ret['comment'] = '{0} will be created'.format(name)
+                        ret['changes']['newfile'] = name
 
             if isinstance(ret['changes'], tuple):
                 ret['result'], ret['comment'] = ret['changes']
             elif ret['changes']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
+                ret['comment'] += ('\nNote: No changes made, actual changes may\n'
+                                   'be different due to other states.')
                 if 'diff' in ret['changes'] and not show_changes:
                     ret['changes']['diff'] = '<show_changes=False>'
             else:
@@ -4499,7 +4509,7 @@ def replace(name,
 
     pattern
         A regular expression, to be matched using Python's
-        :py:func:`~re.search`.
+        :py:func:`re.search`.
 
         .. note::
 
@@ -7332,7 +7342,7 @@ def serialize(name,
                 try:
                     existing_data = __serializers__[deserializer_name](
                         fhr,
-                        **deserializer_options.get(serializer_name, {})
+                        **deserializer_options.get(deserializer_name, {})
                     )
                 except (TypeError, DeserializationError) as exc:
                     ret['result'] = False
