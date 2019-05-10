@@ -257,8 +257,9 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                     )
 
             # Test VCS installations with version info like >= 0.1
-            with patch.object(pip, '__version__', MagicMock(side_effect=AttributeError(
-                                                        'Faked missing __version__ attribute'))):
+            attrib_err = AttributeError('Faked missing __version__ attribute')
+            mock_attrib_err = MagicMock(side_effect=attrib_err)
+            with patch.object(pip, '__version__', mock_attrib_err):
                 mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
                 pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})
                 pip_install = MagicMock(return_value={
