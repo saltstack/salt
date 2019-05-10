@@ -175,7 +175,9 @@ LOGGING_STORE_HANDLER = __StoreLoggingHandler()
 
 
 class SaltLogQueueHandler(QueueHandler):
-    pass
+    def prepare(self, record):
+        record = QueueHandler.prepare(self, record)
+        return record.__dict__.copy()
 
 
 class SaltLogRecord(logging.LogRecord):
@@ -816,7 +818,7 @@ def get_multiprocessing_logging_queue():
         return __MP_LOGGING_QUEUE
 
     if __MP_LOGGING_QUEUE is None:
-        __MP_LOGGING_QUEUE = multiprocessing.Queue()
+        __MP_LOGGING_QUEUE = multiprocessing.Queue(100000)
     return __MP_LOGGING_QUEUE
 
 
@@ -1053,12 +1055,13 @@ def __process_multiprocessing_logging_queue(opts, queue):
         setup_extended_logging(opts)
     while True:
         try:
-            record = queue.get()
-            if record is None:
+            record_dict = queue.get()
+            if record_dict is None:
                 # A sentinel to stop processing the queue
                 break
             # Just log everything, filtering will happen on the main process
             # logging handlers
+            record = logging.makeLogRecord(record_dict)
             logger = logging.getLogger(record.name)
             logger.handle(record)
         except (EOFError, KeyboardInterrupt, SystemExit):

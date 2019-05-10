@@ -22,8 +22,8 @@ requisite to a pkg.installed state for the package which provides pip
 # Import python libs
 from __future__ import absolute_import
 import re
+import types
 import logging
-import pkg_resources
 
 # Import salt libs
 import salt.utils
@@ -33,44 +33,68 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
 import salt.ext.six as six
+try:
+    import pkg_resources
+    HAS_PKG_RESOURCES = True
+except ImportError:
+    HAS_PKG_RESOURCES = False
 # pylint: disable=import-error
 try:
     import pip
     HAS_PIP = True
 except ImportError:
     HAS_PIP = False
+    # Remove references to the loaded pip module above so reloading works
+    import sys
+    pip_related_entries = [
+        (k, v) for (k, v) in sys.modules.items()
+        or getattr(v, '__module__', '').startswith('pip.')
+        or (isinstance(v, types.ModuleType) and v.__name__.startswith('pip.'))
+    ]
+    for name, entry in pip_related_entries:
+        sys.modules.pop(name)
+        del entry
+
+    del pip
+    sys_modules_pip = sys.modules.pop('pip', None)
+    if sys_modules_pip is not None:
+        del sys_modules_pip
 
 if HAS_PIP is True:
-    try:
-        from pip.req import InstallRequirement
-        _from_line = InstallRequirement.from_line
-    except ImportError:
-        # pip 10.0.0 move req module under pip._internal
-        try:
-            try:
-                from pip._internal.req import InstallRequirement
-                _from_line = InstallRequirement.from_line
-            except AttributeError:
-                from pip._internal.req.constructors import install_req_from_line as _from_line
-        except ImportError:
-            HAS_PIP = False
-            # Remove references to the loaded pip module above so reloading works
-            import sys
-            del pip
-            if 'pip' in sys.modules:
-                del sys.modules['pip']
-
-    try:
-        from pip.exceptions import InstallationError
-    except ImportError:
+    if salt.utils.compare_versions(ver1=pip.__version__,
+                                   oper='>=',
+                                   ver2='18.1'):
+        from pip._internal.exceptions import InstallationError  # pylint: disable=E0611,E0401
+    elif salt.utils.compare_versions(ver1=pip.__version__,
+                                   oper='>=',
+                                   ver2='10.0'):
+        from pip.exceptions import InstallationError  # pylint: disable=E0611,E0401
+    else:
         InstallationError = ValueError
 
 # pylint: enable=import-error
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'pip'
+
+
+def _from_line(*args, **kwargs):
+    import pip
+    if salt.utils.compare_versions(ver1=pip.__version__,
+                                   oper='>=',
+                                   ver2='18.1'):
+        import pip._internal.req.constructors  # pylint: disable=E0611,E0401
+        return pip._internal.req.constructors.install_req_from_line(*args, **kwargs)
+    elif salt.utils.compare_versions(ver1=pip.__version__,
+                                   oper='>=',
+                                   ver2='10.0'):
+        import pip._internal.req  # pylint: disable=E0611,E0401
+        return pip._internal.req.InstallRequirement.from_line(*args, **kwargs)
+    else:
+        import pip.req  # pylint: disable=E0611,E0401
+        return pip.req.InstallRequirement.from_line(*args, **kwargs)
 
 
 def __virtual__():
@@ -122,12 +146,10 @@ def _check_pkg_version_format(pkg):
             # vcs+URL urls are not properly parsed.
             # The next line is meant to trigger an AttributeError and
             # handle lower pip versions
-            logger.debug(
-                'Installed pip version: {0}'.format(pip.__version__)
-            )
+            log.debug('Installed pip version: %s', pip.__version__)
             install_req = _from_line(pkg)
         except AttributeError:
-            logger.debug('Installed pip version is lower than 1.2')
+            log.debug('Installed pip version is lower than 1.2')
             supported_vcs = ('git', 'svn', 'hg', 'bzr')
             if pkg.startswith(supported_vcs):
                 for vcs in supported_vcs:
@@ -264,6 +286,10 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
     and 1 if version1 > version2. Return None if there was a problem
     making the comparison.
     '''
+    if HAS_PKG_RESOURCES is False:
+        log.warning('The pkg_resources packages was not loaded. Please install setuptools.')
+        return None
+
     normalize = lambda x: str(x).split('!', 1)[-1] if ignore_epoch else str(x)
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
@@ -276,7 +302,7 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
         if pkg_resources.parse_version(pkg1) > pkg_resources.parse_version(pkg2):
             return 1
     except Exception as exc:
-        logger.exception(exc)
+        log.exception(exc)
     return None
 
 
@@ -725,7 +751,7 @@ def installed(name,
             pip_list = __salt__['pip.list'](bin_env=bin_env, user=user, cwd=cwd)
         # If we fail, then just send False, and we'll try again in the next function call
         except Exception as exc:
-            logger.exception(exc)
+            log.exception(exc)
             pip_list = False
 
         for prefix, state_pkg_name, version_spec in pkgs_details:

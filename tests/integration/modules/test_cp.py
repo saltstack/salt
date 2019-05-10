@@ -3,6 +3,7 @@
 # Import python libs
 from __future__ import absolute_import
 import os
+import sys
 import uuid
 import hashlib
 import logging
@@ -26,6 +27,9 @@ import salt.ext.six as six
 import salt.utils
 
 log = logging.getLogger(__name__)
+
+
+SSL3_SUPPORT = sys.version_info >= (2, 7, 9)
 
 
 class CPModuleTest(ModuleCase):
@@ -237,6 +241,7 @@ class CPModuleTest(ModuleCase):
             ])
         self.assertEqual(ret, False)
 
+    @skipIf(not SSL3_SUPPORT, 'Requires python with SSL3 support')
     @with_tempfile
     def test_get_url_https(self, tgt):
         '''
@@ -255,6 +260,7 @@ class CPModuleTest(ModuleCase):
             self.assertIn('Windows', data)
             self.assertNotIn('AYBABTU', data)
 
+    @skipIf(not SSL3_SUPPORT, 'Requires python with SSL3 support')
     def test_get_url_https_dest_empty(self):
         '''
         cp.get_url with https:// source given and destination omitted.
@@ -271,6 +277,7 @@ class CPModuleTest(ModuleCase):
             self.assertIn('Windows', data)
             self.assertNotIn('AYBABTU', data)
 
+    @skipIf(not SSL3_SUPPORT, 'Requires python with SSL3 support')
     def test_get_url_https_no_dest(self):
         '''
         cp.get_url with https:// source given and destination set as None
@@ -345,6 +352,7 @@ class CPModuleTest(ModuleCase):
             ])
         self.assertEqual(ret, False)
 
+    @skipIf(not SSL3_SUPPORT, 'Requires python with SSL3 support')
     def test_get_file_str_https(self):
         '''
         cp.get_file_str with https:// source given

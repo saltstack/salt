@@ -203,6 +203,8 @@ class TestDaemon(object):
         # Set up PATH to mockbin
         self._enter_mockbin()
 
+        self.minion_targets = set(['minion', 'sub_minion'])
+
         if self.parser.options.transport == 'zeromq':
             self.start_zeromq_daemons()
         elif self.parser.options.transport == 'raet':
@@ -210,7 +212,6 @@ class TestDaemon(object):
         elif self.parser.options.transport == 'tcp':
             self.start_tcp_daemons()
 
-        self.minion_targets = set(['minion', 'sub_minion'])
         self.pre_setup_minions()
         self.setup_minions()
 
@@ -388,6 +389,7 @@ class TestDaemon(object):
                 ' * {LIGHT_YELLOW}Starting syndic salt-master ... {ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            self.prep_syndic()
             self.smaster_process = start_daemon(
                 daemon_name='salt-smaster',
                 daemon_id=self.syndic_master_opts['id'],
@@ -456,6 +458,7 @@ class TestDaemon(object):
             sys.stdout.flush()
 
         if self.parser.options.proxy:
+            self.minion_targets.add(self.proxy_opts['id'])
             try:
                 sys.stdout.write(
                     ' * {LIGHT_YELLOW}Starting salt-proxy ... {ENDC}'.format(**self.colors)
@@ -463,7 +466,7 @@ class TestDaemon(object):
                 sys.stdout.flush()
                 self.proxy_process = start_daemon(
                     daemon_name='salt-proxy',
-                    daemon_id=self.master_opts['id'],
+                    daemon_id=self.proxy_opts['id'],
                     daemon_log_prefix='salt-proxy/{}'.format(self.proxy_opts['id']),
                     daemon_cli_script_name='proxy',
                     daemon_config=self.proxy_opts,
@@ -518,6 +521,13 @@ class TestDaemon(object):
         # no raet syndic daemon yet
 
     start_tcp_daemons = start_zeromq_daemons
+
+    def prep_syndic(self):
+        '''
+        Create a roster file for salt's syndic
+        '''
+        roster_path = os.path.join(FILES, 'conf/_ssh/roster')
+        shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
 
     def prep_ssh(self):
         '''
@@ -670,8 +680,7 @@ class TestDaemon(object):
             print('sshd had errors on startup: {0}'.format(salt.utils.to_str(sshd_err)))
         else:
             os.environ['SSH_DAEMON_RUNNING'] = 'True'
-        roster_path = os.path.join(FILES, 'conf/_ssh/roster')
-        shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
+        self.prep_syndic()
         with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
             roster.write('  user: {0}\n'.format(RUNTIME_VARS.RUNNING_TESTS_USER))
             roster.write('  priv: {0}/{1}'.format(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'))
@@ -746,6 +755,37 @@ class TestDaemon(object):
         syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
         syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
 
+        # Under windows we can't seem to properly create a virtualenv off of another
+        # virtualenv, we can on linux but we will still point to the virtualenv binary
+        # outside the virtualenv running the test suite, if that's the case.
+        try:
+            real_prefix = sys.real_prefix
+            # The above attribute exists, this is a virtualenv
+            if salt.utils.is_windows():
+                virtualenv_binary = os.path.join(real_prefix, 'Scripts', 'virtualenv.exe')
+            else:
+                # We need to remove the virtualenv from PATH or we'll get the virtualenv binary
+                # from within the virtualenv, we don't want that
+                path = os.environ.get('PATH')
+                if path is not None:
+                    path_items = path.split(os.pathsep)
+                    for item in path_items[:]:
+                        if item.startswith(sys.base_prefix):
+                            path_items.remove(item)
+                    os.environ['PATH'] = os.pathsep.join(path_items)
+                virtualenv_binary = salt.utils.which('virtualenv')
+                if path is not None:
+                    # Restore previous environ PATH
+                    os.environ['PATH'] = path
+                if not virtualenv_binary.startswith(real_prefix):
+                    virtualenv_binary = None
+            if virtualenv_binary and not os.path.exists(virtualenv_binary):
+                # It doesn't exist?!
+                virtualenv_binary = None
+        except AttributeError:
+            # We're not running inside a virtualenv
+            virtualenv_binary = None
+
         # This minion connects to master
         minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion'))
         minion_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
@@ -755,6 +795,8 @@ class TestDaemon(object):
         minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
         minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
         minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
+        if virtualenv_binary:
+            minion_opts['venv_bin'] = virtualenv_binary
 
         # This sub_minion also connects to master
         sub_minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'sub_minion'))
@@ -765,6 +807,8 @@ class TestDaemon(object):
         sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-minion', 'pki', 'minion')
         sub_minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
         sub_minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
+        if virtualenv_binary:
+            sub_minion_opts['venv_bin'] = virtualenv_binary
 
         # This is the master of masters
         syndic_master_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master'))
@@ -901,6 +945,7 @@ class TestDaemon(object):
                 conf['log_handlers_dirs'] = []
             conf['log_handlers_dirs'].insert(0, LOG_HANDLERS_DIR)
             conf['runtests_log_port'] = SALT_LOG_PORT
+            conf['runtests_log_level'] = os.environ.get('TESTS_MIN_LOG_LEVEL_NAME') or 'debug'
 
         # ----- Transcribe Configuration ---------------------------------------------------------------------------->
         for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
@@ -1110,9 +1155,10 @@ class TestDaemon(object):
         Clean out the tmp files
         '''
         def remove_readonly(func, path, excinfo):
-            # Give full permissions to owner
-            os.chmod(path, stat.S_IRWXU)
-            func(path)
+            if os.path.exists(path):
+                # Give full permissions to owner
+                os.chmod(path, stat.S_IRWXU)
+                func(path)
 
         for dirname in (TMP, RUNTIME_VARS.TMP_STATE_TREE,
                         RUNTIME_VARS.TMP_PILLAR_TREE, RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
@@ -1335,7 +1381,7 @@ class TestDaemon(object):
                 ret = None
             if ret and 'minions' not in ret:
                 continue
-            if ret and sorted(ret['minions']) == ['minion', 'sub_minion']:
+            if ret and sorted(ret['minions']) == sorted(self.minion_targets):
                 break
             if time.time() - start >= timeout:
                 raise RuntimeError("Ping Minions Failed")

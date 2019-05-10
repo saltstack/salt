@@ -10,28 +10,29 @@ docker
 futures>=2.0; python_version < '3.0'
 GitPython
 hgtools
-ioflo
 jsonschema<=2.6.0
 keyring==5.7.1
-kubernetes<4.0
+kubernetes<=4.0
 mock<1.1.0
 more-itertools==5.0.0
 moto
 msgpack-python >= 0.4.2, != 0.5.5
 psutil
-pycrypto>=2.6.1
+# Let's install cryptodome instead of pycrypto because of pycrypto's outstanding security issues
+# PyCrypto, if pulled, will be removed from the generated static requirements
+pycryptodome
 pyinotify
 pyopenssl
 python-etcd==0.4.2
 python-gnupg
 pyvmomi
-pyzmq
 requests
 rfc3987
 salttesting==2017.6.1
 setproctitle
 setuptools-scm
 strict_rfc3339
+supervisor==3.3.5; python_version < '3'
 timelib
 tornado<5.0
 virtualenv
