@@ -9,7 +9,7 @@ Synopsis
 
 .. code-block:: bash
 
-    salt-unity salt '*' test.ping
+    salt-unity salt '*' test.version
 
 Description
 ===========
