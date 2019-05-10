@@ -35,7 +35,7 @@ SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, 'tests', 'support', 'coverage')
 IS_WINDOWS = sys.platform.lower().startswith('win')
 
 # Python versions to run against
-_PYTHON_VERSIONS = ('2', '2.7', '3', '3.4', '3.5', '3.6')
+_PYTHON_VERSIONS = ('2', '2.7', '3', '3.4', '3.5', '3.6', '3.7')
 
 # Nox options
 #  Reuse existing virtualenvs
@@ -84,8 +84,8 @@ def _get_session_python_site_packages_dir(session):
 
 def _get_pydir(session):
     version_info = _get_session_python_version_info(session)
-    if version_info < (2, 7) or version_info >= (3, 7):
-        session.error('Only Python >= 2.7 and < 3.7 is supported')
+    if version_info < (2, 7):
+        session.error('Only Python >= 2.7 is supported')
     return 'py{}.{}'.format(*version_info)
 
 
