@@ -14,7 +14,6 @@ import logging
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    patch,
     Mock,
     MagicMock,
     NO_MOCK,
@@ -26,6 +25,7 @@ import salt.modules.telegram as telegram
 
 
 log = logging.getLogger(__name__)
+
 
 class RequestMock(Mock):
     '''
