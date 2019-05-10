@@ -262,6 +262,31 @@ editing XML IDs.
         - xpath: .//actor[@id='1']
         - value: William Shatner
 
+Slot Syntax Updates
+===================
+
+The slot syntax has been updated to support parsing dictionary responses and to append text.
+
+.. code-block:: yaml
+
+  demo dict parsing and append:
+    test.configurable_test_state:
+      - name: slot example
+      - changes: False
+      - comment: __slot__:salt:test.arg(shell="/bin/bash").kwargs.shell ~ /appended
+
+.. code-block:: none
+
+  local:
+    ----------
+          ID: demo dict parsing and append
+    Function: test.configurable_test_state
+        Name: slot example
+      Result: True
+     Comment: /bin/bash/appended
+     Started: 09:59:58.623575
+    Duration: 1.229 ms
+     Changes:
 
 State Changes
 =============
@@ -389,12 +414,28 @@ the ``beacon_module`` parameter in the beacon configuration.
 Salt Cloud Features
 ===================
 
+General
+-------
+
+The salt-cloud WinRM util has been extended to allow for an Administrator
+account rename during deployment (for example, the Administator account
+being renamed by an Active Directory group policy).
+
 GCE Driver
 ----------
 
 The GCE salt cloud driver can now be used with GCE instance credentials by
 setting the configuration paramaters ``service_account_private_key`` and
 ``service_account_private_email`` to an empty string.
+
+VMWware Driver
+--------------
+
+The VMWare driver has been updated to:
+    Allow specifying a Windows domain to join during customization.
+    Allow specifying timezone for the system during customization.
+    Allow disabling the Windows autologon after deployment.
+    Allow specifying the source template/VM's datacenter (to allow cloning between datacenters).
 
 Salt Api
 ========

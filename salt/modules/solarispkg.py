@@ -169,7 +169,7 @@ def latest_version(*names, **kwargs):
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
 
