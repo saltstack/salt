@@ -263,6 +263,8 @@ def __virtual__():
             list_backups_dir = _namespaced_function(list_backups_dir, globals())
             normpath_ = _namespaced_function(normpath_, globals())
             _assert_occurrence = _namespaced_function(_assert_occurrence, globals())
+            _starts_till = _namespaced_function(_starts_till, globals())
+            abspath = _namespaced_function(abspath, globals())
 
         else:
             return False, "Module win_file: Missing Win32 modules"
