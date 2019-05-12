@@ -50,6 +50,13 @@ your application. Be sure to back up the ``gpgkeys`` directory someplace safe!
     generation to be extremely slow. In these cases, there are usually means of
     increasing the system entropy. On virtualised Linux systems, this can often
     be achieved by installing the ``rng-tools`` package.
+    
+.. note::
+    As of Ubuntu 18.04 LTS you cannot create a key without a passphrase using 
+    the command given above. Instead you will need to use the following command to force
+    gpg to accept an empty passphrase. 
+    
+    ``gpg --gen-key --homedir /etc/salt/gpgkeys --passphrase '' --pinentry-mode loopback``
 
 Import keys to a master
 ************************
