@@ -70,7 +70,6 @@ _OPTS = {
     'git_pillar_includes': True,
 }
 PROC_TIMEOUT = 10
-NOTSET = object()
 
 
 class ProcessManager(object):
@@ -93,7 +92,7 @@ class ProcessManager(object):
                     elif name in proc.name() and _search(proc):
                         return proc
                 except psutil.NoSuchProcess:
-                    # Whichever process we are interigating is no longer alive.
+                    # Whichever process we are interrogating is no longer alive.
                     # Skip it and keep searching.
                     continue
             else:
@@ -634,14 +633,15 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
         passphraselsess key is used to auth without needing to modify the root
         user's ssh config file.
         '''
-        orig_git_ssh = os.environ.pop('GIT_SSH', NOTSET)
+
+        def cleanup_environ(environ):
+            os.environ.clear()
+            os.environ.update(environ)
+
+        self.addCleanup(cleanup_environ, os.environ.copy())
+
         os.environ['GIT_SSH'] = self.git_ssh
-        try:
-            return super(GitPillarSSHTestBase, self).get_pillar(ext_pillar_conf)
-        finally:
-            os.environ.pop('GIT_SSH', None)
-            if orig_git_ssh is not NOTSET:
-                os.environ['GIT_SSH'] = orig_git_ssh
+        return super(GitPillarSSHTestBase, self).get_pillar(ext_pillar_conf)
 
 
 class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):
