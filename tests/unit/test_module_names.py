@@ -144,6 +144,7 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.netapi.rest_tornado.test_app',
             'integration.netapi.rest_cherrypy.test_app_pam',
             'integration.output.test_output',
+            'integration.pillar.test_pillar_include',
             'integration.proxy.test_shell',
             'integration.proxy.test_simple',
             'integration.reactor.test_reactor',
