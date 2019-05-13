@@ -48,6 +48,14 @@ def _load_libcrypto():
             # two checks below
             lib = glob.glob('/opt/local/lib/libcrypto.so*') + glob.glob('/opt/tools/lib/libcrypto.so*')
             lib = lib[0] if lib else None
+        if not lib and salt.utils.platform.is_aix():
+            if os.path.isdir('/opt/salt/lib'):
+                # preference for Salt installed fileset
+                lib = glob.glob('/opt/salt/lib/libcrypto.so*')
+                lib = lib[0] if lib else None
+            else:
+                lib = glob.glob('/opt/freeware/lib/libcrypto.so*')
+                lib = lib[0] if lib else None
         if lib:
             return cdll.LoadLibrary(lib)
         raise OSError('Cannot locate OpenSSL libcrypto')

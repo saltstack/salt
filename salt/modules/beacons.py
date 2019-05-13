@@ -721,7 +721,7 @@ def reset(**kwargs):
     ret = {'comment': [],
            'result': True}
 
-    if 'test' in kwargs and kwargs['test']:
+    if kwargs.get('test'):
         ret['comment'] = 'Beacons would be reset.'
     else:
         try:
