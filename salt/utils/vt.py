@@ -652,7 +652,7 @@ class Terminal(object):
                             )
                             break
                         except UnicodeDecodeError as ex:
-                            if (ex.reason == 'unexpected end of data'):
+                            if ex.reason == 'unexpected end of data':
                                 bytes_read += os.read(self.child_fde, maxsize)
                             else:
                                 raise
@@ -694,7 +694,7 @@ class Terminal(object):
                             )
                             break
                         except UnicodeDecodeError as ex:
-                            if (ex.reason == 'unexpected end of data'):
+                            if ex.reason == 'unexpected end of data':
                                 bytes_read += os.read(self.child_fd, maxsize)
                             else:
                                 raise
