@@ -424,7 +424,10 @@ def list_nodes_full(conn=None, call=None):
         ret[node.name]['public_ips'] = _get_ips(node, 'public')
         ret[node.name]['floating_ips'] = _get_ips(node, 'floating')
         ret[node.name]['fixed_ips'] = _get_ips(node, 'fixed')
-        ret[node.name]['image'] = node.image.name
+        if isinstance(node.image, six.string_types):
+            ret[node.name]['image'] = node.image
+        else:
+            ret[node.name]['image'] = getattr(conn.get_image(node.image.id), 'name', node.image.id)
     return ret
 
 
@@ -483,7 +486,7 @@ def show_instance(name, conn=None, call=None):
     if isinstance(node.image, six.string_types):
         ret['image'] = node.image
     else:
-        ret['image'] = conn.get_image(node.image.id).name
+        ret['image'] = getattr(conn.get_image(node.image.id), 'name', node.image.id)
     return ret
 
 
