@@ -642,11 +642,21 @@ class Terminal(object):
             # ----- Process STDERR ------------------------------------------>
             if self.child_fde in rlist:
                 try:
-                    stderr = self._translate_newlines(
-                        salt.utils.stringutils.to_unicode(
-                            os.read(self.child_fde, maxsize)
-                        )
-                    )
+                    bytes_read = os.read(self.child_fde, maxsize)
+                    # Loop to handle the case where a multi-byte unicode
+                    # character is split across blocks of received bytes
+                    while True:
+                        try:
+                            stderr = self._translate_newlines(
+                                salt.utils.stringutils.to_unicode(bytes_read)
+                            )
+                            break
+                        except UnicodeDecodeError as ex:
+                            if (ex.start == (len(bytes_read) - 1) and
+                                ex.reason == 'unexpected end of data'):
+                                bytes_read += os.read(self.child_fde, maxsize)
+                            else:
+                                raise
 
                     if not stderr:
                         self.flag_eof_stderr = True
@@ -675,11 +685,21 @@ class Terminal(object):
             # ----- Process STDOUT ------------------------------------------>
             if self.child_fd in rlist:
                 try:
-                    stdout = self._translate_newlines(
-                        salt.utils.stringutils.to_unicode(
-                            os.read(self.child_fd, maxsize)
-                        )
-                    )
+                    bytes_read = os.read(self.child_fd, maxsize)
+                    # Loop to handle the case where a multi-byte unicode
+                    # character is split across blocks of received bytes
+                    while True:
+                        try:
+                            stdout = self._translate_newlines(
+                                salt.utils.stringutils.to_unicode(bytes_read)
+                            )
+                            break
+                        except UnicodeDecodeError as ex:
+                            if (ex.start == (len(bytes_read) - 1) and
+                                ex.reason == 'unexpected end of data'):
+                                bytes_read += os.read(self.child_fd, maxsize)
+                            else:
+                                raise
 
                     if not stdout:
                         self.flag_eof_stdout = True
