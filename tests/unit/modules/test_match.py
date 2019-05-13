@@ -47,6 +47,11 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
                     'id': MINION_ID
                 }
             },
+            compound_match: {
+                '__opts__': {
+                    'id': MINION_ID
+                }
+            },
             glob_match: {
                 '__opts__': {'id': MINION_ID}
             }
