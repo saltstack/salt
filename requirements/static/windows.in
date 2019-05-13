@@ -20,6 +20,7 @@ psutil
 # Let's install cryptodome instead of pycrupto because of it's ourstanding security issues
 # PyCrypto, if pulled, will be removed from the generated static requirements
 pycryptodome
+pygit2
 pylxd>=2.2.5
 pyopenssl
 python-etcd>0.4.2
