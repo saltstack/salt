@@ -639,23 +639,33 @@ class Terminal(object):
                     return None, None
             # <---- Nothing to Process!? -------------------------------------
 
+            # ----- Helper function for processing STDERR and STDOUT -------->
+            def read_and_decode_fd(fd, maxsize):
+                bytes_read = os.read(fd, maxsize)
+                # Loop to handle the case where a multi-byte unicode
+                # character is split across blocks of received bytes
+                while True:
+                    try:
+                        return self._translate_newlines(
+                            salt.utils.stringutils.to_unicode(bytes_read)
+                        )
+                        break
+                    except UnicodeDecodeError as ex:
+                        if ex.reason == 'unexpected end of data':
+                            new_bytes_read = os.read(fd, maxsize)
+                            if new_bytes_read == b'':
+                                # End of stream is an incomplete character
+                                # Raise exception to avoid inifinite loop
+                                raise
+                            bytes_read += new_bytes_read
+                        else:
+                            raise
+            # <---- Helper function for processing STDERR and STDOUT ---------
+
             # ----- Process STDERR ------------------------------------------>
             if self.child_fde in rlist:
                 try:
-                    bytes_read = os.read(self.child_fde, maxsize)
-                    # Loop to handle the case where a multi-byte unicode
-                    # character is split across blocks of received bytes
-                    while True:
-                        try:
-                            stderr = self._translate_newlines(
-                                salt.utils.stringutils.to_unicode(bytes_read)
-                            )
-                            break
-                        except UnicodeDecodeError as ex:
-                            if ex.reason == 'unexpected end of data':
-                                bytes_read += os.read(self.child_fde, maxsize)
-                            else:
-                                raise
+                    stderr = read_and_decode_fd(self.child_fde, maxsize)
 
                     if not stderr:
                         self.flag_eof_stderr = True
@@ -684,20 +694,7 @@ class Terminal(object):
             # ----- Process STDOUT ------------------------------------------>
             if self.child_fd in rlist:
                 try:
-                    bytes_read = os.read(self.child_fd, maxsize)
-                    # Loop to handle the case where a multi-byte unicode
-                    # character is split across blocks of received bytes
-                    while True:
-                        try:
-                            stdout = self._translate_newlines(
-                                salt.utils.stringutils.to_unicode(bytes_read)
-                            )
-                            break
-                        except UnicodeDecodeError as ex:
-                            if ex.reason == 'unexpected end of data':
-                                bytes_read += os.read(self.child_fd, maxsize)
-                            else:
-                                raise
+                    stdout = read_and_decode_fd(self.child_fd, maxsize)
 
                     if not stdout:
                         self.flag_eof_stdout = True
