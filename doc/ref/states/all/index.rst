@@ -258,6 +258,7 @@ state modules
     rvm
     salt_proxy
     saltmod
+    saltutil
     schedule
     selinux
     serverdensity_device
