@@ -134,7 +134,7 @@ Saltcheck Keywords
 
                 assertion_section:
                     'Computer Configuration':
-                        'System\Windows Time Service\Global Configuration Settings': 'MaxPollInterval'
+                        'System\\Windows Time Service\\Global Configuration Settings': 'MaxPollInterval'
 
 **print_result:**
     (bool) Optional keyword to show results in the ``assertEqual``, ``assertNotEqual``,
