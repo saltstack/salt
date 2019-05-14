@@ -143,7 +143,8 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test setting the owner of a file with test=True
         '''
-        with patch.dict(win_file.__opts__, {'test': True}):
+        with patch.dict(win_file.__opts__, {'test': True}), \
+                patch.dict(win_dacl.__opts__, {'test': True}):
             expected = {'comment': '',
                         'changes': {'owner': 'Administrators'},
                         'name': self.temp_file.name,

@@ -251,11 +251,38 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual('', ret['workphone'])
             self.assertEqual('', ret['homephone'])
 
+    def test_user_present_same_password(self):
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertInSaltComment('up to date', ret)
+
+    def test_user_present_new_password_test_true(self):
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('user.present',
+                             name=USER,
+                             password='P@ssW0rd1!',
+                             test=True)
+        self.assertSaltNoneReturn(ret)
+        self.assertSaltStateChangesEqual(ret, {})
+        self.assertInSaltComment('passwd: XXX-REDACTED-XXX', ret)
+
+    def test_user_present_new_password(self):
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd1!')
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, {'passwd': 'XXX-REDACTED-XXX'})
+
     def tearDown(self):
         if salt.utils.platform.is_darwin():
             check_user = self.run_function('user.list_users')
             if USER in check_user:
-                del_user = self.run_function('user.delete', [USER], remove=True)
+                self.run_function('user.delete', [USER], remove=True)
         self.assertSaltTrueReturn(
             self.run_state('user.absent', name=self.user_name)
         )
