@@ -22,6 +22,7 @@ requisite to a pkg.installed state for the package which provides pip
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import re
+import types
 import logging
 try:
     import pkg_resources
@@ -36,38 +37,41 @@ from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
-from salt.ext import six
+import salt.ext.six as six
 # pylint: disable=import-error
 try:
     import pip
     HAS_PIP = True
 except ImportError:
     HAS_PIP = False
+    # Remove references to the loaded pip module above so reloading works
+    import sys
+    pip_related_entries = [
+        (k, v) for (k, v) in sys.modules.items()
+        or getattr(v, '__module__', '').startswith('pip.')
+        or (isinstance(v, types.ModuleType) and v.__name__.startswith('pip.'))
+    ]
+    for name, entry in pip_related_entries:
+        sys.modules.pop(name)
+        del entry
+
+    del pip
+    sys_modules_pip = sys.modules.pop('pip', None)
+    if sys_modules_pip is not None:
+        del sys_modules_pip
 
 if HAS_PIP is True:
-    try:
-        from pip.req import InstallRequirement
-        _from_line = InstallRequirement.from_line
-    except ImportError:
-        # pip 10.0.0 move req module under pip._internal
-        try:
-            try:
-                from pip._internal.req import InstallRequirement
-                _from_line = InstallRequirement.from_line
-            except AttributeError:
-                from pip._internal.req.constructors import install_req_from_line as _from_line
-        except ImportError:
-            HAS_PIP = False
-            # Remove references to the loaded pip module above so reloading works
-            import sys
-            del pip
-            if 'pip' in sys.modules:
-                del sys.modules['pip']
-
-    try:
-        from pip.exceptions import InstallationError
-    except ImportError:
+    if salt.utils.versions.compare(ver1=pip.__version__,
+                                   oper='>=',
+                                   ver2='18.1'):
+        from pip._internal.exceptions import InstallationError  # pylint: disable=E0611,E0401
+    elif salt.utils.versions.compare(ver1=pip.__version__,
+                                   oper='>=',
+                                   ver2='10.0'):
+        from pip.exceptions import InstallationError  # pylint: disable=E0611,E0401
+    else:
         InstallationError = ValueError
+
 
 # pylint: enable=import-error
 
@@ -75,6 +79,23 @@ log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'pip'
+
+
+def _from_line(*args, **kwargs):
+    import pip
+    if salt.utils.versions.compare(ver1=pip.__version__,
+                                   oper='>=',
+                                   ver2='18.1'):
+        import pip._internal.req.constructors  # pylint: disable=E0611,E0401
+        return pip._internal.req.constructors.install_req_from_line(*args, **kwargs)
+    elif salt.utils.versions.compare(ver1=pip.__version__,
+                                   oper='>=',
+                                   ver2='10.0'):
+        import pip._internal.req  # pylint: disable=E0611,E0401
+        return pip._internal.req.InstallRequirement.from_line(*args, **kwargs)
+    else:
+        import pip.req  # pylint: disable=E0611,E0401
+        return pip.req.InstallRequirement.from_line(*args, **kwargs)
 
 
 def __virtual__():
@@ -279,8 +300,10 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
     and 1 if version1 > version2. Return None if there was a problem
     making the comparison.
     '''
-    normalize = lambda x: six.text_type(x).split('!', 1)[-1] \
-        if ignore_epoch else six.text_type(x)
+    if HAS_PKG_RESOURCES is False:
+        log.warning('The pkg_resources packages was not loaded. Please install setuptools.')
+        return None
+    normalize = lambda x: six.text_type(x).split('!', 1)[-1] if ignore_epoch else six.text_type(x)
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 
