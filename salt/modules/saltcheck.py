@@ -19,17 +19,43 @@ be specified in a ``tst`` file. Multiple ``tst`` files can be created in the ``s
 folder, and should be named the same as the associated state. The ``id`` of a test works in the
 same manner as in salt state files and should be unique and descriptive.
 
+.. versionadded:: Neon
+
+    The ``saltcheck-tests`` folder can be customized using the ``saltcheck_test_location`` minion 
+    configuration setting.  This setting is a relative path from the formula's ``salt://`` path
+    to the test files.
+
 Usage
 =====
 
 Example file system layout:
 
-.. code-block:: text
+.. code-block:: txt
 
     /srv/salt/apache/
         init.sls
         config.sls
         saltcheck-tests/
+            init.tst
+            config.tst
+            deployment_validation.tst
+
+Example file system layout with custom saltcheck_test_location:
+
+Minion configuration:
+
+.. code-block:: yaml
+
+    saltcheck_test_location: tests/integration/saltcheck
+
+Filesystem layout:
+
+.. code-block:: txt
+
+    /srv/salt/apache/
+        init.sls
+        config.sls
+        tests/integration/saltcheck/
             init.tst
             config.tst
             deployment_validation.tst
@@ -68,6 +94,48 @@ Saltcheck Keywords
     (str) Optional keyword used to parse the module_and_function return. If a salt module
     returns a dictionary as a result, the ``assertion_section`` value is used to lookup a specific value
     in that return for the assertion comparison.
+
+    .. versionadded:: Neon
+
+        If the salt module returns a nested dictionary structure, a dict of nested key names can be passed
+        with the final value being the key of the value to lookup for comparison.
+
+        For example, imagine the following return (from lgpo.get):
+
+            .. code-block:: yaml
+
+                'Computer Configuration':
+                    'System\Windows Time Service\Global Configuration Settings':
+                        ChainDisable: 0
+                        ChainEntryTimeout: 2
+                        ChainLoggingRate: 0
+                        ChainMaxEntries: 128
+                        ChainMaxHostEntries: 1
+                        Clock Discipline Parameters FrequencyCorrectRate: 4
+                        EventLogFlags: 2
+                        General Parameters AnnounceFlags: 10
+                        HoldPeriod: 5
+                        LargePhaseOffset: 50000000
+                        LocalClockDispersion: 0
+                        MaxAllowedPhaseOffset: 300
+                        MaxNegPhaseCorrection: 4294967295
+                        MaxPollInterval: 15
+                        MaxPosPhaseCorrection: 4294967295
+                        MinPollInterval: 10
+                        PhaseCorrectRate: 1
+                        PollAdjustFactor: 5
+                        RequireSecureTimeSyncRequests: 0
+                        SpikeWatchPeriod: 900
+                        UpdateInterval: 30000
+
+        The ``MaxPollInterval`` value could be verified with the following ``assertion_section``:
+
+            .. code-block:: yaml
+
+                assertion_section:
+                    'Computer Configuration':
+                        'System\Windows Time Service\Global Configuration Settings': 'MaxPollInterval'
+
 **print_result:**
     (bool) Optional keyword to show results in the ``assertEqual``, ``assertNotEqual``,
     ``assertIn``, and ``assertNotIn`` output. Defaults to True.
@@ -151,6 +219,22 @@ Example with assertion_section
       expected-return: /bin/bash
       assertion_section: shell
 
+Example with a nested assertion_section
+---------------------------------------
+
+.. code-block:: yaml
+
+    validate_smb_signing:
+      module_and_function: lgpo.get
+      args:
+        - 'Machine'
+      kwargs:
+        return_full_policy_names: True
+      assertion: assertEqual
+      expected-return: Enabled
+      assertion_section:
+        'Computer Configuration': 'Microsoft network client: Digitally sign communications (always)'
+
 Example suppressing print results
 ---------------------------------
 
@@ -219,23 +303,6 @@ def __virtual__():
     return __virtualname__
 
 
-def update_master_cache(saltenv='base'):
-    '''
-    Updates the master cache onto the minion - transfers all salt-check-tests
-    Should be done one time before running tests, and if tests are updated
-    Can be automated by setting "auto_update_master_cache: True" in minion config
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' saltcheck.update_master_cache
-    '''
-    log.info("Updating files for environment: %s", saltenv)
-    __salt__['cp.cache_master'](saltenv)
-    return True
-
-
 def run_test(**kwargs):
     '''
     Execute one saltcheck test and return result
@@ -299,12 +366,12 @@ def run_state_tests(state, saltenv=None, check_all=False):
         salt '*' saltcheck.run_state_tests postfix,common
     '''
     if not saltenv:
-        saltenv = __opts__['saltenv']
-    if not saltenv:
-        saltenv = 'base'
+        if 'saltenv' in __opts__ and __opts__['saltenv']:
+            saltenv = __opts__['saltenv']
+        else:
+            saltenv = 'base'
     scheck = SaltCheck(saltenv)
-    paths = scheck.get_state_search_path_list(saltenv)
-    stl = StateTestLoader(search_paths=paths)
+    stl = StateTestLoader()
     results = OrderedDict()
     sls_list = salt.utils.args.split_input(state)
     for state_name in sls_list:
@@ -329,14 +396,15 @@ def run_highstate_tests(saltenv=None):
         salt '*' saltcheck.run_highstate_tests
     '''
     if not saltenv:
-        saltenv = __opts__['saltenv']
-    if not saltenv:
-        saltenv = 'base'
+        if 'saltenv' in __opts__ and __opts__['saltenv']:
+            saltenv = __opts__['saltenv']
+        else:
+            saltenv = 'base'
     scheck = SaltCheck(saltenv)
-    paths = scheck.get_state_search_path_list(saltenv)
-    stl = StateTestLoader(search_paths=paths)
+    stl = StateTestLoader()
     results = OrderedDict()
     sls_list = _get_top_states(saltenv)
+    log.debug('sls_list == {}'.format(sls_list))
     all_states = []
     for state in sls_list:
         if state not in all_states:
@@ -404,14 +472,6 @@ def _is_valid_module(module):
     return bool(module in modules)
 
 
-def _get_auto_update_cache_value():
-    '''
-    Return the config value of auto_update_master_cache
-    '''
-    __salt__['config.get']('auto_update_master_cache')
-    return True
-
-
 @memoize
 def _is_valid_function(module_name, function):
     '''
@@ -431,6 +491,8 @@ def _get_top_states(saltenv='base'):
     alt_states = []
     try:
         returned = __salt__['state.show_top']()
+        log.debug('returned == {}'.format(returned))
+        log.debug('saltenv {} states == {}'.format(saltenv, returned[saltenv]))
         for i in returned[saltenv]:
             alt_states.append(i)
     except Exception:
@@ -457,12 +519,9 @@ class SaltCheck(object):
                                   assertGreaterEqual
                                   assertLess assertLessEqual
                                   assertEmpty assertNotEmpty'''.split()
-        self.auto_update_master_cache = _get_auto_update_cache_value
         local_opts = salt.config.minion_config(__opts__['conf_file'])
         local_opts['file_client'] = 'local'
         self.salt_lc = salt.client.Caller(mopts=local_opts)
-        if self.auto_update_master_cache:
-            update_master_cache(saltenv)
 
     def __is_valid_test(self, test_dict):
         '''
@@ -476,6 +535,7 @@ class SaltCheck(object):
         6 points needed for standard test
         4 points needed for test with assertion not requiring expected return
         '''
+        test_errors = []
         tots = 0  # need total of >= 6 to be a valid test
         skip = test_dict.get('skip', False)
         m_and_f = test_dict.get('module_and_function', None)
@@ -500,21 +560,33 @@ class SaltCheck(object):
             module, function = m_and_f.split('.')
             if _is_valid_module(module):
                 tots += 1
+            else:
+                test_errors.append('{} is not a valid module'.format(module))
             if _is_valid_function(module, function):
                 tots += 1
+            else:
+                test_errors.append('{} is not a valid function'.format(function))
             log.info("__is_valid_test has valid m_and_f")
         if assertion in self.assertions_list:
             log.info("__is_valid_test has valid_assertion")
             tots += 1
+        else:
+            test_errors.append('{} is not in the assertions list'.format(assertion))
 
         if exp_ret_key:
             tots += 1
+        else:
+            test_errors.append('No expected return key')
 
         if exp_ret_val is not None:
             tots += 1
+        else:
+            test_errors.append('expected-return does not have a value')
 
         # log the test score for debug purposes
         log.info("__test score: %s and required: %s", tots, required_total)
+        if not tots >= required_total:
+            log.error('Test failed the following test verifications: {}'.format(', '.join(test_errors)))
         return tots >= required_total
 
     def _call_salt_command(self,
@@ -540,9 +612,30 @@ class SaltCheck(object):
         except Exception:
             raise
         if isinstance(value, dict) and assertion_section:
-            return value.get(assertion_section, False)
+            if isinstance(assertion_section, dict):
+                return self._walk_assertion_section_dict(value, assertion_section)
+            else:
+                return value.get(assertion_section, False)
         else:
             return value
+
+    def _walk_assertion_section_dict(self, value, assertion_section):
+        '''
+        recursed through a dict to get the final value
+        '''
+        if assertion_section:
+            if assertion_section.keys() and assertion_section.keys()[0]:
+                if assertion_section.keys()[0] in value:
+                    if isinstance(assertion_section[assertion_section.keys()[0]], dict):
+                        return self._walk_assertion_section_dict(value[assertion_section.keys()[0]], assertion_section[assertion_section.keys()[0]])
+                    else:
+                        return value[assertion_section.keys()[0]].get(assertion_section[assertion_section.keys()[0]], False)
+                else:
+                    return False
+            else:
+                return False
+        else:
+            return False
 
     def run_test(self, test_dict):
         '''
@@ -617,18 +710,19 @@ class SaltCheck(object):
         Determine the type of variable returned
         Cast the expected to the type of variable returned
         '''
-        ret_type = type(returned)
         new_expected = expected
-        if expected == "False" and ret_type == bool:
-            expected = False
-        try:
-            new_expected = ret_type(expected)
-        except ValueError:
-            log.info("Unable to cast expected into type of returned")
-            log.info("returned = %s", returned)
-            log.info("type of returned = %s", type(returned))
-            log.info("expected = %s", expected)
-            log.info("type of expected = %s", type(expected))
+        if returned is not None:
+            ret_type = type(returned)
+            if expected == "False" and ret_type == bool:
+                expected = False
+            try:
+                new_expected = ret_type(expected)
+            except ValueError:
+                log.info("Unable to cast expected into type of returned")
+                log.info("returned = %s", returned)
+                log.info("type of returned = %s", type(returned))
+                log.info("expected = %s", expected)
+                log.info("type of expected = %s", type(expected))
         return new_expected
 
     @staticmethod
@@ -813,11 +907,12 @@ class StateTestLoader(object):
     e.g. state_dir/saltcheck-tests/[1.tst, 2.tst, 3.tst]
     '''
 
-    def __init__(self, search_paths):
-        self.search_paths = search_paths
+    def __init__(self):
         self.path_type = None
         self.test_files = []  # list of file paths
         self.test_dict = OrderedDict()
+        self.saltenv = 'base'
+        self.saltcheck_test_location = __salt__['config.get']('saltcheck_test_location', 'saltcheck-tests')
 
     def load_test_suite(self):
         '''
@@ -840,53 +935,63 @@ class StateTestLoader(object):
             self.test_dict[key] = value
         return
 
-    def _gather_files(self, filepath):
-        '''
-        Gather files for a test suite
-        '''
-        self.test_files = []
-        filepath = filepath + os.sep + 'saltcheck-tests'
-        for dirname, dummy, filelist in salt.utils.path.os_walk(filepath):
-            for fname in filelist:
-                if fname.endswith('.tst'):
-                    start_path = dirname + os.sep + fname
-                    full_path = os.path.abspath(start_path)
-                    log.info("Found test: %s", full_path)
-                    self.test_files.append(full_path)
-        return
-
-    @staticmethod
-    def _convert_sls_to_path(sls):
-        '''
-        Converting sls to paths
-        '''
-        sls = sls.replace(".", os.sep)
-        return sls
-
     def add_test_files_for_sls(self, sls_name, check_all=False):
         '''
         Adding test files
         '''
-        sls_split = sls_name.rpartition('.')
-        for path in self.search_paths:
-            if sls_split[0]:
-                base_path = path + os.sep + self._convert_sls_to_path(sls_split[0])
-            else:
-                base_path = path
-            if os.path.isdir(base_path):
-                log.info("searching path: %s", base_path)
-                if check_all:
-                    # Find and run all tests in the state/saltcheck-tests directory
-                    self._gather_files(base_path + os.sep + sls_split[2])
-                    return
-                init_path = base_path + os.sep + sls_split[2] + os.sep + 'saltcheck-tests' + os.sep + 'init.tst'
-                name_path = base_path + os.sep + 'saltcheck-tests' + os.sep + sls_split[2] + '.tst'
-                if os.path.isfile(init_path):
-                    self.test_files.append(init_path)
-                    log.info("Found test init: %s", init_path)
-                if os.path.isfile(name_path):
-                    self.test_files.append(name_path)
-                    log.info("Found test named: %s", name_path)
-            else:
-                log.info("path is not a directory: %s", base_path)
-        return
+        all_states = __salt__['cp.list_states']()
+        ret = []
+        if sls_name in all_states:
+            ret = __salt__['state.show_low_sls'](sls_name, test=True)
+        else:
+            # passed name isn't a state, so we'll assume it is a test definition
+            ret = [{'__sls__': sls_name}]
+        for low_data in ret:
+            if not isinstance(low_data, dict):
+                log.error('low data from show_low_sls is not formed as a dict: {0}'.format(low_data))
+                return
+            this_cache_ret = None
+            if '__sls__' in low_data:
+                # this low data has an SLS path in it
+
+                # possible formula paths are then
+                # path/to/formula.sls
+                #   with tests of
+                #       path/to/saltcheck-tests/formula.tst
+                # path/to/formula/init.sls
+                #   with tests of
+                #       path/to/formula/saltcheck-tests/init.tst
+
+                sls_path = 'salt://{0}/{1}'.format(low_data['__sls__'].replace('.', '/'), self.saltcheck_test_location)
+                log.debug('looking in {} to cache tests'.format(sls_path))
+                this_cache_ret = __salt__['cp.cache_dir'](sls_path,
+                                                          saltenv=self.saltenv,
+                                                          include_pat='*.tst')
+                log.debug('this_cache_ret = {}'.format(this_cache_ret))
+                if not this_cache_ret:
+                    sls_split = low_data['__sls__'].split('.')
+                    sls_split.pop()
+                    sls_path = 'salt://{0}/{1}'.format('/'.join(sls_split), self.saltcheck_test_location)
+                    log.debug('looking in {} to cache tests'.format(sls_path))
+                    this_cache_ret = __salt__['cp.cache_dir'](sls_path,
+                                                              saltenv=self.saltenv,
+                                                              include_pat='*.tst')
+
+                if this_cache_ret:
+                    if check_all:
+                        # check_all, load all tests cached
+                        self.test_files = self.test_files + this_cache_ret
+                    else:
+                        split_sls = low_data['__sls__'].split('.')
+                        sls_path_names = [
+                                    os.path.join(os.sep.join(split_sls),
+                                                 os.path.normpath(self.saltcheck_test_location),
+                                                 'init.tst'),
+                                    os.path.join(os.sep.join(split_sls[:len(split_sls) - 1]),
+                                                 os.path.normpath(self.saltcheck_test_location),
+                                                 '{0}.tst'.format(split_sls[-1]))
+                                ]
+                        for this_cached_test_file in this_cache_ret:
+                            for sls_path_name in sls_path_names:
+                                if this_cached_test_file.endswith(sls_path_name):
+                                    self.test_files.append(this_cached_test_file)
