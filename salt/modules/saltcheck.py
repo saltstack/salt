@@ -21,7 +21,7 @@ same manner as in salt state files and should be unique and descriptive.
 
 .. versionadded:: Neon
 
-    The ``saltcheck-tests`` folder can be customized using the ``saltcheck_test_location`` minion 
+    The ``saltcheck-tests`` folder can be customized using the ``saltcheck_test_location`` minion
     configuration setting.  This setting is a relative path from the formula's ``salt://`` path
     to the test files.
 
@@ -30,7 +30,7 @@ Usage
 
 Example file system layout:
 
-.. code-block:: txt
+.. code-block:: text
 
     /srv/salt/apache/
         init.sls
@@ -50,7 +50,7 @@ Minion configuration:
 
 Filesystem layout:
 
-.. code-block:: txt
+.. code-block:: text
 
     /srv/salt/apache/
         init.sls
@@ -105,7 +105,7 @@ Saltcheck Keywords
             .. code-block:: yaml
 
                 'Computer Configuration':
-                    'System\Windows Time Service\Global Configuration Settings':
+                    'System\\Windows Time Service\\Global Configuration Settings':
                         ChainDisable: 0
                         ChainEntryTimeout: 2
                         ChainLoggingRate: 0
