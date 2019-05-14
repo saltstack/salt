@@ -37,7 +37,7 @@ the target is the grain key followed by a glob expression: "os:Arch*".
 
 .. code-block:: bash
 
-    salt -G 'os:Fedora' test.ping
+    salt -G 'os:Fedora' test.version
 
 Will return True from all of the minions running Fedora.
 
@@ -62,7 +62,7 @@ This is well defined with an example:
 
 .. code-block:: bash
 
-    salt -C 'G@os:Debian and webser* or E@db.*' test.ping
+    salt -C 'G@os:Debian and webser* or E@db.*' test.version
 
 In this example any minion who's id starts with ``webser`` and is running
 Debian, or any minion who's id starts with db will be matched.
