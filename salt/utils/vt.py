@@ -654,7 +654,7 @@ class Terminal(object):
                             new_bytes_read = os.read(fd, maxsize)
                             if new_bytes_read == b'':
                                 # End of stream is an incomplete character
-                                # Raise exception to avoid inifinite loop
+                                # Raise exception to avoid infinite loop
                                 raise
                             bytes_read += new_bytes_read
                         else:
