@@ -900,7 +900,11 @@ class State(object):
                     ret['comment'] = 'no `fun` argument in onlyif: {0}'.format(entry)
                     log.warning(ret['comment'])
                     return ret
-                result = self.functions[entry.pop('fun')](**entry)
+
+                if 'args' in entry:
+                    result = self.functions[entry.pop('fun')](*entry.pop('args'), **entry)
+                else:
+                    result = self.functions[entry.pop('fun')](**entry)
                 if self.state_con.get('retcode', 0):
                     _check_cmd(self.state_con['retcode'])
                 elif not result:
@@ -941,10 +945,14 @@ class State(object):
                 _check_cmd(cmd)
             elif isinstance(entry, dict):
                 if 'fun' not in entry:
-                    ret['comment'] = 'no `fun` argument in onlyif: {0}'.format(entry)
+                    ret['comment'] = 'no `fun` argument in unless: {0}'.format(entry)
                     log.warning(ret['comment'])
                     return ret
-                result = self.functions[entry.pop('fun')](**entry)
+
+                if 'args' in entry:
+                    result = self.functions[entry.pop('fun')](*entry.pop('args'), **entry)
+                else:
+                    result = self.functions[entry.pop('fun')](**entry)
                 if self.state_con.get('retcode', 0):
                     _check_cmd(self.state_con['retcode'])
                 elif result:

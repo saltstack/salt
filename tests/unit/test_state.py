@@ -73,6 +73,128 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             with self.assertRaises(salt.exceptions.SaltRenderError):
                 state_obj.call_high(high_data)
 
+    def test_render_requisite_require_disabled(self):
+        '''
+        Test that the state compiler correctly deliver a rendering
+        exception when a requisite cannot be resolved
+        '''
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            high_data = {
+                'step_one': OrderedDict([
+                        ('test', [
+                            OrderedDict([
+                                ('require', [
+                                    OrderedDict([
+                                        ('test', 'step_two')])])]),
+                            'succeed_with_changes', {'order': 10000}]),
+                        ('__sls__', 'test.disable_require'),
+                        ('__env__', 'base')]),
+                'step_two': {'test': ['succeed_with_changes',
+                                      {'order': 10001}],
+                             '__env__': 'base',
+                             '__sls__': 'test.disable_require'}}
+
+            minion_opts = self.get_temp_config('minion')
+            minion_opts['disabled_requisites'] = ['require']
+            state_obj = salt.state.State(minion_opts)
+            ret = state_obj.call_high(high_data)
+            run_num = ret['test_|-step_one_|-step_one_|-succeed_with_changes']['__run_num__']
+            self.assertEqual(run_num, 0)
+
+    def test_render_requisite_require_in_disabled(self):
+        '''
+        Test that the state compiler correctly deliver a rendering
+        exception when a requisite cannot be resolved
+        '''
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            high_data = {
+                'step_one': {'test': ['succeed_with_changes',
+                                      {'order': 10000}],
+                             '__env__': 'base',
+                             '__sls__': 'test.disable_require_in'},
+                'step_two': OrderedDict([
+                    ('test', [
+                        OrderedDict([
+                            ('require_in', [
+                                    OrderedDict([
+                                        ('test', 'step_one')])])]),
+                        'succeed_with_changes', {'order': 10001}]),
+                    ('__sls__', 'test.disable_require_in'),
+                    ('__env__', 'base')])}
+
+            minion_opts = self.get_temp_config('minion')
+            minion_opts['disabled_requisites'] = ['require_in']
+            state_obj = salt.state.State(minion_opts)
+            ret = state_obj.call_high(high_data)
+            run_num = ret['test_|-step_one_|-step_one_|-succeed_with_changes']['__run_num__']
+            self.assertEqual(run_num, 0)
+
+    def test_verify_onlyif_parse(self):
+        low_data = {
+            "onlyif": [
+                {
+                    "fun": "file.search",
+                    "args": [
+                        "/etc/crontab",
+                        "run-parts"
+                    ]
+                }
+            ],
+            "name": "mysql-server-5.7",
+            "state": "debconf",
+            "__id__": "set root password",
+            "fun": "set",
+            "__env__": "base",
+            "__sls__": "debconf",
+            "data": {
+                "mysql-server/root_password": {
+                    "type": "password",
+                    "value": "temp123"
+                }
+            },
+            "order": 10000
+        }
+        expected_result = {'comment': 'onlyif condition is true', 'result': False}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_onlyif(low_data, '')
+            self.assertEqual(expected_result, return_result)
+
+    def test_verify_unless_parse(self):
+        low_data = {
+            "unless": [
+                {
+                    "fun": "file.search",
+                    "args": [
+                        "/etc/crontab",
+                        "run-parts"
+                    ]
+                }
+            ],
+            "name": "mysql-server-5.7",
+            "state": "debconf",
+            "__id__": "set root password",
+            "fun": "set",
+            "__env__": "base",
+            "__sls__": "debconf",
+            "data": {
+                "mysql-server/root_password": {
+                    "type": "password",
+                    "value": "temp123"
+                }
+            },
+            "order": 10000
+        }
+        expected_result = {'comment': 'unless condition is true', 'result': True, 'skip_watch': True}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_unless(low_data, '')
+            self.assertEqual(expected_result, return_result)
+
 
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
