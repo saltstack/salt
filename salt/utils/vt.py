@@ -649,7 +649,6 @@ class Terminal(object):
                         return self._translate_newlines(
                             salt.utils.stringutils.to_unicode(bytes_read)
                         )
-                        break
                     except UnicodeDecodeError as ex:
                         if ex.reason == 'unexpected end of data':
                             new_bytes_read = os.read(fd, maxsize)
