@@ -44,9 +44,9 @@ TRIGGER_PARTS = {'Event': ['subscription'],
 
 OPTIONAL_TRIGGER_PARTS = {'trigger_enabled': True,
                           'start_date': time.strftime('%Y-%m-%d'),
-                          'start_time': "%s:%s:%s" % ('00', '00', '00'),
+                          'start_time': time.strftime('%H:%M:%S'),
                           'end_date': None,
-                          'end_time': "%s:%s:%s" % ('00', '00', '00'),
+                          'end_time': "00:00:00",
                           'random_delay': False,
                           'repeat_interval': None,
                           'repeat_duration': None,
@@ -155,7 +155,7 @@ def _get_arguments(arguments_given,
     # check if key arguments are present
     for key in key_arguments:
         if key not in arguments_given:
-            return 'Missing key argument %s' % repr(key)
+            return 'Missing key argument {0}'.format(repr(key))
         block[key] = arguments_given[key]
 
         # check is key item valid
@@ -334,7 +334,7 @@ def present(name,
         .. code-block:: bash
 
             salt 'minion-id' state.apply <YAML file>
-        '''
+    '''
 
     ret = _get_state_data(name)
     before = _get_task_state_data(name, location)
@@ -358,7 +358,7 @@ def present(name,
     # if win os is higher than 7 then Email and Message action_type is not supported
     try:
         if int(__grains__['osversion'].split('.')[0]) >= 8 and new_task['action']['action_type'] in ['Email', 'Message']:
-            log.warning('This OS %s does not support Email or Message action_type.' % __grains__['osversion'])
+            log.warning('This OS %s does not support Email or Message action_type.', __grains__['osversion'])
     except ValueError:
         pass
 
