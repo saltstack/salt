@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Unit tests for the LGPO module
+'''
 
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
@@ -16,6 +19,9 @@ from tests.support.mock import (
 
 
 class WinLgpoNetShTestCase(TestCase, LoaderModuleMockMixin):
+    '''
+    NetSH test cases
+    '''
 
     def setup_loader_modules(self):
         return {win_lgpo: {
@@ -23,6 +29,9 @@ class WinLgpoNetShTestCase(TestCase, LoaderModuleMockMixin):
         }}
 
     def test__set_netsh_value_firewall(self):
+        '''
+        Test setting the firewall inbound policy
+        '''
         context = {
             'lgpo.netsh_data': {
                 'Private': {
@@ -42,6 +51,9 @@ class WinLgpoNetShTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_lgpo.__context__, expected)
 
     def test__set_netsh_value_settings(self):
+        '''
+        Test setting firewall settings
+        '''
         context = {
             'lgpo.netsh_data': {
                 'private': {
@@ -61,6 +73,9 @@ class WinLgpoNetShTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_lgpo.__context__, expected)
 
     def test__set_netsh_value_state(self):
+        '''
+        Test setting the firewall state
+        '''
         context = {
             'lgpo.netsh_data': {
                 'private': {
@@ -80,6 +95,9 @@ class WinLgpoNetShTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_lgpo.__context__, expected)
 
     def test__set_netsh_value_logging(self):
+        '''
+        Test setting firewall logging
+        '''
         context = {
             'lgpo.netsh_data': {
                 'private': {
@@ -100,10 +118,12 @@ class WinLgpoNetShTestCase(TestCase, LoaderModuleMockMixin):
 
 
 class WinLgpoSeceditTestCase(TestCase, LoaderModuleMockMixin):
+    '''
+    Secedit test cases
+    '''
 
     @classmethod
     def setUpClass(cls):
-        cls.mock_true = MagicMock(return_value=True)
         cls.secedit_data = [
             '[Unicode]',
             'Unicode=yes',
@@ -135,6 +155,9 @@ class WinLgpoSeceditTestCase(TestCase, LoaderModuleMockMixin):
         }}
 
     def test__get_secedit_data(self):
+        '''
+        Test getting secedit data and loading it into __context__
+        '''
         expected = {
             'AuditLogonEvents': '0',
             'AuditSystemEvents': '0',
@@ -155,18 +178,27 @@ class WinLgpoSeceditTestCase(TestCase, LoaderModuleMockMixin):
                                  expected)
 
     def test__get_secedit_value(self):
+        '''
+        Test getting a specific secedit value
+        '''
         with patch.object(win_lgpo, '_load_secedit_data',
                           MagicMock(return_value=self.secedit_data)):
             result = win_lgpo._get_secedit_value('AuditSystemEvents')
             self.assertEqual(result, '0')
 
     def test__get_secedit_value_not_defined(self):
+        '''
+        Test getting a secedit value that is undefined
+        '''
         with patch.object(win_lgpo, '_load_secedit_data',
                           MagicMock(return_value=self.secedit_data)):
             result = win_lgpo._get_secedit_value('UndefinedKey')
             self.assertEqual(result, 'Not Defined')
 
     def test__write_secedit_data(self):
+        '''
+        Test writing secedit data and updating the __context__
+        '''
         mock_true = MagicMock(return_value=True)
         mock_false = MagicMock(return_value=False)
         mock_retcode = MagicMock(return_value=0)
