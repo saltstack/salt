@@ -72,6 +72,7 @@ pyasn1-modules==0.2.4     # via google-auth
 pyasn1==0.4.5             # via paramiko, pyasn1-modules, rsa
 pycparser==2.19           # via cffi
 pycryptodome==3.8.1
+pygit2==0.28.1
 pyinotify==0.9.6
 pyopenssl==19.0.0
 pyserial==3.4             # via junos-eznc
@@ -99,7 +100,7 @@ salttesting==2017.6.1
 scp==0.13.2               # via junos-eznc
 setproctitle==1.1.10
 singledispatch==3.4.0.3   # via tornado
-six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kazoo, kubernetes, mock, more-itertools, moto, ncclient, pathlib2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, raet, responses, salttesting, singledispatch, tempora, websocket-client
+six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kazoo, kubernetes, mock, more-itertools, moto, ncclient, pathlib2, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, raet, responses, salttesting, singledispatch, tempora, websocket-client
 smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
