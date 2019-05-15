@@ -12,6 +12,15 @@ engine configuration for the Salt master.
     engines:
         - reactor
 
+    .. note::
+
+    The utilities in this runner embed the running masters rotating AES key in
+    the payload in order for the Reactor subsystem to assert the management
+    commands originate from a trusted source. This is secure in itself, but
+    could potentially expose the rotating AES key in an unexpected public place
+    if you use returners to save your event stream to i.e. splunk, or other shared
+    medium. Take note to filter 'salt/reactors/manage' prefixed events if so.
+
 '''
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -51,8 +60,9 @@ def list_(saltenv='base', test=None):
             listen=True)
 
     master_key = salt.utils.master.get_master_key('root', __opts__)
+    ev = salt.utils.event.get_event('master', opts=__opts__)
 
-    __jid_event__.fire_event({'key': master_key}, 'salt/reactors/manage/list')
+    ev.fire_event({'key': master_key}, 'salt/reactors/manage/list')
 
     results = sevent.get_event(wait=30, tag='salt/reactors/manage/list-results')
     reactors = results['reactors']
@@ -80,11 +90,12 @@ def add(event, reactors, saltenv='base', test=None):
             listen=True)
 
     master_key = salt.utils.master.get_master_key('root', __opts__)
+    ev = salt.utils.event.get_event('master', opts=__opts__)
 
-    __jid_event__.fire_event({'event': event,
-                              'reactors': reactors,
-                              'key': master_key},
-                             'salt/reactors/manage/add')
+    ev.fire_event({'event': event,
+                   'reactors': reactors,
+                   'key': master_key},
+                   'salt/reactors/manage/add')
 
     res = sevent.get_event(wait=30, tag='salt/reactors/manage/add-complete')
     return res['result']
@@ -109,7 +120,8 @@ def delete(event, saltenv='base', test=None):
 
     master_key = salt.utils.master.get_master_key('root', __opts__)
 
-    __jid_event__.fire_event({'event': event, 'key': master_key}, 'salt/reactors/manage/delete')
+    ev = salt.utils.event.get_event('master', opts=__opts__)
+    ev.fire_event({'event': event, 'key': master_key}, 'salt/reactors/manage/delete')
 
     res = sevent.get_event(wait=30, tag='salt/reactors/manage/delete-complete')
     return res['result']
@@ -134,7 +146,8 @@ def is_leader():
 
     master_key = salt.utils.master.get_master_key('root', __opts__)
 
-    __jid_event__.fire_event({'key': master_key}, 'salt/reactors/manage/is_leader')
+    ev = salt.utils.event.get_event('master', opts=__opts__)
+    ev.fire_event({'key': master_key}, 'salt/reactors/manage/is_leader')
 
     res = sevent.get_event(wait=30, tag='salt/reactors/manage/leader/value')
     return res['result']
@@ -159,7 +172,8 @@ def set_leader(value=True):
 
     master_key = salt.utils.master.get_master_key('root', __opts__)
 
-    __jid_event__.fire_event({'id': __opts__['id'], 'value': value, 'key': master_key}, 'salt/reactors/manage/set_leader')
+    ev = salt.utils.event.get_event('master', opts=__opts__)
+    ev.fire_event({'id': __opts__['id'], 'value': value, 'key': master_key}, 'salt/reactors/manage/set_leader')
 
     res = sevent.get_event(wait=30, tag='salt/reactors/manage/leader/value')
     return res['result']
