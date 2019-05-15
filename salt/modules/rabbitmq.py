@@ -1136,28 +1136,100 @@ def disable_plugin(name, runas=None):
     return _format_response(ret, 'Disabled')
 
 
-def add_upstream(name, definition, runas=None):
+def add_upstream(
+        name,
+        uri,
+        prefetch_count=None,
+        reconnect_delay=None,
+        ack_mode=None,
+        trust_user_id=None,
+        exchange=None,
+        max_hops=None,
+        expires=None,
+        message_ttl=None,
+        ha_policy=None,
+        queue=None,
+        runas=None):
     '''
-    Adds an upstream via rabbitmqctl set_parameter.
-    Definition can be passed as (JSON) string or as dict, which will be converted
-    to a JSON string.
+    Adds an upstream via rabbitmqctl set_parameter. This can be an exchange-upstream,
+    a queue-upstream or both.
 
     :param str name: The name of the upstream to add.
-    :param str definition: The JSON string that contains the upstream configuration.
+    The following parameters apply to federated exchanges and federated queues:
+    :param str uri: The AMQP URI(s) for the upstream.
+    :param int prefetch_count: The maximum number of unacknowledged messages copied
+        over a link at any one time. Default: 1000
+    :param int reconnect_delay: The duration (in seconds) to wait before reconnecting
+        to the broker after being disconnected. Default: 1
+    :param str ack_mode: Determines how the link should acknowledge messages.
+        If set to ``on-confirm`` (the default), messages are acknowledged to the
+        upstream broker after they have been confirmed downstream. This handles
+        network errors and broker failures without losing messages, and is the
+        slowest option.
+        If set to ``on-publish``, messages are acknowledged to the upstream broker
+        after they have been published downstream. This handles network errors
+        without losing messages, but may lose messages in the event of broker failures.
+        If set to ``no-ack``, message acknowledgements are not used. This is the
+        fastest option, but may lose messages in the event of network or broker failures.
+    :param bool trust_user_id: Determines how federation should interact with the
+        validated user-id feature. If set to true, federation will pass through
+        any validated user-id from the upstream, even though it cannot validate
+        it itself. If set to false or not set, it will clear any validated user-id
+        it encounters. You should only set this to true if you trust the upstream
+        server (and by extension, all its upstreams) not to forge user-ids.
+    The following parameters apply to federated exchanges only:
+    :param str exchange: The name of the upstream exchange. Default is to use the
+        same name as the federated exchange.
+    :param int max_hops: The maximum number of federation links that a message
+        published to a federated exchange can traverse before it is discarded.
+        Default is 1. Note that even if max-hops is set to a value greater than 1,
+        messages will never visit the same node twice due to travelling in a loop.
+        However, messages may still be duplicated if it is possible for them to
+        travel from the source to the destination via multiple routes.
+    :param int expires: The expiry time (in milliseconds) after which an upstream
+        queue for a federated exchange may be deleted, if a connection to the upstream
+        broker is lost. The default is 'none', meaning the queue should never expire.
+        This setting controls how long the upstream queue will last before it is
+        eligible for deletion if the connection is lost.
+        This value is used to set the "x-expires" argument for the upstream queue.
+    :param int message_ttl: The expiry time for messages in the upstream queue
+        for a federated exchange (see expires), in milliseconds. Default is ``None``,
+        meaning messages should never expire. This does not apply to federated queues.
+        This value is used to set the "x-message-ttl" argument for the upstream queue.
+    :param str ha_policy: Determines the "x-ha-policy" argument for the upstream
+        queue for a federated exchange (see expires). This is only of interest
+        when connecting to old brokers which determine queue HA mode using this
+        argument. Default is ``None``, meaning the queue is not HA.
+    The following parameter applies to federated queues only:
+    :param str queue: The name of the upstream queue. Default is to use the same
+        name as the federated queue.
+
     :param str runas: The name of the user to run the command as.
 
     CLI Example:
     .. code-block:: bash
-        salt '*' rabbitmq.add_upstream upstream_name \
-        '{"ack-mode":"on-confirm","max-hops":1,"trust-user-id":true,"uri":"amqp://hostname"}'
+        salt '*' rabbitmq.add_upstream upstream_name ack_mode=on-confirm max_hops=1 \
+            trust_user_id=True uri=amqp://hostname
 
     .. version-added:: Neon
     '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
-    json_def = salt.utils.json.dumps(definition) if isinstance(definition, dict) else definition
+    params = salt.utils.data.filter_falsey({
+        'uri': uri,
+        'prefetch-count': prefetch_count,
+        'reconnect-delay': reconnect_delay,
+        'ack-mode': ack_mode,
+        'trust-user-id': trust_user_id,
+        'exchange': exchange,
+        'max-hops': max_hops,
+        'expires': expires,
+        'message-ttl': message_ttl,
+        'ha-policy': ha_policy,
+        'queue': queue,
+    })
     res = __salt__['cmd.run_all'](
-        [RABBITMQCTL, 'set_parameter', 'federation-upstream', name, json_def],
+        [RABBITMQCTL, 'set_parameter', 'federation-upstream', name, salt.utils.json.dumps(params)],
         reset_system_locale=False,
         runas=runas,
         python_shell=False)
