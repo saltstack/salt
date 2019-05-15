@@ -1136,7 +1136,7 @@ def disable_plugin(name, runas=None):
     return _format_response(ret, 'Disabled')
 
 
-def add_upstream(
+def set_upstream(
         name,
         uri,
         prefetch_count=None,
@@ -1151,10 +1151,10 @@ def add_upstream(
         queue=None,
         runas=None):
     '''
-    Adds an upstream via rabbitmqctl set_parameter. This can be an exchange-upstream,
+    Configures an upstream via rabbitmqctl set_parameter. This can be an exchange-upstream,
     a queue-upstream or both.
 
-    :param str name: The name of the upstream to add.
+    :param str name: The name of the upstream to configure.
     The following parameters apply to federated exchanges and federated queues:
     :param str uri: The AMQP URI(s) for the upstream.
     :param int prefetch_count: The maximum number of unacknowledged messages copied
@@ -1208,7 +1208,7 @@ def add_upstream(
 
     CLI Example:
     .. code-block:: bash
-        salt '*' rabbitmq.add_upstream upstream_name ack_mode=on-confirm max_hops=1 \
+        salt '*' rabbitmq.set_upstream upstream_name ack_mode=on-confirm max_hops=1 \
             trust_user_id=True uri=amqp://hostname
 
     .. version-added:: Neon
