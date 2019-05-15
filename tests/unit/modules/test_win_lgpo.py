@@ -8,16 +8,15 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Libs
 import salt.modules.win_lgpo as win_lgpo
+import salt.utils.platform
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
-from tests.support.mock import (
-    MagicMock,
-    patch
-)
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, patch
 
 
+@skipIf(not salt.utils.platform.is_windows(), 'Not a Windows system')
 class WinLgpoNetShTestCase(TestCase, LoaderModuleMockMixin):
     '''
     NetSH test cases
