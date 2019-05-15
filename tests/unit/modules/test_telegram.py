@@ -65,9 +65,6 @@ class RequestPutResponseMock(Mock):
         return {'_id': 4321}
 
 
-REQUEST_MOCK = RequestMock()
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TelegramModuleTest(TestCase, LoaderModuleMockMixin):
     '''
@@ -84,7 +81,7 @@ class TelegramModuleTest(TestCase, LoaderModuleMockMixin):
                 }),
                 'requests.put': Mock(),
             },
-            'requests': REQUEST_MOCK
+            'requests': RequestMock()
         }
         return {telegram: module_globals}
 
