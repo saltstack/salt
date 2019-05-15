@@ -39,7 +39,7 @@ provisioner:
   max_retries: 2
   remote_states:
     name: git://github.com/saltstack/salt-jenkins.git
-    branch: master
+    branch: develop
     repo: git
     testingdir: /testing
   salt_copy_filter:
@@ -54,7 +54,7 @@ provisioner:
     base:
       "os:Windows":
         - match: grain
-        - prep_windows
+        - windows
       "*":
         - <%= ENV['KITCHEN_STATE'] || 'git.salt' %>
   pillars:

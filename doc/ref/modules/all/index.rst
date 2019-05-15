@@ -142,6 +142,7 @@ execution modules
     extfs
     file
     firewalld
+    flatpak
     freebsd_sysctl
     freebsd_update
     freebsdjail
@@ -213,7 +214,7 @@ execution modules
     keystoneng
     keystore
     kmod
-    kubernetes
+    kubernetesmod
     launchctl_service
     layman
     ldap3

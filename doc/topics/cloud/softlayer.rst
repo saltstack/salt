@@ -221,9 +221,9 @@ with its short hostname, ``my-vm``):
     Rejected Keys:
     #
     #
-    # salt my-vm.example.com test.ping
+    # salt my-vm.example.com test.version
     my-vm.example.com:
-        True
+        2018.3.4
     #
     #
     # salt-cloud -d my-vm.example.com
@@ -334,7 +334,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    # salt 'myserver.example.com' test.ping
+    # salt 'myserver.example.com' test.version
 
 Dedicated Host
 ~~~~~~~~~~~~~~

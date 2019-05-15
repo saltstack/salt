@@ -300,10 +300,6 @@ class Runner(RunnerClient):
                 ret = '{0}'.format(exc)
             if not self.opts.get('quiet', False):
                 display_output(ret, 'nested', self.opts)
-        else:
-            ret = {
-                'retcode': salt.defaults.exitcodes.EX_SOFTWARE,
-            }
         log.debug('Runner return: %s', ret)
 
         return ret
