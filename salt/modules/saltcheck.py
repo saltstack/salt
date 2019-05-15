@@ -222,43 +222,6 @@ def __virtual__():
     return __virtualname__
 
 
-def update_master_cache(states, saltenv='base'):
-    '''
-    Updates the master cache onto the minion - transfers all salt-check-tests
-    Should be done one time before running tests, and if tests are updated
-    Can be automated by setting "auto_update_master_cache: True" in minion config
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' saltcheck.update_master_cache
-    '''
-    already_processed = []
-    log.info("Updating states %s for environment: %s", states, saltenv)
-    sls_list = salt.utils.args.split_input(states)
-    for state_name in sls_list:
-        state_path = state_name.replace(".", os.sep)
-        if state_path in already_processed:
-            log.debug("Already cached state for %s", state_path)
-        else:
-            qualifed_state = salt.utils.url.create(state_path, saltenv)
-            cache_result = __salt__['cp.cache_dir'](qualifed_state)
-            if cache_result:
-                already_processed.append(state_path)
-            else:
-                # Try dirname of given state as last argument must have been a file and not directory name
-                state_path_dir = os.path.dirname(state_path)
-                if state_path_dir in already_processed:
-                    log.debug("Already cached state for %s", state_path_dir)
-                else:
-                    qualifed_state = salt.utils.url.create(state_path_dir, saltenv)
-                    cache_result = __salt__['cp.cache_dir'](qualifed_state)
-                    if cache_result:
-                        already_processed.append(state_path_dir)
-    return True
-
-
 def run_test(**kwargs):
     '''
     Execute one saltcheck test and return result
@@ -844,53 +807,64 @@ class StateTestLoader(object):
             self.test_dict[key] = value
         return
 
-    def _gather_files(self, filepath):
-        '''
-        Gather files for a test suite
-        '''
-        self.test_files = []
-        filepath = filepath + os.sep + 'saltcheck-tests'
-        for dirname, dummy, filelist in salt.utils.path.os_walk(filepath):
-            for fname in filelist:
-                if fname.endswith('.tst'):
-                    start_path = dirname + os.sep + fname
-                    full_path = os.path.abspath(start_path)
-                    log.info("Found test: %s", full_path)
-                    self.test_files.append(full_path)
-        return
-
-    @staticmethod
-    def _convert_sls_to_path(sls):
-        '''
-        Converting sls to paths
-        '''
-        sls = sls.replace(".", os.sep)
-        return sls
 
     def add_test_files_for_sls(self, sls_name, check_all=False):
         '''
         Adding test files
         '''
-        sls_split = sls_name.rpartition('.')
-        for path in self.search_paths:
-            if sls_split[0]:
-                base_path = path + os.sep + self._convert_sls_to_path(sls_split[0])
-            else:
-                base_path = path
-            if os.path.isdir(base_path):
-                log.info("searching path: %s", base_path)
-                if check_all:
-                    # Find and run all tests in the state/saltcheck-tests directory
-                    self._gather_files(base_path + os.sep + sls_split[2])
-                    return
-                init_path = base_path + os.sep + sls_split[2] + os.sep + 'saltcheck-tests' + os.sep + 'init.tst'
-                name_path = base_path + os.sep + 'saltcheck-tests' + os.sep + sls_split[2] + '.tst'
-                if os.path.isfile(init_path):
-                    self.test_files.append(init_path)
-                    log.info("Found test init: %s", init_path)
-                if os.path.isfile(name_path):
-                    self.test_files.append(name_path)
-                    log.info("Found test named: %s", name_path)
-            else:
-                log.info("path is not a directory: %s", base_path)
-        return
+        all_states = __salt__['cp.list_states']()
+        ret = []
+        if sls_name in all_states:
+            ret = __salt__['state.show_low_sls'](sls_name, test=True)
+        else:
+            # passed name isn't a state, so we'll assume it is a test definition
+            ret = [{'__sls__': sls_name}]
+        for low_data in ret:
+            if not isinstance(low_data, dict):
+                log.error('low data from show_low_sls is not formed as a dict: {0}'.format(low_data))
+                return
+            this_cache_ret = None
+            if '__sls__' in low_data:
+                # this low data has an SLS path in it
+
+                # possible formula paths are then
+                # path/to/formula.sls
+                #   with tests of
+                #       path/to/saltcheck-tests/formula.tst
+                # path/to/formula/init.sls
+                #   with tests of
+                #       path/to/formula/saltcheck-tests/init.tst
+
+                sls_path = 'salt://{0}/{1}'.format(low_data['__sls__'].replace('.', '/'), self.saltcheck_test_location)
+                log.debug('looking in {} to cache tests'.format(sls_path))
+                this_cache_ret = __salt__['cp.cache_dir'](sls_path,
+                                                          saltenv=self.saltenv,
+                                                          include_pat='*.tst')
+                log.debug('this_cache_ret = {}'.format(this_cache_ret))
+                if not this_cache_ret:
+                    sls_split = low_data['__sls__'].split('.')
+                    sls_split.pop()
+                    sls_path = 'salt://{0}/{1}'.format('/'.join(sls_split), self.saltcheck_test_location)
+                    log.debug('looking in {} to cache tests'.format(sls_path))
+                    this_cache_ret = __salt__['cp.cache_dir'](sls_path,
+                                                              saltenv=self.saltenv,
+                                                              include_pat='*.tst')
+
+                if this_cache_ret:
+                    if check_all:
+                        # check_all, load all tests cached
+                        self.test_files = self.test_files + this_cache_ret
+                    else:
+                        split_sls = low_data['__sls__'].split('.')
+                        sls_path_names = [
+                                    os.path.join(os.sep.join(split_sls),
+                                                 os.path.normpath(self.saltcheck_test_location),
+                                                 'init.tst'),
+                                    os.path.join(os.sep.join(split_sls[:len(split_sls) - 1]),
+                                                 os.path.normpath(self.saltcheck_test_location),
+                                                 '{0}.tst'.format(split_sls[-1]))
+                                ]
+                        for this_cached_test_file in this_cache_ret:
+                            for sls_path_name in sls_path_names:
+                                if this_cached_test_file.endswith(sls_path_name):
+                                    self.test_files.append(this_cached_test_file)
