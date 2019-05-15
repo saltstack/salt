@@ -160,12 +160,12 @@ def _get_arguments(arguments_given,
 
         # check is key item valid
         if block[key] not in arguments_need_it:
-            return '%s item %s is not in key item list %s' % (repr(key), repr(block[key]), list(arguments_need_it))
+            return '{0} item {1} is not in key item list {2}'.format(repr(key), repr(block[key]), list(arguments_need_it))
 
         # check is key2 present
         for key2 in arguments_need_it[block[key]]:
             if key2 not in arguments_given:
-                return 'Missing %s argument' % key2
+                return 'Missing {0} argument'.format(key2)
             block[key2] = arguments_given[key2]
 
     # add optional arguments if their not present
@@ -209,7 +209,7 @@ def _task_state_prediction_bandage(state):
                         if len(year) != 4:
                             year = time.strftime('%Y')[:2] + year
 
-                    trigger[key] = salt.utils.dateutils.strftime("%s-%s-%s" % (year, month, day), '%Y-%m-%d')
+                    trigger[key] = salt.utils.dateutils.strftime("{0}-{1}-{2}".format(year, month, day), '%Y-%m-%d')
                 except IndexError:
                     pass
                 except ValueError:
@@ -342,7 +342,7 @@ def present(name,
     # if location not valid the task present will fail
     if not before['location_valid']:
         ret['result'] = False
-        ret['comment'] = '%s is not a valid file location' % (repr(location))
+        ret['comment'] = '{0} is not a valid file location'.format(repr(location))
         return ret
 
     # split up new task into all its parts
@@ -365,7 +365,7 @@ def present(name,
     for key in new_task:
         # if string is returned then an error happened
         if isinstance(new_task[key], str):
-            ret['comment'] = '%s: %s' % (key, new_task[key])
+            ret['comment'] = '{0}: {1}'.format(key, new_task[key])
             ret['result'] = False
             return ret
 
@@ -453,7 +453,7 @@ def absent(name,
     # if location not valid the task present will fail
     if not before['location_valid']:
         ret['result'] = False
-        ret['comment'] = '%s is not a valid file location' % (repr(location))
+        ret['comment'] = '{0} is not a valid file location'.format(repr(location))
         return ret
 
     if __opts__['test']:
