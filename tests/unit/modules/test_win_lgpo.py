@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 
-class WinLgpoTestCase(TestCase, LoaderModuleMockMixin):
+class WinLgpoNetShTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         return {win_lgpo: {
@@ -97,3 +97,93 @@ class WinLgpoTestCase(TestCase, LoaderModuleMockMixin):
                                                value='enable')
             self.assertTrue(result)
             self.assertEqual(win_lgpo.__context__, expected)
+
+
+class WinLgpoSeceditTestCase(TestCase, LoaderModuleMockMixin):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mock_true = MagicMock(return_value=True)
+        cls.secedit_data = [
+            '[Unicode]',
+            'Unicode=yes',
+            '[System Access]',
+            'MinimumPasswordAge = 0',
+            'MaximumPasswordAge = 42',
+            '[Event Audit]',
+            'AuditSystemEvents = 0',
+            'AuditLogonEvents = 0',
+            '[Registry Values]',
+            r'MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Setup\RecoveryConsole\SecurityLevel=4,0',
+            r'MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Setup\RecoveryConsole\SetCommand=4,0',
+            '[Privilege Rights]',
+            'SeNetworkLogonRight = *S-1-1-0,*S-1-5-32-544,*S-1-5-32-545,*S-1-5-32-551',
+            'SeBackupPrivilege = *S-1-5-32-544,*S-1-5-32-551',
+            '[Version]',
+            'signature="$CHICAGO$"',
+            'Revision=1']
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.secedit_data
+
+    def setup_loader_modules(self):
+        return {win_lgpo: {
+            '__context__': {},
+            '__opts__': {'cachedir': 'C:\\cachedir'},
+            '__salt__': {}
+        }}
+
+    def test__get_secedit_data(self):
+        expected = {
+            'AuditLogonEvents': '0',
+            'AuditSystemEvents': '0',
+            r'MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Setup\RecoveryConsole\SecurityLevel': '4,0',
+            r'MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Setup\RecoveryConsole\SetCommand': '4,0',
+            'MaximumPasswordAge': '42',
+            'MinimumPasswordAge': '0',
+            'Revision': '1',
+            'SeBackupPrivilege': '*S-1-5-32-544,*S-1-5-32-551',
+            'SeNetworkLogonRight': '*S-1-1-0,*S-1-5-32-544,*S-1-5-32-545,*S-1-5-32-551',
+            'Unicode': 'yes',
+            'signature': '"$CHICAGO$"'}
+        with patch.object(win_lgpo, '_load_secedit_data',
+                          MagicMock(return_value=self.secedit_data)):
+            result = win_lgpo._get_secedit_data()
+            self.assertDictEqual(result, expected)
+            self.assertDictEqual(win_lgpo.__context__['lgpo.secedit_data'],
+                                 expected)
+
+    def test__get_secedit_value(self):
+        with patch.object(win_lgpo, '_load_secedit_data',
+                          MagicMock(return_value=self.secedit_data)):
+            result = win_lgpo._get_secedit_value('AuditSystemEvents')
+            self.assertEqual(result, '0')
+
+    def test__get_secedit_value_not_defined(self):
+        with patch.object(win_lgpo, '_load_secedit_data',
+                          MagicMock(return_value=self.secedit_data)):
+            result = win_lgpo._get_secedit_value('UndefinedKey')
+            self.assertEqual(result, 'Not Defined')
+
+    def test__write_secedit_data(self):
+        mock_true = MagicMock(return_value=True)
+        mock_false = MagicMock(return_value=False)
+        mock_retcode = MagicMock(return_value=0)
+        new_secedit_data = {'System Access': ['MaximumPasswordAge=100']}
+        with patch.object(win_lgpo, '_load_secedit_data',
+                          MagicMock(return_value=self.secedit_data)),\
+                patch.dict(win_lgpo.__salt__, {'file.write': mock_true,
+                                               'file.file_exists': mock_false,
+                                               'cmd.retcode': mock_retcode}):
+            # Populate __context__['lgpo.secedit_data']
+            # It will have been run before this function is called
+            win_lgpo._get_secedit_data()
+            self.assertEqual(
+                win_lgpo.__context__['lgpo.secedit_data']['MaximumPasswordAge'],
+                '42')
+            result = win_lgpo._write_secedit_data(new_secedit_data)
+            self.assertTrue(result)
+            self.assertEqual(
+                win_lgpo.__context__['lgpo.secedit_data']['MaximumPasswordAge'],
+                '100')
