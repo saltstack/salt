@@ -705,10 +705,6 @@ class Master(SMaster):
             log.info('Creating master maintenance process')
             self.process_manager.add_process(Maintenance, args=(self.opts,))
 
-            if self.opts.get('event_return'):
-                log.info('Creating master event return process')
-                self.process_manager.add_process(salt.utils.event.EventReturn, args=(self.opts,))
-
             ext_procs = self.opts.get('ext_processes', [])
             for proc in ext_procs:
                 log.info('Creating ext_processes process: %s', proc)
@@ -746,6 +742,11 @@ class Master(SMaster):
                 kwargs=kwargs,
                 name='ReqServer')
 
+            if self.opts.get('event_return'):
+                log.info('Creating master event return process')
+                self.process_manager.add_process(salt.utils.event.EventReturn, args=(self.opts,))
+
+            log.info('Creating FileServerUpdate process')
             self.process_manager.add_process(
                 FileserverUpdate,
                 args=(self.opts,))
