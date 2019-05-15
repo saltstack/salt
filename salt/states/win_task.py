@@ -2,10 +2,10 @@
 # https://msdn.microsoft.com/en-us/library/windows/desktop/aa383608(v=vs.85).aspx
 from __future__ import absolute_import, print_function, unicode_literals
 
-'''
-State Module for managing task scheduler on Windows.
-You can add or remove tasks.
-'''
+
+# State Module for managing task scheduler on Windows.
+# You can add or remove tasks.
+
 # Import Python libs
 import copy
 import logging
@@ -17,10 +17,14 @@ import salt.utils.platform
 import salt.utils.dateutils
 
 # Import 3rd-party libs
-import pywintypes
+try:
+    import pywintypes
+except ImportError:
+    pass
+
 
 ACTION_PARTS = {'Execute': ['cmd'],
-                'Email': ['from', 'to', 'cc',  'server'],
+                'Email': ['from', 'to', 'cc', 'server'],
                 'Message': ['title', 'message']}
 
 OPTIONAL_ACTION_PARTS = {'start_in': '',
@@ -78,7 +82,8 @@ def __virtual__():
     '''
     Load only on minions running on Windows and with task Module loaded.
     '''
-    if not salt.utils.platform.is_windows() or 'task.list_tasks' not in __salt__:
+    if not salt.utils.platform.is_windows() or 'task.list_tasks' not in __salt__ or\
+        'pywintypes' not in globals():
         return False, 'State win_task: state only works on Window systems with task loaded'
     return __virtualname__
 
@@ -129,13 +134,13 @@ def _get_task_state_data(name,
     task_state = {'location_valid': False,
                   'task_found': False,
                   'task_info': {}}
-    
+
     # if valid location then try to get more info on task
     if _valid_location(location):
         task_state['location_valid'] = True
         task_state['task_found'] = name in __salt__['task.list_tasks'](location)
         # if task was found then get actions and triggers info
-        if task_state['task_found']: 
+        if task_state['task_found']:
             task_info = __salt__['task.info'](name, location)
             task_state['task_info'] = {key: task_info[key] for key in TASK_PARTS}
 
@@ -143,9 +148,9 @@ def _get_task_state_data(name,
 
 
 def _get_arguments(arguments_given,
-                  key_arguments,
-                  arguments_need_it,
-                  optional_arguments):
+                   key_arguments,
+                   arguments_need_it,
+                   optional_arguments):
     block = {}
     # check if key arguments are present
     for key in key_arguments:
@@ -330,10 +335,10 @@ def present(name,
 
             salt 'minion-id' state.apply <YAML file>
         '''
-    
+
     ret = _get_state_data(name)
     before = _get_task_state_data(name, location)
-    
+
     # if location not valid the task present will fail
     if not before['location_valid']:
         ret['result'] = False
@@ -353,7 +358,7 @@ def present(name,
     # if win os is higher than 7 then Email and Message action_type is not supported
     try:
         if int(__grains__['osversion'].split('.')[0]) >= 8 and new_task['action']['action_type'] in ['Email', 'Message']:
-            log.warning('This OS %s does not support Email or Message action_type.' %  __grains__['osversion'])
+            log.warning('This OS %s does not support Email or Message action_type.' % __grains__['osversion'])
     except ValueError:
         pass
 
@@ -363,7 +368,7 @@ def present(name,
             ret['comment'] = '%s: %s' % (key, new_task[key])
             ret['result'] = False
             return ret
-    
+
     if __opts__['test']:
         # if force is False and task is found then no changes will take place
         if not force and before['task_found']:
@@ -463,7 +468,7 @@ def absent(name,
                                                                     'task_found': False,
                                                                     'task_info': {}})
         return ret
-    
+
     # if task was found then delete it
     if before['task_found']:
         # try to delete task
@@ -473,6 +478,6 @@ def absent(name,
     # if 'task.delete_task' returns a str then task was not deleted
     if isinstance(ret['result'], str):
         ret['result'] = False
-    
+
     ret['changes'] = salt.utils.data.compare_dicts(before, _get_task_state_data(name, location))
     return ret
