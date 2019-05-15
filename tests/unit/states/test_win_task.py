@@ -2,21 +2,21 @@
 # https://msdn.microsoft.com/en-us/library/windows/desktop/aa383608(v=vs.85).aspx
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python Libs
-import copy
-
 # Import Salt Libs
 import salt.modules.win_task
 import salt.states.win_task as win_task
 
 # Import Salt Testing Libs
+import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import skipIf, TestCase
 from tests.support.helpers import destructiveTest
 
 
 @destructiveTest
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not salt.utils.platform.is_windows(), "Windows is required")
 class WinTaskCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.win_task
@@ -84,6 +84,8 @@ class WinTaskCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret['result'], True)
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not salt.utils.platform.is_windows(), "Windows is required")
 class WinTaskPrivateCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_task: {}}
@@ -162,11 +164,14 @@ class WinTaskPrivateCase(TestCase, LoaderModuleMockMixin):
         prediction = win_task._get_task_state_prediction(state, task_info)
         self.assertEqual(state, prediction)
 
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not salt.utils.platform.is_windows(), "Windows is required")
 class WinTaskTriggersCase(TestCase, LoaderModuleMockMixin):
     '''
-        The test below just checks if the state perdition is correct.
-        A lot of test might look the same but under hud a lot of checks are happening.
-        Triggers Test does not test Once or Event
+    The test below just checks if the state perdition is correct.
+    A lot of test might look the same but under hud a lot of checks are happening.
+    Triggers Test does not test Once or Event
     '''
     def setup_loader_modules(self):
         return {win_task: {}}
@@ -175,7 +180,7 @@ class WinTaskTriggersCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'action_type': 'Execute',
                   'cmd': 'del /Q /S C:\\\\Temp',
                   'trigger_type': 'Daily',
-                  'start_data': '2019-05-14',
+                  'start_date': '2019-05-14',
                   'start_time': '01:00 pm',
                   'days_interval': 101}
 
@@ -211,7 +216,7 @@ class WinTaskTriggersCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'action_type': 'Execute',
                   'cmd': 'del /Q /S C:\\\\Temp',
                   'trigger_type': 'Weekly',
-                  'start_data': '2019-05-14',
+                  'start_date': '2019-05-14',
                   'start_time': '01:00 pm',
                   'days_of_week': ['Monday', 'Wednesday', 'Friday'],
                   'weeks_interval': 1}
@@ -248,7 +253,7 @@ class WinTaskTriggersCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'action_type': 'Execute',
                   'cmd': 'del /Q /S C:\\\\Temp',
                   'trigger_type': 'Monthly',
-                  'start_data': '2019-05-14',
+                  'start_date': '2019-05-14',
                   'start_time': '01:00 pm',
                   'months_of_year': ['January', 'July'],
                   'days_of_month': [6, 16, 26],
@@ -285,7 +290,7 @@ class WinTaskTriggersCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'action_type': 'Execute',
                   'cmd': 'del /Q /S C:\\\\Temp',
                   'trigger_type': 'MonthlyDay',
-                  'start_data': '2019-05-14',
+                  'start_date': '2019-05-14',
                   'start_time': '01:00 pm',
                   'months_of_year': ['January', 'July'],
                   'weeks_of_month': ['First', 'Third'],
@@ -324,7 +329,7 @@ class WinTaskTriggersCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'action_type': 'Execute',
                   'cmd': 'del /Q /S C:\\\\Temp',
                   'trigger_type': 'OnIdle',
-                  'start_data': '2019-05-14',
+                  'start_date': '2019-05-14',
                   'start_time': '01:00 pm'}
 
         info = {'triggers': [{'start_date': '2019-05-14',
@@ -359,7 +364,7 @@ class WinTaskTriggersCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'action_type': 'Execute',
                   'cmd': 'del /Q /S C:\\\\Temp',
                   'trigger_type': 'OnTaskCreation',
-                  'start_data': '2019-05-14',
+                  'start_date': '2019-05-14',
                   'start_time': '01:00 pm'}
 
         info = {'triggers': [{'start_date': '2019-05-14',
@@ -395,7 +400,7 @@ class WinTaskTriggersCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'action_type': 'Execute',
                   'cmd': 'del /Q /S C:\\\\Temp',
                   'trigger_type': 'OnBoot',
-                  'start_data': '2019-05-14',
+                  'start_date': '2019-05-14',
                   'start_time': '01:00 pm'}
 
         info = {'triggers': [{'start_date': '2019-05-14',
@@ -432,7 +437,7 @@ class WinTaskTriggersCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'action_type': 'Execute',
                   'cmd': 'del /Q /S C:\\\\Temp',
                   'trigger_type': 'OnLogon',
-                  'start_data': '2019-05-14',
+                  'start_date': '2019-05-14',
                   'start_time': '01:00 pm'}
 
         info = {'triggers': [{'start_date': '2019-05-14',
@@ -468,7 +473,7 @@ class WinTaskTriggersCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'action_type': 'Execute',
                   'cmd': 'del /Q /S C:\\\\Temp',
                   'trigger_type': 'OnSessionChange',
-                  'start_data': '2019-05-14',
+                  'start_date': '2019-05-14',
                   'start_time': '01:00 pm',
                   'state_change': 'SessionUnlock'}
 
@@ -498,4 +503,5 @@ class WinTaskTriggersCase(TestCase, LoaderModuleMockMixin):
              patch.dict(win_task.__opts__, {"test": True}), \
              patch.dict(win_task.__grains__, {'osversion': '7.1'}):
             ret = win_task.present(name='salt', location='', force=True, **kwargs)
+
             self.assertEqual(ret['result'], True)
