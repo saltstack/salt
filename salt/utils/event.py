@@ -1216,10 +1216,10 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         super(EventReturn, self).__init__(**kwargs)
 
         self.opts = opts
+        self.local_minion_opts = self.opts.copy()
+        self.local_minion_opts['file_client'] = 'local'
+
         self.event_return_queue = self.opts['event_return_queue']
-        local_minion_opts = self.opts.copy()
-        local_minion_opts['file_client'] = 'local'
-        self.minion = salt.minion.MasterMinion(local_minion_opts)
         self.event_queue = []
         self.stop = False
 
@@ -1286,6 +1286,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         Spin up the multiprocess event returner
         '''
         salt.utils.process.appendproctitle(self.__class__.__name__)
+        self.minion = salt.minion.MasterMinion(self.local_minion_opts)
         self.event = get_event('master', opts=self.opts, listen=True)
         events = self.event.iter_events(full=True)
         self.event.fire_event({}, 'salt/event_listen/start')
