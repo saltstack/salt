@@ -156,7 +156,7 @@ def init(opts):
     # This is not a SSH-based proxy, so it should be safe to enable
     # multiprocessing.
     try:
-        rpc_reply = __utils__['nxos_api.rpc']('show clock', **conn_args)
+        rpc_reply = __utils__['nxos_api.rpc']('show version', **conn_args)
         # Execute a very simple command to confirm we are able to connect properly
         nxos_device['conn_args'] = conn_args
         nxos_device['initialized'] = True
