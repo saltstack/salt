@@ -343,6 +343,7 @@ state modules
     win_smtp_server
     win_snmp
     win_system
+    win_task
     win_wua
     win_wusa
     winrepo
