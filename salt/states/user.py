@@ -94,7 +94,9 @@ def _changes(name,
     '''
 
     if 'shadow.info' in __salt__:
-        lshad = __salt__['shadow.info'](name)
+        # We pass the password to the shadow.info function on Windows
+        # 'password' is ignored by other OSs
+        lshad = __salt__['shadow.info'](name, password=password)
 
     lusr = __salt__['user.info'](name)
     if not lusr:
@@ -154,6 +156,9 @@ def _changes(name,
     elif 'shadow.info' in __salt__ and salt.utils.platform.is_windows():
         if expire and expire is not -1 and salt.utils.dateutils.strftime(lshad['expire']) != salt.utils.dateutils.strftime(expire):
             change['expire'] = expire
+        if password:
+            if lshad['passwd'] != password and enforce_password:
+                change['passwd'] = password
 
     # GECOS fields
     fullname = salt.utils.data.decode(fullname)
@@ -590,7 +595,9 @@ def present(name,
             return ret
         # The user is present
         if 'shadow.info' in __salt__:
-            lshad = __salt__['shadow.info'](name)
+            # We pass the password to the shadow.info function on Windows
+            # 'password' is ignored by other OSs
+            lshad = __salt__['shadow.info'](name, password=password)
         if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
             lcpre = __salt__['user.get_loginclass'](name)
         pre = __salt__['user.info'](name)
@@ -659,7 +666,9 @@ def present(name,
         post = __salt__['user.info'](name)
         spost = {}
         if 'shadow.info' in __salt__ and lshad['passwd'] != password:
-            spost = __salt__['shadow.info'](name)
+            # We pass the password to the shadow.info function on Windows
+            # 'password' is ignored by other OSs
+            spost = __salt__['shadow.info'](name, password=password)
         if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
             lcpost = __salt__['user.get_loginclass'](name)
         # See if anything changed
