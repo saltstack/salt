@@ -24,7 +24,7 @@ import logging
 import json
 
 # Import salt libs
-import salt.utils.path
+import salt.utils.data
 import salt.utils.dictdiffer
 from salt.exceptions import CommandExecutionError
 
@@ -37,7 +37,7 @@ def __virtual__():
     '''
     requirements = ['rabbitmq.list_upstreams',
                     'rabbitmq.upstream_exists',
-                    'rabbitmq.add_upstream',
+                    'rabbitmq.set_upstream',
                     'rabbitmq.delete_upstream']
     return all(req in __salt__ for req in requirements)
 
@@ -71,11 +71,11 @@ def present(name,
         - verity = verify_peer
         - fail_if_no_peer_cert = true | false
         - auth_mechanism = external
-        Example (these should be one line each):
-        - amqp://user:password@server_name?cacertfile=/path/to/cacert.pem&certfile=/path/to/cert.pem
-            &keyfile=/path/to/key.pem&verify=verify_peer
-        - amqp://server-name?cacertfile=/path/to/cacert.pem&certfile=/path/to/cert.pem
-            &keyfile=/path/to/key.pem&verify=verify_peer&fail_if_no_peer_cert=true&auth_mechanism=external
+        Example:
+        - amqp://user:password@server_name?cacertfile=/path/to/cacert.pem&\
+            certfile=/path/to/cert.pem&keyfile=/path/to/key.pem&verify=verify_peer
+        - amqp://server-name?cacertfile=/path/to/cacert.pem&certfile=/path/to/cert.pem&\
+            keyfile=/path/to/key.pem&verify=verify_peer&fail_if_no_peer_cert=true&auth_mechanism=external
     :param int prefetch_count: Maximum number of unacknowledged messages that may
         be in flight over a federation link at one time. Default: 1000
     :param int reconnect_delay: Time in seconds to wait after a network link
@@ -113,9 +113,10 @@ def present(name,
     .. version-added:: Neon
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
+    action = None
 
     try:
-        current = __salt__['rabbitmq.list_upstreams'](runas=runas)
+        current_upstreams = __salt__['rabbitmq.list_upstreams'](runas=runas)
     except CommandExecutionError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         return ret
@@ -132,41 +133,48 @@ def present(name,
         'ha-policy': ha_policy,
         'queue': queue,
     })
-    if name in current:
-        current_config = json.loads(current.get(name, ''))
+
+    if name in current_upstreams:
+        current_config = json.loads(current_upstreams.get(name, ''))
         diff_config = salt.utils.dictdiffer.deep_diff(current_config, new_config)
         if diff_config:
-            if __opts__['test']:
-                ret['result'] = None
-                ret['comment'] = 'Upstream "{}" would have been updated.'.format(name)
-            else:
-                try:
-                    res = __salt__['rabbitmq.add_upstream'](name, new_config, runas=runas)
-                    ret['result'] = res
-                    ret['comment'] = 'Upstream "{}" updated.'.format(name)
-                    ret['changes'] = diff_config
-                except CommandExecutionError as exp:
-                    ret['comment'] = 'Error: {}'.format(exp)
+            action = 'update'
         else:
             ret['result'] = True
             ret['comment'] = 'Upstream "{}" already present as specified.'.format(name)
     else:
+        action = 'create'
+        diff_config = {'old': None, 'new': new_config}
+
+    if action:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Upstream "{}" would have been created.'.format(name)
+            ret['comment'] = 'Upstream "{}" would have been {}d.'.format(name, action)
         else:
             try:
-                res = __salt__['rabbitmq.add_upstream'](name, new_config, runas=runas)
+                res = __salt__['rabbitmq.set_upstream'](
+                    name,
+                    uri,
+                    prefetch_count=prefetch_count,
+                    reconnect_delay=reconnect_delay,
+                    ack_mode=ack_mode,
+                    trust_user_id=trust_user_id,
+                    exchange=exchange,
+                    max_hops=max_hops,
+                    expires=expires,
+                    message_ttl=message_ttl,
+                    ha_policy=ha_policy,
+                    queue=queue,
+                    runas=runas)
                 ret['result'] = res
-                ret['comment'] = 'Upstream "{}" updated.'.format(name)
-                ret['changes'] = {'old': None, 'new': new_config}
+                ret['comment'] = 'Upstream "{}" {}d.'.format(name, action)
+                ret['changes'] = diff_config
             except CommandExecutionError as exp:
-                ret['comment'] = 'Error: {}'.format(exp)
+                ret['comment'] = 'Error trying to {} upstream: {}'.format(action, exp)
     return ret
 
 
-def absent(name,
-           runas=None):
+def absent(name, runas=None):
     '''
     Ensure the named upstream is absent.
 
