@@ -151,4 +151,3 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             # Does it populate __context__
             self.assertEqual(chocolatey.__context__['chocolatey._path'],
                              expected)
-
