@@ -132,7 +132,7 @@ Saltcheck Keywords
 
             .. code-block:: yaml
 
-                assertion_section: "'Computer Configuration':'System\\Windows Time Service\\Global Configuration Settings':'MaxPollInterval'"
+                assertion_section: 'Computer Configuration:System\\Windows Time Service\\Global Configuration Settings:MaxPollInterval'
 **assertion_section_delimiter**
     (str) The delimiter to use when splitting a neseted structure.
     Defaults to ``salt.defaults.DEFAULT_TARGET_DELIM`` (which is ':')
@@ -232,7 +232,7 @@ Example with a nested assertion_section
         return_full_policy_names: True
       assertion: assertEqual
       expected-return: Enabled
-      assertion_section: "'Computer Configuration'|'Microsoft network client: Digitally sign communications (always)'"
+      assertion_section: 'Computer Configuration|Microsoft network client: Digitally sign communications (always)'
       assertion_section_delimiter: '|'
 
 Example suppressing print results
