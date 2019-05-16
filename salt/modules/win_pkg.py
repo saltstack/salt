@@ -1188,6 +1188,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 'extra_install_flags': kwargs.get('extra_install_flags')
             }
         }
+    elif len(pkg_params) == 1:
+        for pkg in pkg_params:
+            pkg_params[pkg]['extra_install_flags'] = kwargs.get('extra_install_flags')
 
     # Get a list of currently installed software for comparison at the end
     old = list_pkgs(saltenv=saltenv, refresh=refresh, versions_as_list=True)
