@@ -430,7 +430,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 log.error(tops_failure_msg, 'parsing', python3_bin)
                 log.exception(err)
         else:
-            log.error(tops_failure_msg, 'collecting', python3_bin)
+            log.debug(tops_failure_msg, 'collecting', python3_bin)
             log.debug(stderr)
 
     # Collect tops, alternative to 3.x version
@@ -448,7 +448,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 log.error(tops_failure_msg, 'parsing', python2_bin)
                 log.exception(err)
         else:
-            log.error(tops_failure_msg, 'collecting', python2_bin)
+            log.debug(tops_failure_msg, 'collecting', python2_bin)
             log.debug(stderr)
 
     with salt.utils.files.fopen(pymap_cfg, 'wb') as fp_:
