@@ -184,6 +184,13 @@ def present(host, groups, interfaces, **kwargs):
         inventory = kwargs['inventory']
     if inventory is None:
         inventory = {}
+        
+    new_visible_name = ''
+    if 'visible_name' in kwargs:
+        new_visible_name = kwargs['visible_name']
+    if 'firstname' in kwargs:
+        new_visible_name = kwargs['firstname']
+
     # Create dict of requested inventory items
     new_inventory = {}
     for inv_item in inventory:
@@ -318,6 +325,7 @@ def present(host, groups, interfaces, **kwargs):
                                                      interfaces_formated,
                                                      proxy_hostid=proxy_hostid,
                                                      inventory=new_inventory,
+                                                     visible_name=new_visible_name,
                                                      **connection_args)
 
         if 'error' not in host_create:
