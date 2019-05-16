@@ -405,8 +405,10 @@ class GitFSTestBase(object):
 
         username_key = str('USERNAME')
         orig_username = os.environ.get(username_key)
+        environ_copy = os.environ.copy()
         try:
             if username_key not in os.environ:
+
                 try:
                     if salt.utils.platform.is_windows():
                         os.environ[username_key] = \
@@ -434,10 +436,8 @@ class GitFSTestBase(object):
             if hasattr(repo, 'close'):
                 repo.close()
         finally:
-            if orig_username is not None:
-                os.environ[username_key] = orig_username
-            else:
-                os.environ.pop(username_key, None)
+            os.environ.clear()
+            os.environ.update(environ_copy)
 
     @classmethod
     def tearDownClass(cls):

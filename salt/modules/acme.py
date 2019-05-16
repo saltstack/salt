@@ -230,12 +230,15 @@ def cert(name,
 
     if 'no action taken' in res['stdout']:
         comment = 'Certificate {0} unchanged'.format(cert_file)
+        result = None
     elif renew:
         comment = 'Certificate {0} renewed'.format(name)
+        result = True
     else:
         comment = 'Certificate {0} obtained'.format(name)
+        result = True
 
-    ret = {'comment': comment, 'not_after': expires(name), 'changes': {}, 'result': True}
+    ret = {'comment': comment, 'not_after': expires(name), 'changes': {}, 'result': result}
     ret, _ = __salt__['file.check_perms'](_cert_file(name, 'privkey'),
                                           ret,
                                           owner, group, mode,
