@@ -467,7 +467,7 @@ class SSHThinTestCase(TestCase):
 
             if salt.ext.six.PY3:
                 self.assertIn('DEBUG:python2 binary does not exist. Will not '
-                              'detect version to use for Python 2',
+                              'detect Python 2 version',
                               handler.messages)
                 self.assertIn('DEBUG:python2 binary does not exist. Will not attempt to generate '
                               'tops for Python 2',
