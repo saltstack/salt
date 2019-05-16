@@ -96,6 +96,9 @@ Saltcheck Keywords
     (str) Optional keyword used to parse the module_and_function return. If a salt module
     returns a dictionary as a result, the ``assertion_section`` value is used to lookup a specific value
     in that return for the assertion comparison.
+**assertion_section_delimiter**
+    (str) The delimiter to use when splitting a neseted structure.
+    Defaults to ':'
 **print_result:**
     (bool) Optional keyword to show results in the ``assertEqual``, ``assertNotEqual``,
     ``assertIn``, and ``assertNotIn`` output. Defaults to True.
@@ -192,8 +195,8 @@ Example with a nested assertion_section
         return_full_policy_names: True
       assertion: assertEqual
       expected-return: Enabled
-      assertion_section:
-        'Computer Configuration':'Microsoft network client: Digitally sign communications (always)'
+      assertion_section: 'Computer Configuration|Microsoft network client: Digitally sign communications (always)'
+      assertion_section_delimiter: '|'
 
 Example suppressing print results
 ---------------------------------
@@ -252,6 +255,7 @@ import salt.exceptions
 from salt.utils.odict import OrderedDict
 from salt.utils.decorators import memoize
 from salt.ext import six
+from salt.defaults import DEFAULT_TARGET_DELIM
 
 log = logging.getLogger(__name__)
 
@@ -305,8 +309,11 @@ def state_apply(state_name, **kwargs):
     '''
     # A new salt client is instantiated with the default configuration because the main module's
     #   client is hardcoded to local
-    # If the minion is running with a master, a potentially non-local client is needed to lookup states
+    # minion is running with a master, a potentially non-local client is needed to lookup states
     local_opts = salt.config.minion_config(__opts__['conf_file'])
+    if '_salt/running_data/var/run/salt-minion.pid' in __opts__.get('pidfile', False):
+        # Force salt-ssh minions to use local
+        local_opts['file_client'] = 'local'
     caller = salt.client.Caller(mopts=local_opts)
     if kwargs:
         return caller.cmd('state.apply', state_name, **kwargs)
@@ -539,7 +546,8 @@ class SaltCheck(object):
                            fun,
                            args,
                            kwargs,
-                           assertion_section=None):
+                           assertion_section=None,
+                           assertion_section_delimiter=DEFAULT_TARGET_DELIM):
         '''
         Generic call of salt Caller command
         '''
@@ -560,7 +568,8 @@ class SaltCheck(object):
         if isinstance(value, dict) and assertion_section:
             return_value = salt.utils.data.traverse_dict_and_list(value,
                                                                   assertion_section,
-                                                                  default=False)
+                                                                  default=False,
+                                                                  delimiter=assertion_section_delimiter)
             return return_value
         else:
             return value
@@ -576,6 +585,7 @@ class SaltCheck(object):
                 return {'status': 'Skip', 'duration': 0.0}
             mod_and_func = test_dict['module_and_function']
             assertion_section = test_dict.get('assertion_section', None)
+            assertion_section_delimiter = test_dict.get('assertion_section_delimiter', DEFAULT_TARGET_DELIM)
             args = test_dict.get('args', None)
             kwargs = test_dict.get('kwargs', None)
             pillar_data = test_dict.get('pillar-data', None)
@@ -594,7 +604,11 @@ class SaltCheck(object):
                 assertion = test_dict['assertion']
             expected_return = test_dict.get('expected-return', None)
             assert_print_result = test_dict.get('print_result', True)
-            actual_return = self._call_salt_command(mod_and_func, args, kwargs, assertion_section)
+            actual_return = self._call_salt_command(mod_and_func,
+                                                    args,
+                                                    kwargs,
+                                                    assertion_section,
+                                                    assertion_section_delimiter)
             if assertion not in ["assertIn", "assertNotIn", "assertEmpty", "assertNotEmpty",
                                  "assertTrue", "assertFalse"]:
                 expected_return = self._cast_expected_to_returned_type(expected_return, actual_return)
