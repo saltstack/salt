@@ -184,7 +184,7 @@ def present(host, groups, interfaces, **kwargs):
         inventory = kwargs['inventory']
     if inventory is None:
         inventory = {}
-    
+
     new_visible_name = kwargs.get('visible_name', '')
     new_first_name = kwargs.get('first_name', '')
 
