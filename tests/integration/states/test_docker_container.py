@@ -12,12 +12,13 @@ import subprocess
 import tempfile
 
 # Import Salt Testing Libs
-from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
 from tests.support.docker import with_network, random_name
-from tests.support.paths import FILES, TMP
 from tests.support.helpers import destructiveTest, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.paths import FILES, TMP
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 # Import Salt Libs
 import salt.utils.files
@@ -1153,7 +1154,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             'docker_container.run',
             name=name,
             image=self.image,
-            command='/bin/false',
+            command=RUNTIME_VARS.SHELL_FALSE_PATH,
             failhard=True)
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
@@ -1169,7 +1170,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             'docker_container.run',
             name=name,
             image=self.image,
-            command='/bin/false',
+            command=RUNTIME_VARS.SHELL_FALSE_PATH,
             failhard=False)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
