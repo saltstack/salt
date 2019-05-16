@@ -133,3 +133,4 @@ def _create_cp_object(**options):
         cp = configparser.SafeConfigParser(**options)
         if preserve_case:
             cp.optionxform = str
+    return cp
