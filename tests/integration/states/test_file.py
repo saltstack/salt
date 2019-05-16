@@ -42,6 +42,7 @@ import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.serializers.configparser
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 HAS_PWD = True
@@ -750,7 +751,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 source_hash=uppercase_hash
             )
             assert ret[state_name]['result'] is True
-            assert ret[state_name]['pchanges'] == {}
             assert ret[state_name]['changes'] == {}
 
             # Test uppercase source_hash using test=true
@@ -763,7 +763,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 test=True
             )
             assert ret[state_name]['result'] is True
-            assert ret[state_name]['pchanges'] == {}
             assert ret[state_name]['changes'] == {}
 
         finally:
@@ -816,6 +815,87 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # Now make sure that the file is not cached
         result = self.run_function('cp.is_cached', [source, saltenv])
         assert result == '', 'File is still cached at {0}'.format(result)
+
+    @with_tempfile(create=False)
+    @with_tempfile(create=False)
+    def test_file_managed_onchanges(self, file1, file2):
+        '''
+        Test file.managed state with onchanges
+        '''
+        pillar = {'file1': file1,
+                  'file2': file2,
+                  'source': 'salt://testfile',
+                  'req': 'onchanges'}
+
+        # Lay down the file used in the below SLS to ensure that when it is
+        # run, there are no changes.
+        self.run_state(
+            'file.managed',
+            name=pillar['file2'],
+            source=pillar['source'])
+
+        ret = self.repack_state_returns(
+            self.run_function(
+                'state.apply',
+                mods='onchanges_prereq',
+                pillar=pillar,
+                test=True,
+            )
+        )
+        # The file states should both exit with None
+        assert ret['one']['result'] is None, ret['one']['result']
+        assert ret['three']['result'] is True, ret['three']['result']
+        # The first file state should have changes, since a new file was
+        # created. The other one should not, since we already created that file
+        # before applying the SLS file.
+        assert ret['one']['changes']
+        assert not ret['three']['changes'], ret['three']['changes']
+        # The state watching 'one' should have been run due to changes
+        assert ret['two']['comment'] == 'Success!', ret['two']['comment']
+        # The state watching 'three' should not have been run
+        assert ret['four']['comment'] == \
+            'State was not run because none of the onchanges reqs changed', \
+            ret['four']['comment']
+
+    @with_tempfile(create=False)
+    @with_tempfile(create=False)
+    def test_file_managed_prereq(self, file1, file2):
+        '''
+        Test file.managed state with prereq
+        '''
+        pillar = {'file1': file1,
+                  'file2': file2,
+                  'source': 'salt://testfile',
+                  'req': 'prereq'}
+
+        # Lay down the file used in the below SLS to ensure that when it is
+        # run, there are no changes.
+        self.run_state(
+            'file.managed',
+            name=pillar['file2'],
+            source=pillar['source'])
+
+        ret = self.repack_state_returns(
+            self.run_function(
+                'state.apply',
+                mods='onchanges_prereq',
+                pillar=pillar,
+                test=True,
+            )
+        )
+        # The file states should both exit with None
+        assert ret['one']['result'] is None, ret['one']['result']
+        assert ret['three']['result'] is True, ret['three']['result']
+        # The first file state should have changes, since a new file was
+        # created. The other one should not, since we already created that file
+        # before applying the SLS file.
+        assert ret['one']['changes']
+        assert not ret['three']['changes'], ret['three']['changes']
+        # The state watching 'one' should have been run due to changes
+        assert ret['two']['comment'] == 'Success!', ret['two']['comment']
+        # The state watching 'three' should not have been run
+        assert ret['four']['comment'] == 'No changes detected', \
+            ret['four']['comment']
 
     def test_directory(self):
         '''
@@ -1710,16 +1790,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test the serializer_opts and deserializer_opts options
         '''
-        data1 = {'foo': {'bar': 'baz'}}
+        data1 = {'foo': {'bar': '%(x)s'}}
         data2 = {'foo': {'abc': 123}}
-        merged = {'foo': {'bar': 'baz', 'abc': 123}}
+        merged = {'foo': {'y': 'not_used', 'x': 'baz', 'abc': 123, 'bar': u'baz'}}
 
         ret = self.run_state(
             'file.serialize',
             name=name,
             dataset=data1,
-            formatter='json',
-            deserializer_opts=[{'encoding': 'latin-1'}])
+            formatter='configparser',
+            deserializer_opts=[{'defaults': {'y': 'not_used'}}])
         ret = ret[next(iter(ret))]
         assert ret['result'], ret
         # We should have warned about deserializer_opts being used when
@@ -1727,25 +1807,31 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         assert 'warnings' in ret
 
         # Run with merge_if_exists, as well as serializer and deserializer opts
+        # deserializer opts will be used for string interpolation of the %(x)s
+        # that was written to the file with data1 (i.e. bar should become baz)
         ret = self.run_state(
             'file.serialize',
             name=name,
             dataset=data2,
-            formatter='json',
+            formatter='configparser',
             merge_if_exists=True,
-            serializer_opts=[{'indent': 8}],
-            deserializer_opts=[{'encoding': 'latin-1'}])
+            serializer_opts=[{'defaults': {'y': 'not_used'}}],
+            deserializer_opts=[{'defaults': {'x': 'baz'}}])
         ret = ret[next(iter(ret))]
         assert ret['result'], ret
 
         with salt.utils.files.fopen(name) as fp_:
-            serialized_data = salt.utils.json.load(fp_)
+            serialized_data = salt.serializers.configparser.deserialize(fp_)
 
         # If this test fails, this debug logging will help tell us how the
         # serialized data differs from what was serialized.
         log.debug('serialized_data = %r', serialized_data)
         log.debug('merged = %r', merged)
-        assert serialized_data == merged
+        # serializing with a default of 'y' will add y = not_used into foo
+        assert serialized_data['foo']['y'] == merged['foo']['y']
+        # deserializing with default of x = baz will perform interpolation on %(x)s
+        # and bar will then = baz
+        assert serialized_data['foo']['bar'] == merged['foo']['bar']
 
     @with_tempdir()
     def test_replace_issue_18841_omit_backup(self, base_dir):

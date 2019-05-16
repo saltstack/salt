@@ -69,13 +69,12 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                         ''.format(acl_name, perms))
                 ret = {'name': name,
                        'comment': comt,
-                       'changes': {},
-                       'pchanges': {'new': {'acl_name': acl_name,
+                       'changes': {'new': {'acl_name': acl_name,
                                             'acl_type': acl_type,
                                             'perms': perms},
-                                    'old': {'acl_name': acl_name,
-                                            'acl_type': acl_type,
-                                            'perms': 'r-x'}},
+                                   'old': {'acl_name': acl_name,
+                                           'acl_type': acl_type,
+                                           'perms': 'r-x'}},
                        'result': None}
 
                 self.assertDictEqual(linux_acl.present(name, acl_type, acl_name,
@@ -92,7 +91,6 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                                        'old': {'acl_name': acl_name,
                                                'acl_type': acl_type,
                                                'perms': 'r-x'}},
-                           'pchanges': {},
                            'result': True}
                     self.assertDictEqual(linux_acl.present(name, acl_type,
                                                            acl_name, perms),
@@ -106,7 +104,6 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                     ret = {'name': name,
                            'comment': comt,
                            'changes': {},
-                           'pchanges': {},
                            'result': False}
                     self.assertDictEqual(linux_acl.present(name, acl_type,
                                                            acl_name, perms),
@@ -118,10 +115,9 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                             'for {0}: {1}'.format(acl_name, perms))
                     ret = {'name': name,
                            'comment': comt,
-                           'changes': {},
-                           'pchanges': {'new': {'acl_name': acl_name,
-                                                'acl_type': acl_type,
-                                                'perms': perms}},
+                           'changes': {'new': {'acl_name': acl_name,
+                                               'acl_type': acl_type,
+                                               'perms': perms}},
                            'result': None}
                     self.assertDictEqual(linux_acl.present(name, acl_type,
                                                            acl_name, perms),
@@ -135,7 +131,6 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                            'changes': {'new': {'acl_name': acl_name,
                                                'acl_type': acl_type,
                                                'perms': perms}},
-                           'pchanges': {},
                            'result': True}
                     self.assertDictEqual(linux_acl.present(name, acl_type,
                                                            acl_name, perms),
@@ -149,7 +144,6 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                     ret = {'name': name,
                            'comment': comt,
                            'changes': {},
-                           'pchanges': {},
                            'result': False}
                     self.assertDictEqual(linux_acl.present(name, acl_type,
                                                            acl_name, perms),
@@ -163,13 +157,12 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                             ''.format(acl_name, perms))
                     ret = {'name': name,
                            'comment': comt,
-                           'changes': {},
-                           'pchanges': {'new': {'acl_name': acl_name,
+                           'changes': {'new': {'acl_name': acl_name,
                                                 'acl_type': acl_type,
                                                 'perms': perms},
-                                        'old': {'acl_name': acl_name,
-                                                'acl_type': acl_type,
-                                                'perms': 'rwx'}},
+                                       'old': {'acl_name': acl_name,
+                                               'acl_type': acl_type,
+                                               'perms': 'rwx'}},
                            'result': None}
 
                     self.assertDictEqual(linux_acl.present(name, acl_type, acl_name,
@@ -183,7 +176,6 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                     ret = {'name': name,
                            'comment': comt,
                            'changes': {},
-                           'pchanges': {},
                            'result': True}
 
                     self.assertDictEqual(linux_acl.present(name, acl_type, acl_name,
@@ -191,8 +183,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
 
             # No acl type
             comt = ('ACL Type does not exist')
-            ret = {'name': name, 'comment': comt, 'result': False,
-                   'changes': {}, 'pchanges': {}}
+            ret = {'name': name, 'comment': comt, 'result': False, 'changes': {}}
             self.assertDictEqual(linux_acl.present(name, acl_type, acl_name,
                                                    perms), ret)
 

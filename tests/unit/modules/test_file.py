@@ -8,7 +8,7 @@ import tempfile
 import textwrap
 
 # Import Salt Testing libs
-from tests.support.helpers import with_tempfile
+from tests.support.helpers import with_tempfile, dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
@@ -42,7 +42,16 @@ here
 
 
 class DummyStat(object):
-    st_size = 123
+    st_mode = 33188
+    st_ino = 115331251
+    st_dev = 44
+    st_nlink = 1
+    st_uid = 99200001
+    st_gid = 99200001
+    st_size = 41743
+    st_atime = 1552661253
+    st_mtime = 1552661253
+    st_ctime = 1552661253
 
 
 class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
@@ -1109,6 +1118,14 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 ret = filemod.get_diff('binary1', 'text1')
                 self.assertEqual(ret, 'Replace binary file with text file')
 
+    def test_stats(self):
+        with patch('os.path.expanduser', MagicMock(side_effect=lambda path: path)), \
+                patch('os.path.exists', MagicMock(return_value=True)), \
+                patch('os.stat', MagicMock(return_value=DummyStat())):
+            ret = filemod.stats('dummy', None, True)
+            self.assertEqual(ret['mode'], '0644')
+            self.assertEqual(ret['type'], 'file')
+
 
 @skipIf(pytest is None, 'PyTest required for this set of tests')
 class FilemodLineTests(TestCase, LoaderModuleMockMixin):
@@ -2045,3 +2062,34 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             ret = filemod.source_list(
                 [{'file://' + self.myfile: ''}], 'filehash', 'base')
             self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
+
+
+class ChattrVersionTests(TestCase):
+    CHATTR_MAN = salt.utils.stringutils.to_bytes((
+         'AVAILABILITY\n'
+         'chattr is part of the e2fsprogs package and is available '
+         'from http://e2fsprogs.sourceforge.net.\n'
+         'SEE ALSO\n'
+         '   lsattr(1), btrfs(5), ext4(5), xfs(5).\n\n'
+         'E2fsprogs version 1.43.4                                        '
+         '                                          '
+         'January 2017                              '
+         '                                          '
+         '                          CHATTR(1)'
+    ))
+
+    def test__parse_chattr_version(self):
+        '''
+        Validate we can parse the E2fsprogs version from the chattr man page
+        '''
+        man_out = dedent(self.CHATTR_MAN)
+        parsed_version = filemod._parse_chattr_man(man_out)
+        assert parsed_version == '1.43.4', parsed_version
+
+    def test__chattr_version(self):
+        '''
+        The _chattr_version method works
+        '''
+        with patch('subprocess.check_output', return_value=self.CHATTR_MAN):
+            parsed_version = filemod._chattr_version()
+        assert parsed_version == '1.43.4', parsed_version
