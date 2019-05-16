@@ -145,6 +145,17 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         '''
         raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
+    def test_master_uri_override(self):
+        '''
+        ensure master_uri kwarg is respected
+        '''
+        # minion_config should be 127.0.0.1, we want a different uri that still connects
+        uri = 'tcp://{master_ip}:{master_port}'.format(master_ip='localhost', master_port=self.minion_config['master_port'])
+
+        channel = salt.transport.Channel.factory(self.minion_config, master_uri=uri)
+        self.assertIn('localhost', channel.master_uri)
+        del channel
+
 
 @flaky
 @skipIf(ON_SUSE, 'Skipping until https://github.com/saltstack/salt/issues/32902 gets fixed')
