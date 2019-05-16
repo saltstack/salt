@@ -21,20 +21,6 @@ __all__ = ['deserialize', 'serialize', 'available']
 available = True
 
 
-def _check_preservecase_option(**options):
-    '''
-    Checks options passed to the serialize/deserialze function
-    for the 'casesensitive' argument.  If passed as True,
-    the configparser object will preserve case in items
-    '''
-    preserve_case = False
-    if 'preserve_case' in options:
-        if options['preserve_case']:
-            preserve_case = True
-        options.pop('preserve_case')
-    return options, preserve_case
-
-
 def deserialize(stream_or_string, **options):
     '''
     Deserialize any string or stream like object into a Python data structure.
@@ -123,7 +109,7 @@ def _create_cp_object(**options):
     '''
     build the configparser object
     '''
-    options, preserve_case = _check_preservecase_option(**options)
+    preserve_case = options.pop('preserve_case', False)
 
     if six.PY3:
         cp = configparser.ConfigParser(**options)
