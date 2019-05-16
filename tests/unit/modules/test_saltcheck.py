@@ -54,10 +54,6 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
             returned = sc_instance._call_salt_command(fun="test.echo", args=['hello'], kwargs=None)
             self.assertEqual(returned, 'hello')
 
-    def test_update_master_cache(self):
-        '''test master cache'''
-        self.assertTrue(saltcheck.update_master_cache)
-
     def test_call_salt_command2(self):
         '''test simple test.echo module again'''
         with patch.dict(saltcheck.__salt__, {'config.get': MagicMock(return_value=True),
