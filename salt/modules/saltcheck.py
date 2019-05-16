@@ -97,8 +97,8 @@ Saltcheck Keywords
 
     .. versionadded:: Neon
 
-        If the salt module returns a nested dictionary structure, a dict of nested key names can be passed
-        with the final value being the key of the value to lookup for comparison.
+        If the salt module returns a nested dictionary structure, use a colon delimited set of keys to
+        the path of the final key
 
         For example, imagine the following return (from lgpo.get):
 
@@ -132,10 +132,10 @@ Saltcheck Keywords
 
             .. code-block:: yaml
 
-                assertion_section:
-                    'Computer Configuration':
-                        'System\\Windows Time Service\\Global Configuration Settings': 'MaxPollInterval'
-
+                assertion_section: "'Computer Configuration':'System\\Windows Time Service\\Global Configuration Settings':'MaxPollInterval'"
+**assertion_section_delimiter**
+    (str) The delimiter to use when splitting a neseted structure.
+    Defaults to ``salt.defaults.DEFAULT_TARGET_DELIM`` (which is ':')
 **print_result:**
     (bool) Optional keyword to show results in the ``assertEqual``, ``assertNotEqual``,
     ``assertIn``, and ``assertNotIn`` output. Defaults to True.
@@ -232,8 +232,8 @@ Example with a nested assertion_section
         return_full_policy_names: True
       assertion: assertEqual
       expected-return: Enabled
-      assertion_section:
-        'Computer Configuration': 'Microsoft network client: Digitally sign communications (always)'
+      assertion_section: "'Computer Configuration'|'Microsoft network client: Digitally sign communications (always)'"
+      assertion_section_delimiter: '|'
 
 Example suppressing print results
 ---------------------------------
@@ -285,11 +285,13 @@ from salt.utils.json import loads, dumps
 import salt.utils.files
 import salt.utils.path
 import salt.utils.yaml
+import salt.utils.data
 import salt.client
 import salt.exceptions
 from salt.utils.odict import OrderedDict
 from salt.utils.decorators import memoize
 from salt.ext import six
+from salt.defaults import DEFAULT_TARGET_DELIM
 
 log = logging.getLogger(__name__)
 
@@ -593,7 +595,8 @@ class SaltCheck(object):
                            fun,
                            args,
                            kwargs,
-                           assertion_section=None):
+                           assertion_section=None,
+                           assertion_section_delimiter=DEFAULT_TARGET_DELIM):
         '''
         Generic call of salt Caller command
         '''
@@ -612,30 +615,13 @@ class SaltCheck(object):
         except Exception:
             raise
         if isinstance(value, dict) and assertion_section:
-            if isinstance(assertion_section, dict):
-                return self._walk_assertion_section_dict(value, assertion_section)
-            else:
-                return value.get(assertion_section, False)
+            return_value = salt.utils.data.traverse_dict_and_list(value,
+                                                                  assertion_section,
+                                                                  default=False,
+                                                                  delimiter=assertion_section_delimiter)
+            return return_value
         else:
             return value
-
-    def _walk_assertion_section_dict(self, value, assertion_section):
-        '''
-        recursed through a dict to get the final value
-        '''
-        if assertion_section:
-            if assertion_section.keys() and assertion_section.keys()[0]:
-                if assertion_section.keys()[0] in value:
-                    if isinstance(assertion_section[assertion_section.keys()[0]], dict):
-                        return self._walk_assertion_section_dict(value[assertion_section.keys()[0]], assertion_section[assertion_section.keys()[0]])
-                    else:
-                        return value[assertion_section.keys()[0]].get(assertion_section[assertion_section.keys()[0]], False)
-                else:
-                    return False
-            else:
-                return False
-        else:
-            return False
 
     def run_test(self, test_dict):
         '''
@@ -648,6 +634,7 @@ class SaltCheck(object):
                 return {'status': 'Skip', 'duration': 0.0}
             mod_and_func = test_dict['module_and_function']
             assertion_section = test_dict.get('assertion_section', None)
+            assertion_section_delimiter = test_dict.get('assertion_section_delimiter', DEFAULT_TARGET_DELIM)
             args = test_dict.get('args', None)
             kwargs = test_dict.get('kwargs', None)
             pillar_data = test_dict.get('pillar-data', None)
@@ -666,7 +653,11 @@ class SaltCheck(object):
                 assertion = test_dict['assertion']
             expected_return = test_dict.get('expected-return', None)
             assert_print_result = test_dict.get('print_result', True)
-            actual_return = self._call_salt_command(mod_and_func, args, kwargs, assertion_section)
+            actual_return = self._call_salt_command(mod_and_func,
+                                                    args,
+                                                    kwargs,
+                                                    assertion_section,
+                                                    assertion_section_delimiter)
             if assertion not in ["assertIn", "assertNotIn", "assertEmpty", "assertNotEmpty",
                                  "assertTrue", "assertFalse"]:
                 expected_return = self._cast_expected_to_returned_type(expected_return, actual_return)
