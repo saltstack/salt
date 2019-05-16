@@ -397,7 +397,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     if _six.PY3:
         # Let's check for the minimum python 2 version requirement, 2.6
         if not salt.utils.path.which(python2_bin):
-            log.debug('{0} binary does not exist. Will not detect version to use for Python 2'.format(python2_bin))
+            log.debug('%s binary does not exist. Will not detect Python 2 version', python2_bin)
         else:
             py_shell_cmd = "{} -c 'import sys;sys.stdout.write(\"%s.%s\\n\" % sys.version_info[:2]);'".format(python2_bin)
             cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
@@ -414,6 +414,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 log.debug(stdout)
 
     tops_failure_msg = 'Failed %s tops for Python binary %s.'
+    python_check_msg = '%s binary does not exist. Will not attempt to generate tops for Python %s'
     tops_py_version_mapping = {}
     tops = get_tops(extra_mods=extra_mods, so_mods=so_mods)
     tops_py_version_mapping[sys.version_info.major] = tops
@@ -422,7 +423,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     if _six.PY2 and sys.version_info.major == 2:
         # Get python 3 tops
         if not salt.utils.path.which(python3_bin):
-            log.debug('{0} binary does not exist. Will not attempt to generate tops for Python 3'.format(python3_bin))
+            log.debug(python_check_msg, python3_bin, '3')
         else:
             py_shell_cmd = "{0} -c 'import salt.utils.thin as t;print(t.gte())' '{1}'".format(
                 python3_bin, salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
@@ -443,7 +444,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     if _six.PY3 and sys.version_info.major == 3:
         # Get python 2 tops
         if not salt.utils.path.which(python2_bin):
-            log.debug('{0} binary does not exist. Will not attempt to generate tops for Python 2'.format(python2_bin))
+            log.debug(python_check_msg, python2_bin, '2')
         else:
             py_shell_cmd = "{0} -c 'import salt.utils.thin as t;print(t.gte())' '{1}'".format(
                 python2_bin, salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
