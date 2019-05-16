@@ -431,3 +431,12 @@ class CMDModuleTest(ModuleCase):
             self.assertIn('administrator', cmd)
         else:
             self.assertEqual('root', cmd)
+
+    @skipIf(not salt.utils.platform.is_windows(), 'minion is not windows')
+    def test_windows_env_handling(self):
+        '''
+        Ensure that nt.environ is used properly with cmd.run*
+        '''
+        out = self.run_function('cmd.run', ['set'], env={"abc": "123", "ABC": "456"}).splitlines()
+        self.assertIn('abc=123', out)
+        self.assertIn('ABC=456', out)

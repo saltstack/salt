@@ -2222,7 +2222,9 @@ def _get_installed_patterns(root=None):
     if root:
         cmd.extend(['--root', root])
     cmd.extend(['-q', '--provides', '--whatprovides', 'pattern()'])
-    output = __salt__['cmd.run'](cmd)
+    # If no `pattern()`s are found, RPM returns `1`, but for us is not
+    # a real error.
+    output = __salt__['cmd.run'](cmd, ignore_retcode=True)
 
     installed_patterns = [_pattern_name(line) for line in output.splitlines()
                           if line.startswith('pattern() = ')]
