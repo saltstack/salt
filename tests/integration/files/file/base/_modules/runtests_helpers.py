@@ -172,5 +172,5 @@ def get_python_executable():
             python_binary = None
     except AttributeError:
         # We're not running inside a virtualenv
-        python_binary = None
+        python_binary = sys.executable
     return python_binary
