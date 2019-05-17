@@ -15,8 +15,10 @@ from contextlib import closing
 # Import salt libs
 import salt.utils.url
 import salt.utils.files
+import salt.utils.json
 
 log = logging.getLogger(__name__)
+
 
 def update_master_cache(states, saltenv='base'):
     '''
@@ -25,6 +27,7 @@ def update_master_cache(states, saltenv='base'):
         to state cache directory, and cleanup of files
     '''
     cache = __opts__['cachedir']
+    state_cache = os.path.join(cache, 'files', saltenv)
 
     # Setup for copying states to gendir
     gendir = tempfile.mkdtemp()
@@ -33,20 +36,37 @@ def update_master_cache(states, saltenv='base'):
         __context__['cp.fileclient_{0}'.format(id(__opts__))] = \
             salt.fileclient.get_file_client(__opts__)
 
+    # generate cp.list_states output and save to gendir
+    cp_output = salt.utils.json.dumps(__salt__['cp.list_states']())
+    cp_output_file = os.path.join(gendir, 'cp_output.txt')
+    with salt.utils.files.fopen(cp_output_file, 'w') as fp:
+        fp.write(cp_output)
+
     # cp state directories to gendir
     already_processed = []
     sls_list = salt.utils.args.split_input(states)
     for state_name in sls_list:
+        # generate low data for each state and save to gendir
+        state_low_file = os.path.join(gendir, state_name + '.low')
+        state_low_output = salt.utils.json.dumps(__salt__['state.show_low_sls'](state_name))
+        with salt.utils.files.fopen(state_low_file, 'w') as fp:
+            fp.write(state_low_output)
+
         state_name = state_name.replace(".", os.sep)
         if state_name in already_processed:
             log.debug("Already cached state for %s", state_name)
         else:
+            file_copy_file = os.path.join(gendir, state_name + '.copy')
             log.debug('copying %s to %s', state_name, gendir)
             qualified_name = salt.utils.url.create(state_name, saltenv)
             # Duplicate cp.get_dir to gendir
             copy_result = __context__['cp.fileclient_{0}'.format(id(__opts__))].get_dir(
                 qualified_name, gendir, saltenv)
             if copy_result:
+                copy_result = [dir.replace(gendir, state_cache) for dir in copy_result]
+                copy_result_output = salt.utils.json.dumps(copy_result)
+                with salt.utils.files.fopen(file_copy_file, 'w') as fp:
+                    fp.write(copy_result_output)
                 already_processed.append(state_name)
             else:
                 # If files were not copied, assume state.file.sls was given and just copy state
@@ -58,6 +78,10 @@ def update_master_cache(states, saltenv='base'):
                     copy_result = __context__['cp.fileclient_{0}'.format(id(__opts__))].get_dir(
                         qualified_name, gendir, saltenv)
                     if copy_result:
+                        copy_result = [dir.replace(gendir, state_cache) for dir in copy_result]
+                        copy_result_output = salt.utils.json.dumps(copy_result)
+                        with salt.utils.files.fopen(file_copy_file, 'w') as fp:
+                            fp.write(copy_result_output)
                         already_processed.append(state_name)
 
     # turn gendir into tarball and remove gendir
@@ -91,7 +115,6 @@ def update_master_cache(states, saltenv='base'):
         pass
 
     tar_path = os.path.join(thin_dir, os.path.basename(trans_tar))
-    state_cache = os.path.join(cache, 'files', saltenv)
     # Extract remote tarball to cache directory and remove tar file
     # TODO this could be better handled by a single state/connection due to ssh overhead
     ret = __salt__['file.mkdir'](state_cache)
