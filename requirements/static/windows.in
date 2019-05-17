@@ -33,4 +33,3 @@ watchdog
 
 #pywin32==223
 #wmi==1.4.9
->>>>>>> Add watchdog for tests
