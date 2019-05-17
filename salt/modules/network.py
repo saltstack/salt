@@ -1275,6 +1275,10 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
     which are within that subnet. If 'type' is 'public', then only public
     addresses will be returned. Ditto for 'type'='private'.
 
+    .. versionchanged:: Neon
+        ``interface`` can now be a single interface name or a list of
+        interfaces. Globbing is also supported.
+
     CLI Example:
 
     .. code-block:: bash
@@ -1305,6 +1309,10 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     then only IP addresses from that interface will be returned.
     Providing a CIDR via 'cidr="2000::/3"' will return only the addresses
     which are within that subnet.
+
+    .. versionchanged:: Neon
+        ``interface`` can now be a single interface name or a list of
+        interfaces. Globbing is also supported.
 
     CLI Example:
 
@@ -2001,3 +2009,53 @@ def iphexval(ip):
     a = ip.split(".")
     hexval = ["%02X" % int(x) for x in a]  # pylint: disable=E1321
     return "".join(hexval)
+
+
+def ip_networks(interface=None, include_loopback=False, verbose=False):
+    """
+    .. versionaddeed:: Neon
+
+    Returns a list of IPv4 networks to which the minion belongs.
+
+    interface
+        Restrict results to the specified interface(s). This value can be
+        either a single interface name or a list of interfaces. Globbing is
+        also supported.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.list_networks
+        salt '*' network.list_networks interface=docker0
+        salt '*' network.list_networks interface=docker0,enp*
+        salt '*' network.list_networks interface=eth*
+    """
+    return salt.utils.network.ip_networks(
+        interface=interface, include_loopback=include_loopback, verbose=verbose
+    )
+
+
+def ip_networks6(interface=None, include_loopback=False, verbose=False):
+    """
+    .. versionaddeed:: Neon
+
+    Returns a list of IPv6 networks to which the minion belongs.
+
+    interface
+        Restrict results to the specified interface(s). This value can be
+        either a single interface name or a list of interfaces. Globbing is
+        also supported.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.list_networks6
+        salt '*' network.list_networks6 interface=docker0
+        salt '*' network.list_networks6 interface=docker0,enp*
+        salt '*' network.list_networks6 interface=eth*
+    """
+    return salt.utils.network.ip_networks6(
+        interface=interface, include_loopback=include_loopback, verbose=verbose
+    )
