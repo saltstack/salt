@@ -266,8 +266,8 @@ def _params_extend(params, _ignore_name=False, **kwargs):
     # Pop both parameters to avoid blanks ending up in the final JSON request. visible_name takes priority.
     if _ignore_name:
         params.pop('name', None)
-        firstname = params.pop('firstname')
-        visible_name = params.pop('visible_name')
+        firstname = params.pop('firstname', '')
+        visible_name = params.pop('visible_name', '')
         if firstname:
             params['name'] = firstname
         if visible_name:
