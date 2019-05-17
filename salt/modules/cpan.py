@@ -59,7 +59,7 @@ def _get_cpan_bin(bin_env=None):
                                     bin_env if bin_env else "cpan"))
 
     if not _configure(binary):
-        raise ChildProcessError("Could not configure cpan")
+        raise Exception("Could not configure cpan")
 
     return binary
 
@@ -295,7 +295,6 @@ def show(module, bin_env='cpan'):
         if not parse:
             continue
         info.append(line)
-
 
     if len(info) == 6:
         # If the module is not installed, we'll be short a line
