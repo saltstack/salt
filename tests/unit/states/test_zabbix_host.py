@@ -18,8 +18,6 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-from salt.modules.zabbix import _params_extend
-
 import salt.states.zabbix_host as zabbix_host
 import salt.modules.zabbix as zabbix
 
@@ -129,6 +127,7 @@ HOSTINVENTORY_GET_EXISTS_RETURN = {
 }
 
 SUBSTITUTE_PARAMS_CREATE = []
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZabbixHostTestCase(TestCase, LoaderModuleMockMixin):
