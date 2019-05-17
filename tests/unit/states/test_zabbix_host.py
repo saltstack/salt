@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jakub Sliva <jakub.sliva@ultimum.io>`
+    :codeauthor: :email:`Tim Dufrane <tim.dufrane@gmail.com>`
+    Code based off of test by Jakub Sliva
 '''
 
 # Import Python Libs
