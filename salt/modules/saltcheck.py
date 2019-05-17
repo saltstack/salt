@@ -871,7 +871,9 @@ class StateTestLoader(object):
         '''
         Detects states used, caches needed files, and adds to test list
         '''
+        salt_ssh = False
         if '_salt/running_data/var/run/salt-minion.pid' in __opts__.get('pidfile', False):
+            salt_ssh = True
             log.debug('Running on salt-ssh minion. Reading file %s', 'cp_output.txt')
             cp_output_file = os.path.join(__opts__['cachedir'], 'files', self.saltenv, 'cp_output.txt')
             with salt.utils.files.fopen(cp_output_file, 'r') as fp:
@@ -882,7 +884,7 @@ class StateTestLoader(object):
         processed_states = []
         cached_copied_files = []
         if sls_name in all_states:
-            if '_salt/running_data/var/run/salt-minion.pid' in __opts__.get('pidfile', False):
+            if salt_ssh:
                 log.debug('Running on salt-ssh minion. Reading file %s', sls_name + '.low')
                 state_low_file = os.path.join(__opts__['cachedir'], 'files', self.saltenv, sls_name + '.low')
                 with salt.utils.files.fopen(state_low_file, 'r') as fp:
@@ -947,6 +949,13 @@ class StateTestLoader(object):
                     if check_all:
                         # check_all, load all tests cached
                         self.test_files.update(this_cache_ret)
+                        break
+
+                if salt_ssh:
+                    if check_all:
+                        log.error('XXXX cached_files: %s', cached_copied_files)
+                        test_files = [file_string for file_string in cached_copied_files if file_string.endswith('.tst')]
+                        self.test_files.update(test_files)
                         break
 
                 split_sls = low_data['__sls__'].split('.')
