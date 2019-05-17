@@ -10,3 +10,4 @@ uwsgi:
   #   https://github.com/git/git/commit/6bc0cb5
   #   https://github.com/unbit/uwsgi/commit/ac1e354
   cgi-close-stdin-on-eof: 1
+  workers: 3

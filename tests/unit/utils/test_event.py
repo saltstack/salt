@@ -40,6 +40,51 @@ if getattr(zmq, 'IPC_PATH_MAX_LEN', 103) <= 103:
     NO_LONG_IPC = True
 
 
+@contextmanager
+def eventpublisher_process():
+    proc = salt.utils.event.EventPublisher({'sock_dir': SOCK_DIR})
+    proc.start()
+    try:
+        if os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None:
+            # Travis is slow
+            time.sleep(10)
+        else:
+            time.sleep(2)
+        yield
+    finally:
+        proc.close()
+        clean_proc(proc)
+
+
+class EventSender(Process):
+    def __init__(self, data, tag, wait):
+        super(EventSender, self).__init__()
+        self.data = data
+        self.tag = tag
+        self.wait = wait
+
+    def run(self):
+        with salt.utils.event.MasterEvent(SOCK_DIR, listen=False) as me:
+            time.sleep(self.wait)
+            me.fire_event(self.data, self.tag)
+            # Wait a few seconds before tearing down the zmq context
+            if os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None:
+                # Travis is slow
+                time.sleep(10)
+            else:
+                time.sleep(2)
+
+
+@contextmanager
+def eventsender_process(data, tag, wait=0):
+    proc = EventSender(data, tag, wait)
+    proc.start()
+    try:
+        yield
+    finally:
+        clean_proc(proc)
+
+
 @skipIf(NO_LONG_IPC, "This system does not support long IPC paths. Skipping event tests!")
 class TestSaltEvent(TestCase):
     def setUp(self):
@@ -275,13 +320,17 @@ class TestSaltEvent(TestCase):
     def test_event_many_backlog(self):
         '''Test a large number of events, send all then recv all'''
         with eventpublisher_process(self.sock_dir):
-            me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
-            # Must not exceed zmq HWM
-            for i in range(500):
-                me.fire_event({'data': '{0}'.format(i)}, 'testevents')
-            for i in range(500):
-                evt = me.get_event(tag='testevents')
-                self.assertGotEvent(evt, {'data': '{0}'.format(i)}, 'Event {0}'.format(i))
+            with salt.utils.event.MasterEvent(SOCK_DIR, listen=True) as me:
+                # Must not exceed zmq HWM
+                for i in range(500):
+                    try:
+                        me.fire_event({'data': '{0}'.format(i)}, 'testevents')
+                    except Exception:
+                        me.connect_pull()
+                        me.fire_event({'data': '{0}'.format(i)}, 'testevents')
+                for i in range(500):
+                    evt = me.get_event(tag='testevents')
+                    self.assertGotEvent(evt, {'data': '{0}'.format(i)}, 'Event {0}'.format(i))
 
     # Test the fire_master function. As it wraps the underlying fire_event,
     # we don't need to perform extensive testing.
@@ -297,8 +346,6 @@ class TestSaltEvent(TestCase):
 
 
 class TestAsyncEventPublisher(AsyncTestCase):
-    def get_new_ioloop(self):
-        return zmq.eventloop.ioloop.ZMQIOLoop()
 
     def setUp(self):
         super(TestAsyncEventPublisher, self).setUp()

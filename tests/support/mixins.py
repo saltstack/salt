@@ -781,7 +781,7 @@ class SaltMinionEventAssertsMixin(object):
         #TODO
         raise salt.exceptions.NotImplemented('assertMinionEventFired() not implemented')
 
-    def assertMinionEventReceived(self, desired_event, timeout=5, sleep_time=0.5):
+    def assertMinionEventReceived(self, desired_event, timeout=30, sleep_time=0.5):
         start = time.time()
         while True:
             try:

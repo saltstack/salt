@@ -16,6 +16,7 @@ from tests.support.events import eventpublisher_process
 
 # Import Salt libs
 import salt.auth
+import salt.utils.asynchronous
 import salt.utils.event
 import salt.utils.json
 import salt.utils.yaml
@@ -803,6 +804,10 @@ class TestSaltnadoUtils(AsyncTestCase):
 
 @skipIf(not HAS_TORNADO, 'The tornado package needs to be installed')
 class TestEventListener(AsyncTestCase):
+
+    def get_new_ioloop(self):
+        return salt.utils.asynchronous.IOLoop()
+
     def setUp(self):
         self.sock_dir = os.path.join(RUNTIME_VARS.TMP, 'test-socks')
         if not os.path.exists(self.sock_dir):

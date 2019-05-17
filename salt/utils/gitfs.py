@@ -2435,16 +2435,16 @@ class GitBase(object):
 
         # if there is a change, fire an event
         if self.opts.get('fileserver_events', False):
-            event = salt.utils.event.get_event(
+            with salt.utils.event.get_event(
                     'master',
                     self.opts['sock_dir'],
                     self.opts['transport'],
                     opts=self.opts,
-                    listen=False)
-            event.fire_event(
-                data,
-                tagify(['gitfs', 'update'], prefix='fileserver')
-            )
+                    listen=False) as event:
+                event.fire_event(
+                    data,
+                    tagify(['gitfs', 'update'], prefix='fileserver')
+                )
         try:
             salt.fileserver.reap_fileserver_cache_dir(
                 self.hash_cachedir,
@@ -2690,7 +2690,7 @@ class GitFS(GitBase):
         exited.
         '''
         # No need to get the ioloop reference if we're not initializing remotes
-        io_loop = tornado.ioloop.IOLoop.current() if init_remotes else None
+        io_loop = salt.utils.asynchronous.IOLoop() if init_remotes else None
         if not init_remotes or io_loop not in cls.instance_map:
             # We only evaluate the second condition in this if statement if
             # we're initializing remotes, so we won't get here unless io_loop

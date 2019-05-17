@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Salt Libs
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 
 # Salttesting libs
@@ -58,6 +59,7 @@ class BeaconsAddDeleteTest(ModuleCase):
         self.run_function('beacons.save', f_timeout=300)
 
 
+#@skipIf(TORNADO_50 and PY3, "We need to make this work with tornado 5.0")
 class BeaconsTest(ModuleCase):
     '''
     Tests the beacons execution module

@@ -21,6 +21,7 @@ import salt.transport.ipc
 import salt.transport.server
 import salt.transport.client
 import salt.utils.platform
+import salt.utils.asynchronous
 
 from salt.ext import six
 from salt.ext.six.moves import range
@@ -45,7 +46,7 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
 
         self.server_channel = salt.transport.ipc.IPCMessageServer(
             self.socket_path,
-            io_loop=self.io_loop,
+            io_loop=salt.utils.asynchronous.IOLoop(),
             payload_handler=self._handle_payload,
         )
         self.server_channel.start()
@@ -89,7 +90,7 @@ class IPCMessageClient(BaseIPCReqCase):
         if not hasattr(self, 'channel') or self.channel is None:
             self.channel = salt.transport.ipc.IPCMessageClient(
                 socket_path=self.socket_path,
-                io_loop=self.io_loop,
+                io_loop=salt.utils.asynchronous.IOLoop(),
             )
             self.channel.connect(callback=self.stop)
             self.wait()
@@ -196,7 +197,7 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
     def _get_sub_channel(self):
         sub_channel = salt.transport.ipc.IPCMessageSubscriber(
             socket_path=self.socket_path,
-            io_loop=self.io_loop,
+            io_loop=salt.utils.asynchronous.IOLoop(self.io_loop),
         )
         sub_channel.connect(callback=self.stop)
         self.wait()
@@ -237,22 +238,24 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
 
         watchdog = threading.Thread(target=close_server)
         watchdog.start()
+        try:
+            # Runs in ioloop thread so we're safe from race conditions here
+            def handler(raw):
+                call_cnt.append(raw)
+                if len(call_cnt) >= 2:
+                    evt.set()
+                    self.stop()
 
-        # Runs in ioloop thread so we're safe from race conditions here
-        def handler(raw):
-            call_cnt.append(raw)
-            if len(call_cnt) >= 2:
-                evt.set()
-                self.stop()
-
-        # Now let both waiting data at once
-        client1.read_async(handler)
-        client2.read_async(handler)
-        self.pub_channel.publish('TEST')
-        self.wait()
-        self.assertEqual(len(call_cnt), 2)
-        self.assertEqual(call_cnt[0], 'TEST')
-        self.assertEqual(call_cnt[1], 'TEST')
+            # Now let both waiting data at once
+            client1.read_async(handler)
+            client2.read_async(handler)
+            self.pub_channel.publish('TEST')
+            self.wait()
+            self.assertEqual(len(call_cnt), 2)
+            self.assertEqual(call_cnt[0], 'TEST')
+            self.assertEqual(call_cnt[1], 'TEST')
+        finally:
+            watchdog.join()
 
     def test_sync_reading(self):
         # To be completely fair let's create 2 clients.

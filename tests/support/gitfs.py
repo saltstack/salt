@@ -905,6 +905,9 @@ class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):
     Base class for GitPython and Pygit2 HTTP tests
     '''
 
+    def tearDown(self):
+        super(GitPillarTestBase, self).tearDown()
+
     def setUp(self):
         '''
         Create and start the webserver, and create the git repo

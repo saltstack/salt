@@ -22,8 +22,13 @@ class ReqChannel(object):
     @staticmethod
     def factory(opts, **kwargs):
         # All Sync interfaces are just wrappers around the Async ones
-        sync = SyncWrapper(AsyncReqChannel.factory, (opts,), kwargs)
-        return sync
+        return SyncWrapper(
+            AsyncReqChannel.factory,
+            (opts,),
+            kwargs,
+            stop_methods=['close',],
+            loop_kwarg='io_loop',
+        )
 
     def close(self):
         '''
@@ -48,7 +53,7 @@ class ReqChannel(object):
         return self
 
     def __exit__(self, *args):
-        self.close()
+        self.stop()
 
 
 class PushChannel(object):
@@ -57,7 +62,14 @@ class PushChannel(object):
     '''
     @staticmethod
     def factory(opts, **kwargs):
-        sync = SyncWrapper(AsyncPushChannel.factory, (opts,), kwargs)
+        sync = SyncWrapper(
+            AsyncPushChannel.factory,
+            (opts,),
+            kwargs,
+            async_methods=['connect',],
+            stop_methods=['close',],
+            loop_kwarg='io_loop',
+        )
         return sync
 
     def send(self, load, tries=3, timeout=60):
@@ -73,7 +85,13 @@ class PullChannel(object):
     '''
     @staticmethod
     def factory(opts, **kwargs):
-        sync = SyncWrapper(AsyncPullChannel.factory, (opts,), kwargs)
+        sync = SyncWrapper(
+            AsyncPullChannel.factory,
+            (opts,),
+            kwargs,
+            stop_methods=['close'],
+            loop_kwarg=['io_loop'],
+        )
         return sync
 
 

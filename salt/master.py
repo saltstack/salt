@@ -1023,7 +1023,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         '''
         # using ZMQIOLoop since we *might* need zmq in there
         install_zmq()
-        self.io_loop = ZMQDefaultLoop()
+        self.io_loop = salt.utils.asynchronous.IOLoop()
         self.io_loop.make_current()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?

@@ -29,6 +29,12 @@ def run_loop_in_thread(loop, evt):
     finally:
         loop.close()
 
+import tornado.ioloop
+import tornado.gen
+import logging
+
+log = logging.getLogger(__name__)
+
 
 class ReqChannelMixin(object):
 

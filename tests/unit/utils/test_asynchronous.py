@@ -12,6 +12,10 @@ import salt.utils.asynchronous as asynchronous
 
 
 class HelperA(object):
+    _coroutines = [
+        'sleep',
+    ]
+
     def __init__(self, io_loop=None):
         pass
 
@@ -22,6 +26,10 @@ class HelperA(object):
 
 
 class HelperB(object):
+    _coroutines = [
+        'sleep',
+    ]
+
     def __init__(self, a=None, io_loop=None):
         if a is None:
             a = asynchronous.SyncWrapper(HelperA)
@@ -35,6 +43,7 @@ class HelperB(object):
 
 
 class TestSyncWrapper(AsyncTestCase):
+
     @tornado.testing.gen_test
     def test_helpers(self):
         '''

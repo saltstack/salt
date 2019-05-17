@@ -18,9 +18,11 @@ import salt.config
 from salt.ext import six
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.versions
 import salt.transport.server
 import salt.transport.client
 import salt.exceptions
+import salt.utils.asynchronous
 from salt.ext.six.moves import range
 from salt.transport.tcp import SaltMessageClientPool, SaltMessageClient, TCPPubServerChannel
 
@@ -30,6 +32,8 @@ from tests.support.helpers import get_unused_localhost_port, flaky
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin, run_loop_in_thread
+
+log = logging.getLogger(__name__)
 
 log = logging.getLogger(__name__)
 
@@ -57,9 +61,9 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
                'tcp_master_pub_port': tcp_master_pub_port,
                'tcp_master_pull_port': tcp_master_pull_port,
                'tcp_master_publish_pull': tcp_master_publish_pull,
-               'tcp_master_workers': tcp_master_workers}
+               'tcp_master_workers': tcp_master_workers,
+            }
         )
-
         cls.minion_config = cls.get_temp_config(
             'minion',
             **{'transport': 'tcp',
@@ -72,7 +76,7 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         cls.server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.server_channel.pre_fork(cls.process_manager)
-        cls.io_loop = tornado.ioloop.IOLoop()
+        cls.io_loop = salt.utils.asynchronous.IOLoop()
         cls.stop = threading.Event()
         cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(
@@ -107,8 +111,8 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config, crypt='clear')
 
     def tearDown(self):
-        self.channel.close()
-        del self.channel
+        self.channel.stop()
+        del self.channel.obj
 
     @classmethod
     @tornado.gen.coroutine
@@ -125,8 +129,8 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config)
 
     def tearDown(self):
-        self.channel.close()
-        del self.channel
+        self.channel.stop()
+        del self.channel.obj
 
     @classmethod
     @tornado.gen.coroutine
@@ -136,8 +140,17 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         '''
         raise tornado.gen.Return((payload, {'fun': 'send'}))
 
-    # TODO: make failed returns have a specific framing so we can raise the same exception
-    # on encrypted channels
+#    @skipIf(True, 'meh')
+#    def test_normalization(self):
+#        pass
+#
+#    @skipIf(True, 'meh')
+#    def test_basic(self):
+#        pass
+#
+#    # TODO: make failed returns have a specific framing so we can raise the same exception
+#    # on encrypted channels
+#    @skipIf(True, 'meh')
     @flaky
     def test_badload(self):
         '''
@@ -190,7 +203,7 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         # we also require req server for auth
         cls.req_server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.req_server_channel.pre_fork(cls.process_manager)
-        cls.io_loop = tornado.ioloop.IOLoop()
+        cls.io_loop = salt.utils.asynchronous.IOLoop()
         cls.stop = threading.Event()
         cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(
@@ -227,7 +240,8 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
                 failures.append((k, v))
         if failures:
             raise Exception('FDs still attached to the IOLoop: {0}'.format(failures))
-        del self.channel
+        self.channel.stop()
+        del self.channel.obj
         del self._start_handlers
 
 
