@@ -1299,7 +1299,7 @@ def _filter_interfaces(interface=None, interface_data=None):
         ret = {
             k: v
             for k, v in six.iteritems(ifaces)
-            if any(fnmatch.fnmatch(k, pat) for pat in interface)
+            if any((fnmatch.fnmatch(k, pat) for pat in interface))
         }
     return ret
 
