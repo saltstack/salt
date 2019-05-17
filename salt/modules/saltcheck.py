@@ -880,6 +880,7 @@ class StateTestLoader(object):
                 all_states = salt.utils.json.loads(salt.utils.stringutils.to_unicode(fp.read()))
         else:
             all_states = __salt__['cp.list_states']()
+
         ret = []
         processed_states = []
         cached_copied_files = []
@@ -894,10 +895,10 @@ class StateTestLoader(object):
                     cached_copied_files.extend(salt.utils.json.loads(salt.utils.stringutils.to_unicode(fp.read())))
             else:
                 ret = __salt__['state.show_low_sls'](sls_name, test=True)
-            grain_opts = __opts__['file_client']
         else:
             # passed name isn't a state, so we'll assume it is a test definition
             ret = [{'__sls__': sls_name}]
+
         for low_data in ret:
             copy_states = True
             if not isinstance(low_data, dict):
@@ -953,6 +954,7 @@ class StateTestLoader(object):
 
                 if salt_ssh:
                     if check_all:
+                        # load all tests for this state on ssh minion
                         tst_files = [file_string for file_string in cached_copied_files if file_string.endswith('.tst')]
                         self.test_files.update(tst_files)
                         break
@@ -960,12 +962,13 @@ class StateTestLoader(object):
                 split_sls = low_data['__sls__'].split('.')
                 sls_path_names = [
                             os.path.join(os.sep.join(split_sls),
-                                            os.path.normpath(self.saltcheck_test_location),
-                                            'init.tst'),
+                                         os.path.normpath(self.saltcheck_test_location),
+                                         'init.tst'),
                             os.path.join(os.sep.join(split_sls[:len(split_sls) - 1]),
-                                            os.path.normpath(self.saltcheck_test_location),
-                                            '{0}.tst'.format(split_sls[-1]))
+                                         os.path.normpath(self.saltcheck_test_location),
+                                         '{0}.tst'.format(split_sls[-1]))
                         ]
+                # for this state, find matching test files and load them
                 for this_cached_test_file in cached_copied_files:
                     for sls_path_name in sls_path_names:
                         if this_cached_test_file.endswith(sls_path_name):
