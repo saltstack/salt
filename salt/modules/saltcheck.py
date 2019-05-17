@@ -43,14 +43,14 @@ Example Default file system layout:
 Alternative example file system layout with custom saltcheck_test_location:
 
 Minion configuration:
-^^^^^^^^^^^^^^^^^^^^^
+---------------------
 
 .. code-block:: yaml
 
     saltcheck_test_location: tests/integration/saltcheck
 
 Filesystem layout:
-^^^^^^^^^^^^^^^^^^
+------------------
 
 .. code-block:: text
 
@@ -96,8 +96,8 @@ Saltcheck Keywords
     (str) Optional keyword used to parse the module_and_function return. If a salt module
     returns a dictionary as a result, the ``assertion_section`` value is used to lookup a specific value
     in that return for the assertion comparison.
-**assertion_section_delimiter**
-    (str) The delimiter to use when splitting a neseted structure.
+**assertion_section_delimiter:**
+    (str) Optional delimiter to use when splitting a neseted structure.
     Defaults to ':'
 **print_result:**
     (bool) Optional keyword to show results in the ``assertEqual``, ``assertNotEqual``,
@@ -953,9 +953,8 @@ class StateTestLoader(object):
 
                 if salt_ssh:
                     if check_all:
-                        log.error('XXXX cached_files: %s', cached_copied_files)
-                        test_files = [file_string for file_string in cached_copied_files if file_string.endswith('.tst')]
-                        self.test_files.update(test_files)
+                        tst_files = [file_string for file_string in cached_copied_files if file_string.endswith('.tst')]
+                        self.test_files.update(tst_files)
                         break
 
                 split_sls = low_data['__sls__'].split('.')
