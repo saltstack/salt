@@ -58,7 +58,22 @@ def _get_cpan_bin(bin_env=None):
                                    'Make sure it is installed and in the PATH'.format(
                                     bin_env if bin_env else "cpan"))
 
+    if not _configure(binary):
+        raise ChildProcessError("Could not configure cpan")
+
     return binary
+
+
+def _configure(bin_env):
+    '''
+    Configure cpan automatically
+    :param bin_env:
+    :return True if configuration was successful else False
+    '''
+    ret = __salt__['cmd.run_all']("{} -h".format(bin_env), stdin="yes\n")
+    if ret.get("retcode", None):
+        return False
+    return True
 
 
 def version(bin_env=None):
@@ -93,6 +108,7 @@ def install(module,
         salt '*' cpan.install Template::Alloy
     '''
     # Get the state of the package before the install operations
+    log.debug("logging works!")
     old_info = show(module, bin_env=bin_env)
 
     # Initialize the standard return information for this function
@@ -140,7 +156,7 @@ def install(module,
 
     # Remove values that are identical, only report changes
     for k in old_info.copy().keys():
-        if old_info.get(k) == new_info[k]:
+        if old_info.get(k) == new_info.get(k, None):
             old_info.pop(k)
             new_info.pop(k)
 
@@ -262,6 +278,7 @@ def show(module, bin_env='cpan'):
 
         salt '*' cpan.show Template::Alloy
     '''
+    log.debug("debugging works!")
     ret = {'name': module}
 
     # This section parses out details from CPAN, if possible
@@ -278,6 +295,7 @@ def show(module, bin_env='cpan'):
         if not parse:
             continue
         info.append(line)
+
 
     if len(info) == 6:
         # If the module is not installed, we'll be short a line
@@ -317,7 +335,6 @@ def show(module, bin_env='cpan'):
         for file_ in builds:
             if file_.startswith(pfile):
                 ret['cpan build dirs'].append(os.path.join(build_dir, file_))
-
     return ret
 
 

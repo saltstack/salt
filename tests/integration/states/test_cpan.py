@@ -28,6 +28,8 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         super(CpanStateTest, self).setUp()
         if 'cpan' not in __testcontext__:
             self.run_state('pkg.installed', name='cpan')
+            self.run_state('pkg.installed', name='perl')
+            self.run_state('pkg.installed', name='perl-doc')
             __testcontext__['cpan'] = True
 
     def test_cpan_installed_removed(self):
@@ -35,7 +37,8 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         Tests installed and removed states
         '''
         name = 'Template::Alloy'
-        version = self.run_function('cpan.show', (name,)).get('installed version', None)
+        ret = self.run_function('cpan.show', (name,))
+        version = ret.get('installed version', None)
         if version and ("not installed" not in version):
             # For now this is not implemented as state because it is experimental/non-stable
             self.run_function('cpan.remove', (name,))
@@ -47,9 +50,9 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.run_function('cpan.remove', module=(name,))
 
     def test_missing_cpan(self):
-        """
+        '''
         Test cpan not being installed on the system
-        """
+        '''
         module = "Nonexistant::Module"
         # Use the name of a binary that doesn't exist
         bin_env = "no_cpan"
