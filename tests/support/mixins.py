@@ -47,6 +47,7 @@ from salt._compat import ElementTree as etree
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves.queue import Empty  # pylint: disable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
 
@@ -344,8 +345,6 @@ class _FixLoaderModuleMockMixinMroOrder(type):
 class LoaderModuleMockMixin(six.with_metaclass(_FixLoaderModuleMockMixinMroOrder, object)):
     '''
     This class will setup salt loader dunders.
-
-    Please check `set_up_loader_mocks` above
     '''
 
     # Define our setUp function decorator
@@ -671,6 +670,14 @@ def _fetch_events(q):
         sock_dir=a_config.get_config('minion')['sock_dir'],
         opts=a_config.get_config('minion'),
     )
+
+    # Wait for event bus to be connected
+    while not event.connect_pull(30):
+        time.sleep(1)
+
+    # Notify parent process that the event bus is connected
+    q.put('CONNECTED')
+
     while True:
         try:
             events = event.get_event(full=False)
@@ -695,6 +702,12 @@ class SaltMinionEventAssertsMixin(object):
             name='Process-{}-Queue'.format(cls.__name__)
         )
         cls.fetch_proc.start()
+        # Wait for the event bus to be connected
+        msg = cls.q.get(block=True)
+        if msg != 'CONNECTED':
+            # Just in case something very bad happens
+            raise RuntimeError('Unexpected message in test\'s event queue')
+        return object.__new__(cls)
 
     @classmethod
     def tearDownClass(cls):
@@ -706,18 +719,22 @@ class SaltMinionEventAssertsMixin(object):
         #TODO
         raise salt.exceptions.NotImplemented('assertMinionEventFired() not implemented')
 
-    def assertMinionEventReceived(self, desired_event, queue_wait=2.5):
-        max_time = time.time() + queue_wait
-        while self.q.empty():
-            time.sleep(0.5)  # Wait for events to be pushed into the queue
-            if time.time() >= max_time:
-                raise AssertionError('Queue wait timer expired after {} seconds.'.format(queue_wait))
-        while not self.q.empty():  # This is not thread-safe and may be inaccurate
-            event = self.q.get()
+    def assertMinionEventReceived(self, desired_event, timeout=5, sleep_time=0.5):
+        start = time.time()
+        while True:
+            try:
+                event = self.q.get(False)
+            except Empty:
+                time.sleep(sleep_time)
+                if time.time() - start >= timeout:
+                    break
+                continue
             if isinstance(event, dict):
                 event.pop('_stamp')
             if desired_event == event:
                 self.fetch_proc.terminate()
                 return True
+            if time.time() - start >= timeout:
+                break
         self.fetch_proc.terminate()
         raise AssertionError('Event {0} was not received by minion'.format(desired_event))

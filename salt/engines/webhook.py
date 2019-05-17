@@ -11,6 +11,7 @@ import tornado.web
 
 # import salt libs
 import salt.utils.event
+import salt.utils.stringutils
 
 
 def start(address=None, port=5000, ssl_crt=None, ssl_key=None):
@@ -72,7 +73,7 @@ def start(address=None, port=5000, ssl_crt=None, ssl_key=None):
             headers = self.request.headers
             payload = {
                 'headers': headers if isinstance(headers, dict) else dict(headers),
-                'body': body,
+                'body': salt.utils.stringutils.to_str(body),
             }
             fire('salt/engines/hook/' + tag, payload)
 
