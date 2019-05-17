@@ -1191,7 +1191,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     elif len(pkg_params) == 1:
         # A dict of packages was passed, but it contains only 1 key, so we need
         # to add the 'extra_install_flags'
-        pkg_params[pkgs[0]]['extra_install_flags'] = kwargs.get('extra_install_flags')
+        for pkg in pkg_params:
+            pkg_params[pkg]['extra_install_flags'] = kwargs.get('extra_install_flags')
 
     # Get a list of currently installed software for comparison at the end
     old = list_pkgs(saltenv=saltenv, refresh=refresh, versions_as_list=True)
