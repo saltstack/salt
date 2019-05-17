@@ -404,6 +404,29 @@ Util Changes
     - :py:func:`versions_details <salt.utils.win_dotnet.versions_details>`
     - :py:func:`version_at_least <salt.utils.win_dotnet.version_at_least>`
 
+Serializer Changes
+==================
+
+- The configparser serializer and deserializer functions can now be made to preserve
+  case of item names by passing 'preserve_case=True' in the options parameter of the function.
+
+  .. note::
+      This is a parameter consumed only by the salt.serializer.configparser serialize and
+      deserialize functions and not the low-level configparser python object.
+
+  For example, in a file.serialze state:
+
+  .. code-block:: yaml
+
+    some.ini:
+      - file.serialize:
+         - formatter: configparser
+         - merge_if_exists: True
+         - deserializer_opts:
+           - preserve_case: True
+         - serializer_opts:
+           - preserve_case: True
+
 Enhancements to Engines
 =======================
 
