@@ -2450,6 +2450,22 @@ def list_irule(hostname, username, password, name=None, partition=None):
     return _load_response(response)
 
 
+def _add_api_anonymous_payload(payload ,api_anonymous):
+    if isinstance(api_anonymous, dict):
+        contents = __salt__['cp.get_file_str'](api_anonymous['file'])
+        context = api_anonymous['context'] if 'context' in api_anonymous else {}
+        defaults = api_anonymous['defaults'] if 'defaults' in api_anonymous else {}
+        template = api_anonymous['template'] if 'template' in api_anonymous else 'jinja'
+
+        payload["apiAnonymous"] = __salt__['file.apply_template_on_contents'](
+            contents=contents,
+            template=template,
+            context=context,
+            defaults=defaults,
+            saltenv='team')
+    else:
+        payload["apiAnonymous"] = api_anonymous
+
 def create_irule(hostname, username, password, name, api_anonymous, partition=None):
     '''
     A function to connect to a bigip device and create an iRule.
@@ -2476,7 +2492,9 @@ def create_irule(hostname, username, password, name, api_anonymous, partition=No
     #create the payload
     payload = {}
     payload['name'] = name
-    payload["apiAnonymous"] = api_anonymous
+    
+    # Add TCL code to the payload
+    _add_api_anonymous_payload(payload ,api_anonymous)    
 
     #add partition to the payload if partition exists
     _add_partition_payload(payload, partition)
@@ -2516,7 +2534,9 @@ def modify_irule(hostname, username, password, name, api_anonymous, partition=No
     #create the payload
     payload = {}
     payload['name'] = name
-    payload["apiAnonymous"] = api_anonymous
+    
+    # Add TCL code to the payload
+    _add_api_anonymous_payload(payload ,api_anonymous)
 
     #add partition to the payload if partition exists
     _add_partition_payload(payload, partition)
