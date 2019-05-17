@@ -263,12 +263,15 @@ def _params_extend(params, _ignore_name=False, **kwargs):
             params.setdefault(key, kwargs[key])
 
     # ignore name parameter passed from Salt state module, use firstname or visible_name instead
+    # Pop both parameters to avoid blanks ending up in the final JSON request. visible_name takes priority.
     if _ignore_name:
         params.pop('name', None)
-        if 'firstname' in params:
-            params['name'] = params.pop('firstname')
-        elif 'visible_name' in params:
-            params['name'] = params.pop('visible_name')
+        firstname = params.pop('firstname')
+        visible_name = params.pop('visible_name')
+        if firstname:
+            params['name'] = firstname
+        if visible_name:
+            params['name'] = visible_name
 
     return params
 
@@ -1083,9 +1086,10 @@ def host_create(host, groups, interfaces, **kwargs):
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
-    :param visible_name: string with visible name of the host, use
+    :param visible_name: Optional - string with visible name of the host, use
         'visible_name' instead of 'name' parameter to not mess with value
         supplied from Salt sls file.
+    :param firstname: Optional - alias of visible_name, non-prioritized in assignment
 
     return: ID of the created host.
 
