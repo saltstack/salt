@@ -1244,15 +1244,16 @@ def _get_subnetname_id(subnetname):
     for subnet in aws.query(params, location=get_location(),
                provider=get_provider(), opts=__opts__, sigver='4'):
         tags = subnet.get('tagSet', {}).get('item', {})
-        if not isinstance(tags, list):
-            tags = [tags]
-        for tag in tags:
-            if tag['key'] == 'Name' and tag['value'] == subnetname:
-                log.debug(
-                    'AWS Subnet ID of %s is %s',
-                    subnetname, subnet['subnetId']
-                )
-                return subnet['subnetId']
+        if(subnet.has_key("tagSet")):
+            if not isinstance(tags, list):
+                tags = [tags]
+            for tag in tags:
+                if tag['key'] == 'Name' and tag['value'] == subnetname:
+                    log.debug(
+                        'AWS Subnet ID of %s is %s',
+                        subnetname, subnet['subnetId']
+                    )
+                    return subnet['subnetId']
     return None
 
 
