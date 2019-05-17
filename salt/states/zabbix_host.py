@@ -323,7 +323,7 @@ def present(host, groups, interfaces, **kwargs):
                                                      proxy_hostid=proxy_hostid,
                                                      inventory=new_inventory,
                                                      visible_name=new_visible_name,
-                                                     firstname=new_first_name
+                                                     firstname=new_first_name,
                                                      **connection_args)
 
         if 'error' not in host_create:
