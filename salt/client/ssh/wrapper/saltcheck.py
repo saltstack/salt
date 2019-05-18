@@ -71,6 +71,7 @@ def update_master_cache(states, saltenv='base'):
             else:
                 # If files were not copied, assume state.file.sls was given and just copy state
                 state_name = os.path.dirname(state_name)
+                file_copy_file = os.path.join(gendir, state_name + '.copy')
                 if state_name in already_processed:
                     log.debug('Already cached state for %s', state_name)
                 else:

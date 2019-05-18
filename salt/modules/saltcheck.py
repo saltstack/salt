@@ -408,7 +408,7 @@ def _generate_out_list(results):
     out_list = []
     for key, value in results.items():
         out_list.append({key: value})
-    out_list.sort()
+    out_list = sorted(out_list, key=lambda x: sorted(x.keys()))
     out_list.append({'TEST RESULTS': {'Execution Time': round(total_time, 4),
                                       'Passed': passed, 'Failed': failed, 'Skipped': skipped,
                                       'Missing Tests': missing_tests}})
@@ -884,15 +884,27 @@ class StateTestLoader(object):
         ret = []
         processed_states = []
         cached_copied_files = []
+        if salt_ssh:
+            # populate cached_copied_files from sent over file rather than attempting to run cp.cache_dir later
+            log.debug('Running on salt-ssh minion. Populating test file results')
+            state_copy_file = os.path.join(__opts__['cachedir'], 'files', self.saltenv, sls_name + '.copy')
+            try:
+                with salt.utils.files.fopen(state_copy_file, 'r') as fp:
+                    cached_copied_files.extend(salt.utils.json.loads(salt.utils.stringutils.to_unicode(fp.read())))
+            except IOError:
+                # likely attempting to find state.nested.copy when file was sent as just state.copy
+                sls_name_list = sls_name.split('.')
+                sls_root_name = '.'.join(sls_name_list[:-1])
+                state_copy_file = os.path.join(__opts__['cachedir'], 'files', self.saltenv, sls_root_name + '.copy')
+                with salt.utils.files.fopen(state_copy_file, 'r') as fp:
+                    cached_copied_files.extend(salt.utils.json.loads(salt.utils.stringutils.to_unicode(fp.read())))
+
         if sls_name in all_states:
             if salt_ssh:
                 log.debug('Running on salt-ssh minion. Reading file %s', sls_name + '.low')
                 state_low_file = os.path.join(__opts__['cachedir'], 'files', self.saltenv, sls_name + '.low')
                 with salt.utils.files.fopen(state_low_file, 'r') as fp:
                     ret = salt.utils.json.loads(salt.utils.stringutils.to_unicode(fp.read()))
-                state_copy_file = os.path.join(__opts__['cachedir'], 'files', self.saltenv, sls_name + '.copy')
-                with salt.utils.files.fopen(state_copy_file, 'r') as fp:
-                    cached_copied_files.extend(salt.utils.json.loads(salt.utils.stringutils.to_unicode(fp.read())))
             else:
                 ret = __salt__['state.show_low_sls'](sls_name, test=True)
         else:
