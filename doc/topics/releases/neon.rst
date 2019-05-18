@@ -27,7 +27,7 @@ has been enhanced to:
 * Adds assertion_section keyword
 * Use saltcheck.state_apply to run state.apply for test setup or teardown
 * Changes output to display test time
-* Work over salt-ssh
+* Works with salt-ssh
 
 Saltcheck provides unittest like functionality requiring only the knowledge of
 salt module execution and yaml. Saltcheck uses salt modules to return data, then
