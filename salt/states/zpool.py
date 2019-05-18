@@ -153,7 +153,7 @@ def _layout_to_vdev(layout, device_dir=None):
             if not isinstance(vdev_disk, list):
                 vdev_disk = vdev_disk.split(' ')
 
-            # NOTE: also append the actualy disks behind the type
+            # NOTE: also append the actually disks behind the type
             #       also prepend device_dir to disks if required
             for disk in vdev_disk:
                 if device_dir and disk[0] != '/':
@@ -186,7 +186,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
 
         The following configuration properties can be toggled in the config parameter.
           - import (true) - try to import the pool before creating it if absent
-          - import_dirs (None) - specify additional locations to scan for devices on import (comma-seperated)
+          - import_dirs (None) - specify additional locations to scan for devices on import (comma-separated)
           - device_dir (None, SunOS=/dev/dsk, Linux=/dev) - specify device directory to prepend for none
             absolute device paths
           - force (false) - try to force the import or creation

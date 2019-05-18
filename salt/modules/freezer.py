@@ -209,7 +209,7 @@ def restore(name=None, **kwargs):
 
     # The ordering of removing or adding packages and repos can be
     # relevant, as maybe some missing package comes from a repo that
-    # is also missing, so it cannot be installed. But can also happend
+    # is also missing, so it cannot be installed. But can also happened
     # that a missing package comes from a repo that is present, but
     # will be removed.
     #
@@ -251,7 +251,7 @@ def restore(name=None, **kwargs):
 
     # Add missing packages
     # NOTE: we can remove the `for` using `pkgs`. This will improve
-    # performance, but I want to have a more detalied report of what
+    # performance, but I want to have a more detailed report of what
     # packages are installed or failled.
     pkgs = __salt__['pkg.list_pkgs'](**safe_kwargs)
     missing_pkgs = set(frozen_pkgs) - set(pkgs)

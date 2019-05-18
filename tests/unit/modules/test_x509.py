@@ -83,7 +83,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         assert x509.log.debug.call_args[0][1] == list(subj.nid.keys())[0]
         assert isinstance(x509.log.debug.call_args[0][2], TypeError)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
+    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
     def test_get_pem_entry(self):
         '''
         Test private function _parse_subject(subject) it handles a missing fields
@@ -109,7 +109,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         ret = x509.get_pem_entry(ca_key)
         self.assertEqual(ret, ca_key)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
+    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
     def test_get_private_key_size(self):
         '''
         Test private function _parse_subject(subject) it handles a missing fields
@@ -136,7 +136,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         ret = x509.get_private_key_size(ca_key)
         self.assertEqual(ret, 1024)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
+    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
     def test_create_key(self):
         '''
         Test that x509.create_key returns a private key
@@ -146,7 +146,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
                                       passphrase='super_secret_passphrase')
         self.assertIn('BEGIN RSA PRIVATE KEY', ret)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
+    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
     def test_create_certificate(self):
         '''
         Test private function _parse_subject(subject) it handles a missing fields
@@ -186,7 +186,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
                                       days_remaining=0)
         self.assertIn('BEGIN CERTIFICATE', ret)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
+    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
     def test_create_crl(self):
         ca_key = '''
 -----BEGIN RSA PRIVATE KEY-----
@@ -250,7 +250,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         # Ensure that a CRL was actually created
         self.assertIn('BEGIN X509 CRL', crl)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
+    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
     def test_revoke_certificate_with_crl(self):
         ca_key = '''
 -----BEGIN RSA PRIVATE KEY-----
@@ -351,7 +351,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         # the revoked certificates
         self.assertIn(serial_number, crl)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
+    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
     def test_create_csr(self):
         '''
         Test create_csr
@@ -380,7 +380,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
                               CN='Redacted Root CA')
         self.assertIn(b'BEGIN CERTIFICATE REQUEST', ret)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
+    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
     def test_create_csr_ext_mapping(self):
         '''
         Test create_csr with ext_mapping

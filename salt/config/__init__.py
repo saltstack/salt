@@ -137,7 +137,7 @@ VALID_OPTS = immutabletypes.freeze({
     # Do not remove! Keep as an alias for usability.
     'master_shuffle': bool,
 
-    # When in multi-master mode, temporarily remove a master from the list if a conenction
+    # When in multi-master mode, temporarily remove a master from the list if a connection
     # is interrupted and try another master in the list.
     'master_alive_interval': int,
 
@@ -181,7 +181,7 @@ VALID_OPTS = immutabletypes.freeze({
 
     # The caching mechanism to use for the PKI key store. Can substantially decrease master publish
     # times. Available types:
-    # 'maint': Runs on a schedule as a part of the maintanence process.
+    # 'maint': Runs on a schedule as a part of the maintenance process.
     # '': Disable the key cache [default]
     'key_cache': six.string_types,
 
@@ -3603,7 +3603,7 @@ def call_id_function(opts):
 def remove_domain_from_fqdn(opts, newid):
     '''
     Depending on the values of `minion_id_remove_domain`,
-    remove all domains or a single domain from a FQDN, effectivly generating a hostname.
+    remove all domains or a single domain from a FQDN, effectively generating a hostname.
     '''
     opt_domain = opts.get('minion_id_remove_domain')
     if opt_domain is True:

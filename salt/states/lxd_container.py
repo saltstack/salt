@@ -157,7 +157,7 @@ def present(name,
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     '''
     if profiles is None:
         profiles = ['default']
@@ -399,7 +399,7 @@ def absent(name,
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     '''
     ret = {
         'name': name,
@@ -478,7 +478,7 @@ def running(name,
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     '''
     ret = {
         'name': name,
@@ -574,7 +574,7 @@ def frozen(name,
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     '''
     ret = {
         'name': name,
@@ -675,7 +675,7 @@ def stopped(name,
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     '''
     ret = {
         'name': name,
@@ -758,7 +758,7 @@ def migrated(name,
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
 
     src_remote_addr :
         An URL to the source remote Server

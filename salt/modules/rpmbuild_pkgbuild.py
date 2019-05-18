@@ -204,7 +204,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
 
     template
         Run the spec file through a templating engine
-        Optional arguement, allows for no templating engine used to be
+        Optional argument, allows for no templating engine used to be
         if none is desired.
 
     saltenv

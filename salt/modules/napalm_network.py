@@ -584,7 +584,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             file or pillar as ``textfsm_index_file``.
 
     saltenv: ``base``
-        Salt fileserver envrionment from which to retrieve the file.
+        Salt fileserver environment from which to retrieve the file.
         Ignored if ``textfsm_path`` is not a ``salt://`` URL.
 
         .. versionadded:: 2018.3.0
@@ -958,7 +958,7 @@ def ipaddrs(**kwargs):  # pylint: disable=unused-argument
         of dictionaries.  Keys of the main dictionary represent the name of the
         interface.  Values of the main dictionary represent are dictionaries
         that may consist of two keys 'ipv4' and 'ipv6' (one, both or none)
-        which are themselvs dictionaries with the IP addresses as keys.
+        which are themselves dictionaries with the IP addresses as keys.
 
     CLI Example:
 

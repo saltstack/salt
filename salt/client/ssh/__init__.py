@@ -101,7 +101,7 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + r'(?:\r?\n|$)'
 #   * SSH_PY_SHIM is base64 encoded and formatted into the SSH_SH_SHIM
 #     string.  This makes the python script "armored" so that it can
 #     all be passed in the SSH command and will not need special quoting
-#     (which likely would be impossibe to do anyway)
+#     (which likely would be impossible to do anyway)
 #   * The formatted SSH_SH_SHIM with the SSH_PY_SHIM payload is a bit
 #     big (~7.5k).  If this proves problematic for an SSH command we
 #     might try simply invoking "/bin/sh -s" and passing the formatted

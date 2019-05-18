@@ -19,7 +19,7 @@ def namespaced_function(function, global_dict, defaults=None, preserve_context=F
         preserve_context:
             Allow keeping the context taken from orignal namespace,
             and extend it with globals() taken from
-            new targetted namespace.
+            new targeted namespace.
     '''
     if defaults is None:
         defaults = function.__defaults__

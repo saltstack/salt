@@ -665,7 +665,7 @@ def start(uri=None,
 
     :param uri: libvirt URI to listen on.
                 Defaults to None to pick the first available local hypervisor
-    :param tag_prefix: the begining of the salt event tag to use.
+    :param tag_prefix: the beginning of the salt event tag to use.
                        Defaults to 'salt/engines/libvirt_events'
     :param filters: the list of event of listen on. Defaults to 'all'
     '''

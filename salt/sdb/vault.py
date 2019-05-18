@@ -60,7 +60,7 @@ def set_(key, value, profile=None):
         __utils__['versions.warn_until'](
             'Neon',
             (
-                'Using ? to seperate between the path and key for vault has been deprecated '
+                'Using ? to separate between the path and key for vault has been deprecated '
                 'and will be removed in {version}.  Please just use a /.'
             ),
         )
@@ -93,7 +93,7 @@ def get(key, profile=None):
         __utils__['versions.warn_until'](
             'Neon',
             (
-                'Using ? to seperate between the path and key for vault has been deprecated '
+                'Using ? to separate between the path and key for vault has been deprecated '
                 'and will be removed in {version}.  Please just use a /.'
             ),
         )

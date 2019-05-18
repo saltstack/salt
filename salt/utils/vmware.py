@@ -124,7 +124,7 @@ def __virtual__():
 
 def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None, credstore=None):
     '''
-    Shell out and call the specified esxcli commmand, parse the result
+    Shell out and call the specified esxcli command, parse the result
     and return something sane.
 
     :param host: ESXi or vCenter host to connect to
@@ -1012,7 +1012,7 @@ def get_network_adapter_type(adapter_type):
     '''
     Return the network adapter type.
 
-    adpater_type
+    adapter_type
         The adapter type from which to obtain the network adapter type.
     '''
     if adapter_type == 'vmxnet':
@@ -2086,7 +2086,7 @@ def get_datastores(service_instance, reference, datastore_names=None,
     '''
     Returns a list of vim.Datastore objects representing the datastores visible
     from a VMware object, filtered by their names, or the backing disk
-    cannonical name or scsi_addresses
+    canonical name or scsi_addresses
 
     service_instance
         The Service Instance Object from which to obtain datastores.
@@ -2693,7 +2693,7 @@ def get_disks(host_ref, disk_ids=None, scsi_addresses=None,
               get_all_disks=False):
     '''
     Returns a list of vim.HostScsiDisk objects representing disks
-    in a ESXi host, filtered by their cannonical names and scsi_addresses
+    in a ESXi host, filtered by their canonical names and scsi_addresses
 
     host_ref
         The vim.HostSystem object representing the host that contains the
@@ -2867,14 +2867,14 @@ def erase_disk_partitions(service_instance, host_ref, disk_id,
 def get_diskgroups(host_ref, cache_disk_ids=None, get_all_disk_groups=False):
     '''
     Returns a list of vim.VsanHostDiskMapping objects representing disks
-    in a ESXi host, filtered by their cannonical names.
+    in a ESXi host, filtered by their canonical names.
 
     host_ref
         The vim.HostSystem object representing the host that contains the
         requested disks.
 
     cache_disk_ids
-        The list of cannonical names of the cache disks to be retrieved. The
+        The list of canonical names of the cache disks to be retrieved. The
         canonical name of the cache disk is enough to identify the disk group
         because it is guaranteed to have one and only one cache disk.
         Default is None.

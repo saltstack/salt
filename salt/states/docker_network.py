@@ -137,7 +137,7 @@ def present(name,
         skipped. Alternatively, pass ``True`` and *all* translation will be
         skipped.
 
-        Skipping tranlsation allows for arguments to be formatted directly in
+        Skipping translation allows for arguments to be formatted directly in
         the format which docker-py expects. This allows for API changes and
         other issues to be more easily worked around. See the following links
         for more information:
@@ -361,7 +361,7 @@ def present(name,
         .. note::
             This option cannot be reliably managed on CentOS 7. This is because
             while support for this option was added in API version 1.24, its
-            value was not added to the inpsect results until API version 1.26.
+            value was not added to the inspect results until API version 1.26.
             The version of Docker which is available for CentOS 7 runs API
             version 1.24, meaning that while Salt can pass this argument to the
             API, it has no way of knowing the value of this config option in an

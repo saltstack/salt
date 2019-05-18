@@ -316,7 +316,7 @@ def file_list(load):
             with salt.utils.files.fopen(container_list, 'r') as fp_:
                 ret.update(set(salt.utils.json.load(fp_)))
     except Exception as exc:
-        log.error('azurefs: an error ocurred retrieving file lists. '
+        log.error('azurefs: an error occurred retrieving file lists. '
                   'It should be resolved next time the fileserver '
                   'updates. Please do not manually modify the azurefs '
                   'cache directory.')

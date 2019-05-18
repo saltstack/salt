@@ -149,7 +149,7 @@ def default_vsan_policy_configured(name, policy):
     proxy_type = __salt__['vsphere.get_proxy_type']()
     log.trace('proxy_type = %s', proxy_type)
     # All allowed proxies have a shim execution module with the same
-    # name which implementes a get_details function
+    # name which implements a get_details function
     # All allowed proxies have a vcenter detail
     vcenter = __salt__['{0}.get_details'.format(proxy_type)]()['vcenter']
     log.info('Running %s on vCenter \'%s\'', name, vcenter)
@@ -295,7 +295,7 @@ def storage_policies_configured(name, policies):
         proxy_type = __salt__['vsphere.get_proxy_type']()
         log.trace('proxy_type = %s', proxy_type)
         # All allowed proxies have a shim execution module with the same
-        # name which implementes a get_details function
+        # name which implements a get_details function
         # All allowed proxies have a vcenter detail
         vcenter = __salt__['{0}.get_details'.format(proxy_type)]()['vcenter']
         log.info('Running state \'%s\' on vCenter \'%s\'', name, vcenter)

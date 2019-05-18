@@ -92,7 +92,7 @@ def _connect(**kwargs):
     '''
     connargs = dict()
 
-    # Shamelessy ripped from the mysql module
+    # Shamelessly ripped from the mysql module
     def __connarg(name, key=None, default=None):
         '''
         Add key to connargs, only if name exists in our kwargs or as

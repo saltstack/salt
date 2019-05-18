@@ -105,7 +105,7 @@ def coalesce(name, **kwargs):
         new = {}
         diff = []
 
-        # Retreive changes to made
+        # Retrieve changes to made
         for key, value in kwargs.items():
             if key in old and value != old[key]:
                 new.update({key: value})
@@ -185,7 +185,7 @@ def ring(name, **kwargs):
         new = {}
         diff = []
 
-        # Retreive changes to made
+        # Retrieve changes to made
         for key, value in kwargs.items():
             if key in old:
                 if value == 'max':
@@ -264,7 +264,7 @@ def offload(name, **kwargs):
         new = {}
         diff = []
 
-        # Retreive changes to made
+        # Retrieve changes to made
         for key, value in kwargs.items():
             value = value and "on" or "off"
             if key in old and value != old[key]:

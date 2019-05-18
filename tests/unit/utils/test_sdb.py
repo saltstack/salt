@@ -50,7 +50,7 @@ class SdbTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {sdb: {}}
 
-    # test with SQLite database key not presest
+    # test with SQLite database key not present
 
     def test_sqlite_get_not_found(self):
         what = sdb.sdb_get(

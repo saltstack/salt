@@ -143,7 +143,7 @@ def status(zpool=None):
 
     ## parse status output
     # NOTE: output is 'key: value' except for the 'config' key.
-    #       mulitple pools will repeat the output, so if switch pools if
+    #       multiple pools will repeat the output, so if switch pools if
     #       we see 'pool:'
     current_pool = None
     current_prop = None
@@ -195,7 +195,7 @@ def status(zpool=None):
             # NOTE: data is indented by 1 tab, then multiples of 2 spaces
             #       to differential root vdev, vdev, and dev
             #
-            #       we just strip the intial tab (can't use .strip() here)
+            #       we just strip the initial tab (can't use .strip() here)
             if line[0] == "\t":
                 line = line[1:]
 
@@ -294,7 +294,7 @@ def iostat(zpool=None, sample_time=5, parsable=True):
         'name',
         'capacity-alloc', 'capacity-free',
         'operations-read', 'operations-write',
-        'bandwith-read', 'bandwith-write',
+        'bandwidth-read', 'bandwidth-write',
     ]
     root_vdev = None
     vdev = None
@@ -372,7 +372,7 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None, parsable=Tru
 
     .. note::
 
-        Multiple storage pool can be provded as a space separated list
+        Multiple storage pool can be provided as a space separated list
 
     CLI Example:
 

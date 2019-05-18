@@ -995,7 +995,7 @@ class _Swagger(object):
 
     def _get_current_deployment_id(self):
         '''
-        Helper method to find the deployment id that the stage name is currently assocaited with.
+        Helper method to find the deployment id that the stage name is currently associated with.
         '''
         deploymentId = ''
         stage = __salt__['boto_apigateway.describe_api_stage'](restApiId=self.restApiId,

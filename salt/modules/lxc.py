@@ -925,7 +925,7 @@ def _config_list(conf_tuples=None, only_net=False, **kwargs):
 
     only_net
         by default we add to the tuples a reflection of both
-        the real config if avalaible and a certain amount of
+        the real config if available and a certain amount of
         default values like the cpu parameters, the memory
         and etc.
         On the other hand, we also no matter the case reflect
@@ -1829,7 +1829,7 @@ def create(name,
             options='{"dist": "centos", "release": "6", "arch": "amd64"}'
 
         For available template options, refer to the lxc template scripts
-        which are ususally located under ``/usr/share/lxc/templates``,
+        which are usually located under ``/usr/share/lxc/templates``,
         or run ``lxc-create -t <template> -h``.
 
     image

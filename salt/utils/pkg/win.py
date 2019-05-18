@@ -138,7 +138,7 @@ class RegSoftwareInfo(object):
             key_guid (str): Identifer.
             sid (str): Security IDentifier of the User or None for Computer/Machine.
             use_32bit (bool):
-                Regisrty location of the Identifer. ``True`` 32 bit registry only
+                Registry location of the Identifer. ``True`` 32 bit registry only
                 meaning fully on 64 bit OS.
         '''
         self.__reg_key_guid = key_guid  # also called IdentifyingNumber(wmic)

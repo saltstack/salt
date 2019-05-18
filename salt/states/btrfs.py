@@ -97,7 +97,7 @@ def _unset_cow(path):
 
 def __mount_device(action):
     '''
-    Small decorator to makes sure that the mount and umount happends in
+    Small decorator to makes sure that the mount and umount happens in
     a transactional way.
     '''
     @functools.wraps(action)
@@ -109,7 +109,7 @@ def __mount_device(action):
             'name': name,
             'result': False,
             'changes': {},
-            'comment': ['Some error happends during the operation.'],
+            'comment': ['Some error happened during the operation.'],
         }
         try:
             dest = _mount(device)
@@ -170,7 +170,7 @@ def subvolume_created(name, device, qgroupids=None, set_default=False,
 
     # Resolve first the test case. The check is not complete, but at
     # least we will report if a subvolume needs to be created. Can
-    # happend that the subvolume is there, but we also need to set it
+    # happened that the subvolume is there, but we also need to set it
     # as default, or persist in fstab.
     if __opts__['test']:
         ret['result'] = None

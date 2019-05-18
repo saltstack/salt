@@ -110,7 +110,7 @@ class PCAPParser(object):
         # Arguments here are:
         #   device
         #   snaplen (maximum number of bytes to capture _per_packet_)
-        #   promiscious mode (1 for true)
+        #   promiscuous mode (1 for true)
         #   timeout (in milliseconds)
         cap = pcapy.open_live(self.iface, 65536, 1, 0)
 

@@ -1598,7 +1598,7 @@ def _filesystems(config='/etc/filesystems', leading_key=True):
     Return the contents of the filesystems in an OrderedDict
 
     config
-        File containing filesystem infomation
+        File containing filesystem information
 
     leading_key
         True    return dictionary keyed by 'name' and value as dictionary with other keys, values (name excluded)

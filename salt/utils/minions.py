@@ -233,7 +233,7 @@ class CkMinions(object):
 
     def _pki_minions(self):
         '''
-        Retreive complete minion list from PKI dir.
+        Retrieve complete minion list from PKI dir.
         Respects cache if configured
         '''
         minions = []

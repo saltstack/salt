@@ -267,10 +267,10 @@ def _compare(cur_cmp, cur_struct):
         return cur_cmp == cur_struct
     elif isinstance(cur_struct, (six.integer_types, float)) and \
          isinstance(cur_cmp, (six.string_types, six.text_type)):
-        # Comapring the numerical value agains a presumably mathematical value
+        # Comapring the numerical value against a presumably mathematical value
         log.debug('Comparing a numeric value (%d) with a string (%s)', cur_struct, cur_cmp)
         numeric_compare = _numeric_regex.match(cur_cmp)
-        # determine if the value to compare agains is a mathematical operand
+        # determine if the value to compare against is a mathematical operand
         if numeric_compare:
             compare_value = numeric_compare.group(2)
             return getattr(float(cur_struct), _numeric_operand[numeric_compare.group(1)])(float(compare_value))
@@ -291,7 +291,7 @@ def validate(config):
         if not isinstance(fun_cfg, dict):
             return False, 'The match structure for the {} execution function output must be a dictionary'.format(fun)
         if fun not in __salt__:
-            return False, 'Execution function {} is not availabe!'.format(fun)
+            return False, 'Execution function {} is not available!'.format(fun)
     return True, 'Valid configuration for the napal beacon!'
 
 

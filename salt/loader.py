@@ -1710,7 +1710,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             else:
                 tgt_fn = os.path.join('salt', 'utils', 'process.py')
                 if fn_.endswith(tgt_fn) and '_handle_signals' in caller:
-                    # Race conditon, SIGTERM or SIGINT received while loader
+                    # Race condition, SIGTERM or SIGINT received while loader
                     # was in process of loading a module. Call sys.exit to
                     # ensure that the process is killed.
                     sys.exit(salt.defaults.exitcodes.EX_OK)

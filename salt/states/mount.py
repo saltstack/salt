@@ -446,7 +446,7 @@ def mounted(name,
                             return ret
                         else:
                             # Some file systems require umounting and mounting if options change
-                            # add others to list that require similiar functionality
+                            # add others to list that require similar functionality
                             if fstype in ['nfs', 'cvfs'] or fstype.startswith('fuse'):
                                 ret['changes']['umount'] = "Forced unmount and mount because " \
                                                             + "options ({0}) changed".format(opt)
@@ -485,7 +485,7 @@ def mounted(name,
                             return ret
                         else:
                             # Some file systems require umounting and mounting if options change
-                            # add others to list that require similiar functionality
+                            # add others to list that require similar functionality
                             if fstype in ['nfs', 'cvfs'] or fstype.startswith('fuse'):
                                 ret['changes']['umount'] = "Forced unmount and mount because " \
                                                             + "options ({0}) changed".format(opt)

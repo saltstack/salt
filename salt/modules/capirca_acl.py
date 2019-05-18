@@ -1183,7 +1183,7 @@ def get_policy_config(platform,
         policy_pillar_cfg = _get_pillar_cfg(pillar_key,
                                             saltenv=saltenv,
                                             pillarenv=pillarenv)
-        # now, let's merge everything witht the pillar data
+        # now, let's merge everything with the pillar data
         # again, this will not remove any extra filters/terms
         # but it will merge with the pillar data
         # if this behaviour is not wanted, the user can set `merge_pillar` as `False`

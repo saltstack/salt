@@ -3,7 +3,7 @@
 Installing of certificates to the keychain
 ==========================================
 
-Install certificats to the macOS keychain
+Install certificates to the macOS keychain
 
 .. code-block:: yaml
 

@@ -526,7 +526,7 @@ def rollback(**kwargs):
                 .format(exception)
             return ret
     else:
-        ret['message'] = 'Rollback succesfull but pre-commit check failed.'
+        ret['message'] = 'Rollback successful but pre-commit check failed.'
         ret['out'] = False
     return ret
 

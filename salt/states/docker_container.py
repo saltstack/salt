@@ -269,7 +269,7 @@ def running(name,
         skipped. Alternatively, pass ``True`` and *all* translation will be
         skipped.
 
-        Skipping tranlsation allows for arguments to be formatted directly in
+        Skipping translation allows for arguments to be formatted directly in
         the format which docker-py_ expects. This allows for API changes and
         other issues to be more easily worked around. An example of using this
         option to skip translation would be:

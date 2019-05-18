@@ -1946,7 +1946,7 @@ class Pygit2(GitProvider):
         credentials object. Return False if a required auth param is not
         present. Return True if the required auth parameters are present (or
         auth is not configured), otherwise failhard if there is a problem with
-        authenticaion.
+        authentication.
         '''
         self.credentials = None
 

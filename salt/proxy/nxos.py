@@ -310,7 +310,7 @@ def sendline(command, method='cli_show_ascii', **kwargs):
         NOTES for SSH proxy minon:
           ``method`` is ignored for SSH proxy minion.
           Only show commands are supported and data is returned unstructured.
-          This function is preserved for backwards compatibilty.
+          This function is preserved for backwards compatibility.
 
     .. code-block: bash
 

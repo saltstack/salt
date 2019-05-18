@@ -1096,7 +1096,7 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
 class AsyncReqMessageClient(object):
     '''
     This class wraps the underlying zeromq REQ socket and gives a future-based
-    interface to sending and recieving messages. This works around the primary
+    interface to sending and receiving messages. This works around the primary
     limitation of serialized send/recv on the underlying socket by queueing the
     message sends in this class. In the future if we decide to attempt to multiplex
     we can manage a pool of REQ/REP sockets-- but for now we'll just do them in serial

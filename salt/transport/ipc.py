@@ -190,7 +190,7 @@ class IPCServer(object):
                 # On occasion an exception will occur with
                 # an error code of 0, it's a spurious exception.
                 if exc.errno == 0:
-                    log.trace('Exception occured with error number 0, '
+                    log.trace('Exception occurred with error number 0, '
                               'spurious exception: %s', exc)
                 else:
                     log.error('Exception occurred while '

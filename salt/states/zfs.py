@@ -822,7 +822,7 @@ def _schedule_snapshot_retrieve(dataset, prefix, snapshots):
     '''
     ## NOTE: retrieve all snapshots for the dataset
     for snap in sorted(__salt__['zfs.list'](dataset, **{'recursive': True, 'depth': 1, 'type': 'snapshot'}).keys()):
-        ## NOTE: we only want the actualy name
+        ## NOTE: we only want the actually name
         ##       myzpool/data@zbck-20171201_000248 -> zbck-20171201_000248
         snap_name = snap[snap.index('@')+1:]
 
@@ -833,7 +833,7 @@ def _schedule_snapshot_retrieve(dataset, prefix, snapshots):
         ## NOTE: retrieve the holds for this snapshot
         snap_holds = __salt__['zfs.holds'](snap)
 
-        ## NOTE: this snapshot has no holds, eligable for pruning
+        ## NOTE: this snapshot has no holds, eligible for pruning
         if not snap_holds:
             snapshots['_prunable'].append(snap)
 

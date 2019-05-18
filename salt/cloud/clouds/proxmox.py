@@ -737,7 +737,7 @@ def create(vm_):
                     postParams[setting] = vm_[setting]
                     query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
 
-        # net strings are a list of comma seperated settings. We need to merge the settings so that
+        # net strings are a list of comma separated settings. We need to merge the settings so that
         # the setting in the profile only changes the settings it touches and the other settings
         # are left alone. An example of why this is necessary is because the MAC address is set
         # in here and generally you don't want to alter or have to know the MAC address of the new

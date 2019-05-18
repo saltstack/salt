@@ -300,7 +300,7 @@ def request(
     if zone_id is None:
         raise CommandExecutionError(
             'Either a zone or a zone_id must be passed in or '
-            'configured in the master file. This id can be retreived using '
+            'configured in the master file. This id can be retrieved using '
             'venafi.show_company <domain>'
         )
 

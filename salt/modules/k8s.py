@@ -63,7 +63,7 @@ def _guess_apiserver(apiserver_url=None):
     else:
         # we failed to discover, lets use k8s default address
         apiserver_url = "http://127.0.0.1:8080"
-    log.debug("Discoverd k8s API server address: %s", apiserver_url)
+    log.debug("Discovered k8s API server address: %s", apiserver_url)
     return apiserver_url
 
 

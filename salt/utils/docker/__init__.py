@@ -336,7 +336,7 @@ def create_ipam_config(*pools, **kwargs):
     pool_dicts = ret.get('Config')
     if pool_dicts:
         # When you inspect a network with custom IPAM configuration, only
-        # arguments which were explictly passed are reflected. By contrast,
+        # arguments which were explicitly passed are reflected. By contrast,
         # docker-py will include keys for arguments which were not passed in
         # but set the value to None. Thus, for ease of comparison, the below
         # loop will remove all keys with a value of None from the generated

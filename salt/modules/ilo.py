@@ -248,7 +248,7 @@ def set_ssh_key(public_key):
         salt '*' ilo.set_ssh_key "ssh-dss AAAAB3NzaC1kc3MAAACBA... damian"
 
     The SSH public key needs to be DSA and the last argument in the key needs
-    to be the username (case-senstive) of the ILO username.
+    to be the username (case-sensitive) of the ILO username.
     '''
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">

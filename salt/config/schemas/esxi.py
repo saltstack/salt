@@ -49,7 +49,7 @@ class DiskGroupDiskScsiAddressItem(ComplexSchemaItem):
 
 class DiskGroupDiskIdItem(ComplexSchemaItem):
     '''
-    Schema item of a ESXi host disk group containg disk ids
+    Schema item of a ESXi host disk group containing disk ids
     '''
 
     title = 'Diskgroup Disk Id Item'

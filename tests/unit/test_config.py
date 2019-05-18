@@ -673,7 +673,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_minion_id_remove_domain_string_positive(self, tempdir):
         '''
         This tests that the values of `minion_id_remove_domain` is suppressed from a generated minion id,
-        effectivly generating a hostname minion_id.
+        effectively generating a hostname minion_id.
         '''
         minion_config = os.path.join(tempdir, 'minion')
         with salt.utils.files.fopen(minion_config, 'w') as fp_:

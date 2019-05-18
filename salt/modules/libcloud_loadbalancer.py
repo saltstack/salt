@@ -256,7 +256,7 @@ def get_balancer_by_name(name, profile, **libcloud_kwargs):
     if len(match) == 1:
         return _simple_balancer(match[0])
     elif len(match) > 1:
-        raise ValueError("Ambiguous argument, found mulitple records")
+        raise ValueError("Ambiguous argument, found multiple records")
     else:
         raise ValueError("Bad argument, found no records")
 
@@ -374,7 +374,7 @@ def balancer_detach_member(balancer_id, member_id, profile, **libcloud_kwargs):
     members = conn.balancer_list_members(balancer=balancer)
     match = [member for member in members if member.id == member_id]
     if len(match) > 1:
-        raise ValueError("Ambiguous argument, found mulitple records")
+        raise ValueError("Ambiguous argument, found multiple records")
     elif not match:
         raise ValueError("Bad argument, found no records")
     else:

@@ -118,7 +118,7 @@ def describe_topic(name, region=None, key=None, keyid=None, profile=None):
                 sub_arn = ret['Subscriptions'][sub]['SubscriptionArn']
                 if not sub_arn.startswith('arn:aws:sns:'):
                     # Sometimes a sub is in e.g. PendingAccept or other
-                    # wierd states and doesn't have an ARN yet
+                    # weird states and doesn't have an ARN yet
                     log.debug('Subscription with invalid ARN %s skipped...', sub_arn)
                     continue
                 deets = get_subscription_attributes(SubscriptionArn=sub_arn, region=region,

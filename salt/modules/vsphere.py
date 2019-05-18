@@ -349,7 +349,7 @@ def gets_service_instance_via_proxy(fn):
 
                 # There are two cases:
                 #   1. service_instance was passed in as a positional parameter
-                #   2. service_instance was passed in as a named paramter
+                #   2. service_instance was passed in as a named parameter
                 if len(args) > idx:
                     # case 1: The call was made with enough positional
                     # parameters to include 'service_instance'
@@ -3674,7 +3674,7 @@ def _get_dvs_link_discovery_protocol(dvs_name, dvs_link_disc_protocol):
     dvs_name
         The name of the DVS
 
-    dvs_link_disc_protocl
+    dvs_link_disc_protocol
         The DVS link discovery protocol
     '''
     log.trace('Building the dict of the DVS \'%s\' link discovery protocol', dvs_name)
@@ -4163,7 +4163,7 @@ def _get_dvportgroup_teaming(pg_name, pg_default_port_config):
 
 def _get_dvportgroup_dict(pg_ref):
     '''
-    Returns a dictionary with a distributed virutal portgroup data
+    Returns a dictionary with a distributed virtual portgroup data
 
 
     pg_ref

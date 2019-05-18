@@ -376,7 +376,7 @@ def fcontext_policy_present(name, sel_type, filetype='a', sel_user=None, sel_lev
                                             sel_type)})
             return ret
 
-        # Removal of current rule is not neccesary, since adding a new rule for the same
+        # Removal of current rule is not necessary, since adding a new rule for the same
         # filespec and the same filetype automatically overwrites
         if __opts__['test']:
             ret.update({'result': None})

@@ -23,7 +23,7 @@ if psutil.version_info >= (2, 0):
     from psutil import *  # pylint: disable=wildcard-import,unused-wildcard-import,3rd-party-module-not-gated
 else:
     # Import hack to work around bugs in old psutil's
-    # Psuedo "from psutil import *"
+    # Pseudo "from psutil import *"
     _globals = globals()
     for attr in psutil.__all__:
         _temp = __import__('psutil', globals(), locals(), [attr], -1 if six.PY2 else 0)

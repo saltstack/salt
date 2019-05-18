@@ -721,7 +721,7 @@ def salt_api_acl_tool(username, request):
     '''
     failure_str = ("[api_acl] Authentication failed for "
                    "user %s from IP %s")
-    success_str = ("[api_acl] Authentication sucessful for "
+    success_str = ("[api_acl] Authentication successful for "
                    "user %s from IP %s")
     pass_str = ("[api_acl] Authentication not checked for "
                 "user %s from IP %s")

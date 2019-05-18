@@ -1720,7 +1720,7 @@ def os_data():
                 try:
                     init_bin = salt.utils.path.which(init_cmdline[0])
                 except IndexError:
-                    # Emtpy init_cmdline
+                    # Empty init_cmdline
                     init_bin = None
                     log.warning('Unable to fetch data from /proc/1/cmdline')
                 if init_bin is not None and init_bin.endswith('bin/init'):

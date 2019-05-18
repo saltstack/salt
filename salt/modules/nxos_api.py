@@ -180,17 +180,17 @@ def _cli_command(commands,
                         method=method,
                         **kwargs)
     txt_responses = []
-    for rpc_reponse in rpc_responses:
-        error = rpc_reponse.get('error')
+    for rpc_response in rpc_responses:
+        error = rpc_response.get('error')
         if error:
-            cmd = rpc_reponse.get('command')
+            cmd = rpc_response.get('command')
             if 'data' in error:
                 msg = 'The command "{cmd}" raised the error "{err}".'.format(cmd=cmd, err=error['data']['msg'])
                 raise SaltException(msg)
             else:
                 msg = 'Invalid command: "{cmd}".'.format(cmd=cmd)
                 raise SaltException(msg)
-        txt_responses.append(rpc_reponse['result'])
+        txt_responses.append(rpc_response['result'])
     return txt_responses
 
 # -----------------------------------------------------------------------------

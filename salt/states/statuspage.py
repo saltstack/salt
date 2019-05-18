@@ -175,7 +175,7 @@ def _compute_diff(expected_endpoints, configured_endpoints):
 
     ret = _compute_diff_ret()
 
-    # noth configured => configure with expected endpoints
+    # not configured => configure with expected endpoints
     if not configured_endpoints:
         ret.update({
             'add': expected_endpoints

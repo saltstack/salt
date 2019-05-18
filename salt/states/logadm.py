@@ -105,7 +105,7 @@ def rotate(name, **kwargs):
         else:
             ret['comment'] = res['Error']
             # NOTE: we need to remove the log file first
-            #       potentially the log configuraiton can get lost :s
+            #       potentially the log configuration can get lost :s
             if kwargs['log_file'] in old_config:
                 ret['changes'] = {kwargs['log_file']: None}
             else:

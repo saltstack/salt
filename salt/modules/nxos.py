@@ -194,7 +194,7 @@ def check_role(username, role, **kwargs):
 
 def cmd(command, *args, **kwargs):
     '''
-    NOTE: This function is preserved for backwards compatibilty.  This allows
+    NOTE: This function is preserved for backwards compatibility.  This allows
     commands to be executed using either of the following syntactic forms.
 
     salt '*' nxos.cmd <function>
@@ -313,7 +313,7 @@ def grains_refresh(**kwargs):
 
 def sendline(command, method='cli_show_ascii', **kwargs):
     '''
-    Send arbitray commands to the NX-OS device.
+    Send arbitrary commands to the NX-OS device.
 
     command
         The command to be sent.
@@ -692,7 +692,7 @@ def set_password(username,
         Configure crypt_salt setting
         Default: None
 
-    alogrithm
+    algorithm
         Encryption algorithm
         Default: sha256
 

@@ -163,7 +163,7 @@ def get_host_vsan_system(service_instance, host_ref, hostname=None):
         Service instance to the host or vCenter
 
     host_ref
-        Refernce to ESXi host
+        Reference to ESXi host
 
     hostname
         Name of ESXi host. Default value is None.

@@ -161,7 +161,7 @@ def topic_present(name, subscriptions=None, attributes=None,
     for attr in ['DisplayName', 'Policy', 'DeliveryPolicy']:
         curr_val = curr_attrs.get(attr)
         want_val = want_attrs.get(attr)
-        # Some get default values if not set, so it's not safe to enforce absense if they're
+        # Some get default values if not set, so it's not safe to enforce absence if they're
         # not provided at all.  This implies that if you want to clear a value, you must explicitly
         # set it to an empty string.
         if want_val is None:

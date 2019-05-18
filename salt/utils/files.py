@@ -752,7 +752,7 @@ def normalize_mode(mode):
     if six.PY3:
         mode = mode.replace('0o', '0')
     # Strip any quotes any initial zeroes, then though zero-pad it up to 4.
-    # This ensures that somethign like '00644' is normalized to '0644'
+    # This ensures that something like '00644' is normalized to '0644'
     return mode.strip('"').strip('\'').lstrip('0').zfill(4)
 
 

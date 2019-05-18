@@ -1827,7 +1827,7 @@ class Minion(MinionBase):
             )
 
         # Add default returners from minion config
-        # Should have been coverted to comma-delimited string already
+        # Should have been converted to comma-delimited string already
         if isinstance(opts.get('return'), six.string_types):
             if data['ret']:
                 data['ret'] = ','.join((data['ret'], opts['return']))

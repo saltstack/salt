@@ -930,7 +930,7 @@ def _resolve_capabilities(pkgs, refresh=False, **kwargs):
     '''
     Resolve capabilities in ``pkgs`` and exchange them with real package
     names, when the result is distinct.
-    This feature can be turned on while setting the paramter
+    This feature can be turned on while setting the parameter
     ``resolve_capabilities`` to True.
 
     Return the input dictionary with replaced capability names and as

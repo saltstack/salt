@@ -493,7 +493,7 @@ def clear_property(zone, key):
 
 def _resource(methode, zone, resource_type, resource_selector, **kwargs):
     '''
-    internal resource hanlder
+    internal resource handler
 
     methode : string
         add or update

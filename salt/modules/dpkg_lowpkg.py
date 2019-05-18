@@ -48,7 +48,7 @@ def bin_pkg_info(path, saltenv='base'):
         minion so that it can be examined.
 
     saltenv : base
-        Salt fileserver envrionment from which to retrieve the package. Ignored
+        Salt fileserver environment from which to retrieve the package. Ignored
         if ``path`` is a local file path on the minion.
 
     CLI Example:

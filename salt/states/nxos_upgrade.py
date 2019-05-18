@@ -116,4 +116,4 @@ def _version_info():
     elif 'kickstart' in __grains__['nxos']['software']:
         return __grains__['nxos']['software']['kickstart']
     else:
-        return 'Unable to detect sofware version'
+        return 'Unable to detect software version'

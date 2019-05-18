@@ -305,7 +305,7 @@ def present(
                 fingerprint_hash_type)
         return ret
 
-    # Get only the path to the file without env referrences to check if exists
+    # Get only the path to the file without env references to check if exists
     if source != '':
         source_path = __salt__['cp.get_url'](
                         source,

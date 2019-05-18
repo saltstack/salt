@@ -106,7 +106,7 @@ def _worker_status(target,
         target, 'modjk.worker_status', args, tgt_type
     )
 
-    # Did we got any respone from someone ?
+    # Did we get any response from someone ?
     if not status:
         ret['result'] = False
         return ret

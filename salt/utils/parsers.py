@@ -742,7 +742,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                     verify_files([logfile], self.config['user'])
 
         if logfile is None:
-            # Use the default setting if the logfile wasn't explicity set
+            # Use the default setting if the logfile wasn't explicitly set
             logfile = self._default_logging_logfile_
 
         cli_log_file_fmt = 'cli_{0}_log_file_fmt'.format(
@@ -887,7 +887,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         if self._setup_mp_logging_listener_:
             # Set multiprocessing logging level even in non-Windows
             # environments. In non-Windows environments, this setting will
-            # propogate from process to process via fork behavior and will be
+            # propagate from process to process via fork behavior and will be
             # used by child processes if they invoke the multiprocessing
             # logging client.
             log.set_multiprocessing_logging_level_by_opts(self.config)

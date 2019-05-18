@@ -232,7 +232,7 @@ def _salt(fun, *args, **kw):
                 ret = cret['data']
                 break
             # special case, some answers may be crafted
-            # to handle the unresponsivness of a specific command
+            # to handle the unresponsive of a specific command
             # which is also meaningful, e.g. a minion not yet provisioned
             if fun in ['test.ping'] and not wait_for_res:
                 ret = {

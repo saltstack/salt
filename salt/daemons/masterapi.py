@@ -441,7 +441,7 @@ class AutoKey(object):
 
 class RemoteFuncs(object):
     '''
-    Funcitons made available to minions, this class includes the raw routines
+    Functions made available to minions, this class includes the raw routines
     post validation that make up the minion access to the master
     '''
     def __init__(self, opts):

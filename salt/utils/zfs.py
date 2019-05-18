@@ -123,7 +123,7 @@ def _property_parse_cmd(cmd, alias=None):
     # NOTE: parse output
     prop_hdr = []
     for prop_data in _exec(cmd=cmd)['stderr'].split('\n'):
-        # NOTE: make the line data more managable
+        # NOTE: make the line data more manageable
         prop_data = prop_data.lower().split()
 
         # NOTE: skip empty lines
@@ -348,7 +348,7 @@ def property_data_zpool():
     zpool_size_extra = [
         'capacity-alloc', 'capacity-free',
         'operations-read', 'operations-write',
-        'bandwith-read', 'bandwith-write',
+        'bandwidth-read', 'bandwidth-write',
         'read', 'write',
     ]
     zpool_numeric_extra = [

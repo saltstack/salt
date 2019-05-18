@@ -961,7 +961,7 @@ def _get_device_template(disk, disk_info, template=None):
             temp = 'DISK=[TYPE={0}, SIZE={1}, FORMAT={2}]'.format(v_type,
                                                                   size, format)
         return temp
-    #TODO add persistant disk_type
+    #TODO add persistent disk_type
 
 
 def create(vm_):
@@ -4499,7 +4499,7 @@ def _get_node(name):
 
 def _get_xml(xml_str):
     '''
-    Intrepret the data coming from opennebula and raise if it's not XML.
+    Interpret the data coming from opennebula and raise if it's not XML.
     '''
     try:
         xml_data = etree.XML(xml_str)

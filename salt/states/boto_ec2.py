@@ -260,7 +260,7 @@ def eni_present(
         if __opts__['test']:
             ret['comment'] = 'ENI is set to be created.'
             if allocate_eip:
-                ret['comment'] = ' '.join([ret['comment'], 'An EIP is set to be allocated/assocaited to the ENI.'])
+                ret['comment'] = ' '.join([ret['comment'], 'An EIP is set to be allocated/associated to the ENI.'])
             if arecords:
                 ret['comment'] = ' '.join([ret['comment'], 'A records are set to be created.'])
             ret['result'] = None
@@ -312,7 +312,7 @@ def eni_present(
     if allocate_eip:
         if 'allocationId' not in r['result']:
             if __opts__['test']:
-                ret['comment'] = ' '.join([ret['comment'], 'An EIP is set to be allocated and assocaited to the ENI.'])
+                ret['comment'] = ' '.join([ret['comment'], 'An EIP is set to be allocated and associated to the ENI.'])
             else:
                 domain = 'vpc' if allocate_eip == 'vpc' else None
                 eip_alloc = __salt__['boto_ec2.allocate_eip_address'](domain=domain,
@@ -348,7 +348,7 @@ def eni_present(
                     ret['comment'] = ' '.join([ret['comment'], 'Failed to allocate an EIP address'])
                     return ret
         else:
-            ret['comment'] = ' '.join([ret['comment'], 'An EIP is already allocated/assocaited to the ENI'])
+            ret['comment'] = ' '.join([ret['comment'], 'An EIP is already allocated/associated to the ENI'])
     if arecords:
         for arecord in arecords:
             if 'name' not in arecord:

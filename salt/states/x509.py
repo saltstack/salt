@@ -269,7 +269,7 @@ def private_key_managed(name,
     new:
         Always create a new key. Defaults to False.
         Combining new with :mod:`prereq <salt.states.requsities.preqreq>`, or when used as part of a
-        `managed_private_key` can allow key rotation whenever a new certificiate is generated.
+        `managed_private_key` can allow key rotation whenever a new certificate is generated.
 
     overwrite:
         Overwrite an existing private key if the provided passphrase cannot decrypt it.
@@ -669,7 +669,7 @@ def crl_managed(name,
             - signing_private_key: /etc/pki/myca.key
             - signing_cert: /etc/pki/myca.crt
             - revoked:
-              - compromized_Web_key:
+              - compromised_Web_key:
                 - certificate: /etc/pki/certs/badweb.crt
                 - revocation_date: 2015-03-01 00:00:00
                 - reason: keyCompromise

@@ -4,7 +4,7 @@ Configure a Pacemaker/Corosync cluster with PCS
 ===============================================
 
 Configure Pacemaker/Cororsync clusters with the
-Pacemaker/Cororsync conifguration system (PCS)
+Pacemaker/Cororsync configuration system (PCS)
 
 :depends: pcs
 

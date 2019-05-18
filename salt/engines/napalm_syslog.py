@@ -165,7 +165,7 @@ occurs, the reactor will execute the
 sending as arguments the template ``salt://increase_prefix_limit.jinja`` defined
 by the user in their environment and the complete OpenConfig object under
 the variable name ``openconfig_structure``. Inside the Jinja template, the user
-can process the object from ``openconfig_structure`` and define the bussiness
+can process the object from ``openconfig_structure`` and define the business
 logic as required.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
