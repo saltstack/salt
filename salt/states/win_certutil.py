@@ -75,6 +75,7 @@ def add_store(name, store, saltenv='base'):
 
     return ret
 
+
 def del_store(name, store, saltenv='base'):
     '''
     Remove a certificate in the given store
