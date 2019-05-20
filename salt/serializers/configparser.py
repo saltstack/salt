@@ -28,11 +28,7 @@ def deserialize(stream_or_string, **options):
     :param stream_or_string: stream or string to deserialize.
     :param options: options given to lower configparser module.
     '''
-
-    if six.PY3:
-        cp = configparser.ConfigParser(**options)
-    else:
-        cp = configparser.SafeConfigParser(**options)
+    cp = _create_cp_object(**options)
 
     try:
         if not isinstance(stream_or_string, (bytes, six.string_types)):
@@ -69,10 +65,7 @@ def serialize(obj, **options):
         if not isinstance(obj, dict):
             raise TypeError("configparser can only serialize dictionaries, not {0}".format(type(obj)))
         fp = options.pop('fp', None)
-        if six.PY3:
-            cp = configparser.ConfigParser(**options)
-        else:
-            cp = configparser.SafeConfigParser(**options)
+        cp = _create_cp_object(**options)
         _read_dict(cp, obj)
 
         if fp:
@@ -110,3 +103,20 @@ def _read_dict(cp, dictionary):
             if value is not None:
                 value = six.text_type(value)
             cp.set(section, key, value)
+
+
+def _create_cp_object(**options):
+    '''
+    build the configparser object
+    '''
+    preserve_case = options.pop('preserve_case', False)
+
+    if six.PY3:
+        cp = configparser.ConfigParser(**options)
+        if preserve_case:
+            cp.optionxform = str
+    else:
+        cp = configparser.SafeConfigParser(**options)
+        if preserve_case:
+            cp.optionxform = str
+    return cp
