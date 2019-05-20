@@ -14,8 +14,6 @@ from tests.support.unit import TestCase
 # Import Salt Libs
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.win_pkg as win_pkg
-
-# Import third party libs
 import salt.utils.data
 
 
