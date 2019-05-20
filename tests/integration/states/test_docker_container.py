@@ -12,12 +12,13 @@ import subprocess
 import tempfile
 
 # Import Salt Testing Libs
-from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
 from tests.support.docker import with_network, random_name
-from tests.support.paths import FILES, TMP
 from tests.support.helpers import destructiveTest, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.paths import FILES, TMP
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 # Import Salt Libs
 import salt.utils.files
@@ -67,8 +68,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # Generate image name
         cls.image = random_name(prefix='salt_busybox_')
 
-        script_path = \
-            os.path.join(FILES, 'file/base/mkimage-busybox-static')
+        script_path = os.path.join(FILES, 'file/base/mkimage-busybox-static')
         cmd = [script_path, cls.image_build_rootdir, cls.image]
         log.debug('Running \'%s\' to build busybox image', ' '.join(cmd))
         process = subprocess.Popen(
@@ -77,10 +77,12 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         output = process.communicate()[0]
-        log.debug('Output from mkimge-busybox-static:\n%s', output)
 
+        log.debug('Output from mkimge-busybox-static:\n%s', output)
         if process.returncode != 0:
-            raise Exception('Failed to build image')
+            raise Exception(
+                'Failed to build image. Output from mkimge-busybox-static:\n{}'.format(output)
+            )
 
         try:
             salt.utils.files.rm_rf(cls.image_build_rootdir)
@@ -1098,7 +1100,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             'docker_container.run',
             name=name,
             image=self.image,
-            command='/bin/false',
+            command=RUNTIME_VARS.SHELL_FALSE_PATH,
             failhard=True)
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
@@ -1114,7 +1116,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             'docker_container.run',
             name=name,
             image=self.image,
-            command='/bin/false',
+            command=RUNTIME_VARS.SHELL_FALSE_PATH,
             failhard=False)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
