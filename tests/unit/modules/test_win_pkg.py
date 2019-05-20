@@ -166,16 +166,16 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                                           'uninstall_flags': '/S', 'locale': 'en_US', 'install_flags': '/s',
                                           'full_name': 'Firebox 3.03 (x86 en-US)'}}
 
-        mock = MagicMock(return_value={'retcode': 0})
+        ret_cmd_run_all = MagicMock(return_value={'retcode': 0})
         with patch.object(salt.utils.data, 'is_true', MagicMock(return_value=True)),\
              patch.object(win_pkg, '_get_package_info', MagicMock(return_value=ret__get_package_info)),\
              patch.dict(win_pkg.__salt__, {'pkg_resource.parse_targets':
-                        MagicMock(return_value=[{'firebox': '3.03'}, None]),
+                                                MagicMock(return_value=[{'firebox': '3.03'}, None]),
                                            'cp.is_cached':
-                        MagicMock(return_value='C:\\fake\\path.exe'),
-                                           'cmd.run_all': mock}):
+                                                MagicMock(return_value='C:\\fake\\path.exe'),
+                                           'cmd.run_all': ret_cmd_run_all}):
             ret = win_pkg.install(name='firebox', version='3.03', extra_install_flags='-e True -test_flag True')
-            self.assertEqual('-e True -test_flag True' in str(mock.call_args[0]), True)
+            self.assertTrue('-e True -test_flag True' in str(ret_cmd_run_all.call_args[0]))
 
     def test_single_pkg_install(self):
         '''
@@ -187,16 +187,16 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                                           'uninstall_flags': '/S', 'locale': 'en_US', 'install_flags': '/s',
                                           'full_name': 'Firebox 3.03 (x86 en-US)'}}
 
-        mock = MagicMock(return_value={'retcode': 0})
+        ret_cmd_run_all = MagicMock(return_value={'retcode': 0})
         with patch.object(salt.utils.data, 'is_true', MagicMock(return_value=True)), \
              patch.object(win_pkg, '_get_package_info', MagicMock(return_value=ret__get_package_info)), \
              patch.dict(win_pkg.__salt__, {'pkg_resource.parse_targets':
                                                MagicMock(return_value=[{'firebox': '3.03'}, None]),
                                            'cp.is_cached':
                                                MagicMock(return_value='C:\\fake\\path.exe'),
-                                           'cmd.run_all': mock}):
+                                           'cmd.run_all': ret_cmd_run_all}):
             ret = win_pkg.install(pkgs=['firebox'], version='3.03', extra_install_flags='-e True -test_flag True')
-            self.assertEqual('-e True -test_flag True' in str(mock.call_args[0]), True)
+            self.assertTrue('-e True -test_flag True' in str(ret_cmd_run_all.call_args[0]))
 
     def test_multiple_pkg_install(self):
         '''
@@ -208,13 +208,13 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                                           'uninstall_flags': '/S', 'locale': 'en_US', 'install_flags': '/s',
                                           'full_name': 'Firebox 3.03 (x86 en-US)'}}
 
-        mock = MagicMock(return_value={'retcode': 0})
+        ret_cmd_run_all = MagicMock(return_value={'retcode': 0})
         with patch.object(salt.utils.data, 'is_true', MagicMock(return_value=True)), \
              patch.object(win_pkg, '_get_package_info', MagicMock(return_value=ret__get_package_info)), \
              patch.dict(win_pkg.__salt__, {'pkg_resource.parse_targets':
                                                MagicMock(return_value=[{'firebox': '3.03', 'got': '3.03'}, None]),
                                            'cp.is_cached':
                                                MagicMock(return_value='C:\\fake\\path.exe'),
-                                           'cmd.run_all': mock}):
+                                           'cmd.run_all': ret_cmd_run_all}):
             ret = win_pkg.install(pkgs=['firebox', 'got'], extra_install_flags='-e True -test_flag True')
-            self.assertEqual('-e True -test_flag True' in str(mock.call_args[0]), False)
+            self.assertFalse('-e True -test_flag True' in str(ret_cmd_run_all.call_args[0]))
