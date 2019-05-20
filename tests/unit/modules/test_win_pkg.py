@@ -15,6 +15,9 @@ from tests.support.unit import TestCase
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.win_pkg as win_pkg
 
+# Import third party libs
+import salt.utils.data
+
 
 class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -151,3 +154,72 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             expected = {}
             result = win_pkg.install(name='nsis', version='3.03')
             self.assertDictEqual(expected, result)
+
+    @staticmethod
+    def test_name_pkg_install():
+        '''
+        test pkg.install name extra_install_flags
+        '''
+
+        ret__get_package_info = {'3.03': {'uninstaller': '%program.exe', 'reboot': False,
+                                          'msiexec': False,
+                                          'installer': 'runme.exe',
+                                          'uninstall_flags': '/S', 'locale': 'en_US', 'install_flags': '/s',
+                                          'full_name': 'Firebox 3.03 (x86 en-US)'}}
+
+        mock = MagicMock(return_value={'retcode': 0})
+        with patch.object(salt.utils.data, 'is_true', MagicMock(return_value=True)),\
+             patch.object(win_pkg, '_get_package_info', MagicMock(return_value=ret__get_package_info)),\
+             patch.dict(win_pkg.__salt__, {'pkg_resource.parse_targets':
+                        MagicMock(return_value=[{'firebox': '3.03'}, None]),
+                                           'cp.is_cached':
+                        MagicMock(return_value='C:\\fake\\path.exe'),
+                                           'cmd.run_all': mock}):
+            ret = win_pkg.install(name='firebox', version='3.03', extra_install_flags='-e True')
+            mock.assert_called_once_with('"C:\\Windows\\system32\\cmd.exe" /s /c ""runme.exe" /s -e True"',
+                                         '', output_loglevel='trace', python_shell=False, redirect_stderr=True)
+
+    @staticmethod
+    def test_single_pkg_install():
+        '''
+        test pkg.install pkg with extra_install_flags
+        '''
+        ret__get_package_info = {'3.03': {'uninstaller': '%program.exe', 'reboot': False,
+                                          'msiexec': False,
+                                          'installer': 'runme.exe',
+                                          'uninstall_flags': '/S', 'locale': 'en_US', 'install_flags': '/s',
+                                          'full_name': 'Firebox 3.03 (x86 en-US)'}}
+
+        mock = MagicMock(return_value={'retcode': 0})
+        with patch.object(salt.utils.data, 'is_true', MagicMock(return_value=True)), \
+             patch.object(win_pkg, '_get_package_info', MagicMock(return_value=ret__get_package_info)), \
+             patch.dict(win_pkg.__salt__, {'pkg_resource.parse_targets':
+                                               MagicMock(return_value=[{'firebox': '3.03'}, None]),
+                                           'cp.is_cached':
+                                               MagicMock(return_value='C:\\fake\\path.exe'),
+                                           'cmd.run_all': mock}):
+            ret = win_pkg.install(pkgs=['firebox'], version='3.03', extra_install_flags='-e True')
+            mock.assert_called_once_with('"C:\\Windows\\system32\\cmd.exe" /s /c ""runme.exe" /s -e True"',
+                                         '', output_loglevel='trace', python_shell=False, redirect_stderr=True)
+
+    def test_multiple_pkg_install(self):
+        '''
+        test pkg.install pkg with extra_install_flags
+        '''
+        ret__get_package_info = {'3.03': {'uninstaller': '%program.exe', 'reboot': False,
+                                          'msiexec': False,
+                                          'installer': 'runme.exe',
+                                          'uninstall_flags': '/S', 'locale': 'en_US', 'install_flags': '/s',
+                                          'full_name': 'Firebox 3.03 (x86 en-US)'}}
+
+        mock = MagicMock(return_value={'retcode': 0})
+        with patch.object(salt.utils.data, 'is_true', MagicMock(return_value=True)), \
+             patch.object(win_pkg, '_get_package_info', MagicMock(return_value=ret__get_package_info)), \
+             patch.dict(win_pkg.__salt__, {'pkg_resource.parse_targets':
+                                               MagicMock(return_value=[{'firebox': '3.03', 'got': '3.03'}, None]),
+                                           'cp.is_cached':
+                                               MagicMock(return_value='C:\\fake\\path.exe'),
+                                           'cmd.run_all': mock}):
+            ret = win_pkg.install(pkgs=['firebox', 'got'], extra_install_flags='-e True')
+            mock.assert_called_with('"C:\\Windows\\system32\\cmd.exe" /s /c ""runme.exe" /s"',
+                                    '', output_loglevel='trace', python_shell=False, redirect_stderr=True)
