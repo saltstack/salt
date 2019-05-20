@@ -119,8 +119,11 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     '__orchestration_jid__',
     '__pub_user',
     '__pub_arg',
+    '__pub_id',
     '__pub_jid',
     '__pub_fun',
+    '__pub_fun_args',
+    '__pub_schedule',
     '__pub_tgt',
     '__pub_ret',
     '__pub_pid',
@@ -902,7 +905,11 @@ class State(object):
                     ret['comment'] = 'no `fun` argument in onlyif: {0}'.format(entry)
                     log.warning(ret['comment'])
                     return ret
-                result = self.functions[entry.pop('fun')](**entry)
+
+                if 'args' in entry:
+                    result = self.functions[entry.pop('fun')](*entry.pop('args'), **entry)
+                else:
+                    result = self.functions[entry.pop('fun')](**entry)
                 if self.state_con.get('retcode', 0):
                     _check_cmd(self.state_con['retcode'])
                 elif not result:
@@ -943,10 +950,14 @@ class State(object):
                 _check_cmd(cmd)
             elif isinstance(entry, dict):
                 if 'fun' not in entry:
-                    ret['comment'] = 'no `fun` argument in onlyif: {0}'.format(entry)
+                    ret['comment'] = 'no `fun` argument in unless: {0}'.format(entry)
                     log.warning(ret['comment'])
                     return ret
-                result = self.functions[entry.pop('fun')](**entry)
+
+                if 'args' in entry:
+                    result = self.functions[entry.pop('fun')](*entry.pop('args'), **entry)
+                else:
+                    result = self.functions[entry.pop('fun')](**entry)
                 if self.state_con.get('retcode', 0):
                     _check_cmd(self.state_con['retcode'])
                 elif result:
