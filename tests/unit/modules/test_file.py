@@ -9,7 +9,7 @@ import textwrap
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.helpers import with_tempfile
+from tests.support.helpers import with_tempfile, dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, Mock, patch, mock_open, DEFAULT
@@ -2190,3 +2190,34 @@ class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
             result = filemod.check_perms(self.tfile3.name, {}, 'root', 'root', 644, seuser=None,
                                         serole=None, setype='lost_found_t', serange=None)
             self.assertEqual(result, expected_result)
+
+
+class ChattrVersionTests(TestCase):
+    CHATTR_MAN = salt.utils.stringutils.to_bytes((
+         'AVAILABILITY\n'
+         'chattr is part of the e2fsprogs package and is available '
+         'from http://e2fsprogs.sourceforge.net.\n'
+         'SEE ALSO\n'
+         '   lsattr(1), btrfs(5), ext4(5), xfs(5).\n\n'
+         'E2fsprogs version 1.43.4                                        '
+         '                                          '
+         'January 2017                              '
+         '                                          '
+         '                          CHATTR(1)'
+    ))
+
+    def test__parse_chattr_version(self):
+        '''
+        Validate we can parse the E2fsprogs version from the chattr man page
+        '''
+        man_out = dedent(self.CHATTR_MAN)
+        parsed_version = filemod._parse_chattr_man(man_out)
+        assert parsed_version == '1.43.4', parsed_version
+
+    def test__chattr_version(self):
+        '''
+        The _chattr_version method works
+        '''
+        with patch('subprocess.check_output', return_value=self.CHATTR_MAN):
+            parsed_version = filemod._chattr_version()
+        assert parsed_version == '1.43.4', parsed_version
