@@ -31,8 +31,7 @@ def __virtual__():
     '''
     if salt.utils.path.which('cpan'):
         return True
-    return (
-    False, 'Unable to locate cpan. Make sure it is installed and in the PATH.')
+    return False, 'Unable to locate cpan. Make sure it is installed and in the PATH.'
 
 
 def _get_cpan_bin(bin_env=None):
@@ -301,7 +300,7 @@ def show(module, bin_env='cpan'):
         info.insert(2, '')
     if len(info) < 6:
         # This must not be a real package
-        ret['error'] = 'Could not find package {}'.format(module)
+        ret.update({'error': 'Could not find package {}'.format(module)})
         return ret
 
     ret['description'] = info[0].strip()
@@ -326,10 +325,11 @@ def show(module, bin_env='cpan'):
     build_dir = cfg.get('build_dir', None)
     if build_dir is not None:
         ret['cpan build dirs'] = []
+        builds = []
         if os.path.exists(build_dir):
             builds = os.listdir(build_dir)
         else:
-            return {'error': '\'{}\' is not a path'.format(build_dir)}
+            ret.update({'comment': '\'{}\' is not a path'.format(build_dir)})
         pfile = module.replace('::', '-')
         for file_ in builds:
             if file_.startswith(pfile):
