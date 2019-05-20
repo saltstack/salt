@@ -155,7 +155,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             result = win_pkg.install(name='nsis', version='3.03')
             self.assertDictEqual(expected, result)
 
-    def test_name_pkg_install(self):
+    def test_pkg_install_name(self):
         '''
         test pkg.install name extra_install_flags
         '''
@@ -177,7 +177,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             ret = win_pkg.install(name='firebox', version='3.03', extra_install_flags='-e True -test_flag True')
             self.assertTrue('-e True -test_flag True' in str(ret_cmd_run_all.call_args[0]))
 
-    def test_single_pkg_install(self):
+    def test_pkg_install_single_pkg(self):
         '''
         test pkg.install pkg with extra_install_flags
         '''
@@ -198,7 +198,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             ret = win_pkg.install(pkgs=['firebox'], version='3.03', extra_install_flags='-e True -test_flag True')
             self.assertTrue('-e True -test_flag True' in str(ret_cmd_run_all.call_args[0]))
 
-    def test_multiple_pkg_install(self):
+    def test_pkg_install_multiple_pkgs(self):
         '''
         test pkg.install pkg with extra_install_flags
         '''
