@@ -1159,7 +1159,9 @@ def set_upstream(
     a queue-upstream or both.
 
     :param str name: The name of the upstream to configure.
+
     The following parameters apply to federated exchanges and federated queues:
+
     :param str uri: The AMQP URI(s) for the upstream.
     :param int prefetch_count: The maximum number of unacknowledged messages copied
         over a link at any one time. Default: 1000
@@ -1181,7 +1183,9 @@ def set_upstream(
         it itself. If set to false or not set, it will clear any validated user-id
         it encounters. You should only set this to true if you trust the upstream
         server (and by extension, all its upstreams) not to forge user-ids.
+
     The following parameters apply to federated exchanges only:
+
     :param str exchange: The name of the upstream exchange. Default is to use the
         same name as the federated exchange.
     :param int max_hops: The maximum number of federation links that a message
@@ -1204,7 +1208,9 @@ def set_upstream(
         queue for a federated exchange (see expires). This is only of interest
         when connecting to old brokers which determine queue HA mode using this
         argument. Default is ``None``, meaning the queue is not HA.
+
     The following parameter applies to federated queues only:
+
     :param str queue: The name of the upstream queue. Default is to use the same
         name as the federated queue.
 
