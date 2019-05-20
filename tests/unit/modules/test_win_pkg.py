@@ -153,8 +153,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             result = win_pkg.install(name='nsis', version='3.03')
             self.assertDictEqual(expected, result)
 
-    @staticmethod
-    def test_name_pkg_install():
+    def test_name_pkg_install(self):
         '''
         test pkg.install name extra_install_flags
         '''
@@ -173,12 +172,10 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                                            'cp.is_cached':
                         MagicMock(return_value='C:\\fake\\path.exe'),
                                            'cmd.run_all': mock}):
-            ret = win_pkg.install(name='firebox', version='3.03', extra_install_flags='-e True')
-            mock.assert_called_once_with('"C:\\Windows\\system32\\cmd.exe" /s /c ""runme.exe" /s -e True"',
-                                         '', output_loglevel='trace', python_shell=False, redirect_stderr=True)
+            ret = win_pkg.install(name='firebox', version='3.03', extra_install_flags='-e True -test_flag True')
+            self.assertEqual('-e True -test_flag True' in str(mock.call_args[0]), True)
 
-    @staticmethod
-    def test_single_pkg_install():
+    def test_single_pkg_install(self):
         '''
         test pkg.install pkg with extra_install_flags
         '''
@@ -196,9 +193,8 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                                            'cp.is_cached':
                                                MagicMock(return_value='C:\\fake\\path.exe'),
                                            'cmd.run_all': mock}):
-            ret = win_pkg.install(pkgs=['firebox'], version='3.03', extra_install_flags='-e True')
-            mock.assert_called_once_with('"C:\\Windows\\system32\\cmd.exe" /s /c ""runme.exe" /s -e True"',
-                                         '', output_loglevel='trace', python_shell=False, redirect_stderr=True)
+            ret = win_pkg.install(pkgs=['firebox'], version='3.03', extra_install_flags='-e True -test_flag True')
+            self.assertEqual('-e True -test_flag True' in str(mock.call_args[0]), True)
 
     def test_multiple_pkg_install(self):
         '''
@@ -218,6 +214,5 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                                            'cp.is_cached':
                                                MagicMock(return_value='C:\\fake\\path.exe'),
                                            'cmd.run_all': mock}):
-            ret = win_pkg.install(pkgs=['firebox', 'got'], extra_install_flags='-e True')
-            mock.assert_called_with('"C:\\Windows\\system32\\cmd.exe" /s /c ""runme.exe" /s"',
-                                    '', output_loglevel='trace', python_shell=False, redirect_stderr=True)
+            ret = win_pkg.install(pkgs=['firebox', 'got'], extra_install_flags='-e True -test_flag True')
+            self.assertEqual('-e True -test_flag True' in str(mock.call_args[0]), False)
