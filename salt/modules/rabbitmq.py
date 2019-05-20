@@ -264,7 +264,9 @@ def list_upstreams(runas=None):
     :param str runas: The name of the user to run this command as.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' rabbitmq.list_upstreams
 
     .. versionadded:: Neon
@@ -322,7 +324,9 @@ def upstream_exists(name, runas=None):
     :param str runas: The name of the user to run the command as.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' rabbitmq.upstream_exists rabbit_upstream
 
     .. versionadded:: Neon
@@ -1037,14 +1041,14 @@ def policy_exists(vhost, name, runas=None):
 
 def list_available_plugins(runas=None):
     '''
-        Returns a list of the names of all available plugins (enabled and disabled).
+    Returns a list of the names of all available plugins (enabled and disabled).
 
-        CLI Example:
+    CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' rabbitmq.list_available_plugins
-        '''
+        salt '*' rabbitmq.list_available_plugins
+    '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'list', '-m']
@@ -1059,14 +1063,14 @@ def list_available_plugins(runas=None):
 
 def list_enabled_plugins(runas=None):
     '''
-        Returns a list of the names of the enabled plugins.
+    Returns a list of the names of the enabled plugins.
 
-        CLI Example:
+    CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' rabbitmq.list_enabled_plugins
-        '''
+        salt '*' rabbitmq.list_enabled_plugins
+    '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'list', '-m', '-e']
@@ -1207,7 +1211,9 @@ def set_upstream(
     :param str runas: The name of the user to run the command as.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' rabbitmq.set_upstream upstream_name ack_mode=on-confirm max_hops=1 \
             trust_user_id=True uri=amqp://hostname
 
@@ -1243,6 +1249,12 @@ def delete_upstream(name, runas=None):
 
     :param str name: The name of the upstream to delete.
     :param str runas: The name of the user to run the command as.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.delete_upstream upstream_name
 
     .. versionadded:: Neon
     '''
