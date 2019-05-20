@@ -5,6 +5,7 @@ Test the salt mine system
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import time
+import pprint
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -132,7 +133,19 @@ class MineTest(ModuleCase):
             'mine.get',
             ['minion', 'grains.items']
         )
-        self.assertEqual(ret_grains['minion']['id'], 'minion')
+        if 'minion' not in ret_grains:
+            self.fail(
+                '\'minion\' was not found as a key of the \'mine.get\' \'grains.items\' call. Full return: {}'.format(
+                    pprint.pformat(ret_grains)
+                )
+            )
+        self.assertEqual(
+            ret_grains['minion']['id'], 'minion',
+            msg='{} != minion, full return payload: {}'.format(
+                ret_grains['minion']['id'],
+                pprint.pformat(ret_grains)
+            )
+        )
         self.assertTrue(
             self.run_function(
                 'mine.send',
