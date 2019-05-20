@@ -118,7 +118,7 @@ the following configuration:
       - state2
 
 For this example to work, you would need to have defined the grain
-``role`` for the minions you wish to match.
+``roles`` for the minions you wish to match.
 
 .. _writing-grains:
 
