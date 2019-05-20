@@ -118,20 +118,19 @@ class MineTest(ModuleCase):
         '''
         Test mine.delete
         '''
-        # TODO The calls to sleep were added in an attempt to make this tests
-        # less flaky. If we still see it fail we need to look for a more robust
-        # solution.
         self.assertTrue(
             self.run_function(
                 'mine.send',
-                ['grains.items']
+                ['grains.items'],
+                minion_tgt='minion'
             )
         )
-        time.sleep(1)
+        self.wait_for_all_jobs(minions=('minion',))
         # Smoke testing that grains should now exist in the mine
         ret_grains = self.run_function(
             'mine.get',
-            ['minion', 'grains.items']
+            ['minion', 'grains.items'],
+            minion_tgt='minion'
         )
         if 'minion' not in ret_grains:
             self.fail(
@@ -150,9 +149,10 @@ class MineTest(ModuleCase):
             self.run_function(
                 'mine.send',
                 ['test.arg', 'foo=bar', 'fnord=roscivs'],
+                minion_tgt='minion'
             )
         )
-        time.sleep(1)
+        self.wait_for_all_jobs(minions=('minion',))
         ret_args = self.run_function(
             'mine.get',
             ['minion', 'test.arg']
@@ -171,26 +171,30 @@ class MineTest(ModuleCase):
         self.assertTrue(
             self.run_function(
                 'mine.send',
-                ['test.echo', 'foo']
+                ['test.echo', 'foo'],
+                minion_tgt='minion'
             )
         )
-        time.sleep(1)
+        self.wait_for_all_jobs(minions=('minion',))
         ret_echo = self.run_function(
             'mine.get',
-            ['minion', 'test.echo']
+            ['minion', 'test.echo'],
+            minion_tgt='minion'
         )
         # Smoke testing that we were also able to set test.echo in the mine
         self.assertEqual(ret_echo['minion'], 'foo')
         self.assertTrue(
             self.run_function(
                 'mine.delete',
-                ['test.arg']
+                ['test.arg'],
+                minion_tgt='minion'
             )
         )
-        time.sleep(1)
+        self.wait_for_all_jobs(minions=('minion',))
         ret_arg_deleted = self.run_function(
             'mine.get',
-            ['minion', 'test.arg']
+            ['minion', 'test.arg'],
+            minion_tgt='minion'
         )
         # Now comes the real test - did we obliterate test.arg from the mine?
         # We could assert this a different way, but there shouldn't be any
@@ -206,7 +210,8 @@ class MineTest(ModuleCase):
         )
         ret_echo_stays = self.run_function(
             'mine.get',
-            ['minion', 'test.echo']
+            ['minion', 'test.echo'],
+            minion_tgt='minion'
         )
         # Of course, one more health check - we want targeted removal.
         # This isn't horseshoes or hand grenades - test.arg should go away
