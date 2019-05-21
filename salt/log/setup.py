@@ -812,7 +812,7 @@ def setup_extended_logging(opts):
 
 def get_multiprocessing_logging_queue():
     global __MP_LOGGING_QUEUE
-    from salt.utils.platform import is_darwin
+    from salt.utils import is_darwin
 
     if __MP_IN_MAINPROCESS is False:
         # We're not in the MainProcess, return! No Queue shall be instantiated
