@@ -16,7 +16,6 @@ import inspect
 import tempfile
 import threading
 import functools
-import threading
 import traceback
 import types
 from zipimport import zipimporter
