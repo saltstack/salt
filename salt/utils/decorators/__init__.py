@@ -260,7 +260,7 @@ class _DeprecationDecorator(object):
                     'Unhandled exception occurred in function "%s: %s',
                     self._function.__name__, error
                 )
-                raise error
+                six.reraise(*sys.exc_info())
         else:
             raise CommandExecutionError("Function is deprecated, but the successor function was not found.")
 

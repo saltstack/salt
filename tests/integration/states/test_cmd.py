@@ -9,6 +9,7 @@ import os
 import textwrap
 import tempfile
 import time
+import sys
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -18,6 +19,9 @@ from tests.support.mixins import SaltReturnAssertsMixin
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
+
+# Import 3rd-party libs
+from salt.ext import six
 
 IS_WINDOWS = salt.utils.platform.is_windows()
 
@@ -71,7 +75,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
             os.close(fd)
         except OSError as exc:
             if exc.errno != errno.EBADF:
-                raise exc
+                six.reraise(*sys.exc_info())
 
         # Create the testfile and release the handle
         fd, self.test_tmp_path = tempfile.mkstemp()
@@ -79,7 +83,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
             os.close(fd)
         except OSError as exc:
             if exc.errno != errno.EBADF:
-                raise exc
+                six.reraise(*sys.exc_info())
 
         super(CMDRunRedirectTest, self).setUp()
 
