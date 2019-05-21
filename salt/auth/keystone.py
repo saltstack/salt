@@ -25,14 +25,15 @@ def get_auth_url():
 
 
 def get_api_version():
-   '''
-   Try and get the API version from the config, else return v2
-   Valid values v2, v3
-   '''
-   try:
-       return __opts__['keystone.api_version']
-   except KeyError:
-       return 'v2'
+    '''
+    Try and get the API version from the config, else return v2
+    Valid values v2, v3
+    '''
+    try:
+        return __opts__['keystone.api_version']
+    except KeyError:
+        return 'v2'
+
 
 def auth(username, password):
     '''
