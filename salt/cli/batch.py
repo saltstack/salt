@@ -312,6 +312,11 @@ class Batch(object):
                     if self.opts.get('failhard') and data['ret']['retcode'] > 0:
                         failhard = True
 
+                # avoid an exception if the minion does not respond.
+                if data.get("failed") is True:
+                    log.debug('Minion %s failed to respond: data=%s', minion, data)
+                    data = {'ret': 'Minion did not return. [Failed]', 'retcode': 1}
+
                 if self.opts.get('raw'):
                     ret[minion] = data
                     yield data
