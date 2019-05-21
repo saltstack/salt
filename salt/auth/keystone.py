@@ -41,7 +41,7 @@ def auth(username, password):
     '''
     try:
         if get_api_version() == 'v2':
-            keystone = cilentv2.Client(username=username, password=password,
+            keystone = clientv2.Client(username=username, password=password,
                                  auth_url=get_auth_url())
         elif get_api_version() == 'v3':
             keystone = clientv3.Client(username=username, password=password,
