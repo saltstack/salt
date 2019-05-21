@@ -803,9 +803,15 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        know_to_return_none = (
-            'file.chown', 'file.chgrp', 'ssh.recv_known_host_entries'
+        known_to_return_none = (
+            'data.get',
+            'file.chown',
+            'file.chgrp',
+            'pkg.refresh_db',
+            'ssh.recv_known_host_entries',
         )
+        if minion_tgt == 'sub_minion':
+            known_to_return_none += ('mine.update',)
         if 'f_arg' in kwargs:
             kwargs['arg'] = kwargs.pop('f_arg')
         if 'f_timeout' in kwargs:
@@ -823,7 +829,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                     minion_tgt, orig
                 )
             )
-        elif orig[minion_tgt] is None and function not in know_to_return_none:
+        elif orig[minion_tgt] is None and function not in known_to_return_none:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
                 'the minion \'{1}\'. Command output: {2}'.format(
