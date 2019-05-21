@@ -7,11 +7,12 @@ The core behaviors used by minion and master
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
-import time
-import random
-import logging
 import itertools
+import logging
+import os
+import random
+import sys
+import time
 from collections import deque
 from _socket import gaierror
 
@@ -402,7 +403,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                     except gaierror as ex:
                         log.warning("Unable to connect to master %s: %s", mha, ex)
                         if self.opts.value.get('master_type') not in ('failover', 'distributed'):
-                            raise ex
+                            six.reraise(*sys.exc_info())
                 if not stack.remotes:
                     raise ex
 
