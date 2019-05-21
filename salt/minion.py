@@ -716,7 +716,7 @@ class MinionBase(object):
                     if attempts == tries:
                         # Exhausted all attempts. Return exception.
                         self.connected = False
-                        raise exc
+                        six.reraise(*sys.exc_info())
 
     def _discover_masters(self):
         '''
