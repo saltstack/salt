@@ -18,7 +18,7 @@ import salt.utils.data
 import salt.utils.platform
 
 
-@skipIf(not salt.utils.platform.is_windows(), "Must be on Windows")
+@skipIf(not salt.utils.platform.is_windows(), "Must be on Windows!")
 class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_pkg
