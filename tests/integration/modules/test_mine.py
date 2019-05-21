@@ -126,18 +126,34 @@ class MineTest(ModuleCase):
             )
         )
         self.wait_for_all_jobs(minions=('minion',))
-        # Smoke testing that grains should now exist in the mine
-        ret_grains = self.run_function(
-            'mine.get',
-            ['minion', 'grains.items'],
-            minion_tgt='minion'
-        )
-        if 'minion' not in ret_grains:
+
+        attempts = 10
+        ret_grains = None
+        while True:
+            if ret_grains:
+                break
+            # Smoke testing that grains should now exist in the mine
+            ret_grains = self.run_function(
+                'mine.get',
+                ['minion', 'grains.items'],
+                minion_tgt='minion'
+            )
+            if ret_grains and 'minion' in ret_grains:
+                break
+
+            if attempts:
+                attempts -= 1
+
+            if attempts:
+                time.sleep(1.5)
+                continue
+
             self.fail(
                 '\'minion\' was not found as a key of the \'mine.get\' \'grains.items\' call. Full return: {}'.format(
                     pprint.pformat(ret_grains)
                 )
             )
+
         self.assertEqual(
             ret_grains['minion']['id'], 'minion',
             msg='{} != minion, full return payload: {}'.format(
