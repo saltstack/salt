@@ -22,7 +22,10 @@ Rob Speer's changes are as follows:
     - added __getitem__
 '''
 from __future__ import absolute_import, unicode_literals, print_function
-import collections
+try:
+    from collections.abc import MutableSet
+except ImportError:
+    from collections import MutableSet
 
 SLICE_ALL = slice(None)
 __version__ = '2.0.1'
@@ -44,7 +47,7 @@ def is_iterable(obj):
     return hasattr(obj, '__iter__') and not isinstance(obj, str) and not isinstance(obj, tuple)
 
 
-class OrderedSet(collections.MutableSet):
+class OrderedSet(MutableSet):
     """
     An OrderedSet is a custom MutableSet that remembers its order, so that
     every entry has an index that can be looked up.
