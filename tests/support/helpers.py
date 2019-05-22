@@ -209,7 +209,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 return caller(cls)
             except Exception as exc:
                 if attempt >= attempts -1:
-                    raise exc
+                    six.reraise(*sys.exc_info())
                 backoff_time = attempt ** 2
                 log.info(
                     'Found Exception. Waiting %s seconds to retry.',
