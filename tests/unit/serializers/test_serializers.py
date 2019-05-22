@@ -68,7 +68,22 @@ class TestSerializers(TestCase):
         serialized = yamlex.serialize(data)
         assert serialized == '{foo: bar}', serialized
 
+        serialized = yamlex.serialize(data, default_flow_style=False)
+        assert serialized == 'foo: bar', serialized
+
         deserialized = yamlex.deserialize(serialized)
+        assert deserialized == data, deserialized
+
+        serialized = yaml.serialize(data)
+        assert serialized == '{foo: bar}', serialized
+
+        deserialized = yaml.deserialize(serialized)
+        assert deserialized == data, deserialized
+
+        serialized = yaml.serialize(data, default_flow_style=False)
+        assert serialized == 'foo: bar', serialized
+
+        deserialized = yaml.deserialize(serialized)
         assert deserialized == data, deserialized
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
@@ -82,6 +97,12 @@ class TestSerializers(TestCase):
         assert serialized == '{foo: 1, bar: 2, baz: true}', serialized
 
         deserialized = yamlex.deserialize(serialized)
+        assert deserialized == data, deserialized
+
+        serialized = yaml.serialize(data)
+        assert serialized == '{bar: 2, baz: true, foo: 1}', serialized
+
+        deserialized = yaml.deserialize(serialized)
         assert deserialized == data, deserialized
 
     @skipIf(not yaml.available, SKIP_MESSAGE % 'yaml')

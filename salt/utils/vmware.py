@@ -946,7 +946,7 @@ def get_mors_with_properties(service_instance, object_type, property_list=None,
         content = get_content(*content_args, **content_kwargs)
     except IOError as exc:
         if exc.errno != errno.EPIPE:
-            raise exc
+            six.reraise(*sys.exc_info())
         content = get_content(*content_args, **content_kwargs)
 
     object_list = []
