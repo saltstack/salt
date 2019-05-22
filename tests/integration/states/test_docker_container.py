@@ -4,11 +4,13 @@ Integration tests for the docker_container states
 '''
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import errno
 import functools
 import logging
 import os
 import subprocess
+import sys
 import tempfile
 
 # Import Salt Testing Libs
@@ -943,7 +945,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 os.close(fd)
             except OSError as exc:
                 if exc.errno != errno.EBADF:
-                    raise exc
+                    six.reraise(*sys.exc_info())
             else:
                 self.addCleanup(os.remove, ret)
                 return ret
