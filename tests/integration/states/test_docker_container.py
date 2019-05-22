@@ -18,7 +18,6 @@ from tests.support.case import ModuleCase
 from tests.support.docker import with_network, random_name
 from tests.support.helpers import destructiveTest, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.paths import FILES, TMP
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 

@@ -10,7 +10,6 @@ import copy
 import errno
 import hashlib
 import logging
-import msgpack
 import multiprocessing
 import os
 import pipes
