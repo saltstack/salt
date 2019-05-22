@@ -119,6 +119,97 @@ class LazyLoaderTest(TestCase):
         self.assertTrue(self.module_name + '.not_loaded' not in self.loader)
 
 
+loader_template_module = '''
+import my_utils
+
+def run():
+    return my_utils.run()
+'''
+
+loader_template_utils = '''
+def run():
+    return True
+'''
+
+
+class LazyLoaderUtilsTest(TestCase):
+    '''
+    Test the loader
+    '''
+    module_name = 'lazyloaderutilstest'
+    utils_name = 'my_utils'
+
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
+        if not os.path.isdir(RUNTIME_VARS.TMP):
+            os.makedirs(RUNTIME_VARS.TMP)
+
+    def setUp(self):
+        # Setup the module
+        self.module_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.module_file = os.path.join(self.module_dir,
+                                        '{}.py'.format(self.module_name))
+        with salt.utils.files.fopen(self.module_file, 'w') as fh:
+            fh.write(salt.utils.stringutils.to_str(loader_template_module))
+            fh.flush()
+            os.fsync(fh.fileno())
+
+        self.utils_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.utils_file = os.path.join(self.utils_dir,
+                                       '{}.py'.format(self.utils_name))
+        with salt.utils.files.fopen(self.utils_file, 'w') as fh:
+            fh.write(salt.utils.stringutils.to_str(loader_template_utils))
+            fh.flush()
+            os.fsync(fh.fileno())
+
+    def tearDown(self):
+        shutil.rmtree(self.module_dir)
+        if os.path.isdir(self.module_dir):
+            shutil.rmtree(self.module_dir)
+        shutil.rmtree(self.utils_dir)
+        if os.path.isdir(self.utils_dir):
+            shutil.rmtree(self.utils_dir)
+        del self.module_dir
+        del self.module_file
+        del self.utils_dir
+        del self.utils_file
+
+        if self.module_name in sys.modules:
+            del sys.modules[self.module_name]
+        if self.utils_name in sys.modules:
+            del sys.modules[self.utils_name]
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
+
+    def test_utils_found(self):
+        '''
+        Test that the extra module directory is available for imports
+        '''
+        loader = salt.loader.LazyLoader(
+            [self.module_dir],
+            copy.deepcopy(self.opts),
+            tag='module',
+            extra_module_dirs=[self.utils_dir])
+        self.assertTrue(
+            inspect.isfunction(
+                loader[self.module_name + '.run']))
+        self.assertTrue(loader[self.module_name + '.run']())
+
+    def test_utils_not_found(self):
+        '''
+        Test that the extra module directory is not available for imports
+        '''
+        loader = salt.loader.LazyLoader(
+            [self.module_dir],
+            copy.deepcopy(self.opts),
+            tag='module')
+        self.assertTrue(self.module_name + '.run' not in loader)
+
+
 class LazyLoaderVirtualEnabledTest(TestCase):
     '''
     Test the base loader of salt.
@@ -1021,8 +1112,9 @@ class LoaderGlobalsTest(ModuleCase):
 
         # Now, test each module!
         for item in six.itervalues(global_vars):
-            for name in names:
-                self.assertIn(name, list(item.keys()))
+            if item['__name__'].startswith('salt.loaded'):
+                for name in names:
+                    self.assertIn(name, list(item.keys()))
 
     def test_auth(self):
         '''
