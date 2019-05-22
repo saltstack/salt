@@ -186,7 +186,7 @@ def min_party(name,
     num_nodes = len(nodes)
 
     if num_nodes >= min_nodes or blocking:
-        ret['result'] = None if __opts__['test'] else True
+        ret['result'] = True
         if not blocking:
             ret['comment'] = 'Currently {0} nodes, which is >= {1}'.format(num_nodes, min_nodes)
         else:
