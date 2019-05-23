@@ -1296,11 +1296,13 @@ def _filter_interfaces(interface=None, interface_data=None):
         ret = ifaces
     else:
         interface = salt.utils.args.split_input(interface)
+        # pylint: disable=not-an-iterable
         ret = {
             k: v
             for k, v in six.iteritems(ifaces)
             if any((fnmatch.fnmatch(k, pat) for pat in interface))
         }
+        # pylint: enable=not-an-iterable
     return ret
 
 
