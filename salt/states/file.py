@@ -694,13 +694,14 @@ def _check_directory(name,
                      user=None,
                      group=None,
                      recurse=False,
-                     mode=None,
+                     dir_mode=None,
                      file_mode=None,
                      clean=False,
                      require=False,
                      exclude_pat=None,
                      max_depth=None,
-                     follow_symlinks=False):
+                     follow_symlinks=False,
+                     children_only=False):
     '''
     Check what changes need to be made on a directory
     '''
@@ -723,15 +724,13 @@ def _check_directory(name,
             user = None
         if 'group' not in recurse_set:
             group = None
-        if 'mode' not in recurse_set:
-            mode = None
         check_files = 'ignore_files' not in recurse_set
         check_dirs = 'ignore_dirs' not in recurse_set
         for root, dirs, files in walk_l:
             if check_files:
                 for fname in files:
                     fchange = {}
-                    mode = file_mode
+                    mode = file_mode if 'mode' in recurse_set else None
                     path = os.path.join(root, fname)
                     stats = __salt__['file.stats'](
                         path, None, follow_symlinks
@@ -746,14 +745,18 @@ def _check_directory(name,
                         changes[path] = fchange
             if check_dirs:
                 for name_ in dirs:
+                    mode = dir_mode if 'mode' in recurse_set else None
                     path = os.path.join(root, name_)
                     fchange = _check_dir_meta(path, user, group, mode, follow_symlinks)
                     if fchange:
                         changes[path] = fchange
+
     # Recurse skips root (we always do dirs, not root), so always check root:
-    fchange = _check_dir_meta(name, user, group, mode, follow_symlinks)
-    if fchange:
-        changes[name] = fchange
+    if not children_only:
+        fchange = _check_dir_meta(name, user, group, dir_mode, follow_symlinks)
+        if fchange:
+            changes[name] = fchange
+
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
 
@@ -777,7 +780,7 @@ def _check_directory(name,
     if not os.path.isdir(name):
         changes[name] = {'directory': 'new'}
     if changes:
-        comments = ['The following files will be changed:\n']
+        comments = ['The following files/dirs will be changed:\n']
         for fn_ in changes:
             for key, val in six.iteritems(changes[fn_]):
                 comments.append('{0}: {1} - {2}\n'.format(fn_, key, val))
