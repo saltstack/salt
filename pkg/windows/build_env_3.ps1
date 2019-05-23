@@ -241,10 +241,6 @@ New-Item -Path "$($ini['Settings']['SitePkgs3Dir'])\win32com\gen_py" -ItemType D
 Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
 Remove-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32"
 
-# Remove pythonwin directory
-Write-Output " - $script_name :: Removing pythonwin Directory . . ."
-Remove-Item "$($ini['Settings']['SitePkgs3Dir'])\pythonwin" -Force -Recurse
-
 # Remove PyWin32 PostInstall and testall Scripts
 Write-Output " - $script_name :: Removing PyWin32 scripts . . ."
 Remove-Item "$($ini['Settings']['Scripts3Dir'])\pywin32_*" -Force -Recurse
