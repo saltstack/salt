@@ -46,9 +46,11 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         cmd.run with output hidden
         '''
+
+        cmd = u'dir' if IS_WINDOWS else u'ls'
         ret = self.run_state(
             u'cmd.run',
-            name=u'ls',
+            name=cmd,
             hide_output=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
