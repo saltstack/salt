@@ -315,7 +315,7 @@ class Batch(object):
                 # avoid an exception if the minion does not respond.
                 if data.get("failed") is True:
                     log.debug('Minion %s failed to respond: data=%s', minion, data)
-                    data = {'ret': 'Minion did not return. [Failed]', 'retcode': 1}
+                    data = {'ret': 'Minion did not return. [Failed]', 'retcode': salt.defaults.exitcodes.EX_GENERIC}
 
                 if self.opts.get('raw'):
                     ret[minion] = data
