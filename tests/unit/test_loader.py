@@ -994,7 +994,7 @@ class LoaderGlobalsTest(ModuleCase):
         names = next(six.itervalues(salt.utils.yaml.safe_load(getattr(self, func_name).__doc__)))
 
         # Now, test each module!
-        for key, item in global_vars.iteritems():
+        for item in six.itervalues(global_vars):
             for name in names:
                 self.assertIn(name, list(item.keys()))
 
