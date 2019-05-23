@@ -472,8 +472,9 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             payload = self.serial.loads(messages[0])
         # 2 includes a header which says who should do it
         elif messages_len == 2:
-            if messages[0] not in ('broadcast', self.hexid):
-                log.debug('Publish received for not this minion: %s', messages[0])
+            message_target = salt.utils.stringutils.to_str(messages[0])
+            if message_target not in ('broadcast', self.hexid):
+                log.debug('Publish received for not this minion: %s', message_target)
                 raise tornado.gen.Return(None)
             payload = self.serial.loads(messages[1])
         else:
@@ -855,7 +856,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                                 log.trace('Sending filtered data over publisher %s', pub_uri)
                                 # zmq filters are substring match, hash the topic
                                 # to avoid collisions
-                                htopic = hashlib.sha1(topic).hexdigest()
+                                htopic = salt.utils.stringutils.to_bytes(hashlib.sha1(salt.utils.stringutils.to_bytes(topic)).hexdigest())
                                 pub_sock.send(htopic, flags=zmq.SNDMORE)
                                 pub_sock.send(payload)
                                 log.trace('Filtered data has been sent')
@@ -863,7 +864,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                         else:
                             # TODO: constants file for "broadcast"
                             log.trace('Sending broadcasted data over publisher %s', pub_uri)
-                            pub_sock.send('broadcast', flags=zmq.SNDMORE)
+                            pub_sock.send(b'broadcast', flags=zmq.SNDMORE)
                             pub_sock.send(payload)
                             log.trace('Broadcasted data has been sent')
                     else:
