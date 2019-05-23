@@ -11,11 +11,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
 import msgpack
-import socket
 import os
-import weakref
+import socket
+import sys
 import time
 import traceback
+import weakref
 
 # Import Salt Libs
 import salt.crypt
@@ -564,7 +565,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                     # Ignore this condition and continue.
                     pass
                 else:
-                    raise exc
+                    six.reraise(*sys.exc_info())
             self._socket.close()
             self._socket = None
         if hasattr(self.req_server, 'stop'):
