@@ -780,7 +780,7 @@ def _check_directory(name,
     if not os.path.isdir(name):
         changes[name] = {'directory': 'new'}
     if changes:
-        comments = ['The following files or dirs will be changed:\n']
+        comments = ['The following files will be changed:\n']
         for fn_ in changes:
             for key, val in six.iteritems(changes[fn_]):
                 comments.append('{0}: {1} - {2}\n'.format(fn_, key, val))
