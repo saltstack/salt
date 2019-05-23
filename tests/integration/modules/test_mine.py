@@ -5,6 +5,7 @@ Test the salt mine system
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import time
+import pprint
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -14,6 +15,9 @@ class MineTest(ModuleCase):
     '''
     Test the mine system
     '''
+    def setUp(self):
+        self.wait_for_all_jobs()
+
     def test_get(self):
         '''
         test mine.get and mine.update
@@ -114,29 +118,57 @@ class MineTest(ModuleCase):
         '''
         Test mine.delete
         '''
-        # TODO The calls to sleep were added in an attempt to make this tests
-        # less flaky. If we still see it fail we need to look for a more robust
-        # solution.
         self.assertTrue(
             self.run_function(
                 'mine.send',
-                ['grains.items']
+                ['grains.items'],
+                minion_tgt='minion'
             )
         )
-        time.sleep(1)
-        # Smoke testing that grains should now exist in the mine
-        ret_grains = self.run_function(
-            'mine.get',
-            ['minion', 'grains.items']
+        self.wait_for_all_jobs(minions=('minion',))
+
+        attempts = 10
+        ret_grains = None
+        while True:
+            if ret_grains:
+                break
+            # Smoke testing that grains should now exist in the mine
+            ret_grains = self.run_function(
+                'mine.get',
+                ['minion', 'grains.items'],
+                minion_tgt='minion'
+            )
+            if ret_grains and 'minion' in ret_grains:
+                break
+
+            if attempts:
+                attempts -= 1
+
+            if attempts:
+                time.sleep(1.5)
+                continue
+
+            self.fail(
+                '\'minion\' was not found as a key of the \'mine.get\' \'grains.items\' call. Full return: {}'.format(
+                    pprint.pformat(ret_grains)
+                )
+            )
+
+        self.assertEqual(
+            ret_grains['minion']['id'], 'minion',
+            msg='{} != minion, full return payload: {}'.format(
+                ret_grains['minion']['id'],
+                pprint.pformat(ret_grains)
+            )
         )
-        self.assertEqual(ret_grains['minion']['id'], 'minion')
         self.assertTrue(
             self.run_function(
                 'mine.send',
                 ['test.arg', 'foo=bar', 'fnord=roscivs'],
+                minion_tgt='minion'
             )
         )
-        time.sleep(1)
+        self.wait_for_all_jobs(minions=('minion',))
         ret_args = self.run_function(
             'mine.get',
             ['minion', 'test.arg']
@@ -155,26 +187,30 @@ class MineTest(ModuleCase):
         self.assertTrue(
             self.run_function(
                 'mine.send',
-                ['test.echo', 'foo']
+                ['test.echo', 'foo'],
+                minion_tgt='minion'
             )
         )
-        time.sleep(1)
+        self.wait_for_all_jobs(minions=('minion',))
         ret_echo = self.run_function(
             'mine.get',
-            ['minion', 'test.echo']
+            ['minion', 'test.echo'],
+            minion_tgt='minion'
         )
         # Smoke testing that we were also able to set test.echo in the mine
         self.assertEqual(ret_echo['minion'], 'foo')
         self.assertTrue(
             self.run_function(
                 'mine.delete',
-                ['test.arg']
+                ['test.arg'],
+                minion_tgt='minion'
             )
         )
-        time.sleep(1)
+        self.wait_for_all_jobs(minions=('minion',))
         ret_arg_deleted = self.run_function(
             'mine.get',
-            ['minion', 'test.arg']
+            ['minion', 'test.arg'],
+            minion_tgt='minion'
         )
         # Now comes the real test - did we obliterate test.arg from the mine?
         # We could assert this a different way, but there shouldn't be any
@@ -190,7 +226,8 @@ class MineTest(ModuleCase):
         )
         ret_echo_stays = self.run_function(
             'mine.get',
-            ['minion', 'test.echo']
+            ['minion', 'test.echo'],
+            minion_tgt='minion'
         )
         # Of course, one more health check - we want targeted removal.
         # This isn't horseshoes or hand grenades - test.arg should go away
