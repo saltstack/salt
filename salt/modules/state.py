@@ -1098,7 +1098,7 @@ def highstate(test=None, queue=False, **kwargs):
     return ret
 
 
-def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
+def sls(mods, test=None, exclude=None, queue=False, sync_mods=True, **kwargs):
     '''
     Execute the states in one or more SLS files
 
