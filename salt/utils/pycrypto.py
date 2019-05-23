@@ -25,6 +25,7 @@ except ImportError:
 
 try:
     # Windows does not have the crypt module
+    # consider using passlib.hash instead
     import crypt
     HAS_CRYPT = True
 except ImportError:
