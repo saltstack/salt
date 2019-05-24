@@ -54,7 +54,7 @@ def secure_password(length=20, use_random=True):
                     except UnicodeDecodeError:
                         continue
                 pw += re.sub(
-                    salt.utils.stringutils.to_str(r'\W'),
+                    salt.utils.stringutils.to_str(r'[\W_]'),
                     str(),  # future lint: disable=blacklisted-function
                     char
                 )

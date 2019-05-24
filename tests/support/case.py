@@ -822,6 +822,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
             'file.chgrp',
             'pkg.refresh_db',
             'ssh.recv_known_host_entries',
+            'time.sleep'
         )
         if minion_tgt == 'sub_minion':
             known_to_return_none += ('mine.update',)
