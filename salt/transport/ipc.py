@@ -254,15 +254,11 @@ class IPCClient(object):
         self.socket_path = socket_path
         self._closing = False
         self.stream = None
-        # msgpack deprecated `encoding` starting with version 0.5.2
-        if msgpack.version >= (0, 5, 2):
-            msgpack_kwargs = {'raw': False}
+        if six.PY2:
+            encoding = None
         else:
-            if six.PY2:
-                msgpack_kwargs = {'encoding': None}
-            else:
-                msgpack_kwargs = {'encoding': 'utf-8'}
-        self.unpacker = msgpack.Unpacker(**msgpack_kwargs)
+            encoding = 'utf-8'
+        self.unpacker = msgpack.Unpacker(encoding=encoding)
 
     def connected(self):
         return self.stream is not None and not self.stream.closed()
