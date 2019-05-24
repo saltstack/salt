@@ -57,10 +57,6 @@ def setup_handlers():
             pass
         sock.close()
 
-    # One million log messages is more than enough to queue.
-    # Above that value, if `process_queue` can't process fast enough,
-    # start dropping. This will contain a memory leak in case `process_queue`
-    # can't process fast enough of in case it can't deliver the log records at all.
     if is_darwin():
         queue_size = 32767
     else:

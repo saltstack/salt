@@ -22,7 +22,6 @@ from salt.ext.six.moves import queue
 
 log = logging.getLogger(__name__)
 
-
 if sys.version_info < (2, 7):
     # Since the NullHandler is only available on python >= 2.7, here's a copy
     # with NewStyleClassMixIn so it's also a new style class
