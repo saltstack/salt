@@ -8,7 +8,7 @@ import tempfile
 import textwrap
 
 # Import Salt Testing libs
-from tests.support.helpers import with_tempfile, dedent
+from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
