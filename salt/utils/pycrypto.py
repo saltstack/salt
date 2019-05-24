@@ -25,6 +25,7 @@ except ImportError:
 
 try:
     # Windows does not have the crypt module
+    # consider using passlib.hash instead
     import crypt
     HAS_CRYPT = True
 except ImportError:
@@ -54,7 +55,7 @@ def secure_password(length=20, use_random=True):
                     except UnicodeDecodeError:
                         continue
                 pw += re.sub(
-                    salt.utils.stringutils.to_str(r'\W'),
+                    salt.utils.stringutils.to_str(r'[\W_]'),
                     str(),  # future lint: disable=blacklisted-function
                     char
                 )

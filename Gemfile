@@ -30,4 +30,5 @@ group :macos do
   gem 'rbnacl', '< 5.0', :require => false
   gem 'rbnacl-libsodium', :require => false
   gem 'bcrypt_pbkdf', '< 2.0', :require => false
+  gem 'ffi', '= 1.10.0', :require => false
 end
