@@ -164,11 +164,15 @@ class IPCServer(object):
                 return return_message
             else:
                 return _null
-        if six.PY2:
-            encoding = None
+        # msgpack deprecated `encoding` starting with version 0.5.2
+        if msgpack.version >= (0, 5, 2):
+            msgpack_kwargs = {'raw': False}
         else:
-            encoding = 'utf-8'
-        unpacker = msgpack.Unpacker(encoding=encoding)
+            if six.PY2:
+                msgpack_kwargs = {'encoding': None}
+            else:
+                msgpack_kwargs = {'encoding': 'utf-8'}
+        unpacker = msgpack.Unpacker(**msgpack_kwargs)
         while not stream.closed():
             try:
                 wire_bytes = yield stream.read_bytes(4096, partial=True)
