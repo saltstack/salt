@@ -39,6 +39,7 @@ execution modules
     augeas_cfg
     aws_sqs
     azurearm_compute
+    azurearm_dns
     azurearm_network
     azurearm_resource
     bamboohr
