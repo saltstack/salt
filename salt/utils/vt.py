@@ -644,17 +644,25 @@ class Terminal(object):
                 bytes_read = os.read(fd, maxsize)
                 # Loop to handle the case where a multi-byte unicode
                 # character is split across blocks of received bytes
-                while True:
+                # This max length is for unicode, it may need to change if
+                # this function is updated to handle errors in other encodings
+                max_multibyte_char_len = 4
+                for additional_reads in range(max_multibyte_char_len):
                     try:
                         return self._translate_newlines(
                             salt.utils.stringutils.to_unicode(bytes_read)
                         )
                     except UnicodeDecodeError as ex:
+                        if additional_reads == (max_multibyte_char_len - 1):
+                            # We have read enough extra bytes to complete the
+                            # character, give up now
+                            raise
                         if ex.reason == 'unexpected end of data':
-                            new_bytes_read = os.read(fd, maxsize)
+                            # Read an extra byte to try and complete the split
+                            # character
+                            new_bytes_read = os.read(fd, 1)
                             if new_bytes_read == b'':
                                 # End of stream is an incomplete character
-                                # Raise exception to avoid infinite loop
                                 raise
                             bytes_read += new_bytes_read
                         else:
