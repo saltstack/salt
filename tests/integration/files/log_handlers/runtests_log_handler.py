@@ -23,7 +23,8 @@ from multiprocessing import Queue
 import msgpack
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
+from salt.utils import is_darwin
 import salt.log.setup
 
 log = logging.getLogger(__name__)
@@ -60,7 +61,10 @@ def setup_handlers():
     # Above that value, if `process_queue` can't process fast enough,
     # start dropping. This will contain a memory leak in case `process_queue`
     # can't process fast enough of in case it can't deliver the log records at all.
-    queue_size = 10000000
+    if is_darwin():
+        queue_size = 32767
+    else:
+        queue_size = 10000000
     queue = Queue(queue_size)
     handler = salt.log.setup.QueueHandler(queue)
     level = salt.log.setup.LOG_LEVELS[(__opts__.get('runtests_log_level') or 'error').lower()]
