@@ -3920,7 +3920,7 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
             os.remove(self.name)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
-                raise exc
+                six.reraise(*sys.exc_info())
 
     def run_state(self, *args, **kwargs):
         ret = super(RemoteFileTest, self).run_state(*args, **kwargs)

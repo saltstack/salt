@@ -103,8 +103,11 @@ def process_queue(port, queue):
         except socket.error as exc:
             if exc.errno == errno.EPIPE:
                 # Broken pipe
-                sock.shutdown(socket.SHUT_RDWR)
-                sock.close()
+                try:
+                    sock.shutdown(socket.SHUT_RDWR)
+                    sock.close()
+                except OSError:
+                    pass
                 break
             log.exception(exc)
         except Exception as exc:  # pylint: disable=broad-except

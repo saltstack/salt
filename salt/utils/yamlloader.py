@@ -6,6 +6,7 @@ Custom YAML loading in Salt
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import re
+import sys
 import warnings
 
 import yaml  # pylint: disable=blacklisted-import
@@ -18,6 +19,9 @@ except Exception:
     pass
 
 import salt.utils.stringutils
+
+# Import 3rd-party libs
+from salt.ext import six
 
 __all__ = ['SaltYamlSafeLoader', 'load', 'safe_load']
 
@@ -167,7 +171,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
                         self.column = problem_column
                         self.pointer = problem_pointer
             # Raise the caught exception
-            raise exc
+            six.reraise(*sys.exc_info())
 
     def flatten_mapping(self, node):
         merge = []

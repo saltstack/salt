@@ -8,14 +8,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 import logging
 log = logging.getLogger(__name__)
 
 
-@destructiveTest
 class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test beacon states

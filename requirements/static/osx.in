@@ -19,9 +19,11 @@ more-itertools==5.0.0
 moto
 msgpack-python >= 0.4.2, != 0.5.5
 psutil
-# Let's install cryptodome instead of pycrupto because of it's ourstanding security issues
+# Let's install cryptodome instead of pycrypto because of pycrypto's outstanding security issues
 # PyCrypto, if pulled, will be removed from the generated static requirements
 pycryptodome
+# Not installing pygit2 for now since we need to have libgit2 installed first for OSX
+#pygit2
 pylxd>=2.2.5
 pyopenssl
 python-etcd>0.4.2
