@@ -531,6 +531,7 @@ class TestDaemon(object):
         '''
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
         shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
+        shutil.copy(roster_path, RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR)
 
     def prep_ssh(self):
         '''

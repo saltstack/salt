@@ -93,8 +93,11 @@ def process_queue(port, queue):
             # logging handlers
             sock.sendall(msgpack.dumps(record.__dict__, encoding='utf-8'))
         except (IOError, EOFError, KeyboardInterrupt, SystemExit):
-            sock.shutdown(socket.SHUT_RDWR)
-            sock.close()
+            try:
+                sock.shutdown(socket.SHUT_RDWR)
+                sock.close()
+            except (OSError, socket.error):
+                pass
             break
         except socket.error as exc:
             if exc.errno == errno.EPIPE:
@@ -102,7 +105,7 @@ def process_queue(port, queue):
                 try:
                     sock.shutdown(socket.SHUT_RDWR)
                     sock.close()
-                except OSError:
+                except (OSError, socket.error):
                     pass
                 break
             log.exception(exc)
