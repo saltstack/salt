@@ -18,7 +18,10 @@ proxy modules
     cisconso
     docker
     dummy
+    esxcluster
+    esxdatacenter
     esxi
+    esxvm
     fx2
     junos
     marathon
@@ -31,3 +34,4 @@ proxy modules
     philips_hue
     rest_sample
     ssh_sample
+    vcenter
