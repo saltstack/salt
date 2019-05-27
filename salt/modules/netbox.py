@@ -27,17 +27,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 from salt.exceptions import CommandExecutionError
-from salt.utils.args import clean_kwargs
 
 log = logging.getLogger(__name__)
 
 try:
     import pynetbox
 
-    try:
-        from pynetbox.lib import RequestError
-    except ImportError:
-        from pynetbox.core.query import RequestError
     HAS_PYNETBOX = True
 except ImportError:
     HAS_PYNETBOX = False
@@ -97,12 +92,15 @@ def filter(app, endpoint, **kwargs):
     '''
     ret = []
     nb = _nb_obj(auth_required=True if app in AUTH_ENDPOINTS else False)
-    nb_query = getattr(getattr(nb, app), endpoint).filter(
-        **clean_kwargs(**kwargs)
-    )
+    clean_kwargs = __utils__['args.clean_kwargs'](**kwargs)
+    nb_query = None
+    if not clean_kwargs:
+        nb_query = getattr(getattr(nb, app), endpoint).all()
+    else:
+        nb_query = getattr(getattr(nb, app), endpoint).filter(**clean_kwargs)
     if nb_query:
         ret = [_strip_url_field(dict(i)) for i in nb_query]
-    return sorted(ret)
+    return ret
 
 
 def get(app, endpoint, id=None, **kwargs):
