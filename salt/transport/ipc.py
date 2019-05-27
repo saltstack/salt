@@ -166,7 +166,8 @@ class IPCServer(object):
                 return _null
         # msgpack deprecated `encoding` starting with version 0.5.2
         if msgpack.version >= (0, 5, 2):
-            msgpack_kwargs = {'raw': False}
+            # Under Py2 we still want raw to be set to True
+            msgpack_kwargs = {'raw': six.PY2}
         else:
             if six.PY2:
                 msgpack_kwargs = {'encoding': None}
@@ -260,7 +261,8 @@ class IPCClient(object):
         self.stream = None
         # msgpack deprecated `encoding` starting with version 0.5.2
         if msgpack.version >= (0, 5, 2):
-            msgpack_kwargs = {'raw': False}
+            # Under Py2 we still want raw to be set to True
+            msgpack_kwargs = {'raw': six.PY2}
         else:
             if six.PY2:
                 msgpack_kwargs = {'encoding': None}
