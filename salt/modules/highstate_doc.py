@@ -145,7 +145,7 @@ Other hints
 
 If you wish to customize the document format:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # you could also create a new `proccesser` for perhaps reStructuredText
     # highstate_doc.config:
@@ -180,38 +180,40 @@ If you wish to customize the document format:
 
 Some `replace_text_regex` values that might be helpful.
 
-    ## CERTS
-    '-----BEGIN RSA PRIVATE KEY-----[\r\n\t\f\S]{0,2200}': 'XXXXXXX'
-    '-----BEGIN CERTIFICATE-----[\r\n\t\f\S]{0,2200}': 'XXXXXXX'
-    '-----BEGIN DH PARAMETERS-----[\r\n\t\f\S]{0,2200}': 'XXXXXXX'
-    '-----BEGIN PRIVATE KEY-----[\r\n\t\f\S]{0,2200}': 'XXXXXXX'
-    '-----BEGIN OPENSSH PRIVATE KEY-----[\r\n\t\f\S]{0,2200}': 'XXXXXXX'
-    'ssh-rsa .* ': 'ssh-rsa XXXXXXX '
-    'ssh-dss .* ': 'ssh-dss XXXXXXX '
-    ## DB
-    'DB_PASS.*': 'DB_PASS = XXXXXXX'
-    '5432:*:*:.*': '5432:*:XXXXXXX'
-    "'PASSWORD': .*": "'PASSWORD': 'XXXXXXX',"
-    " PASSWORD '.*'": " PASSWORD 'XXXXXXX'"
-    'PGPASSWORD=.* ': 'PGPASSWORD=XXXXXXX'
-    "_replication password '.*'":  "_replication password 'XXXXXXX'"
-    ## OTHER
-    'EMAIL_HOST_PASSWORD =.*': 'EMAIL_HOST_PASSWORD =XXXXXXX'
-    "net ads join -U '.*@MFCFADS.MATH.EXAMPLE.CA.* ": "net ads join -U '.*@MFCFADS.MATH.EXAMPLE.CA%XXXXXXX "
-    "net ads join -U '.*@NEXUS.EXAMPLE.CA.* ": "net ads join -U '.*@NEXUS.EXAMPLE.CA%XXXXXXX "
-    'install-uptrack .* --autoinstall': 'install-uptrack XXXXXXX --autoinstall'
-    'accesskey = .*': 'accesskey = XXXXXXX'
-    'auth_pass .*': 'auth_pass XXXXXXX'
-    'PSK "0x.*': 'PSK "0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-    'SECRET_KEY.*': 'SECRET_KEY = XXXXXXX'
-    "password=.*": "password=XXXXXXX"
-    '<password>.*</password>': '<password>XXXXXXX</password>'
-    '<salt>.*</salt>': '<salt>XXXXXXX</salt>'
-    'application.secret = ".*"': 'application.secret = "XXXXXXX"'
-    'url = "postgres://.*"': 'url = "postgres://XXXXXXX"'
-    'PASS_.*_PASS': 'PASS_XXXXXXX_PASS'
-    ## HTACCESS
-    ':{PLAIN}.*': ':{PLAIN}XXXXXXX'
+.. code-block:: yaml
+
+      ## CERTS
+      '-----BEGIN RSA PRIVATE KEY-----[\\r\\n\\t\\f\S]{0,2200}': 'XXXXXXX'
+      '-----BEGIN CERTIFICATE-----[\\r\\n\\t\\f\S]{0,2200}': 'XXXXXXX'
+      '-----BEGIN DH PARAMETERS-----[\\r\\n\\t\\f\S]{0,2200}': 'XXXXXXX'
+      '-----BEGIN PRIVATE KEY-----[\\r\\n\\t\\f\S]{0,2200}': 'XXXXXXX'
+      '-----BEGIN OPENSSH PRIVATE KEY-----[\\r\\n\\t\\f\S]{0,2200}': 'XXXXXXX'
+      'ssh-rsa .* ': 'ssh-rsa XXXXXXX '
+      'ssh-dss .* ': 'ssh-dss XXXXXXX '
+      ## DB
+      'DB_PASS.*': 'DB_PASS = XXXXXXX'
+      '5432:*:*:.*': '5432:*:XXXXXXX'
+      "'PASSWORD': .*": "'PASSWORD': 'XXXXXXX',"
+      " PASSWORD '.*'": " PASSWORD 'XXXXXXX'"
+      'PGPASSWORD=.* ': 'PGPASSWORD=XXXXXXX'
+      "_replication password '.*'":  "_replication password 'XXXXXXX'"
+      ## OTHER
+      'EMAIL_HOST_PASSWORD =.*': 'EMAIL_HOST_PASSWORD =XXXXXXX'
+      "net ads join -U '.*@MFCFADS.MATH.EXAMPLE.CA.* ": "net ads join -U '.*@MFCFADS.MATH.EXAMPLE.CA%XXXXXXX "
+      "net ads join -U '.*@NEXUS.EXAMPLE.CA.* ": "net ads join -U '.*@NEXUS.EXAMPLE.CA%XXXXXXX "
+      'install-uptrack .* --autoinstall': 'install-uptrack XXXXXXX --autoinstall'
+      'accesskey = .*': 'accesskey = XXXXXXX'
+      'auth_pass .*': 'auth_pass XXXXXXX'
+      'PSK "0x.*': 'PSK "0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+      'SECRET_KEY.*': 'SECRET_KEY = XXXXXXX'
+      "password=.*": "password=XXXXXXX"
+      '<password>.*</password>': '<password>XXXXXXX</password>'
+      '<salt>.*</salt>': '<salt>XXXXXXX</salt>'
+      'application.secret = ".*"': 'application.secret = "XXXXXXX"'
+      'url = "postgres://.*"': 'url = "postgres://XXXXXXX"'
+      'PASS_.*_PASS': 'PASS_XXXXXXX_PASS'
+      ## HTACCESS
+      ':{PLAIN}.*': ':{PLAIN}XXXXXXX'
 
 '''
 
@@ -429,10 +431,11 @@ def render(jinja_template_text=None, jinja_template_function='highstate_doc.mark
 
     jinja_template_text: jinja text that the render uses to create the document.
     jinja_template_function: a salt module call that returns template text.
-        options:
-            highstate_doc.markdown_basic_jinja_template
-            highstate_doc.markdown_default_jinja_template
-            highstate_doc.markdown_full_jinja_template
+
+    options:
+        highstate_doc.markdown_basic_jinja_template
+        highstate_doc.markdown_default_jinja_template
+        highstate_doc.markdown_full_jinja_template
     '''
     config = _get_config(**kwargs)
     lowstates = proccess_lowstates(**kwargs)
