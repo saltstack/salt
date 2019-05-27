@@ -15,6 +15,7 @@ proxy modules
     chronos
     cimc
     cisconso
+    docker
     dummy
     esxi
     fx2
