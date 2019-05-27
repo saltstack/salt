@@ -105,7 +105,7 @@ def process_queue(port, queue):
                 try:
                     sock.shutdown(socket.SHUT_RDWR)
                     sock.close()
-                except OSError:
+                except (OSError, socket.error):
                     pass
                 break
             log.exception(exc)
