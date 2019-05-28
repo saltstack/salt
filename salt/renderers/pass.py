@@ -66,6 +66,9 @@ The following will result in pillar ``foo_bar`` having contents of pass entry ``
 
     foo_bar: |
         secret/foo/bar
+
+.. note::
+    If the entry doesn't exist, you'll end up with just the string ``secret/foo/bar`` as the pillar value
 '''
 
 # Import python libs
