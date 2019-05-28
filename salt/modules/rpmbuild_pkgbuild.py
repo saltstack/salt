@@ -23,7 +23,7 @@ import traceback
 import functools
 
 # Import salt libs
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 import salt.utils.files
 import salt.utils.path
 import salt.utils.user
@@ -171,6 +171,19 @@ def _get_deps(deps, tree_base, saltenv='base'):
         deps_list += ' {0}'.format(dest)
 
     return deps_list
+
+
+def _check_repo_gpg_phrase_utils():
+    '''
+    Check for /usr/libexec/gpg-preset-passphrase is installed
+    '''
+    util_name = '/usr/libexec/gpg-preset-passphrase'
+    if __salt__['file.file_exists'](util_name):
+        return True
+    else:
+        raise CommandExecutionError(
+            'utility \'{0}\' needs to be installed'.format(util_name)
+        )
 
 
 def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base', runas='root'):
@@ -450,7 +463,13 @@ def make_repo(repodir,
 
         Use a passphrase with the signing key presented in ``keyid``.
         Passphrase is received from Pillar data which could be passed on the
-        command line with ``pillar`` parameter. For example:
+        command line with ``pillar`` parameter.
+
+        .. versionadded:: 2018.2.1
+        RHEL 8 and above leverages gpg-agent and gpg-preset-passphrase for
+        caching keys, etc.
+
+        For example:
 
         .. code-block:: bash
 
@@ -485,10 +504,21 @@ def make_repo(repodir,
     '''
     SIGN_PROMPT_RE = re.compile(r'Enter pass phrase: ', re.M)
 
-    define_gpg_name = ''
+    local_keygrip_to_use = None
+    local_key_fingerprint = None
     local_keyid = None
     local_uids = None
+    define_gpg_name = ''
     phrase = ''
+    retrc = 0
+    use_gpg_agent = False
+
+    if gnupghome and env is None:
+        env = {}
+        env['GNUPGHOME'] = gnupghome
+
+    if __grains__.get('osmajorrelease') >= 7:
+        use_gpg_agent = True
 
     if keyid is not None:
         # import_keys
@@ -517,7 +547,29 @@ def make_repo(repodir,
             if keyid == gpg_key['keyid'][8:]:
                 local_uids = gpg_key['uids']
                 local_keyid = gpg_key['keyid']
+                if use_gpg_agent:
+                    local_keygrip_to_use = gpg_key['fingerprint']
+                    local_key_fingerprint = gpg_key['fingerprint']
                 break
+
+        if use_gpg_agent:
+            cmd = 'gpg --with-keygrip --list-secret-keys'
+            local_keys2_keygrip = __salt__['cmd.run'](cmd, runas=runas, env=env)
+            local_keys2 = iter(local_keys2_keygrip.splitlines())
+            try:
+                for line in local_keys2:
+                    if line.startswith('sec'):
+                        line_fingerprint = next(local_keys2).lstrip().rstrip()
+                        if local_key_fingerprint == line_fingerprint:
+                            lkeygrip = next(local_keys2).split('=')
+                            local_keygrip_to_use = lkeygrip[1].lstrip().rstrip()
+                            break
+            except StopIteration:
+                raise SaltInvocationError(
+                    'unable to find keygrip associated with fingerprint \'{0}\' for keyid \'{1}\''
+                    .format(local_key_fingerprint, local_keyid)
+                )
+
 
         if local_keyid is None:
             raise SaltInvocationError(
@@ -527,6 +579,16 @@ def make_repo(repodir,
 
         if use_passphrase:
             phrase = __salt__['pillar.get']('gpg_passphrase')
+            if use_gpg_agent:
+                _check_repo_gpg_phrase_utils()
+                cmd = '/usr/libexec/gpg-preset-passphrase --verbose --preset ' \
+                      '--passphrase "{0}" {1}'.format(phrase, local_keygrip_to_use)
+                retrc = __salt__['cmd.retcode'](cmd, runas=runas, env=env)
+                if retrc != 0:
+                    raise SaltInvocationError(
+                         'Failed to preset passphrase, error {1}, '
+                         'check logs for further details'.format(retrc)
+                    )
 
         if local_uids:
             define_gpg_name = '--define=\'%_signature gpg\' --define=\'%_gpg_name {0}\''.format(
@@ -553,43 +615,54 @@ def make_repo(repodir,
                 number_retries = timeout / interval
                 times_looped = 0
                 error_msg = 'Failed to sign file {0}'.format(abs_file)
-                cmd = 'rpm {0} --addsign {1}'.format(define_gpg_name, abs_file)
-                preexec_fn = functools.partial(salt.utils.user.chugid_and_umask, runas, None)
-                try:
-                    stdout, stderr = None, None
-                    proc = salt.utils.vt.Terminal(
-                        cmd,
-                        shell=True,
-                        preexec_fn=preexec_fn,
-                        stream_stdout=True,
-                        stream_stderr=True
-                    )
-                    while proc.has_unread_data:
-                        stdout, stderr = proc.recv()
-                        if stdout and SIGN_PROMPT_RE.search(stdout):
-                            # have the prompt for inputting the passphrase
-                            proc.sendline(phrase)
-                        else:
-                            times_looped += 1
-
-                        if times_looped > number_retries:
-                            raise SaltInvocationError(
-                                'Attemping to sign file {0} failed, timed out after {1} seconds'
-                                .format(abs_file, int(times_looped * interval))
-                            )
-                        time.sleep(interval)
-
-                    proc_exitstatus = proc.exitstatus
-                    if proc_exitstatus != 0:
+                if use_gpg_agent:
+                    cmd = 'rpmsign --verbose  --key-id={0} --addsign {1}'.format(local_keyid, abs_file)
+                    retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
+                    if retrc != 0:
                         raise SaltInvocationError(
-                            'Signing file {0} failed with proc.status {1}'
-                            .format(abs_file, proc_exitstatus)
+                             'Signing encountered errors for command \'{0}\', '
+                             'return error {1}, check logs for further details'.format(
+                                cmd,
+                                retrc)
                         )
-                except salt.utils.vt.TerminalException as err:
-                    trace = traceback.format_exc()
-                    log.error(error_msg, err, trace)
-                finally:
-                    proc.close(terminate=True, kill=True)
+                else:
+                    cmd = 'rpm {0} --addsign {1}'.format(define_gpg_name, abs_file)
+                    preexec_fn = functools.partial(salt.utils.user.chugid_and_umask, runas, None)
+                    try:
+                        stdout, stderr = None, None
+                        proc = salt.utils.vt.Terminal(
+                            cmd,
+                            shell=True,
+                            preexec_fn=preexec_fn,
+                            stream_stdout=True,
+                            stream_stderr=True
+                        )
+                        while proc.has_unread_data:
+                            stdout, stderr = proc.recv()
+                            if stdout and SIGN_PROMPT_RE.search(stdout):
+                                # have the prompt for inputting the passphrase
+                                proc.sendline(phrase)
+                            else:
+                                times_looped += 1
+
+                            if times_looped > number_retries:
+                                raise SaltInvocationError(
+                                    'Attemping to sign file {0} failed, timed out after {1} seconds'
+                                    .format(abs_file, int(times_looped * interval))
+                                )
+                            time.sleep(interval)
+
+                        proc_exitstatus = proc.exitstatus
+                        if proc_exitstatus != 0:
+                            raise SaltInvocationError(
+                                'Signing file {0} failed with proc.status {1}'
+                                .format(abs_file, proc_exitstatus)
+                            )
+                    except salt.utils.vt.TerminalException as err:
+                        trace = traceback.format_exc()
+                        log.error(error_msg, err, trace)
+                    finally:
+                        proc.close(terminate=True, kill=True)
 
     cmd = 'createrepo --update {0}'.format(repodir)
     return __salt__['cmd.run_all'](cmd, runas=runas)
