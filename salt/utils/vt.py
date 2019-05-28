@@ -658,7 +658,9 @@ class Terminal(object):
             # ----- Helper function for processing STDERR and STDOUT -------->
             def read_and_decode_fd(fd, maxsize, partial_data_attr=None):
                 bytes_read = getattr(self, partial_data_attr, b'')
-                bytes_read += os.read(fd, maxsize)
+                # Only read one byte if we already have some existing data
+                # to try and complete a split multibyte character
+                bytes_read += os.read(fd, 1 if len(bytes_read) else maxsize)
                 try:
                     decoded_data =  self._translate_newlines(
                         salt.utils.stringutils.to_unicode(bytes_read)
