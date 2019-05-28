@@ -674,11 +674,18 @@ class Terminal(object):
                         setattr(self, partial_data_attr, b'')
                     return decoded_data, False
                 except UnicodeDecodeError as ex:
-                    if ex.reason == 'unexpected end of data':
-                        # We weren't able to decode the received data because
-                        # it is a multibyte unicode character split across
+                    max_multibyte_character_length = 4
+                    if (ex.start > (len(bytes_read) -
+                                    max_multibyte_character_length)
+                        and ex.end == len(bytes_read)):
+                        # We weren't able to decode the received data possibly
+                        # because it is a multibyte character split across
                         # blocks. Save what data we have to try and decode
-                        # later.
+                        # later. If the error wasn't caused by a multibyte
+                        # character being split then the error start position
+                        # should remain the same each time we get here but the
+                        # length of the bytes_read will increase so we will
+                        # give up and raise an exception instead.
                         if partial_data_attr is not None:
                             setattr(self, partial_data_attr, bytes_read)
                         else:
