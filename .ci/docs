@@ -27,8 +27,8 @@ pipeline {
                 sh '''
                 eval "$(pyenv init -)"
                 pyenv --version
-                pyenv install --skip-existing 2.7.15
-                pyenv shell 2.7.15
+                pyenv install --skip-existing 3.6.8
+                pyenv shell 3.6.8
                 python --version
                 pip install -U https://github.com/s0undt3ch/nox/archive/hotfix/py2.zip#egg=Nox==2018.10.17
                 nox --version
@@ -39,7 +39,7 @@ pipeline {
             steps {
                 sh '''
                 eval "$(pyenv init -)"
-                pyenv shell 2.7.15
+                pyenv shell 3.6.8
                 nox -e docs
                 '''
                 archiveArtifacts artifacts: 'doc/doc-archive.tar.gz'
