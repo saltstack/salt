@@ -97,7 +97,7 @@ class VultrTest(ShellCase):
         '''
         size_list = self.run_cloud('--list-sizes {0}'.format(PROVIDER_NAME))
         self.assertIn(
-            '32768 MB RAM,110 GB SSD,40.00 TB BW',
+            '32768 MB RAM,4x110 GB SSD,40.00 TB BW',
             [i.strip() for i in size_list]
         )
 
