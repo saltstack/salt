@@ -26,6 +26,7 @@ import salt.utils.locales
 import salt.utils.platform
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party Libs
 from salt.ext import six
@@ -573,6 +574,10 @@ def get_system_info():
                        6: 'Appliance PC',
                        7: 'Performance Server',
                        8: 'Maximum'}
+    # Must get chassis_sku_number this way for backwards compatibility
+    # system.ChassisSKUNumber is only available on Windows 10/2016 and newer
+    product = conn.Win32_ComputerSystemProduct()[0]
+    ret.update({'chassis_sku_number': product.SKUNumber})
     system = conn.Win32_ComputerSystem()[0]
     # Get pc_system_type depending on Windows version
     if platform.release() in ['Vista', '7', '8']:
@@ -586,7 +591,6 @@ def get_system_info():
         'bootup_state': system.BootupState,
         'caption': system.Caption,
         'chassis_bootup_state': warning_states[system.ChassisBootupState],
-        'chassis_sku_number': system.ChassisSKUNumber,
         'dns_hostname': system.DNSHostname,
         'domain': system.Domain,
         'domain_role': domain_role[system.DomainRole],
@@ -608,14 +612,16 @@ def get_system_info():
     ret['processors'] = 0
     ret['processors_logical'] = 0
     ret['processor_cores'] = 0
-    ret['processor_cores_enabled'] = 0
+    if _LooseVersion(platform.version()) >= _LooseVersion('10.0'):
+        ret['processor_cores_enabled'] = 0
     ret['processor_manufacturer'] = processors[0].Manufacturer
     ret['processor_max_clock_speed'] = six.text_type(processors[0].MaxClockSpeed) + 'MHz'
     for system in processors:
         ret['processors'] += 1
         ret['processors_logical'] += system.NumberOfLogicalProcessors
         ret['processor_cores'] += system.NumberOfCores
-        ret['processor_cores_enabled'] += system.NumberOfEnabledCore
+        if _LooseVersion(platform.version()) >= _LooseVersion('10.0'):
+            ret['processor_cores_enabled'] += system.NumberOfEnabledCore
 
     system = conn.Win32_BIOS()[0]
     ret.update({'hardware_serial': system.SerialNumber,
