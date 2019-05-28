@@ -36,8 +36,8 @@ node('docs') {
                         sh shell_header + '''
                         eval "$(pyenv init -)"
                         pyenv --version
-                        pyenv install --skip-existing 2.7.15
-                        pyenv shell 2.7.15
+                        pyenv install --skip-existing 3.6.8
+                        pyenv shell 3.6.8
                         python --version
                         pip install -U nox-py2
                         nox --version
@@ -47,7 +47,7 @@ node('docs') {
                     stage('Build') {
                         sh shell_header + '''
                         eval "$(pyenv init -)"
-                        pyenv shell 2.7.15
+                        pyenv shell 3.6.8
                         nox -e docs
                         '''
                         archiveArtifacts artifacts: 'doc/doc-archive.tar.gz'
