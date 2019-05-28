@@ -207,6 +207,15 @@ repos:
           - --py-version=3.6
 
       - id: pip-tools-compile
+        alias: compile-doc-requirements
+        name: Docs Py3.6 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/docs\.in)$
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+
+      - id: pip-tools-compile
         alias: compile-linux-py3.7-zmq-requirements
         name: Linux Py3.7 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$

@@ -840,12 +840,12 @@ def lint_tests(session):
     _lint(session, '.testing.pylintrc', flags, paths)
 
 
-@nox.session(python='2.7')
+@nox.session(python='3.6')
 def docs(session):
     '''
     Build Salt's Documentation
     '''
-    session.install('--progress-bar=off', '-r', 'requirements/static/py2.7/docs.txt', silent=PIP_INSTALL_SILENT)
+    session.install('--progress-bar=off', '-r', 'requirements/static/py3.6/docs.txt', silent=PIP_INSTALL_SILENT)
     os.chdir('doc/')
     session.run('make', 'clean', external=True)
     session.run('make', 'html', external=True)
