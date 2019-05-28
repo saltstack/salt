@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import fnmatch
 import inspect
+import logging
 import re
 import shlex
 
@@ -20,6 +21,9 @@ import salt.utils.jid
 import salt.utils.versions
 import salt.utils.yaml
 from salt.utils.odict import OrderedDict
+
+log = logging.getLogger(__name__)
+
 
 if six.PY3:
     KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)
