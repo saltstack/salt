@@ -504,6 +504,11 @@ def get_system_info():
     '''
     Get system information.
 
+    .. note::
+
+        Not all system info is available across all versions of Windows. If it
+        is not available on an older version, it will be skipped
+
     Returns:
         dict: Dictionary containing information about the system to include
         name, description, version, etc...
