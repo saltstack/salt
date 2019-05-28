@@ -32,7 +32,6 @@ import logging
 
 # Import salt libs
 from salt.ext import six
-from salt.ext.six.moves import range
 
 mswindows = (sys.platform == "win32")
 
