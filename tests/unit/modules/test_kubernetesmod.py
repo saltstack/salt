@@ -77,7 +77,8 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(kubernetes.deployments(), ['mock_deployment_name'])
                 self.assertTrue(
-                    kubernetes.kubernetes.client.ExtensionsV1beta1Api().list_namespaced_deployment().to_dict.called)
+                    kubernetes.kubernetes.client.ExtensionsV1beta1Api().list_namespaced_deployment().to_dict.called)\
+                    # pylint: disable=E1120
 
     def test_services(self):
         '''
