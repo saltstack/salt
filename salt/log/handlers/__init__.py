@@ -14,6 +14,7 @@ import sys
 import copy
 import logging
 import threading
+import collections
 import logging.handlers
 
 # Import salt libs
@@ -21,7 +22,6 @@ from salt.log.mixins import NewStyleClassMixIn, ExcInfoOnLogLevelFormatMixIn
 from salt.ext.six.moves import queue
 
 log = logging.getLogger(__name__)
-
 
 if sys.version_info < (2, 7):
     # Since the NullHandler is only available on python >= 2.7, here's a copy
@@ -58,16 +58,12 @@ class TemporaryLoggingHandler(logging.NullHandler):
     .. versionadded:: 0.17.0
     '''
 
-    def __init__(self, level=logging.NOTSET, max_queue_size=10000):
-        self.__max_queue_size = max_queue_size
+    def __init__(self, level=logging.NOTSET, max_queue_size=100000):
         super(TemporaryLoggingHandler, self).__init__(level=level)
-        self.__messages = []
+        self.__messages = collections.deque(maxlen=max_queue_size)
 
     def handle(self, record):
         self.acquire()
-        if len(self.__messages) >= self.__max_queue_size:
-            # Loose the initial log records
-            self.__messages.pop(0)
         self.__messages.append(record)
         self.release()
 
@@ -79,7 +75,7 @@ class TemporaryLoggingHandler(logging.NullHandler):
             return
 
         while self.__messages:
-            record = self.__messages.pop(0)
+            record = self.__messages.popleft()
             for handler in handlers:
                 if handler.level > record.levelno:
                     # If the handler's level is higher than the log record one,
