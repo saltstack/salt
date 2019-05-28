@@ -5,28 +5,24 @@ Integration tests for the beacon states
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
-import logging
 log = logging.getLogger(__name__)
 
 
-@destructiveTest
 class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test beacon states
     '''
     def setUp(self):
-        '''
-        '''
         self.run_function('beacons.reset', f_timeout=300)
-
-    def tearDown(self):
-        self.run_function('beacons.reset', f_timeout=300)
+        self.wait_for_all_jobs()
+        self.addCleanup(self.run_function, 'beacons.reset', f_timeout=300)
+        self.addCleanup(self.wait_for_all_jobs)
 
     def test_present_absent(self):
         kwargs = {'/': '38%', 'interval': 5}
