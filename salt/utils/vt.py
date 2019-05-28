@@ -120,6 +120,9 @@ class Terminal(object):
                  # sys.stdXYZ streaming options
                  stream_stdout=None,
                  stream_stderr=None,
+
+                 # Used for tests
+                 force_receive_encoding=__salt_system_encoding__,
                  ):
 
         # Let's avoid Zombies!!!
@@ -136,6 +139,7 @@ class Terminal(object):
         self.cwd = cwd
         self.env = env
         self.preexec_fn = preexec_fn
+        self.receive_encoding = force_receive_encoding
 
         # ----- Set the desired terminal size ------------------------------->
         if rows is None and cols is None:
@@ -663,7 +667,8 @@ class Terminal(object):
                 bytes_read += os.read(fd, 1 if len(bytes_read) else maxsize)
                 try:
                     decoded_data =  self._translate_newlines(
-                        salt.utils.stringutils.to_unicode(bytes_read)
+                        salt.utils.stringutils.to_unicode(bytes_read,
+                                                          self.receive_encoding)
                     )
                     if partial_data_attr is not None:
                         setattr(self, partial_data_attr, b'')
