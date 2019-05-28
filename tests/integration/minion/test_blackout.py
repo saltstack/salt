@@ -27,15 +27,25 @@ class MinionBlackoutTestCase(ModuleCase):
 
     @classmethod
     def setUpClass(cls):
+        cls.top_pillar = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls')
         cls.blackout_pillar = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'blackout.sls')
 
     @classmethod
     def tearDownClass(cls):
+        if os.path.exists(cls.top_pillar):
+            os.unlink(cls.top_pillar)
+        del cls.top_pillar
         if os.path.exists(cls.blackout_pillar):
             os.unlink(cls.blackout_pillar)
         del cls.blackout_pillar
 
     def setUp(self):
+        with salt.utils.files.fopen(self.top_pillar, 'w') as wfh:
+            wfh.write(textwrap.dedent('''\
+                base:
+                  '*':
+                    - blackout
+                '''))
         with salt.utils.files.fopen(self.blackout_pillar, 'w') as wfh:
             wfh.write('minion_blackout: False')
         self.addCleanup(self.cleanup_blackout_pillar)
@@ -51,6 +61,8 @@ class MinionBlackoutTestCase(ModuleCase):
         self.wait_for_all_jobs()
 
     def cleanup_blackout_pillar(self):
+        if os.path.exists(self.top_pillar):
+            os.unlink(self.top_pillar)
         if os.path.exists(self.blackout_pillar):
             os.unlink(self.blackout_pillar)
 
