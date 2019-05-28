@@ -212,3 +212,42 @@ class VTTestCase(TestCase):
             self.assertIsNone(stdout)
         finally:
             term.close(terminate=True, kill=True)
+
+    def test_split_multibyte_characters_unicode(self):
+        block_size = 1024
+        stdout_line = ('stdout_content = b\'\\xE2\\x80\\xA6\' * ' +
+                       str(4 * block_size))
+        stderr_line = 'stderr_content = b\'\\x2E\' + stdout_content'
+        # generate expected data using the same commands as the test process
+        stdout_content = b'\xE2\x80\xA6' * 4 * block_size
+        stderr_content = b'\x2E' + stdout_content
+        expected_stdout = stdout_content.decode('utf-8')
+        expected_stderr = stderr_content.decode('utf-8')
+        python_command = '\n'.join((
+            'import sys',
+            stdout_line,
+            stderr_line,
+            'sys.stdout.buffer.write(stdout_content)',
+            'sys.stderr.buffer.write(stderr_content)'))
+        term = salt.utils.vt.Terminal(
+                                      args=['python',
+                                            '-c',
+                                            '"' + python_command + '"'],
+                                      shell=True,
+                                      stream_stdout=False,
+                                      stream_stderr=False)
+        buffer_o = buffer_e = ''
+        try:
+            while term.has_unread_data:
+                stdout, stderr = term.recv(block_size)
+                if stdout:
+                    buffer_o += stdout
+                if stderr:
+                    buffer_e += stderr
+
+            self.assertEqual(len(buffer_o), len(expected_stdout))
+            self.assertEqual(len(buffer_e), len(expected_stderr))
+            self.assertEqual(buffer_o, expected_stdout)
+            self.assertEqual(buffer_e, expected_stderr)
+        finally:
+            term.close(terminate=True, kill=True)
