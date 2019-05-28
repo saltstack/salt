@@ -619,7 +619,7 @@ class Terminal(object):
                 if not rlist:
                     self.flag_eof_stdout = self.flag_eof_stderr = True
                     log.debug('End of file(EOL). Slow platform.')
-                    if self.patrial_data_stdout or self.patrial_data_stderr: 
+                    if self.patrial_data_stdout or self.patrial_data_stderr:
                         # There is data that was received but for which
                         # decoding failed, attempt decoding again to generate
                         # relevant exception
@@ -663,20 +663,21 @@ class Terminal(object):
                 bytes_read = getattr(self, partial_data_attr, b'')
                 # Only read one byte if we already have some existing data
                 # to try and complete a split multibyte character
-                bytes_read += os.read(fd, 1 if len(bytes_read) else maxsize)
+                bytes_read += os.read(fd, maxsize if not bytes_read else 1)
                 try:
-                    decoded_data =  self._translate_newlines(
-                        salt.utils.stringutils.to_unicode(bytes_read,
-                                                          self.receive_encoding)
+                    decoded_data = self._translate_newlines(
+                        salt.utils.stringutils.to_unicode(
+                            bytes_read,
+                            self.receive_encoding)
                     )
                     if partial_data_attr is not None:
                         setattr(self, partial_data_attr, b'')
                     return decoded_data, False
                 except UnicodeDecodeError as ex:
                     max_multibyte_character_length = 4
-                    if (ex.start > (len(bytes_read) -
-                                    max_multibyte_character_length)
-                        and ex.end == len(bytes_read)):
+                    if ex.start > (
+                            len(bytes_read) - max_multibyte_character_length
+                    ) and ex.end == len(bytes_read):
                         # We weren't able to decode the received data possibly
                         # because it is a multibyte character split across
                         # blocks. Save what data we have to try and decode
