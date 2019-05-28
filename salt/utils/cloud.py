@@ -903,7 +903,7 @@ class Client(object):
             except SCMRException as exc:
                 log.debug("Exception encountered while deleting service %s", repr(exc))
                 if time.time() - wait_start > wait_timeout:
-                    raise exc
+                    six.reraise(*sys.exc_info())
                 time.sleep(sleep_wait)
                 continue
             break
@@ -924,7 +924,7 @@ class Client(object):
             except SMBResponseException as exc:
                 log.debug("Exception deleting file %s %s", self._exe_file, repr(exc))
                 if time.time() - wait_start > wait_timeout:
-                    raise exc
+                    six.reraise(*sys.exc_info())
                 time.sleep(sleep_wait)
                 continue
             break
@@ -1022,12 +1022,10 @@ def wait_for_psexecsvc(host, port, username, password, timeout=900):
         if time.time() - start > timeout:
             return False
         log.debug(
-            'Retrying psexec connection to host {0} on port {1} '
-            '(try {2})'.format(
-                host,
-                port,
-                try_count
-            )
+            'Retrying psexec connection to host %s on port %s (try %s)',
+            host,
+            port,
+            try_count
         )
         time.sleep(1)
 
@@ -3180,7 +3178,7 @@ def _salt_cloud_force_ascii(exc):
         return unicode_trans[exc.object[exc.start:exc.end]], exc.end
 
     # There's nothing else we can do, raise the exception
-    raise exc
+    six.reraise(*sys.exc_info())
 
 
 codecs.register_error('salt-cloud-force-ascii', _salt_cloud_force_ascii)

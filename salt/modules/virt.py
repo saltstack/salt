@@ -1824,9 +1824,9 @@ def update(name,
         try:
             conn.defineXML(salt.utils.stringutils.to_str(ElementTree.tostring(desc)))
             status['definition'] = True
-        except libvirt.libvirtError as err:
+        except libvirt.libvirtError:
             conn.close()
-            raise err
+            six.reraise(*sys.exc_info())
 
         # Do the live changes now that we know the definition has been properly set
         # From that point on, failures are not blocking to try to live update as much

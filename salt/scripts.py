@@ -40,7 +40,7 @@ def _handle_interrupt(exc, original_exc, hardfail=False, trace=''):
             log.error(trace)
         raise original_exc
     else:
-        raise exc
+        six.reraise(*sys.exc_info())
 
 
 def _handle_signals(client, signum, sigframe):

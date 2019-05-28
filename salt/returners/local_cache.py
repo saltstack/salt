@@ -6,6 +6,7 @@ Return data to local job cache
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
+import sys
 import errno
 import glob
 import logging
@@ -306,12 +307,12 @@ def get_load(jid):
             try:
                 ret = serial.load(rfh)
                 break
-            except Exception as exc:
+            except Exception:
                 if index == num_tries:
                     time.sleep(0.25)
     else:
         log.critical('Failed to unpack %s', load_p)
-        raise exc
+        six.reraise(*sys.exc_info())
     if ret is None:
         ret = {}
     minions_cache = [os.path.join(jid_dir, MINIONS_P)]

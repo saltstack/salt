@@ -456,7 +456,7 @@ def _purge_jobs(timestamp):
             error = err.args
             sys.stderr.write(six.text_type(error))
             cursor.execute("ROLLBACK")
-            raise err
+            six.reraise(*sys.exc_info())
 
         try:
             sql = 'delete from salt_returns where alter_time < %s'
@@ -466,7 +466,7 @@ def _purge_jobs(timestamp):
             error = err.args
             sys.stderr.write(six.text_type(error))
             cursor.execute("ROLLBACK")
-            raise err
+            six.reraise(*sys.exc_info())
 
         try:
             sql = 'delete from salt_events where alter_time < %s'
@@ -476,7 +476,7 @@ def _purge_jobs(timestamp):
             error = err.args
             sys.stderr.write(six.text_type(error))
             cursor.execute("ROLLBACK")
-            raise err
+            six.reraise(*sys.exc_info())
 
     return True
 
@@ -504,7 +504,7 @@ def _archive_jobs(timestamp):
                 error = err.args
                 sys.stderr.write(six.text_type(error))
                 cursor.execute("ROLLBACK")
-                raise err
+                six.reraise(*sys.exc_info())
 
         try:
             sql = 'insert into {0} select * from {1} where jid in (select distinct jid from salt_returns where alter_time < %s)'.format(target_tables['jids'], 'jids')
@@ -514,7 +514,7 @@ def _archive_jobs(timestamp):
             error = err.args
             sys.stderr.write(six.text_type(error))
             cursor.execute("ROLLBACK")
-            raise err
+            six.reraise(*sys.exc_info())
         except Exception as e:
             log.error(e)
             raise
@@ -527,7 +527,7 @@ def _archive_jobs(timestamp):
             error = err.args
             sys.stderr.write(six.text_type(error))
             cursor.execute("ROLLBACK")
-            raise err
+            six.reraise(*sys.exc_info())
 
         try:
             sql = 'insert into {0} select * from {1} where alter_time < %s'.format(target_tables['salt_events'], 'salt_events')
@@ -537,7 +537,7 @@ def _archive_jobs(timestamp):
             error = err.args
             sys.stderr.write(six.text_type(error))
             cursor.execute("ROLLBACK")
-            raise err
+            six.reraise(*sys.exc_info())
 
     return _purge_jobs(timestamp)
 

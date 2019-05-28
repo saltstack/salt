@@ -11,6 +11,7 @@ Much of what is here was adapted from the following:
 '''
 from __future__ import absolute_import, unicode_literals
 import os
+import sys
 import collections
 import logging
 import psutil
@@ -18,6 +19,7 @@ import psutil
 import ctypes
 from ctypes import wintypes
 
+import salt.ext.six as six
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
 
@@ -1055,7 +1057,7 @@ def CreateProcessWithTokenW(token,
         winerr = win32api.GetLastError()
         exc = WindowsError(win32api.FormatMessage(winerr))  # pylint: disable=undefined-variable
         exc.winerror = winerr
-        raise exc
+        six.reraise(*sys.exc_info())
     return process_info
 
 
@@ -1073,7 +1075,7 @@ def enumerate_tokens(sid=None, session_id=None, privs=None):
             if exc.winerror == 5:
                 log.debug("Unable to OpenProcess pid=%d name=%s", p.pid, p.name())
                 continue
-            raise exc
+            six.reraise(*sys.exc_info())
         try:
             access = (
                 win32security.TOKEN_DUPLICATE |
