@@ -2733,7 +2733,12 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
         for line in filerepos[stanza]:
-            content += '\n{0}={1}'.format(line, filerepos[stanza][line])
+            # A whitespace is needed at the begining of the new line in order
+            # to avoid breaking multiple line values allowed on repo files.
+            value = filerepos[stanza][line]
+            if '\n' in value:
+               value = '\n '.join(value.split('\n'))
+            content += '\n{0}={1}'.format(line, value)
         content += '\n{0}\n'.format(comments)
 
     with salt.utils.files.fopen(repofile, 'w') as fileout:
@@ -2868,11 +2873,14 @@ def mod_repo(repo, basedir=None, **kwargs):
         )
         content += '[{0}]\n'.format(stanza)
         for line in six.iterkeys(filerepos[stanza]):
+            # A whitespace is needed at the begining of the new line in order
+            # to avoid breaking multiple line values allowed on repo files.
+            value = filerepos[stanza][line]
+            if '\n' in value:
+               value = '\n '.join(value.split('\n'))
             content += '{0}={1}\n'.format(
                 line,
-                filerepos[stanza][line]
-                    if not isinstance(filerepos[stanza][line], bool)
-                    else _bool_to_str(filerepos[stanza][line])
+                value if not isinstance(value, bool) else _bool_to_str(value)
             )
         content += comments + '\n'
 
