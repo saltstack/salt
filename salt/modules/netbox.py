@@ -124,6 +124,7 @@ def get(app, endpoint, id=None, **kwargs):
     if id:
         return dict(getattr(getattr(nb, app), endpoint).get(id))
     else:
+        clean_kwargs = __utils__['args.clean_kwargs'](**kwargs)
         return dict(
-            getattr(getattr(nb, app), endpoint).get(**clean_kwargs(**kwargs))
+            getattr(getattr(nb, app), endpoint).get(**clean_kwargs)
         )
