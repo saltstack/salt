@@ -2737,7 +2737,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
             # to avoid breaking multiple line values allowed on repo files.
             value = filerepos[stanza][line]
             if '\n' in value:
-               value = '\n '.join(value.split('\n'))
+                value = '\n '.join(value.split('\n'))
             content += '\n{0}={1}'.format(line, value)
         content += '\n{0}\n'.format(comments)
 
@@ -2877,7 +2877,7 @@ def mod_repo(repo, basedir=None, **kwargs):
             # to avoid breaking multiple line values allowed on repo files.
             value = filerepos[stanza][line]
             if '\n' in value:
-               value = '\n '.join(value.split('\n'))
+                value = '\n '.join(value.split('\n'))
             content += '{0}={1}\n'.format(
                 line,
                 value if not isinstance(value, bool) else _bool_to_str(value)
