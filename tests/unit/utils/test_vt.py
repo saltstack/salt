@@ -16,6 +16,7 @@ import sys
 import random
 import subprocess
 import time
+import tempfile
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
@@ -24,6 +25,7 @@ from tests.support.unit import TestCase, skipIf
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.vt
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -215,82 +217,94 @@ class VTTestCase(TestCase):
 
     def test_split_multibyte_characters_unicode(self):
         block_size = 1024
-        stdout_line = ('stdout_content = b\'\\xE2\\x80\\xA6\' * ' +
-                       str(4 * block_size))
-        # stderr is offset by one byte to guarentee a split character in one of
-        # the output streams
-        stderr_line = 'stderr_content = b\'\\x2E\' + stdout_content'
-        # generate expected data using the same commands as the test process
-        stdout_content = b'\xE2\x80\xA6' * 4 * block_size
-        stderr_content = b'\x2E' + stdout_content
-        expected_stdout = stdout_content.decode('utf-8')
-        expected_stderr = stderr_content.decode('utf-8')
-        python_command = '\n'.join((
-            'import sys',
-            stdout_line,
-            stderr_line,
-            'sys.stdout.buffer.write(stdout_content)',
-            'sys.stderr.buffer.write(stderr_content)'))
-        term = salt.utils.vt.Terminal(
-                                      args=['python',
-                                            '-c',
-                                            '"' + python_command + '"'],
-                                      shell=True,
-                                      stream_stdout=False,
-                                      stream_stderr=False,
-                                      force_receive_encoding='utf-8')
-        buffer_o = buffer_e = ''
-        try:
-            while term.has_unread_data:
-                stdout, stderr = term.recv(block_size)
-                if stdout:
-                    buffer_o += stdout
-                if stderr:
-                    buffer_e += stderr
+        encoding = 'utf-8'
+        with tempfile.TemporaryDirectory() as tempdir:
+            file_path_stdout = os.path.join(tempdir, "stdout.txt")
+            file_path_stderr = os.path.join(tempdir, "stderr.txt")
+            stdout_content = b'\xE2\x80\xA6' * 4 * block_size
+            # stderr is offset by one byte to guarentee a split character in
+            # one of the output streams
+            stderr_content = b'\x2E' + stdout_content
+            with open(file_path_stdout, "wb") as fout:
+                fout.write(stdout_content)
+            with open(file_path_stderr, "wb") as ferr:
+                ferr.write(stderr_content)
 
-            self.assertEqual(buffer_o, expected_stdout)
-            self.assertEqual(buffer_e, expected_stderr)
-        finally:
-            term.close(terminate=True, kill=True)
+            expected_stdout = salt.utils.stringutils.to_unicode(stdout_content,
+                                                                encoding)
+            expected_stderr = salt.utils.stringutils.to_unicode(stderr_content,
+                                                                encoding)
+            python_command = '\n'.join((
+                'import sys',
+                'with open(\'' + file_path_stdout + '\', \'rb\') as fout:',
+                '    sys.stdout.buffer.write(fout.read())',
+                'with open(\'' + file_path_stderr + '\', \'rb\') as ferr:',
+                '    sys.stderr.buffer.write(ferr.read())',))
+            term = salt.utils.vt.Terminal(
+                args=['python',
+                      '-c',
+                      '"' + python_command + '"'],
+                shell=True,
+                stream_stdout=False,
+                stream_stderr=False,
+                force_receive_encoding=encoding)
+            buffer_o = buffer_e = ''
+            try:
+                while term.has_unread_data:
+                    stdout, stderr = term.recv(block_size)
+                    if stdout:
+                        buffer_o += stdout
+                    if stderr:
+                        buffer_e += stderr
+
+                self.assertEqual(buffer_o, expected_stdout)
+                self.assertEqual(buffer_e, expected_stderr)
+            finally:
+                term.close(terminate=True, kill=True)
 
     def test_split_multibyte_characters_shiftjis(self):
         block_size = 1024
-        stdout_line = ('stdout_content = b\'\\x8B\\x80\' * ' +
-                       str(4 * block_size))
-        # stderr is offset by one byte to guarentee a split character in one of
-        # the output streams
-        stderr_line = 'stderr_content = b\'\\x2E\' + stdout_content'
-        # generate expected data using the same commands as the test process
-        stdout_content = b'\x8B\x80' * 4 * block_size
-        stderr_content = b'\x2E' + stdout_content
-        expected_stdout = stdout_content.decode('shift-jis')
-        expected_stderr = stderr_content.decode('shift-jis')
-        python_command = '\n'.join((
-            'import sys',
-            stdout_line,
-            stderr_line,
-            'sys.stdout.buffer.write(stdout_content)',
-            'sys.stderr.buffer.write(stderr_content)'))
-        term = salt.utils.vt.Terminal(
-                                      args=['python',
-                                            '-c',
-                                            '"' + python_command + '"'],
-                                      shell=True,
-                                      stream_stdout=False,
-                                      stream_stderr=False,
-                                      force_receive_encoding='shift-jis')
-        buffer_o = buffer_e = ''
-        try:
-            while term.has_unread_data:
-                stdout, stderr = term.recv(block_size)
-                if stdout:
-                    buffer_o += stdout
-                if stderr:
-                    buffer_e += stderr
+        encoding = 'shift-jis'
+        with tempfile.TemporaryDirectory() as tempdir:
+            file_path_stdout = os.path.join(tempdir, "stdout.txt")
+            file_path_stderr = os.path.join(tempdir, "stderr.txt")
+            stdout_content = b'\x8B\x80' * 4 * block_size
+            # stderr is offset by one byte to guarentee a split character in
+            # one of the output streams
+            stderr_content = b'\x2E' + stdout_content
+            with open(file_path_stdout, "wb") as fout:
+                fout.write(stdout_content)
+            with open(file_path_stderr, "wb") as ferr:
+                ferr.write(stderr_content)
 
-            self.assertEqual(len(buffer_o), len(expected_stdout))
-            self.assertEqual(len(buffer_e), len(expected_stderr))
-            self.assertEqual(buffer_o, expected_stdout)
-            self.assertEqual(buffer_e, expected_stderr)
-        finally:
-            term.close(terminate=True, kill=True)
+            expected_stdout = salt.utils.stringutils.to_unicode(stdout_content,
+                                                                encoding)
+            expected_stderr = salt.utils.stringutils.to_unicode(stderr_content,
+                                                                encoding)
+            python_command = '\n'.join((
+                'import sys',
+                'with open(\'' + file_path_stdout + '\', \'rb\') as fout:',
+                '    sys.stdout.buffer.write(fout.read())',
+                'with open(\'' + file_path_stderr + '\', \'rb\') as ferr:',
+                '    sys.stderr.buffer.write(ferr.read())',))
+            term = salt.utils.vt.Terminal(
+                args=['python',
+                      '-c',
+                      '"' + python_command + '"'],
+                shell=True,
+                stream_stdout=False,
+                stream_stderr=False,
+                force_receive_encoding=encoding)
+            buffer_o = buffer_e = ''
+            try:
+                while term.has_unread_data:
+                    stdout, stderr = term.recv(block_size)
+                    if stdout:
+                        buffer_o += stdout
+                    if stderr:
+                        buffer_e += stderr
+
+                self.assertEqual(buffer_o, expected_stdout)
+                self.assertEqual(buffer_e, expected_stderr)
+            finally:
+                term.close(terminate=True, kill=True)
