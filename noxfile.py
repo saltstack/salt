@@ -840,14 +840,17 @@ def lint_tests(session):
     _lint(session, '.testing.pylintrc', flags, paths)
 
 
-@nox.session(python='3.6')
+@nox.session(python='3')
 def docs(session):
     '''
     Build Salt's Documentation
     '''
+    pydir = _get_pydir(session)
+    if pydir == 'py3.4':
+        session.error('Sphinx only runs on Python >= 3.5')
     session.install(
         '--progress-bar=off',
-        '-r', 'requirements/static/py{}/docs.txt'.format(session.python),
+        '-r', 'requirements/static/{}/docs.txt'.format(pydir),
         silent=PIP_INSTALL_SILENT)
     os.chdir('doc/')
     session.run('make', 'clean', external=True)
