@@ -251,7 +251,7 @@ class VTTestCase(TestCase):
                 stream_stdout=False,
                 stream_stderr=False,
                 force_receive_encoding=encoding)
-            buffer_o = buffer_e = ''
+            buffer_o = buffer_e = salt.utils.stringutils.to_unicode('')
             try:
                 while term.has_unread_data:
                     stdout, stderr = term.recv(block_size)
@@ -301,7 +301,7 @@ class VTTestCase(TestCase):
                 stream_stdout=False,
                 stream_stderr=False,
                 force_receive_encoding=encoding)
-            buffer_o = buffer_e = ''
+            buffer_o = buffer_e = salt.utils.stringutils.to_unicode('')
             try:
                 while term.has_unread_data:
                     stdout, stderr = term.recv(block_size)
