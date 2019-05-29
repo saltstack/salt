@@ -22,6 +22,7 @@ import salt.roster.sshknownhosts as sshknownhosts
 _ALL = {
     'server1': {'host': 'server1'},
     'server2': {'host': 'server2'},
+    'server3.local': {'host': 'server3.local'},
     'eu-mysql-1.local': {'host': 'eu-mysql-1.local'},
     'eu-mysql-2': {'host': 'eu-mysql-2'},
     'eu-mysql-2.local': {'host': 'eu-mysql-2.local'}
@@ -29,7 +30,8 @@ _ALL = {
 
 _TEST_GLOB = {
     'server1': {'host': 'server1'},
-    'server2': {'host': 'server2'}
+    'server2': {'host': 'server2'},
+    'server3.local': {'host': 'server3.local'}
 }
 
 _TEST_PCRE = {
@@ -67,16 +69,16 @@ class SSHKnownHostsRosterTestCase(TestCase, mixins.LoaderModuleMockMixin):
         self.opts['ssh_known_hosts_file'] = os.path.join(self.tests_dir, 'known_hosts')
         with patch.dict(sshknownhosts.__opts__, self.opts):
             targets = sshknownhosts.targets(tgt='*')
-            self.assertEqual(targets, _ALL)
+            self.assertDictEqual(targets, _ALL)
 
     def test_glob(self):
         self.opts['ssh_known_hosts_file'] = os.path.join(self.tests_dir, 'known_hosts')
         with patch.dict(sshknownhosts.__opts__, self.opts):
             targets = sshknownhosts.targets(tgt='server*')
-            self.assertEqual(targets, _TEST_GLOB)
+            self.assertDictEqual(targets, _TEST_GLOB)
 
     def test_pcre(self):
         self.opts['ssh_known_hosts_file'] = os.path.join(self.tests_dir, 'known_hosts')
         with patch.dict(sshknownhosts.__opts__, self.opts):
             targets = sshknownhosts.targets(tgt='eu-mysql-2$', tgt_type='pcre')
-            self.assertEqual(targets, _TEST_PCRE)
+            self.assertDictEqual(targets, _TEST_PCRE)
