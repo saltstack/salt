@@ -219,7 +219,8 @@ class VTTestCase(TestCase):
     def test_split_multibyte_characters_unicode(self):
         block_size = 1024
         encoding = 'utf-8'
-        with tempfile.TemporaryDirectory() as tempdir:
+        try:
+            tempdir = tempfile.mkdtemp()
             file_path_stdout = os.path.join(tempdir, "stdout.txt")
             file_path_stderr = os.path.join(tempdir, "stderr.txt")
             stdout_content = b'\xE2\x80\xA6' * 4 * block_size
@@ -262,11 +263,16 @@ class VTTestCase(TestCase):
                 self.assertEqual(buffer_e, expected_stderr)
             finally:
                 term.close(terminate=True, kill=True)
+        finally:
+            os.remove(file_path_stdout)
+            os.remove(file_path_stderr)
+            os.removedirs(tempdir)
 
     def test_split_multibyte_characters_shiftjis(self):
         block_size = 1024
         encoding = 'shift-jis'
-        with tempfile.TemporaryDirectory() as tempdir:
+        try:
+            tempdir = tempfile.mkdtemp()
             file_path_stdout = os.path.join(tempdir, "stdout.txt")
             file_path_stderr = os.path.join(tempdir, "stderr.txt")
             stdout_content = b'\x8B\x80' * 4 * block_size
@@ -309,3 +315,7 @@ class VTTestCase(TestCase):
                 self.assertEqual(buffer_e, expected_stderr)
             finally:
                 term.close(terminate=True, kill=True)
+        finally:
+            os.remove(file_path_stdout)
+            os.remove(file_path_stderr)
+            os.removedirs(tempdir)
