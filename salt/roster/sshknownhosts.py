@@ -20,7 +20,7 @@ Now you can use the module
 
 Or with a Saltfile
 
-.. code-block:: ini
+.. code-block:: yaml
 
     salt-ssh:
       ssh_known_hosts_file: /Users/user1/.ssh/known_hosts
