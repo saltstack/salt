@@ -845,9 +845,12 @@ def docs(session):
     '''
     Build Salt's Documentation
     '''
-    session.install('--progress-bar=off', '-r', 'requirements/static/py3.6/docs.txt', silent=PIP_INSTALL_SILENT)
+    session.install(
+        '--progress-bar=off',
+        '-r', 'requirements/static/py{}/docs.txt'.format(session.python),
+        silent=PIP_INSTALL_SILENT)
     os.chdir('doc/')
     session.run('make', 'clean', external=True)
-    session.run('make', 'html', external=True)
+    session.run('make', 'html', 'SPHINXOPTS=-W', external=True)
     session.run('tar', '-czvf', 'doc-archive.tar.gz', '_build/html')
     os.chdir('..')
