@@ -775,7 +775,7 @@ def ping_all_connected_minions(opts):
     else:
         tgt = '*'
         form = 'glob'
-    client.cmd(tgt, 'test.ping', tgt_type=form)
+    client.cmd_async(tgt, 'test.ping', tgt_type=form)
 
 
 def get_master_key(key_user, opts, skip_perm_errors=False):

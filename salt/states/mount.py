@@ -1018,9 +1018,9 @@ def _convert_to(maybe_device, convert_to):
 
 def fstab_present(name, fs_file, fs_vfstype, fs_mntops='defaults',
                   fs_freq=0, fs_passno=0, mount_by=None,
-                  config='/etc/fstab', mount=True, match_on='auto'):
-    '''
-    Makes sure that a fstab mount point is pressent.
+                  config='/etc/fstab', mount=True, match_on='auto',
+                  not_change=False):
+    '''Makes sure that a fstab mount point is pressent.
 
     name
         The name of block device. Can be any valid fs_spec value.
@@ -1065,6 +1065,13 @@ def fstab_present(name, fs_file, fs_vfstype, fs_mntops='defaults',
         to guess based on fstype.  In general, ``auto`` matches on
         name for recognized special devices and device otherwise.
 
+    not_change
+        By default, if the entry is found in the fstab file but is
+        different from the expected content (like different options),
+        the entry will be replaced with the correct content. If this
+        parameter is set to ``True`` and the line is found, the
+        original content will be preserved.
+
     '''
     ret = {
         'name': name,
@@ -1105,7 +1112,8 @@ def fstab_present(name, fs_file, fs_vfstype, fs_mntops='defaults',
                                                    fstype=fs_vfstype,
                                                    opts=fs_mntops,
                                                    config=config,
-                                                   test=True)
+                                                   test=True,
+                                                   not_change=not_change)
         elif __grains__['os'] == 'AIX':
             out = __salt__['mount.set_filesystems'](name=fs_file,
                                                     device=fs_spec,
@@ -1114,7 +1122,8 @@ def fstab_present(name, fs_file, fs_vfstype, fs_mntops='defaults',
                                                     mount=mount,
                                                     config=config,
                                                     test=True,
-                                                    match_on=match_on)
+                                                    match_on=match_on,
+                                                    not_change=not_change)
         else:
             out = __salt__['mount.set_fstab'](name=fs_file,
                                               device=fs_spec,
@@ -1124,7 +1133,8 @@ def fstab_present(name, fs_file, fs_vfstype, fs_mntops='defaults',
                                               pass_num=fs_passno,
                                               config=config,
                                               test=True,
-                                              match_on=match_on)
+                                              match_on=match_on,
+                                              not_change=not_change)
         ret['result'] = None
         if out == 'present':
             msg = '{} entry is already in {}.'
@@ -1146,7 +1156,8 @@ def fstab_present(name, fs_file, fs_vfstype, fs_mntops='defaults',
                                                device=fs_spec,
                                                fstype=fs_vfstype,
                                                opts=fs_mntops,
-                                               config=config)
+                                               config=config,
+                                               not_change=not_change)
     elif __grains__['os'] == 'AIX':
         out = __salt__['mount.set_filesystems'](name=fs_file,
                                                 device=fs_spec,
@@ -1154,7 +1165,8 @@ def fstab_present(name, fs_file, fs_vfstype, fs_mntops='defaults',
                                                 opts=fs_mntops,
                                                 mount=mount,
                                                 config=config,
-                                                match_on=match_on)
+                                                match_on=match_on,
+                                                not_change=not_change)
     else:
         out = __salt__['mount.set_fstab'](name=fs_file,
                                           device=fs_spec,
@@ -1163,7 +1175,8 @@ def fstab_present(name, fs_file, fs_vfstype, fs_mntops='defaults',
                                           dump=fs_freq,
                                           pass_num=fs_passno,
                                           config=config,
-                                          match_on=match_on)
+                                          match_on=match_on,
+                                          not_change=not_change)
 
     ret['result'] = True
     if out == 'present':
