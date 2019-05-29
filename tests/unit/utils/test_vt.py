@@ -22,6 +22,7 @@ import tempfile
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
+import salt.utils
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.vt
@@ -272,9 +273,9 @@ class VTTestCase(TestCase):
             # stderr is offset by one byte to guarentee a split character in
             # one of the output streams
             stderr_content = b'\x2E' + stdout_content
-            with open(file_path_stdout, "wb") as fout:
+            with salt.utils.fopen(file_path_stdout, "wb") as fout:
                 fout.write(stdout_content)
-            with open(file_path_stderr, "wb") as ferr:
+            with salt.utils.fopen(file_path_stderr, "wb") as ferr:
                 ferr.write(stderr_content)
 
             expected_stdout = salt.utils.stringutils.to_unicode(stdout_content,
