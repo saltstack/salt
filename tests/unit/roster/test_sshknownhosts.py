@@ -2,19 +2,21 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import collections
+import os
 
 # Import Salt Testing Libs
 from tests.support.mock import (
-    mock_open,
     NO_MOCK,
     NO_MOCK_REASON,
     patch
 )
 from tests.support import mixins
 from tests.support.unit import skipIf, TestCase
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
+import salt.config
+import salt.loader
 import salt.roster.sshknownhosts as sshknownhosts
 
 _ALL = {
@@ -33,7 +35,6 @@ _TEST_GLOB = {
 _TEST_PCRE = {
     'eu-mysql-2': {'host': 'eu-mysql-2'}
 }
-
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
