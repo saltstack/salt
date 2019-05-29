@@ -9,18 +9,20 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import time
-import errno
-import threading
 import datetime
+import errno
+import io
+import threading
+import time
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 
 # Import Salt libs
 from salt.utils import immutabletypes
 from salt.utils.odict import OrderedDict
+from salt.utils.stringutils import to_bytes
 import salt.exceptions
 import salt.payload
 
@@ -31,6 +33,88 @@ from salt.ext import six
 import logging
 
 log = logging.getLogger(__name__)
+
+
+class WrappedMsgpackTestCase(TestCase):
+    def test_if_msgpack_version_is_0_5_2_present_encoding_should_return_raw_False(self):
+        depreciated_kwargs = {
+            'encoding': 'fnord',
+        }
+        expected_kwargs = {
+            'raw': False,
+        }
+        with patch('salt.payload.msgpack.version', (0, 5, 2)):
+            self.assertDictEqual(
+                salt.payload._adapt_unpack_kwargs(depreciated_kwargs),
+                expected_kwargs,
+            )
+
+    def test_if_msgpack_version_is_0_5_2_absent_encoding_should_return_raw_True(self):
+        depreciated_kwargs = {
+            'encoding': None,
+        }
+        expected_kwargs = {
+            'raw': True,
+        }
+        with patch('salt.payload.msgpack.version', (0, 5, 2)):
+            self.assertDictEqual(
+                salt.payload._adapt_unpack_kwargs(depreciated_kwargs),
+                expected_kwargs,
+            )
+
+    def test_if_msgpack_version_is_0_5_1_or_less_encoding_val_should_be_passed(self):
+        all_kwargs = [
+            {'encoding': None},
+            {'encoding': 'utf-8'},
+            {'encoding': 'fnord'},
+        ]
+        with patch('salt.payload.msgpack.version', (0, 5, 1)):
+            for kwargs in all_kwargs:
+                self.assertDictEqual(
+                    salt.payload._adapt_unpack_kwargs(kwargs.copy()),
+                    kwargs,
+                )
+
+
+class TestPayloadUnpacker(TestCase):
+    def test_encoding_as_parameter_should_be_passed_to_super_on_0_5_1_or_less(self):
+        fh = io.BytesIO(b'''\x81\xa3foo\xa3bar''')
+        with patch('salt.payload.msgpack.version', (0, 5, 1)):
+            p = salt.payload.Unpacker(fh, encoding='roscivs')
+
+            # On 0.5.1 (or less) we want to pass in the encoding
+            # parameter. This one isn't valid.
+            with self.assertRaises(LookupError):
+                p.unpack()
+
+    def test_no_encoding_parameter_on_0_5_2_or_later_should_be_ignored(self):
+        fh = io.BytesIO(b'''\x81\xa3foo\xa3bar''')
+        expected_dict = {'foo': 'bar'}
+        p = salt.payload.Unpacker(fh)
+
+        with patch('salt.payload.msgpack.version', (0, 5, 2)):
+            # We're going to use raw=False instead, and ignore whatever
+            # this encoding is. That means the dict should be
+            # made of text values, instead of byte strings.
+            p = salt.payload.Unpacker(fh, encoding='roscivs')
+
+            self.assertDictEqual(p.unpack(), expected_dict)
+
+    def test_encoding_as_parameter_should_have_raw_False_passed_to_super_on_0_5_2_and_greater(self):
+        fh = io.BytesIO(b'''\x81\xa3foo\xa3bar''')
+        expected_dict = {'foo': 'bar'}
+        with patch('salt.payload.msgpack.version', (0, 5, 2)):
+            p = salt.payload.Unpacker(fh, encoding='roscivs')
+
+            self.assertDictEqual(p.unpack(), expected_dict)
+
+    def test_without_encoding_raw_True_should_be_passed_on_0_5_2_and_greader(self):
+        fh = io.BytesIO(b'''\x81\xa3foo\xa3bar''')
+        expected_dict = {to_bytes('foo'): to_bytes('bar')}
+        with patch('salt.payload.msgpack.version', (0, 5, 2)):
+            p = salt.payload.Unpacker(fh)
+
+            self.assertDictEqual(p.unpack(), expected_dict)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

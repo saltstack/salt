@@ -39,6 +39,7 @@ except ImportError:
 # Import salt libs
 import salt.config
 import salt.loader
+import salt.payload as payload
 import salt.syspaths
 import salt.utils.args
 import salt.utils.data
@@ -47,9 +48,9 @@ import salt.utils.json
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.xmlutil as xml
 import salt.utils.yaml
 import salt.version
-import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 from salt.template import compile_template
 from salt.utils.decorators.jinja import jinja_filter
@@ -81,12 +82,6 @@ try:
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
-
-try:
-    import msgpack
-    HAS_MSGPACK = True
-except ImportError:
-    HAS_MSGPACK = False
 
 try:
     import certifi
@@ -267,19 +262,19 @@ def query(url,
     if session_cookie_jar is None:
         session_cookie_jar = os.path.join(opts.get('cachedir', salt.syspaths.CACHE_DIR), 'cookies.session.p')
 
-    if persist_session is True and HAS_MSGPACK:
+    if persist_session is True and payload.HAS_MSGPACK:
         # TODO: This is hackish; it will overwrite the session cookie jar with
         # all cookies from this one connection, rather than behaving like a
         # proper cookie jar. Unfortunately, since session cookies do not
         # contain expirations, they can't be stored in a proper cookie jar.
         if os.path.isfile(session_cookie_jar):
             with salt.utils.files.fopen(session_cookie_jar, 'rb') as fh_:
-                session_cookies = msgpack.load(fh_)
+                session_cookies = payload.load(fh_)
             if isinstance(session_cookies, dict):
                 header_dict.update(session_cookies)
         else:
             with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
-                msgpack.dump('', fh_)
+                payload.dump('', fh_)
 
     for header in header_list:
         comps = header.split(':')
@@ -625,15 +620,15 @@ def query(url,
     if cookies is not None:
         sess_cookies.save()
 
-    if persist_session is True and HAS_MSGPACK:
+    if persist_session is True and payload.HAS_MSGPACK:
         # TODO: See persist_session above
         if 'set-cookie' in result_headers:
             with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
                 session_cookies = result_headers.get('set-cookie', None)
                 if session_cookies is not None:
-                    msgpack.dump({'Cookie': session_cookies}, fh_)
+                    payload.dump({'Cookie': session_cookies}, fh_)
                 else:
-                    msgpack.dump('', fh_)
+                    payload.dump('', fh_)
 
     if status is True:
         ret['status'] = result_status_code

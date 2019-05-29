@@ -24,7 +24,7 @@ import time
 
 # Import salt libs
 import salt.config
-import salt.payload
+import salt.payload as payload
 import salt.state
 import salt.utils.args
 import salt.utils.data
@@ -44,7 +44,6 @@ from salt.runners.state import orchestrate as _orchestrate
 
 # Import 3rd-party libs
 from salt.ext import six
-import msgpack
 
 __proxyenabled__ = ['*']
 
@@ -184,7 +183,7 @@ def _get_pause(jid, state_id=None):
             data[state_id] = {}
     if os.path.exists(pause_path):
         with salt.utils.files.fopen(pause_path, 'rb') as fp_:
-            data = msgpack.loads(fp_.read())
+            data = payload.unpackage(fp_.read())
     return data, pause_path
 
 
@@ -255,7 +254,7 @@ def soft_kill(jid, state_id=None):
     data, pause_path = _get_pause(jid, state_id)
     data[state_id]['kill'] = True
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(payload.package(data))
 
 
 def pause(jid, state_id=None, duration=None):
@@ -290,7 +289,7 @@ def pause(jid, state_id=None, duration=None):
     if duration:
         data[state_id]['duration'] = int(duration)
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(payload.package(data))
 
 
 def resume(jid, state_id=None):
@@ -324,7 +323,7 @@ def resume(jid, state_id=None):
     if state_id == '__all__':
         data = {}
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(payload.package(data))
 
 
 def orchestrate(mods,
@@ -798,7 +797,7 @@ def request(mods=None,
     kwargs['test'] = True
     ret = apply_(mods, **kwargs)
     notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
-    serial = salt.payload.Serial(__opts__)
+    serial = payload.Serial(__opts__)
     req = check_request()
     req.update({kwargs.get('name', 'default'): {
             'test_run': ret,
@@ -834,7 +833,7 @@ def check_request(name=None):
         salt '*' state.check_request
     '''
     notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
-    serial = salt.payload.Serial(__opts__)
+    serial = payload.Serial(__opts__)
     if os.path.isfile(notify_path):
         with salt.utils.files.fopen(notify_path, 'rb') as fp_:
             req = serial.load(fp_)
@@ -857,7 +856,7 @@ def clear_request(name=None):
         salt '*' state.clear_request
     '''
     notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
-    serial = salt.payload.Serial(__opts__)
+    serial = payload.Serial(__opts__)
     if not os.path.isfile(notify_path):
         return True
     if not name:
@@ -1257,7 +1256,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
             'is specified.'
         )
 
-    serial = salt.payload.Serial(__opts__)
+    serial = payload.Serial(__opts__)
     cfn = os.path.join(
             __opts__['cachedir'],
             '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))

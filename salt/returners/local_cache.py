@@ -15,16 +15,15 @@ import time
 import bisect
 
 # Import salt libs
-import salt.payload
+import salt.exceptions
+import salt.payload as payload
 import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minions
 import salt.utils.stringutils
-import salt.exceptions
 
 # Import 3rd-party libs
-import msgpack
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
@@ -57,7 +56,7 @@ def _walk_through(job_dir):
     '''
     Walk though the jid dir and look for jobs
     '''
-    serial = salt.payload.Serial(__opts__)
+    serial = payload.Serial(__opts__)
 
     for top in os.listdir(job_dir):
         t_path = os.path.join(job_dir, top)
@@ -134,7 +133,7 @@ def returner(load):
     '''
     Return data to the local job cache
     '''
-    serial = salt.payload.Serial(__opts__)
+    serial = payload.Serial(__opts__)
 
     # if a minion is returning a standalone job, get a jobid
     if load['jid'] == 'req':
@@ -200,7 +199,7 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
 
     jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
 
-    serial = salt.payload.Serial(__opts__)
+    serial = payload.Serial(__opts__)
 
     # Save the invocation information
     try:
@@ -251,7 +250,7 @@ def save_minions(jid, minions, syndic_id=None):
         ' from syndic master \'{0}\''.format(syndic_id) if syndic_id else '',
         minions
     )
-    serial = salt.payload.Serial(__opts__)
+    serial = payload.Serial(__opts__)
 
     jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
 
@@ -297,7 +296,7 @@ def get_load(jid):
     load_fn = os.path.join(jid_dir, LOAD_P)
     if not os.path.exists(jid_dir) or not os.path.exists(load_fn):
         return {}
-    serial = salt.payload.Serial(__opts__)
+    serial = payload.Serial(__opts__)
     ret = {}
     load_p = os.path.join(jid_dir, LOAD_P)
     num_tries = 5
@@ -338,7 +337,7 @@ def get_jid(jid):
     Return the information returned when the specified job id was executed
     '''
     jid_dir = salt.utils.jid.jid_dir(jid, _job_dir(), __opts__['hash_type'])
-    serial = salt.payload.Serial(__opts__)
+    serial = payload.Serial(__opts__)
 
     ret = {}
     # Check to see if the jid is real, if not return the empty dict
@@ -517,7 +516,7 @@ def save_reg(data):
             raise
     try:
         with salt.utils.files.fopen(regfile, 'a') as fh_:
-            msgpack.dump(data, fh_)
+            payload.dump(data, fh_)
     except Exception:
         log.error('Could not write to msgpack file %s', __opts__['outdir'])
         raise
@@ -531,7 +530,7 @@ def load_reg():
     regfile = os.path.join(reg_dir, 'register')
     try:
         with salt.utils.files.fopen(regfile, 'r') as fh_:
-            return msgpack.load(fh_)
+            return payload.load(fh_)
     except Exception:
         log.error('Could not write to msgpack file %s', __opts__['outdir'])
         raise

@@ -8,24 +8,22 @@ Runner to manage Windows software repo
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
 import os
 
 # Import third party libs
 from salt.ext import six
-try:
-    import msgpack
-except ImportError:
-    import msgpack_pure as msgpack  # pylint: disable=import-error
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError, SaltRenderError
+import salt.loader
+import salt.minion
+import salt.payload as payload
+import salt.template
 import salt.utils.files
 import salt.utils.gitfs
 import salt.utils.path
-import logging
-import salt.minion
-import salt.loader
-import salt.template
+from salt.exceptions import CommandExecutionError, SaltRenderError
 
 log = logging.getLogger(__name__)
 
@@ -124,7 +122,7 @@ def genrepo(opts=None, fire_event=True):
                     ret.setdefault('name_map', {}).update(revmap)
     with salt.utils.files.fopen(
             os.path.join(winrepo_dir, winrepo_cachefile), 'w+b') as repo:
-        repo.write(msgpack.dumps(ret))
+        repo.write(payload.package(ret))
     return ret
 
 

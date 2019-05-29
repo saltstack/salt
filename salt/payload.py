@@ -70,19 +70,50 @@ if HAS_MSGPACK and not hasattr(msgpack, 'exceptions'):
     msgpack.exceptions = exceptions()
 
 
-def package(payload):
+def _adapt_unpack_kwargs(kwargs):
+    '''
+    Return an adapted version of kwargs, based on the installed version
+    of msgpack.
+    '''
+    if msgpack.version >= (0, 5, 2):
+        encoding = kwargs.pop('encoding', None)
+        if encoding is None:
+            kwargs['raw'] = True
+        else:
+            kwargs['raw'] = False
+
+    return kwargs
+
+
+def package(payload, **kwargs):
     '''
     This method for now just wraps msgpack.dumps, but it is here so that
     we can make the serialization a custom option in the future with ease.
     '''
-    return msgpack.dumps(payload)
+    return msgpack.dumps(payload, **kwargs)
 
 
-def unpackage(package_):
+def unpackage(package_, **kwargs):
     '''
     Unpackages a payload
     '''
-    return msgpack.loads(package_, use_list=True)
+    kwargs = _adapt_unpack_kwargs(kwargs)
+    return msgpack.loads(package_, **kwargs)
+
+
+def load(stream, **kwargs):
+    '''
+    Unpack the payload from the provided ``stream``.
+    '''
+    kwargs = _adapt_unpack_kwargs(kwargs)
+    return msgpack.load(stream, **kwargs)
+
+
+def dump(obj, stream, **kwargs):
+    '''
+    Serialize the provided ``obj`` into the ``stream``.
+    '''
+    return msgpack.dump(obj, stream, **kwargs)
 
 
 def format_payload(enc, **kwargs):
@@ -96,6 +127,13 @@ def format_payload(enc, **kwargs):
         load[key] = kwargs[key]
     payload['load'] = load
     return package(payload)
+
+
+# TODO: I'm not sure what to do here, based on the "Don't exit" comment -W. Werner, 2019-05-28
+class Unpacker(msgpack.Unpacker):
+    def __init__(self, *args, **kwargs):
+        kwargs = _adapt_unpack_kwargs(kwargs)
+        super(Unpacker, self).__init__(*args, **kwargs)
 
 
 class Serial(object):

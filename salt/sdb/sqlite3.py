@@ -54,11 +54,8 @@ except ImportError:
     HAS_SQLITE3 = False
 
 # Import salt libs
+from salt import payload
 from salt.ext import six
-
-# Import third party libs
-import msgpack
-
 
 DEFAULT_TABLE = 'sdb'
 
@@ -126,9 +123,9 @@ def set_(key, value, profile=None):
         return False
     conn, cur, table = _connect(profile)
     if six.PY2:
-        value = buffer(msgpack.packb(value))
+        value = buffer(payload.package(value))
     else:
-        value = memoryview(msgpack.packb(value))
+        value = memoryview(payload.package(value))
     q = profile.get('set_query', ('INSERT OR REPLACE INTO {0} VALUES '
                                   '(:key, :value)').format(table))
     conn.execute(q, {'key': key, 'value': value})
@@ -149,4 +146,4 @@ def get(key, profile=None):
     res = res.fetchone()
     if not res:
         return None
-    return msgpack.unpackb(res[0])
+    return payload.unpackage(res[0])

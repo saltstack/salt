@@ -56,6 +56,7 @@ import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.yaml
 import salt.log.setup as salt_log_setup
+from salt import payload
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt.utils.nb_popen import NonBlockingPopen
@@ -68,7 +69,6 @@ except ImportError:
     pass
 
 # Import 3rd-party libs
-import msgpack
 from salt.ext import six
 from salt.ext.six.moves import cStringIO
 
@@ -153,7 +153,7 @@ class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer):
 
 class SocketServerRequestHandler(socketserver.StreamRequestHandler):
     def handle(self):
-        unpacker = msgpack.Unpacker(encoding='utf-8')
+        unpacker = payload.Unpacker(encoding='utf-8')
         while not self.server.shutting_down.is_set():
             try:
                 wire_bytes = self.request.recv(1024)

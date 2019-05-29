@@ -21,6 +21,7 @@ import salt.crypt
 import salt.daemons.masterapi
 import salt.exceptions
 import salt.minion
+import salt.payload as payload
 import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data
@@ -37,12 +38,6 @@ import salt.utils.user
 from salt.ext import six
 from salt.ext.six.moves import input, zip_longest
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
-
-# Import third party libs
-try:
-    import msgpack
-except ImportError:
-    pass
 
 log = logging.getLogger(__name__)
 
@@ -1044,7 +1039,7 @@ class RaetKey(Key):
                     if ext == '.json':
                         data = salt.utils.json.load(fp_)
                     elif ext == '.msgpack':
-                        data = msgpack.load(fp_)
+                        data = payload.load(fp_)
                     role = salt.utils.stringutils.to_unicode(data['role'])
                     if role not in minions:
                         os.remove(path)

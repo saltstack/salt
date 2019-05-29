@@ -8,15 +8,10 @@ import os
 import re
 import time
 import logging
-try:
-    import msgpack
-    HAS_MSGPACK = True
-except ImportError:
-    HAS_MSGPACK = False
 
 # Import salt libs
 import salt.config
-import salt.payload
+import salt.payload as payload
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
@@ -136,10 +131,10 @@ class CacheDisk(CacheDict):
         '''
         Read in from disk
         '''
-        if not HAS_MSGPACK or not os.path.exists(self._path):
+        if not payload.HAS_MSGPACK or not os.path.exists(self._path):
             return
         with salt.utils.files.fopen(self._path, 'rb') as fp_:
-            cache = salt.utils.data.decode(msgpack.load(fp_, encoding=__salt_system_encoding__))
+            cache = salt.utils.data.decode(payload.load(fp_, encoding=__salt_system_encoding__))
         if "CacheDisk_cachetime" in cache:  # new format
             self._dict = cache["CacheDisk_data"]
             self._key_cache_time = cache["CacheDisk_cachetime"]
@@ -155,7 +150,7 @@ class CacheDisk(CacheDict):
         '''
         Write out to disk
         '''
-        if not HAS_MSGPACK:
+        if not payload.HAS_MSGPACK:
             return
         # TODO Add check into preflight to ensure dir exists
         # TODO Dir hashing?
@@ -164,7 +159,7 @@ class CacheDisk(CacheDict):
                 "CacheDisk_data": self._dict,
                 "CacheDisk_cachetime": self._key_cache_time
             }
-            msgpack.dump(cache, fp_, use_bin_type=True)
+            payload.dump(cache, fp_, use_bin_type=True)
 
 
 class CacheCli(object):
@@ -178,7 +173,7 @@ class CacheCli(object):
         Sets up the zmq-connection to the ConCache
         '''
         self.opts = opts
-        self.serial = salt.payload.Serial(self.opts.get('serial', ''))
+        self.serial = payload.Serial(self.opts.get('serial', ''))
         self.cache_sock = os.path.join(self.opts['sock_dir'], 'con_cache.ipc')
         self.cache_upd_sock = os.path.join(
             self.opts['sock_dir'], 'con_upd.ipc')
@@ -276,7 +271,7 @@ class ContextCache(object):
         '''
         self.opts = opts
         self.cache_path = os.path.join(opts['cachedir'], 'context', '{0}.p'.format(name))
-        self.serial = salt.payload.Serial(self.opts)
+        self.serial = payload.Serial(self.opts)
 
     def cache_context(self, context):
         '''

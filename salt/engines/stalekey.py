@@ -26,13 +26,13 @@ import logging
 # Import salt libs
 import salt.config
 import salt.key
+import salt.payload as payload
 import salt.utils.files
 import salt.utils.minions
 import salt.wheel
 
 # Import 3rd-party libs
 from salt.ext import six
-import msgpack
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ def start(interval=3600, expire=604800):
         if os.path.exists(presence_file):
             try:
                 with salt.utils.files.fopen(presence_file, 'r') as f:
-                    minions = msgpack.load(f)
+                    minions = payload.load(f)
             except IOError as e:
                 log.error('Could not open presence file %s: %s', presence_file, e)
                 time.sleep(interval)
@@ -95,7 +95,7 @@ def start(interval=3600, expire=604800):
 
         try:
             with salt.utils.files.fopen(presence_file, 'w') as f:
-                msgpack.dump(minions, f)
+                payload.dump(minions, f)
         except IOError as e:
             log.error('Could not write to presence file %s: %s', presence_file, e)
         time.sleep(interval)

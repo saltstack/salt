@@ -12,7 +12,7 @@ import copy
 import logging
 
 # Import Salt Libs
-from salt.log import setup_console_logger
+from salt import payload
 from salt.serializers import DeserializationError, SerializationError
 
 # Import 3rd-party libs
@@ -21,31 +21,7 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 
-try:
-    # Attempt to import msgpack
-    import msgpack
-    # There is a serialization issue on ARM and potentially other platforms
-    # for some msgpack bindings, check for it
-    if msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
-        raise ImportError
-    available = True
-except ImportError:
-    # Fall back to msgpack_pure
-    try:
-        import msgpack_pure as msgpack  # pylint: disable=import-error
-    except ImportError:
-        # TODO: Come up with a sane way to get a configured logfile
-        #       and write to the logfile when this error is hit also
-        LOG_FORMAT = '[%(levelname)-8s] %(message)s'
-        setup_console_logger(log_format=LOG_FORMAT)
-        log.fatal('Unable to import msgpack or msgpack_pure python modules')
-        # Don't exit if msgpack is not available, this is to make local mode
-        # work without msgpack
-        #sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-        available = False
-
-
-if not available:
+if not payload.HAS_MSGPACK:
 
     def _fail():
         raise RuntimeError('msgpack is not available')
@@ -56,11 +32,11 @@ if not available:
     def _deserialize(stream_or_string, **options):
         _fail()
 
-elif msgpack.version >= (0, 2, 0):
+elif payload.msgpack.version >= (0, 2, 0):
 
     def _serialize(obj, **options):
         try:
-            return msgpack.dumps(obj, **options)
+            return payload.package(obj, **options)
         except Exception as error:
             raise SerializationError(error)
 
@@ -68,7 +44,7 @@ elif msgpack.version >= (0, 2, 0):
         try:
             options.setdefault('use_list', True)
             options.setdefault('encoding', 'utf-8')
-            return msgpack.loads(stream_or_string, **options)
+            return payload.unpackage(stream_or_string, **options)
         except Exception as error:
             raise DeserializationError(error)
 
@@ -95,14 +71,14 @@ else:  # msgpack.version < 0.2.0
     def _serialize(obj, **options):
         try:
             obj = _encoder(obj)
-            return msgpack.dumps(obj, **options)
+            return payload.package(obj, **options)
         except Exception as error:
             raise SerializationError(error)
 
     def _deserialize(stream_or_string, **options):
         options.setdefault('use_list', True)
         try:
-            obj = msgpack.loads(stream_or_string)
+            obj = payload.unpackage(stream_or_string)
             return _decoder(obj)
         except Exception as error:
             raise DeserializationError(error)

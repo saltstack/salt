@@ -10,9 +10,6 @@ import logging
 import socket
 import time
 
-# Import 3rd-party libs
-import msgpack
-
 # Import Tornado libs
 import tornado
 import tornado.gen
@@ -24,6 +21,7 @@ from tornado.iostream import IOStream, StreamClosedError
 # Import Salt libs
 import salt.transport.client
 import salt.transport.frame
+from salt import payload
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -168,7 +166,7 @@ class IPCServer(object):
             encoding = None
         else:
             encoding = 'utf-8'
-        unpacker = msgpack.Unpacker(encoding=encoding)
+        unpacker = payload.Unpacker(encoding=encoding)
         while not stream.closed():
             try:
                 wire_bytes = yield stream.read_bytes(4096, partial=True)
@@ -253,7 +251,7 @@ class IPCClient(object):
             encoding = None
         else:
             encoding = 'utf-8'
-        self.unpacker = msgpack.Unpacker(encoding=encoding)
+        self.unpacker = payload.Unpacker(encoding=encoding)
 
     def connected(self):
         return self.stream is not None and not self.stream.closed()

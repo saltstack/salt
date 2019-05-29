@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import third party libs
-import msgpack
-
 # Import salt libs
+from salt import payload
 from salt.ext import six
 
 
@@ -23,9 +21,8 @@ def render(msgpack_data, saltenv='base', sls='', **kws):
     '''
     if not isinstance(msgpack_data, six.string_types):
         msgpack_data = msgpack_data.read()
-
     if msgpack_data.startswith('#!'):
         msgpack_data = msgpack_data[(msgpack_data.find('\n') + 1):]
     if not msgpack_data.strip():
         return {}
-    return msgpack.loads(msgpack_data)
+    return payload.unpackage(msgpack_data)
