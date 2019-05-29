@@ -1584,7 +1584,7 @@ def installed(
 
     if bypass_file is not None and bypass_file_contains is not None:
         if os.path.isfile(bypass_file):
-            with salt.utils.fopen(bypass_file) as bypass_file_open:
+            with salt.utils.files.fopen(bypass_file) as bypass_file_open:
                 if bypass_file_contains in bypass_file_open.read():
                     return {'name': name,
                             'changes': {},
