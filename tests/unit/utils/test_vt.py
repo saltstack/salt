@@ -222,8 +222,8 @@ class VTTestCase(TestCase):
         encoding = 'utf-8'
         try:
             tempdir = tempfile.mkdtemp()
-            file_path_stdout = os.path.join(tempdir, "stdout.txt")
-            file_path_stderr = os.path.join(tempdir, "stderr.txt")
+            file_path_stdout = os.path.join(tempdir, "vt_unicode_stdout.txt")
+            file_path_stderr = os.path.join(tempdir, "vt_unicode_stderr.txt")
             stdout_content = b'\xE2\x80\xA6' * 4 * block_size
             # stderr is offset by one byte to guarentee a split character in
             # one of the output streams
@@ -272,8 +272,8 @@ class VTTestCase(TestCase):
         encoding = 'shift-jis'
         try:
             tempdir = tempfile.mkdtemp()
-            file_path_stdout = os.path.join(tempdir, "stdout.txt")
-            file_path_stderr = os.path.join(tempdir, "stderr.txt")
+            file_path_stdout = os.path.join(tempdir, "vt_shiftjis_stdout.txt")
+            file_path_stderr = os.path.join(tempdir, "vt_shiftjis_stderr.txt")
             stdout_content = b'\x8B\x80' * 4 * block_size
             # stderr is offset by one byte to guarentee a split character in
             # one of the output streams
