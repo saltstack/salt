@@ -265,7 +265,9 @@ class VTTestCase(TestCase):
             finally:
                 term.close(terminate=True, kill=True)
         finally:
-            shutil.rmtree(tempdir)
+            # Ignore errors because on some platforms the tempdir doesn't exist
+            # which would seem be indicative of deeper problems
+            shutil.rmtree(tempdir, ignore_errors=True)
 
     def test_split_multibyte_characters_shiftjis(self):
         block_size = 1024
@@ -315,4 +317,6 @@ class VTTestCase(TestCase):
             finally:
                 term.close(terminate=True, kill=True)
         finally:
-            shutil.rmtree(tempdir)
+            # Ignore errors because on some platforms the tempdir doesn't exist
+            # which would seem be indicative of deeper problems
+            shutil.rmtree(tempdir, ignore_errors=True)
