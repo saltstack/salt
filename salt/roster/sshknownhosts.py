@@ -2,7 +2,7 @@
 '''
 Parses roster entries out of Host directives from SSH known_hosts
 
-Example of configuration,
+Sample configuration:
 keep in mind that known_hosts file only contain hostname/IP,
 so you have to use roster_defaults for other parameter for each minion
 
