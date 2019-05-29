@@ -248,8 +248,6 @@ class VTTestCase(TestCase):
                 if stderr:
                     buffer_e += stderr
 
-            self.assertEqual(len(buffer_o), len(expected_stdout))
-            self.assertEqual(len(buffer_e), len(expected_stderr))
             self.assertEqual(buffer_o, expected_stdout)
             self.assertEqual(buffer_e, expected_stderr)
         finally:
