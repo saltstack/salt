@@ -6,7 +6,7 @@ properties([
         $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
     ],
     parameters([
-        booleanParam(defaultValue: false, description: 'Run full test suite', name: 'runFull')
+        booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
     ])
 ])
 timeout(time: 6, unit: 'HOURS') {
@@ -87,8 +87,7 @@ timeout(time: 6, unit: 'HOURS') {
                             junit 'artifacts/xml-unittests-output/*.xml'
                         } finally {
                             cleanWs notFailBuild: true
-                            def currentResult = currentBuild.result ?: 'SUCCESS'
-                            if (currentResult == 'SUCCESS') {
+                            if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
                                 githubNotify credentialsId: 'test-jenkins-credentials',
                                     description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has passed",
                                     status: 'SUCCESS',
