@@ -30,9 +30,11 @@ try:
 except ImportError:
     HAS_CRYPT = False
 
+__virtualname__ = 'shadow'
+
 
 def __virtual__():
-    return __grains__.get('kernel', '') == 'Linux'
+    return __virtualname__ if __grains__.get('kernel', '') == 'Linux' else False
 
 
 def default_hash():
