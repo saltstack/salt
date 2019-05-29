@@ -128,15 +128,6 @@ repos:
           - --platform=linux
 
       - id: pip-tools-compile
-        alias: compile-doc-requirements
-        name: Docs Py2.7 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/docs\.in)$
-        args:
-          - -v
-          - --py-version=2.7
-          - --platform=linux
-
-      - id: pip-tools-compile
         alias: compile-cloud-py2.7-requirements
         name: Cloud Py2.7 Requirements
         files: ^requirements/(static/cloud\.in)$
@@ -435,6 +426,15 @@ repos:
         args:
           - -v
           - --py-version=3.6
+
+      - id: pip-tools-compile
+        alias: compile-doc-requirements
+        name: Docs Py3.6 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/docs\.in)$
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
 
       - id: pip-tools-compile
         alias: compile-linux-py3.7-tcp-requirements
