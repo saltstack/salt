@@ -17,6 +17,7 @@ import random
 import subprocess
 import time
 import tempfile
+import shutil
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
@@ -264,9 +265,7 @@ class VTTestCase(TestCase):
             finally:
                 term.close(terminate=True, kill=True)
         finally:
-            os.remove(file_path_stdout)
-            os.remove(file_path_stderr)
-            os.removedirs(tempdir)
+            shutil.rmtree(tempdir)
 
     def test_split_multibyte_characters_shiftjis(self):
         block_size = 1024
@@ -316,6 +315,4 @@ class VTTestCase(TestCase):
             finally:
                 term.close(terminate=True, kill=True)
         finally:
-            os.remove(file_path_stdout)
-            os.remove(file_path_stderr)
-            os.removedirs(tempdir)
+            shutil.rmtree(tempdir)
