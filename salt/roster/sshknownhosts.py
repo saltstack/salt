@@ -6,7 +6,7 @@ Sample configuration:
 keep in mind that known_hosts file only contain hostname/IP,
 so you have to use roster_defaults for other parameter for each minion
 
-.. code-block:: ini
+.. code-block:: yaml
     ssh_known_hosts_file: /Users/user1/.ssh/known_hosts
     roster_defaults:
       user: user1
