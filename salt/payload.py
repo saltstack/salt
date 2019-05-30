@@ -14,7 +14,6 @@ import datetime
 
 # Import salt libs
 import salt.log
-import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.stringutils
 from salt.exceptions import SaltReqTimeoutError
@@ -198,7 +197,11 @@ class Serial(object):
             else:
                 ret = msgpack.loads(msg, **loads_kwargs)
             if six.PY3 and encoding is None and not raw:
-                ret = salt.transport.frame.decode_embedded_strs(ret)
+                # This is the only place in this module where frame is
+                # used. It's possible that frame and payload just belong
+                # as one module, but for now, this should be reasonable.
+                import salt.transport.frame as frame
+                ret = frame.decode_embedded_strs(ret)
         except Exception as exc:
             log.critical(
                 'Could not deserialize msgpack message. This often happens '

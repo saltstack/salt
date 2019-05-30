@@ -5,7 +5,7 @@ Helper functions for transport components to handle message framing
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-from salt import payload
+import salt.payload as payload
 from salt.ext import six
 
 
