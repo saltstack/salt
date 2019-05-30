@@ -264,9 +264,9 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test bypass_file_contains option
         '''
-        temp_file_object = tempfile.NamedTemporaryFile(delete=False)
+        temp_file_object = tempfile.NamedTemporaryFile(mode='w', delete=False)
         temp_file_name = temp_file_object.name
-        temp_comment = bytes('TEST_COMMENT1234')
+        temp_comment = 'TEST_COMMENT1234'
         cachedir = tempfile.tempdir
         temp_file_object.write(temp_comment)
         temp_file_object.seek(0)
