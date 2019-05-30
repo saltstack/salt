@@ -266,7 +266,7 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         temp_file_object = tempfile.NamedTemporaryFile(delete=False)
         temp_file_name = temp_file_object.name
-        temp_comment = 'TEST_COMMENT1234'
+        temp_comment = bytes('TEST_COMMENT1234')
         cachedir = tempfile.tempdir
         temp_file_object.write(temp_comment)
         temp_file_object.seek(0)
