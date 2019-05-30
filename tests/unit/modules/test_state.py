@@ -808,10 +808,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.state.salt.payload', MockSerial):
             mock = MagicMock(side_effect=[True, True, False])
             with patch.object(os.path, 'isfile', mock):
-                with patch('salt.utils.files.fopen', mock_open()):
+                with patch('salt.utils.files.fopen', mock_open(read_data=b'\x81\xa1A\xa1B')):
                     self.assertDictEqual(state.check_request(), {'A': 'B'})
 
-                with patch('salt.utils.files.fopen', mock_open()):
+                with patch('salt.utils.files.fopen', mock_open(read_data=b'\x81\xa1A\xa1B')):
                     self.assertEqual(state.check_request("A"), 'B')
 
                 self.assertDictEqual(state.check_request(), {})
