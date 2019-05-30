@@ -477,7 +477,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
-    def test_pkg_009_latest_with_epoch(self):
+    @requires_system_grains
+    def test_pkg_009_latest_with_epoch(self, grains=None):
         '''
         This tests for the following issue:
         https://github.com/saltstack/salt/issues/31014
@@ -488,13 +489,17 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
             self.skipTest('Package manager is not available')
 
+        if (grains.get('os') == 'Amazon' and grains.get('osmajorrelease') != 2):
+            self.skipTest('minion is Amazon Linux 1, bash-completion not available')
+
         ret = self.run_state('pkg.installed',
                              name='bash-completion',
                              refresh=False)
         self.assertSaltTrueReturn(ret)
 
     @requires_salt_modules('pkg.info_installed')
-    def test_pkg_010_latest_with_epoch_and_info_installed(self):
+    @requires_system_grains
+    def test_pkg_010_latest_with_epoch_and_info_installed(self, grains=None):
         '''
         Need to check to ensure the package has been
         installed after the pkg_latest_epoch sls
@@ -505,6 +510,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # Skip test if package manager not available
         if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
             self.skipTest('Package manager is not available')
+
+        if (grains.get('os') == 'Amazon' and grains.get('osmajorrelease') != 2):
+            self.skipTest('minion is Amazon Linux 1, bash-completion not available')
 
         package = 'bash-completion'
         pkgquery = 'version'
