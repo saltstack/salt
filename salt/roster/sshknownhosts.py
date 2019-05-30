@@ -3,8 +3,11 @@
 Parses roster entries out of Host directives from SSH known_hosts
 
 Sample configuration:
-keep in mind that known_hosts file only contain hostname/IP,
-so you have to use roster_defaults for other parameter for each minion
+
+.. note::
+
+    The ``known_hosts`` file only contains hostname/IP. To pass other parameters,
+    use ``roster_defaults``.
 
 .. code-block:: yaml
     ssh_known_hosts_file: /Users/user1/.ssh/known_hosts
