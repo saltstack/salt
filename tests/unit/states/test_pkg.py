@@ -2,6 +2,8 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import tempfile
+import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -34,7 +36,8 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
             pkg: {
                 '__grains__': {
                     'os': 'CentOS'
-                }
+                },
+                '__env__': 'base'
             }
         }
 
@@ -235,3 +238,51 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
         for installed_versions, operator, version, expected_result in test_parameters:
             msg = "installed_versions: {}, operator: {}, version: {}, expected_result: {}".format(installed_versions, operator, version, expected_result)
             self.assertEqual(expected_result, pkg._fulfills_version_spec(installed_versions, operator, version), msg)
+
+    def test_bypass_file(self):
+        '''
+        Test bypass_file option
+        '''
+        temp_file_object = tempfile.NamedTemporaryFile(delete=False)
+        temp_file_name = temp_file_object.name
+        cachedir = tempfile.tempdir
+
+        with patch.dict(pkg.__opts__,
+                        {'bypass_file': temp_file_name,
+                         'cachedir': cachedir}):
+            ret = pkg.installed('dummy', bypass_file=temp_file_name)
+            comment = u'pkg.installed was bypassed as bypass_file {} was ' \
+                'present'.format(temp_file_name)
+            msg = {u'comment': comment,
+                   u'changes': {},
+                   u'name': 'dummy',
+                   u'result': True}
+            self.assertEqual(ret, msg)
+            os.remove(temp_file_name)
+
+    def test_bypass_file_contains(self):
+        '''
+        Test bypass_file_contains option
+        '''
+        temp_file_object = tempfile.NamedTemporaryFile(delete=False)
+        temp_file_name = temp_file_object.name
+        temp_comment = 'TEST_COMMENT1234'
+        cachedir = tempfile.tempdir
+        temp_file_object.write(temp_comment)
+        temp_file_object.seek(0)
+
+        with patch.dict(pkg.__opts__,
+                        {'bypass_file': temp_file_name,
+                         'bypass_file_contains': temp_comment,
+                         'cachedir': cachedir}):
+            ret = pkg.installed('dummy',
+                                bypass_file=temp_file_name,
+                                bypass_file_contains=temp_comment)
+            comment = u'pkg.installed was bypassed as {} was present in ' \
+                '{}'.format(temp_comment, temp_file_name)
+            msg = {u'comment': comment,
+                   u'changes': {},
+                   u'name': 'dummy',
+                   u'result': True}
+            self.assertEqual(ret, msg)
+            os.remove(temp_file_name)
