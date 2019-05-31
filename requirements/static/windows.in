@@ -3,6 +3,7 @@
 #apache-libcloud==2.0.0
 boto3
 boto>=2.46.0
+croniter>=0.3.0,!=0.3.22
 dmidecode
 dnspython
 # We require docker < 3.0.0 because after that they also start locking their pywin32 requirement, actually
