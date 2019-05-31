@@ -8,9 +8,11 @@ import os
 import shutil
 import tempfile
 import time
+from pprint import pprint
 
 # Salt libs
 import salt.utils.files
+import salt.utils.platform
 from salt.beacons import watchdog
 from salt.ext.six.moves import range
 
@@ -90,11 +92,19 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         create(path, 'some content')
 
         ret = check_events(config)
-        self.assertEqual(len(ret), 2)
-        self.assertEqual(ret[0]['path'], os.path.dirname(path))
-        self.assertEqual(ret[0]['change'], 'modified')
-        self.assertEqual(ret[1]['path'], path)
-        self.assertEqual(ret[1]['change'], 'modified')
+
+        # Windows only returns a single item for each event
+        # Other OS'es return 2 apparently
+        if salt.utils.platform.is_windows():
+            self.assertEqual(len(ret), 1)
+            self.assertEqual(ret[0]['path'], path)
+            self.assertEqual(ret[0]['change'], 'modified')
+        else:
+            self.assertEqual(len(ret), 2)
+            self.assertEqual(ret[0]['path'], os.path.dirname(path))
+            self.assertEqual(ret[0]['change'], 'modified')
+            self.assertEqual(ret[1]['path'], path)
+            self.assertEqual(ret[1]['change'], 'modified')
 
     def test_file_deleted(self):
         path = os.path.join(self.tmpdir, 'tmpfile')
@@ -135,11 +145,18 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         create(path)
 
         ret = check_events(config)
-        self.assertEqual(len(ret), 2)
-        self.assertEqual(ret[0]['path'], path)
-        self.assertEqual(ret[0]['change'], 'created')
-        self.assertEqual(ret[1]['path'], self.tmpdir)
-        self.assertEqual(ret[1]['change'], 'modified')
+        # Windows only returns a single item for each event
+        # Other OS'es return 2 apparently
+        if salt.utils.platform.is_windows():
+            self.assertEqual(len(ret), 1)
+            self.assertEqual(ret[0]['path'], path)
+            self.assertEqual(ret[0]['change'], 'created')
+        else:
+            self.assertEqual(len(ret), 2)
+            self.assertEqual(ret[0]['path'], path)
+            self.assertEqual(ret[0]['change'], 'created')
+            self.assertEqual(ret[1]['path'], self.tmpdir)
+            self.assertEqual(ret[1]['change'], 'modified')
 
     def test_trigger_all_possible_events(self):
         path = os.path.join(self.tmpdir, 'tmpfile')
@@ -162,28 +179,49 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = check_events(config)
 
-        self.assertEqual(len(ret), 8)
+        # Windows only returns a single item for each event
+        # Other OS'es return 2 apparently
+        if salt.utils.platform.is_windows():
+            self.assertEqual(len(ret), 4)
 
-        # create
-        self.assertEqual(ret[0]['path'], path)
-        self.assertEqual(ret[0]['change'], 'created')
-        self.assertEqual(ret[1]['path'], self.tmpdir)
-        self.assertEqual(ret[1]['change'], 'modified')
+            # create
+            self.assertEqual(ret[0]['path'], path)
+            self.assertEqual(ret[0]['change'], 'created')
 
-        # modify
-        self.assertEqual(ret[2]['path'], path)
-        self.assertEqual(ret[2]['change'], 'modified')
-        self.assertEqual(ret[3]['path'], path)
-        self.assertEqual(ret[3]['change'], 'modified')
+            # modify
+            self.assertEqual(ret[1]['path'], path)
+            self.assertEqual(ret[1]['change'], 'modified')
 
-        # move
-        self.assertEqual(ret[4]['path'], path)
-        self.assertEqual(ret[4]['change'], 'moved')
-        self.assertEqual(ret[5]['path'], self.tmpdir)
-        self.assertEqual(ret[5]['change'], 'modified')
+            # move
+            self.assertEqual(ret[2]['path'], path)
+            self.assertEqual(ret[2]['change'], 'moved')
 
-        # delete
-        self.assertEqual(ret[6]['path'], moved)
-        self.assertEqual(ret[6]['change'], 'deleted')
-        self.assertEqual(ret[7]['path'], self.tmpdir)
-        self.assertEqual(ret[7]['change'], 'modified')
+            # delete
+            self.assertEqual(ret[3]['path'], moved)
+            self.assertEqual(ret[3]['change'], 'deleted')
+        else:
+            self.assertEqual(len(ret), 8)
+
+            # create
+            self.assertEqual(ret[0]['path'], path)
+            self.assertEqual(ret[0]['change'], 'created')
+            self.assertEqual(ret[1]['path'], self.tmpdir)
+            self.assertEqual(ret[1]['change'], 'modified')
+
+            # modify
+            self.assertEqual(ret[2]['path'], path)
+            self.assertEqual(ret[2]['change'], 'modified')
+            self.assertEqual(ret[3]['path'], path)
+            self.assertEqual(ret[3]['change'], 'modified')
+
+            # move
+            self.assertEqual(ret[4]['path'], path)
+            self.assertEqual(ret[4]['change'], 'moved')
+            self.assertEqual(ret[5]['path'], self.tmpdir)
+            self.assertEqual(ret[5]['change'], 'modified')
+
+            # delete
+            self.assertEqual(ret[6]['path'], moved)
+            self.assertEqual(ret[6]['change'], 'deleted')
+            self.assertEqual(ret[7]['path'], self.tmpdir)
+            self.assertEqual(ret[7]['change'], 'modified')
