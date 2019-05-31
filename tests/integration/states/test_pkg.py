@@ -489,11 +489,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
             self.skipTest('Package manager is not available')
 
+        test_name = 'bash-completion'
         if (grains.get('os') == 'Amazon' and grains.get('osmajorrelease') != 2):
-            self.skipTest('minion is Amazon Linux 1, bash-completion not available')
+            test_name = 'bash-doc'
 
         ret = self.run_state('pkg.installed',
-                             name='bash-completion',
+                             name=test_name,
                              refresh=False)
         self.assertSaltTrueReturn(ret)
 
@@ -511,10 +512,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
             self.skipTest('Package manager is not available')
 
-        if (grains.get('os') == 'Amazon' and grains.get('osmajorrelease') != 2):
-            self.skipTest('minion is Amazon Linux 1, bash-completion not available')
-
         package = 'bash-completion'
+        if (grains.get('os') == 'Amazon' and grains.get('osmajorrelease') != 2):
+            package = 'bash-doc'
+
         pkgquery = 'version'
 
         ret = self.run_function('pkg.info_installed', [package])
