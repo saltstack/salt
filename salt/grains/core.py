@@ -982,6 +982,10 @@ def _virtual(osdata):
                         grains['virtual'] = 'gce'
                     elif 'BHYVE' in output:
                         grains['virtual'] = 'bhyve'
+            except UnicodeDecodeError:
+                # Some firmwares provide non-valid 'product_name'
+                # files, ignore them
+                pass
             except IOError:
                 pass
     elif osdata['kernel'] == 'FreeBSD':
@@ -2536,6 +2540,10 @@ def _hw_data(osdata):
                         grains[key] = salt.utils.stringutils.to_unicode(ifile.read().strip(), errors='replace')
                         if key == 'uuid':
                             grains['uuid'] = grains['uuid'].lower()
+                except UnicodeDecodeError:
+                    # Some firmwares provide non-valid 'product_name'
+                    # files, ignore them
+                    pass
                 except (IOError, OSError) as err:
                     # PermissionError is new to Python 3, but corresponds to the EACESS and
                     # EPERM error numbers. Use those instead here for PY2 compatibility.
