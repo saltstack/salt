@@ -18,6 +18,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       user: myuser@pam or myuser@pve
       password: mypassword
       url: hypervisor.domain.tld
+      port: 8006
       driver: proxmox
       verify_ssl: True
 
@@ -105,6 +106,7 @@ def get_dependencies():
 
 
 url = None
+port = None
 ticket = None
 csrf = None
 verify_ssl = None
@@ -115,9 +117,13 @@ def _authenticate():
     '''
     Retrieve CSRF and API tickets for the Proxmox API
     '''
-    global url, ticket, csrf, verify_ssl
+    global url, port, ticket, csrf, verify_ssl
     url = config.get_cloud_config_value(
         'url', get_configured_provider(), __opts__, search_global=False
+    )
+    port = config.get_cloud_config_value(
+        'port', get_configured_provider(), __opts__,
+        default=8006, search_global=False
     )
     username = config.get_cloud_config_value(
         'user', get_configured_provider(), __opts__, search_global=False
@@ -131,7 +137,7 @@ def _authenticate():
     )
 
     connect_data = {'username': username, 'password': passwd}
-    full_url = 'https://{0}:8006/api2/json/access/ticket'.format(url)
+    full_url = 'https://{0}:{1}/api2/json/access/ticket'.format(url, port)
 
     returned_data = requests.post(
         full_url, verify=verify_ssl, data=connect_data).json()
@@ -148,7 +154,7 @@ def query(conn_type, option, post_data=None):
         log.debug('Not authenticated yet, doing that now..')
         _authenticate()
 
-    full_url = 'https://{0}:8006/api2/json/{1}'.format(url, option)
+    full_url = 'https://{0}:{1}/api2/json/{2}'.format(url, port, option)
 
     log.debug('%s: %s (%s)', conn_type, full_url, post_data)
 
@@ -320,22 +326,42 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
 
         salt-cloud -f get_resources_vms my-proxmox-config
     '''
-    log.debug('Getting resource: vms.. (filter: %s)', resFilter)
-    resources = query('get', 'cluster/resources')
 
-    ret = {}
-    for resource in resources:
-        if 'type' in resource and resource['type'] in ['openvz', 'qemu', 'lxc']:
-            name = resource['name']
-            ret[name] = resource
+    timeoutTime = time.time() + 60
+    while True:
+        log.debug('Getting resource: vms.. (filter: %s)', resFilter)
+        resources = query('get', 'cluster/resources')
+        ret = {}
+        badResource = False
+        for resource in resources:
+            if 'type' in resource and resource['type'] in ['openvz', 'qemu',
+                                                           'lxc']:
+                try:
+                    name = resource['name']
+                except KeyError:
+                    badResource = True
+                    log.debug('No name in VM resource %s', repr(resource))
+                    break
 
-            if includeConfig:
-                # Requested to include the detailed configuration of a VM
-                ret[name]['config'] = get_vmconfig(
-                    ret[name]['vmid'],
-                    ret[name]['node'],
-                    ret[name]['type']
-                )
+                ret[name] = resource
+
+                if includeConfig:
+                    # Requested to include the detailed configuration of a VM
+                    ret[name]['config'] = get_vmconfig(
+                        ret[name]['vmid'],
+                        ret[name]['node'],
+                        ret[name]['type']
+                    )
+
+        if time.time() > timeoutTime:
+            raise SaltCloudExecutionTimeout('FAILED to get the proxmox '
+                                            'resources vms')
+
+        # Carry on if there wasn't a bad resource return from Proxmox
+        if not badResource:
+            break
+
+        time.sleep(0.5)
 
     if resFilter is not None:
         log.debug('Filter given: %s, returning requested '
@@ -492,6 +518,41 @@ def list_nodes_select(call=None):
     )
 
 
+def _stringlist_to_dictionary(input_string):
+    '''
+    Convert a stringlist (comma separated settings) to a dictionary
+
+    The result of the string setting1=value1,setting2=value2 will be a python dictionary:
+
+    {'setting1':'value1','setting2':'value2'}
+    '''
+    li = str(input_string).split(',')
+    ret = {}
+    for item in li:
+        pair = str(item).replace(' ', '').split('=')
+        if len(pair) != 2:
+            log.warning('Cannot process stringlist item %s', item)
+            continue
+
+        ret[pair[0]] = pair[1]
+    return ret
+
+
+def _dictionary_to_stringlist(input_dict):
+    '''
+    Convert a dictionary to a stringlist (comma separated settings)
+
+    The result of the dictionary {'setting1':'value1','setting2':'value2'} will be:
+
+    setting1=value1,setting2=value2
+    '''
+    string_value = ""
+    for s in input_dict:
+        string_value += "{0}={1},".format(s, input_dict[s])
+    string_value = string_value[:-1]
+    return string_value
+
+
 def create(vm_):
     '''
     Create a single VM from a data dict
@@ -518,7 +579,8 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
+        args=__utils__['cloud.filter_event'](
+            'creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -559,21 +621,171 @@ def create(vm_):
     host = data['node']       # host which we have received
     nodeType = data['technology']  # VM tech (Qemu / OpenVZ)
 
-    # Determine which IP to use in order of preference:
-    if 'ip_address' in vm_:
-        ip_address = six.text_type(vm_['ip_address'])
-    elif 'public_ips' in data:
-        ip_address = six.text_type(data['public_ips'][0])  # first IP
-    elif 'private_ips' in data:
-        ip_address = six.text_type(data['private_ips'][0])  # first IP
-    else:
-        raise SaltCloudExecutionFailure  # err.. not a good idea i reckon
-
-    log.debug('Using IP address %s', ip_address)
+    if 'agent_get_ip' not in vm_ or vm_['agent_get_ip'] == 0:
+        # Determine which IP to use in order of preference:
+        if 'ip_address' in vm_:
+            ip_address = six.text_type(vm_['ip_address'])
+        elif 'public_ips' in data:
+            ip_address = six.text_type(data['public_ips'][0])  # first IP
+        elif 'private_ips' in data:
+            ip_address = six.text_type(data['private_ips'][0])  # first IP
+        else:
+            raise SaltCloudExecutionFailure("Could not determine an IP address to use")
 
     # wait until the vm has been created so we can start it
     if not wait_for_created(data['upid'], timeout=300):
         return {'Error': 'Unable to create {0}, command timed out'.format(name)}
+
+    if 'clone' in vm_ and vm_['clone'] is True and vm_['technology'] == 'qemu':
+        # If we cloned a machine, see if we need to reconfigure any of the options such as net0,
+        # ide2, etc. This enables us to have a different cloud-init ISO mounted for each VM that's
+        # brought up
+
+        log.info('Configuring cloned VM')
+
+        # Modify the settings for the VM one at a time so we can see any problems with the values
+        # as quickly as possible
+        for setting in 'sockets', 'cores', 'cpulimit', 'memory', 'onboot', 'agent':
+            if setting in vm_:  # if the property is set, use it for the VM request
+                postParams = {}
+                postParams[setting] = vm_[setting]
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        # cloud-init settings
+        for setting in 'ciuser', 'cipassword', 'sshkeys', 'nameserver', 'searchdomain':
+            if setting in vm_:  # if the property is set, use it for the VM request
+                postParams = {}
+                postParams[setting] = vm_[setting]
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        for setting_number in range(3):
+            setting = 'ide{0}'.format(setting_number)
+            if setting in vm_:
+                postParams = {}
+                postParams[setting] = vm_[setting]
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        for setting_number in range(5):
+            setting = 'sata{0}'.format(setting_number)
+            if setting in vm_:
+                vm_config = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
+                if setting in vm_config:
+                    setting_params = vm_[setting]
+                    setting_storage = setting_params.split(':')[0]
+                    setting_size = _stringlist_to_dictionary(setting_params)['size']
+                    vm_disk_params = vm_config[setting]
+                    vm_disk_storage = vm_disk_params.split(':')[0]
+                    vm_disk_size = _stringlist_to_dictionary(vm_disk_params)['size']
+                    # if storage is different, move the disk
+                    if setting_storage != vm_disk_storage:
+                        postParams = {}
+                        postParams['disk'] = setting
+                        postParams['storage'] = setting_storage
+                        postParams['delete'] = 1
+                        node = query('post', 'nodes/{0}/qemu/{1}/move_disk'.format(
+                            vm_['host'], vmid), postParams)
+                        data = _parse_proxmox_upid(node, vm_)
+                        # wait until the disk has been moved
+                        if not wait_for_task(data['upid'], timeout=300):
+                            return {'Error': 'Unable to move disk {0}, command timed out'.format(
+                                setting)}
+                    # if storage is different, move the disk
+                    if setting_size != vm_disk_size:
+                        postParams = {}
+                        postParams['disk'] = setting
+                        postParams['size'] = setting_size
+                        query('put', 'nodes/{0}/qemu/{1}/resize'.format(
+                            vm_['host'], vmid), postParams)
+                else:
+                    postParams = {}
+                    postParams[setting] = vm_[setting]
+                    query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        for setting_number in range(13):
+            setting = 'scsi{0}'.format(setting_number)
+            if setting in vm_:
+                vm_config = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
+                if setting in vm_config:
+                    setting_params = vm_[setting]
+                    setting_storage = setting_params.split(':')[0]
+                    setting_size = _stringlist_to_dictionary(setting_params)['size']
+                    vm_disk_params = vm_config[setting]
+                    vm_disk_storage = vm_disk_params.split(':')[0]
+                    vm_disk_size = _stringlist_to_dictionary(vm_disk_params)['size']
+                    # if storage is different, move the disk
+                    if setting_storage != vm_disk_storage:
+                        postParams = {}
+                        postParams['disk'] = setting
+                        postParams['storage'] = setting_storage
+                        postParams['delete'] = 1
+                        node = query('post', 'nodes/{0}/qemu/{1}/move_disk'.format(
+                            vm_['host'], vmid), postParams)
+                        data = _parse_proxmox_upid(node, vm_)
+                        # wait until the disk has been moved
+                        if not wait_for_task(data['upid'], timeout=300):
+                            return {'Error': 'Unable to move disk {0}, command timed out'.format(
+                                setting)}
+                    # if storage is different, move the disk
+                    if setting_size != vm_disk_size:
+                        postParams = {}
+                        postParams['disk'] = setting
+                        postParams['size'] = setting_size
+                        query('put', 'nodes/{0}/qemu/{1}/resize'.format(
+                            vm_['host'], vmid), postParams)
+                else:
+                    postParams = {}
+                    postParams[setting] = vm_[setting]
+                    query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        # net strings are a list of comma seperated settings. We need to merge the settings so that
+        # the setting in the profile only changes the settings it touches and the other settings
+        # are left alone. An example of why this is necessary is because the MAC address is set
+        # in here and generally you don't want to alter or have to know the MAC address of the new
+        # instance, but you may want to set the VLAN bridge for example
+        for setting_number in range(20):
+            setting = 'net{0}'.format(setting_number)
+            if setting in vm_:
+                data = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
+
+                # Generate a dictionary of settings from the existing string
+                new_setting = {}
+                if setting in data:
+                    new_setting.update(_stringlist_to_dictionary(data[setting]))
+
+                # Merge the new settings (as a dictionary) into the existing dictionary to get the
+                # new merged settings
+                new_setting.update(_stringlist_to_dictionary(vm_[setting]))
+
+                # Convert the dictionary back into a string list
+                postParams = {setting: _dictionary_to_stringlist(new_setting)}
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        for setting_number in range(20):
+            setting = 'ipconfig{0}'.format(setting_number)
+            if setting in vm_:
+                data = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
+
+                # Generate a dictionary of settings from the existing string
+                new_setting = {}
+                if setting in data:
+                    new_setting.update(_stringlist_to_dictionary(data[setting]))
+
+                # Merge the new settings (as a dictionary) into the existing dictionary to get the
+                # new merged settings
+                if setting_number == 0 and 'ip_address' in vm_:
+                    if 'gw' in _stringlist_to_dictionary(vm_[setting]):
+                        new_setting.update(_stringlist_to_dictionary(
+                            'ip={0}/24,gw={1}'.format(
+                                vm_['ip_address'], _stringlist_to_dictionary(vm_[setting])['gw'])))
+                    else:
+                        new_setting.update(
+                            _stringlist_to_dictionary('ip={0}/24'.format(vm_['ip_address'])))
+                else:
+                    new_setting.update(_stringlist_to_dictionary(vm_[setting]))
+
+                # Convert the dictionary back into a string list
+                postParams = {setting: _dictionary_to_stringlist(new_setting)}
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
 
     # VM has been created. Starting..
     if not start(name, vmid, call='action'):
@@ -584,6 +796,42 @@ def create(vm_):
     log.debug('Waiting for state "running" for vm %s on %s', vmid, host)
     if not wait_for_state(vmid, 'running'):
         return {'Error': 'Unable to start {0}, command timed out'.format(name)}
+
+    # For QEMU VMs, we can get the IP Address from qemu-agent
+    if 'agent_get_ip' in vm_ and vm_['agent_get_ip'] == 1:
+        def __find_agent_ip(vm_):
+            log.debug("Waiting for qemu-agent to start...")
+            endpoint = 'nodes/{0}/qemu/{1}/agent/network-get-interfaces'.format(vm_['host'], vmid)
+            interfaces = query('get', endpoint)
+            # If we get a result from the agent, parse it
+            if 'result' in interfaces:
+                for interface in interfaces['result']:
+                    if_name = interface['name']
+                    # Only check ethernet type interfaces, as they are not returned in any order
+                    if if_name.startswith('eth') or if_name.startswith('ens'):
+                        for if_addr in interface['ip-addresses']:
+                            ip_addr = if_addr['ip-address']
+                            # Ensure interface has a valid IPv4 address
+                            if if_addr['ip-address-type'] == 'ipv4' and ip_addr is not None:
+                                return six.text_type(ip_addr)
+            raise SaltCloudExecutionFailure
+
+        # We have to wait for a bit for qemu-agent to start
+        try:
+            ip_address = __utils__['cloud.wait_for_fun'](
+                __find_agent_ip,
+                vm_=vm_
+            )
+        except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+            try:
+                # If VM was created but we can't connect, destroy it.
+                destroy(vm_['name'])
+            except SaltCloudSystemExit:
+                pass
+            finally:
+                raise SaltCloudSystemExit(six.text_type(exc))
+
+    log.debug('Using IP address %s', ip_address)
 
     ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
@@ -611,7 +859,8 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
+        args=__utils__['cloud.filter_event'](
+            'created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
     )
 
@@ -625,7 +874,7 @@ def _import_api():
     Load this json content into global variable "api"
     '''
     global api
-    full_url = 'https://{0}:8006/pve-docs/api-viewer/apidoc.js'.format(url)
+    full_url = 'https://{0}:{1}/pve-docs/api-viewer/apidoc.js'.format(url, port)
     returned_data = requests.get(full_url, verify=verify_ssl)
 
     re_filter = re.compile('(?<=pveapi =)(.*)(?=^;)', re.DOTALL | re.MULTILINE)
@@ -709,7 +958,8 @@ def create_node(vm_, newid):
         newnode['ostemplate'] = vm_['image']
 
         # optional VZ settings
-        for prop in 'cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid', 'storage':
+        for prop in ['cpus', 'disk', 'ip_address', 'nameserver',
+                     'password', 'swap', 'poolid', 'storage']:
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
@@ -718,8 +968,8 @@ def create_node(vm_, newid):
         newnode['hostname'] = vm_['name']
         newnode['ostemplate'] = vm_['image']
 
-        static_props = ('cpuunits', 'cpulimit', 'rootfs', 'cores', 'description', 'memory', 'onboot', 'net0',
-                        'password', 'nameserver', 'swap', 'storage', 'rootfs')
+        static_props = ('cpuunits', 'cpulimit', 'rootfs', 'cores', 'description', 'memory',
+                        'onboot', 'net0', 'password', 'nameserver', 'swap', 'storage', 'rootfs')
         for prop in _get_properties('/nodes/{node}/lxc',
                                     'POST',
                                     static_props):
@@ -747,7 +997,8 @@ def create_node(vm_, newid):
 
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
-        static_props = ('acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0')
+        static_props = (
+            'acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0')
         for prop in _get_properties('/nodes/{node}/qemu',
                                     'POST',
                                     static_props):
@@ -774,7 +1025,18 @@ def create_node(vm_, newid):
             if 'clone_' + prop in vm_:  # if the property is set, use it for the VM request
                 postParams[prop] = vm_['clone_' + prop]
 
-        node = query('post', 'nodes/{0}/qemu/{1}/clone'.format(vmhost, vm_['clone_from']), postParams)
+        if 'host' in vm_:
+            postParams['target'] = vm_['host']
+
+        try:
+            int(vm_['clone_from'])
+        except ValueError:
+            if ':' in vm_['clone_from']:
+                vmhost = vm_['clone_from'].split(':')[0]
+                vm_['clone_from'] = vm_['clone_from'].split(':')[1]
+
+        node = query('post', 'nodes/{0}/qemu/{1}/clone'.format(
+            vmhost, vm_['clone_from']), postParams)
     else:
         node = query('post', 'nodes/{0}/{1}'.format(vmhost, vm_['technology']), newnode)
     return _parse_proxmox_upid(node, vm_)
@@ -857,6 +1119,28 @@ def wait_for_state(vmid, state, timeout=300):
                   node['name'], node['status'], state)
 
 
+def wait_for_task(upid, timeout=300):
+    '''
+    Wait until a the task has been finished successfully
+    '''
+    start_time = time.time()
+    info = _lookup_proxmox_task(upid)
+    if not info:
+        log.error('wait_for_task: No task information '
+                  'retrieved based on given criteria.')
+        raise SaltCloudExecutionFailure
+
+    while True:
+        if 'status' in info and info['status'] == 'OK':
+            log.debug('Task has been finished!')
+            return True
+        time.sleep(3)  # Little more patience, we're not in a hurry
+        if time.time() - start_time > timeout:
+            log.debug('Timeout reached while waiting for task to be finished')
+            return False
+        info = _lookup_proxmox_task(upid)
+
+
 def destroy(name, call=None):
     '''
     Destroy a node.
@@ -908,7 +1192,8 @@ def destroy(name, call=None):
             transport=__opts__['transport']
         )
         if __opts__.get('update_cachedir', False) is True:
-            __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
+            __utils__['cloud.delete_minion_cachedir'](
+                name, __active_provider_name__.split(':')[0], __opts__)
 
         return {'Destroyed': '{0} was destroyed.'.format(name)}
 
@@ -935,7 +1220,7 @@ def set_vm_status(status, name=None, vmid=None):
 
     log.debug("VM_STATUS: Has desired info (%s). Setting status..", vmobj)
     data = query('post', 'nodes/{0}/{1}/{2}/status/{3}'.format(
-                 vmobj['node'], vmobj['type'], vmobj['vmid'], status))
+        vmobj['node'], vmobj['type'], vmobj['vmid'], status))
 
     result = _parse_proxmox_upid(data, vmobj)
 
@@ -966,7 +1251,7 @@ def get_vm_status(vmid=None, name=None):
         log.debug("VM_STATUS: Has desired info. Retrieving.. (%s)",
                   vmobj['name'])
         data = query('get', 'nodes/{0}/{1}/{2}/status/current'.format(
-                     vmobj['node'], vmobj['type'], vmobj['vmid']))
+            vmobj['node'], vmobj['type'], vmobj['vmid']))
         return data
 
     log.error('VM or requested status not found..')

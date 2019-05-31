@@ -67,3 +67,10 @@ services`_ offerings.
 .. _SaltStack education offerings: http://saltstack.com/training/
 .. _SaltStack Certified Engineer (SSCE): http://saltstack.com/certification/
 .. _SaltStack professional services: http://saltstack.com/services/
+
+License
+=======
+
+SaltStack is licensed by the SaltStack Team under the Apache 2.0 license. Please see the
+LICENSE file for the full text of the Apache license, followed by a full summary
+of the licensing used by external modules.

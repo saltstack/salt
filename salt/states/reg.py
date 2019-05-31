@@ -385,7 +385,6 @@ def present(name,
     ret = {'name': name,
            'result': True,
            'changes': {},
-           'pchanges': {},
            'comment': ''}
 
     hive, key = _parse_key(name)

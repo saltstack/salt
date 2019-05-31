@@ -9,6 +9,9 @@
                 {% for dev in boot_dev %}
                 <boot dev='{{ dev }}' />
                 {% endfor %}
+		{% if loader %}
+		<loader {{ loader.get('_attributes') }}>{{ loader.get('path') }}</loader>
+		{% endif %}
         </os>
         <devices>
                 {% for disk in disks %}

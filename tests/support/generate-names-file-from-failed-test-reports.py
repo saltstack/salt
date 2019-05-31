@@ -6,6 +6,7 @@
     This script is meant as a stop-gap until we move to PyTest to provide a functionality similar to
     PyTest's --last-failed where PyTest only runs last failed tests.
 '''
+
 # pylint: disable=resource-leakage
 from __future__ import absolute_import, unicode_literals, print_function
 import os

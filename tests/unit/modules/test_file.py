@@ -8,9 +8,9 @@ import tempfile
 import textwrap
 
 # Import Salt Testing libs
-from tests.support.helpers import with_tempfile, dedent
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, Mock, patch, mock_open, DEFAULT
 
@@ -42,7 +42,16 @@ here
 
 
 class DummyStat(object):
-    st_size = 123
+    st_mode = 33188
+    st_ino = 115331251
+    st_dev = 44
+    st_nlink = 1
+    st_uid = 99200001
+    st_gid = 99200001
+    st_size = 41743
+    st_atime = 1552661253
+    st_mtime = 1552661253
+    st_ctime = 1552661253
 
 
 class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
@@ -449,6 +458,39 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     '{0}#-- END BLOCK 2'.format(new_content)])),
                 fp.read())
 
+    def test_replace_insert_after(self):
+        new_content = "Well, I didn't vote for you."
+
+        self.assertRaises(
+            CommandExecutionError,
+            filemod.blockreplace,
+            self.tfile.name,
+            marker_start='#-- START BLOCK 2',
+            marker_end='#-- END BLOCK 2',
+            content=new_content,
+            insert_after_match='not in the text',
+            backup=False
+        )
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            self.assertNotIn(
+                '#-- START BLOCK 2' + "\n" + new_content + '#-- END BLOCK 2',
+                salt.utils.stringutils.to_unicode(fp.read())
+            )
+
+        filemod.blockreplace(self.tfile.name,
+                             marker_start='#-- START BLOCK 2',
+                             marker_end='#-- END BLOCK 2',
+                             content=new_content,
+                             backup=False,
+                             insert_after_match='malesuada')
+
+        with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
+            self.assertIn(salt.utils.stringutils.to_bytes(
+                os.linesep.join([
+                    '#-- START BLOCK 2',
+                    '{0}#-- END BLOCK 2'.format(new_content)])),
+                fp.read())
+
     def test_replace_append_newline_at_eof(self):
         '''
         Check that file.blockreplace works consistently on files with and
@@ -525,6 +567,39 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     os.linesep.join([
                         '#-- START BLOCK 2',
                         '{0}#-- END BLOCK 2'.format(new_content)]))))
+
+    def test_replace_insert_before(self):
+        new_content = "Well, I didn't vote for you."
+
+        self.assertRaises(
+            CommandExecutionError,
+            filemod.blockreplace,
+            self.tfile.name,
+            marker_start='#-- START BLOCK 2',
+            marker_end='#-- END BLOCK 2',
+            content=new_content,
+            insert_before_match='not in the text',
+            backup=False
+        )
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            self.assertNotIn(
+                '#-- START BLOCK 2' + "\n" + new_content + '#-- END BLOCK 2',
+                salt.utils.stringutils.to_unicode(fp.read())
+            )
+
+        filemod.blockreplace(self.tfile.name,
+                             marker_start='#-- START BLOCK 2',
+                             marker_end='#-- END BLOCK 2',
+                             content=new_content,
+                             backup=False,
+                             insert_before_match='malesuada')
+
+        with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
+            self.assertIn(salt.utils.stringutils.to_bytes(
+                os.linesep.join([
+                    '#-- START BLOCK 2',
+                    '{0}#-- END BLOCK 2'.format(new_content)])),
+                fp.read())
 
     def test_replace_partial_marked_lines(self):
         filemod.blockreplace(self.tfile.name,
@@ -811,6 +886,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(tfile.name) as tfile2:
             new_file = salt.utils.stringutils.to_unicode(tfile2.read())
         self.assertEqual(new_file, expected)
+        os.remove(tfile.name)
 
         # File not ending with a newline
         with tempfile.NamedTemporaryFile(mode='wb', delete=False) as tfile:
@@ -820,6 +896,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(tfile.name) as tfile2:
             self.assertEqual(
                 salt.utils.stringutils.to_unicode(tfile2.read()), expected)
+        os.remove(tfile.name)
 
         # A newline should be added in empty files
         with tempfile.NamedTemporaryFile(mode='wb', delete=False) as tfile:
@@ -829,6 +906,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 salt.utils.stringutils.to_unicode(tfile2.read()),
                 'bar' + os.linesep
             )
+        os.remove(tfile.name)
 
     def test_extract_hash(self):
         '''
@@ -916,6 +994,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 'hash_type': 'sha1'
             } if hash_type != 'sha256' else None
             self.assertEqual(result, expected)
+        os.remove(tfile.name)
 
         # Hash only, no file name (Maven repo checksum format)
         # Since there is no name match, the first checksum in the file will
@@ -933,6 +1012,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 'hash_type': 'sha1'
             } if hash_type != 'sha256' else None
             self.assertEqual(result, expected)
+        os.remove(tfile.name)
 
     def test_user_to_uid_int(self):
         '''
@@ -1109,6 +1189,14 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 ret = filemod.get_diff('binary1', 'text1')
                 self.assertEqual(ret, 'Replace binary file with text file')
 
+    def test_stats(self):
+        with patch('os.path.expanduser', MagicMock(side_effect=lambda path: path)), \
+                patch('os.path.exists', MagicMock(return_value=True)), \
+                patch('os.stat', MagicMock(return_value=DummyStat())):
+            ret = filemod.stats('dummy', None, True)
+            self.assertEqual(ret['mode'], '0644')
+            self.assertEqual(ret['type'], 'file')
+
 
 @skipIf(pytest is None, 'PyTest required for this set of tests')
 class FilemodLineTests(TestCase, LoaderModuleMockMixin):
@@ -1178,8 +1266,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                     patch('os.stat', self._anyattr), \
                     patch('salt.modules.file.log', _log):
                 self.assertFalse(filemod.line('/dummy/path', content='foo', match='bar', mode=mode))
-            self.assertIn('Cannot find text to {0}'.format(mode),
-                          _log.warning.call_args_list[0][0][0])
+            assert 'Cannot find text to ' in _log.warning.call_args_list[0][0][0], \
+                _log.warning.call_args_list[0][0][0]
+            assert _log.warning.call_args_list[0][0][1] == mode, \
+                _log.warning.call_args_list[0][0][1]
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1966,7 +2056,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             self.tfile.close()
         self.addCleanup(os.remove, self.tfile.name)
         self.addCleanup(delattr, self, 'tfile')
-        self.myfile = os.path.join(TMP, 'myfile')
+        self.myfile = os.path.join(RUNTIME_VARS.TMP, 'myfile')
         with salt.utils.files.fopen(self.myfile, 'w+') as fp:
             fp.write(salt.utils.stringutils.to_str('Hello\n'))
         self.addCleanup(os.remove, self.myfile)
@@ -2047,32 +2137,434 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
 
 
-class ChattrVersionTests(TestCase):
-    CHATTR_MAN = salt.utils.stringutils.to_bytes((
-         'AVAILABILITY\n'
-         'chattr is part of the e2fsprogs package and is available '
-         'from http://e2fsprogs.sourceforge.net.\n'
-         'SEE ALSO\n'
-         '   lsattr(1), btrfs(5), ext4(5), xfs(5).\n\n'
-         'E2fsprogs version 1.43.4                                        '
-         '                                          '
-         'January 2017                              '
-         '                                          '
-         '                          CHATTR(1)'
-    ))
+class LsattrTests(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filemod: {
+                '__salt__': {
+                    'cmd.run': cmdmod.run,
+                },
+            },
+        }
 
-    def test__parse_chattr_version(self):
-        '''
-        Validate we can parse the E2fsprogs version from the chattr man page
-        '''
-        man_out = dedent(self.CHATTR_MAN)
-        parsed_version = filemod._parse_chattr_man(man_out)
-        assert parsed_version == '1.43.4', parsed_version
+    def run(self, result=None):
+        patch_aix = patch(
+            'salt.utils.platform.is_aix',
+            Mock(return_value=False),
+        )
+        patch_exists = patch(
+            'os.path.exists',
+            Mock(return_value=True),
+        )
+        patch_which = patch(
+            'salt.utils.path.which',
+            Mock(return_value='fnord'),
+        )
+        with patch_aix, patch_exists, patch_which:
+            super(LsattrTests, self).run(result)
 
-    def test__chattr_version(self):
+    def test_if_lsattr_is_missing_it_should_return_None(self):
+        patch_which = patch(
+            'salt.utils.path.which',
+            Mock(return_value=None),
+        )
+        with patch_which:
+            actual = filemod.lsattr('foo')
+            assert actual is None, actual
+
+    def test_on_aix_lsattr_should_be_None(self):
+        patch_aix = patch(
+            'salt.utils.platform.is_aix',
+            Mock(return_value=True),
+        )
+        with patch_aix:
+            # SaltInvocationError will be raised if filemod.lsattr
+            # doesn't early exit
+            actual = filemod.lsattr('foo')
+            self.assertIsNone(actual)
+
+    def test_SaltInvocationError_should_be_raised_when_file_is_missing(self):
+        patch_exists = patch(
+            'os.path.exists',
+            Mock(return_value=False),
+        )
+        with patch_exists, self.assertRaises(SaltInvocationError):
+            filemod.lsattr('foo')
+
+    def test_if_chattr_version_is_less_than_required_flags_should_ignore_extended(self):
+        fname = '/path/to/fnord'
+        with_extended = textwrap.dedent(
+            '''
+            aAcCdDeijPsStTu---- {}
+            '''
+        ).strip().format(fname)
+        expected = set('acdijstuADST')
+        patch_has_ext = patch(
+            'salt.modules.file._chattr_has_extended_attrs',
+            Mock(return_value=False),
+        )
+        patch_run = patch.dict(
+            filemod.__salt__,
+            {'cmd.run': Mock(return_value=with_extended)},
+        )
+        with patch_has_ext, patch_run:
+            actual = set(filemod.lsattr(fname)[fname])
+            msg = 'Actual: {!r} Expected: {!r}'.format(actual, expected)  # pylint: disable=E1322
+            assert actual == expected, msg
+
+    def test_if_chattr_version_is_high_enough_then_extended_flags_should_be_returned(self):
+        fname = '/path/to/fnord'
+        with_extended = textwrap.dedent(
+            '''
+            aAcCdDeijPsStTu---- {}
+            '''
+        ).strip().format(fname)
+        expected = set('aAcCdDeijPsStTu')
+        patch_has_ext = patch(
+            'salt.modules.file._chattr_has_extended_attrs',
+            Mock(return_value=True),
+        )
+        patch_run = patch.dict(
+            filemod.__salt__,
+            {'cmd.run': Mock(return_value=with_extended)},
+        )
+        with patch_has_ext, patch_run:
+            actual = set(filemod.lsattr(fname)[fname])
+            msg = 'Actual: {!r} Expected: {!r}'.format(actual, expected)  # pylint: disable=E1322
+            assert actual == expected, msg
+
+    def test_if_supports_extended_but_there_are_no_flags_then_none_should_be_returned(self):
+        fname = '/path/to/fnord'
+        with_extended = textwrap.dedent(
+            '''
+            ------------------- {}
+            '''
+        ).strip().format(fname)
+        expected = set('')
+        patch_has_ext = patch(
+            'salt.modules.file._chattr_has_extended_attrs',
+            Mock(return_value=True),
+        )
+        patch_run = patch.dict(
+            filemod.__salt__,
+            {'cmd.run': Mock(return_value=with_extended)},
+        )
+        with patch_has_ext, patch_run:
+            actual = set(filemod.lsattr(fname)[fname])
+            msg = 'Actual: {!r} Expected: {!r}'.format(actual, expected)  # pylint: disable=E1322
+            assert actual == expected, msg
+
+
+class ChattrTests(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filemod: {
+                '__salt__': {
+                    'cmd.run': cmdmod.run,
+                },
+                '__opts__': {
+                    'test': False,
+                },
+            },
+        }
+
+    def run(self, result=None):
+        patch_aix = patch(
+            'salt.utils.platform.is_aix',
+            Mock(return_value=False),
+        )
+        patch_exists = patch(
+            'os.path.exists',
+            Mock(return_value=True),
+        )
+        patch_which = patch(
+            'salt.utils.path.which',
+            Mock(return_value='some/tune2fs'),
+        )
+        with patch_aix, patch_exists, patch_which:
+            super(ChattrTests, self).run(result)
+
+    def test_chattr_version_returns_None_if_no_tune2fs_exists(self):
+        patch_which = patch(
+            'salt.utils.path.which',
+            Mock(return_value=''),
+        )
+        with patch_which:
+            actual = filemod._chattr_version()
+            self.assertIsNone(actual)
+
+    def test_on_aix_chattr_version_should_be_None_even_if_tune2fs_exists(self):
+        patch_which = patch(
+            'salt.utils.path.which',
+            Mock(return_value='fnord'),
+        )
+        patch_aix = patch(
+            'salt.utils.platform.is_aix',
+            Mock(return_value=True),
+        )
+        mock_run = MagicMock(return_value='fnord')
+        patch_run = patch.dict(filemod.__salt__, {'cmd.run': mock_run})
+        with patch_which, patch_aix, patch_run:
+            actual = filemod._chattr_version()
+            self.assertIsNone(actual)
+            mock_run.assert_not_called()
+
+    def test_chattr_version_should_return_version_from_tune2fs(self):
+        expected = '1.43.4'
+        sample_output = textwrap.dedent(
+            '''
+            tune2fs 1.43.4 (31-Jan-2017)
+            Usage: tune2fs [-c max_mounts_count] [-e errors_behavior] [-f] [-g group]
+            [-i interval[d|m|w]] [-j] [-J journal_options] [-l]
+            [-m reserved_blocks_percent] [-o [^]mount_options[,...]]
+            [-p mmp_update_interval] [-r reserved_blocks_count] [-u user]
+            [-C mount_count] [-L volume_label] [-M last_mounted_dir]
+            [-O [^]feature[,...]] [-Q quota_options]
+            [-E extended-option[,...]] [-T last_check_time] [-U UUID]
+            [-I new_inode_size] [-z undo_file] device
+            '''
+        )
+        patch_which = patch(
+            'salt.utils.path.which',
+            Mock(return_value='fnord'),
+        )
+        patch_run = patch.dict(
+            filemod.__salt__,
+            {'cmd.run': MagicMock(return_value=sample_output)},
+        )
+        with patch_which, patch_run:
+            actual = filemod._chattr_version()
+            self.assertEqual(actual, expected)
+
+    def test_if_tune2fs_has_no_version_version_should_be_None(self):
+        patch_which = patch(
+            'salt.utils.path.which',
+            Mock(return_value='fnord'),
+        )
+        patch_run = patch.dict(
+            filemod.__salt__,
+            {'cmd.run': MagicMock(return_value='fnord')},
+        )
+        with patch_which, patch_run:
+            actual = filemod._chattr_version()
+            self.assertIsNone(actual)
+
+    def test_chattr_has_extended_attrs_should_return_False_if_chattr_version_is_None(self):
+        patch_chattr = patch(
+            'salt.modules.file._chattr_version',
+            Mock(return_value=None),
+        )
+        with patch_chattr:
+            actual = filemod._chattr_has_extended_attrs()
+            assert not actual, actual
+
+    def test_chattr_has_extended_attrs_should_return_False_if_version_is_too_low(self):
+        below_expected = '0.1.1'
+        patch_chattr = patch(
+            'salt.modules.file._chattr_version',
+            Mock(return_value=below_expected),
+        )
+        with patch_chattr:
+            actual = filemod._chattr_has_extended_attrs()
+            assert not actual, actual
+
+    def test_chattr_has_extended_attrs_should_return_False_if_version_is_equal_threshold(self):
+        threshold = '1.41.12'
+        patch_chattr = patch(
+            'salt.modules.file._chattr_version',
+            Mock(return_value=threshold),
+        )
+        with patch_chattr:
+            actual = filemod._chattr_has_extended_attrs()
+            assert not actual, actual
+
+    def test_chattr_has_extended_attrs_should_return_True_if_version_is_above_threshold(self):
+        higher_than = '1.41.13'
+        patch_chattr = patch(
+            'salt.modules.file._chattr_version',
+            Mock(return_value=higher_than),
+        )
+        with patch_chattr:
+            actual = filemod._chattr_has_extended_attrs()
+            assert actual, actual
+
+    def test_check_perms_should_report_no_attr_changes_if_there_are_none(self):
+        filename = '/path/to/fnord'
+        attrs = 'aAcCdDeijPsStTu'
+
+        higher_than = '1.41.13'
+        patch_chattr = patch(
+            'salt.modules.file._chattr_version',
+            Mock(return_value=higher_than),
+        )
+        patch_exists = patch(
+            'os.path.exists',
+            Mock(return_value=True),
+        )
+        patch_stats = patch(
+            'salt.modules.file.stats',
+            Mock(return_value={
+                'user': 'foo',
+                'group': 'bar',
+                'mode': '123',
+            }),
+        )
+        patch_run = patch.dict(
+            filemod.__salt__,
+            {'cmd.run': MagicMock(return_value='--------- '+filename)},
+        )
+        with patch_chattr, patch_exists, patch_stats, patch_run:
+            actual_ret, actual_perms = filemod.check_perms(
+                name=filename,
+                ret=None,
+                user='foo',
+                group='bar',
+                mode='123',
+                attrs=attrs,
+                follow_symlinks=False,
+            )
+            assert actual_ret.get('changes', {}).get('attrs')is None, actual_ret
+
+    def test_check_perms_should_report_attrs_new_and_old_if_they_changed(self):
+        filename = '/path/to/fnord'
+        attrs = 'aAcCdDeijPsStTu'
+        existing_attrs = 'aeiu'
+        expected = {
+            'attrs': {
+                'old': existing_attrs,
+                'new': attrs,
+            },
+        }
+
+        higher_than = '1.41.13'
+        patch_chattr = patch(
+            'salt.modules.file._chattr_version',
+            Mock(return_value=higher_than),
+        )
+        patch_stats = patch(
+            'salt.modules.file.stats',
+            Mock(return_value={
+                'user': 'foo',
+                'group': 'bar',
+                'mode': '123',
+            }),
+        )
+        patch_cmp = patch(
+            'salt.modules.file._cmp_attrs',
+            MagicMock(side_effect=[
+                filemod.AttrChanges(
+                    added='aAcCdDeijPsStTu',
+                    removed='',
+                ),
+                filemod.AttrChanges(
+                    None,
+                    None,
+                ),
+            ]),
+        )
+        patch_chattr = patch(
+            'salt.modules.file.chattr',
+            MagicMock(),
+        )
+
+        def fake_cmd(cmd, *args, **kwargs):
+            if cmd == ['lsattr', '/path/to/fnord']:
+                return textwrap.dedent(
+                    '''
+                    {}---- {}
+                    '''.format(existing_attrs, filename)
+                ).strip()
+            else:
+                assert False, "not sure how to handle {}".format(cmd)
+
+        patch_run = patch.dict(
+            filemod.__salt__,
+            {'cmd.run': MagicMock(side_effect=fake_cmd)},
+        )
+        patch_ver = patch(
+            'salt.modules.file._chattr_has_extended_attrs',
+            MagicMock(return_value=True),
+        )
+        with patch_chattr, patch_stats, patch_cmp, patch_run, patch_ver:
+            actual_ret, actual_perms = filemod.check_perms(
+                name=filename,
+                ret=None,
+                user='foo',
+                group='bar',
+                mode='123',
+                attrs=attrs,
+                follow_symlinks=False,
+            )
+            self.assertDictEqual(actual_ret['changes'], expected)
+
+
+@skipIf(salt.modules.selinux.getenforce() != 'Enforcing', 'Skip if selinux not enabled')
+class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filemod: {
+                '__salt__': {
+                    'cmd.run': cmdmod.run,
+                    'cmd.retcode': cmdmod.retcode,
+                    'selinux.fcontext_add_policy': MagicMock(return_value={'retcode': 0, 'stdout': ''})
+                },
+                '__opts__': {
+                    'test': False
+                }
+            }
+        }
+
+    def setUp(self):
+        # Read copy 1
+        self.tfile1 = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+
+        # Edit copy 2
+        self.tfile2 = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+
+        # Edit copy 3
+        self.tfile3 = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+
+    def tearDown(self):
+        os.remove(self.tfile1.name)
+        del self.tfile1
+        os.remove(self.tfile2.name)
+        del self.tfile2
+        os.remove(self.tfile3.name)
+        del self.tfile3
+
+    def test_selinux_getcontext(self):
         '''
-        The _chattr_version method works
+            Test get selinux context
+            Assumes default selinux attributes on temporary files
         '''
-        with patch('subprocess.check_output', return_value=self.CHATTR_MAN):
-            parsed_version = filemod._chattr_version()
-        assert parsed_version == '1.43.4', parsed_version
+        result = filemod.get_selinux_context(self.tfile1.name)
+        self.assertEqual(result, "unconfined_u:object_r:user_tmp_t:s0")
+
+    def test_selinux_setcontext(self):
+        '''
+            Test set selinux context
+            Assumes default selinux attributes on temporary files
+        '''
+        result = filemod.set_selinux_context(self.tfile2.name, user="system_u")
+        self.assertEqual(result, "system_u:object_r:user_tmp_t:s0")
+
+    def test_selinux_setcontext_persist(self):
+        '''
+            Test set selinux context with persist=True
+            Assumes default selinux attributes on temporary files
+        '''
+        result = filemod.set_selinux_context(self.tfile2.name, user="system_u", persist=True)
+        self.assertEqual(result, "system_u:object_r:user_tmp_t:s0")
+
+    def test_file_check_perms(self):
+        expected_result = {'comment': 'The file {0} is set to be changed'.format(self.tfile3.name),
+                           'changes': {'selinux': {'New': 'Type: lost_found_t', 'Old': 'Type: user_tmp_t'},
+                           'mode': '0644'}, 'name': self.tfile3.name, 'result': True}, {
+                           'luser': 'root', 'lmode': '0600', 'lgroup': 'root'}
+
+        # Disable lsattr calls
+        with patch('salt.utils.path.which') as m_which:
+            m_which.return_value = None
+            result = filemod.check_perms(self.tfile3.name, {}, 'root', 'root', 644, seuser=None,
+                                        serole=None, setype='lost_found_t', serange=None)
+            self.assertEqual(result, expected_result)

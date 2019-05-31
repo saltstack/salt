@@ -43,7 +43,7 @@ def version():
     '''
     cmd = '{0} -v'.format(__detect_os())
     out = __salt__['cmd.run'](cmd).splitlines()
-    ret = out[0].split(': ')
+    ret = out[0].split(': ')[-1].split('/')
     return ret[-1]
 
 

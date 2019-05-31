@@ -110,6 +110,15 @@ def _determine_auth(**kwargs):
             credentials = UserPassCredentials(kwargs['username'],
                                               kwargs['password'],
                                               cloud_environment=cloud_env)
+    elif 'subscription_id' in kwargs:
+        try:
+            from msrestazure.azure_active_directory import (
+                MSIAuthentication
+            )
+            credentials = MSIAuthentication(cloud_environment=cloud_env)
+        except ImportError:
+            raise SaltSystemExit(msg='MSI authentication support not availabe (requires msrestazure >= 0.4.14)')
+
     else:
         raise SaltInvocationError(
             'Unable to determine credentials. '
@@ -133,7 +142,11 @@ def get_client(client_type, **kwargs):
     Dynamically load the selected client and return a management client object
     '''
     client_map = {'compute': 'ComputeManagement',
+                  'authorization': 'AuthorizationManagement',
+                  'dns': 'DnsManagement',
                   'storage': 'StorageManagement',
+                  'managementlock': 'ManagementLock',
+                  'monitor': 'MonitorManagement',
                   'network': 'NetworkManagement',
                   'policy': 'Policy',
                   'resource': 'ResourceManagement',
@@ -142,14 +155,16 @@ def get_client(client_type, **kwargs):
 
     if client_type not in client_map:
         raise SaltSystemExit(
-            'The Azure ARM client_type {0} specified can not be found.'.format(
+            msg='The Azure ARM client_type {0} specified can not be found.'.format(
                 client_type)
         )
 
     map_value = client_map[client_type]
 
-    if client_type == 'subscription' or client_type == 'policy':
+    if client_type in ['policy', 'subscription']:
         module_name = 'resource'
+    elif client_type in ['managementlock']:
+        module_name = 'resource.locks'
     else:
         module_name = client_type
 
@@ -164,6 +179,7 @@ def get_client(client_type, **kwargs):
         )
 
     credentials, subscription_id, cloud_env = _determine_auth(**kwargs)
+
     if client_type == 'subscription':
         client = Client(
             credentials=credentials,

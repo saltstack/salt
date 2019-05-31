@@ -331,11 +331,13 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
         opts['conf_file'] = config_file
     except Exception as err:
         import salt.log
-        msg = 'pillar_ldap: error parsing configuration file: {0} - {1}'
+        msg = 'pillar_ldap: error parsing configuration file: {0} - {1}'.format(
+            config_file, err
+        )
         if salt.log.is_console_configured():
-            log.warning(msg.format(config_file, err))
+            log.warning(msg)
         else:
-            print(msg.format(config_file, err))
+            print(msg)
         return {}
     else:
         if not isinstance(opts, dict):

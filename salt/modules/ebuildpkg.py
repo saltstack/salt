@@ -62,7 +62,7 @@ def __virtual__():
     '''
     Confirm this module is on a Gentoo based system
     '''
-    if HAS_PORTAGE and __grains__['os'] == 'Gentoo':
+    if HAS_PORTAGE and __grains__['os_family'] == 'Gentoo':
         return __virtualname__
     return (False, 'The ebuild execution module cannot be loaded: either the system is not Gentoo or the portage python library is not available.')
 
@@ -196,8 +196,10 @@ def check_db(*names, **kwargs):
     ret = {}
     for name in names:
         if name in ret:
-            log.warning('pkg.check_db: Duplicate package name \'{0}\' '
-                        'submitted'.format(name))
+            log.warning(
+                'pkg.check_db: Duplicate package name \'%s\' submitted',
+                name
+            )
             continue
         if '/' not in name:
             ret.setdefault(name, {})['found'] = False
@@ -257,7 +259,7 @@ def latest_version(*names, **kwargs):
     '''
     refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
-    if len(names) == 0:
+    if not names:
         return ''
 
     # Refresh before looking for the latest version available
@@ -358,7 +360,7 @@ def list_upgrades(refresh=True, backtrack=3, **kwargs):  # pylint: disable=W0613
     return _get_upgradable(backtrack)
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
 
@@ -440,7 +442,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
-def refresh_db():
+def refresh_db(**kwargs):
     '''
     Update the portage tree using the first available method from the following
     list:
@@ -478,7 +480,7 @@ def refresh_db():
         timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(main_repo_root))
         if now - timestamp < day:
             log.info('Did not sync package tree since last sync was done at'
-                     ' {0}, less than 1 day ago'.format(timestamp))
+                     ' %s, less than 1 day ago', timestamp)
             return False
 
     if has_emaint:
@@ -629,7 +631,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    log.debug('Called modules.pkg.install: {0}'.format(
+    log.debug('Called modules.pkg.install: %s',
         {
             'name': name,
             'refresh': refresh,
@@ -638,7 +640,7 @@ def install(name=None,
             'kwargs': kwargs,
             'binhost': binhost,
         }
-    ))
+    )
     if salt.utils.data.is_true(refresh):
         refresh_db()
 
@@ -662,7 +664,7 @@ def install(name=None,
                 version_num += '[{0}]'.format(','.join(uses))
             pkg_params = {name: version_num}
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
     elif pkg_type == 'file':
         emerge_opts = ['tbz2file']
@@ -697,7 +699,7 @@ def install(name=None,
                     prefix = gt_lt or ''
                     prefix += eq or ''
                     # If no prefix characters were supplied and verstr contains a version, use '='
-                    if len(verstr) > 0 and verstr[0] != ':' and verstr[0] != '[':
+                    if verstr and verstr[0] != ':' and verstr[0] != '[':
                         prefix = prefix or '='
                         target = '{0}{1}-{2}'.format(prefix, param, verstr)
                     else:
@@ -765,7 +767,7 @@ def install(name=None,
     return changes
 
 
-def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
+def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None, **kwargs):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -858,7 +860,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
     return ret
 
 
-def upgrade(refresh=True, binhost=None, backtrack=3):
+def upgrade(refresh=True, binhost=None, backtrack=3, **kwargs):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -1227,7 +1229,7 @@ def check_extra_requirements(pkgname, pkgver):
     try:
         cpv = _porttree().dbapi.xmatch('bestmatch-visible', atom)
     except portage.exception.InvalidAtom as iae:
-        log.error('Unable to find a matching package for {0}: ({1})'.format(atom, iae))
+        log.error('Unable to find a matching package for %s: (%s)', atom, iae)
         return False
 
     if cpv == '':
@@ -1244,8 +1246,7 @@ def check_extra_requirements(pkgname, pkgver):
 
     des_uses = set(portage.dep.dep_getusedeps(atom))
     cur_use = cur_use.split()
-    if len([x for x in des_uses.difference(cur_use)
-            if x[0] != '-' or x[1:] in cur_use]) > 0:
+    if [x for x in des_uses.difference(cur_use) if x[0] != '-' or x[1:] in cur_use]:
         return False
 
     if keyword:

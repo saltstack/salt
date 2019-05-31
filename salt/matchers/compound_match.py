@@ -19,13 +19,15 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def match(tgt):
+def match(tgt, opts=None):
     '''
     Runs the compound target check
     '''
-    nodegroups = __opts__.get('nodegroups', {})
-    matchers = salt.loader.matchers(__opts__)
-    minion_id = __opts__.get('minion_id', __opts__['id'])
+    if not opts:
+        opts = __opts__
+    nodegroups = opts.get('nodegroups', {})
+    matchers = salt.loader.matchers(opts)
+    minion_id = opts.get('minion_id', __opts__['id'])
 
     if not isinstance(tgt, six.string_types) and not isinstance(tgt, (list, tuple)):
         log.error('Compound target received that is neither string, list nor tuple')

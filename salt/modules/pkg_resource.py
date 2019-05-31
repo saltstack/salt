@@ -193,7 +193,7 @@ def version(*names, **kwargs):
     versions_as_list = \
         salt.utils.data.is_true(kwargs.pop('versions_as_list', False))
     pkg_glob = False
-    if len(names) != 0:
+    if names:
         pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
         for name in names:
             if '*' in name:

@@ -126,10 +126,12 @@ import subprocess
 
 # Import salt libs
 import salt.utils.cloud
+import salt.utils.master
 import salt.utils.network
 import salt.utils.stringutils
 import salt.utils.xmlutil
 import salt.utils.vmware
+from salt._compat import ipaddress
 from salt.exceptions import SaltCloudSystemExit
 
 # Import salt cloud libs
@@ -990,41 +992,67 @@ def _wait_for_vmware_tools(vm_ref, max_wait):
 
 def _valid_ip(ip_address):
     '''
-    Check if the IP address is valid
+    Check if the IP address is valid and routable
     Return either True or False
     '''
 
-    # Make sure IP has four octets
-    octets = ip_address.split('.')
-    if len(octets) != 4:
+    try:
+        address = ipaddress.IPv4Address(ip_address)
+    except ipaddress.AddressValueError:
         return False
 
-    # convert octet from string to int
-    for i, octet in enumerate(octets):
-
-        try:
-            octets[i] = int(octet)
-        except ValueError:
-            # couldn't convert octet to an integer
-            return False
-
-    # map variables to elements of octets list
-    first_octet, second_octet, third_octet, fourth_octet = octets
-
-    # Check first_octet meets conditions
-    if first_octet < 1 or first_octet > 223 or first_octet == 127:
+    if address.is_unspecified or \
+        address.is_loopback or \
+        address.is_link_local or \
+        address.is_multicast or \
+        address.is_reserved:
         return False
 
-    # Check 169.254.X.X condition
-    if first_octet == 169 and second_octet == 254:
-        return False
-
-    # Check 2nd - 4th octets
-    for octet in (second_octet, third_octet, fourth_octet):
-        if (octet < 0) or (octet > 255):
-            return False
-    # Passed all of the checks
     return True
+
+
+def _valid_ip6(ip_address):
+    '''
+    Check if the IPv6 address is valid and routable
+    Return either True or False
+    '''
+
+    # Validate IPv6 address
+    try:
+        address = ipaddress.IPv6Address(ip_address)
+    except ipaddress.AddressValueError:
+        return False
+
+    if address.is_unspecified or \
+        address.is_loopback or \
+        address.is_link_local or \
+        address.is_multicast or \
+        address.is_reserved:
+        return False
+
+    if address.ipv4_mapped is not None:
+        return False
+
+    return True
+
+
+def _master_supports_ipv6():
+    '''
+    Check if the salt master has a valid and
+    routable IPv6 address available
+    '''
+    master_fqdn = salt.utils.network.get_fqhostname()
+    pillar_util = salt.utils.master.MasterPillarUtil(master_fqdn,
+                                                     tgt_type='glob',
+                                                     use_cached_grains=False,
+                                                     grains_fallback=False,
+                                                     opts=__opts__)
+    grains_data = pillar_util.get_minion_grains()
+    ipv6_addresses = grains_data[master_fqdn]['ipv6']
+    for address in ipv6_addresses:
+        if _valid_ip6(address):
+            return True
+    return False
 
 
 def _wait_for_ip(vm_ref, max_wait):
@@ -1041,34 +1069,43 @@ def _wait_for_ip(vm_ref, max_wait):
         if isinstance(resolved_ips, list) and resolved_ips:
             return resolved_ips[0]
         return False
+    master_supports_ipv6 = _master_supports_ipv6()
+    log.info(
+        "[ %s ] Master has IPv6 support: %s",
+        vm_ref.name, master_supports_ipv6
+    )
     time_counter = 0
     starttime = time.time()
+    ipv4_address = None
     while time_counter < max_wait_ip:
         if time_counter % 5 == 0:
             log.info(
-                "[ %s ] Waiting to retrieve IPv4 information [%s s]",
+                "[ %s ] Waiting to retrieve IPv4/6 information [%s s]",
                 vm_ref.name, time_counter
             )
 
-        if vm_ref.summary.guest.ipAddress and _valid_ip(vm_ref.summary.guest.ipAddress):
-            log.info(
-                "[ %s ] Successfully retrieved IPv4 information in %s seconds",
-                vm_ref.name, time_counter
-            )
-            return vm_ref.summary.guest.ipAddress
         for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
-                    if _valid_ip(current_ip.ipAddress):
+                    if master_supports_ipv6 and _valid_ip6(current_ip.ipAddress):
                         log.info(
-                            "[ %s ] Successfully retrieved IPv4 information "
+                            "[ %s ] Successfully retrieved IPv6 information "
                             "in %s seconds", vm_ref.name, time_counter
                         )
                         return current_ip.ipAddress
+                    if _valid_ip(current_ip.ipAddress) and not ipv4_address:
+                        # Delay return in case we have a valid IPv6 available
+                        ipv4_address = current_ip
+        if ipv4_address:
+            log.info(
+                "[ %s ] Successfully retrieved IPv4 information "
+                "in %s seconds", vm_ref.name, time_counter
+            )
+            return ipv4_address.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
     log.warning(
-        "[ %s ] Timeout Reached. Unable to retrieve IPv4 information after "
+        "[ %s ] Timeout Reached. Unable to retrieve IPv4/6 information after "
         "waiting for %s seconds", vm_ref.name, max_wait_ip
     )
     return False
@@ -1603,6 +1640,52 @@ def list_datastores(kwargs=None, call=None):
         )
 
     return {'Datastores': salt.utils.vmware.list_datastores(_get_si())}
+
+
+def list_datastores_full(kwargs=None, call=None):
+    '''
+    List all the datastores for this VMware environment, with extra information
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_datastores_full my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_datastores_full function must be called with '
+            '-f or --function.'
+        )
+
+    return {'Datastores': salt.utils.vmware.list_datastores_full(_get_si())}
+
+
+def list_datastore_full(kwargs=None, call=None, datastore=None):
+    '''
+    Returns a dictionary with basic information for the given datastore
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_datastore_full my-vmware-config datastore=datastore-name
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_datastore_full function must be called with '
+            '-f or --function.'
+        )
+
+    if kwargs:
+        datastore = kwargs.get('datastore', None)
+
+    if not datastore:
+        raise SaltCloudSystemExit(
+            'The list_datastore_full function requires a datastore'
+        )
+
+    return {datastore: salt.utils.vmware.list_datastore_full(_get_si(), datastore)}
 
 
 def list_hosts(kwargs=None, call=None):
@@ -2550,11 +2633,33 @@ def create(vm_):
     win_run_once = config.get_cloud_config_value(
         'win_run_once', vm_, __opts__, search_global=False, default=None
     )
+    win_ad_domain = config.get_cloud_config_value(
+        'win_ad_domain', vm_, __opts__, search_global=False, default=''
+    )
+    win_ad_user = config.get_cloud_config_value(
+        'win_ad_user', vm_, __opts__, search_global=False, default=''
+    )
+    win_ad_password = config.get_cloud_config_value(
+        'win_ad_password', vm_, __opts__, search_global=False, default=''
+    )
+    win_autologon = config.get_cloud_config_value(
+        'win_autologon', vm_, __opts__, search_global=False, default=True
+    )
+    timezone = config.get_cloud_config_value(
+        'timezone', vm_, __opts__, search_global=False, default=''
+    )
+    hw_clock_utc = config.get_cloud_config_value(
+        'hw_clock_utc', vm_, __opts__, search_global=False, default=''
+    )
+    clonefrom_datacenter = config.get_cloud_config_value(
+        'clonefrom_datacenter', vm_, __opts__, search_global=False, default=datacenter
+    )
 
     # Get service instance object
     si = _get_si()
 
     container_ref = None
+    clonefrom_datacenter_ref = None
 
     # If datacenter is specified, set the container reference to start search from it instead
     if datacenter:
@@ -2570,13 +2675,22 @@ def create(vm_):
                                  datacenter
                              )
             container_ref = datacenter_ref if datacenter_ref else None
+            clonefrom_container_ref = datacenter_ref if datacenter_ref else None
+        # allow specifying a different datacenter that the template lives in
+        if clonefrom_datacenter:
+            clonefrom_datacenter_ref = salt.utils.vmware.get_mor_by_property(
+                                           si,
+                                           vim.Datacenter,
+                                           clonefrom_datacenter
+                                       )
+            clonefrom_container_ref = clonefrom_datacenter_ref if clonefrom_datacenter_ref else None
 
         # Clone VM/template from specified VM/template
         object_ref = salt.utils.vmware.get_mor_by_property(
                          si,
                          vim.VirtualMachine,
                          vm_['clonefrom'],
-                         container_ref=container_ref
+                         container_ref=clonefrom_container_ref
                      )
         if object_ref:
             clone_type = "template" if object_ref.config.template else "vm"
@@ -2814,14 +2928,23 @@ def create(vm_):
                 identity = vim.vm.customization.LinuxPrep()
                 identity.hostName = vim.vm.customization.FixedName(name=host_name)
                 identity.domain = domain_name
+                if timezone:
+                    identity.timeZone = timezone
+                if isinstance(hw_clock_utc, bool):
+                    identity.hwClockUTC = hw_clock_utc
             else:
                 identity = vim.vm.customization.Sysprep()
                 identity.guiUnattended = vim.vm.customization.GuiUnattended()
-                identity.guiUnattended.autoLogon = True
-                identity.guiUnattended.autoLogonCount = 1
+                identity.guiUnattended.autoLogon = win_autologon
+                if win_autologon:
+                    identity.guiUnattended.autoLogonCount = 1
+                else:
+                    identity.guiUnattended.autoLogonCount = 0
                 identity.guiUnattended.password = vim.vm.customization.Password()
                 identity.guiUnattended.password.value = win_password
                 identity.guiUnattended.password.plainText = plain_text
+                if timezone:
+                    identity.guiUnattended.timeZone = timezone
                 if win_run_once:
                     identity.guiRunOnce = vim.vm.customization.GuiRunOnce()
                     identity.guiRunOnce.commandList = win_run_once
@@ -2831,6 +2954,12 @@ def create(vm_):
                 identity.userData.computerName = vim.vm.customization.FixedName()
                 identity.userData.computerName.name = host_name
                 identity.identification = vim.vm.customization.Identification()
+                if win_ad_domain and win_ad_user and win_ad_password:
+                    identity.identification.joinDomain = win_ad_domain
+                    identity.identification.domainAdmin = win_ad_user
+                    identity.identification.domainAdminPassword = vim.vm.customization.Password()
+                    identity.identification.domainAdminPassword.value = win_ad_password
+                    identity.identification.domainAdminPassword.plainText = plain_text
             custom_spec = vim.vm.customization.Specification(
                 globalIPSettings=global_ip,
                 identity=identity,
@@ -4337,7 +4466,7 @@ def reboot_host(kwargs=None, call=None):
             'Specified host system does not support reboot.'
         )
 
-    if not host_ref.runtime.inMaintenanceMode:
+    if not host_ref.runtime.inMaintenanceMode and not force:
         raise SaltCloudSystemExit(
             'Specified host system is not in maintenance mode. Specify force=True to '
             'force reboot even if there are virtual machines running or other operations '
@@ -4419,3 +4548,73 @@ def create_datastore_cluster(kwargs=None, call=None):
         return False
 
     return {datastore_cluster_name: 'created'}
+
+
+def shutdown_host(kwargs=None, call=None):
+    '''
+    Shut down the specified host system in this VMware environment
+
+    .. note::
+
+        If the host system is not in maintenance mode, it will not be shut down. If you
+        want to shut down the host system regardless of whether it is in maintenance mode,
+        set ``force=True``. Default is ``force=False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f shutdown_host my-vmware-config host="myHostSystemName" [force=True]
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The shutdown_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+    force = _str_to_bool(kwargs.get('force')) if kwargs and 'force' in kwargs else False
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must specify name of the host system.'
+        )
+
+    # Get the service instance
+    si = _get_si()
+
+    host_ref = salt.utils.vmware.get_mor_by_property(si, vim.HostSystem, host_name)
+    if not host_ref:
+        raise SaltCloudSystemExit(
+            'Specified host system does not exist.'
+        )
+
+    if host_ref.runtime.connectionState == 'notResponding':
+        raise SaltCloudSystemExit(
+            'Specified host system cannot be shut down in it\'s current state (not responding).'
+        )
+
+    if not host_ref.capability.rebootSupported:
+        raise SaltCloudSystemExit(
+            'Specified host system does not support shutdown.'
+        )
+
+    if not host_ref.runtime.inMaintenanceMode and not force:
+        raise SaltCloudSystemExit(
+            'Specified host system is not in maintenance mode. Specify force=True to '
+            'force reboot even if there are virtual machines running or other operations '
+            'in progress.'
+        )
+
+    try:
+        host_ref.ShutdownHost_Task(force)
+    except Exception as exc:
+        log.error(
+            'Error while shutting down host %s: %s',
+            host_name, exc,
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return {host_name: 'failed to shut down host'}
+
+    return {host_name: 'shut down host'}

@@ -1,0 +1,3 @@
+jobs-last:
+  - run:jobs.last_run:
+      info: List all detectable jobs and associated functions

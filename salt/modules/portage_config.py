@@ -48,7 +48,7 @@ def __virtual__():
     '''
     Confirm this module is on a Gentoo based system.
     '''
-    if HAS_PORTAGE and __grains__['os'] == 'Gentoo':
+    if HAS_PORTAGE and __grains__['os_family'] == 'Gentoo':
         return 'portage_config'
     return (False, 'portage_config execution module cannot be loaded: only available on Gentoo with portage installed.')
 
@@ -256,12 +256,12 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
                                     new_contents += line
                                 else:
                                     rearrange.append(line.strip())
-                        if len(new_contents) != 0:
+                        if new_contents:
                             file_handler.seek(0)
                             file_handler.truncate(len(new_contents))
                             file_handler.write(new_contents)
 
-                    if len(new_contents) == 0:
+                    if not new_contents:
                         os.remove(file_path)
 
         for line in rearrange:
@@ -276,8 +276,7 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
 
         if clean:
             for triplet in salt.utils.path.os_walk(path):
-                if len(triplet[1]) == 0 and len(triplet[2]) == 0 and \
-                        triplet[0] != path:
+                if not triplet[1] and not triplet[2] and triplet[0] != path:
                     shutil.rmtree(triplet[0])
 
 
@@ -451,7 +450,7 @@ def append_use_flags(atom, uses=None, overwrite=False):
     '''
     if not uses:
         uses = portage.dep.dep_getusedeps(atom)
-    if len(uses) == 0:
+    if not uses:
         return
     atom = atom[:atom.rfind('[')]
     append_to_package_conf('use', atom=atom, flags=uses, overwrite=overwrite)

@@ -4692,7 +4692,7 @@ def get_pid(name, path=None):
     if name not in list_(limit='running', path=path):
         raise CommandExecutionError('Container {0} is not running, can\'t determine PID'.format(name))
     info = __salt__['cmd.run']('lxc-info -n {0}'.format(name)).split("\n")
-    pid = [line.split(':')[1].strip() for line in info if re.match(r'\s*PID', line) is not None][0]
+    pid = [line.split(':')[1].strip() for line in info if re.match(r'\s*PID', line)][0]
     return pid
 
 

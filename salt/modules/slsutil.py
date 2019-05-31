@@ -5,6 +5,8 @@ Utility functions for use with or in SLS files
 
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
+import textwrap
+import os
 
 # Import Salt libs
 import salt.exceptions
@@ -168,7 +170,7 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
     renderers = salt.loader.render(__opts__, __salt__)
 
     if path:
-        path_or_string = __salt__['cp.get_url'](path)
+        path_or_string = __salt__['cp.get_url'](path, saltenv=kwargs.get('saltenv', 'base'))
     elif string:
         path_or_string = ':string:'
         kwargs['input_data'] = string
@@ -246,3 +248,130 @@ def deserialize(serializer, stream_or_string, **mod_kwargs):
     kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
     return _get_serialize_fn(serializer, 'deserialize')(stream_or_string,
             **kwargs)
+
+
+def banner(width=72, commentchar='#', borderchar='#', blockstart=None, blockend=None,
+           title=None, text=None, newline=False):
+    '''
+    Create a standardized comment block to include in a templated file.
+
+    A common technique in configuration management is to include a comment
+    block in managed files, warning users not to modify the file. This
+    function simplifies and standardizes those comment blocks.
+
+    :param width: The width, in characters, of the banner. Default is 72.
+    :param commentchar: The character to be used in the starting position of
+        each line. This value should be set to a valid line comment character
+        for the syntax of the file in which the banner is being inserted.
+        Multiple character sequences, like '//' are supported.
+        If the file's syntax does not support line comments (such as XML),
+        use the ``blockstart`` and ``blockend`` options.
+    :param borderchar: The character to use in the top and bottom border of
+        the comment box. Must be a single character.
+    :param blockstart: The character sequence to use at the beginning of a
+        block comment. Should be used in conjunction with ``blockend``
+    :param blockend: The character sequence to use at the end of a
+        block comment. Should be used in conjunction with ``blockstart``
+    :param title: The first field of the comment block. This field appears
+        centered at the top of the box.
+    :param text: The second filed of the comment block. This field appears
+        left-justifed at the bottom of the box.
+    :param newline: Boolean value to indicate whether the comment block should
+        end with a newline. Default is ``False``.
+
+    This banner can be injected into any templated file, for example:
+
+    .. code-block:: jinja
+
+        {{ salt['slsutil.banner'](width=120, commentchar='//') }}
+
+    The default banner:
+
+    .. code-block:: none
+
+        ########################################################################
+        #                                                                      #
+        #              THIS FILE IS MANAGED BY SALT - DO NOT EDIT              #
+        #                                                                      #
+        # The contents of this file are managed by Salt. Any changes to this   #
+        # file may be overwritten automatically and without warning.           #
+        ########################################################################
+    '''
+
+    if title is None:
+        title = 'THIS FILE IS MANAGED BY SALT - DO NOT EDIT'
+
+    if text is None:
+        text = ('The contents of this file are managed by Salt. '
+                'Any changes to this file may be overwritten '
+                'automatically and without warning')
+
+    # Set up some typesetting variables
+    lgutter = commentchar.strip() + ' '
+    rgutter = ' ' + commentchar.strip()
+    textwidth = width - len(lgutter) - len(rgutter)
+    border_line = commentchar + borderchar[:1] * (width - len(commentchar) * 2) + commentchar
+    spacer_line = commentchar + ' ' * (width - len(commentchar) * 2) + commentchar
+    wrapper = textwrap.TextWrapper(width=(width - len(lgutter) - len(rgutter)))
+    block = list()
+
+    # Create the banner
+    if blockstart is not None:
+        block.append(blockstart)
+    block.append(border_line)
+    block.append(spacer_line)
+    for line in wrapper.wrap(title):
+        block.append(lgutter + line.center(textwidth) + rgutter)
+    block.append(spacer_line)
+    for line in wrapper.wrap(text):
+        block.append(lgutter + line + ' ' * (textwidth - len(line)) + rgutter)
+    block.append(border_line)
+    if blockend is not None:
+        block.append(blockend)
+
+    # Convert list to multi-line string
+    result = os.linesep.join(block)
+
+    # Add a newline character to the end of the banner
+    if newline:
+        return result + os.linesep
+
+    return result
+
+
+def boolstr(value, true='true', false='false'):
+    '''
+    Convert a boolean value into a string. This function is
+    intended to be used from within file templates to provide
+    an easy way to take boolean values stored in Pillars or
+    Grains, and write them out in the apprpriate syntax for
+    a particular file template.
+
+    :param value: The boolean value to be converted
+    :param true: The value to return if ``value`` is ``True``
+    :param false: The value to return if ``value`` is ``False``
+
+    In this example, a pillar named ``smtp:encrypted`` stores a boolean
+    value, but the template that uses that value needs ``yes`` or ``no``
+    to be written, based on the boolean value.
+
+    *Note: this is written on two lines for clarity. The same result
+    could be achieved in one line.*
+
+    .. code-block:: jinja
+
+        {% set encrypted = salt[pillar.get]('smtp:encrypted', false) %}
+        use_tls: {{ salt['slsutil.boolstr'](encrypted, 'yes', 'no') }}
+
+    Result (assuming the value is ``True``):
+
+    .. code-block:: none
+
+        use_tls: yes
+
+    '''
+
+    if value:
+        return true
+
+    return false

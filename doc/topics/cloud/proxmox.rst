@@ -204,6 +204,9 @@ QEMU profile file (for a new VM):
     # Enable QEMU Guest Agent (0 / 1)
     agent: 1
 
+    # Use the QEMU Guest agent to determine the VM's IP (0 / 1)
+    agent_get_ip: 1
+
     # VM name
     name: Test
 

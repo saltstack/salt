@@ -26,6 +26,79 @@ import logging
 log = logging.getLogger(__name__)
 
 
+def get_bnum(opts, minions, quiet):
+    '''
+    Return the active number of minions to maintain
+    '''
+    partition = lambda x: float(x) / 100.0 * len(minions)
+    try:
+        if '%' in opts['batch']:
+            res = partition(float(opts['batch'].strip('%')))
+            if res < 1:
+                return int(math.ceil(res))
+            else:
+                return int(res)
+        else:
+            return int(opts['batch'])
+    except ValueError:
+        if not quiet:
+            salt.utils.stringutils.print_cli('Invalid batch data sent: {0}\nData must be in the '
+                      'form of %10, 10% or 3'.format(opts['batch']))
+
+
+def batch_get_opts(
+        tgt,
+        fun,
+        batch,
+        parent_opts,
+        arg=(),
+        tgt_type='glob',
+        ret='',
+        kwarg=None,
+        **kwargs):
+    # We need to re-import salt.utils.args here
+    # even though it has already been imported.
+    # when cmd_batch is called via the NetAPI
+    # the module is unavailable.
+    import salt.utils.args
+
+    arg = salt.utils.args.condition_input(arg, kwarg)
+    opts = {'tgt': tgt,
+            'fun': fun,
+            'arg': arg,
+            'tgt_type': tgt_type,
+            'ret': ret,
+            'batch': batch,
+            'failhard': kwargs.get('failhard', False),
+            'raw': kwargs.get('raw', False)}
+
+    if 'timeout' in kwargs:
+        opts['timeout'] = kwargs['timeout']
+    if 'gather_job_timeout' in kwargs:
+        opts['gather_job_timeout'] = kwargs['gather_job_timeout']
+    if 'batch_wait' in kwargs:
+        opts['batch_wait'] = int(kwargs['batch_wait'])
+
+    for key, val in six.iteritems(parent_opts):
+        if key not in opts:
+            opts[key] = val
+
+    return opts
+
+
+def batch_get_eauth(kwargs):
+    eauth = {}
+    if 'eauth' in kwargs:
+        eauth['eauth'] = kwargs.pop('eauth')
+    if 'username' in kwargs:
+        eauth['username'] = kwargs.pop('username')
+    if 'password' in kwargs:
+        eauth['password'] = kwargs.pop('password')
+    if 'token' in kwargs:
+        eauth['token'] = kwargs.pop('token')
+    return eauth
+
+
 class Batch(object):
     '''
     Manage the execution of batch runs
@@ -80,23 +153,7 @@ class Batch(object):
         return (list(fret), ping_gen, nret.difference(fret))
 
     def get_bnum(self):
-        '''
-        Return the active number of minions to maintain
-        '''
-        partition = lambda x: float(x) / 100.0 * len(self.minions)
-        try:
-            if isinstance(self.opts['batch'], six.string_types) and '%' in self.opts['batch']:
-                res = partition(float(self.opts['batch'].strip('%')))
-                if res < 1:
-                    return int(math.ceil(res))
-                else:
-                    return int(res)
-            else:
-                return int(self.opts['batch'])
-        except ValueError:
-            if not self.quiet:
-                salt.utils.stringutils.print_cli('Invalid batch data sent: {0}\nData must be in the '
-                          'form of %10, 10% or 3'.format(self.opts['batch']))
+        return get_bnum(self.opts, self.minions, self.quiet)
 
     def __update_wait(self, wait):
         now = datetime.now()

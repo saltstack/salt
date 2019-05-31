@@ -315,8 +315,6 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=30,
                               )
         response_obj = salt.utils.json.loads(response.body)
-        self.application.opts['order_masters'] = []
-        self.application.opts['syndic_wait'] = 5
         # If --proxy is set, it will cause an extra minion_id to be in the
         # response. Since there's not a great way to know if the test runner's
         # proxy minion is running, and we're not testing proxy minions here

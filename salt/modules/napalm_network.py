@@ -5,7 +5,7 @@ NAPALM Network
 
 Basic methods for interaction with the network device through the virtual proxy 'napalm'.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -216,7 +216,7 @@ def _config_logic(napalm_device,
         # will discard the config
         if loaded_result['comment']:
             loaded_result['comment'] += '\n'
-        if not len(loaded_result.get('diff', '')) > 0:
+        if not loaded_result.get('diff', ''):
             loaded_result['already_configured'] = True
         discarded = _safe_dicard_config(loaded_result, napalm_device)
         if not discarded['result']:
@@ -236,7 +236,7 @@ def _config_logic(napalm_device,
             removed = cancel_commit(commit_jid)
             log.debug('Cleaned up the commit from the schedule')
             log.debug(removed['comment'])
-        if len(loaded_result.get('diff', '')) > 0:
+        if loaded_result.get('diff', ''):
             # if not testing mode
             # and also the user wants to commit (default)
             # and there are changes to commit
@@ -1994,10 +1994,10 @@ def load_template(template_name=None,
                 if not isinstance(_managed, (list, tuple)) and isinstance(_managed, six.string_types):
                     _loaded['comment'] += _managed
                     _loaded['result'] = False
-                elif isinstance(_managed, (list, tuple)) and not len(_managed) > 0:
+                elif isinstance(_managed, (list, tuple)) and not _managed:
                     _loaded['result'] = False
                     _loaded['comment'] += 'Error while rendering the template.'
-                elif isinstance(_managed, (list, tuple)) and not len(_managed[0]) > 0:
+                elif isinstance(_managed, (list, tuple)) and not _managed[0]:
                     _loaded['result'] = False
                     _loaded['comment'] += _managed[-1]  # contains the error message
                 if _loaded['result']:  # all good

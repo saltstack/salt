@@ -420,7 +420,8 @@ def _docker_client(wrapped):
         timeout = kwargs.pop('client_timeout', NOTSET)
         if 'docker.client' not in __context__ \
                 or not hasattr(__context__['docker.client'], 'timeout'):
-            __context__['docker.client'] = _get_client(timeout=timeout, **kwargs)
+            __context__['docker.client'] = _get_client(
+                timeout=timeout, **kwargs)
         orig_timeout = None
         if timeout is not NOTSET \
                 and hasattr(__context__['docker.client'], 'timeout') \
@@ -446,7 +447,8 @@ def _refresh_mine_cache(wrapped):
         '''
         returned = wrapped(*args, **__utils__['args.clean_kwargs'](**kwargs))
         if _check_update_mine():
-            __salt__['mine.send']('docker.ps', verbose=True, all=True, host=True)
+            __salt__['mine.send'](
+                'docker.ps', verbose=True, all=True, host=True)
         return returned
     return wrapper
 
@@ -455,7 +457,8 @@ def _check_update_mine():
     try:
         ret = __context__['docker.update_mine']
     except KeyError:
-        ret = __context__['docker.update_mine'] = __salt__['config.get']('docker.update_mine', default=True)
+        ret = __context__['docker.update_mine'] = __salt__[
+            'config.get']('docker.update_mine', default=True)
     return ret
 
 
@@ -896,7 +899,7 @@ def _get_create_kwargs(skip_translate=None,
                 create_kwargs[arg] = kwargs.pop(arg)
             continue
     create_kwargs['host_config'] = \
-            _client_wrapper('create_host_config', **host_kwargs)
+        _client_wrapper('create_host_config', **host_kwargs)
     # In the event that a full host_config was passed, overlay it on top of the
     # one we just created.
     create_kwargs['host_config'].update(full_host_config)
@@ -945,12 +948,14 @@ def compare_containers(first, second, ignore=None):
             val2 = result2[conf_dict].get(item)
             if item in ('OomKillDisable',) or (val1 is None or val2 is None):
                 if bool(val1) != bool(val2):
-                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+                    ret.setdefault(conf_dict, {})[item] = {
+                        'old': val1, 'new': val2}
             elif item == 'Image':
                 image1 = inspect_image(val1)['Id']
                 image2 = inspect_image(val2)['Id']
                 if image1 != image2:
-                    ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
+                    ret.setdefault(conf_dict, {})[item] = {
+                        'old': image1, 'new': image2}
             else:
                 if item == 'Links':
                     val1 = sorted(_scrub_links(val1, first))
@@ -962,7 +967,8 @@ def compare_containers(first, second, ignore=None):
                     val1 = sorted(val1)
                     val2 = sorted(val2)
                 if val1 != val2:
-                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+                    ret.setdefault(conf_dict, {})[item] = {
+                        'old': val1, 'new': val2}
         # Check for optionally-present items that were in the second container
         # and not the first.
         for item in result2[conf_dict]:
@@ -974,12 +980,14 @@ def compare_containers(first, second, ignore=None):
             val2 = result2[conf_dict][item]
             if item in ('OomKillDisable',) or (val1 is None or val2 is None):
                 if bool(val1) != bool(val2):
-                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+                    ret.setdefault(conf_dict, {})[item] = {
+                        'old': val1, 'new': val2}
             elif item == 'Image':
                 image1 = inspect_image(val1)['Id']
                 image2 = inspect_image(val2)['Id']
                 if image1 != image2:
-                    ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
+                    ret.setdefault(conf_dict, {})[item] = {
+                        'old': image1, 'new': image2}
             else:
                 if item == 'Links':
                     val1 = sorted(_scrub_links(val1, first))
@@ -991,7 +999,8 @@ def compare_containers(first, second, ignore=None):
                     val1 = sorted(val1)
                     val2 = sorted(val2)
                 if val1 != val2:
-                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+                    ret.setdefault(conf_dict, {})[item] = {
+                        'old': val1, 'new': val2}
     return ret
 
 
@@ -1079,7 +1088,8 @@ def compare_container_networks(first, second):
     all_nets.update(nets2)
     for net_name in all_nets:
         try:
-            connected_containers = inspect_network(net_name).get('Containers', {})
+            connected_containers = inspect_network(
+                net_name).get('Containers', {})
         except Exception as exc:
             # Shouldn't happen unless a network was removed outside of Salt
             # between the time that a docker_container.running state started
@@ -1198,7 +1208,8 @@ def compare_container_networks(first, second):
                                 # The only alias was the default one for the
                                 # hostname
                                 continue
-                    ret.setdefault(net_name, {})[key] = {'old': None, 'new': val}
+                    ret.setdefault(net_name, {})[key] = {
+                        'old': None, 'new': val}
         else:
             for key in compare_keys.get('static', []):
                 old_val = nets1[net_name][key]
@@ -1215,10 +1226,18 @@ def compare_container_networks(first, second):
                         old_val.remove(result1['Config']['Hostname'])
                     except (AttributeError, ValueError):
                         pass
+                    try:
+                        old_val.remove(result1['Id'][:12])
+                    except (AttributeError, ValueError):
+                        pass
                     if not old_val:
                         old_val = None
                     try:
                         new_val.remove(result2['Config']['Hostname'])
+                    except (AttributeError, ValueError):
+                        pass
+                    try:
+                        new_val.remove(result2['Id'][:12])
                     except (AttributeError, ValueError):
                         pass
                     if not new_val:
@@ -1282,8 +1301,9 @@ def compare_networks(first, second, ignore='Name,Id,Created,Containers'):
                 if bool(subval1) is bool(subval2) is False:
                     continue
                 elif subkey == 'Config':
-                    kvsort = lambda x: (list(six.iterkeys(x)),
-                                        list(six.itervalues(x)))
+                    def kvsort(x):
+                        return (list(six.iterkeys(x)),
+                                list(six.itervalues(x)))
                     config1 = sorted(val1['Config'], key=kvsort)
                     config2 = sorted(val2.get('Config', []), key=kvsort)
                     if config1 != config2:
@@ -1392,7 +1412,8 @@ def login(*registries):
     ret = {'retcode': 0}
     errors = ret.setdefault('Errors', [])
     if not isinstance(registry_auth, dict):
-        errors.append('\'docker-registries\' Pillar value must be a dictionary')
+        errors.append(
+            '\'docker-registries\' Pillar value must be a dictionary')
         registry_auth = {}
     for key, data in six.iteritems(__pillar__):
         try:
@@ -1647,7 +1668,7 @@ def history(name, quiet=False):
                 time.strftime(
                     '%Y-%m-%d %H:%M:%S %Z',
                     time.localtime(step['Time_Created_Epoch'])
-                )
+            )
         for param in ('Size',):
             if param in step:
                 step['{0}_Human'.format(param)] = _size_fmt(step[param])
@@ -1695,8 +1716,8 @@ def images(verbose=False, **kwargs):
             for item in img:
                 img_state = ('untagged' if
                              img['RepoTags'] in (
-                               ['<none>:<none>'],  # docker API <1.24
-                               None,  # docker API >=1.24
+                                 ['<none>:<none>'],  # docker API <1.24
+                                 None,  # docker API >=1.24
                              ) else 'tagged')
                 bucket = __context__.setdefault('docker.images', {})
                 bucket = bucket.setdefault(img_state, {})
@@ -1707,7 +1728,7 @@ def images(verbose=False, **kwargs):
                     time.strftime(
                         '%Y-%m-%d %H:%M:%S %Z',
                         time.localtime(bucket[img_id]['Time_Created_Epoch'])
-                    )
+                )
             for param in ('Size', 'VirtualSize'):
                 if param in bucket.get(img_id, {}):
                     bucket[img_id]['{0}_Human'.format(param)] = \
@@ -1931,7 +1952,7 @@ def resolve_image_id(name):
     return False
 
 
-def resolve_tag(name, tags=None, **kwargs):
+def resolve_tag(name, **kwargs):
     '''
     .. versionadded:: 2017.7.2
     .. versionchanged:: 2018.3.0
@@ -1961,7 +1982,6 @@ def resolve_tag(name, tags=None, **kwargs):
 
     tags
         .. deprecated:: 2018.3.0
-            Ignored if passed, will be removed in the Neon release.
 
     CLI Examples:
 
@@ -1975,13 +1995,6 @@ def resolve_tag(name, tags=None, **kwargs):
     all_ = kwargs.pop('all', False)
     if kwargs:
         __utils__['args.invalid_kwargs'](kwargs)
-
-    if tags is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'tags\' argument to docker.resolve_tag is deprecated. It no '
-            'longer is used, and will be removed in the Neon release.'
-        )
 
     try:
         inspect_result = inspect_image(name)
@@ -2245,7 +2258,7 @@ def ps_(filters=None, **kwargs):
                 time.strftime(
                     '%Y-%m-%d %H:%M:%S %Z',
                     time.localtime(bucket[c_id]['Time_Created_Epoch'])
-                )
+            )
 
     ret = copy.deepcopy(context_data.get('running', {}))
     if kwargs.get('all', False):
@@ -3376,13 +3389,15 @@ def run_container(image,
                         net_name,
                         **net_conf)
             except CommandExecutionError as exc:
-                # Make an effort to remove the container if auto_remove was enabled
+                # Make an effort to remove the container if auto_remove was
+                # enabled
                 if auto_remove:
                     try:
                         rm_(name)
                     except CommandExecutionError as rm_exc:
                         exc_info.setdefault('other_errors', []).append(
-                            'Failed to auto_remove container: {0}'.format(rm_exc)
+                            'Failed to auto_remove container: {0}'.format(
+                                rm_exc)
                         )
                 # Raise original exception with additonal info
                 raise CommandExecutionError(exc.__str__(), info=exc_info)
@@ -3428,7 +3443,8 @@ def run_container(image,
                     cstate = cinfo.get('State', {})
                     cstatus = cstate.get('Status')
                     if cstatus != 'exited':
-                        _append_warning(ret, 'Container state is not \'exited\'')
+                        _append_warning(
+                            ret, 'Container state is not \'exited\'')
                     ret['ExitCode'] = cstate.get('ExitCode')
 
     except CommandExecutionError as exc:
@@ -3756,7 +3772,8 @@ def export(name,
             # open the filehandle. If not using gzip, we need to open the
             # filehandle here. We make sure to close it in the "finally" block
             # below.
-            out = __utils__['files.fopen'](path, 'wb')  # pylint: disable=resource-leakage
+            out = __utils__['files.fopen'](
+                path, 'wb')  # pylint: disable=resource-leakage
         response = _client_wrapper('export', name)
         buf = None
         while buf != '':
@@ -3892,7 +3909,8 @@ def rename(name, new_name):
         salt myminion docker.rename foo bar
     '''
     id_ = inspect_container(name)['Id']
-    log.debug('Renaming container \'%s\' (ID: %s) to \'%s\'', name, id_, new_name)
+    log.debug('Renaming container \'%s\' (ID: %s) to \'%s\'',
+              name, id_, new_name)
     _client_wrapper('rename', id_, new_name)
     # Confirm that the ID of the container corresponding to the new name is the
     # same as it was before.
@@ -3909,7 +3927,10 @@ def build(path=None,
           fileobj=None,
           dockerfile=None,
           buildargs=None,
-          image=None):
+          network_mode=None,
+          labels=None,
+          cache_from=None,
+          target=None):
     '''
     .. versionchanged:: 2018.3.0
         If the built image should be tagged, then the repository and tag must
@@ -3962,6 +3983,17 @@ def build(path=None,
     buildargs
         A dictionary of build arguments provided to the docker build process.
 
+    network_mode
+        networking mode(or name of docker network) to use when executing RUN commands.
+
+    labels
+        A dictionary of labels to set for the image
+
+    cache_from
+        list of image names to use a sources of cached layers(when cache is True)
+
+    target
+        Name of build stage to build for a multi-stage Dockerfile.
 
     **RETURN DATA**
 
@@ -3997,14 +4029,6 @@ def build(path=None,
     '''
     _prep_pull()
 
-    if image is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'image\' argument to docker.build has been deprecated, '
-            'please use \'repository\' instead.'
-        )
-        respository = image
-
     if repository or tag:
         if not repository and tag:
             # Have to have both or neither
@@ -4020,7 +4044,8 @@ def build(path=None,
     # For the build function in the low-level API, the "tag" refers to the full
     # tag (e.g. myuser/myimage:mytag). This is different than in other
     # functions, where the repo and tag are passed separately.
-    image_tag = '{0}:{1}'.format(repository, tag) if repository and tag else None
+    image_tag = '{0}:{1}'.format(
+        repository, tag) if repository and tag else None
 
     time_started = time.time()
     response = _client_wrapper('build',
@@ -4031,7 +4056,11 @@ def build(path=None,
                                rm=rm,
                                nocache=not cache,
                                dockerfile=dockerfile,
-                               buildargs=buildargs)
+                               buildargs=buildargs,
+                               network_mode=network_mode,
+                               labels=labels,
+                               cache_from=cache_from,
+                               target=target)
     ret = {'Time_Elapsed': time.time() - time_started}
     _clear_context()
 
@@ -4089,8 +4118,7 @@ def commit(name,
            repository,
            tag='latest',
            message=None,
-           author=None,
-           image=None):
+           author=None):
     '''
     .. versionchanged:: 2018.3.0
         The repository and tag must now be passed separately using the
@@ -4139,14 +4167,6 @@ def commit(name,
 
         salt myminion docker.commit mycontainer myuser/myimage mytag
     '''
-    if image is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'image\' argument to docker.commit has been deprecated, '
-            'please use \'repository\' instead.'
-        )
-        respository = image
-
     if not isinstance(repository, six.string_types):
         repository = six.text_type(repository)
     if not isinstance(tag, six.string_types):
@@ -4172,7 +4192,6 @@ def commit(name,
     if image_id is None:
         raise CommandExecutionError('No image ID was returned in API response')
 
-    ret['Image'] = image
     ret['Id'] = image_id
     return ret
 
@@ -4237,8 +4256,7 @@ def dangling(prune=False, force=False):
 def import_(source,
             repository,
             tag='latest',
-            api_response=False,
-            image=None):
+            api_response=False):
     '''
     .. versionchanged:: 2018.3.0
         The repository and tag must now be passed separately using the
@@ -4290,14 +4308,6 @@ def import_(source,
         salt myminion docker.import /tmp/cent7-minimal.tar.xz myuser/centos:7
         salt myminion docker.import salt://dockerimages/cent7-minimal.tar.xz myuser/centos:7
     '''
-    if image is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'image\' argument to docker.import has been deprecated, '
-            'please use \'repository\' instead.'
-        )
-        respository = image
-
     if not isinstance(repository, six.string_types):
         repository = six.text_type(repository)
     if not isinstance(tag, six.string_types):
@@ -4346,7 +4356,7 @@ def import_(source,
     return ret
 
 
-def load(path, repository=None, tag=None, image=None):
+def load(path, repository=None, tag=None):
     '''
     .. versionchanged:: 2018.3.0
         If the loaded image should be tagged, then the repository and tag must
@@ -4408,14 +4418,6 @@ def load(path, repository=None, tag=None, image=None):
         salt myminion docker.load /path/to/image.tar
         salt myminion docker.load salt://path/to/docker/saved/image.tar repository=myuser/myimage tag=mytag
     '''
-    if image is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'image\' argument to docker.load has been deprecated, '
-            'please use \'repository\' instead.'
-        )
-        respository = image
-
     if (repository or tag) and not (repository and tag):
         # Have to have both or neither
         raise SaltInvocationError(
@@ -4746,15 +4748,16 @@ def rmi(*names, **kwargs):
                 errors.append(exc.explanation)
                 deps = depends(name)
                 if deps['Containers'] or deps['Images']:
-                    err = 'Image is in use by '
+                    users = []
                     if deps['Containers']:
-                        err += 'container(s): {0}'.format(
-                            ', '.join(deps['Containers'])
-                        )
+                        users.append('container(s): {0}'
+                                     .format(', '.join(deps['Containers'])))
                     if deps['Images']:
-                        if deps['Containers']:
-                            err += ' and '
-                        err += 'image(s): {0}'.format(', '.join(deps['Images']))
+                        users.append('image(s): {0}'
+                                     .format(', '.join(deps['Images'])))
+                    err = 'Image is in use by {}'.format(
+                        " and ".join(users)
+                    )
                     errors.append(err)
             else:
                 errors.append('Error {0}: {1}'.format(exc.response.status_code,
@@ -4898,7 +4901,8 @@ def save(name,
     else:
         saved_path = path
     # use the image name if its valid if not use the image id
-    image_to_save = name if name in inspect_image(name)['RepoTags'] else inspect_image(name)['Id']
+    image_to_save = name if name in inspect_image(
+        name)['RepoTags'] else inspect_image(name)['Id']
     cmd = ['docker', 'save', '-o', saved_path, image_to_save]
     time_started = time.time()
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -4974,7 +4978,7 @@ def save(name,
     return ret
 
 
-def tag_(name, repository, tag='latest', force=False, image=None):
+def tag_(name, repository, tag='latest', force=False):
     '''
     .. versionchanged:: 2018.3.0
         The repository and tag must now be passed separately using the
@@ -5010,14 +5014,6 @@ def tag_(name, repository, tag='latest', force=False, image=None):
 
         salt myminion docker.tag 0123456789ab myrepo/mycontainer mytag
     '''
-    if image is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'image\' argument to docker.tag has been deprecated, '
-            'please use \'repository\' instead.'
-        )
-        respository = image
-
     if not isinstance(repository, six.string_types):
         repository = six.text_type(repository)
     if not isinstance(tag, six.string_types):
@@ -5328,7 +5324,7 @@ def create_network(name,
         ipam_kwargs = {}
         for key in [
                 x for x in ['ipam_driver', 'ipam_opts']
-                    + get_client_args('ipam_config')['ipam_config']
+            + get_client_args('ipam_config')['ipam_config']
                 if x in kwargs]:
             ipam_kwargs[key] = kwargs.pop(key)
         ipam_pools = kwargs.pop('ipam_pools', ())
@@ -5413,15 +5409,6 @@ def connect_container_to_network(container, net_id, **kwargs):
         salt myminion docker.connect_container_to_network web-1 1f9d2454d0872b68dd9e8744c6e7a4c66b86f10abaccc21e14f7f014f729b2bc
     '''
     kwargs = __utils__['args.clean_kwargs'](**kwargs)
-    network_id = kwargs.pop('network_id', None)
-    if network_id is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'network_id\' argument to docker.build has been deprecated, '
-            'please use \'net_id\' instead.'
-        )
-        net_id = network_id
-
     log.debug(
         'Connecting container \'%s\' to network \'%s\' with the following '
         'configuration: %s', container, net_id, kwargs
@@ -5432,7 +5419,7 @@ def connect_container_to_network(container, net_id, **kwargs):
                                **kwargs)
     log.debug(
         'Successfully connected container \'%s\' to network \'%s\'',
-        container, network_id
+        container, net_id
     )
     _clear_context()
     return True
@@ -6015,7 +6002,8 @@ def prune(containers=False, networks=False, images=False,
 
     ret = {}
     if system or containers:
-        ret['containers'] = _client_wrapper('prune_containers', filters=filters)
+        ret['containers'] = _client_wrapper(
+            'prune_containers', filters=filters)
     if system or images:
         ret['images'] = _client_wrapper('prune_images', filters=filters)
     if system or networks:
@@ -6597,7 +6585,8 @@ def _mk_fileclient():
     Create a file client and add it to the context.
     '''
     if 'cp.fileclient' not in __context__:
-        __context__['cp.fileclient'] = salt.fileclient.get_file_client(__opts__)
+        __context__['cp.fileclient'] = salt.fileclient.get_file_client(
+            __opts__)
 
 
 def _generate_tmp_path():
@@ -6606,7 +6595,8 @@ def _generate_tmp_path():
         'salt.docker.{0}'.format(uuid.uuid4().hex[:6]))
 
 
-def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None, extra_filerefs=''):
+def _prepare_trans_tar(name, sls_opts, mods=None,
+                       pillar=None, extra_filerefs=''):
     '''
     Prepares a self contained tarball that has the state
     to be applied in the container
@@ -6690,13 +6680,14 @@ def call(name, function, *args, **kwargs):
         extra_mods=__salt__['config.option']("thin_extra_mods", ''),
         so_mods=__salt__['config.option']("thin_so_mods", '')
     )
-    ret = copy_to(name, thin_path, os.path.join(thin_dest_path, os.path.basename(thin_path)))
+    ret = copy_to(name, thin_path, os.path.join(
+        thin_dest_path, os.path.basename(thin_path)))
 
     # untar archive
     untar_cmd = ["python", "-c", (
-                     "import tarfile; "
-                     "tarfile.open(\"{0}/{1}\").extractall(path=\"{0}\")"
-                 ).format(thin_dest_path, os.path.basename(thin_path))]
+        "import tarfile; "
+        "tarfile.open(\"{0}/{1}\").extractall(path=\"{0}\")"
+    ).format(thin_dest_path, os.path.basename(thin_path))]
     ret = run_all(name, subprocess.list2cmdline(untar_cmd))
     if ret['retcode'] != 0:
         return {'result': False, 'comment': ret['stderr']}
@@ -6977,17 +6968,9 @@ def sls_build(repository,
         salt myminion docker.sls_build imgname base=mybase mods=rails,web
 
     '''
-    name = kwargs.pop('name', None)
-    if name is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'name\' argument to docker.sls_build has been deprecated, '
-            'please use \'repository\' instead.'
-        )
-        repository = name
-
     create_kwargs = __utils__['args.clean_kwargs'](**copy.deepcopy(kwargs))
-    for key in ('image', 'name', 'cmd', 'interactive', 'tty', 'extra_filerefs'):
+    for key in ('image', 'name', 'cmd', 'interactive',
+                'tty', 'extra_filerefs'):
         try:
             del create_kwargs[key]
         except KeyError:

@@ -276,7 +276,7 @@ def remove(name=None, pkgs=None, **kwargs):
     return ret
 
 
-def refresh_db():
+def refresh_db(**kwargs):
     '''
     Update the homebrew package repository.
 
@@ -390,7 +390,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     formulas = ' '.join(pkg_params)
@@ -459,7 +459,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     return ret
 
 
-def upgrade_available(pkg):
+def upgrade_available(pkg, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
 
@@ -472,7 +472,7 @@ def upgrade_available(pkg):
     return pkg in list_upgrades()
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True, **kwargs):
     '''
     Upgrade outdated, unpinned brews.
 
@@ -517,7 +517,7 @@ def upgrade(refresh=True):
     return ret
 
 
-def info_installed(*names):
+def info_installed(*names, **kwargs):
     '''
     Return the information of the named package(s) installed on the system.
 

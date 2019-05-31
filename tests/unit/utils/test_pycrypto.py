@@ -7,7 +7,6 @@ import re
 
 # Import Salt Libs
 import salt.utils.pycrypto
-import salt.utils.platform
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
@@ -20,7 +19,7 @@ class PycryptoTestCase(TestCase):
     TestCase for salt.utils.pycrypto module
     '''
 
-    @skipIf(salt.utils.platform.is_windows(), 'No crypto module for Windows')
+    @skipIf(not salt.utils.pycrypto.HAS_CRYPT, 'No crypto library available')
     def test_gen_hash(self):
         '''
         Test gen_hash

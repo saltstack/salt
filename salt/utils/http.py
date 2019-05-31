@@ -83,7 +83,7 @@ except ImportError:
     HAS_REQUESTS = False
 
 try:
-    import msgpack
+    import salt.utils.msgpack
     HAS_MSGPACK = True
 except ImportError:
     HAS_MSGPACK = False
@@ -274,12 +274,12 @@ def query(url,
         # contain expirations, they can't be stored in a proper cookie jar.
         if os.path.isfile(session_cookie_jar):
             with salt.utils.files.fopen(session_cookie_jar, 'rb') as fh_:
-                session_cookies = msgpack.load(fh_)
+                session_cookies = salt.utils.msgpack.load(fh_)
             if isinstance(session_cookies, dict):
                 header_dict.update(session_cookies)
         else:
             with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
-                msgpack.dump('', fh_)
+                salt.utils.msgpack.dump('', fh_)
 
     for header in header_list:
         comps = header.split(':')
@@ -292,6 +292,9 @@ def query(url,
             auth = (username, password)
 
     if agent == USERAGENT:
+        user_agent = opts.get('user_agent', None)
+        if user_agent:
+            agent = user_agent
         agent = '{0} http.query()'.format(agent)
     header_dict['User-agent'] = agent
 
@@ -640,9 +643,9 @@ def query(url,
             with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
                 session_cookies = result_headers.get('set-cookie', None)
                 if session_cookies is not None:
-                    msgpack.dump({'Cookie': session_cookies}, fh_)
+                    salt.utils.msgpack.dump({'Cookie': session_cookies}, fh_)
                 else:
-                    msgpack.dump('', fh_)
+                    salt.utils.msgpack.dump('', fh_)
 
     if status is True:
         ret['status'] = result_status_code
@@ -752,7 +755,7 @@ def update_ca_bundle(
         source=None,
         opts=None,
         merge_files=None,
-    ):
+        ):
     '''
     Attempt to update the CA bundle file from a URL
 
@@ -978,7 +981,7 @@ def _sanitize_url_components(comp_list, field):
     '''
     Recursive function to sanitize each component of the url.
     '''
-    if len(comp_list) == 0:
+    if not comp_list:
         return ''
     elif comp_list[0].startswith('{0}='.format(field)):
         ret = '{0}=XXXXXXXXXX&'.format(field)

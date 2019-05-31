@@ -69,13 +69,12 @@ def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
     # Log the exception
     logging.getLogger(__name__).error(
         'An un-handled exception was caught by salt-testing\'s global '
-        'exception handler:\n{0}: {1}\n{2}'.format(
-            exc_type.__name__,
-            exc_value,
-            ''.join(traceback.format_exception(
-                exc_type, exc_value, exc_traceback
-            )).strip()
-        )
+        'exception handler:\n%s: %s\n%s',
+        exc_type.__name__,
+        exc_value,
+        ''.join(traceback.format_exception(
+            exc_type, exc_value, exc_traceback
+        )).strip()
     )
     # Call the original sys.excepthook
     __GLOBAL_EXCEPTION_HANDLER(exc_type, exc_value, exc_traceback)
@@ -379,7 +378,7 @@ class SaltTestingParser(optparse.OptionParser):
         try:
             return self.__test_mods
         except AttributeError:
-            self.__test_mods = set(tests.support.paths.test_mods())
+            self.__test_mods = set(tests.support.paths.list_test_mods())
             return self.__test_mods
 
     def _map_files(self, files):
@@ -417,6 +416,8 @@ class SaltTestingParser(optparse.OptionParser):
             match = re.match(r'^(salt/|tests/(integration|unit)/)(.+\.py)$', path)
             if match:
                 comps = match.group(3).split('/')
+                if len(comps) < 2:
+                    continue
 
                 # Find matches for a source file
                 if match.group(1) == 'salt/':
@@ -849,9 +850,8 @@ class SaltTestingParser(optparse.OptionParser):
                 log.info('Second run at terminating test suite child processes: %s', children)
                 helpers.terminate_process(children=children, kill_children=True)
         log.info(
-            'Test suite execution finalized with exit code: {0}'.format(
-                exit_code
-            )
+            'Test suite execution finalized with exit code: %s',
+            exit_code
         )
         self.exit(exit_code)
 

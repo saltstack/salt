@@ -1,9 +1,11 @@
 # This is a compilation of requirements installed on salt-jenkins git.salt state run
+ansible; python_version < '3.0'
 apache-libcloud==2.0.0
 boto3
 boto>=2.46.0
 cffi
 cherrypy==17.3.0
+clustershell
 croniter>=0.3.0,!=0.3.22
 dnspython
 docker
@@ -20,11 +22,12 @@ moto
 msgpack-python >= 0.4.2, != 0.5.5
 paramiko==2.1.2
 psutil
-paramiko==2.1.2
 # Let's install cryptodome instead of pycrypto because of pycrypto's outstanding security issues
 # PyCrypto, if pulled, will be removed from the generated static requirements
 pycryptodome
+pygit2
 pyinotify
+pylxd>=2.2.5
 pyopenssl
 python-etcd>0.4.2
 python-gnupg

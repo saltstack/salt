@@ -71,6 +71,10 @@ To use the EC2 cloud module, set up the cloud configuration at
       # Pass userdata to the instance to be created
       userdata_file: /etc/salt/my-userdata-file
 
+      # Instance termination protection setting
+      # Default is disabled
+      termination_protection: False
+
 :depends: requests
 '''
 # pylint: disable=invalid-name,function-redefined
@@ -91,7 +95,6 @@ import hashlib
 import binascii
 import datetime
 import base64
-import msgpack
 import re
 import decimal
 
@@ -101,6 +104,7 @@ import salt.utils.compat
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.json
+import salt.utils.msgpack
 import salt.utils.stringutils
 import salt.utils.yaml
 from salt._compat import ElementTree as ET
@@ -1930,6 +1934,18 @@ def request_instance(vm_=None, call=None):
     set_del_root_vol_on_destroy = config.get_cloud_config_value(
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
     )
+
+    set_termination_protection = config.get_cloud_config_value(
+        'termination_protection', vm_, __opts__, search_global=False
+    )
+
+    if set_termination_protection is not None:
+        if not isinstance(set_termination_protection, bool):
+            raise SaltCloudConfigError(
+                '\'termination_protection\' should be a boolean value.'
+            )
+        params.update(_param_from_config(spot_prefix + 'DisableApiTermination',
+                                         set_termination_protection))
 
     if set_del_root_vol_on_destroy and not isinstance(set_del_root_vol_on_destroy, bool):
         raise SaltCloudConfigError(
@@ -4466,11 +4482,14 @@ def create_keypair(kwargs=None, call=None):
 
     data = aws.query(params,
                      return_url=True,
+                     return_root=True,
                      location=get_location(),
                      provider=get_provider(),
                      opts=__opts__,
                      sigver='4')
-    return data
+    keys = [x for x in data[0] if 'requestId' not in x]
+
+    return (keys, data[1])
 
 
 def import_keypair(kwargs=None, call=None):
@@ -4999,7 +5018,7 @@ def _parse_pricing(url, name):
         __opts__['cachedir'], 'ec2-pricing-{0}.p'.format(name)
     )
     with salt.utils.files.fopen(outfile, 'w') as fho:
-        msgpack.dump(regions, fho)
+        salt.utils.msgpack.dump(regions, fho)
 
     return True
 
@@ -5067,7 +5086,8 @@ def show_pricing(kwargs=None, call=None):
         update_pricing({'type': name}, 'function')
 
     with salt.utils.files.fopen(pricefile, 'r') as fhi:
-        ec2_price = salt.utils.stringutils.to_unicode(msgpack.load(fhi))
+        ec2_price = salt.utils.stringutils.to_unicode(
+            salt.utils.msgpack.load(fhi))
 
     region = get_location(profile)
     size = profile.get('size', None)

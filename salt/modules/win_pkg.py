@@ -951,7 +951,7 @@ def refresh_db(**kwargs):
         )
 
     # Cache repo-ng locally
-    log.info('Fetching *.sls files from {0}'.format(repo_details.winrepo_source_dir))
+    log.info('Fetching *.sls files from %s', repo_details.winrepo_source_dir)
     __salt__['cp.cache_dir'](
         path=repo_details.winrepo_source_dir,
         saltenv=saltenv,
@@ -1088,7 +1088,7 @@ def genrepo(**kwargs):
 
         # Skip hidden directories (.git)
         if re.search(r'[\\/]\..*', root):
-            log.debug('Skipping files in directory: {0}'.format(root))
+            log.debug('Skipping files in directory: %s', root)
             continue
 
         short_path = os.path.relpath(root, repo_details.local_dest)
@@ -1147,7 +1147,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
     renderers = salt.loader.render(__opts__, __salt__)
 
     def _failed_compile(prefix_msg, error_msg):
-        log.error('{0} \'{1}\': {2} '.format(prefix_msg, short_path_name, error_msg))
+        log.error('%s \'%s\': %s ', prefix_msg, short_path_name, error_msg)
         ret.setdefault('errors', {})[short_path_name] = ['{0}, {1} '.format(prefix_msg, error_msg)]
         return False
 
@@ -1447,6 +1447,11 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 'extra_install_flags': kwargs.get('extra_install_flags')
             }
         }
+    elif len(pkg_params) == 1:
+        # A dict of packages was passed, but it contains only 1 key, so we need
+        # to add the 'extra_install_flags'
+        for pkg in pkg_params:
+            pkg_params[pkg]['extra_install_flags'] = kwargs.get('extra_install_flags')
 
     # Get a list of currently installed software for comparison at the end
     old = list_pkgs(saltenv=saltenv, refresh=refresh, versions_as_list=True)

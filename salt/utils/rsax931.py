@@ -36,6 +36,9 @@ def _load_libcrypto():
             'libcrypto.so*'))[0])
     else:
         lib = find_library('crypto')
+        if not lib and sys.platform.startswith('sunos5'):
+            # ctypes.util.find_library defaults to 32 bit library path on sunos5, test for 64 bit python execution
+            lib = find_library('crypto', sys.maxsize > 2**32)
         if not lib and salt.utils.platform.is_sunos():
             # Solaris-like distribution that use pkgsrc have
             # libraries in a non standard location.
@@ -44,15 +47,15 @@ def _load_libcrypto():
             # or /opt/local/lib (non-Global Zone), thus the
             # two checks below
             lib = glob.glob('/opt/local/lib/libcrypto.so*') + glob.glob('/opt/tools/lib/libcrypto.so*')
-            lib = lib[0] if len(lib) > 0 else None
+            lib = lib[0] if lib else None
         if not lib and salt.utils.platform.is_aix():
             if os.path.isdir('/opt/salt/lib'):
                 # preference for Salt installed fileset
                 lib = glob.glob('/opt/salt/lib/libcrypto.so*')
-                lib = lib[0] if len(lib) > 0 else None
+                lib = lib[0] if lib else None
             else:
                 lib = glob.glob('/opt/freeware/lib/libcrypto.so*')
-                lib = lib[0] if len(lib) > 0 else None
+                lib = lib[0] if lib else None
         if lib:
             return cdll.LoadLibrary(lib)
         raise OSError('Cannot locate OpenSSL libcrypto')

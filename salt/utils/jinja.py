@@ -305,7 +305,7 @@ def to_bool(val):
     if isinstance(val, six.integer_types):
         return val > 0
     if not isinstance(val, collections.Hashable):
-        return len(val) > 0
+        return bool(val)
     return False
 
 
@@ -634,6 +634,11 @@ def symmetric_difference(lst1, lst2):
     if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
         return set(lst1) ^ set(lst2)
     return unique([ele for ele in union(lst1, lst2) if ele not in intersect(lst1, lst2)])
+
+
+@jinja_filter('method_call')
+def method_call(obj, f_name, *f_args, **f_kwargs):
+    return getattr(obj, f_name, lambda *args, **kwargs: None)(*f_args, **f_kwargs)
 
 
 @jinja2.contextfunction

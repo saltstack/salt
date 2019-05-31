@@ -110,7 +110,7 @@ def _get_message(ret):
         return 'salt func: {}'.format(ret['fun'])
     arg_string = ' '.join([arg for arg in ret['fun_args'] if isinstance(arg, six.string_types)])
     kwarg_string = ''
-    if isinstance(ret['fun_args'], list) and len(ret['fun_args']) > 0:
+    if ret['fun_args'] and isinstance(ret['fun_args'], list):
         kwargs = ret['fun_args'][-1]
         if isinstance(kwargs, dict):
             kwarg_string = ' '.join(sorted(['{}={}'.format(k, v) for k, v in kwargs.items() if not k.startswith('_')]))

@@ -76,6 +76,11 @@ def communicator(func):
             queue.put('ERROR')
             queue.put('Exception')
             queue.put('{0}\n{1}\n'.format(ex, trace))
+        except SystemExit as ex:
+            trace = traceback.format_exc()
+            queue.put('ERROR')
+            queue.put('System exit')
+            queue.put('{0}\n{1}\n'.format(ex, trace))
         return ret
     return _call
 
@@ -184,8 +189,10 @@ class CloudClient(object):
     def __init__(self, path=None, opts=None, config_dir=None, pillars=None):
         if opts:
             self.opts = opts
-        else:
+        elif path:
             self.opts = salt.config.cloud_config(path)
+        else:
+            self.opts = salt.config.cloud_config()
 
         # Check the cache-dir exists. If not, create it.
         v_dirs = [self.opts['cachedir']]
@@ -517,6 +524,7 @@ class Cloud(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.client = CloudClient(opts=self.opts)
         self.clouds = salt.loader.clouds(self.opts)
         self.__filter_non_working_providers()
         self.__cached_provider_queries = {}
@@ -2050,6 +2058,10 @@ class Map(Cloud):
 
         # Now sort the create list based on dependencies
         create_list = sorted(six.iteritems(dmap['create']), key=lambda x: x[1]['level'])
+        full_map = dmap['create'].copy()
+        if 'existing' in dmap:
+            full_map.update(dmap['existing'])
+        possible_master_list = sorted(six.iteritems(full_map), key=lambda x: x[1]['level'])
         output = {}
         if self.opts['parallel']:
             parallel_data = []
@@ -2057,117 +2069,127 @@ class Map(Cloud):
         master_minion_name = None
         master_host = None
         master_finger = None
-        try:
-            master_name, master_profile = next((
-                (name, profile) for name, profile in create_list
-                if profile.get('make_master', False) is True
-            ))
-            master_minion_name = master_name
-            log.debug('Creating new master \'%s\'', master_name)
-            if salt.config.get_cloud_config_value(
-                'deploy',
-                master_profile,
-                self.opts
-            ) is False:
-                raise SaltCloudSystemExit(
-                    'Cannot proceed with \'make_master\' when salt deployment '
-                    'is disabled(ex: --no-deploy).'
-                )
+        for name, profile in possible_master_list:
+            if profile.get('make_master', False) is True:
+                master_name = name
+                master_profile = profile
 
-            # Generate the master keys
-            log.debug('Generating master keys for \'%s\'', master_profile['name'])
-            priv, pub = salt.utils.cloud.gen_keys(
-                salt.config.get_cloud_config_value(
-                    'keysize',
+        if master_name:
+            # If the master already exists, get the host
+            if master_name not in dmap['create']:
+                master_host = self.client.query()
+                for provider_part in master_profile['provider'].split(':'):
+                    master_host = master_host[provider_part]
+                master_host = master_host[master_name][master_profile.get('ssh_interface', 'public_ips')]
+                if not master_host:
+                    raise SaltCloudSystemExit(
+                        'Could not get the hostname of master {}.'.format(master_name)
+                    )
+            # Otherwise, deploy it as a new master
+            else:
+                master_minion_name = master_name
+                log.debug('Creating new master \'%s\'', master_name)
+                if salt.config.get_cloud_config_value(
+                    'deploy',
                     master_profile,
                     self.opts
-                )
-            )
-            master_profile['master_pub'] = pub
-            master_profile['master_pem'] = priv
+                ) is False:
+                    raise SaltCloudSystemExit(
+                        'Cannot proceed with \'make_master\' when salt deployment '
+                        'is disabled(ex: --no-deploy).'
+                    )
 
-            # Generate the fingerprint of the master pubkey in order to
-            # mitigate man-in-the-middle attacks
-            master_temp_pub = salt.utils.files.mkstemp()
-            with salt.utils.files.fopen(master_temp_pub, 'w') as mtp:
-                mtp.write(pub)
-            master_finger = salt.utils.crypt.pem_finger(master_temp_pub, sum_type=self.opts['hash_type'])
-            os.unlink(master_temp_pub)
+                # Generate the master keys
+                log.debug('Generating master keys for \'%s\'', master_profile['name'])
 
-            if master_profile.get('make_minion', True) is True:
-                master_profile.setdefault('minion', {})
-                if 'id' in master_profile['minion']:
-                    master_minion_name = master_profile['minion']['id']
-                # Set this minion's master as local if the user has not set it
-                if 'master' not in master_profile['minion']:
-                    master_profile['minion']['master'] = '127.0.0.1'
-                    if master_finger is not None:
-                        master_profile['master_finger'] = master_finger
-
-            # Generate the minion keys to pre-seed the master:
-            for name, profile in create_list:
-                make_minion = salt.config.get_cloud_config_value(
-                    'make_minion', profile, self.opts, default=True
-                )
-                if make_minion is False:
-                    continue
-
-                log.debug('Generating minion keys for \'%s\'', profile['name'])
                 priv, pub = salt.utils.cloud.gen_keys(
                     salt.config.get_cloud_config_value(
                         'keysize',
-                        profile,
+                        master_profile,
                         self.opts
                     )
                 )
-                profile['pub_key'] = pub
-                profile['priv_key'] = priv
-                # Store the minion's public key in order to be pre-seeded in
-                # the master
-                master_profile.setdefault('preseed_minion_keys', {})
-                master_profile['preseed_minion_keys'].update({name: pub})
+                master_profile['master_pub'] = pub
+                master_profile['master_pem'] = priv
 
-            local_master = False
-            if master_profile['minion'].get('local_master', False) and \
-                    master_profile['minion'].get('master', None) is not None:
-                # The minion is explicitly defining a master and it's
-                # explicitly saying it's the local one
-                local_master = True
+                # Generate the fingerprint of the master pubkey in order to
+                # mitigate man-in-the-middle attacks
+                master_temp_pub = salt.utils.files.mkstemp()
+                with salt.utils.files.fopen(master_temp_pub, 'w') as mtp:
+                    mtp.write(pub)
+                master_finger = salt.utils.crypt.pem_finger(master_temp_pub, sum_type=self.opts['hash_type'])
+                os.unlink(master_temp_pub)
 
-            out = self.create(master_profile, local_master=local_master)
+                if master_profile.get('make_minion', True) is True:
+                    master_profile.setdefault('minion', {})
+                    if 'id' in master_profile['minion']:
+                        master_minion_name = master_profile['minion']['id']
+                    # Set this minion's master as local if the user has not set it
+                    if 'master' not in master_profile['minion']:
+                        master_profile['minion']['master'] = '127.0.0.1'
+                        if master_finger is not None:
+                            master_profile['master_finger'] = master_finger
 
-            if not isinstance(out, dict):
-                log.debug(
-                    'Master creation details is not a dictionary: {0}'.format(
-                        out
+                # Generate the minion keys to pre-seed the master:
+                for name, profile in create_list:
+                    make_minion = salt.config.get_cloud_config_value(
+                        'make_minion', profile, self.opts, default=True
                     )
-                )
+                    if make_minion is False:
+                        continue
 
-            elif 'Errors' in out:
-                raise SaltCloudSystemExit(
-                    'An error occurred while creating the master, not '
-                    'continuing: {0}'.format(out['Errors'])
-                )
-
-            deploy_kwargs = (
-                self.opts.get('show_deploy_args', False) is True and
-                # Get the needed data
-                out.get('deploy_kwargs', {}) or
-                # Strip the deploy_kwargs from the returned data since we don't
-                # want it shown in the console.
-                out.pop('deploy_kwargs', {})
-            )
-
-            master_host = deploy_kwargs.get('salt_host', deploy_kwargs.get('host', None))
-            if master_host is None:
-                raise SaltCloudSystemExit(
-                    'Host for new master {0} was not found, '
-                    'aborting map'.format(
-                        master_name
+                    log.debug('Generating minion keys for \'%s\'', profile['name'])
+                    priv, pub = salt.utils.cloud.gen_keys(
+                        salt.config.get_cloud_config_value(
+                            'keysize',
+                            profile,
+                            self.opts
+                        )
                     )
+                    profile['pub_key'] = pub
+                    profile['priv_key'] = priv
+                    # Store the minion's public key in order to be pre-seeded in
+                    # the master
+                    master_profile.setdefault('preseed_minion_keys', {})
+                    master_profile['preseed_minion_keys'].update({name: pub})
+
+                local_master = False
+                if master_profile['minion'].get('local_master', False) and \
+                        master_profile['minion'].get('master', None) is not None:
+                    # The minion is explicitly defining a master and it's
+                    # explicitly saying it's the local one
+                    local_master = True
+
+                out = self.create(master_profile, local_master=local_master)
+
+                if not isinstance(out, dict):
+                    log.debug('Master creation details is not a dictionary: %s', out)
+
+                elif 'Errors' in out:
+                    raise SaltCloudSystemExit(
+                        'An error occurred while creating the master, not '
+                        'continuing: {0}'.format(out['Errors'])
+                    )
+
+                deploy_kwargs = (
+                    self.opts.get('show_deploy_args', False) is True and
+                    # Get the needed data
+                    out.get('deploy_kwargs', {}) or
+                    # Strip the deploy_kwargs from the returned data since we don't
+                    # want it shown in the console.
+                    out.pop('deploy_kwargs', {})
                 )
-            output[master_name] = out
-        except StopIteration:
+
+                master_host = deploy_kwargs.get('salt_host', deploy_kwargs.get('host', None))
+                if master_host is None:
+                    raise SaltCloudSystemExit(
+                        'Host for new master {0} was not found, '
+                        'aborting map'.format(
+                            master_name
+                        )
+                    )
+                output[master_name] = out
+        else:
             log.debug('No make_master found in map')
             # Local master?
             # Generate the fingerprint of the master pubkey in order to

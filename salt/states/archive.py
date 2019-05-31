@@ -412,6 +412,10 @@ def extracted(name,
         Set this to ``True`` if archive should be extracted if source_hash has
         changed. This would extract regardless of the ``if_missing`` parameter.
 
+        Note that this is only checked if the ``source`` value has not changed.
+        If it has (e.g. to increment a version number in the path) then the
+        archive will not be extracted even if the hash has changed.
+
         .. versionadded:: 2016.3.0
 
     skip_verify : False
@@ -453,7 +457,7 @@ def extracted(name,
 
         If this argument is not used, then the minion will attempt to use
         Python's native tarfile_/zipfile_ support to extract it. For zip
-        archives, this argument is mostly used to overwrite exsiting files with
+        archives, this argument is mostly used to overwrite existing files with
         ``o``.
 
         Using this argument means that the ``tar`` or ``unzip`` command will be
@@ -1062,7 +1066,7 @@ def extracted(name,
 
     if enforce_toplevel and contents is not None \
             and (len(contents['top_level_dirs']) > 1
-                 or len(contents['top_level_files']) > 0):
+                 or contents['top_level_files']):
         ret['comment'] = ('Archive does not have a single top-level directory. '
                           'To allow this archive to be extracted, set '
                           '\'enforce_toplevel\' to False. To avoid a '
@@ -1350,10 +1354,13 @@ def extracted(name,
                         )
                         return ret
 
-                    tar_opts = shlex.split(options)
+                    # Ignore verbose file list options as we are already using
+                    # "v" below in tar_shortopts
+                    tar_opts = [x for x in shlex.split(options)
+                                if x not in ('v', '-v', '--verbose')]
 
                     tar_cmd = ['tar']
-                    tar_shortopts = 'x'
+                    tar_shortopts = 'xv'
                     tar_longopts = []
 
                     for position, opt in enumerate(tar_opts):
@@ -1383,9 +1390,9 @@ def extracted(name,
                         ret['changes'] = results
                         return ret
                     if _is_bsdtar():
-                        files = results['stderr']
+                        files = results['stderr'].splitlines()
                     else:
-                        files = results['stdout']
+                        files = results['stdout'].splitlines()
                     if not files:
                         files = 'no tar output so far'
         except CommandExecutionError as exc:
@@ -1482,7 +1489,7 @@ def extracted(name,
                             enforce_failed.append(filename)
 
     if extraction_needed:
-        if len(files) > 0:
+        if files:
             if created_destdir:
                 ret['changes']['directories_created'] = [name]
             ret['changes']['extracted_files'] = files

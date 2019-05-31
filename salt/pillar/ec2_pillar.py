@@ -186,12 +186,16 @@ def ext_pillar(minion_id,
         return {}
 
     myself = boto.utils.get_instance_metadata(timeout=0.1, num_retries=1)
-    if len(myself.keys()) < 1:
+    if not myself:
         log.info("%s: salt master not an EC2 instance, skipping", __name__)
         return {}
 
     # Get the Master's instance info, primarily the region
     (_, region) = _get_instance_info()
+
+    # If the Minion's region is available, use it instead
+    if use_grain:
+        region = __grains__.get('ec2', {}).get('region', region)
 
     try:
         conn = boto.ec2.connect_to_region(region)

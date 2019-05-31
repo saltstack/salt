@@ -10,7 +10,7 @@ import time
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
-from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import expensiveTest, generate_random_name
 from tests.support.unit import skipIf
 
@@ -25,6 +25,7 @@ PROVIDER_NAME = 'vultr'
 TIMEOUT = 500
 
 
+@expensiveTest
 class VultrTest(ShellCase):
     '''
     Integration tests for the Vultr cloud provider in Salt-Cloud
@@ -50,7 +51,7 @@ class VultrTest(ShellCase):
         # check if api_key, ssh_key_file, and ssh_key_names are present
         config = cloud_providers_config(
             os.path.join(
-                FILES,
+                RUNTIME_VARS.FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'

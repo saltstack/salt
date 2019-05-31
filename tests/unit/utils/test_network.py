@@ -258,6 +258,9 @@ class NetworkTestCase(TestCase):
             def setsockopt(self, *args, **kwargs):
                 pass
 
+            def settimeout(self, *args, **kwargs):
+                pass
+
             def sendto(self, *args, **kwargs):
                 pass
 
@@ -279,17 +282,18 @@ class NetworkTestCase(TestCase):
             {'host': '2001:0db8:85a3::8a2e:0370:7334',
              'port': '',
              'mocked': [(10, 1, 6, '', ('2001:db8:85a3::8a2e:370:7334', 0, 0, 0))],
-             'ret': '2001:db8:85a3::8a2e:370:7334'},
+             'ret': '[2001:db8:85a3::8a2e:370:7334]'},
             {'host': '2001:0db8:85a3::8a2e:370:7334',
              'port': '1234',
              'mocked': [(10, 1, 6, '', ('2001:db8:85a3::8a2e:370:7334', 0, 0, 0))],
-             'ret': '2001:db8:85a3::8a2e:370:7334'},
+             'ret': '[2001:db8:85a3::8a2e:370:7334]'},
             {'host': 'salt-master',
              'port': '1234',
              'mocked': [(2, 1, 6, '', ('127.0.0.1', 0))],
              'ret': '127.0.0.1'},
         ]
         for host in hosts:
+            log.debug('=== host %s ===', host)
             with patch.object(socket, 'getaddrinfo', MagicMock(return_value=host['mocked'])):
                 with patch('socket.socket', MockSocket):
                     ret = network.dns_check(host['host'], host['port'])
@@ -632,6 +636,17 @@ class NetworkTestCase(TestCase):
         self.assertEqual(b'\x10\x08\x06\x04\x02\x00', network.mac_str_to_bytes('100806040200'))
         self.assertEqual(b'\xf8\xe7\xd6\xc5\xb4\xa3', network.mac_str_to_bytes('f8e7d6c5b4a3'))
 
+    def test_get_fqhostname_return(self):
+        '''
+        Test if proper hostname is used when RevDNS differ from hostname
+
+        :return:
+        '''
+        with patch('socket.gethostname', MagicMock(return_value='hostname')), \
+             patch('socket.getfqdn', MagicMock(return_value='very.long.and.complex.domain.name')), \
+             patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))])):
+            self.assertEqual(network.get_fqhostname(), 'hostname')
+
     def test_generate_minion_id_with_long_hostname(self):
         '''
         Validate the fix for:
@@ -643,6 +658,25 @@ class NetworkTestCase(TestCase):
             # An exception is raised if unicode is passed to socket.getfqdn
             minion_id = network.generate_minion_id()
         assert minion_id != '', minion_id
+
+    def test_is_fqdn(self):
+        """
+        Test is_fqdn function passes possible FQDN names.
+
+        :return: None
+        """
+        for fqdn in ["host.domain.com", "something.with.the.dots.still.ok", "UPPERCASE.ALSO.SHOULD.WORK",
+                     "MiXeD.CaSe.AcCePtAbLe", "123.host.com", "host123.com", "some_underscore.com", "host-here.com"]:
+            assert network.is_fqdn(fqdn)
+
+    def test_is_not_fqdn(self):
+        """
+        Test is_fqdn function rejects FQDN names.
+
+        :return: None
+        """
+        for fqdn in ["hostname", "/some/path", "$variable.here", "verylonghostname.{}".format("domain" * 45)]:
+            assert not network.is_fqdn(fqdn)
 
     def test_netlink_tool_remote_on(self):
         with patch('subprocess.check_output', return_value=NETLINK_SS):

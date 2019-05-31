@@ -24,7 +24,7 @@ import importlib
 from functools import wraps
 
 # Import Salt libs
-from salt.ext import six as six
+from salt.ext import six
 import salt.output
 import salt.utils.platform
 import salt.utils.args

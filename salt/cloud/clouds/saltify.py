@@ -248,6 +248,10 @@ def create(vm_):
     deploy_config = config.get_cloud_config_value(
         'deploy', vm_, __opts__, default=False)
 
+    # If ssh_host is not set, default to the minion name
+    if not config.get_cloud_config_value('ssh_host', vm_, __opts__, default=''):
+        vm_['ssh_host'] = vm_['name']
+
     if deploy_config:
         wol_mac = config.get_cloud_config_value(
             'wake_on_lan_mac', vm_, __opts__, default='')
@@ -300,7 +304,7 @@ def get_configured_provider():
 
 def _verify(vm_):
     '''
-    Verify credentials for an exsiting system
+    Verify credentials for an existing system
     '''
     log.info('Verifying credentials for %s', vm_['name'])
 

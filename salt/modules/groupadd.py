@@ -12,8 +12,12 @@ Manage groups on Linux, OpenBSD and NetBSD
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import functools
+import os
 
 from salt.ext import six
+import salt.utils.files
+import salt.utils.stringutils
 try:
     import grp
 except ImportError:
@@ -40,6 +44,18 @@ def add(name, gid=None, system=False, root=None):
     '''
     Add the specified group
 
+    name
+        Name of the new group
+
+    gid
+        Use GID for the new group
+
+    system
+        Create a system account
+
+    root
+        Directory to chroot into
+
     CLI Example:
 
     .. code-block:: bash
@@ -51,10 +67,11 @@ def add(name, gid=None, system=False, root=None):
         cmd.append('-g {0}'.format(gid))
     if system and __grains__['kernel'] != 'OpenBSD':
         cmd.append('-r')
-    cmd.append(name)
 
     if root is not None:
         cmd.extend(('-R', root))
+
+    cmd.append(name)
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -65,25 +82,39 @@ def delete(name, root=None):
     '''
     Remove the named group
 
+    name
+        Name group to delete
+
+    root
+        Directory to chroot into
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' group.delete foo
     '''
-    cmd = ['groupdel', name]
+    cmd = ['groupdel']
 
     if root is not None:
         cmd.extend(('-R', root))
+
+    cmd.append(name)
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     return not ret['retcode']
 
 
-def info(name):
+def info(name, root=None):
     '''
     Return information about a group
+
+    name
+        Name of the group
+
+    root
+        Directory to chroot into
 
     CLI Example:
 
@@ -91,8 +122,13 @@ def info(name):
 
         salt '*' group.info foo
     '''
+    if root is not None:
+        getgrnam = functools.partial(_getgrnam, root=root)
+    else:
+        getgrnam = functools.partial(grp.getgrnam)
+
     try:
-        grinfo = grp.getgrnam(name)
+        grinfo = getgrnam(name)
     except KeyError:
         return {}
     else:
@@ -109,9 +145,15 @@ def _format_info(data):
             'members': data.gr_mem}
 
 
-def getent(refresh=False):
+def getent(refresh=False, root=None):
     '''
     Return info on all groups
+
+    refresh
+        Force a refresh of group information
+
+    root
+        Directory to chroot into
 
     CLI Example:
 
@@ -123,15 +165,51 @@ def getent(refresh=False):
         return __context__['group.getent']
 
     ret = []
-    for grinfo in grp.getgrall():
+    if root is not None:
+        getgrall = functools.partial(_getgrall, root=root)
+    else:
+        getgrall = functools.partial(grp.getgrall)
+
+    for grinfo in getgrall():
         ret.append(_format_info(grinfo))
     __context__['group.getent'] = ret
     return ret
 
 
+def _chattrib(name, key, value, param, root=None):
+    '''
+    Change an attribute for a named user
+    '''
+    pre_info = info(name, root=root)
+    if not pre_info:
+        return False
+
+    if value == pre_info[key]:
+        return True
+
+    cmd = ['groupmod']
+
+    if root is not None:
+        cmd.extend(('-R', root))
+
+    cmd.extend((param, value, name))
+
+    __salt__['cmd.run'](cmd, python_shell=False)
+    return info(name, root=root).get(key) == value
+
+
 def chgid(name, gid, root=None):
     '''
     Change the gid for a named group
+
+    name
+        Name of the group to modify
+
+    gid
+        Change the group ID to GID
+
+    root
+        Directory to chroot into
 
     CLI Example:
 
@@ -139,24 +217,21 @@ def chgid(name, gid, root=None):
 
         salt '*' group.chgid foo 4376
     '''
-    pre_gid = __salt__['file.group_to_gid'](name)
-    if gid == pre_gid:
-        return True
-    cmd = ['groupmod', '-g', gid, name]
-
-    if root is not None:
-        cmd.extend(('-R', root))
-
-    __salt__['cmd.run'](cmd, python_shell=False)
-    post_gid = __salt__['file.group_to_gid'](name)
-    if post_gid != pre_gid:
-        return post_gid == gid
-    return False
+    return _chattrib(name, 'gid', gid, '-g', root=root)
 
 
 def adduser(name, username, root=None):
     '''
     Add a user in the group.
+
+    name
+        Name of the group to modify
+
+    username
+        Username to add to the group
+
+    root
+        Directory to chroot into
 
     CLI Example:
 
@@ -178,7 +253,7 @@ def adduser(name, username, root=None):
         else:
             cmd = ['gpasswd', '--add', username, name]
         if root is not None:
-            cmd.extend(('-Q', root))
+            cmd.extend(('--root', root))
     else:
         cmd = ['usermod', '-G', name, username]
         if root is not None:
@@ -192,6 +267,15 @@ def adduser(name, username, root=None):
 def deluser(name, username, root=None):
     '''
     Remove a user from the group.
+
+    name
+        Name of the group to modify
+
+    username
+        Username to delete from the group
+
+    root
+        Directory to chroot into
 
     CLI Example:
 
@@ -216,7 +300,7 @@ def deluser(name, username, root=None):
                 else:
                     cmd = ['gpasswd', '--del', username, name]
                 if root is not None:
-                    cmd.extend(('-R', root))
+                    cmd.extend(('--root', root))
                 retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
             elif __grains__['kernel'] == 'OpenBSD':
                 out = __salt__['cmd.run_stdout']('id -Gn {0}'.format(username),
@@ -239,6 +323,15 @@ def members(name, members_list, root=None):
     '''
     Replaces members of the group with a provided list.
 
+    name
+        Name of the group to modify
+
+    members_list
+        Username list to set into the group
+
+    root
+        Directory to chroot into
+
     CLI Example:
 
         salt '*' group.members foo 'user1,user2,user3,...'
@@ -259,7 +352,7 @@ def members(name, members_list, root=None):
         else:
             cmd = ['gpasswd', '--members', members_list, name]
         if root is not None:
-            cmd.extend(('-R', root))
+            cmd.extend(('--root', root))
         retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
     elif __grains__['kernel'] == 'OpenBSD':
         retcode = 1
@@ -284,3 +377,43 @@ def members(name, members_list, root=None):
         return False
 
     return not retcode
+
+
+def _getgrnam(name, root=None):
+    '''
+    Alternative implementation for getgrnam, that use only /etc/group
+    '''
+    root = root or '/'
+    passwd = os.path.join(root, 'etc/group')
+    with salt.utils.files.fopen(passwd) as fp_:
+        for line in fp_:
+            line = salt.utils.stringutils.to_unicode(line)
+            comps = line.strip().split(':')
+            if len(comps) < 4:
+                log.debug('Ignoring group line: %s', line)
+                continue
+            if comps[0] == name:
+                # Generate a getpwnam compatible output
+                comps[2] = int(comps[2])
+                comps[3] = comps[3].split(',') if comps[3] else []
+                return grp.struct_group(comps)
+    raise KeyError('getgrnam(): name not found: {}'.format(name))
+
+
+def _getgrall(root=None):
+    '''
+    Alternative implemetantion for getgrall, that use only /etc/group
+    '''
+    root = root or '/'
+    passwd = os.path.join(root, 'etc/group')
+    with salt.utils.files.fopen(passwd) as fp_:
+        for line in fp_:
+            line = salt.utils.stringutils.to_unicode(line)
+            comps = line.strip().split(':')
+            if len(comps) < 4:
+                log.debug('Ignoring group line: %s', line)
+                continue
+            # Generate a getgrall compatible output
+            comps[2] = int(comps[2])
+            comps[3] = comps[3].split(',') if comps[3] else []
+            yield grp.struct_group(comps)

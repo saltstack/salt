@@ -279,7 +279,7 @@ def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
 
 def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
@@ -528,7 +528,7 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
     if _record:
         ret['name'] = _decode_name(_record.name)
@@ -603,7 +603,7 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
     _value = _munge_value(value, _type)
     while error_retries > 0:
@@ -624,7 +624,7 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
 
 def update_record(name, value, zone, record_type, identifier=None, ttl=None,
@@ -686,7 +686,7 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
 
 def delete_record(name, zone, record_type, identifier=None, all_records=False,
@@ -747,7 +747,7 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
 
 def _try_func(conn, func, **args):

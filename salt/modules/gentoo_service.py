@@ -31,7 +31,7 @@ def __virtual__():
     '''
     Only work on systems which default to OpenRC
     '''
-    if __grains__['os'] == 'Gentoo' and not salt.utils.systemd.booted(__context__):
+    if __grains__['os_family'] == 'Gentoo' and not salt.utils.systemd.booted(__context__):
         return __virtualname__
     if __grains__['os'] == 'Alpine':
         return __virtualname__
@@ -40,7 +40,7 @@ def __virtual__():
 
 
 def _ret_code(cmd, ignore_retcode=False):
-    log.debug('executing [{0}]'.format(cmd))
+    log.debug('executing [%s]', cmd)
     sts = __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=ignore_retcode)
     return sts
 

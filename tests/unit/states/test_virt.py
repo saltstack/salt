@@ -8,8 +8,8 @@ import tempfile
 import shutil
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -19,6 +19,8 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
+from salt.ext import six
+from salt.exceptions import CommandExecutionError
 import salt.states.virt as virt
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
@@ -57,7 +59,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.pki_dir = tempfile.mkdtemp(dir=TMP)
+        cls.pki_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
     @classmethod
     def tearDownClass(cls):
@@ -251,7 +253,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             init_mock.assert_called_with('myvm', cpu=2, mem=2048, image='/path/to/img.qcow2',
                                          os_type=None, arch=None,
                                          disk=None, disks=None, nic=None, interfaces=None,
-                                         graphics=None, hypervisor=None,
+                                         graphics=None, loader=None, hypervisor=None,
                                          seed=True, install=True, pub_key=None, priv_key=None,
                                          connection=None, username=None, password=None)
 
@@ -283,6 +285,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                          'source': 'admin'
                       }]
             graphics = {'type': 'spice', 'listen': {'type': 'address', 'address': '192.168.0.1'}}
+            loader = {'path': '/path/to/loader', 'readonly': 'yes'}
             self.assertDictEqual(virt.running('myvm',
                                               cpu=2,
                                               mem=2048,
@@ -294,6 +297,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                               nic_profile='prod',
                                               interfaces=ifaces,
                                               graphics=graphics,
+                                              loader=loader,
                                               seed=False,
                                               install=False,
                                               pub_key='/path/to/key.pub',
@@ -312,6 +316,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                          nic='prod',
                                          interfaces=ifaces,
                                          graphics=graphics,
+                                         loader=loader,
                                          hypervisor='qemu',
                                          seed=False,
                                          install=False,

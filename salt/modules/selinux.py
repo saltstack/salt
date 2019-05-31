@@ -717,7 +717,7 @@ def fcontext_apply_policy(name, recursive=False):
     ret.update(apply_ret)
     if apply_ret['retcode'] == 0:
         changes_list = re.findall('restorecon reset (.*) context (.*)->(.*)$', changes_text, re.M)
-        if len(changes_list) > 0:
+        if changes_list:
             ret.update({'changes': {}})
         for item in changes_list:
             filespec = item[0]

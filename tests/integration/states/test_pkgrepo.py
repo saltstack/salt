@@ -44,7 +44,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
 
         if grains['os_family'] == 'Debian':
             try:
-                from aptsources import sourceslist
+                from aptsources import sourceslist  # pylint: disable=unused-import
             except ImportError:
                 self.skipTest(
                     'aptsources.sourceslist python module not found'

@@ -19,6 +19,11 @@ import tests.integration as integration
 import salt.config
 from salt.utils.schedule import Schedule
 
+from salt.modules.test import ping as test_ping
+from salt.modules.test import true_ as test_true
+from salt.modules.status import time as status_time
+from salt.modules.cmdmod import run as cmd_run
+
 # pylint: disable=import-error,unused-import
 try:
     import croniter
@@ -52,7 +57,13 @@ class ScheduleTestCase(TestCase):
 
     def setUp(self):
         with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
-            self.schedule = Schedule(copy.deepcopy(self.default_config), {}, returners={})
+            functions = {'test.ping': test_ping,
+                         'test.true': test_true,
+                         'status.time': status_time,
+                         'cmd.run': cmd_run}
+            self.schedule = Schedule(copy.deepcopy(self.default_config),
+                                     functions,
+                                     returners={})
         self.addCleanup(delattr, self, 'schedule')
 
     # delete_job tests
@@ -376,3 +387,34 @@ class ScheduleTestCase(TestCase):
                 patch('sys.platform', 'linux2'):
                 self.schedule.handle_func(False, 'test.ping', data)
                 self.assertTrue(log_mock.exception.called)
+
+    def test_eval_schedule_compound_function(self):
+        '''
+        Tests eval if the schedule setting time is in the future
+        '''
+        self.schedule.opts.update({'pillar': {'schedule': {}}})
+        self.schedule.opts.update({'schedule': {'testjob': {'function': ['cmd.run', 'status.time'],
+                                                            'args': [["data"], []],
+                                                            'seconds': 60}}})
+        now = datetime.datetime.now()
+        self.schedule.eval()
+        self.assertTrue(self.schedule.opts['schedule']['testjob']['_next_fire_time'] > now)
+
+    def test_eval_schedule_invalid_arguments(self):
+        '''
+        Tests eval if the schedule if data contains error
+        '''
+        self.schedule.opts.update({'pillar': {'schedule': {}}})
+        self.schedule.opts.update({'schedule': {'testjob': {'function': ['cmd.run', 'status.time'],
+                                                            'args': [["data"]],
+                                                            'seconds': 60}}})
+        now = datetime.datetime.now()
+
+        # Run eval one to prime the scheduler
+        self.schedule.eval()
+
+        # Run in "60 seconds" and we should receive the error
+        self.schedule.eval(now + datetime.timedelta(seconds=60))
+        self.assertIn('_error', self.schedule.opts['schedule']['testjob'])
+        _expected = 'Number of arguments is less than the number of functions. Ignoring job.'
+        self.assertEqual(self.schedule.opts['schedule']['testjob']['_error'], _expected)

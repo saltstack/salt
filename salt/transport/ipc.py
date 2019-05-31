@@ -87,10 +87,11 @@ class IPCServer(object):
     A Tornado IPC server very similar to Tornado's TCPServer class
     but using either UNIX domain sockets or TCP sockets
     '''
-    def __init__(self, socket_path, io_loop=None, payload_handler=None):
+    def __init__(self, opts, socket_path, io_loop=None, payload_handler=None):
         '''
         Create a new Tornado IPC server
 
+        :param dict opts: Salt options
         :param str/int socket_path: Path on the filesystem for the
                                     socket to bind to. This socket does
                                     not need to exist prior to calling
@@ -103,6 +104,7 @@ class IPCServer(object):
         :param func payload_handler: A function to customize handling of
                                      incoming data.
         '''
+        self.opts = opts
         self.socket_path = socket_path
         self._started = False
         self.payload_handler = payload_handler
@@ -123,12 +125,17 @@ class IPCServer(object):
         if isinstance(self.socket_path, int):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if self.opts.get('ipc_so_sndbuf'):
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, self.opts['ipc_so_sndbuf'])
+            if self.opts.get('ipc_so_rcvbuf'):
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.opts['ipc_so_rcvbuf'])
             self.sock.setblocking(0)
             self.sock.bind(('127.0.0.1', self.socket_path))
             # Based on default used in tornado.netutil.bind_sockets()
-            self.sock.listen(128)
+            self.sock.listen(self.opts['ipc_so_backlog'])
         else:
-            self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
+            # sndbuf/rcvbuf does not apply to unix sockets
+            self.sock = tornado.netutil.bind_unix_socket(self.socket_path, backlog=self.opts['ipc_so_backlog'])
 
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             tornado.netutil.add_accept_handler(
@@ -420,16 +427,13 @@ class IPCMessageServer(IPCServer):
 
         # Import Salt libs
         import salt.transport.ipc
-        import salt.config
-
-        opts = salt.config.master_opts()
 
         io_loop = tornado.ioloop.IOLoop.current()
         ipc_server_socket_path = '/var/run/ipc_server.ipc'
-        ipc_server = salt.transport.ipc.IPCMessageServer(opts, io_loop=io_loop
-                                                         stream_handler=print_to_console)
+        ipc_server = salt.transport.ipc.IPCMessageServer(ipc_server_socket_path, io_loop=io_loop,
+                                                         payload_handler=print_to_console)
         # Bind to the socket and prepare to run
-        ipc_server.start(ipc_server_socket_path)
+        ipc_server.start()
 
         # Start the server
         io_loop.start()
@@ -482,12 +486,17 @@ class IPCMessagePublisher(object):
         if isinstance(self.socket_path, int):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if self.opts.get('ipc_so_sndbuf'):
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, self.opts['ipc_so_sndbuf'])
+            if self.opts.get('ipc_so_rcvbuf'):
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.opts['ipc_so_rcvbuf'])
             self.sock.setblocking(0)
             self.sock.bind(('127.0.0.1', self.socket_path))
             # Based on default used in tornado.netutil.bind_sockets()
-            self.sock.listen(128)
+            self.sock.listen(self.opts['ipc_so_backlog'])
         else:
-            self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
+            # sndbuf/rcvbuf does not apply to unix sockets
+            self.sock = tornado.netutil.bind_unix_socket(self.socket_path, backlog=self.opts['ipc_so_backlog'])
 
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             tornado.netutil.add_accept_handler(
@@ -513,7 +522,7 @@ class IPCMessagePublisher(object):
         '''
         Send message to all connected sockets
         '''
-        if not len(self.streams):
+        if not self.streams:
             return
 
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
@@ -605,6 +614,7 @@ class IPCMessageSubscriber(IPCClient):
         self._read_stream_future = None
         self._saved_data = []
         self._read_in_progress = Lock()
+        self.callbacks = set()
 
     @tornado.gen.coroutine
     def _read(self, timeout, callback=None):
@@ -680,8 +690,12 @@ class IPCMessageSubscriber(IPCClient):
             return self._saved_data.pop(0)
         return self.io_loop.run_sync(lambda: self._read(timeout))
 
+    def __run_callbacks(self, raw):
+        for callback in self.callbacks:
+            self.io_loop.spawn_callback(callback, raw)
+
     @tornado.gen.coroutine
-    def read_async(self, callback):
+    def read_async(self):
         '''
         Asynchronously read messages and invoke a callback when they are ready.
 
@@ -696,7 +710,7 @@ class IPCMessageSubscriber(IPCClient):
             except Exception as exc:
                 log.error('Exception occurred while Subscriber connecting: %s', exc)
                 yield tornado.gen.sleep(1)
-        yield self._read(None, callback)
+        yield self._read(None, self.__run_callbacks)
 
     def close(self):
         '''
@@ -714,7 +728,3 @@ class IPCMessageSubscriber(IPCClient):
             exc = self._read_stream_future.exception()
             if exc and not isinstance(exc, StreamClosedError):
                 log.error("Read future returned exception %r", exc)
-
-    def __del__(self):
-        if IPCMessageSubscriber in globals():
-            self.close()

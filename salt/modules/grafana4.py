@@ -183,7 +183,7 @@ def create_user(profile='grafana', **kwargs):
     return response.json()
 
 
-def update_user(userid, profile='grafana', **kwargs):
+def update_user(userid, profile='grafana', orgid=None, **kwargs):
     '''
     Update an existing user.
 
@@ -198,6 +198,9 @@ def update_user(userid, profile='grafana', **kwargs):
 
     name
         Optional - Full name of the user.
+
+    orgid
+        Optional - Default Organization of the user.
 
     profile
         Configuration profile used to connect to the Grafana instance.
@@ -220,6 +223,15 @@ def update_user(userid, profile='grafana', **kwargs):
     )
     if response.status_code >= 400:
         response.raise_for_status()
+    if orgid:
+        response2 = requests.post(
+            '{0}/api/users/{1}/using/{2}'.format(profile['grafana_url'], userid, orgid),
+            auth=_get_auth(profile),
+            headers=_get_headers(profile),
+            timeout=profile.get('grafana_timeout', 3),
+        )
+        if response2.status_code >= 400:
+            response2.raise_for_status()
     return response.json()
 
 

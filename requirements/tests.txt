@@ -29,7 +29,6 @@ jsonschema
 strict_rfc3339
 rfc3987
 pyOpenSSL
-ioflo
 dnspython
 SaltTesting==2017.6.1
 junos-eznc
@@ -39,3 +38,6 @@ kazoo
 ansible; sys.platform != 'win32' and sys.platform != 'darwin' and python_version >= '3.5'
 ansible; sys.platform != 'win32' and sys.platform != 'darwin' and python_version == '2.7'
 pylxd>=2.2.5; sys.platform != 'win32' and sys.platform != 'darwin'
+jmespath
+yamlordereddictloader
+python-dateutil

@@ -27,10 +27,11 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
-from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import (
     get_unused_localhost_port,
     requires_system_grains,
+    patched_environ
 )
 from tests.support.mock import patch
 
@@ -131,7 +132,7 @@ class SSHDMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
 
     @classmethod
     def prep_server(cls):
-        cls.sshd_config_dir = tempfile.mkdtemp(dir=TMP)
+        cls.sshd_config_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         cls.sshd_config = os.path.join(cls.sshd_config_dir, 'sshd_config')
         cls.sshd_port = get_unused_localhost_port()
         cls.url = 'ssh://{username}@127.0.0.1:{port}/~/repo.git'.format(
@@ -187,7 +188,7 @@ class WebserverMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
         Set up all the webserver paths. Designed to be run once in a
         setUpClass function.
         '''
-        cls.root_dir = tempfile.mkdtemp(dir=TMP)
+        cls.root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         cls.config_dir = os.path.join(cls.root_dir, 'config')
         cls.nginx_conf = os.path.join(cls.config_dir, 'nginx.conf')
         cls.uwsgi_conf = os.path.join(cls.config_dir, 'uwsgi.yml')
@@ -338,7 +339,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         '''
         Run git_pillar with the specified configuration
         '''
-        cachedir = tempfile.mkdtemp(dir=TMP)
+        cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, cachedir, ignore_errors=True)
         ext_pillar_opts = {'optimization_order': [0, 1, 2]}
         ext_pillar_opts.update(
@@ -633,15 +634,8 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
         passphraselsess key is used to auth without needing to modify the root
         user's ssh config file.
         '''
-
-        def cleanup_environ(environ):
-            os.environ.clear()
-            os.environ.update(environ)
-
-        self.addCleanup(cleanup_environ, os.environ.copy())
-
-        os.environ['GIT_SSH'] = self.git_ssh
-        return super(GitPillarSSHTestBase, self).get_pillar(ext_pillar_conf)
+        with patched_environ(GIT_SSH=self.git_ssh):
+            return super(GitPillarSSHTestBase, self).get_pillar(ext_pillar_conf)
 
 
 class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):

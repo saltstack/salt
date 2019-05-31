@@ -285,7 +285,7 @@ def index_template_present(name, definition, check_definition=False):
                     if current_template[key] == {} and key not in definition_parsed:
                         del current_template[key]
                 diff = __utils__['dictdiffer.deep_diff'](current_template, definition_parsed)
-                if len(diff) != 0:
+                if diff:
                     if __opts__['test']:
                         ret['comment'] = 'Index template {0} exist but need to be updated'.format(name)
                         ret['changes'] = diff

@@ -150,7 +150,8 @@ def _tree(domain, tld=False):
             tld = tldextract.extract(domain).suffix
         else:
             tld = re.search(r'((?:(?:ac|biz|com?|info|edu|gov|mil|name|net|n[oi]m|org)\.)?[^.]+)$', domain).group()
-            log.info('Without tldextract, dns.util resolves the TLD of {0} to {1}'.format(domain, tld))
+            log.info('Without tldextract, dns.util resolves the TLD of %s to %s',
+                     domain, tld)
 
     res = [domain]
     while True:
@@ -1076,7 +1077,7 @@ def services(services_file='/etc/services'):
     with salt.utils.files.fopen(services_file, 'r') as svc_defs:
         for svc_def in svc_defs.readlines():
             svc_def = salt.utils.stringutils.to_unicode(svc_def.strip())
-            if not len(svc_def) or svc_def.startswith('#'):
+            if not svc_def or svc_def.startswith('#'):
                 continue
             elif '#' in svc_def:
                 svc_def, comment = svc_def.split('#', 1)

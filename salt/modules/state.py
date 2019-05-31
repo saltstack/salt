@@ -33,6 +33,7 @@ import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.jid
 import salt.utils.json
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.state
 import salt.utils.stringutils
@@ -45,7 +46,6 @@ from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 from salt.ext import six
-import msgpack
 
 __proxyenabled__ = ['*']
 
@@ -185,7 +185,7 @@ def _get_pause(jid, state_id=None):
             data[state_id] = {}
     if os.path.exists(pause_path):
         with salt.utils.files.fopen(pause_path, 'rb') as fp_:
-            data = msgpack.loads(fp_.read())
+            data = salt.utils.msgpack.loads(fp_.read())
     return data, pause_path
 
 
@@ -256,7 +256,7 @@ def soft_kill(jid, state_id=None):
     data, pause_path = _get_pause(jid, state_id)
     data[state_id]['kill'] = True
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def pause(jid, state_id=None, duration=None):
@@ -291,7 +291,7 @@ def pause(jid, state_id=None, duration=None):
     if duration:
         data[state_id]['duration'] = int(duration)
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def resume(jid, state_id=None):
@@ -325,7 +325,7 @@ def resume(jid, state_id=None):
     if state_id == '__all__':
         data = {}
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def orchestrate(mods,
@@ -2386,37 +2386,37 @@ def event(tagmatch='*',
 
         salt-call --local state.event pretty=True
     '''
-    sevent = salt.utils.event.get_event(
-                 node,
-                 sock_dir or __opts__['sock_dir'],
-                 __opts__['transport'],
-                 opts=__opts__,
-                 listen=True)
+    with salt.utils.event.get_event(
+            node,
+            sock_dir or __opts__['sock_dir'],
+            __opts__['transport'],
+            opts=__opts__,
+            listen=True) as sevent:
 
-    while True:
-        ret = sevent.get_event(full=True, auto_reconnect=True)
-        if ret is None:
-            continue
+        while True:
+            ret = sevent.get_event(full=True, auto_reconnect=True)
+            if ret is None:
+                continue
 
-        if salt.utils.stringutils.expr_match(ret['tag'], tagmatch):
-            if not quiet:
-                salt.utils.stringutils.print_cli(
-                    str('{0}\t{1}').format(  # future lint: blacklisted-function
-                        salt.utils.stringutils.to_str(ret['tag']),
-                        salt.utils.json.dumps(
-                            ret['data'],
-                            sort_keys=pretty,
-                            indent=None if not pretty else 4)
+            if salt.utils.stringutils.expr_match(ret['tag'], tagmatch):
+                if not quiet:
+                    salt.utils.stringutils.print_cli(
+                        str('{0}\t{1}').format(  # future lint: blacklisted-function
+                            salt.utils.stringutils.to_str(ret['tag']),
+                            salt.utils.json.dumps(
+                                ret['data'],
+                                sort_keys=pretty,
+                                indent=None if not pretty else 4)
+                        )
                     )
-                )
-                sys.stdout.flush()
+                    sys.stdout.flush()
 
-            if count > 0:
-                count -= 1
-                log.debug('Remaining event matches: %s', count)
+                if count > 0:
+                    count -= 1
+                    log.debug('Remaining event matches: %s', count)
 
-            if count == 0:
-                break
-        else:
-            log.debug('Skipping event tag: %s', ret['tag'])
-            continue
+                if count == 0:
+                    break
+            else:
+                log.debug('Skipping event tag: %s', ret['tag'])
+                continue

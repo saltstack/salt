@@ -11,6 +11,7 @@ config, these are the defaults:
     redis.db: '0'
     redis.host: 'salt'
     redis.port: 6379
+    redis.password: ''
 
 .. versionadded:: 2018.3.1
 
@@ -43,6 +44,7 @@ the default location:
     alternative.redis.db: '0'
     alternative.redis.host: 'salt'
     alternative.redis.port: 6379
+    alternative.redis.password: ''
 
 To use the redis returner, append '--return redis' to the salt command.
 
@@ -148,6 +150,7 @@ def _get_options(ret=None):
              'port': 'port',
              'unix_socket_path': 'unix_socket_path',
              'db': 'db',
+             'password': 'password',
              'cluster_mode': 'cluster_mode',
              'startup_nodes': 'cluster.startup_nodes',
              'skip_full_coverage_check': 'cluster.skip_full_coverage_check',
@@ -159,6 +162,7 @@ def _get_options(ret=None):
             'port': __opts__.get('redis.port', 6379),
             'unix_socket_path': __opts__.get('redis.unix_socket_path', None),
             'db': __opts__.get('redis.db', '0'),
+            'password': __opts__.get('redis.password', ''),
             'cluster_mode': __opts__.get('redis.cluster_mode', False),
             'startup_nodes': __opts__.get('redis.cluster.startup_nodes', {}),
             'skip_full_coverage_check': __opts__.get('redis.cluster.skip_full_coverage_check', False)
@@ -189,7 +193,8 @@ def _get_serv(ret=None):
                                        port=_options.get('port'),
                                        unix_socket_path=_options.get('unix_socket_path', None),
                                        db=_options.get('db'),
-                                       decode_responses=True)
+                                       decode_responses=True,
+                                       password=_options.get('password'))
     return REDIS_POOL
 
 
@@ -309,7 +314,7 @@ def clean_old_jobs():
         load_key = ret_key.replace('ret:', 'load:', 1)
         if load_key not in living_jids:
             to_remove.append(ret_key)
-    if len(to_remove) != 0:
+    if to_remove:
         serv.delete(*to_remove)
         log.debug('clean old jobs: %s', to_remove)
 

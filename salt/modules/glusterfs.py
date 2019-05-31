@@ -58,6 +58,8 @@ def _gluster_output_cleanup(result):
     for line in result.splitlines():
         if line.startswith('gluster>'):
             ret += line[9:].strip()
+        elif line.startswith('Welcome to gluster prompt'):
+            pass
         else:
             ret += line.strip()
 
@@ -580,7 +582,7 @@ def add_volume_bricks(name, bricks):
         else:
             new_bricks.append(brick)
 
-    if len(new_bricks) > 0:
+    if new_bricks:
         for brick in new_bricks:
             cmd += ' {0}'.format(brick)
         return _gluster(cmd)

@@ -7,6 +7,10 @@ settings are listed below, along with sane defaults:
 
     couchdb.db: 'salt'
     couchdb.url: 'http://salt:5984/'
+    couchdb.user: None
+    couchdb.passwd: None
+    couchdb.redact_pws: None
+    couchdb.minimum_return: None
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
@@ -72,6 +76,13 @@ import salt.utils.jid
 import salt.utils.json
 import salt.returners
 
+# boltons lib for redact_pws and minimum_return
+try:
+    from boltons.iterutils import remap
+    boltons_lib = True
+except ImportError:
+    boltons_lib = False
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -87,7 +98,11 @@ def _get_options(ret=None):
     Get the couchdb options from salt.
     '''
     attrs = {'url': 'url',
-             'db': 'db'}
+             'db': 'db',
+             'user': 'user',
+             'passwd': 'passwd',
+             'redact_pws': 'redact_pws',
+             'minimum_return': 'minimum_return'}
 
     _options = salt.returners.get_returner_options(__virtualname__,
                                                    ret,
@@ -102,7 +117,35 @@ def _get_options(ret=None):
         log.debug("Using default database.")
         _options['db'] = "salt"
 
+    if 'user' not in _options:
+        log.debug("Not athenticating with a user.")
+        _options['user'] = None
+
+    if 'passwd' not in _options:
+        log.debug("Not athenticating with a password.")
+        _options['passwd'] = None
+
+    if 'redact_pws' not in _options:
+        log.debug("Not redacting passwords.")
+        _options['redact_pws'] = None
+
+    if 'minimum_return' not in _options:
+        log.debug("Not minimizing the return object.")
+        _options['minimum_return'] = None
+
     return _options
+
+
+def _redact_passwords(path, key, value):
+    if 'password' in str(key) and value:
+        return key, 'XXX-REDACTED-XXX'
+    return key, value
+
+
+def _minimize_return(path, key, value):
+    if isinstance(key, str) and key.startswith('__pub'):
+        return False
+    return True
 
 
 def _generate_doc(ret):
@@ -123,7 +166,7 @@ def _generate_doc(ret):
     return retc
 
 
-def _request(method, url, content_type=None, _data=None):
+def _request(method, url, content_type=None, _data=None, user=None, passwd=None):
     '''
     Makes a HTTP request. Returns the JSON parse, or an obj with an error.
     '''
@@ -131,12 +174,42 @@ def _request(method, url, content_type=None, _data=None):
     request = _Request(url, data=_data)
     if content_type:
         request.add_header('Content-Type', content_type)
+    if user and passwd:
+        auth_encode = '{0}:{1}'.format(user, passwd).encode('base64')[:-1]
+        auth_basic = "Basic {0}".format(auth_encode)
+        request.add_header('Authorization', auth_basic)
+        request.add_header('Accept', 'application/json')
     request.get_method = lambda: method
     try:
         handler = opener.open(request)
     except HTTPError as exc:
         return {'error': '{0}'.format(exc)}
     return salt.utils.json.loads(handler.read())
+
+
+def _generate_event_doc(event):
+    '''
+    Create a object that will be saved into the database based in
+    options.
+    '''
+
+    # Create a copy of the object that we will return.
+    eventc = event.copy()
+
+    # Set the ID of the document to be the JID.
+    eventc["_id"] = '{}-{}'.format(
+                                    event.get('tag', '').split('/')[2],
+                                    event.get('tag', '').split('/')[3]
+                                  )
+
+    # Add a timestamp field to the document
+    eventc["timestamp"] = time.time()
+
+    # remove any return data as it's captured in the "returner" function
+    if eventc.get('data').get('return'):
+        del eventc['data']['return']
+
+    return eventc
 
 
 def returner(ret):
@@ -147,22 +220,43 @@ def returner(ret):
     options = _get_options(ret)
 
     # Check to see if the database exists.
-    _response = _request("GET", options['url'] + "_all_dbs")
+    _response = _request("GET",
+                         options['url'] + "_all_dbs",
+                         user=options['user'],
+                         passwd=options['passwd'])
     if options['db'] not in _response:
 
         # Make a PUT request to create the database.
-        _response = _request("PUT", options['url'] + options['db'])
+        _response = _request("PUT",
+                             options['url'] + options['db'],
+                             user=options['user'],
+                             passwd=options['passwd'])
 
         # Confirm that the response back was simple 'ok': true.
         if 'ok' not in _response or _response['ok'] is not True:
-            log.error('Unable to create database \'%s\'', options['db'])
-            log.error('Nothing logged! Lost data.')
+            log.error('Nothing logged! Lost data. Unable to create database "%s"', options['db'])
+            log.debug('_response object is: %s', _response)
             return
-        log.info('Created database \'%s\'', options['db'])
+        log.info('Created database "%s"', options['db'])
 
-    # Call _generate_doc to get a dict object of the document we're going to
-    # shove into the database.
-    doc = _generate_doc(ret)
+    if boltons_lib:
+        # redact all passwords if options['redact_pws'] is True
+        if options['redact_pws']:
+            ret_remap_pws = remap(ret, visit=_redact_passwords)
+        else:
+            ret_remap_pws = ret
+
+        # remove all return values starting with '__pub' if options['minimum_return'] is True
+        if options['minimum_return']:
+            ret_remapped = remap(ret_remap_pws, visit=_minimize_return)
+        else:
+            ret_remapped = ret_remap_pws
+    else:
+        log.info('boltons library not installed. pip install boltons. https://github.com/mahmoud/boltons.')
+        ret_remapped = ret
+
+    # Call _generate_doc to get a dict object of the document we're going to shove into the database.
+    doc = _generate_doc(ret_remapped)
 
     # Make the actual HTTP PUT request to create the doc.
     _response = _request("PUT",
@@ -172,8 +266,56 @@ def returner(ret):
 
     # Sanity check regarding the response..
     if 'ok' not in _response or _response['ok'] is not True:
-        log.error('Unable to create document: \'%s\'', _response)
-        log.error('Nothing logged! Lost data.')
+        log.error('Nothing logged! Lost data. Unable to create document: "%s"', _response)
+
+
+def event_return(events):
+    '''
+    Return event to CouchDB server
+    Requires that configuration be enabled via 'event_return'
+    option in master config.
+
+    Example:
+
+    event_return:
+      - couchdb
+
+    '''
+    log.debug('events data is: %s', events)
+
+    options = _get_options()
+
+    # Check to see if the database exists.
+    _response = _request("GET", options['url'] + "_all_dbs")
+    event_db = '{}-events'.format(options['db'])
+    if event_db not in _response:
+
+        # Make a PUT request to create the database.
+        log.info('Creating database "%s"', event_db)
+        _response = _request("PUT",
+                             options['url'] + event_db,
+                             user=options['user'],
+                             passwd=options['passwd'])
+
+        # Confirm that the response back was simple 'ok': true.
+        if 'ok' not in _response or _response['ok'] is not True:
+            log.error('Nothing logged! Lost data. Unable to create database "%s"', event_db)
+            return
+        log.info('Created database "%s"', event_db)
+
+    for event in events:
+        # Call _generate_doc to get a dict object of the document we're going to shove into the database.
+        log.debug('event data is: %s', event)
+        doc = _generate_event_doc(event)
+
+        # Make the actual HTTP PUT request to create the doc.
+        _response = _request("PUT",
+                             options['url'] + event_db + "/" + doc['_id'],
+                             'application/json',
+                             salt.utils.json.dumps(doc))
+        # Sanity check regarding the response..
+        if 'ok' not in _response or _response['ok'] is not True:
+            log.error('Nothing logged! Lost data. Unable to create document: "%s"', _response)
 
 
 def get_jid(jid):
@@ -183,7 +325,7 @@ def get_jid(jid):
     options = _get_options(ret=None)
     _response = _request("GET", options['url'] + options['db'] + '/' + jid)
     if 'error' in _response:
-        log.error('Unable to get JID \'%s\' : \'%s\'', jid, _response)
+        log.error('Unable to get JID "%s" : "%s"', jid, _response)
         return {}
     return {_response['id']: _response}
 
@@ -197,10 +339,7 @@ def get_jids():
 
     # Make sure the 'total_rows' is returned.. if not error out.
     if 'total_rows' not in _response:
-        log.error(
-            'Didn\'t get valid response from requesting all docs: %s',
-            _response
-        )
+        log.error('Didn\'t get valid response from requesting all docs: %s', _response)
         return {}
 
     # Return the rows.
@@ -229,12 +368,10 @@ def get_fun(fun):
     # Define a simple return object.
     _ret = {}
 
-    # get_minions takes care of calling ensure_views for us.
-    # For each minion we know about
+    # get_minions takes care of calling ensure_views for us. For each minion we know about
     for minion in get_minions():
 
-        # Make a query of the by-minion-and-timestamp view and limit the count
-        # to 1.
+        # Make a query of the by-minion-and-timestamp view and limit the count to 1.
         _response = _request("GET",
                              options['url'] +
                                      options['db'] +
@@ -247,15 +384,13 @@ def get_fun(fun):
                                                         fun))
         # Skip the minion if we got an error..
         if 'error' in _response:
-            log.warning(
-                'Got an error when querying for last command by a minion: %s',
-                _response['error']
-            )
+            log.warning('Got an error when querying for last command '
+                        'by a minion: %s', _response['error'])
             continue
 
         # Skip the minion if we didn't get any rows back. ( IE function that
         # they're looking for has a typo in it or some such ).
-        if len(_response['rows']) < 1:
+        if not _response['rows']:
             continue
 
         # Set the respnse ..
@@ -357,10 +492,7 @@ def set_salt_view():
                          options['url'] + options['db'] + "/_design/salt",
                          "application/json", salt.utils.json.dumps(new_doc))
     if 'error' in _response:
-        log.warning(
-            'Unable to set the salt design document: %s',
-            _response['error']
-        )
+        log.warning('Unable to set the salt design document: %s', _response['error'])
         return False
     return True
 
@@ -377,3 +509,22 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     Included for API consistency
     '''
     pass
+
+
+def save_load(jid, load):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
+
+
+def get_load(jid):
+    '''
+    Included for API consistency
+    '''
+    options = _get_options(ret=None)
+    _response = _request("GET", options['url'] + options['db'] + '/' + jid)
+    if 'error' in _response:
+        log.error('Unable to get JID "%s" : "%s"', jid, _response)
+        return {}
+    return {_response['id']: _response}

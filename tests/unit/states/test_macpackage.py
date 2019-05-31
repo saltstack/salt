@@ -208,7 +208,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 'result': True
             }
 
-            install_mock = MagicMock()
+            install_mock = MagicMock(return_value='')
             _mod_run_check_mock.return_value = True
             exists_mock.return_value = False
 
@@ -254,7 +254,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 'result': True
             }
 
-            install_mock = MagicMock()
+            install_mock = MagicMock(return_value='')
             mount_mock = MagicMock(return_value=['success', '/tmp/dmg-X'])
             unmount_mock = MagicMock()
             cmd_mock = MagicMock(return_value='file.app')

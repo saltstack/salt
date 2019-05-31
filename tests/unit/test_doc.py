@@ -11,8 +11,8 @@ import re
 import logging
 
 # Import Salt Testing libs
-from tests.support.paths import CODE_DIR
 from tests.support.unit import TestCase
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.modules.cmdmod
@@ -38,7 +38,7 @@ class DocTestCase(TestCase):
 
         https://github.com/saltstack/salt/issues/12788
         '''
-        salt_dir = CODE_DIR
+        salt_dir = RUNTIME_VARS.CODE_DIR
 
         if salt.utils.platform.is_windows():
             if salt.utils.path.which('bash'):

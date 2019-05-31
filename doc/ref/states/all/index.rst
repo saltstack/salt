@@ -30,6 +30,7 @@ state modules
     beacon
     bigip
     blockdev
+    bluecoat_sslv
     boto3_elasticache
     boto3_route53
     boto_apigateway
@@ -72,6 +73,7 @@ state modules
     cloud
     cmd
     composer
+    consul
     cron
     csf
     cyg
@@ -96,6 +98,7 @@ state modules
     file
     firewall
     firewalld
+    flatpak
     gem
     git
     github
@@ -115,7 +118,6 @@ state modules
     group
     heat
     hg
-    hipchat
     host
     http
     icinga2
@@ -150,6 +152,7 @@ state modules
     keystone_role_grant
     keystone_service
     keystone_user
+    keystore
     kmod
     kubernetes
     layman
@@ -255,6 +258,7 @@ state modules
     rvm
     salt_proxy
     saltmod
+    saltutil
     schedule
     selinux
     serverdensity_device
@@ -262,6 +266,7 @@ state modules
     slack
     smartos
     smtp
+    snap
     snapper
     solrcloud
     splunk
@@ -313,6 +318,7 @@ state modules
     win_wua
     winrepo
     x509
+    xml
     xmpp
     zabbix_action
     zabbix_host

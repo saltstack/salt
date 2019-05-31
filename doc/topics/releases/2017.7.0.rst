@@ -683,7 +683,7 @@ New Modules
 Beacons
 -------
 
-- :mod:`salt.beacons.log <salt.beacons.log>`
+- :mod:`salt.beacons.logs <salt.beacons.logs>`
 
 Cache
 -----

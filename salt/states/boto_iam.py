@@ -1694,7 +1694,7 @@ def saml_provider_absent(name, region=None, key=None, keyid=None, profile=None):
     provider = __salt__['boto_iam.list_saml_providers'](region=region,
                                                         key=key, keyid=keyid,
                                                         profile=profile)
-    if len(provider) == 0:
+    if not provider:
         ret['comment'] = 'SAML provider {0} is absent.'.format(name)
         return ret
     if __opts__['test']:

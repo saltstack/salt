@@ -7,6 +7,7 @@ Compatibility functions for utils
 from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import copy
+import importlib
 import types
 import importlib
 

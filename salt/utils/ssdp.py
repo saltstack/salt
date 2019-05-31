@@ -378,7 +378,8 @@ class SSDPDiscoveryClient(SSDPBase):
                 else:
                     break
             except Exception as err:
-                self.log.error('Discovery master collection failure: %s', err)
+                if not response:
+                    self.log.error('Discovery master collection failure: %s', err)
                 break
 
     def discover(self):

@@ -268,9 +268,10 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'latest'  # latest, previous, develop, next
-release = latest_release
+build_type = 'develop'  # latest, previous, develop, next
 # < --- END do not merge these settings to other branches END ---> #
+
+release = latest_release if build_type == 'develop' else version
 
 # Set google custom search engine
 
@@ -387,7 +388,7 @@ html_short_title = 'Salt'
 html_static_path = ['_static']
 html_logo = None # specified in the theme layout.html
 html_favicon = 'favicon.ico'
-html_use_smartypants = False
+smartquotes = False
 
 # Use Google customized search or use Sphinx built-in JavaScript search
 if on_saltstack:

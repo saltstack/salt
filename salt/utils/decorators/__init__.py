@@ -329,7 +329,7 @@ class _DeprecationDecorator(object):
                     'Unhandled exception occurred in function "%s: %s',
                     self._function.__name__, error
                 )
-                raise error
+                six.reraise(*sys.exc_info())
         else:
             raise CommandExecutionError("Function is deprecated, but the successor function was not found.")
 
@@ -669,3 +669,27 @@ def ensure_unicode_args(function):
         else:
             return function(*args, **kwargs)
     return wrapped
+
+
+def external(func):
+    '''
+    Mark function as external.
+
+    :param func:
+    :return:
+    '''
+
+    def f(*args, **kwargs):
+        '''
+        Stub.
+
+        :param args:
+        :param kwargs:
+        :return:
+        '''
+        return func(*args, **kwargs)
+
+    f.external = True
+    f.__doc__ = func.__doc__
+
+    return f

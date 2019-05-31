@@ -34,7 +34,7 @@ wrap conditional or redundant state elements:
         {% endif %}
         - source: salt://motd
 
-In this example, the first if block will only be evaluated on minions that
+In this example, the first **if** block will only be evaluated on minions that
 aren't running FreeBSD, and the second block changes the file name based on the
 *os* grain.
 
@@ -649,6 +649,56 @@ Returns:
   1, 4
 
 
+.. jinja_ref:: method_call
+
+``method_call``
+---------------
+
+.. versionadded:: Neon
+
+Returns a result of object's method call.
+
+Example #1:
+
+.. code-block:: jinja
+
+  {{ [1, 2, 1, 3, 4] | method_call('index', 1, 1, 3) }}
+
+Returns:
+
+.. code-block:: text
+
+  2
+
+This filter can be used with the `map filter`_ to apply object methods without
+using loop constructs or temporary variables.
+
+Example #2:
+
+.. code-block:: jinja
+
+  {% set host_list = ['web01.example.com', 'db01.example.com'] %}
+  {% set host_list_split = [] %}
+  {% for item in host_list %}
+    {% do host_list_split.append(item.split('.', 1)) %}
+  {% endfor %}
+  {{ host_list_split }}
+
+Example #3:
+
+.. code-block:: jinja
+
+  {{ host_list|map('method_call', 'split', '.', 1)|list }}
+
+Return of examples #2 and #3:
+
+.. code-block:: text
+
+  [[web01, example.com], [db01, example.com]]
+
+.. _`map filter`: http://jinja.pocoo.org/docs/2.10/templates/#map
+
+
 .. jinja_ref:: is_sorted
 
 ``is_sorted``
@@ -656,7 +706,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return is an iterable object is already sorted.
+Return ``True`` if an iterable object is already sorted.
 
 Example:
 
@@ -690,7 +740,7 @@ Returns:
 
 .. code-block:: python
 
-  {'new': 4, 'old': 3}
+  {'new': [4], 'old': [3]}
 
 
 .. jinja_ref:: compare_dicts
@@ -706,7 +756,7 @@ Example:
 
 .. code-block:: jinja
 
-  {{ {'a': 'b'} | compare_lists({'a': 'c'}) }}
+  {{ {'a': 'b'} | compare_dicts({'a': 'c'}) }}
 
 Returns:
 
@@ -722,7 +772,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return True if the value is hexazecimal.
+Return ``True`` if the value is hexadecimal.
 
 Example:
 
@@ -746,7 +796,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return True if a text contains whitespaces.
+Return ``True`` if a text contains whitespaces.
 
 Example:
 
@@ -770,7 +820,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return is a substring is found in a list of string values.
+Return ``True`` if a substring is found in a list of string values.
 
 Example:
 
@@ -1019,6 +1069,137 @@ Returns:
   d94a45acd81f8e3107d237dbc0d5d195f6a52a0d188bc0284c0763ece1eac9f9496fb6a531a296074c87b3540398dace1222b42e150e67c9301383fde3d66ae5
 
 
+.. jinja_ref:: set_dict_key_value
+
+``set_dict_key_value``
+----------------------
+
+..versionadded:: Neon
+
+Allows you to set a value in a nested dictionary without having to worry if all the nested keys actually exist.
+Missing keys will be automatically created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {} %}
+  {{ foo | set_dict_key_value('bar:baz', 42) }}
+
+Example 2:
+  {{ {} | set_dict_key_value('bar.baz.qux', 42, delimiter='.') }}
+
+Returns:
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': 42}}
+
+Example 2:
+  {'bar': {'baz': {'qux': 42}}}
+
+
+.. jinja_ref:: append_dict_key_value
+
+``append_dict_key_value``
+-------------------------
+
+..versionadded:: Neon
+
+Allows you to append to a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
+Missing keys will automatically be created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {'bar': {'baz': [1, 2]}} %}
+  {{ foo | append_dict_key_value('bar:baz', 42) }}
+
+Example 2:
+  {%- set foo = {} %}
+  {{ foo | append_dict_key_value('bar:baz:qux', 42) }}
+
+Returns:
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': [1, 2, 42]}}
+
+Example 2:
+  {'bar': {'baz': {'qux': [42]}}}
+
+
+.. jinja_ref:: extend_dict_key_value
+
+``extend_dict_key_value``
+-------------------------
+
+..versionadded:: Neon
+
+Allows you to extend a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
+Missing keys will automatically be created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {'bar': {'baz': [1, 2]}} %}
+  {{ foo | extend_dict_key_value('bar:baz', [42, 42]) }}
+
+Example 2:
+  {{ {} | extend_dict_key_value('bar:baz:qux', [42]) }}
+
+Returns:
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': [1, 2, 42, 42]}}
+
+Example 2:
+  {'bar': {'baz': {'qux': [42]}}}
+
+
+.. jinja_ref:: update_dict_key_value
+
+``update_dict_key_value``
+-------------------------
+
+..versionadded:: Neon
+
+Allows you to update a dictionary nested (deep) in another dictionary without having to worry if all the nested keys actually exist.
+Missing keys will automatically be created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {'bar': {'baz': {'qux': 1}}} %}
+  {{ foo | update_dict_key_value('bar:baz', {'quux': 3}) }}
+
+Example 2:
+  {{ {} | update_dict_key_value('bar:baz:qux', {'quux': 3}) }}
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': {'qux': 1, 'quux': 3}}}
+
+Example 2:
+  {'bar': {'baz': {'qux': {'quux': 3}}}}
+
+
 .. jinja_ref:: md5
 
 ``md5``
@@ -1212,8 +1393,95 @@ Returns:
 
   'default'
 
+
+.. jinja_ref:: json_query
+
+``json_query``
+--------------
+
+.. versionadded:: Neon
+
+A port of Ansible ``json_query`` Jinja filter to make queries against JSON data using `JMESPath language`_.
+Could be used to filter ``pillar`` data, ``yaml`` maps, and together with :jinja_ref:`http_query`.
+Depends on the `jmespath`_ Python module.
+
+Examples:
+
+.. code-block:: jinja
+
+  Example 1: {{ [1, 2, 3, 4, [5, 6]] | json_query('[]') }}
+
+  Example 2: {{
+  {"machines": [
+    {"name": "a", "state": "running"},
+    {"name": "b", "state": "stopped"},
+    {"name": "b", "state": "running"}
+  ]} | json_query("machines[?state=='running'].name") }}
+
+  Example 3: {{
+  {"services": [
+    {"name": "http", "host": "1.2.3.4", "port": 80},
+    {"name": "smtp", "host": "1.2.3.5", "port": 25},
+    {"name": "ssh",  "host": "1.2.3.6", "port": 22},
+  ]} | json_query("services[].port") }}
+
+Returns:
+
+.. code-block:: text
+
+  Example 1: [1, 2, 3, 4, 5, 6]
+
+  Example 2: ['a', 'b']
+
+  Example 3: [80, 25, 22]
+
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
+.. _`JMESPath language`: http://jmespath.org/
+.. _`jmespath`: https://github.com/jmespath/jmespath.py
+
+
+.. jinja_ref:: to_snake_case
+
+``to_snake_case``
+-----------------
+
+.. versionadded:: Neon
+
+Converts a string from camelCase (or CamelCase) to snake_case.
+
+.. code-block:: jinja
+
+  Example: {{ camelsWillLoveThis | to_snake_case }}
+
+Returns:
+
+.. code-block:: text
+
+  Example: camels_will_love_this
+
+
+.. jinja_ref:: to_camelcase
+
+``to_camelcase``
+----------------
+
+.. versionadded:: Neon
+
+Converts a string from snake_case to camelCase (or UpperCamelCase if so indicated).
+
+.. code-block:: jinja
+
+  Example 1: {{ snake_case_for_the_win | to_camelcase }}
+
+  Example 2: {{ snake_case_for_the_win | to_camelcase(uppercamel=True) }}
+
+Returns:
+
+.. code-block:: text
+
+  Example 1: snakeCaseForTheWin
+  Example 2: SnakeCaseForTheWin
 
 Networking Filters
 ------------------
@@ -1465,6 +1733,9 @@ Example:
 Return the ip resolved by dns, but do not exit on failure, only raise an
 exception. Obeys system preference for IPv4/6 address resolution.
 
+This function tries to connect to the address/port before considering it
+valid and therefor requires a port to test. The default port tested is 80.
+
 Example:
 
 .. code-block:: jinja
@@ -1479,6 +1750,15 @@ Returns:
 
 File filters
 ------------
+
+.. jinja_ref:: connection_check
+
+``connection_check``
+--------------------
+
+.. versionadded:: Neon
+
+Return the IP resolved by DNS. This is an alias of ``dns_check``.
 
 .. jinja_ref:: is_text_file
 

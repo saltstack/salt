@@ -8,21 +8,25 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
+import os
 import shutil
 import tempfile
+import textwrap
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import with_tempdir
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from tests.support.paths import TMP
 
 # Import salt libs
+import salt.exceptions
 import salt.fileclient
 import salt.pillar
 import salt.utils.stringutils
-import salt.exceptions
+
+from salt.utils.files import fopen
 
 
 class MockFileclient(object):
@@ -351,7 +355,7 @@ class PillarTestCase(TestCase):
             'kernel': 'Linux'
         }
 
-        tempdir = tempfile.mkdtemp(dir=TMP)
+        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         try:
             sls_files = self._setup_test_topfile_sls_pillar_match(
                 tempdir,)
@@ -599,7 +603,7 @@ class PillarTestCase(TestCase):
         }
 
         def _run_test(nodegroup_order, glob_order, expected):
-            tempdir = tempfile.mkdtemp(dir=TMP)
+            tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
             try:
                 sls_files = self._setup_test_topfile_sls(
                     tempdir,
@@ -818,6 +822,143 @@ sub_with_slashes:
             'test.sub_with_init_dot': {'path': '', 'dest': sub_with_init_dot_sls.name},
             'test.sub.with.slashes': {'path': '', 'dest': sub_with_slashes_sls.name},
         }
+
+    @with_tempdir()
+    def test_relative_include(self, tempdir):
+        join = os.path.join
+        with fopen(join(tempdir, 'top.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    base:
+                      '*':
+                        - includer
+                        - simple_includer
+                        - includes.with.more.depth
+                '''),
+                file=f,
+            )
+        includer_dir = join(tempdir, 'includer')
+        os.makedirs(includer_dir)
+        with fopen(join(includer_dir, 'init.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    include:
+                      - .this
+                      - includer.that
+                '''),
+                file=f,
+            )
+        with fopen(join(includer_dir, 'this.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    this:
+                        is all good
+                '''),
+                file=f,
+            )
+        with fopen(join(includer_dir, 'that.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    that:
+                        is also all good
+                '''),
+                file=f,
+            )
+
+        with fopen(join(tempdir, 'simple_includer.sls'), 'w') as simpleincluder:
+            print(
+                textwrap.dedent('''
+                    include:
+                      - .simple
+                      - super_simple
+                '''),
+                file=simpleincluder,
+            )
+        with fopen(join(tempdir, 'simple.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    simple:
+                      simon
+                '''),
+                file=f,
+            )
+        with fopen(join(tempdir, 'super_simple.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    super simple:
+                      a caveman
+                '''),
+                file=f,
+            )
+
+        depth_dir = join(tempdir, 'includes', 'with', 'more')
+        os.makedirs(depth_dir)
+        with fopen(join(depth_dir, 'depth.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    include:
+                      - .ramble
+                      - includes.with.more.doors
+
+                    mordor:
+                        has dark depths
+                '''),
+                file=f,
+            )
+
+        with fopen(join(depth_dir, 'ramble.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    found:
+                        my precious
+                '''),
+                file=f,
+            )
+
+        with fopen(join(depth_dir, 'doors.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    mojo:
+                        bad risin'
+                '''),
+                file=f,
+            )
+        opts = {
+            'optimization_order': [0, 1, 2],
+            'renderer': 'yaml',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': 'top.sls',
+            'pillar_roots': {'base': [tempdir]},
+            'extension_modules': '',
+            'saltenv': 'base',
+            'file_roots': [],
+            'file_ignore_regex': None,
+            'file_ignore_glob': None,
+        }
+        grains = {
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
+            'oscodename': 'raring',
+            'osfullname': 'Ubuntu',
+            'osrelease': '13.04',
+            'kernel': 'Linux',
+        }
+        pillar = salt.pillar.Pillar(opts, grains, 'minion', 'base')
+        # Make sure that confirm_top.confirm_top returns True
+        pillar.matchers['confirm_top.confirm_top'] = lambda *x, **y: True
+
+        # Act
+        compiled_pillar = pillar.compile_pillar()
+
+        # Assert
+        self.assertEqual(compiled_pillar['this'], 'is all good')
+        self.assertEqual(compiled_pillar['that'], 'is also all good')
+        self.assertEqual(compiled_pillar['simple'], 'simon')
+        self.assertEqual(compiled_pillar['super simple'], 'a caveman')
+        self.assertEqual(compiled_pillar['mordor'], 'has dark depths')
+        self.assertEqual(compiled_pillar['found'], 'my precious')
+        self.assertEqual(compiled_pillar['mojo'], "bad risin'")
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

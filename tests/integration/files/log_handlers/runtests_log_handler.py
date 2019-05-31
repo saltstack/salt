@@ -19,10 +19,8 @@ import logging
 import threading
 from multiprocessing import Queue
 
-# Import 3rd-party libs
-import msgpack
-
 # Import Salt libs
+import salt.utils.msgpack
 from salt.ext import six
 from salt.utils.platform import is_darwin
 import salt.log.setup
@@ -57,10 +55,6 @@ def setup_handlers():
             pass
         sock.close()
 
-    # One million log messages is more than enough to queue.
-    # Above that value, if `process_queue` can't process fast enough,
-    # start dropping. This will contain a memory leak in case `process_queue`
-    # can't process fast enough of in case it can't deliver the log records at all.
     if is_darwin():
         queue_size = 32767
     else:
@@ -95,13 +89,15 @@ def process_queue(port, queue):
                 break
             # Just log everything, filtering will happen on the main process
             # logging handlers
-            sock.sendall(msgpack.dumps(record.__dict__, encoding='utf-8'))
+            sock.sendall(salt.utils.msgpack.dumps(record.__dict__,
+                                                  encoding='utf-8'))
         except (IOError, EOFError, KeyboardInterrupt, SystemExit):
             try:
                 sock.shutdown(socket.SHUT_RDWR)
                 sock.close()
-            except (OSError, socket.error):
-                pass
+            except socket.error as exc:
+                if exc.errno != errno.ENOTCONN:
+                    raise
             break
         except socket.error as exc:
             if exc.errno == errno.EPIPE:

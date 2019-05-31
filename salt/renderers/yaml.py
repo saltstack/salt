@@ -69,7 +69,7 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
             raise SaltRenderError(err_type, line_num, exc.problem_mark.buffer)
         except (ParserError, ConstructorError) as exc:
             raise SaltRenderError(exc)
-        if len(warn_list) > 0:
+        if warn_list:
             for item in warn_list:
                 log.warning(
                     '%s found in %s saltenv=%s',

@@ -84,7 +84,6 @@ import logging
 from salt.exceptions import CommandExecutionError
 from salt.output import nested
 import salt.utils.path
-import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -163,9 +162,7 @@ def present(name,
             port_fwd=None,
             prune_port_fwd=False,
             services=None,
-            # TODO: prune_services=False in future release
-            # prune_services=False,
-            prune_services=None,
+            prune_services=False,
             interfaces=None,
             prune_interfaces=False,
             sources=None,
@@ -206,7 +203,7 @@ def present(name,
     services : None
         List of services to add to the zone.
 
-    prune_services : True
+    prune_services : False
         If ``True``, remove all but the specified services from the zone.
         .. note:: Currently defaults to True for compatibility, but will be changed to False in a future release.
 
@@ -228,15 +225,6 @@ def present(name,
     prune_rich_rules : False
         If ``True``, remove all but the specified rich rules from the zone.
     '''
-
-    # if prune_services == None, set to True and log a deprecation warning
-    if prune_services is None:
-        prune_services = True
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'prune_services\' argument default is currently True, '
-            'but will be changed to False in the Neon release.')
-
     ret = _present(name, block_icmp, prune_block_icmp, default, masquerade, ports, prune_ports,
             port_fwd, prune_port_fwd, services, prune_services, interfaces, prune_interfaces,
             sources, prune_sources, rich_rules, prune_rich_rules)

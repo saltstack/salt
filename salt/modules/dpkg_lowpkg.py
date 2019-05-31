@@ -135,7 +135,7 @@ def unpurge(*packages):
     return salt.utils.data.compare_dicts(old, new)
 
 
-def list_pkgs(*packages):
+def list_pkgs(*packages, **kwargs):
     '''
     List the packages currently installed in a dict::
 
@@ -169,7 +169,7 @@ def list_pkgs(*packages):
     return pkgs
 
 
-def file_list(*packages):
+def file_list(*packages, **kwargs):
     '''
     List the files that belong to a package. Not specifying any packages will
     return a list of _every_ file on the system's package database (not
@@ -211,7 +211,7 @@ def file_list(*packages):
     return {'errors': errors, 'files': list(ret)}
 
 
-def file_dict(*packages):
+def file_dict(*packages, **kwargs):
     '''
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of _every_ file on the system's
@@ -252,6 +252,38 @@ def file_dict(*packages):
     return {'errors': errors, 'packages': ret}
 
 
+def _get_pkg_build_time(name):
+    '''
+    Get package build time, if possible.
+
+    :param name:
+    :return:
+    '''
+    iso_time = iso_time_t = None
+    changelog_dir = os.path.join('/usr/share/doc', name)
+    if os.path.exists(changelog_dir):
+        for fname in os.listdir(changelog_dir):
+            try:
+                iso_time_t = int(os.path.getmtime(os.path.join(changelog_dir, fname)))
+                iso_time = datetime.datetime.utcfromtimestamp(iso_time_t).isoformat() + 'Z'
+                break
+            except OSError:
+                pass
+
+    # Packager doesn't care about Debian standards, therefore Plan B: brute-force it.
+    if not iso_time:
+        for pkg_f_path in __salt__['cmd.run']('dpkg-query -L {}'.format(name)).splitlines():
+            if 'changelog' in pkg_f_path.lower() and os.path.exists(pkg_f_path):
+                try:
+                    iso_time_t = int(os.path.getmtime(pkg_f_path))
+                    iso_time = datetime.datetime.utcfromtimestamp(iso_time_t).isoformat() + 'Z'
+                    break
+                except OSError:
+                    pass
+
+    return iso_time, iso_time_t
+
+
 def _get_pkg_info(*packages, **kwargs):
     '''
     Return list of package information. If 'packages' parameter is empty,
@@ -274,7 +306,7 @@ def _get_pkg_info(*packages, **kwargs):
     ret = []
     cmd = "dpkg-query -W -f='package:" + bin_var + "\\n" \
           "revision:${binary:Revision}\\n" \
-          "architecture:${Architecture}\\n" \
+          "arch:${Architecture}\\n" \
           "maintainer:${Maintainer}\\n" \
           "summary:${Summary}\\n" \
           "source:${source:Package}\\n" \
@@ -287,6 +319,7 @@ def _get_pkg_info(*packages, **kwargs):
           "SHA256:${SHA256}\\n" \
           "origin:${Origin}\\n" \
           "homepage:${Homepage}\\n" \
+          "status:${db:Status-Abbrev}\\n" \
           "======\\n" \
           "description:${Description}\\n" \
           "------\\n'"
@@ -307,9 +340,14 @@ def _get_pkg_info(*packages, **kwargs):
             key, value = pkg_info_line.split(":", 1)
             if value:
                 pkg_data[key] = value
-            install_date = _get_pkg_install_time(pkg_data.get('package'))
-            if install_date:
-                pkg_data['install_date'] = install_date
+        install_date, install_date_t = _get_pkg_install_time(pkg_data.get('package'), pkg_data.get('arch'))
+        if install_date:
+            pkg_data['install_date'] = install_date
+            pkg_data['install_date_time_t'] = install_date_t  # Unix ticks
+        build_date, build_date_t = _get_pkg_build_time(pkg_data.get('package'))
+        if build_date:
+            pkg_data['build_date'] = build_date
+            pkg_data['build_date_time_t'] = build_date_t
         pkg_data['description'] = pkg_descr.split(":", 1)[-1]
         ret.append(pkg_data)
 
@@ -335,19 +373,32 @@ def _get_pkg_license(pkg):
     return ", ".join(sorted(licenses))
 
 
-def _get_pkg_install_time(pkg):
+def _get_pkg_install_time(pkg, arch=None):
     '''
     Return package install time, based on the /var/lib/dpkg/info/<package>.list
 
     :return:
     '''
-    iso_time = None
+    iso_time = iso_time_t = None
+    loc_root = '/var/lib/dpkg/info'
     if pkg is not None:
-        location = "/var/lib/dpkg/info/{0}.list".format(pkg)
-        if os.path.exists(location):
-            iso_time = datetime.datetime.utcfromtimestamp(int(os.path.getmtime(location))).isoformat() + "Z"
+        locations = []
+        if arch is not None and arch != 'all':
+            locations.append(os.path.join(loc_root, '{0}:{1}.list'.format(pkg, arch)))
 
-    return iso_time
+        locations.append(os.path.join(loc_root, '{0}.list'.format(pkg)))
+        for location in locations:
+            try:
+                iso_time_t = int(os.path.getmtime(location))
+                iso_time = datetime.datetime.utcfromtimestamp(iso_time_t).isoformat() + 'Z'
+                break
+            except OSError:
+                pass
+
+        if iso_time is None:
+            log.debug('Unable to get package installation time for package "%s".', pkg)
+
+    return iso_time, iso_time_t
 
 
 def _get_pkg_ds_avail():
@@ -397,6 +448,15 @@ def info(*packages, **kwargs):
 
         .. versionadded:: 2016.11.3
 
+    attr
+        Comma-separated package attributes. If no 'attr' is specified, all available attributes returned.
+
+        Valid attributes are:
+            version, vendor, release, build_date, build_date_time_t, install_date, install_date_time_t,
+            build_host, group, source_rpm, arch, epoch, size, license, signature, packager, url, summary, description.
+
+        .. versionadded:: Neon
+
     CLI example:
 
     .. code-block:: bash
@@ -411,6 +471,10 @@ def info(*packages, **kwargs):
 
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     failhard = kwargs.pop('failhard', True)
+    attr = kwargs.pop('attr', None) or None
+    if attr:
+        attr = attr.split(',')
+
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
@@ -430,6 +494,14 @@ def info(*packages, **kwargs):
         lic = _get_pkg_license(pkg['package'])
         if lic:
             pkg['license'] = lic
-        ret[pkg['package']] = pkg
+
+        # Remove keys that aren't in attrs
+        pkg_name = pkg['package']
+        if attr:
+            for k in list(pkg.keys())[:]:
+                if k not in attr:
+                    del pkg[k]
+
+        ret[pkg_name] = pkg
 
     return ret

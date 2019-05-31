@@ -122,7 +122,7 @@ class _LDAPConnection(object):
             self.ldap.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
 
             if not anonymous:
-                if self.bindpw is None or len(self.bindpw) < 1:
+                if not self.bindpw:
                     raise CommandExecutionError(
                         'LDAP bind password is not set: password cannot be empty if auth.ldap.anonymous is False'
                     )
@@ -242,7 +242,7 @@ def _bind(username, password, anonymous=False, opts=None):
                 'scope:%s', paramvalues['filter'], basedn, scope
             )
             result = _ldap.search_s(basedn, int(scope), paramvalues['filter'])
-            if len(result) < 1:
+            if not result:
                 log.warning('Unable to find user %s', username)
                 return False
             elif len(result) > 1:

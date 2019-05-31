@@ -56,7 +56,7 @@ import sys
 
 # Import 3rd-party libs
 from salt.ext import six
-# pylint: disable=import-error
+# pylint: disable=import-error,no-name-in-module
 try:
     import django
     from django.db import connection
@@ -66,7 +66,7 @@ except Exception as exc:
     # the following line to display additional information
     #log.warning('Could not load Django auth module. Found exception: %s', exc)
     HAS_DJANGO = False
-# pylint: enable=import-error
+# pylint: enable=import-error,no-name-in-module
 
 DJANGO_AUTH_CLASS = None
 

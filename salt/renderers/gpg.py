@@ -14,6 +14,20 @@ developers can add new secrets quickly and easily.
 This renderer requires the gpg_ binary. No python libraries are required as of
 the 2015.8.0 release.
 
+.. _gpg-homedir:
+
+GPG Homedir
+-----------
+
+When running gpg commands, it is important to run commands as the user that owns
+the keys directory. If salt-master runs as user salt, then ``su salt`` before
+running any gpg commands.
+
+To avoid compatibility and upgrade problems and to provide a standardized location
+for keys, salt uses ``/etc/salt/gpgkeys``. In order to make the gpg command use
+this directory, use ``gpg --homedir /etc/salt/gpgkeys`` with gpg commands or set
+the homedir for that user using ``echo 'homedir /etc/salt/gpgkeys' >> ~/.gnupg``.
+
 .. _gpg: https://gnupg.org
 
 Setup
@@ -37,6 +51,54 @@ your application. Be sure to back up the ``gpgkeys`` directory someplace safe!
     increasing the system entropy. On virtualised Linux systems, this can often
     be achieved by installing the ``rng-tools`` package.
 
+Import keys to a master
+************************
+
+If the keys already exist and need to be imported to the salt master, run the
+following to import them.
+
+.. code-block:: bash
+
+    gpg --homedir /etc/salt/gpgkeys --import /path/to/private.key
+    gpg --homedir /etc/salt/gpgkeys --import /path/to/pubkey.gpg
+
+Note: The default `GPG Homedir <gpg-homedir>` is ``~/.gnupg`` and needs to be
+set using ``--homedir``.
+
+Adjust trust level of imported keys
+***********************************
+
+In some cases, importing existing keys may not be enough and the trust level of
+the key needs to be adjusted. This can be done by editing the key. The ``key_id``
+and the actual trust level of the key can be seen by listing the already imported
+keys.
+
+.. code-block:: bash
+
+    gpg --homedir /etc/salt/gpgkeys --list-keys
+    gpg --homedir /etc/salt/gpgkeys --list-secret-keys
+
+If the trust-level is not ``ultimate`` it needs to be changed by running
+
+.. code-block:: bash
+
+    gpg --homedir /etc/salt/gpgkeys --edit-key <key_id>
+
+This will open an interactive shell for the management of the GPG encryption key.
+Type ``trust`` to be able to set the trust level for the key and then select ``5
+(I trust ultimately)``. Then quit the shell by typing ``save``.
+
+Different GPG Location
+**********************
+
+In some cases, it's preferable to have gpg keys stored on removeable media or
+other non-standard locations. This can be done using the ``gpg_keydir`` option
+on the salt master. This will also require using a different path to ``--homedir``,
+as mentioned in the `GPG Homedir <gpg-homedir>` section.
+
+.. code-block:: bash
+
+    gpg_keydir: <path/to/homedir>
 
 Export the Public Key
 ---------------------

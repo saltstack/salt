@@ -246,6 +246,7 @@ def running(name,
             nic_profile=None,
             interfaces=None,
             graphics=None,
+            loader=None,
             seed=True,
             install=True,
             pub_key=None,
@@ -278,7 +279,9 @@ def running(name,
         .. versionadded:: 2019.2.0
     :param disks:
         List of disk to create for the new virtual machine.
-        See :ref:`init-disk-def` for more details on the items on this list.
+        See the **Disk Definitions** section of the :py:func:`virt.init
+        <salt.modules.virt.init>` function for more details on the items on
+        this list.
 
         .. versionadded:: 2019.2.0
     :param nic_profile:
@@ -287,12 +290,21 @@ def running(name,
         .. versionadded:: 2019.2.0
     :param interfaces:
         List of network interfaces to create for the new virtual machine.
-        See :ref:`init-nic-def` for more details on the items on this list.
+        See the **Network Interface Definitions** section of the
+        :py:func:`virt.init <salt.modules.virt.init>` function for more details
+        on the items on this list.
 
         .. versionadded:: 2019.2.0
     :param graphics:
         Graphics device to create for the new virtual machine.
-        See :ref:`init-graphics-def` for more details on this dictionary
+        See the **Graphics Definition** section of the :py:func:`virt.init
+        <salt.modules.virt.init>` function for more details on this dictionary.
+
+        .. versionadded:: 2019.2.0
+    :param loader:
+        Firmware loader for the new virtual machine.
+        See the **Loader Definition** section of the :py:func:`virt.init
+        <salt.modules.virt.init>` function for more details on this dictionary.
 
         .. versionadded:: 2019.2.0
     :param saltenv:
@@ -451,6 +463,7 @@ def running(name,
                                   nic=nic_profile,
                                   interfaces=interfaces,
                                   graphics=graphics,
+                                  loader=loader,
                                   seed=seed,
                                   install=install,
                                   pub_key=pub_key,
@@ -713,17 +726,21 @@ def pool_running(name,
 
     :param ptype: libvirt pool type
     :param target: full path to the target device or folder. (Default: ``None``)
-    :param permissions:
-        target permissions. See :ref:`pool-define-permissions` for more details on this structure.
+    :param permissions: target permissions. See the **Permissions definition**
+        section of the :py:func:`virt.pool_define
+        <salt.module.virt.pool_define>` documentation for more details on this
+        structure.
     :param source:
         dictionary containing keys matching the ``source_*`` parameters in function
-        :func:`salt.modules.virt.pool_define`.
+        :py:func:`virt.pool_define <salt.modules.virt.pool_define>`.
     :param transient:
-        when set to ``True``, the pool will be automatically undefined after being stopped. (Default: ``False``)
+        when set to ``True``, the pool will be automatically undefined after
+        being stopped. (Default: ``False``)
     :param autostart:
         Whether to start the pool when booting the host. (Default: ``True``)
     :param start:
-        When ``True``, define and start the pool, otherwise the pool will be left stopped.
+        When ``True``, define and start the pool, otherwise the pool will be
+        left stopped.
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults

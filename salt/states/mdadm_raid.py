@@ -98,7 +98,7 @@ def present(name,
         if dev == 'missing' or not __salt__['file.access'](dev, 'f'):
             missing.append(dev)
             continue
-        superblock = __salt__['raid.examine'](dev)
+        superblock = __salt__['raid.examine'](dev, quiet=True)
 
         if 'MD_UUID' in superblock:
             uuid = superblock['MD_UUID']
@@ -127,12 +127,12 @@ def present(name,
     if present:
         do_assemble = False
         do_create = False
-    elif len(devices_with_superblock) > 0:
+    elif devices_with_superblock:
         do_assemble = True
         do_create = False
         verb = 'assembled'
     else:
-        if len(new_devices) == 0:
+        if not new_devices:
             ret['comment'] = 'All devices are missing: {0}.'.format(missing)
             ret['result'] = False
             return ret
@@ -161,11 +161,11 @@ def present(name,
             ret['comment'] = 'Raid will be {0} with: {1}'.format(verb, res)
             ret['result'] = None
 
-        if (do_assemble or present) and len(new_devices) > 0:
+        if (do_assemble or present) and new_devices:
             ret['comment'] += ' New devices will be added: {0}'.format(new_devices)
             ret['result'] = None
 
-        if len(missing) > 0:
+        if missing:
             ret['comment'] += ' Missing devices: {0}'.format(missing)
 
         return ret
@@ -195,7 +195,7 @@ def present(name,
     else:
         ret['comment'] = 'Raid {0} already present.'.format(name)
 
-    if (do_assemble or present) and len(new_devices) > 0 and ret['result']:
+    if (do_assemble or present) and new_devices and ret['result']:
         for d in new_devices:
             res = __salt__['raid.add'](name, d)
             if not res:
@@ -206,7 +206,7 @@ def present(name,
         if ret['result']:
             ret['changes']['added'] = new_devices
 
-    if len(missing) > 0:
+    if missing:
         ret['comment'] += ' Missing devices: {0}'.format(missing)
 
     return ret

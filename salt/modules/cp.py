@@ -525,6 +525,29 @@ def cache_file(path, saltenv='base', source_hash=None):
     return result
 
 
+def cache_dest(url, saltenv='base'):
+    '''
+    .. versionadded:: Neon
+
+    Returns the expected cache path for the file, if cached using
+    :py:func:`cp.cache_file <salt.modules.cp.cache_file>`.
+
+    .. note::
+        This only returns the _expected_ path, it does not tell you if the URL
+        is really cached. To check if the URL is cached, use
+        :py:func:`cp.is_cached <salt.modules.cp.is_cached>` instead.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' cp.cache_dest https://foo.com/bar.rpm
+        salt '*' cp.cache_dest salt://my/file
+        salt '*' cp.cache_dest salt://my/file saltenv=dev
+    '''
+    return _client().cache_dest(url, saltenv)
+
+
 def cache_files(paths, saltenv='base'):
     '''
     Used to gather many files from the Master, the gathered files will be

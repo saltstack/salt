@@ -93,6 +93,7 @@ def md5_digest(instr):
     )
 
 
+@jinja_filter('sha1')
 def sha1_digest(instr):
     '''
     Generate an sha1 hash of a given string.
@@ -137,7 +138,6 @@ def hmac_signature(string, shared_secret, challenge_hmac):
     return valid_hmac == challenge
 
 
-@jinja_filter('rand_str')  # Remove this for Neon
 @jinja_filter('random_hash')
 def random_hash(size=9999999999, hash_type=None):
     '''

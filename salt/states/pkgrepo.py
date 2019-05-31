@@ -393,10 +393,7 @@ def managed(name, ppa=None, **kwargs):
         kwargs.pop(kwarg, None)
 
     try:
-        pre = __salt__['pkg.get_repo'](
-            repo,
-            ppa_auth=kwargs.get('ppa_auth', None)
-        )
+        pre = __salt__['pkg.get_repo'](repo=repo, **kwargs)
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = \
@@ -512,10 +509,7 @@ def managed(name, ppa=None, **kwargs):
         return ret
 
     try:
-        post = __salt__['pkg.get_repo'](
-            repo,
-            ppa_auth=kwargs.get('ppa_auth', None)
-        )
+        post = __salt__['pkg.get_repo'](repo=repo, **kwargs)
         if pre:
             for kwarg in sanitizedkwargs:
                 if post.get(kwarg) != pre.get(kwarg):
@@ -608,9 +602,7 @@ def absent(name, **kwargs):
         return ret
 
     try:
-        repo = __salt__['pkg.get_repo'](
-            name, ppa_auth=kwargs.get('ppa_auth', None)
-        )
+        repo = __salt__['pkg.get_repo'](name, **kwargs)
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = \

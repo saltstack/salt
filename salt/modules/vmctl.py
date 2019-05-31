@@ -244,13 +244,13 @@ def start(name=None, id=None, bootpath=None, disk=None, disks=None, local_iface=
     if local_iface:
         cmd.append('-L')
 
-    if disk and (disks and len(disks) > 0):
+    if disk and disks:
         raise SaltInvocationError('Must provide either "disks" or "disk"')
 
     if disk:
         cmd.extend(['-d', disk])
 
-    if disks and len(disks) > 0:
+    if disks:
         cmd.extend(['-d', x] for x in disks)
 
     # Before attempting to define a new VM, make sure it doesn't already exist.

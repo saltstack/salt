@@ -96,7 +96,7 @@ def present(name,
 
     # check if user exists
     users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
-    if len(users) > 0:
+    if users:
         # check for errors returned in users e.g.
         #    users= (False, 'Failed to connect to MongoDB database localhost:27017')
         #    users= (False, 'not authorized on admin to execute command { usersInfo: "root" }')

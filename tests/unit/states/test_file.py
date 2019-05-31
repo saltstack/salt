@@ -818,7 +818,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                     if salt.utils.platform.is_windows():
                                         self.assertDictEqual(filestate.managed
                                                              (name, user=user,
-                                                              group=group), ret)
+                                                              group=group
+                                                              ), ret)
                                     else:
                                         self.assertDictEqual(filestate.managed
                                                              (name, user=user,
@@ -874,8 +875,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.check_perms': mock_perms,
                                              'file.mkdir': mock_t}), \
              patch('salt.utils.win_dacl.get_sid', mock_error), \
-             patch('os.path.isdir', mock_t), \
-             patch('salt.states.file._check_directory_win', mock_check):
+             patch('os.path.isdir', mock_t):
+                 #, \
+             #patch('salt.states.file._check_directory_win', mock_check):
             if salt.utils.platform.is_windows():
                 comt = ('User salt is not available Group salt'
                         ' is not available')
@@ -883,8 +885,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 comt = ('User salt is not available Group saltstack'
                         ' is not available')
             ret.update({'comment': comt, 'name': name})
-            self.assertDictEqual(
-                filestate.directory(name, user=user, group=group), ret)
+            with patch('salt.states.file._check_directory_win', mock_check):
+                self.assertDictEqual(
+                    filestate.directory(name, user=user, group=group), ret)
 
             with patch.object(os.path, 'isabs', mock_f):
                 comt = ('Specified file {0} is not an absolute path'
@@ -951,7 +954,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                  ret)
 
                         with patch.object(os.path, 'isdir',
-                                          MagicMock(side_effect=[True, False, True, True])):
+                                          MagicMock(side_effect=[True, False, True, True])), \
+                              patch('salt.states.file._check_directory_win', mock_check):
                             comt = ('Failed to create directory {0}'
                                     .format(name))
                             ret.update({'comment': comt, 'result': False})
@@ -965,7 +969,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                '"ignore_dirs" at the same '
                                                'time.',
                                     'changes': {}})
-                        with patch.object(os.path, 'isdir', mock_t):
+                        with patch.object(os.path, 'isdir', mock_t), \
+                              patch('salt.states.file._check_directory_win', mock_check):
                             self.assertDictEqual(filestate.directory
                                                  (name, user=user,
                                                   recurse=recurse, group=group),
@@ -974,6 +979,25 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             self.assertDictEqual(filestate.directory
                                                  (name, user=user, group=group),
                                                  ret)
+                    changes = {}
+                    mock_check = MagicMock(
+                        return_value=(True, 'The directory {0} is in the correct state'.format(name), changes)
+                    )
+                    with patch('salt.states.file._check_directory_win', mock_check):
+                        recurse = ['mode']
+                        ret.update({'comment': 'The directory {} is in the '
+                                               'correct state'.format(name),
+                                    'changes': {},
+                                    'result': True})
+                        with patch.object(os.path, 'isdir', mock_t):
+                            self.assertDictEqual(
+                                filestate.directory(
+                                    name, user=user, dir_mode=700,
+                                    recurse=recurse, group=group,
+                                    children_only=True
+                                ),
+                                ret,
+                            )
 
     # 'recurse' function tests: 1
 
@@ -1164,7 +1188,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             with patch.object(os.path, 'isabs', mock_t):
                 with patch.dict(filestate.__salt__,
-                                {'file.search': MagicMock(side_effect=[True, True, True, False, False])}):
+                                {'file.search': MagicMock(side_effect=[False, True, False, False])}):
                     comt = ('Pattern already commented')
                     ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(filestate.comment(name, regex), ret)
@@ -1174,7 +1198,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(filestate.comment(name, regex), ret)
 
                 with patch.dict(filestate.__salt__,
-                                {'file.search': MagicMock(side_effect=[False, True, False, True, True]),
+                                {'file.search': MagicMock(side_effect=[True, True, True]),
                                  'file.comment': mock_t,
                                  'file.comment_line': mock_t}):
                     with patch.dict(filestate.__opts__, {'test': True}):
@@ -1212,7 +1236,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             mock_t = MagicMock(return_value=True)
             mock_f = MagicMock(return_value=False)
-            mock = MagicMock(side_effect=[True, False, False, False, True, False,
+            mock = MagicMock(side_effect=[False, True,
+                                          False, False,
+                                          True,
                                           True, True])
             with patch.object(os.path, 'isabs', mock_f):
                 comt = ('Specified file {0} is not an absolute path'.format(name))
@@ -1520,7 +1546,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             with patch.object(os.path, 'lexists', mock_lex):
                 comt = ('The target file "{0}" exists and will not be '
                         'overwritten'.format(name))
-                ret.update({'comment': comt, 'result': False})
+                ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(filestate.rename(name, source), ret)
 
         mock_lex = MagicMock(side_effect=[True, True, True])
@@ -1979,7 +2005,6 @@ class TestFileTidied(TestCase):
                     os.path.join('test', 'test1', 'file1'),
                     os.path.join('test', 'test2', 'file2'),
                     os.path.join('test', 'file3')]},
-            'pchanges': {},
             'result': True,
             'comment': 'Removed 3 files or directories from directory {0}'.format(name),
         }
@@ -2005,7 +2030,6 @@ class TestFileTidied(TestCase):
                     os.path.join('test', 'file3'),
                     os.path.join('test', 'test1'),
                     os.path.join('test', 'test2')]},
-            'pchanges': {},
             'result': True,
             'comment': 'Removed 6 files or directories from directory {0}'.format(name),
         }
@@ -2016,7 +2040,6 @@ class TestFileTidied(TestCase):
         exp = {
             'name': 'test/',
             'changes': {},
-            'pchanges': {},
             'result': False,
             'comment': 'Specified file test/ is not an absolute path',
         }
@@ -2024,8 +2047,52 @@ class TestFileTidied(TestCase):
         exp = {
             'name': '/bad-directory-name/',
             'changes': {},
-            'pchanges': {},
             'result': False,
             'comment': '/bad-directory-name/ does not exist or is not a directory.',
         }
         assert filestate.tidied(name='/bad-directory-name/') == exp
+
+
+@skipIf(not salt.utils.platform.is_linux(), 'Selinux only supported on linux')
+class TestSelinux(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filestate: {
+                '__env__': 'base',
+                '__salt__': {
+                    'file.manage_file': False
+                    },
+                '__opts__': {'test': False, 'cachedir': ''},
+                '__instance_id__': '',
+                '__low__': {},
+                '__utils__': {},
+            }
+        }
+
+    def test_selinux_change(self):
+        file_name = '/tmp/some-test-file'
+        check_perms_result = [
+            {
+                "comment": "The file {0} is set to be changed".format(file_name),
+                "changes": {
+                    "selinux": {
+                        "New": "User: unconfined_u Type: lost_found_t",
+                        "Old": "User: system_u Type: user_tmp_t"
+                    }
+                },
+                "name": file_name,
+                "result": True
+            },
+            {
+                "luser": "root",
+                "lmode": "0644",
+                "lgroup": "root"
+            }
+        ]
+
+        with patch.object(os.path, 'exists', MagicMock(return_value=True)):
+            with patch.dict(filestate.__salt__, {'file.source_list': MagicMock(return_value=[file_name, None]),
+                                                 'file.check_perms': MagicMock(return_value=check_perms_result)
+                                                }):
+                ret = filestate.managed(file_name, selinux={'seuser': 'unconfined_u', 'setype': 'user_tmp_t'})
+                self.assertEqual(True, ret['result'])

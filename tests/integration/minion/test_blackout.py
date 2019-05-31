@@ -6,7 +6,6 @@ Tests for minion blackout
 # Import Python libs
 from __future__ import absolute_import
 import os
-import time
 import logging
 import textwrap
 
@@ -52,10 +51,13 @@ class MinionBlackoutTestCase(ModuleCase):
         self.addCleanup(self.cleanup_blackout_pillar)
 
     def tearDown(self):
-        self.end_blackout(sleep=False)
-        # Be sure to also refresh the sub_minion pillar
-        self.run_function('saltutil.refresh_pillar', minion_tgt='sub_minion')
-        time.sleep(10)  # wait for minion to exit blackout mode
+        self.end_blackout()
+        # Make sure we also refresh the sub_minion pillar
+        refreshed = self.run_function(
+            'saltutil.refresh_pillar',
+            minion_tgt='sub_minion',
+            **{'async': False})
+        self.assertTrue(refreshed)
         self.wait_for_all_jobs()
 
     def cleanup_blackout_pillar(self):
@@ -72,20 +74,23 @@ class MinionBlackoutTestCase(ModuleCase):
         self.wait_for_all_jobs()
         with salt.utils.files.fopen(self.blackout_pillar, 'w') as wfh:
             wfh.write(blackout_data)
-        self.run_function('saltutil.refresh_pillar')
-        time.sleep(10)  # wait for minion to enter blackout mode
+        refreshed = self.run_function(
+            'saltutil.refresh_pillar',
+            **{'async': False})
+        self.assertTrue(refreshed)
         log.info('Entered minion blackout.')
 
-    def end_blackout(self, sleep=True):
+    def end_blackout(self):
         '''
         takedown minion blackout mode
         '''
         log.info('Exiting minion blackout...')
         with salt.utils.files.fopen(self.blackout_pillar, 'w') as wfh:
             wfh.write('minion_blackout: False\n')
-        self.run_function('saltutil.refresh_pillar')
-        if sleep:
-            time.sleep(10)  # wait for minion to exit blackout mode
+        refreshed = self.run_function(
+            'saltutil.refresh_pillar',
+            **{'async': False})
+        self.assertTrue(refreshed)
         self.wait_for_all_jobs()
         log.info('Exited minion blackout.')
 

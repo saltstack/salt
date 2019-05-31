@@ -131,8 +131,8 @@ class DataTestCase(TestCase):
                 test_three_level_dict, 'a:b:c:v'
             )
         )
-        self.assertFalse(
         # Test regression in 2015.8 where 'a:c:v' would match 'a:b:c:v'
+        self.assertFalse(
             salt.utils.data.subdict_match(
                 test_three_level_dict, 'a:c:v'
             )
@@ -243,6 +243,30 @@ class DataTestCase(TestCase):
         ret = salt.utils.data.compare_dicts(old={'foo': 'bar'}, new={'foo': 'woz'})
         expected_ret = {'foo': {'new': 'woz', 'old': 'bar'}}
         self.assertDictEqual(ret, expected_ret)
+
+    def test_compare_lists_no_change(self):
+        ret = salt.utils.data.compare_lists(old=[1, 2, 3, 'a', 'b', 'c'],
+                                            new=[1, 2, 3, 'a', 'b', 'c'])
+        expected = {}
+        self.assertDictEqual(ret, expected)
+
+    def test_compare_lists_changes(self):
+        ret = salt.utils.data.compare_lists(old=[1, 2, 3, 'a', 'b', 'c'],
+                                            new=[1, 2, 4, 'x', 'y', 'z'])
+        expected = {'new': [4, 'x', 'y', 'z'], 'old': [3, 'a', 'b', 'c']}
+        self.assertDictEqual(ret, expected)
+
+    def test_compare_lists_changes_new(self):
+        ret = salt.utils.data.compare_lists(old=[1, 2, 3],
+                                            new=[1, 2, 3, 'x', 'y', 'z'])
+        expected = {'new': ['x', 'y', 'z']}
+        self.assertDictEqual(ret, expected)
+
+    def test_compare_lists_changes_old(self):
+        ret = salt.utils.data.compare_lists(old=[1, 2, 3, 'a', 'b', 'c'],
+                                            new=[1, 2, 3])
+        expected = {'old': ['a', 'b', 'c']}
+        self.assertDictEqual(ret, expected)
 
     def test_decode(self):
         '''
@@ -443,14 +467,18 @@ class DataTestCase(TestCase):
             BYTES,
             [123, 456.789, _b('спам'), True, False, None, _b(EGGS), BYTES],
             (987, 654.321, _b('яйца'), _b(EGGS), None, (True, _b(EGGS), BYTES)),
-            {_b('str_key'): _b('str_val'),
-             None: True,
-             123: 456.789,
-             _b(EGGS): BYTES,
-             _b('subdict'): {_b('unicode_key'): _b(EGGS),
-                             _b('tuple'): (123, _b('hello'), _b('world'), True, _b(EGGS), BYTES),
-                             _b('list'): [456, _b('спам'), False, _b(EGGS), BYTES]}},
-             OrderedDict([(_b('foo'), _b('bar')), (123, 456), (_b(EGGS), BYTES)])
+            {
+                _b('str_key'): _b('str_val'),
+                None: True,
+                123: 456.789,
+                _b(EGGS): BYTES,
+                _b('subdict'): {
+                    _b('unicode_key'): _b(EGGS),
+                    _b('tuple'): (123, _b('hello'), _b('world'), True, _b(EGGS), BYTES),
+                    _b('list'): [456, _b('спам'), False, _b(EGGS), BYTES]
+                }
+            },
+            OrderedDict([(_b('foo'), _b('bar')), (123, 456), (_b(EGGS), BYTES)])
         ]
 
         # Both keep=True and keep=False should work because the BYTES data is
@@ -549,7 +577,7 @@ class DataTestCase(TestCase):
             keep=False,
             preserve_tuples=True)
 
-        for index, item in enumerate(data):
+        for index, _ in enumerate(data):
             self.assertEqual(
                 salt.utils.data.encode(data[index], encoding,
                                        keep=True, preserve_tuples=True),
@@ -598,3 +626,251 @@ class DataTestCase(TestCase):
             salt.utils.data.stringify(['one', 'two', str('three'), 4, 5]),  # future lint: disable=blacklisted-function
             ['one', 'two', 'three', '4', '5']
         )
+
+    def test_json_query(self):
+        # Raises exception if jmespath module is not found
+        with patch('salt.utils.data.jmespath', None):
+            self.assertRaisesRegex(
+                RuntimeError, 'requires jmespath',
+                salt.utils.data.json_query, {}, '@'
+            )
+
+        # Test search
+        user_groups = {
+            'user1': {'groups': ['group1', 'group2', 'group3']},
+            'user2': {'groups': ['group1', 'group2']},
+            'user3': {'groups': ['group3']},
+        }
+        expression = '*.groups[0]'
+        primary_groups = ['group1', 'group1', 'group3']
+        self.assertEqual(
+            sorted(salt.utils.data.json_query(user_groups, expression)),
+            primary_groups
+        )
+
+
+class FilterFalseyTestCase(TestCase):
+    '''
+    Test suite for salt.utils.data.filter_falsey
+    '''
+
+    def test_nop(self):
+        '''
+        Test cases where nothing will be done.
+        '''
+        # Test with dictionary without recursion
+        old_dict = {'foo': 'bar', 'bar': {'baz': {'qux': 'quux'}}, 'baz': ['qux', {'foo': 'bar'}]}
+        new_dict = salt.utils.data.filter_falsey(old_dict)
+        self.assertEqual(old_dict, new_dict)
+        # Check returned type equality
+        self.assertIs(type(old_dict), type(new_dict))
+        # Test dictionary with recursion
+        new_dict = salt.utils.data.filter_falsey(old_dict, recurse_depth=3)
+        self.assertEqual(old_dict, new_dict)
+        # Test with list
+        old_list = ['foo', 'bar']
+        new_list = salt.utils.data.filter_falsey(old_list)
+        self.assertEqual(old_list, new_list)
+        # Check returned type equality
+        self.assertIs(type(old_list), type(new_list))
+        # Test with set
+        old_set = set(['foo', 'bar'])
+        new_set = salt.utils.data.filter_falsey(old_set)
+        self.assertEqual(old_set, new_set)
+        # Check returned type equality
+        self.assertIs(type(old_set), type(new_set))
+        # Test with OrderedDict
+        old_dict = OrderedDict([
+            ('foo', 'bar'),
+            ('bar', OrderedDict([('qux', 'quux')])),
+            ('baz', ['qux', OrderedDict([('foo', 'bar')])])
+        ])
+        new_dict = salt.utils.data.filter_falsey(old_dict)
+        self.assertEqual(old_dict, new_dict)
+        self.assertIs(type(old_dict), type(new_dict))
+        # Test excluding int
+        old_list = [0]
+        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type(0)])
+        self.assertEqual(old_list, new_list)
+        # Test excluding str (or unicode) (or both)
+        old_list = ['']
+        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type('')])
+        self.assertEqual(old_list, new_list)
+        # Test excluding list
+        old_list = [[]]
+        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type([])])
+        self.assertEqual(old_list, new_list)
+        # Test excluding dict
+        old_list = [{}]
+        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type({})])
+        self.assertEqual(old_list, new_list)
+
+    def test_filter_dict_no_recurse(self):
+        '''
+        Test filtering a dictionary without recursing.
+        This will only filter out key-values where the values are falsey.
+        '''
+        old_dict = {'foo': None,
+                    'bar': {'baz': {'qux': None, 'quux': '', 'foo': []}},
+                    'baz': ['qux'],
+                    'qux': {},
+                    'quux': []}
+        new_dict = salt.utils.data.filter_falsey(old_dict)
+        expect_dict = {'bar': {'baz': {'qux': None, 'quux': '', 'foo': []}}, 'baz': ['qux']}
+        self.assertEqual(expect_dict, new_dict)
+        self.assertIs(type(expect_dict), type(new_dict))
+
+    def test_filter_dict_recurse(self):
+        '''
+        Test filtering a dictionary with recursing.
+        This will filter out any key-values where the values are falsey or when
+        the values *become* falsey after filtering their contents (in case they
+        are lists or dicts).
+        '''
+        old_dict = {'foo': None,
+                    'bar': {'baz': {'qux': None, 'quux': '', 'foo': []}},
+                    'baz': ['qux'],
+                    'qux': {},
+                    'quux': []}
+        new_dict = salt.utils.data.filter_falsey(old_dict, recurse_depth=3)
+        expect_dict = {'baz': ['qux']}
+        self.assertEqual(expect_dict, new_dict)
+        self.assertIs(type(expect_dict), type(new_dict))
+
+    def test_filter_list_no_recurse(self):
+        '''
+        Test filtering a list without recursing.
+        This will only filter out items which are falsey.
+        '''
+        old_list = ['foo', None, [], {}, 0, '']
+        new_list = salt.utils.data.filter_falsey(old_list)
+        expect_list = ['foo']
+        self.assertEqual(expect_list, new_list)
+        self.assertIs(type(expect_list), type(new_list))
+        # Ensure nested values are *not* filtered out.
+        old_list = [
+            'foo',
+            ['foo'],
+            ['foo', None],
+            {'foo': 0},
+            {'foo': 'bar', 'baz': []},
+            [{'foo': ''}],
+        ]
+        new_list = salt.utils.data.filter_falsey(old_list)
+        self.assertEqual(old_list, new_list)
+        self.assertIs(type(old_list), type(new_list))
+
+    def test_filter_list_recurse(self):
+        '''
+        Test filtering a list with recursing.
+        This will filter out any items which are falsey, or which become falsey
+        after filtering their contents (in case they are lists or dicts).
+        '''
+        old_list = [
+            'foo',
+            ['foo'],
+            ['foo', None],
+            {'foo': 0},
+            {'foo': 'bar', 'baz': []},
+            [{'foo': ''}]
+        ]
+        new_list = salt.utils.data.filter_falsey(old_list, recurse_depth=3)
+        expect_list = ['foo', ['foo'], ['foo'], {'foo': 'bar'}]
+        self.assertEqual(expect_list, new_list)
+        self.assertIs(type(expect_list), type(new_list))
+
+    def test_filter_set_no_recurse(self):
+        '''
+        Test filtering a set without recursing.
+        Note that a set cannot contain unhashable types, so recursion is not possible.
+        '''
+        old_set = set([
+            'foo',
+            None,
+            0,
+            '',
+        ])
+        new_set = salt.utils.data.filter_falsey(old_set)
+        expect_set = set(['foo'])
+        self.assertEqual(expect_set, new_set)
+        self.assertIs(type(expect_set), type(new_set))
+
+    def test_filter_ordereddict_no_recurse(self):
+        '''
+        Test filtering an OrderedDict without recursing.
+        '''
+        old_dict = OrderedDict([
+            ('foo', None),
+            ('bar', OrderedDict([('baz', OrderedDict([('qux', None), ('quux', ''), ('foo', [])]))])),
+            ('baz', ['qux']),
+            ('qux', {}),
+            ('quux', [])
+        ])
+        new_dict = salt.utils.data.filter_falsey(old_dict)
+        expect_dict = OrderedDict([
+            ('bar', OrderedDict([('baz', OrderedDict([('qux', None), ('quux', ''), ('foo', [])]))])),
+            ('baz', ['qux']),
+        ])
+        self.assertEqual(expect_dict, new_dict)
+        self.assertIs(type(expect_dict), type(new_dict))
+
+    def test_filter_ordereddict_recurse(self):
+        '''
+        Test filtering an OrderedDict with recursing.
+        '''
+        old_dict = OrderedDict([
+            ('foo', None),
+            ('bar', OrderedDict([('baz', OrderedDict([('qux', None), ('quux', ''), ('foo', [])]))])),
+            ('baz', ['qux']),
+            ('qux', {}),
+            ('quux', [])
+        ])
+        new_dict = salt.utils.data.filter_falsey(old_dict, recurse_depth=3)
+        expect_dict = OrderedDict([
+            ('baz', ['qux']),
+        ])
+        self.assertEqual(expect_dict, new_dict)
+        self.assertIs(type(expect_dict), type(new_dict))
+
+    def test_filter_list_recurse_limit(self):
+        '''
+        Test filtering a list with recursing, but with a limited depth.
+        Note that the top-level is always processed, so a recursion depth of 2
+        means that two *additional* levels are processed.
+        '''
+        old_list = [None, [None, [None, [None]]]]
+        new_list = salt.utils.data.filter_falsey(old_list, recurse_depth=2)
+        self.assertEqual([[[[None]]]], new_list)
+
+    def test_filter_dict_recurse_limit(self):
+        '''
+        Test filtering a dict with recursing, but with a limited depth.
+        Note that the top-level is always processed, so a recursion depth of 2
+        means that two *additional* levels are processed.
+        '''
+        old_dict = {'one': None,
+                    'foo': {'two': None, 'bar': {'three': None, 'baz': {'four': None}}}}
+        new_dict = salt.utils.data.filter_falsey(old_dict, recurse_depth=2)
+        self.assertEqual({'foo': {'bar': {'baz': {'four': None}}}}, new_dict)
+
+    def test_filter_exclude_types(self):
+        '''
+        Test filtering a list recursively, but also ignoring (i.e. not filtering)
+        out certain types that can be falsey.
+        '''
+        # Ignore int, unicode
+        old_list = ['foo', ['foo'], ['foo', None], {'foo': 0}, {'foo': 'bar', 'baz': []}, [{'foo': ''}]]
+        new_list = salt.utils.data.filter_falsey(old_list, recurse_depth=3, ignore_types=[type(0), type('')])
+        self.assertEqual(['foo', ['foo'], ['foo'], {'foo': 0}, {'foo': 'bar'}, [{'foo': ''}]], new_list)
+        # Ignore list
+        old_list = ['foo', ['foo'], ['foo', None], {'foo': 0}, {'foo': 'bar', 'baz': []}, [{'foo': ''}]]
+        new_list = salt.utils.data.filter_falsey(old_list, recurse_depth=3, ignore_types=[type([])])
+        self.assertEqual(['foo', ['foo'], ['foo'], {'foo': 'bar', 'baz': []}, []], new_list)
+        # Ignore dict
+        old_list = ['foo', ['foo'], ['foo', None], {'foo': 0}, {'foo': 'bar', 'baz': []}, [{'foo': ''}]]
+        new_list = salt.utils.data.filter_falsey(old_list, recurse_depth=3, ignore_types=[type({})])
+        self.assertEqual(['foo', ['foo'], ['foo'], {}, {'foo': 'bar'}, [{}]], new_list)
+        # Ignore NoneType
+        old_list = ['foo', ['foo'], ['foo', None], {'foo': 0}, {'foo': 'bar', 'baz': []}, [{'foo': ''}]]
+        new_list = salt.utils.data.filter_falsey(old_list, recurse_depth=3, ignore_types=[type(None)])
+        self.assertEqual(['foo', ['foo'], ['foo', None], {'foo': 'bar'}], new_list)

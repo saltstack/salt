@@ -509,7 +509,7 @@ class ProcessManager(object):
                     yield gen.sleep(10)
                 else:
                     time.sleep(10)
-                if len(self._process_map) == 0:
+                if not self._process_map:
                     break
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:

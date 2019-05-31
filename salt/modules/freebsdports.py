@@ -300,9 +300,7 @@ def showconfig(name, default=False, dict_return=False):
     try:
         pkg = output[0].split()[-1].rstrip(':')
     except (IndexError, AttributeError, TypeError) as exc:
-        log.error(
-            'Unable to get pkg-version string: {0}'.format(exc)
-        )
+        log.error('Unable to get pkg-version string: %s', exc)
         return {}
 
     ret = {pkg: {}}

@@ -209,7 +209,8 @@ class Schedule(object):
         # NOTE--jid_include defaults to True, thus if it is missing from the data
         # dict we treat it like it was there and is True
 
-        # Check if we're able to run
+        # Check if we're able to run, default to False
+        # in case the `run` value is not present.
         if not data['run']:
             return data
         if 'jid_include' not in data or data['jid_include']:
@@ -291,10 +292,10 @@ class Schedule(object):
             log.warning("Cannot delete job %s, it's in the pillar!", name)
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True,
-                        'schedule': self._get_schedule()},
-                       tag='/salt/minion/minion_schedule_delete_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts, listen=False) as evt:
+            evt.fire_event({'complete': True,
+                            'schedule': self._get_schedule()},
+                           tag='/salt/minion/minion_schedule_delete_complete')
 
         # remove from self.intervals
         if name in self.intervals:
@@ -326,10 +327,10 @@ class Schedule(object):
                 log.warning("Cannot delete job %s, it's in the pillar!", job)
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True,
-                        'schedule': self._get_schedule()},
-                       tag='/salt/minion/minion_schedule_delete_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts, listen=False) as evt:
+            evt.fire_event({'complete': True,
+                            'schedule': self._get_schedule()},
+                           tag='/salt/minion/minion_schedule_delete_complete')
 
         # remove from self.intervals
         for job in list(self.intervals.keys()):
@@ -373,10 +374,10 @@ class Schedule(object):
             self.opts['schedule'].update(data)
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True,
-                        'schedule': self._get_schedule()},
-                       tag='/salt/minion/minion_schedule_add_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts, listen=False) as evt:
+            evt.fire_event({'complete': True,
+                            'schedule': self._get_schedule()},
+                           tag='/salt/minion/minion_schedule_add_complete')
 
         if persist:
             self.persist()
@@ -393,10 +394,10 @@ class Schedule(object):
             log.warning("Cannot modify job %s, it's in the pillar!", name)
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True,
-                        'schedule': self._get_schedule()},
-                       tag='/salt/minion/minion_schedule_enabled_job_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts, listen=False) as evt:
+            evt.fire_event({'complete': True,
+                            'schedule': self._get_schedule()},
+                           tag='/salt/minion/minion_schedule_enabled_job_complete')
 
         if persist:
             self.persist()
@@ -412,11 +413,11 @@ class Schedule(object):
         elif name in self._get_schedule(include_opts=False):
             log.warning("Cannot modify job %s, it's in the pillar!", name)
 
-        # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True,
-                        'schedule': self._get_schedule()},
-                       tag='/salt/minion/minion_schedule_disabled_job_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts, listen=False) as evt:
+            # Fire the complete event back along with updated list of schedule
+            evt.fire_event({'complete': True,
+                            'schedule': self._get_schedule()},
+                           tag='/salt/minion/minion_schedule_disabled_job_complete')
 
         if persist:
             self.persist()
@@ -451,26 +452,27 @@ class Schedule(object):
             func = data['fun']
         else:
             func = None
-        if func not in self.functions:
-            log.info(
-                'Invalid function: %s in scheduled job %s.',
-                func, name
-            )
+        if not isinstance(func, list):
+            func = [func]
+        for _func in func:
+            if _func not in self.functions:
+                log.error(
+                    'Invalid function: %s in scheduled job %s.',
+                    _func, name
+                )
 
         if 'name' not in data:
             data['name'] = name
+        if 'run' not in data:
+            data['run'] = True
         log.info('Running Job: %s', name)
-
-        if not self.standalone:
-            data = self._check_max_running(func,
-                                           data,
-                                           self.opts,
-                                           datetime.datetime.now())
 
         # Grab run, assume True
         run = data.get('run', True)
         if run:
-            self._run_job(func, data)
+            now = datetime.datetime.now()
+            self._run_job(_func, data)
+            data['_last_run'] = now
 
     def enable_schedule(self):
         '''
@@ -479,9 +481,10 @@ class Schedule(object):
         self.opts['schedule']['enabled'] = True
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
-                       tag='/salt/minion/minion_schedule_enabled_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts, listen=False) as evt:
+            evt.fire_event({'complete': True,
+                            'schedule': self._get_schedule()},
+                           tag='/salt/minion/minion_schedule_enabled_complete')
 
     def disable_schedule(self):
         '''
@@ -490,9 +493,10 @@ class Schedule(object):
         self.opts['schedule']['enabled'] = False
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
-                       tag='/salt/minion/minion_schedule_disabled_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts, listen=False) as evt:
+            evt.fire_event({'complete': True,
+                            'schedule': self._get_schedule()},
+                           tag='/salt/minion/minion_schedule_disabled_complete')
 
     def reload(self, schedule):
         '''
@@ -517,9 +521,9 @@ class Schedule(object):
             schedule = self._get_schedule()
 
         # Fire the complete event back along with the list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': schedule},
-                       tag='/salt/minion/minion_schedule_list_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts, listen=False) as evt:
+            evt.fire_event({'complete': True, 'schedule': schedule},
+                           tag='/salt/minion/minion_schedule_list_complete')
 
     def save_schedule(self):
         '''
@@ -528,9 +532,9 @@ class Schedule(object):
         self.persist()
 
         # Fire the complete event back along with the list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True},
-                       tag='/salt/minion/minion_schedule_saved')
+        with salt.utils.event.get_event('minion', opts=self.opts, listen=False) as evt:
+            evt.fire_event({'complete': True},
+                           tag='/salt/minion/minion_schedule_saved')
 
     def postpone_job(self, name, data):
         '''
@@ -557,10 +561,10 @@ class Schedule(object):
             log.warning("Cannot modify job %s, it's in the pillar!", name)
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True,
-                        'schedule': self._get_schedule()},
-                       tag='/salt/minion/minion_schedule_postpone_job_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts, listen=False) as evt:
+            evt.fire_event({'complete': True,
+                            'schedule': self._get_schedule()},
+                           tag='/salt/minion/minion_schedule_postpone_job_complete')
 
     def skip_job(self, name, data):
         '''
@@ -581,10 +585,10 @@ class Schedule(object):
             log.warning("Cannot modify job %s, it's in the pillar!", name)
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True,
-                        'schedule': self._get_schedule()},
-                       tag='/salt/minion/minion_schedule_skip_job_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts, listen=False) as evt:
+            evt.fire_event({'complete': True,
+                            'schedule': self._get_schedule()},
+                           tag='/salt/minion/minion_schedule_skip_job_complete')
 
     def get_next_fire_time(self, name, fmt='%Y-%m-%dT%H:%M:%S'):
         '''
@@ -599,9 +603,9 @@ class Schedule(object):
                 _next_fire_time = _next_fire_time.strftime(fmt)
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'next_fire_time': _next_fire_time},
-                       tag='/salt/minion/minion_schedule_next_fire_time_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts, listen=False) as evt:
+            evt.fire_event({'complete': True, 'next_fire_time': _next_fire_time},
+                           tag='/salt/minion/minion_schedule_next_fire_time_complete')
 
     def job_status(self, name):
         '''
@@ -610,6 +614,34 @@ class Schedule(object):
 
         schedule = self._get_schedule()
         return schedule.get(name, {})
+
+    def job_running(self, data):
+        '''
+        Return the schedule data structure
+        '''
+        # Check to see if there are other jobs with this
+        # signature running.  If there are more than maxrunning
+        # jobs present then don't start another.
+        # If jid_include is False for this job we can ignore all this
+        # NOTE--jid_include defaults to True, thus if it is missing from the data
+        # dict we treat it like it was there and is True
+
+        # Check if we're able to run, default to False
+        # in case the `run` value is not present.
+        running = False
+        if 'jid_include' not in data or data['jid_include']:
+            if self.opts['__role'] == 'master':
+                current_jobs = salt.utils.master.get_running_jobs(self.opts)
+            else:
+                current_jobs = salt.utils.minion.running(self.opts)
+            for job in current_jobs:
+                if 'schedule' in job:
+                    log.info('=== data %s ===', data)
+                    log.info('=== job %s ===', job)
+                    if data['name'] in job['schedule'] \
+                            and salt.utils.process.os_is_running(job['pid']):
+                        running = True
+        return running
 
     def handle_func(self, multiprocessing_enabled, func, data):
         '''
@@ -722,15 +754,14 @@ class Schedule(object):
                 jid = salt.utils.jid.gen_jid(self.opts)
                 tag = salt.utils.event.tagify(jid, prefix='salt/scheduler/')
 
-                event = salt.utils.event.get_event(
+                namespaced_event = salt.utils.event.NamespacedEvent(
+                    salt.utils.event.get_event(
                         self.opts['__role'],
                         self.opts['sock_dir'],
                         self.opts['transport'],
                         opts=self.opts,
-                        listen=False)
-
-                namespaced_event = salt.utils.event.NamespacedEvent(
-                    event,
+                        listen=False,
+                    ),
                     tag,
                     print_func=None
                 )
@@ -832,6 +863,11 @@ class Schedule(object):
                         event.fire_event(load, '__schedule_return')
                     except Exception as exc:
                         log.exception('Unhandled exception firing __schedule_return event')
+                    finally:
+                        event.destroy()
+
+            if self.opts['__role'] == 'master':
+                namespaced_event.destroy()
 
             if not self.standalone:
                 log.debug('schedule.handle_func: Removing %s', proc_fn)
@@ -947,116 +983,64 @@ class Schedule(object):
                 log.error(data['_error'])
                 return
 
-            if isinstance(data['when'], list):
-                _when = []
-                for i in data['when']:
-                    if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
-                            i in self.opts['pillar']['whens']):
-                        if not isinstance(self.opts['pillar']['whens'],
-                                          dict):
-                            data['_error'] = ('Pillar item "whens" '
-                                              'must be a dict. '
-                                              'Ignoring job {0}.'.format(data['name']))
-                            log.error(data['_error'])
-                            return
-                        when_ = self.opts['pillar']['whens'][i]
-                    elif ('whens' in self.opts['grains'] and
-                          i in self.opts['grains']['whens']):
-                        if not isinstance(self.opts['grains']['whens'],
-                                          dict):
-                            data['_error'] = ('Grain "whens" must be a dict.'
-                                              'Ignoring job {0}.'.format(data['name']))
-                            log.error(data['_error'])
-                            return
-                        when_ = self.opts['grains']['whens'][i]
-                    else:
-                        when_ = i
-
-                    if not isinstance(when_, datetime.datetime):
-                        try:
-                            when_ = dateutil_parser.parse(when_)
-                        except ValueError:
-                            data['_error'] = ('Invalid date string {0}. '
-                                              'Ignoring job {1}.'.format(i, data['name']))
-                            log.error(data['_error'])
-                            return
-
-                    _when.append(when_)
-
-                if data['_splay']:
-                    _when.append(data['_splay'])
-
-                # Sort the list of "whens" from earlier to later schedules
-                _when.sort()
-
-                # Copy the list so we can loop through it
-                for i in copy.deepcopy(_when):
-                    if len(_when) > 1:
-                        if i < now - loop_interval:
-                            # Remove all missed schedules except the latest one.
-                            # We need it to detect if it was triggered previously.
-                            _when.remove(i)
-
-                if _when:
-                    # Grab the first element, which is the next run time or
-                    # last scheduled time in the past.
-                    when = _when[0]
-
-                    if when < now - loop_interval and \
-                            not data.get('_run', False) and \
-                            not data.get('run', False) and \
-                            not data['_splay']:
-                        data['_next_fire_time'] = None
-                        data['_continue'] = True
-                        return
-
-                    if '_run' not in data:
-                        # Prevent run of jobs from the past
-                        data['_run'] = bool(when >= now - loop_interval)
-
-                    if not data['_next_fire_time']:
-                        data['_next_fire_time'] = when
-
-                    data['_next_scheduled_fire_time'] = when
-
-                    if data['_next_fire_time'] < when and \
-                            not run and \
-                            not data['_run']:
-                        data['_next_fire_time'] = when
-                        data['_run'] = True
-
-                elif not data.get('_run', False):
-                    data['_next_fire_time'] = None
-                    data['_continue'] = True
-
+            if not isinstance(data['when'], list):
+                _when_data = [data['when']]
             else:
+                _when_data = data['when']
+
+            _when = []
+            for i in _when_data:
                 if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
-                        data['when'] in self.opts['pillar']['whens']):
-                    if not isinstance(self.opts['pillar']['whens'], dict):
-                        data['_error'] = ('Pillar item "whens" must be dict.'
+                        i in self.opts['pillar']['whens']):
+                    if not isinstance(self.opts['pillar']['whens'],
+                                      dict):
+                        data['_error'] = ('Pillar item "whens" '
+                                          'must be a dict. '
                                           'Ignoring job {0}.'.format(data['name']))
                         log.error(data['_error'])
                         return
-                    when = self.opts['pillar']['whens'][data['when']]
+                    when_ = self.opts['pillar']['whens'][i]
                 elif ('whens' in self.opts['grains'] and
-                      data['when'] in self.opts['grains']['whens']):
-                    if not isinstance(self.opts['grains']['whens'], dict):
+                      i in self.opts['grains']['whens']):
+                    if not isinstance(self.opts['grains']['whens'],
+                                      dict):
                         data['_error'] = ('Grain "whens" must be a dict. '
                                           'Ignoring job {0}.'.format(data['name']))
                         log.error(data['_error'])
                         return
-                    when = self.opts['grains']['whens'][data['when']]
+                    when_ = self.opts['grains']['whens'][i]
                 else:
-                    when = data['when']
+                    when_ = i
 
-                if not isinstance(when, datetime.datetime):
+                if not isinstance(when_, datetime.datetime):
                     try:
-                        when = dateutil_parser.parse(when)
+                        when_ = dateutil_parser.parse(when_)
                     except ValueError:
-                        data['_error'] = ('Invalid date string. '
-                                          'Ignoring job {0}.'.format(data['name']))
+                        data['_error'] = ('Invalid date string {0}. '
+                                          'Ignoring job {1}.'.format(i, data['name']))
                         log.error(data['_error'])
                         return
+
+                _when.append(when_)
+
+            if data['_splay']:
+                _when.append(data['_splay'])
+
+            # Sort the list of "whens" from earlier to later schedules
+            _when.sort()
+
+            # Copy the list so we can loop through it
+            for i in copy.deepcopy(_when):
+                if len(_when) > 1:
+                    if i < now - loop_interval:
+                        # Remove all missed schedules except the latest one.
+                        # We need it to detect if it was triggered previously.
+                        _when.remove(i)
+
+            if _when:
+                # Grab the first element, which is the next run time or
+                # last scheduled time in the past.
+                when = _when[0]
 
                 if when < now - loop_interval and \
                         not data.get('_run', False) and \
@@ -1067,7 +1051,8 @@ class Schedule(object):
                     return
 
                 if '_run' not in data:
-                    data['_run'] = True
+                    # Prevent run of jobs from the past
+                    data['_run'] = bool(when >= now - loop_interval)
 
                 if not data['_next_fire_time']:
                     data['_next_fire_time'] = when
@@ -1075,9 +1060,14 @@ class Schedule(object):
                 data['_next_scheduled_fire_time'] = when
 
                 if data['_next_fire_time'] < when and \
+                        not run and \
                         not data['_run']:
                     data['_next_fire_time'] = when
                     data['_run'] = True
+
+            elif not data.get('_run', False):
+                data['_next_fire_time'] = None
+                data['_continue'] = True
 
         def _handle_cron(data, loop_interval):
             '''
@@ -1405,11 +1395,14 @@ class Schedule(object):
                 func = data['fun']
             else:
                 func = None
-            if func not in self.functions:
-                log.info(
-                    'Invalid function: %s in scheduled job %s.',
-                    func, job_name
-                )
+            if not isinstance(func, list):
+                func = [func]
+            for _func in func:
+                if _func not in self.functions:
+                    log.info(
+                        'Invalid function: %s in scheduled job %s.',
+                        _func, job_name
+                    )
 
             if '_next_fire_time' not in data:
                 data['_next_fire_time'] = None
@@ -1591,6 +1584,15 @@ class Schedule(object):
 
                     run = data['run']
 
+                # If args is a list and less than the number of functions
+                # run is set to False.
+                if 'args' in data and isinstance(data['args'], list):
+                    if len(data['args']) < len(func):
+                        data['_error'] = ('Number of arguments is less than '
+                                          'the number of functions. Ignoring job.')
+                        log.error(data['_error'])
+                        run = False
+
             # If the job item has continue, then we set run to False
             # so the job does not run but we still get the important
             # information calculated, eg. _next_fire_time
@@ -1704,16 +1706,21 @@ class Schedule(object):
             else:
                 thread_cls = threading.Thread
 
-            if multiprocessing_enabled:
-                with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                    # Reset current signals before starting the process in
-                    # order not to inherit the current signal handlers
+            for i, _func in enumerate(func):
+                _data = copy.deepcopy(data)
+                if 'args' in _data and isinstance(_data['args'], list):
+                    _data['args'] = _data['args'][i]
+
+                if multiprocessing_enabled:
+                    with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                        proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, _func, _data))
+                        # Reset current signals before starting the process in
+                        # order not to inherit the current signal handlers
+                        proc.start()
+                    proc.join()
+                else:
+                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, _func, _data))
                     proc.start()
-                proc.join()
-            else:
-                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                proc.start()
         finally:
             if multiprocessing_enabled and salt.utils.platform.is_windows():
                 # Restore our function references.

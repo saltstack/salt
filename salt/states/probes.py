@@ -5,7 +5,7 @@ Network Probes
 
 Configure RPM (JunOS)/SLA (Cisco) probes on the device via NAPALM proxy.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -25,9 +25,9 @@ import logging
 log = logging.getLogger(__name__)
 
 from copy import deepcopy
-from json import loads, dumps
 
 # salt modules
+from salt.utils.json import loads, dumps
 from salt.ext import six
 # import NAPALM utils
 import salt.utils.napalm

@@ -12,12 +12,13 @@ import shutil
 import salt.utils.platform
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 
 @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
+@skipIf(salt.utils.platform.is_aix(), 'minion is AIX')
 class ManTest(ModuleCase):
     # Map filenames to search strings which should be in the manpage
     manpages = {
@@ -82,7 +83,7 @@ class ManTest(ModuleCase):
     }
 
     def setUp(self):
-        self.rootdir = os.path.join(TMP, 'mantest')
+        self.rootdir = os.path.join(RUNTIME_VARS.TMP, 'mantest')
         self.addCleanup(shutil.rmtree, self.rootdir, ignore_errors=True)
         if not os.path.exists(self.rootdir):
             ret = self.run_function('mantest.install', [self.rootdir])

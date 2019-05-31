@@ -9,7 +9,9 @@ import collections
 import datetime
 import logging
 import subprocess
+import platform
 import salt.utils.stringutils
+import salt.utils.path
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -37,17 +39,24 @@ ARCHES = ARCHES_64 + ARCHES_32 + ARCHES_PPC + ARCHES_S390 + \
 # EPOCHNUM can't be used until RHEL5 is EOL as it is not present
 QUERYFORMAT = '%{NAME}_|-%{EPOCH}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}_|-%{INSTALLTIME}'
 
+# on some archs, the rpm _host_cpu macro doesn't match the pkg name arch
+ARCHMAP = {'powerpc64le': 'ppc64le'}
+
 
 def get_osarch():
     '''
     Get the os architecture using rpm --eval
     '''
-    ret = subprocess.Popen(
-        'rpm --eval "%{_host_cpu}"',
-        shell=True,
-        close_fds=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE).communicate()[0]
+    if salt.utils.path.which('rpm'):
+        ret = subprocess.Popen(
+            'rpm --eval "%{_host_cpu}"',
+            shell=True,
+            close_fds=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE).communicate()[0]
+    else:
+        ret = ''.join([x for x in platform.uname()[-2:] if x][-1:])
+
     return salt.utils.stringutils.to_str(ret).strip() or 'unknown'
 
 
@@ -81,7 +90,7 @@ def resolve_name(name, arch, osarch=None):
     if osarch is None:
         osarch = get_osarch()
 
-    if not check_32(arch, osarch) and arch not in (osarch, 'noarch'):
+    if not check_32(arch, osarch) and arch not in (ARCHMAP.get(osarch, osarch), 'noarch'):
         name += '.{0}'.format(arch)
     return name
 

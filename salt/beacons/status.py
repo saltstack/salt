@@ -123,7 +123,7 @@ def beacon(config):
     log.debug(config)
     ctime = datetime.datetime.utcnow().isoformat()
 
-    if len(config) < 1:
+    if not config:
         config = [{
             'loadavg': ['all'],
             'cpustats': ['all'],

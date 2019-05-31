@@ -275,7 +275,7 @@ def get_tops(extra_mods='', so_mods=''):
             try:
                 locals()[mod] = __import__(mod)
                 moddir, modname = os.path.split(locals()[mod].__file__)
-                base, ext = os.path.splitext(modname)
+                base, _ = os.path.splitext(modname)
                 if base == '__init__':
                     tops.append(moddir)
                 else:
@@ -391,7 +391,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             except OSError as exc:
                 log.error('Error while removing %s file: %s', thintar, exc)
                 if os.path.exists(thintar):
-                    raise salt.exceptions.SaltSystemExit('Unable to remove %s file. See logs for details.', thintar)
+                    raise salt.exceptions.SaltSystemExit(
+                        'Unable to remove {0}. See logs for details.'.format(thintar)
+                    )
         else:
             return thintar
     if _six.PY3:

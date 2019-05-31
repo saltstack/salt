@@ -319,7 +319,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         pkg_params = {name: spec}
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     formulas_array = []
@@ -376,7 +376,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     return _list('outdated')
 
 
-def upgrade_available(pkg, refresh=True):
+def upgrade_available(pkg, refresh=True, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
 
@@ -389,7 +389,7 @@ def upgrade_available(pkg, refresh=True):
     return pkg in list_upgrades(refresh=refresh)
 
 
-def refresh_db():
+def refresh_db(**kwargs):
     '''
     Update ports with ``port selfupdate``
 
@@ -405,7 +405,7 @@ def refresh_db():
     return salt.utils.mac_utils.execute_return_success(cmd)
 
 
-def upgrade(refresh=True):  # pylint: disable=W0613
+def upgrade(refresh=True, **kwargs):  # pylint: disable=W0613
     '''
     Run a full upgrade using MacPorts 'port upgrade outdated'
 
