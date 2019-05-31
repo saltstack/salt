@@ -176,9 +176,9 @@ LOGGING_STORE_HANDLER = __StoreLoggingHandler()
 
 
 class SaltLogQueueHandler(QueueHandler):
-    def prepare(self, record):
-        record = QueueHandler.prepare(self, record)
-        return record.__dict__.copy()
+    '''
+    Subclassed just to differentiate when debugging
+    '''
 
 
 class SaltLogRecord(logging.LogRecord):
