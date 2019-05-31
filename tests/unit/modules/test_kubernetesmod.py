@@ -81,7 +81,6 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     kubernetes.kubernetes.client.ExtensionsV1beta1Api().list_namespaced_deployment().to_dict.called)
                 # pylint: enable=E1120
 
-
     def test_services(self):
         '''
         Tests services listing.
@@ -133,7 +132,6 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                         kubernetes.kubernetes.client.ExtensionsV1beta1Api().
                         delete_namespaced_deployment().to_dict.called)
                     # pylint: enable=E1120
-
 
     def test_create_deployments(self):
         '''
