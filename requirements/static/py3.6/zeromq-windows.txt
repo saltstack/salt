@@ -77,7 +77,6 @@ pytest-helpers-namespace==2019.1.8
 pytest-salt-runtests-bridge==2019.1.30
 pytest-salt==2019.5.10.post1
 pytest-tempdir==2018.8.11
-pytest-timeout==1.3.3
 pytest==4.4.2
 python-dateutil==2.8.0
 python-etcd==0.4.5
