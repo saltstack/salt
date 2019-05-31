@@ -23,8 +23,6 @@ import salt.utils.files
 import salt.utils.platform
 from salt.modules import kubernetesmod as kubernetes
 
-# pylint: disable=E1120
-
 
 @contextmanager
 def mock_kubernetes_library():
@@ -78,8 +76,10 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                         {'items': [{'metadata': {'name': 'mock_deployment_name'}}]}}
                 )
                 self.assertEqual(kubernetes.deployments(), ['mock_deployment_name'])
+                # pylint: disable=E1120
                 self.assertTrue(
-                    kubernetes.kubernetes.client.ExtensionsV1beta1Api().list_namespaced_deployment().to_dict.called)\
+                    kubernetes.kubernetes.client.ExtensionsV1beta1Api().list_namespaced_deployment().to_dict.called)
+                # pylint: enable=E1120
 
 
     def test_services(self):
@@ -94,7 +94,9 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                         {'items': [{'metadata': {'name': 'mock_service_name'}}]}}
                 )
                 self.assertEqual(kubernetes.services(), ['mock_service_name'])
+                # pylint: disable=E1120
                 self.assertTrue(kubernetes.kubernetes.client.CoreV1Api().list_namespaced_service().to_dict.called)
+                # pylint: enable=E1120
 
     def test_pods(self):
         '''
@@ -108,8 +110,10 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                         {'items': [{'metadata': {'name': 'mock_pod_name'}}]}}
                 )
                 self.assertEqual(kubernetes.pods(), ['mock_pod_name'])
+                # pylint: disable=E1120
                 self.assertTrue(kubernetes.kubernetes.client.CoreV1Api().
                                 list_namespaced_pod().to_dict.called)
+                # pylint: enable=E1120
 
     def test_delete_deployments(self):
         '''
@@ -124,9 +128,12 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                         **{"delete_namespaced_deployment.return_value.to_dict.return_value": {'code': ''}}
                     )
                     self.assertEqual(kubernetes.delete_deployment("test"), {'code': 200})
+                    # pylint: disable=E1120
                     self.assertTrue(
                         kubernetes.kubernetes.client.ExtensionsV1beta1Api().
                         delete_namespaced_deployment().to_dict.called)
+                    # pylint: enable=E1120
+
 
     def test_create_deployments(self):
         '''
@@ -140,9 +147,11 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(kubernetes.create_deployment("test", "default", {}, {},
                                                               None, None, None), {})
+                # pylint: disable=E1120
                 self.assertTrue(
                     kubernetes.kubernetes.client.ExtensionsV1beta1Api().
                     create_namespaced_deployment().to_dict.called)
+                # pylint: enable=E1120
 
     @staticmethod
     def settings(name, value=None):
