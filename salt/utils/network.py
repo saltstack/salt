@@ -1490,8 +1490,8 @@ def _netlink_tool_remote_on(port, which_end):
         elif 'ESTAB' not in line:
             continue
         chunks = line.split()
-        local_host, local_port = chunks[3].split(':', 1)
-        remote_host, remote_port = chunks[4].split(':', 1)
+        local_host, local_port = chunks[3].rsplit(':', 1)
+        remote_host, remote_port = chunks[4].rsplit(':', 1)
 
         if which_end == 'remote_port' and int(remote_port) != port:
             continue
