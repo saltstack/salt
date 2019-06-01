@@ -490,7 +490,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.skipTest('Package manager is not available')
 
         test_name = 'bash-completion'
-        if (grains.get('os') == 'Amazon' and grains.get('osmajorrelease') != 2):
+        if grains.get('os') == 'Amazon' and grains.get('osmajorrelease') != 2:
             test_name = 'bash-doc'
 
         ret = self.run_state('pkg.installed',
@@ -513,7 +513,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.skipTest('Package manager is not available')
 
         package = 'bash-completion'
-        if (grains.get('os') == 'Amazon' and grains.get('osmajorrelease') != 2):
+        if grains.get('os') == 'Amazon' and grains.get('osmajorrelease') != 2:
             package = 'bash-doc'
 
         pkgquery = 'version'
