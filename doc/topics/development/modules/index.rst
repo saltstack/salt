@@ -55,9 +55,6 @@ prepended by underscore, such as:
 Modules must be synced before they can be used. This can happen a few ways,
 discussed below.
 
-.. note:
-    Using saltenvs besides ``base`` may not work in all contexts.
-
 Sync Via States
 ~~~~~~~~~~~~~~~
 
@@ -77,6 +74,15 @@ or specific dynamic modules. The ``saltutil.sync_*``
 :py:mod:`execution functions <salt.modules.saltutil>` and
 :py:mod:`runner functions <salt.runners.saltutil>` can be used to sync modules
 to minions and the master, respectively.
+
+About saltenvs
+~~~~~~~~~~~~~~
+
+In either of the above cases, which saltenvs are synced from are based on the topfiles. (Unless specified manually.)
+
+The minion syncs modules from saltenvs that mention the minion in the saltenv's topfile.
+
+That is, for each saltenv on the file server, if a minion is mentioned in that saltenv's topfile, the minion will load modules from that saltenv.
 
 
 The extmods Directory
