@@ -296,7 +296,7 @@ def _replication_request(command, host=None, core_name=None, params=None):
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
     params : list<str> ([])
-        Any additional parameters you want to send. Should be a lsit of
+        Any additional parameters you want to send. Should be a list of
         strings in name=value format. e.g. ['name=value']
 
     Return: dict<str, obj>::

@@ -100,7 +100,7 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv='base'):
         Supports the same URL schemes as the ``template_path`` argument.
 
     saltenv: ``base``
-        Salt fileserver envrionment from which to retrieve the file.
+        Salt fileserver environment from which to retrieve the file.
         Ignored if ``template_path`` is not a ``salt://`` URL.
 
     CLI Example:
@@ -193,7 +193,7 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv='base'):
         return ret
     try:
         log.debug('Reading TextFSM template from cache path: %s', tpl_cached_path)
-        # Disabling pylint W8470 to nto complain about fopen.
+        # Disabling pylint W8470 to not complain about fopen.
         # Unfortunately textFSM needs the file handle rather than the content...
         # pylint: disable=W8470
         tpl_file_handle = fopen(tpl_cached_path, 'r')
@@ -314,7 +314,7 @@ def index(command,
             file or pillar as ``textfsm_index_file``.
 
     saltenv: ``base``
-        Salt fileserver envrionment from which to retrieve the file.
+        Salt fileserver environment from which to retrieve the file.
         Ignored if ``textfsm_path`` is not a ``salt://`` URL.
 
     include_empty: ``False``
@@ -384,7 +384,7 @@ def index(command,
         'comment': ''
     }
     if not HAS_CLITABLE:
-        ret['comment'] = 'TextFSM doesnt seem that has clitable embedded.'
+        ret['comment'] = 'TextFSM does not seem that has clitable embedded.'
         log.error(ret['comment'])
         return ret
     if not platform:
@@ -454,6 +454,6 @@ def index(command,
         ret['out'] = _clitable_to_dict(textfsm_obj, textfsm_obj)
         ret['result'] = True
     except clitable.CliTableError as cterr:
-        log.error('Unable to proces the CliTable', exc_info=True)
+        log.error('Unable to process the CliTable', exc_info=True)
         ret['comment'] = 'Unable to process the output: {}'.format(cterr)
     return ret

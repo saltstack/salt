@@ -99,7 +99,7 @@ def get(name, profile="splunk"):
     '''
     client = _get_splunk(profile)
     search = None
-    # uglyness of splunk lib
+    # ugliness of splunk lib
     try:
         search = client.saved_searches[name]
     except KeyError:

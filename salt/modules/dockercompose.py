@@ -896,7 +896,7 @@ def service_create(path, service_name, definition):
     Create the definition of a docker-compose service
     This fails when the service already exists
     This does not pull or up the service
-    This wil re-write your yaml file. Comments will be lost. Indentation is set to 2 spaces
+    This will re-write your yaml file. Comments will be lost. Indentation is set to 2 spaces
 
     path
         Path where the docker-compose file is stored on the server
@@ -928,7 +928,7 @@ def service_upsert(path, service_name, definition):
     '''
     Create or update the definition of a docker-compose service
     This does not pull or up the service
-    This wil re-write your yaml file. Comments will be lost. Indentation is set to 2 spaces
+    This will re-write your yaml file. Comments will be lost. Indentation is set to 2 spaces
 
     path
         Path where the docker-compose file is stored on the server
@@ -960,7 +960,7 @@ def service_remove(path, service_name):
     '''
     Remove the definition of a docker-compose service
     This does not rm the container
-    This wil re-write your yaml file. Comments will be lost. Indentation is set to 2 spaces
+    This will re-write your yaml file. Comments will be lost. Indentation is set to 2 spaces
 
     path
         Path where the docker-compose file is stored on the server
@@ -991,7 +991,7 @@ def service_set_tag(path, service_name, tag):
     '''
     Change the tag of a docker-compose service
     This does not pull or up the service
-    This wil re-write your yaml file. Comments will be lost. Indentation is set to 2 spaces
+    This will re-write your yaml file. Comments will be lost. Indentation is set to 2 spaces
 
     path
         Path where the docker-compose file is stored on the server

@@ -79,7 +79,7 @@ def fire_master(data, tag, preload=None, timeout=60):
                 # Ensure ret is True.
                 ret = True
             except Exception:
-                # only set a False ret if it hasn't been sent atleast once
+                # only set a False ret if it hasn't been sent at least once
                 if ret is None:
                     ret = False
             finally:

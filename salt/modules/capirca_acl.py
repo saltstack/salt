@@ -208,7 +208,7 @@ def _import_platform_generator(platform):
                 if inspect.isclass(plat_obj) and issubclass(plat_obj, capirca.lib.aclgenerator.ACLGenerator):
                     log.debug('Identified Capirca class %s for %s', plat_obj, platform)
                     return plat_obj
-    log.error('Unable to identify any Capirca plaform class for %s', platform)
+    log.error('Unable to identify any Capirca platform class for %s', platform)
 
 
 def _get_services_mapping():
@@ -292,7 +292,7 @@ def _make_it_list(dict_, field_name, value):
                 if not isinstance(port, (tuple, list)):
                     # to make sure everything is consistent,
                     # we'll transform indivitual ports into tuples
-                    # thus an individual port e.g. 1000 will be transormed into the port range 1000-1000
+                    # thus an individual port e.g. 1000 will be transformed into the port range 1000-1000
                     # which is the equivalent
                     # but assures consistency for the Capirca parser
                     portval.append((port, port))
@@ -445,7 +445,7 @@ def _merge_list_of_dict(first, second, prepend=True):
     if first and not second:
         return first
     # Determine overlaps
-    # So we dont change the position of the existing terms/filters
+    # So we don't change the position of the existing terms/filters
     overlaps = []
     merged = []
     appended = []
@@ -459,7 +459,7 @@ def _merge_list_of_dict(first, second, prepend=True):
     for ele in second:
         ele_key = ele.keys()[0]
         if _lookup_element(overlaps, ele_key):
-            # If theres an overlap, get the value from the first
+            # If there's an overlap, get the value from the first
             # But inserted into the right position
             ele_val_first = _lookup_element(first, ele_key)
             merged.append({ele_key: ele_val_first})
@@ -1183,7 +1183,7 @@ def get_policy_config(platform,
         policy_pillar_cfg = _get_pillar_cfg(pillar_key,
                                             saltenv=saltenv,
                                             pillarenv=pillarenv)
-        # now, let's merge everything witht the pillar data
+        # now, let's merge everything with the pillar data
         # again, this will not remove any extra filters/terms
         # but it will merge with the pillar data
         # if this behaviour is not wanted, the user can set `merge_pillar` as `False`

@@ -1513,7 +1513,7 @@ def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
             'ret': ret, 'kwarg': kwarg
         }
         del kwargs['asynchronous']
-        # run_job doesnt need processing like the others
+        # run_job doesn't need processing like the others
         return client.run_job(**cmd_kwargs)
     else:
         _cmd = client.cmd_iter

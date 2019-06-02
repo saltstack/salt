@@ -198,7 +198,7 @@ identifier delimiter (like `).
 
  * Some rare exploits with bad multibytes management, either on python or
 MySQL could defeat this barrier, bindings internal escape functions
-should manage theses cases.
+should manage these cases.
 
  * Unicode strings in Python 2 will include the 'u' before the repr'ed string,
    like so:
@@ -216,16 +216,16 @@ We use pyformat, which means 'SELECT * FROM foo WHERE bar=%(myval)s'
 used with {'myval': 'some user input'}
 
 So far so good. But this cannot be used for identifier escapes. Identifiers
-are database names, table names and column names. Theses names are not values
+are database names, table names and column names. These names are not values
 and do not follow the same escape rules (see quote_identifier function for
 details on `_ and % escape policies on identifiers). Using value escaping on
 identifier could fool the SQL engine (badly escaping quotes and not doubling
 ` characters. So for identifiers a call to quote_identifier should be done and
-theses identifiers should then be added in strings with format, but without
+these identifiers should then be added in strings with format, but without
 __repr__ filter.
 
 Note also that when using query with arguments in _execute all '%' characters
-used in the query should get escaped to '%%' fo MySQLdb, but should not be
+used in the query should get escaped to '%%' for MySQLdb, but should not be
 escaped if the query runs without arguments. This is managed by _execute() and
 quote_identifier. This is not the same as escaping '%' to '\%' or '_' to '\%'
 when using a LIKE query (example in db_exists), as this escape is there to
@@ -233,7 +233,7 @@ avoid having _ or % characters interpreted in LIKE queries. The string parted
 of the first query could become (still used with args dictionary for myval):
 'SELECT * FROM {0} WHERE bar=%(myval)s'.format(quote_identifier('user input'))
 
-Check integration tests if you find a hole in theses strings and escapes rules
+Check integration tests if you find a hole in these strings and escapes rules
 
 Finally some examples to sum up.
 
@@ -250,7 +250,7 @@ in mySQLdb, query with args   : `f_o%%o``b'a"r` (as identifier)
 in mySQLdb, query without args: `f_o%o``b'a"r` (as identifier)
 value in a LIKE query         : 'f\_o\%o`b\'a"r' (quotes managed by MySQLdb)
 
-And theses could be mixed, in a like query value with args: 'f\_o\%%o`b\'a"r'
+And these could be mixed, in a like query value with args: 'f\_o\%%o`b\'a"r'
 '''
 
 
@@ -570,7 +570,7 @@ def quote_identifier(identifier, for_grants=False):
 
     :param for_grants: is False by default, when using database names on grant
      queries you should set it to True to also escape "_" and "%" characters as
-     requested by MySQL. Note that theses characters should only be escaped when
+     requested by MySQL. Note that these characters should only be escaped when
      requesting grants on the database level (`my\_\%db`.*) but not for table
      level grants (`my_%db`.`foo`)
 
@@ -681,7 +681,7 @@ def query(database, query, **connection_args):
     conv_iter = iter(orig_conv)
     conv = dict(zip(conv_iter, [str] * len(orig_conv)))
 
-    # some converters are lists, do not break theses
+    # some converters are lists, do not break these
     conv_mysqldb = {'MYSQLDB': True}
     if conv_mysqldb.get(MySQLdb.__package__.upper()):
         conv[FIELD_TYPE.BLOB] = [

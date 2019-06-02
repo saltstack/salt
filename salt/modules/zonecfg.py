@@ -390,11 +390,11 @@ def import_(zone, path):
     return ret
 
 
-def _property(methode, zone, key, value):
+def _property(method, zone, key, value):
     '''
     internal handler for set and clear_property
 
-    methode : string
+    method : string
         either set, add, or clear
     zone : string
         name of zone
@@ -408,19 +408,19 @@ def _property(methode, zone, key, value):
 
     # generate update script
     cfg_file = None
-    if methode not in ['set', 'clear']:
+    if method not in ['set', 'clear']:
         ret['status'] = False
-        ret['message'] = 'unkown methode {0}!'.format(methode)
+        ret['message'] = 'unkown method {0}!'.format(method)
     else:
         cfg_file = salt.utils.files.mkstemp()
         with salt.utils.files.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
-            if methode == 'set':
+            if method == 'set':
                 if isinstance(value, dict) or isinstance(value, list):
                     value = _sanitize_value(value)
                 value = six.text_type(value).lower() if isinstance(value, bool) else six.text_type(value)
-                fp_.write("{0} {1}={2}\n".format(methode, key, _sanitize_value(value)))
-            elif methode == 'clear':
-                fp_.write("{0} {1}\n".format(methode, key))
+                fp_.write("{0} {1}={2}\n".format(method, key, _sanitize_value(value)))
+            elif method == 'clear':
+                fp_.write("{0} {1}\n".format(method, key))
 
     # update property
     if cfg_file:
@@ -491,11 +491,11 @@ def clear_property(zone, key):
     )
 
 
-def _resource(methode, zone, resource_type, resource_selector, **kwargs):
+def _resource(method, zone, resource_type, resource_selector, **kwargs):
     '''
-    internal resource hanlder
+    internal resource handler
 
-    methode : string
+    method : string
         add or update
     zone : string
         name of zone
@@ -514,11 +514,11 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
     for k in kwargs:
         if isinstance(kwargs[k], dict) or isinstance(kwargs[k], list):
             kwargs[k] = _sanitize_value(kwargs[k])
-    if methode not in ['add', 'update']:
+    if method not in ['add', 'update']:
         ret['status'] = False
-        ret['message'] = 'unknown methode {0}'.format(methode)
+        ret['message'] = 'unknown method {0}'.format(method)
         return ret
-    if methode in ['update'] and resource_selector and resource_selector not in kwargs:
+    if method in ['update'] and resource_selector and resource_selector not in kwargs:
         ret['status'] = False
         ret['message'] = 'resource selector {0} not found in parameters'.format(resource_selector)
         return ret
@@ -526,9 +526,9 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
     # generate update script
     cfg_file = salt.utils.files.mkstemp()
     with salt.utils.files.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
-        if methode in ['add']:
+        if method in ['add']:
             fp_.write("add {0}\n".format(resource_type))
-        elif methode in ['update']:
+        elif method in ['update']:
             if resource_selector:
                 value = kwargs[resource_selector]
                 if isinstance(value, dict) or isinstance(value, list):
@@ -538,7 +538,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
             else:
                 fp_.write("select {0}\n".format(resource_type))
         for k, v in six.iteritems(kwargs):
-            if methode in ['update'] and k == resource_selector:
+            if method in ['update'] and k == resource_selector:
                 continue
             if isinstance(v, dict) or isinstance(v, list):
                 value = _sanitize_value(value)

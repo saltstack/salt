@@ -158,7 +158,7 @@ def _validate_ipv4(value):
 
 def _interface_to_service(iface):
     '''
-    returns the coresponding service to given interface if exists, otherwise return None
+    returns the corresponding service to given interface if exists, otherwise return None
     '''
     for _service in _get_services():
         service_info = pyconnman.ConnService(os.path.join(SERVICE_PATH, _service))

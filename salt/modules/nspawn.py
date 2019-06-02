@@ -695,7 +695,7 @@ def _needs_install(name):
     ret = 0
     has_minion = retcode(name, "command -v salt-minion")
     # we assume that installing is when no minion is running
-    # but testing the executable presence is not enougth for custom
+    # but testing the executable presence is not enough for custom
     # installs where the bootstrap can do much more than installing
     # the bare salt binaries.
     if has_minion:
@@ -1318,7 +1318,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False):
 cp = salt.utils.functools.alias_function(copy_to, 'cp')
 
 
-# Everything below requres systemd >= 219
+# Everything below requires systemd >= 219
 # TODO: Write a decorator to keep these functions from being available to older
 #       systemd versions.
 def _pull_image(pull_type, image, name, **kwargs):

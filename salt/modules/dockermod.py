@@ -355,7 +355,7 @@ def _get_client(timeout=NOTSET, **kwargs):
         client_kwargs['base_url'] = os.environ.get('DOCKER_HOST')
 
     if 'version' not in client_kwargs:
-        # Let docker-py auto detect docker version incase
+        # Let docker-py auto detect docker version in case
         # it's not defined by user.
         client_kwargs['version'] = 'auto'
 
@@ -887,7 +887,7 @@ def _get_create_kwargs(skip_translate=None,
     full_host_config = {}
     host_kwargs = {}
     create_kwargs = {}
-    # Using list() becausee we'll be altering kwargs during iteration
+    # Using list() because we'll be altering kwargs during iteration
     for arg in list(kwargs):
         if arg in client_args['host_config']:
             host_kwargs[arg] = kwargs.pop(arg)
@@ -3399,7 +3399,7 @@ def run_container(image,
                             'Failed to auto_remove container: {0}'.format(
                                 rm_exc)
                         )
-                # Raise original exception with additonal info
+                # Raise original exception with additional info
                 raise CommandExecutionError(exc.__str__(), info=exc_info)
 
         # Start the container
@@ -4405,7 +4405,7 @@ def load(path, repository=None, tag=None):
 
       *(Only present if tag was specified and tagging was successful)*
     - ``Time_Elapsed`` - Time in seconds taken to load the file
-    - ``Warning`` - Message describing any problems encountered in attemp to
+    - ``Warning`` - Message describing any problems encountered in attempt to
       tag the topmost layer
 
       *(Only present if tag was specified and tagging failed)*
@@ -4480,7 +4480,7 @@ def load(path, repository=None, tag=None):
 def layers(name):
     '''
     Returns a list of the IDs of layers belonging to the specified image, with
-    the top-most layer (the one correspnding to the passed name) appearing
+    the top-most layer (the one corresponding to the passed name) appearing
     last.
 
     name

@@ -134,7 +134,7 @@ def _auth(profile=None, api_version=2, **connection_args):
     region = get('region')
     ks_endpoint = get('endpoint', 'http://127.0.0.1:9292/')
     g_endpoint_url = __salt__['keystone.endpoint_get']('glance', profile)
-    # The trailing 'v2' causes URLs like thise one:
+    # The trailing 'v2' causes URLs like these one:
     # http://127.0.0.1:9292/v2/v1/images
     g_endpoint_url = re.sub('/v2', '', g_endpoint_url['internalurl'])
 
@@ -168,7 +168,7 @@ def _auth(profile=None, api_version=2, **connection_args):
                   ks_endpoint, kwargs)
         keystone = kstone.Client(**kwargs)
         kwargs['token'] = keystone.get_token(keystone.session)
-        # This doesn't realy prevent the password to show up
+        # This doesn't really prevent the password to show up
         # in the minion log as keystoneclient.session is
         # logging it anyway when in debug-mode
         kwargs.pop('password')

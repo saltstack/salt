@@ -1360,7 +1360,7 @@ def set_container_setting(name, container, settings):
         msg = 'Unable to set settings for {0}: {1}'.format(container, name)
         raise CommandExecutionError(msg)
 
-    # Get the fields post-change so that we can verify tht all values
+    # Get the fields post-change so that we can verify that all values
     # were modified successfully. Track the ones that weren't.
     new_settings = get_container_setting(
         name=name, container=container, settings=settings.keys())
@@ -2191,7 +2191,7 @@ def set_webconfiguration_settings(name, settings, location=''):
         msg = 'Unable to set settings for {0}'.format(name)
         raise CommandExecutionError(msg)
 
-    # Get the fields post-change so that we can verify tht all values
+    # Get the fields post-change so that we can verify that all values
     # were modified successfully. Track the ones that weren't.
     new_settings = get_webconfiguration_settings(
         name=name, settings=settings, location=location)

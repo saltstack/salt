@@ -210,7 +210,7 @@ def set_agent_settings(contact=None, location=None, services=None):
             __utils__['reg.set_value'](
                 _HKEY, _AGENT_KEY, 'sysServices', vdata, 'REG_DWORD')
 
-    # Get the fields post-change so that we can verify tht all values
+    # Get the fields post-change so that we can verify that all values
     # were modified successfully. Track the ones that weren't.
     new_settings = get_agent_settings()
     failed_settings = dict()
@@ -453,7 +453,7 @@ def set_community_names(communities):
             __utils__['reg.set_value'](
                 _HKEY, _COMMUNITIES_KEY, vname, values[vname], 'REG_DWORD')
 
-    # Get the fields post-change so that we can verify tht all values
+    # Get the fields post-change so that we can verify that all values
     # were modified successfully. Track the ones that weren't.
     new_communities = get_community_names()
     failed_communities = dict()

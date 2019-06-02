@@ -93,7 +93,7 @@ def _cmd_run(cmd, as_json=False):
 
 def _validate_cert_path(name):
     '''
-    Ensure that the certificate path, as determind from user input, is valid.
+    Ensure that the certificate path, as determined from user input, is valid.
     '''
     cmd = r"Test-Path -Path '{0}'".format(name)
 
@@ -103,7 +103,7 @@ def _validate_cert_path(name):
 
 def _validate_cert_format(name):
     '''
-    Ensure that the certificate format, as determind from user input, is valid.
+    Ensure that the certificate format, as determined from user input, is valid.
     '''
     cert_formats = ['cer', 'pfx']
 

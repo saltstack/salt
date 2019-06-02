@@ -126,7 +126,7 @@ def _get_blade():
 def _get_fs(name, blade):
     '''
     Private function to
-    check for existance of a filesystem
+    check for existence of a filesystem
     '''
     _fs = []
     _fs.append(name)
@@ -175,7 +175,7 @@ def snap_create(name, suffix=None):
     name : string
         name of filesystem to snapshot
     suffix : string
-        if specificed forces snapshot name suffix. If not specified defaults to timestamp.
+        if specified forces snapshot name suffix. If not specified defaults to timestamp.
 
     CLI Example:
 

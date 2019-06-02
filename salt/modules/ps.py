@@ -750,7 +750,7 @@ def psaux(name):
             if not salt_exception_pattern.search(info):
                 nb_lines += 1
                 found_infos.append(info)
-    pid_count = six.text_type(nb_lines) + " occurence(s)."
+    pid_count = six.text_type(nb_lines) + " occurrence(s)."
     ret = []
     ret.extend([sanitize_name, found_infos, pid_count])
     return ret

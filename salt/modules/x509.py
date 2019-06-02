@@ -1883,7 +1883,7 @@ def will_expire(certificate, days):
             ret['cn'] = _parse_subject(cert.get_subject())['CN']
             ret['will_expire'] = _expiration_date.strftime(ts_pt) <= _check_time.strftime(ts_pt)
         except ValueError as err:
-            log.debug('Unable to return details of a sertificate expiration: %s', err)
+            log.debug('Unable to return details of a certificate expiration: %s', err)
             log.trace(err, exc_info=True)
 
     return ret

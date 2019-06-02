@@ -1266,8 +1266,8 @@ def _set_repo_options(repo, options):
     delimiters = "[", "]"
     pattern = '|'.join(map(re.escape, delimiters))
     for option in options:
-        splitted = re.split(pattern, option)
-        for opt in splitted:
+        split = re.split(pattern, option)
+        for opt in split:
             _set_repo_option(repo, opt)
 
 

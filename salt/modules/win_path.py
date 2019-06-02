@@ -248,7 +248,7 @@ def add(path, index=None, **kwargs):
                         or (index >= 0 and cur_index != index):
                     # Directory is present, but not at the desired index.
                     # Remove it from the non-normalized path list and insert it
-                    # at the correct postition.
+                    # at the correct position.
                     dirs.pop(cur_index)
                     dirs.insert(pos, path)
                     return True

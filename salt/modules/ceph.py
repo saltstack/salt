@@ -24,7 +24,7 @@ except ImportError:
 
 def __virtual__():
     if HAS_CEPH_CFG is False:
-        msg = 'ceph_cfg unavailable: {0} execution module cant be loaded '.format(__virtualname__)
+        msg = 'ceph_cfg unavailable: {0} execution module can not be loaded '.format(__virtualname__)
         return False, msg
     return __virtualname__
 
@@ -115,7 +115,7 @@ def zap(target=None, **kwargs):
         The cluster UUID. Defaults to value found in ceph config file.
     '''
     if target is not None:
-        log.warning("Depricated use of function, use kwargs")
+        log.warning("Deprecated use of function, use kwargs")
     target = kwargs.get("dev", target)
     kwargs["dev"] = target
     return ceph_cfg.zap(**kwargs)

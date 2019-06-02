@@ -22,7 +22,7 @@ Because of 1 and 2 it is possible to get the salt-minion into a state where
 on the master to check for potentially long-running calls to `port`.
 
 Finally, ports database updates are always handled with `port selfupdate`
-as opposed to `port sync`.  This makes sense in the MacPorts user commmunity
+as opposed to `port sync`.  This makes sense in the MacPorts user community
 but may confuse experienced Linux admins as Linux package managers
 don't upgrade the packaging software when doing a package database update.
 In other words `salt mac-machine pkg.refresh_db` is more like

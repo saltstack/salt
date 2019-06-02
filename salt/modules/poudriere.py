@@ -238,7 +238,7 @@ def delete_jail(name):
 
         # Make sure jail is gone
         if is_jail(name):
-            return 'Looks like there was an issue deleteing jail \
+            return 'Looks like there was an issue deleting jail \
             {0}'.format(name)
     else:
         # Could not find jail.

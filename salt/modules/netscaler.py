@@ -143,7 +143,7 @@ def _disconnect(nitro):
 
 def _servicegroup_get(sg_name, **connection_args):
     '''
-    Return a service group ressource or None
+    Return a service group resource or None
     '''
     nitro = _connect(**connection_args)
     if nitro is None:
@@ -411,7 +411,7 @@ def servicegroup_server_delete(sg_name, s_name, s_port, **connection_args):
 
 def _service_get(s_name, **connection_args):
     '''
-    Returns a service ressource or None
+    Returns a service resource or None
     '''
     nitro = _connect(**connection_args)
     if nitro is None:

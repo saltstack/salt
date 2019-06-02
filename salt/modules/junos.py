@@ -526,7 +526,7 @@ def rollback(**kwargs):
                 .format(exception)
             return ret
     else:
-        ret['message'] = 'Rollback succesfull but pre-commit check failed.'
+        ret['message'] = 'Rollback successful but pre-commit check failed.'
         ret['out'] = False
     return ret
 
@@ -763,7 +763,7 @@ def shutdown(**kwargs):
         ret['out'] = True
     except Exception as exception:
         ret['message'] = \
-            'Could not poweroff/reboot beacause "{0}"'.format(exception)
+            'Could not poweroff/reboot because "{0}"'.format(exception)
         ret['out'] = False
     return ret
 

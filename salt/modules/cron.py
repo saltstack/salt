@@ -89,7 +89,7 @@ def _cron_matched(cron, cmd, identifier=None):
             # on saving, be sure not to overwrite a cron
             # with specific identifier but also track
             # crons where command is the same
-            # but with the default if that we gonna overwrite
+            # but with the default if that we are going to overwrite
             if (
                 cron.get('cmd', None) == cmd
                 and cid == SALT_CRON_NO_IDENTIFIER

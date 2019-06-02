@@ -735,7 +735,7 @@ def user_addmedia(userids, active, mediatypeid, period, sendto, severity, **kwar
                 userids = [userids]
             for user in userids:
                 params['users'].append({"userid": user})
-            # Medias
+            # Media
             params['medias'] = [{"active": active, "mediatypeid": mediatypeid, "period": period,
                                  "sendto": sendto, "severity": severity}, ]
 
@@ -1581,7 +1581,7 @@ def hostgroup_get(name=None, groupids=None, hostids=None, **kwargs):
     Retrieve host groups according to the given parameters
 
     .. note::
-        This function accepts all standard hostgroup.get properities: keyword
+        This function accepts all standard hostgroup.get properties: keyword
         argument names differ depending on your zabbix version, see here__.
 
         .. __: https://www.zabbix.com/documentation/2.2/manual/api/reference/hostgroup/get
@@ -1707,7 +1707,7 @@ def hostinterface_get(hostids, **kwargs):
     Retrieve host groups according to the given parameters
 
     .. note::
-        This function accepts all standard hostinterface.get properities:
+        This function accepts all standard hostinterface.get properties:
         keyword argument names differ depending on your zabbix version, see
         here__.
 

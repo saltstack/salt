@@ -142,7 +142,7 @@ def add(name,
     else:
         # At this point, the user was successfully created, so return true
         # regardless of the outcome of the below functions. If there is a
-        # problem wth changing any of the user's info below, it will be raised
+        # problem with changing any of the user's info below, it will be raised
         # in a future highstate call. If anyone has a better idea on how to do
         # this, feel free to change it, but I didn't think it was a good idea
         # to return False when the user was successfully created since A) the

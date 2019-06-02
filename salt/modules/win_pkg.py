@@ -783,7 +783,7 @@ def _refresh_db_conditional(saltenv, **kwargs):
             process.
 
     Returns:
-        bool: True Fetched or Cache uptodate, False to indicate an issue
+        bool: True Fetched or Cache up-to-date, False to indicate an issue
 
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''

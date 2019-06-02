@@ -938,7 +938,7 @@ def add_repo(name,
         The URL with more information about the repository.
 
     private
-        The visiblity of the repository. Note that private repositories require
+        The visibility of the repository. Note that private repositories require
         a paid GitHub account.
 
     has_issues
@@ -1023,7 +1023,7 @@ def edit_repo(name,
         The URL with more information about the repository.
 
     private
-        The visiblity of the repository. Note that private repositories require
+        The visibility of the repository. Note that private repositories require
         a paid GitHub account.
 
     has_issues

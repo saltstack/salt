@@ -155,7 +155,7 @@ def _auth(profile=None, api_version=1, **connection_args):
 
     token = __salt__['keystone.token_get'](profile)
     kwargs['token'] = token['id']
-    # This doesn't realy prevent the password to show up
+    # This doesn't really prevent the password to show up
     # in the minion log as keystoneclient.session is
     # logging it anyway when in debug-mode
     kwargs.pop('password')
@@ -855,7 +855,7 @@ def template_stack(name=None, profile=None):
     except heatclient.exc.BadRequest:
         return {
             'result': False,
-            'comment': 'Bad request fot stack {0}'.format(name)
+            'comment': 'Bad request for stack {0}'.format(name)
             }
     if 'heat_template_version' in get_template:
         template = salt.utils.yaml.safe_dump(get_template)

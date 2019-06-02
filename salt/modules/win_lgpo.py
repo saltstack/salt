@@ -4727,7 +4727,7 @@ class _policy_info(object):
     @classmethod
     def _string_put_transform(cls, item, **kwargs):
         '''
-        transfrom for a REG_SZ to properly handle "Not Defined"
+        transform for a REG_SZ to properly handle "Not Defined"
         '''
         if isinstance(item, six.string_types):
             if item.lower() == 'not defined':
@@ -6959,7 +6959,7 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                 log.error('policy %s was found but it does not appear to be valid for the class %s',
                                           admPolicy, registry_class)
                         else:
-                            log.error('policy item %s does not have the requried "class" attribute',
+                            log.error('policy item %s does not have the required "class" attribute',
                                       this_policy.attrib)
                 else:
                     log.debug('time to enable and set the policy "%s"',

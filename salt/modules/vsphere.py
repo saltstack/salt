@@ -349,7 +349,7 @@ def gets_service_instance_via_proxy(fn):
 
                 # There are two cases:
                 #   1. service_instance was passed in as a positional parameter
-                #   2. service_instance was passed in as a named paramter
+                #   2. service_instance was passed in as a named parameter
                 if len(args) > idx:
                     # case 1: The call was made with enough positional
                     # parameters to include 'service_instance'
@@ -370,7 +370,7 @@ def gets_service_instance_via_proxy(fn):
                                     *connection_details)
                         kwargs['service_instance'] = local_service_instance
         else:
-            # 'service_instance' is not a paremter in the function definition
+            # 'service_instance' is not a parameter in the function definition
             # but it will be caught by the **kwargs parameter
             if not kwargs.get('service_instance'):
                 local_service_instance = \
@@ -4094,7 +4094,7 @@ def _get_dvportgroup_out_shaping(pg_name, pg_default_port_config):
         The name of the portgroup
 
     pg_default_port_config
-        The dafault port config of the portgroup
+        The default port config of the portgroup
     '''
     log.trace('Retrieving portgroup\'s \'%s\' out shaping config', pg_name)
     out_shaping_policy = pg_default_port_config.outShapingPolicy
@@ -4114,7 +4114,7 @@ def _get_dvportgroup_security_policy(pg_name, pg_default_port_config):
         The name of the portgroup
 
     pg_default_port_config
-        The dafault port config of the portgroup
+        The default port config of the portgroup
     '''
     log.trace('Retrieving portgroup\'s \'%s\' security policy config', pg_name)
     sec_policy = pg_default_port_config.securityPolicy
@@ -4133,7 +4133,7 @@ def _get_dvportgroup_teaming(pg_name, pg_default_port_config):
         The name of the portgroup
 
     pg_default_port_config
-        The dafault port config of the portgroup
+        The default port config of the portgroup
     '''
     log.trace('Retrieving portgroup\'s \'%s\' teaming config', pg_name)
     teaming_policy = pg_default_port_config.uplinkTeamingPolicy
@@ -4163,7 +4163,7 @@ def _get_dvportgroup_teaming(pg_name, pg_default_port_config):
 
 def _get_dvportgroup_dict(pg_ref):
     '''
-    Returns a dictionary with a distributed virutal portgroup data
+    Returns a dictionary with a distributed virtual portgroup data
 
 
     pg_ref
@@ -5258,7 +5258,7 @@ def _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec=None,
                 vsan_spec.dataEfficiencyConfig.dedupEnabled = \
                         vsan_dict['dedup_enabled']
         # In all cases we need to configure the vsan on the cluster
-        # directly so not to have a missmatch between vsan_spec and
+        # directly so not to have a mismatch between vsan_spec and
         # cluster_spec
         if not cluster_spec.vsanConfig:
             cluster_spec.vsanConfig = \

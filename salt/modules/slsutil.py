@@ -344,7 +344,7 @@ def boolstr(value, true='true', false='false'):
     Convert a boolean value into a string. This function is
     intended to be used from within file templates to provide
     an easy way to take boolean values stored in Pillars or
-    Grains, and write them out in the apprpriate syntax for
+    Grains, and write them out in the appropriate syntax for
     a particular file template.
 
     :param value: The boolean value to be converted

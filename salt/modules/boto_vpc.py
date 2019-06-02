@@ -1865,7 +1865,7 @@ def associate_network_acl_to_subnet(network_acl_id=None, subnet_id=None,
         else:
             log.warning('Network ACL with id %s was not associated with subnet %s',
                         network_acl_id, subnet_id)
-            return {'associated': False, 'error': {'message': 'ACL could not be assocaited.'}}
+            return {'associated': False, 'error': {'message': 'ACL could not be associated.'}}
     except BotoServerError as e:
         return {'associated': False, 'error': __utils__['boto.get_error'](e)}
 
@@ -2235,7 +2235,7 @@ def associate_route_table(route_table_id=None, subnet_id=None,
 
 def disassociate_route_table(association_id, region=None, key=None, keyid=None, profile=None):
     '''
-    Dissassociates a route table.
+    Disassociates a route table.
 
     association_id
         The Route Table Association ID to disassociate

@@ -63,7 +63,7 @@ def _param_if_exists(if_exists):
 
 def _retcode_to_bool(retcode):
     '''
-    Evaulates Open vSwitch command`s retcode value.
+    Evaluates Open vSwitch command`s retcode value.
 
     Args:
         retcode: Value of retcode field from response, should be 0, 1 or 2.
@@ -79,7 +79,7 @@ def _retcode_to_bool(retcode):
 
 def _stdout_list_split(retcode, stdout='', splitstring='\n'):
     '''
-    Evaulates Open vSwitch command`s retcode value.
+    Evaluates Open vSwitch command`s retcode value.
 
     Args:
         retcode: Value of retcode field from response, should be 0, 1 or 2.

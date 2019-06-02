@@ -37,7 +37,7 @@ def _base_url():
     '''
     Return the proxy configured base url.
     '''
-    base_url = "http://locahost:8080"
+    base_url = "http://localhost:8080"
     if 'proxy' in __opts__:
         base_url = __opts__['proxy'].get('base_url', base_url)
     return base_url

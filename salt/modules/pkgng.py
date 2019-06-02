@@ -1901,7 +1901,7 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     Version-lock packages
 
     .. note::
-        This function is provided primarily for compatibilty with some
+        This function is provided primarily for compatibility with some
         parts of :py:mod:`states.pkg <salt.states.pkg>`.
         Consider using Consider using :py:func:`pkg.lock <salt.modules.pkgng.lock>` instead. instead.
 
@@ -1966,7 +1966,7 @@ def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     Remove version locks
 
     .. note::
-        This function is provided primarily for compatibilty with some parts of
+        This function is provided primarily for compatibility with some parts of
         :py:mod:`states.pkg <salt.states.pkg>`.  Consider using
         :py:func:`pkg.unlock <salt.modules.pkgng.unlock>` instead.
 

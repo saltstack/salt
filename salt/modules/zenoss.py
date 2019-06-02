@@ -97,7 +97,7 @@ def _router_request(router, method, data=None):
     url = '{0}/zport/dmd/{1}_router'.format(config.get('hostname'), ROUTERS[router])
     response = _session().post(url, data=req_data)
 
-    # The API returns a 200 response code even whe auth is bad.
+    # The API returns a 200 response code even when auth is bad.
     # With bad auth, the login page is displayed. Here I search for
     # an element on the login form to determine if auth failed.
     if re.search('name="__ac_name"', response.content):

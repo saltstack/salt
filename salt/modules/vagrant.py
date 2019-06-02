@@ -573,11 +573,11 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
     ssh_config = _vagrant_ssh_config(vm_)
 
     try:
-        ans = {'key_filename': ssh_config['IdentityFile'],
-               'ssh_username': ssh_config['User'],
-               'ssh_host': ssh_config['HostName'],
-               'ssh_port': ssh_config['Port'],
-               }
+        answer = {'key_filename': ssh_config['IdentityFile'],
+                  'ssh_username': ssh_config['User'],
+                  'ssh_host': ssh_config['HostName'],
+                  'ssh_port': ssh_config['Port'],
+                 }
 
     except KeyError:
         raise CommandExecutionError(
@@ -614,19 +614,19 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
                     nxt = tokens.index("inet6") + 1
                     found_address = ipaddress.ip_address(tokens[nxt].split('/')[0])
                 if found_address in target_network_range:
-                    ans['ip_address'] = six.text_type(found_address)
+                    answer['ip_address'] = six.text_type(found_address)
                     break  # we have located a good matching address
             except (IndexError, AttributeError, TypeError):
                 pass  # all syntax and type errors loop here
                 # falling out if the loop leaves us remembering the last candidate
         log.info('Network IP address in %s detected as: %s',
-                 target_network_range, ans.get('ip_address', '(not found)'))
+                 target_network_range, answer.get('ip_address', '(not found)'))
 
     if get_private_key:
         # retrieve the Vagrant private key from the host
         try:
             with salt.utils.files.fopen(ssh_config['IdentityFile']) as pks:
-                ans['private_key'] = salt.utils.stringutils.to_unicode(pks.read())
+                answer['private_key'] = salt.utils.stringutils.to_unicode(pks.read())
         except (OSError, IOError) as e:
             raise CommandExecutionError("Error processing Vagrant private key file: {}".format(e))
-    return ans
+    return answer

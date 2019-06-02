@@ -280,7 +280,7 @@ def _run_initdb(name,
     ret = __salt__['cmd.run_all'](cmdstr, python_shell=False, **kwargs)
 
     if ret.get('retcode', 0) != 0:
-        log.error('Error initilizing the postgres data directory')
+        log.error('Error initializing the postgres data directory')
 
     if password is not None and not __salt__['file.remove'](pgpassfile):
         log.warning('Removal of PGPASSFILE failed')

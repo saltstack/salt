@@ -338,7 +338,7 @@ def node_add_label(node_name, label_name, label_value, **kwargs):
     '''
     Set the value of the label identified by `label_name` to `label_value` on
     the node identified by the name `node_name`.
-    Creates the lable if not present.
+    Creates the label if not present.
 
     CLI Examples::
 
@@ -1241,7 +1241,7 @@ def replace_deployment(name,
                        **kwargs):
     '''
     Replaces an existing deployment with a new one defined by name and
-    namespace, having the specificed metadata and spec.
+    namespace, having the specified metadata and spec.
     '''
     body = __create_object_body(
         kind='Deployment',
@@ -1287,7 +1287,7 @@ def replace_service(name,
                     **kwargs):
     '''
     Replaces an existing service with a new one defined by name and namespace,
-    having the specificed metadata and spec.
+    having the specified metadata and spec.
     '''
     body = __create_object_body(
         kind='Service',
@@ -1336,7 +1336,7 @@ def replace_secret(name,
                    **kwargs):
     '''
     Replaces an existing secret with a new one defined by name and namespace,
-    having the specificed data.
+    having the specified data.
 
     CLI Examples::
 

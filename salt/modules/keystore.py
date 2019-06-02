@@ -29,7 +29,7 @@ def __virtual__():
     Check dependencies
     '''
     if has_depends is False:
-        msg = 'jks unavailable: {0} execution module cant be loaded '.format(__virtualname__)
+        msg = 'jks unavailable: {0} execution module can not be loaded '.format(__virtualname__)
         return False, msg
     return __virtualname__
 

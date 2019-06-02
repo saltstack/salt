@@ -1935,7 +1935,7 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
 
     CLI Example::
 
-        salt '*' bigip.modify_monitor bigip admin admin http my-http-monitor  timout=16 interval=6
+        salt '*' bigip.modify_monitor bigip admin admin http my-http-monitor  timeout=16 interval=6
 
     '''
 

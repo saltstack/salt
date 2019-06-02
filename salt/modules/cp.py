@@ -396,7 +396,7 @@ def get_url(path, dest='', saltenv='base', makedirs=False, source_hash=None):
             ``https://`` will not be cached.
 
     saltenv : base
-        Salt fileserver envrionment from which to retrieve the file. Ignored if
+        Salt fileserver environment from which to retrieve the file. Ignored if
         ``path`` is not a ``salt://`` URL.
 
     source_hash

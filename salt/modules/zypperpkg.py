@@ -63,7 +63,7 @@ def __virtual__():
     Set the virtual pkg module if the os is openSUSE
     '''
     if __grains__.get('os_family', '') != 'Suse':
-        return (False, "Module zypper: non SUSE OS not suppored by zypper package manager")
+        return (False, "Module zypper: non SUSE OS not supported by zypper package manager")
     # Not all versions of SUSE use zypper, check that it is available
     if not salt.utils.path.which('zypper'):
         return (False, "Module zypper: zypper package manager not found")
@@ -82,7 +82,7 @@ class _Zypper(object):
         100: 'Patches are available for installation.',
         101: 'Security patches are available for installation.',
         102: 'Installation successful, reboot required.',
-        103: 'Installation succesful, restart of the package manager itself required.',
+        103: 'Installation successful, restart of the package manager itself required.',
     }
 
     WARNING_EXIT_CODES = {

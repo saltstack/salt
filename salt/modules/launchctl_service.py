@@ -119,7 +119,7 @@ def _available_services():
                 except AttributeError:
                     # As of MacOS 10.12 there might be plist files without Label key
                     # in the searched directories. As these files do not represent
-                    # services, thay are not added to the list.
+                    # services, they are not added to the list.
                     pass
 
     return available_services

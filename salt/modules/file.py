@@ -639,7 +639,7 @@ def chattr(*files, **kwargs):
     the following options:
 
     operator
-        Can be wither ``add`` or ``remove``. Determines whether attributes
+        Can be whether ``add`` or ``remove``. Determines whether attributes
         should be added or removed from files
 
     attributes

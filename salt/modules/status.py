@@ -109,7 +109,7 @@ def _aix_loadavg():
 
 def _aix_nproc():
     '''
-    Return the maximun number of PROCESSES allowed per user on AIX
+    Return the maximum number of PROCESSES allowed per user on AIX
     '''
     nprocs = __salt__['cmd.run']('lsattr -E -l sys0 | grep maxuproc', python_shell=True).split()
     return _number(nprocs[1])

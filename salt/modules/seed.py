@@ -47,7 +47,7 @@ def prep_bootstrap(mpt):
         salt '*' seed.prep_bootstrap /tmp
 
     '''
-    # Verify that the boostrap script is downloaded
+    # Verify that the bootstrap script is downloaded
     bs_ = __salt__['config.gather_bootstrap_script']()
     fpd_ = os.path.join(mpt, 'tmp', "{0}".format(
         uuid.uuid4()))

@@ -6,22 +6,22 @@ This module renders highstate configuration into a more human readable format.
 
 How it works:
 
- `highstate or lowstate` data is parsed with a `proccesser` this defaults to `highstate_doc.proccesser_markdown`.
- The proccessed data is passed to a `jinja` template that builds up the document content.
+ `highstate or lowstate` data is parsed with a `processor` this defaults to `highstate_doc.processor_markdown`.
+ The processed data is passed to a `jinja` template that builds up the document content.
 
 
 configuration: Pillar
 
 .. code-block:: yaml
 
-    # the following defaults can be overrided
+    # the following defaults can be overridden
     highstate_doc.config:
 
-        # list of regex of state names to ignore in `highstate_doc.proccess_lowstates`
+        # list of regex of state names to ignore in `highstate_doc.process_lowstates`
         filter_id_regex:
             - '.*!doc_skip$'
 
-        # list of regex of state functions to ignore in `highstate_doc.proccess_lowstates`
+        # list of regex of state functions to ignore in `highstate_doc.process_lowstates`
         filter_state_function_regex:
             - 'file.accumulated'
 
@@ -32,8 +32,8 @@ configuration: Pillar
         # limit size of files that can be included in doc (10000 bytes)
         max_render_file_size: 10000
 
-        # advanced option to set a custom lowstate proccesser
-        proccesser: highstate_doc.proccesser_markdown
+        # advanced option to set a custom lowstate processor
+        processor: highstate_doc.processor_markdown
 
 
 State example
@@ -47,10 +47,10 @@ State example
             - contents: |
                 example `highstate_doc.note`
                 ------------------
-                This state does not do anything to the system! It is only used by a `proccesser`
+                This state does not do anything to the system! It is only used by a `processor`
                 you can use `requisites` and `order` to move your docs around the rendered file.
 
-    {{sls}} a file we dont want in the doc !doc_skip:
+    {{sls}} a file we do not want in the doc !doc_skip:
         file.managed:
             - name: /root/passwords
             - contents: 'password: sadefgq34y45h56q'
@@ -59,7 +59,7 @@ State example
 
 
 To create the help document build a State that uses `highstate_doc.render`.
-For preformance it's advised to not included this state in your `top.sls` file.
+For performance it's advised to not included this state in your `top.sls` file.
 
 .. code-block:: yaml
 
@@ -79,7 +79,7 @@ Run our `makereadme.sls` state to create `/root/README.md`.
     # first ensure `highstate` return without errors or changes
     salt-call state.highstate
     salt-call state.apply makereadme
-    # or if you dont want the extra `make helpfile` state
+    # or if you do not want the extra `make helpfile` state
     salt-call --out=newline_values_only salt.highstate_doc.render > /root/README.md ; chmod 0600 /root/README.md
 
 
@@ -118,14 +118,14 @@ You can use pandoc to create HTML versions of the markdown.
 
 .. code-block:: bash
 
-    # proccess all the readme.md files to readme.html
+    # process all the readme.md files to readme.html
     if which pandoc; then echo "Found pandoc"; else echo "** Missing pandoc"; exit 1; fi
     if which gs; then echo "Found gs"; else echo "** Missing gs(ghostscript)"; exit 1; fi
     readme_files=$(find $dest -type f -path "*/README.md" -print)
     for f in $readme_files ; do
         ff=${f#$dest/}
         minion=${ff%%/*}
-        echo "proccess: $dest/${minion}/$(basename $f)"
+        echo "process: $dest/${minion}/$(basename $f)"
         cat $dest/${minion}/$(basename $f) | \
             pandoc --standalone --from markdown_github --to html \
             --include-in-header $dest/style.html \
@@ -147,9 +147,9 @@ If you wish to customize the document format:
 
 .. code-block:: yaml
 
-    # you could also create a new `proccesser` for perhaps reStructuredText
+    # you could also create a new `processor` for perhaps reStructuredText
     # highstate_doc.config:
-    #     proccesser: doc_custom.proccesser_rst
+    #     processor: doc_custom.processor_rst
 
     # example `salt://makereadme.jinja`
     """
@@ -157,7 +157,7 @@ If you wish to customize the document format:
     ==========================================
 
     {# lowstates is set from highstate_doc.render() #}
-    {# if lowstates is missing use salt.highstate_doc.proccess_lowstates() #}
+    {# if lowstates is missing use salt.highstate_doc.process_lowstates() #}
     {% for s in lowstates %}
     {{s.id}}
     -----------------------------------------------------------------
@@ -245,7 +245,7 @@ markdown_basic_jinja_template_txt = """
 """
 
 markdown_default_jinja_template_txt = """
-Configuration Managment
+Configuration Management
 ===============================================================================
 
 ```
@@ -370,7 +370,7 @@ def _get_config(**kwargs):
         'filter_id_regex': ['.*!doc_skip'],
         'filter_function_regex': [],
         'replace_text_regex': {},
-        'proccesser': 'highstate_doc.proccesser_markdown',
+        'processor': 'highstate_doc.processor_markdown',
         'max_render_file_size': 10000,
         'note': None
     }
@@ -435,7 +435,7 @@ def render(jinja_template_text=None, jinja_template_function='highstate_doc.mark
             highstate_doc.markdown_full_jinja_template
     '''
     config = _get_config(**kwargs)
-    lowstates = proccess_lowstates(**kwargs)
+    lowstates = process_lowstates(**kwargs)
     # TODO: __env__,
     context = {
         'saltenv': None,
@@ -454,7 +454,7 @@ def render(jinja_template_text=None, jinja_template_function='highstate_doc.mark
         raise Exception('No jinja template text')
 
     txt = tpl.render_jinja_tmpl(template_text, context, tmplpath=None)
-    # after proccessing the template replace passwords or other data.
+    # after processing the template replace passwords or other data.
     rt = config.get('replace_text_regex')
     for r in rt:
         txt = re.sub(r, rt[r], txt)
@@ -474,16 +474,16 @@ def _blacklist_filter(s, config):
     return False
 
 
-def proccess_lowstates(**kwargs):
+def process_lowstates(**kwargs):
     '''
-    return proccessed lowstate data that was not blacklisted
+    return processed lowstate data that was not blacklisted
 
     render_module_function is used to provide your own.
     defaults to from_lowstate
     '''
     states = []
     config = _get_config(**kwargs)
-    proccesser = config.get('proccesser')
+    processor = config.get('processor')
     ls = __salt__['state.show_lowstate']()
 
     if not isinstance(ls, list):
@@ -496,7 +496,7 @@ def proccess_lowstates(**kwargs):
     for s in ls:
         if _blacklist_filter(s, config):
             continue
-        doc = __salt__[proccesser](s, config, **kwargs)
+        doc = __salt__[processor](s, config, **kwargs)
         states.append(doc)
     return states
 
@@ -538,7 +538,7 @@ def _format_markdown_system_file(filename, config):
     if file_size <= config.get('max_render_file_size'):
         is_binary = True
         try:
-            # TODO: this is linux only should find somthing portable
+            # TODO: this is linux only should find something portable
             file_type = __salt__['cmd.shell']('\\file -i \'{0}\''.format(filename))
             if 'charset=binary' not in file_type:
                 is_binary = False
@@ -577,16 +577,16 @@ def _format_markdown_requisite(state, stateid, makelink=True):
         return ' * `{0}`\n'.format(fmt_id)
 
 
-def proccesser_markdown(lowstate_item, config, **kwargs):
+def processor_markdown(lowstate_item, config, **kwargs):
     '''
-    Takes low state data and returns a dict of proccessed data
+    Takes low state data and returns a dict of processed data
     that is by default used in a jinja template when rendering a markdown highstate_doc.
 
     This `lowstate_item_markdown` given a lowstate item, returns a dict like:
 
     .. code-block:: yaml
 
-        vars:       # the raw lowstate_item that was proccessed
+        vars:       # the raw lowstate_item that was processed
         id:         # the 'id' of the state.
         id_full:    # combo of the state type and id "state: id"
         state:      # name of the salt state module

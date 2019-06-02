@@ -466,7 +466,7 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
     '''
     result = {}
 
-    if not _sysfs_attr(_bcpath(dev), None, 'error', '{0} is not a bcache fo any kind'.format(dev)):
+    if not _sysfs_attr(_bcpath(dev), None, 'error', '{0} is not a bcache of any kind'.format(dev)):
         return False
     elif _bcsys(dev, 'set'):
         # ---------------- It's the cache itself ----------------
@@ -868,7 +868,7 @@ def _sizes(dev):
     # max_hw_sectors_kb???
     # There's also discard_max_hw_bytes more recently
     # See: https://www.kernel.org/doc/Documentation/block/queue-sysfs.txt
-    # Also, I cant find any docs yet regarding bucket sizes;
+    # Also, I can't find any docs yet regarding bucket sizes;
     # it's supposed to be discard_max_hw_bytes,
     # but no way to figure that one reliably out apparently
 

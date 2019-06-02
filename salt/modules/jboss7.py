@@ -96,7 +96,7 @@ def stop_server(jboss_config, host=None):
     else:
         operation = '/host="{host}"/:shutdown'.format(host=host)
     shutdown_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
-    # JBoss seems to occasionaly close the channel immediately when :shutdown is sent
+    # JBoss seems to occasionally close the channel immediately when :shutdown is sent
     if shutdown_result['success'] or (not shutdown_result['success'] and 'Operation failed: Channel closed' in shutdown_result['stdout']):
         return shutdown_result
     else:
@@ -126,7 +126,7 @@ def reload_(jboss_config, host=None):
     else:
         operation = '/host="{host}"/:reload'.format(host=host)
     reload_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
-    # JBoss seems to occasionaly close the channel immediately when :reload is sent
+    # JBoss seems to occasionally close the channel immediately when :reload is sent
     if reload_result['success'] or (not reload_result['success'] and
                                          ('Operation failed: Channel closed' in reload_result['stdout'] or
                                           'Communication error: java.util.concurrent.ExecutionException: Operation failed' in reload_result['stdout'])):

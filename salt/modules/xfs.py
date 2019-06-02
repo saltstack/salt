@@ -183,9 +183,9 @@ def dump(device, destination, level=0, label=None, noerase=None):
 
     .. code-block:: bash
 
-        salt '*' xfs.dump /dev/sda1 /detination/on/the/client
-        salt '*' xfs.dump /dev/sda1 /detination/on/the/client label='Company accountancy'
-        salt '*' xfs.dump /dev/sda1 /detination/on/the/client noerase=True
+        salt '*' xfs.dump /dev/sda1 /destination/on/the/client
+        salt '*' xfs.dump /dev/sda1 /destination/on/the/client label='Company accountancy'
+        salt '*' xfs.dump /dev/sda1 /destination/on/the/client noerase=True
     '''
     if not salt.utils.path.which("xfsdump"):
         raise CommandExecutionError("Utility \"xfsdump\" has to be installed or missing.")

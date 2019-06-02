@@ -43,7 +43,7 @@ def __virtual__():
 
 def _get_cmd():
     '''
-    Alteratives commands and differ across distributions
+    Alternatives commands and differ across distributions
     '''
     if __grains__['os_family'] == 'RedHat':
         return 'alternatives'

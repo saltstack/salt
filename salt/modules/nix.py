@@ -148,7 +148,7 @@ def install(*pkgs, **kwargs):
     :param pkgs:
         packages to update
     :param bool attributes:
-        Pass the list of packages or single package as attribues, not package names.
+        Pass the list of packages or single package as attributes, not package names.
         default: False
 
     :return: Installed packages. Example element: ``gcc-3.3.2``

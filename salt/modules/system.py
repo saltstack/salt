@@ -525,7 +525,7 @@ def get_computer_desc():
                     if match:
                         # get rid of whitespace then strip off quotes
                         desc = _strip_quotes(match.group(1).strip())
-                        # no break so we get the last occurance
+                        # no break so we get the last occurrence
         except IOError:
             pass
 

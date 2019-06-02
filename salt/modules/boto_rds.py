@@ -814,7 +814,7 @@ def describe_parameter_group(name, Filters=None, MaxRecords=None, Marker=None,
                     'Failed to get RDS description for group {0}.'.format(name)}
 
         return {'results': bool(info), 'message':
-                'Got RDS descrition for group {0}.'.format(name)}
+                'Got RDS description for group {0}.'.format(name)}
     except ClientError as e:
         return {'error': __utils__['boto3.get_error'](e)}
 

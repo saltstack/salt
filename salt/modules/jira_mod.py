@@ -44,7 +44,7 @@ JIRA = None
 
 
 def __virtual__():
-    return __virtualname__ if HAS_JIRA else (False, 'Please install the jira Python libary from PyPI')
+    return __virtualname__ if HAS_JIRA else (False, 'Please install the jira Python library from PyPI')
 
 
 def _get_credentials(server=None,

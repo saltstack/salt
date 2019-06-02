@@ -36,7 +36,7 @@ def __virtual__():
 
 def get_parameter(name, withdecryption=False, resp_json=False, region=None, key=None, keyid=None, profile=None):
     '''
-    Retrives a parameter from SSM Parameter Store
+    Retrieves a parameter from SSM Parameter Store
 
     .. versionadded:: Neon
 

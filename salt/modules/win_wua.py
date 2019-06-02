@@ -968,7 +968,7 @@ def _get_msupdate_status():
     # Return a collection of loaded Services
     col_services = obj_sm.Services
 
-    # Loop through the collection to find the Microsoft Udpate Service
+    # Loop through the collection to find the Microsoft Update Service
     # If it exists return True otherwise False
     for service in col_services:
         if service.name == 'Microsoft Update':

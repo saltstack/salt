@@ -888,7 +888,7 @@ def cmd_unzip(zip_file,
             salt '*' archive.cmd_unzip template=jinja /tmp/zipfile.zip '/tmp/{{grains.id}}' excludes=file_1,file_2
 
     options
-        Optional when using ``zip`` archives, ignored when usign other archives
+        Optional when using ``zip`` archives, ignored when using other archives
         files. This is mostly used to overwrite existing files with ``o``.
         This options are only used when ``unzip`` binary is used.
 

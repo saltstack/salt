@@ -292,7 +292,7 @@ def add(name,
 
     # At this point, the user was successfully created, so return true
     # regardless of the outcome of the below functions. If there is a
-    # problem wth changing any of the user's info below, it will be raised
+    # problem with changing any of the user's info below, it will be raised
     # in a future highstate call. If anyone has a better idea on how to do
     # this, feel free to change it, but I didn't think it was a good idea
     # to return False when the user was successfully created since A) the
@@ -505,7 +505,7 @@ def chhome(name, home, persist=False, root=None):
     home
         New home directory for the user account
 
-    presist
+    persist
         Move contents of the home directory to the new location
 
     root

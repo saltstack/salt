@@ -691,7 +691,7 @@ def delete_snapshot(name, snap_name, runas=None, all=False):
 
     .. note::
 
-        Deleting a snapshot from which other snapshots are dervied will not
+        Deleting a snapshot from which other snapshots are derived will not
         delete the derived snapshots
 
     :param str name:

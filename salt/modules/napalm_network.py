@@ -584,7 +584,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             file or pillar as ``textfsm_index_file``.
 
     saltenv: ``base``
-        Salt fileserver envrionment from which to retrieve the file.
+        Salt fileserver environment from which to retrieve the file.
         Ignored if ``textfsm_path`` is not a ``salt://`` URL.
 
         .. versionadded:: 2018.3.0
@@ -677,9 +677,9 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         }
     )
     # thus we can display the output as is
-    # in case of errors, they'll be catched in the proxy
+    # in case of errors, they'll be caught in the proxy
     if not raw_cli_outputs['result']:
-        # Error -> dispaly the output as-is.
+        # Error -> display the output as-is.
         return raw_cli_outputs
     textfsm_parse = kwargs.get('textfsm_parse') or __opts__.get('napalm_cli_textfsm_parse') or\
                     __pillar__.get('napalm_cli_textfsm_parse', False)
@@ -737,7 +737,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             log.debug('Processed CLI output:')
             log.debug(processed_cli_output)
             if not processed_cli_output['result']:
-                log.debug('Apparently this didnt work, returnin the raw output')
+                log.debug('Apparently this didn\'t work, returning the raw output')
                 processed_command_output = command_output
                 processed_cli_outputs['comment'] += '\nUnable to process the output from {0}: {1}.'.format(command,
                     processed_cli_output['comment'])
@@ -761,7 +761,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             log.debug('Processed CLI output:')
             log.debug(processed_cli_output)
             if not processed_cli_output['result']:
-                log.debug('Apparently this didnt work, returning '
+                log.debug('Apparently this didn\'t work, returning '
                           'the raw output')
                 processed_command_output = command_output
                 processed_cli_outputs['comment'] += '\nUnable to process the output from {0}: {1}'.format(command,
@@ -771,7 +771,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                 log.debug('All good, %s has a nice output!', command)
                 processed_command_output = processed_cli_output['out']
             else:
-                log.debug('Processing %s didnt fail, but didnt return'
+                log.debug('Processing %s didn\'t fail, but didn\'t return'
                           ' anything either. Dumping raw.', command)
                 processed_command_output = command_output
         else:

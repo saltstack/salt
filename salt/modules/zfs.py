@@ -9,8 +9,8 @@ Module for running ZFS command
 :platform:      illumos,freebsd,linux
 
 .. versionchanged:: 2018.3.1
-  Big refactor to remove duplicate code, better type converions and improved
-  consistancy in output.
+  Big refactor to remove duplicate code, better type conversions and improved
+  consistency in output.
 
 '''
 from __future__ import absolute_import, unicode_literals, print_function

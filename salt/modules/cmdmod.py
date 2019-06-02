@@ -242,7 +242,7 @@ def _check_avail(cmd):
                 wret = True
                 break
     else:
-        # If no whitelist set then alls good!
+        # If no whitelist set then all is good!
         wret = True
     return bret and wret
 

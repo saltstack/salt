@@ -202,7 +202,7 @@ def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
                 continue
             log.info('Impact data gathered:\n%s', impact)
 
-            # Check to see if conditions are sufficent to return the impact
+            # Check to see if conditions are sufficient to return the impact
             # data and not proceed with the actual upgrade.
             #
             # Impact data indicates the upgrade or downgrade will fail
@@ -381,7 +381,7 @@ def _parse_upgrade_data(data):
                 upgrade_result[bk][mk]['upgrade_required'] = True
             continue
 
-        # The following lines indicate a successfull upgrade.
+        # The following lines indicate a successful upgrade.
         if re.search(r'Install has been successful', line):
             log.info('Install successful line')
             upgrade_result['succeeded'] = True

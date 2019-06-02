@@ -192,7 +192,7 @@ def _yum_pkginfo(output):
                                                           osarch)
         else:
             if key == 'version':
-                # Suppport packages with no 'Release' parameter
+                # Support packages with no 'Release' parameter
                 value = value.rstrip('-')
             elif key == 'repoid':
                 # Installed packages show a '@' at the beginning
@@ -1844,7 +1844,7 @@ def upgrade(name=None,
         .. versionadded:: 2019.2.0
 
     obsoletes : True
-        Controls wether yum/dnf should take obsoletes into account and remove them.
+        Controls whether yum/dnf should take obsoletes into account and remove them.
         If set to ``False`` yum will use ``update`` instead of ``upgrade``
         and dnf will be run with ``--obsoletes=False``
 

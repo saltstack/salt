@@ -606,7 +606,7 @@ def disassociate_vpc_from_hosted_zone(HostedZoneId=None, Name=None, VPCId=None,
 
         salt myminion boto3_route53.disassociate_vpc_from_hosted_zone \
                     Name=example.org. VPCName=myVPC \
-                    VPCRegion=us-east-1 Comment="Whoops!  Don't wanna talk to this-here zone no more."
+                    VPCRegion=us-east-1 Comment="Whoops!  Don't want to talk to this-here zone no more."
 
     '''
     if not _exactly_one((HostedZoneId, Name)):
@@ -723,7 +723,7 @@ def delete_hosted_zone_by_domain(Name, PrivateZone=None, region=None, key=None, 
 
 def aws_encode(x):
     '''
-    An implementation of the encoding required to suport AWS's domain name
+    An implementation of the encoding required to support AWS's domain name
     rules defined here__:
 
     .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
@@ -774,7 +774,7 @@ def _aws_encode_changebatch(o):
 
 def _aws_decode(x):
     '''
-    An implementation of the decoding required to suport AWS's domain name
+    An implementation of the decoding required to support AWS's domain name
     rules defined here__:
 
     .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
@@ -789,7 +789,7 @@ def _aws_decode(x):
 
         For a list of ASCII characters the corresponding octal codes, do an internet search on "ascii table".
 
-    We look for the existance of any escape codes which give us a clue that
+    We look for the existence of any escape codes which give us a clue that
     we're received an escaped unicode string; or we assume it's idna encoded
     and then decode as necessary.
     '''

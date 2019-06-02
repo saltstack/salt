@@ -849,7 +849,7 @@ def _network_conf(conf_tuples=None, **kwargs):
             odata = old[iface]
             omac = odata.get('lxc.network.hwaddr', '')
             otype = odata.get('lxc.network.type', '')
-        # default for network type is setted here
+        # default for network type is set here
         # attention not to change the network type
         # without a good and explicit reason to.
         if otype and not ntype:
@@ -925,7 +925,7 @@ def _config_list(conf_tuples=None, only_net=False, **kwargs):
 
     only_net
         by default we add to the tuples a reflection of both
-        the real config if avalaible and a certain amount of
+        the real config if available and a certain amount of
         default values like the cpu parameters, the memory
         and etc.
         On the other hand, we also no matter the case reflect
@@ -1506,7 +1506,7 @@ def init(name,
                     msg = '{0}: Failed to set password'.format(
                         user) + exc.strerror
                     # only hardfail in unrecoverable situation:
-                    # root cannot be setted up
+                    # root cannot be set up
                     if user == 'root':
                         ret['comment'] = msg
                         ret['result'] = False
@@ -1829,7 +1829,7 @@ def create(name,
             options='{"dist": "centos", "release": "6", "arch": "amd64"}'
 
         For available template options, refer to the lxc template scripts
-        which are ususally located under ``/usr/share/lxc/templates``,
+        which are usually located under ``/usr/share/lxc/templates``,
         or run ``lxc-create -t <template> -h``.
 
     image
@@ -2265,7 +2265,7 @@ def _change_state(cmd,
     cmd += ' -n {0}'.format(name)
 
     # certain lxc commands need to be taken with care (lxc-start)
-    # as te command itself mess with double forks; we must not
+    # as the command itself mess with double forks; we must not
     # communicate with it, but just wait for the exit status
     pkwargs = {'python_shell': False,
                'redirect_stderr': True,
@@ -3098,7 +3098,7 @@ def set_dns(name, dnsservers=None, searchdomains=None, path=None):
     # We need to handle that case with care:
     #  - we create the resolv.conf runtime directory (the
     #   linked directory) as anyway it will be shadowed when the real
-    #   runned tmpfs mountpoint will be mounted.
+    #   running tmpfs mountpoint will be mounted.
     #   ( /etc/resolv.conf -> ../run/resolvconf/resolv.conf)
     #   Indeed, it can save us in any other case (running, eg, in a
     #   bare chroot when repairing or preparing the container for
@@ -3366,7 +3366,7 @@ def _needs_install(name, path=None):
                          path=path,
                          ignore_retcode=True)
     # we assume that installing is when no minion is running
-    # but testing the executable presence is not enougth for custom
+    # but testing the executable presence is not enough for custom
     # installs where the bootstrap can do much more than installing
     # the bare salt binaries.
     if has_minion:

@@ -379,7 +379,7 @@ def procs(count=False):
     if count:
         return len(processes)
 
-    #a propper run of the function, creating a nonsensically long out put.
+    #a proper run of the function, creating a nonsensically long out put.
     process_info = {}
     for proc in processes:
         process_info[proc.ProcessId] = _get_process_info(proc)

@@ -62,7 +62,7 @@ LIST_DIRS = [
     # Or /usr/lib/locale
     '^/usr/lib/locale/',
     # Skip files from the user's home directories
-    # many processes hold temporafy files there
+    # many processes hold temporary files there
     '^/home/',
     # Skip automatically generated files
     '^.*icon-theme.cache',
@@ -191,7 +191,7 @@ def _format_output(kernel_restart, packages, verbose, restartable, nonrestartabl
         String - formatted output.
 
     Args:
-        kernel_restart: indicates that newer kernel is instaled
+        kernel_restart: indicates that newer kernel is installed
         packages: list of packages that should be restarted
         verbose: enables extensive output
         restartable: list of restartable packages

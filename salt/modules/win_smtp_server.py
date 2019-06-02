@@ -273,7 +273,7 @@ def set_server_setting(settings, server=_DEFAULT_SERVER):
                 except AttributeError as error:
                     _LOG.error('Error setting %s: %s', setting, error)
 
-    # Get the settings post-change so that we can verify tht all properties
+    # Get the settings post-change so that we can verify that all properties
     # were modified successfully. Track the ones that weren't.
     new_settings = get_server_setting(settings=settings.keys(), server=server)
     failed_settings = dict()

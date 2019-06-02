@@ -389,7 +389,7 @@ def update(endpoint='incidents',
     Update attribute(s) of a specific endpoint.
 
     id
-        The unique ID of the enpoint entry.
+        The unique ID of the endpoint entry.
 
     endpoint: incidents
         Endpoint name.

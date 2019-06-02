@@ -167,8 +167,8 @@ def create(domain_name, years, **kwargs):
     opts['DomainName'] = domain_name
     opts['Years'] = six.text_type(years)
 
-    def add_to_opts(opts_dict, kwargs, value, suffix, prefices):
-        for prefix in prefices:
+    def add_to_opts(opts_dict, kwargs, value, suffix, prefixes):
+        for prefix in prefixes:
             nextkey = prefix + suffix
             if nextkey not in kwargs:
                 opts_dict[nextkey] = value

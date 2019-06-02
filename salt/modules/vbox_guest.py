@@ -233,7 +233,7 @@ def additions_remove(**kwargs):
 
     Firstly it tries to uninstall itself by executing
     '/opt/VBoxGuestAdditions-VERSION/uninstall.run uninstall'.
-    It uses the CD, connected by VirtualBox if it failes.
+    It uses the CD, connected by VirtualBox if it fails.
 
     CLI Example:
 

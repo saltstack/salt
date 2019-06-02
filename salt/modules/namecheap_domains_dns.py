@@ -137,7 +137,7 @@ def set_hosts(sld, tld, hosts):
         - **address** - URL or IP address
         - **ttl** - An integer between 60 and 60000 (default: ``1800``)
 
-        Additonally, the ``mxpref`` key can be present, but must be accompanied
+        Additionally, the ``mxpref`` key can be present, but must be accompanied
         by an ``emailtype`` key.
 
     CLI Example:

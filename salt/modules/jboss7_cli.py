@@ -111,7 +111,7 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
             cli_result = _parse(cli_command_result['stdout'])
             cli_result['success'] = cli_result['outcome'] == 'success'
         else:
-            raise CommandExecutionError('Operation has returned unparseable output: {0}'.format(cli_command_result['stdout']))
+            raise CommandExecutionError('Operation has returned unparsable output: {0}'.format(cli_command_result['stdout']))
     else:
         if _is_cli_output(cli_command_result['stdout']):
             cli_result = _parse(cli_command_result['stdout'])
@@ -158,7 +158,7 @@ def __call_cli(jboss_config, command, retries=1):
     if cli_command_result['retcode'] == 1 and 'Unable to authenticate against controller' in cli_command_result['stderr']:
         raise CommandExecutionError('Could not authenticate against controller, please check username and password for the management console. Err code: {retcode}, stdout: {stdout}, stderr: {stderr}'.format(**cli_command_result))
 
-    # It may happen that eventhough server is up it may not respond to the call
+    # It may happen that even though server is up it may not respond to the call
     if cli_command_result['retcode'] == 1 and 'JBAS012144' in cli_command_result['stderr'] and retries > 0:  # Cannot connect to cli
         log.debug('Command failed, retrying... (%d tries left)', retries)
         time.sleep(3)
@@ -178,7 +178,7 @@ def __escape_command(command):
       <simple name="java:/app/binding1" value="a\b"/>
     </bindings>
 
-    Eventhough it is just a single "\" if you want to read it from command line you will get:
+    Even though it is just a single "\" if you want to read it from command line you will get:
 
     /opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller=ip_addr:9999 --user=user --password=pass --command="/subsystem=naming/binding=\"java:/app/binding1\":read-resource"
     {

@@ -216,7 +216,7 @@ def snap_create(name, suffix=None):
     name : string
         name of volume to snapshot
     suffix : string
-        if specificed forces snapshot name suffix. If not specified defaults to timestamp.
+        if specified forces snapshot name suffix. If not specified defaults to timestamp.
 
     CLI Example:
 
@@ -327,7 +327,7 @@ def volume_create(name, size=None):
     name : string
         name of volume (truncated to 63 characters)
     size : string
-        if specificed capacity of volume. If not specified default to 1G.
+        if specified capacity of volume. If not specified default to 1G.
         Refer to Pure Storage documentation for formatting rules.
 
     CLI Example:
@@ -961,7 +961,7 @@ def pg_create(name, hostgroup=None, host=None, volume=None, enabled=True):
     Create a protection group on a Pure Storage FlashArray.
 
     Will return False is the following cases:
-       * Protection Grop already exists
+       * Protection Group already exists
        * Protection Group in a deleted state
        * More than one type is specified - protection groups are for only
          hostgroups, hosts or volumes
