@@ -64,7 +64,7 @@ dynamic modules when states are run. To disable this behavior set
 :conf_minion:`autoload_dynamic_modules` to ``False`` in the minion config.
 
 When dynamic modules are autoloaded via states, only the modules defined in the
-same saltenvs as the states currently being run.
+same saltenv as the states currently being run are synced.
 
 Sync Via the saltutil Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -75,10 +75,7 @@ or specific dynamic modules. The ``saltutil.sync_*``
 :py:mod:`runner functions <salt.runners.saltutil>` can be used to sync modules
 to minions and the master, respectively.
 
-About saltenvs
-~~~~~~~~~~~~~~
-
-In either of the above cases, which saltenvs are synced from are based on the topfiles. (Unless specified manually.)
+Which saltenvs that the minion syncs from is based on the topfiles. (Unless specified manually.)
 
 The minion syncs modules from saltenvs that mention the minion in the saltenv's topfile.
 
