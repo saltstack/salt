@@ -213,10 +213,7 @@ def pytest_configure(config):
         if dirname != 'tests':
             config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, dirname))
     config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/support'))
-    config.addinivalue_line(
-        'filterwarnings',
-        r'once:encoding is deprecated, Use raw=False instead\.:DeprecationWarning'
-    )
+    config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/kitchen'))
     # pylint: disable=protected-access
 
     # Default Logging Config
