@@ -88,7 +88,7 @@ pytest-helpers-namespace==2019.1.8
 pytest-salt-runtests-bridge==2019.6.14
 pytest-salt==2019.6.13
 pytest-tempdir==2018.8.11
-pytest==4.6.3
+pytest==4.6.4
 python-dateutil==2.8.0    # via botocore, croniter, kubernetes, moto, pylxd
 python-etcd==0.4.5
 python-gnupg==0.4.4
