@@ -213,6 +213,7 @@ def pytest_configure(config):
         if dirname != 'tests':
             config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, dirname))
     config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/support'))
+    config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/kitchen'))
     # Ignore the msgpack deprecated encoding usage
     config.addinivalue_line(
         'filterwarnings',
