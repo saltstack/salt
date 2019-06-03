@@ -217,6 +217,10 @@ class VTTestCase(TestCase):
         finally:
             term.close(terminate=True, kill=True)
 
+    @skipIf(
+        'JENKINS_URL' in os.environ,
+        'Disabled until use of sys.stdout.fileno is possible in CI test suite'
+    )
     def test_split_multibyte_characters_unicode(self):
         block_size = 1024
         encoding = 'utf-8'
@@ -269,6 +273,10 @@ class VTTestCase(TestCase):
             # which would seem be indicative of deeper problems
             shutil.rmtree(tempdir, ignore_errors=True)
 
+    @skipIf(
+        'JENKINS_URL' in os.environ,
+        'Disabled until use of sys.stdout.fileno is possible in CI test suite'
+    )
     def test_split_multibyte_characters_shiftjis(self):
         block_size = 1024
         encoding = 'shift-jis'
