@@ -33,9 +33,9 @@ import salt.utils.stringutils
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 def stdout_fileno_available():
-    """
+    '''
         Tests if sys.stdout.fileno is available in this testing enviroment
-    """
+    '''
     try:
         sys.stdout.fileno()
         return True
@@ -45,10 +45,10 @@ def stdout_fileno_available():
 class VTTestCase(TestCase):
 
     def run_test_in_subprocess(self, test_name):
-        """
+        '''
             Runs a named test in a new instance of python to avoid broken
             sys.stdout.fileno method
-        """
+        '''
         test_root = os.path.abspath(
             os.path.join(
                 os.path.join(
