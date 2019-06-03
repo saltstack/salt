@@ -1816,7 +1816,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.utils.platform.is_proxy")
     def test__hw_data_linux_unicode_error(self, is_proxy, exists):
         def _fopen(*args):
-            class _File:
+            class _File(object):
                 def __enter__(self):
                     return self
 
