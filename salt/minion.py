@@ -988,10 +988,14 @@ class MinionManager(MinionBase):
         if (self.opts['master_type'] in ('failover', 'distributed')) or not isinstance(self.opts['master'], list):
             masters = [masters]
 
+        beacons_leader = True
         for master in masters:
             s_opts = copy.deepcopy(self.opts)
             s_opts['master'] = master
             s_opts['multimaster'] = True
+            if beacons_leader:
+                s_opts['beacons_leader'] = beacons_leader
+                beacons_leader = False
             minion = self._create_minion_object(s_opts,
                                                 s_opts['auth_timeout'],
                                                 False,
@@ -2122,6 +2126,8 @@ class Minion(MinionBase):
         '''
         Refresh the functions and returners.
         '''
+        if not self.opts.get('beacons_leader', False):
+            return
         log.debug('Refreshing beacons.')
         self.beacons = salt.beacons.Beacon(self.opts, self.functions)
 
@@ -2190,6 +2196,9 @@ class Minion(MinionBase):
         '''
         Manage Beacons
         '''
+        if not self.opts.get('beacons_leader', False):
+            return
+
         func = data.get('func', None)
         name = data.get('name', None)
         beacon_data = data.get('beacon_data', None)
@@ -2470,6 +2479,10 @@ class Minion(MinionBase):
                 key, salt.crypt.AsyncAuth.creds_map.get(key), data['creds']
             )
             salt.crypt.AsyncAuth.creds_map[tuple(data['key'])] = data['creds']
+        elif tag.startswith('__beacons_return'):
+            if self.connected:
+                log.debug('Firing beacons to master')
+                self._fire_master(events=data)
 
     def _fallback_cleanups(self):
         '''
@@ -2512,6 +2525,10 @@ class Minion(MinionBase):
         Set up the beacons.
         This is safe to call multiple times.
         '''
+        # In multimaster configuration the only one minion shall execute beacons
+        if not self.opts.get('beacons_leader', False):
+            return
+
         self._setup_core()
 
         loop_interval = self.opts['loop_interval']
@@ -2527,8 +2544,11 @@ class Minion(MinionBase):
                     beacons = self.process_beacons(self.functions)
                 except Exception:
                     log.critical('The beacon errored: ', exc_info=True)
-                if beacons and self.connected:
-                    self._fire_master(events=beacons)
+                if beacons:
+                    event = salt.utils.event.get_event('minion',
+                                                       opts=self.opts,
+                                                       listen=False)
+                    event.fire_event(beacons, '__beacons_return')
 
             new_periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(
                     handle_beacons, loop_interval * 1000)
