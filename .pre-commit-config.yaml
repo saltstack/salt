@@ -115,7 +115,7 @@ repos:
         alias: compile-linux-py3.4-zmq-requirements
         name: Linux Py3.4 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.4
@@ -129,7 +129,7 @@ repos:
         alias: compile-linux-py3.4-raet-requirements
         name: Linux Py3.4 RAET Requirements
         files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.4
@@ -153,7 +153,7 @@ repos:
         alias: compile-linux-py3.5-zmq-requirements
         name: Linux Py3.5 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.5
@@ -193,7 +193,7 @@ repos:
         alias: compile-linux-py3.5-raet-requirements
         name: Linux Py3.5 RAET Requirements
         files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.5
@@ -245,7 +245,7 @@ repos:
         alias: compile-linux-py3.6-zmq-requirements
         name: Linux Py3.6 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.6
@@ -285,7 +285,7 @@ repos:
         alias: compile-linux-py3.6-raet-requirements
         name: Linux Py3.6 RAET Requirements
         files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.6
@@ -337,7 +337,7 @@ repos:
         alias: compile-linux-py3.7-zmq-requirements
         name: Linux Py3.7 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.7
@@ -377,7 +377,7 @@ repos:
         alias: compile-linux-py3.7-raet-requirements
         name: Linux Py3.7 RAET Requirements
         files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.7
