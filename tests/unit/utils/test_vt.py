@@ -217,8 +217,18 @@ class VTTestCase(TestCase):
         finally:
             term.close(terminate=True, kill=True)
 
+    def stdout_fileno_available():
+        """
+            Tests if sys.stdout.fileno is available in this testing enviroment
+        """
+        try:
+            sys.stdout.fileno()
+            return True
+        except:
+            return False            
+            
     @skipIf(
-        'JENKINS_URL' in os.environ,
+        not stdout_fileno_available(),
         'Disabled until use of sys.stdout.fileno is possible in CI test suite'
     )
     def test_split_multibyte_characters_unicode(self):
@@ -274,7 +284,7 @@ class VTTestCase(TestCase):
             shutil.rmtree(tempdir, ignore_errors=True)
 
     @skipIf(
-        'JENKINS_URL' in os.environ,
+        not stdout_fileno_available(),
         'Disabled until use of sys.stdout.fileno is possible in CI test suite'
     )
     def test_split_multibyte_characters_shiftjis(self):
