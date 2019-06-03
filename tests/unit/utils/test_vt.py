@@ -40,7 +40,7 @@ def stdout_fileno_available():
         sys.stdout.fileno()
         return True
     except:
-        return False   
+        return False
 
 class VTTestCase(TestCase):
 
