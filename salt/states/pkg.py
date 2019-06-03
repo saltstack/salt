@@ -961,8 +961,6 @@ def installed(
         ignore_epoch=False,
         reinstall=False,
         update_holds=False,
-        bypass_file=None,
-        bypass_file_contains=None,
         **kwargs):
     '''
     Ensure that the package is installed, and that it is the correct version
@@ -1495,54 +1493,6 @@ def installed(
                - version: 10.0.40219
                - report_reboot_exit_codes: False
 
-    :param str bypass_file:
-       If you wish to bypass the full package validation process, you can
-       specify a file related to the installed pacakge as a way to
-       validate the pacakge has already been installed. A good example
-       would be a config file that is deployed with the package. Another
-       bypass_file could be ``/run/salt-minon.pid``.
-
-       .. code-block:: yaml
-
-           install_ntp:
-             pkg.installed:
-               - name: ntp
-               - bypass_file: /etc/ntp.conf
-
-       The use case for this feature is when running salt at significant scale.
-       Each state that has a requisite for a ``pkg.installed`` will have salt
-       querying the package manager of the system. Compared to simple diff
-       checks, querying the pacakge manager is a lengthy process. This feature
-       is an attempt to reduce the run time of states. If only a config change
-       is being made but you wish to keep all of the self resolving requisites
-       this bypasses the lenghty cost of the package manager. The assumption is
-       that if this file is present, the package should already be installed.
-
-    :param str bypass_file_contains:
-       This option can only be used in conjunction with the ``bypass_file``
-       option. It is to provide a second layer of validation before bypassing
-       the ``pkg.installed`` process.
-
-       .. code-block:: yaml
-
-           install_ntp:
-             pkg.installed:
-               - name: ntp
-               - bypass_file: /etc/ntp.conf
-               - bypass_file_contains: version-20181218
-
-       The will have salt check to see if the file contains the specified
-       string. If the value is found, the ``pkg.installed`` process will be
-       bypassed under the assumption that two pieces of validation have passed
-       and the package is already installed.
-
-       .. warning::
-
-           Do not try and use ``{{ salt['pkg.version']('ntp') }}`` in a jinja
-           template as part of your bypass_file_contains match. This will
-           trigger a ``pkg.version`` lookup with the pacakge manager and negate
-           any time saved by trying to use the bypass feature.
-
     :return:
         A dictionary containing the state of the software installation
     :rtype dict:
@@ -1581,21 +1531,6 @@ def installed(
 
     kwargs['saltenv'] = __env__
     refresh = salt.utils.pkg.check_refresh(__opts__, refresh)
-
-    if bypass_file is not None and bypass_file_contains is not None:
-        if os.path.isfile(bypass_file):
-            with salt.utils.fopen(bypass_file) as bypass_file_open:
-                if bypass_file_contains in bypass_file_open.read():
-                    return {'name': name,
-                            'changes': {},
-                            'result': True,
-                            'comment': 'pkg.installed was bypassed as {} was present in {}'.format(bypass_file_contains, bypass_file)}
-    if bypass_file is not None and bypass_file_contains is None:
-        if os.path.isfile(bypass_file):
-            return {'name': name,
-                    'changes': {},
-                    'result': True,
-                    'comment': 'pkg.installed was bypassed as bypass_file {} was present'.format(bypass_file)}
 
     # check if capabilities should be checked and modify the requested packages
     # accordingly.
