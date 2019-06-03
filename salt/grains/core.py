@@ -985,7 +985,7 @@ def _virtual(osdata):
             except UnicodeDecodeError:
                 # Some firmwares provide non-valid 'product_name'
                 # files, ignore them
-                pass
+                log.debug('The content in /sys/devices/virtual/dmi/id/product_name is not valid')
             except IOError:
                 pass
     elif osdata['kernel'] == 'FreeBSD':
@@ -2543,7 +2543,7 @@ def _hw_data(osdata):
                 except UnicodeDecodeError:
                     # Some firmwares provide non-valid 'product_name'
                     # files, ignore them
-                    pass
+                    log.debug('The content in /sys/devices/virtual/dmi/id/product_name is not valid')
                 except (IOError, OSError) as err:
                     # PermissionError is new to Python 3, but corresponds to the EACESS and
                     # EPERM error numbers. Use those instead here for PY2 compatibility.
@@ -2762,26 +2762,6 @@ def _hw_data(osdata):
     elif osdata['kernel'] == 'AIX':
         cmd = salt.utils.path.which('prtconf')
         if cmd:
-            data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
-            for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
-                                    ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
-                for regex in [re.compile(r) for r in [regstring]]:
-                    res = regex.search(data)
-                    if res and len(res.groups()) >= 1:
-                        grains[dest] = res.group(1).strip().replace("'", '')
-
-            product_regexes = [re.compile(r'(?im)^\s*System\s+Model:\s+(\S+)')]
-            for regex in product_regexes:
-                res = regex.search(data)
-                if res and len(res.groups()) >= 1:
-                    grains['manufacturer'], grains['productname'] = res.group(1).strip().replace("'", "").split(",")
-                    break
-        else:
-            log.error('The \'prtconf\' binary was not found in $PATH.')
-
-    elif osdata['kernel'] == 'AIX':
-        cmd = salt.utils.path.which('prtconf')
-        if data:
             data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
             for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
                                     ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
