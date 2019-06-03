@@ -38,7 +38,7 @@ node('kitchen-slave') {
                         'SALT_KITCHEN_PLATFORMS=/var/jenkins/workspace/nox-platforms.yml',
                         'SALT_KITCHEN_VERIFIER=/var/jenkins/workspace/nox-verifier.yml',
                         'SALT_KITCHEN_DRIVER=/var/jenkins/workspace/driver.yml',
-                        'NOX_ENV_NAME=runtests-zeromq',
+                        'NOX_ENV_NAME=pytest-zeromq',
                         'NOX_ENABLE_FROM_FILENAMES=true',
                         "NOX_PASSTHROUGH_OPTS=--unit",
                         "SALT_TARGET_BRANCH=${salt_target_branch}",
