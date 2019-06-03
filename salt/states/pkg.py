@@ -1592,10 +1592,11 @@ def installed(
                       - 'user www-data;'
 
         The above examples use two different methods to reasonably ensure
-        that a package has already been installed on a system and does not
-        require salt to make an expensive call through the full flow of the
-        ``pkg`` state. With these requisists satisfied, unless will return
-        ``True`` and the ``pkg.installed`` state will be skipped.
+        that a package has already been installed. First, with checking for a
+        file that would be created with the pacakge. Second, by checking for
+        specific text within a file that would be created or managed by salt.
+        With these requisists satisfied, unless will return ``True`` and the
+        ``pkg.installed`` state will be skipped.
 
         .. code-block:: bash
             # Example of state run without unless used
@@ -1611,7 +1612,7 @@ def installed(
                       Duration: 4290.0 ms
                       Changes:
 
-            # Example of state run with unless enabled and true
+            # Example of state run using unless requisite
             salt 'saltdev' state.apply nginx
             saltdev:
             ----------
