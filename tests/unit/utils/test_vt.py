@@ -44,6 +44,37 @@ def stdout_fileno_available():
 
 class VTTestCase(TestCase):
 
+    def run_test_in_subprocess(self, test_name):
+        """
+            Runs a named test in a new instance of python to avoid broken
+            sys.stdout.fileno method
+        """
+        test_root = os.path.abspath(
+            os.path.join(
+                os.path.join(
+                    os.path.join(
+                        os.path.dirname(os.path.realpath(__file__)), os.pardir
+                    ),
+                    os.pardir,
+                ),
+                os.pardir,
+            )
+        )
+        # Test the test isn't a fork bomb before starting a new process
+        self.assertFalse('TEST_VT_CHILD' in os.environ)
+        self.assertEqual(
+            0,
+            subprocess.call(
+                args=(
+                    sys.executable,
+                    os.path.join(test_root, 'tests/runtests.py'),
+                    '--name=unit.utils.test_vt.VTTestCase.' + test_name,
+                ),
+                cwd=test_root,
+                env=dict(os.environ, TEST_VT_CHILD='1'),
+            ),
+        )
+
     @skipIf(True, 'Disabled until we can figure out why this fails when whole test suite runs.')
     def test_vt_size(self):
         '''Confirm that the terminal size is being set'''
@@ -226,11 +257,12 @@ class VTTestCase(TestCase):
         finally:
             term.close(terminate=True, kill=True)
             
-    @skipIf(
-        not stdout_fileno_available(),
-        'Disabled until use of sys.stdout.fileno is possible in CI test suite'
-    )
     def test_split_multibyte_characters_unicode(self):
+        if not stdout_fileno_available() and 'TEST_VT_CHILD' not in os.environ:
+            self.run_test_in_subprocess(
+                'test_split_multibyte_characters_unicode'
+            )
+            return
         block_size = 1024
         encoding = 'utf-8'
         try:
@@ -282,11 +314,12 @@ class VTTestCase(TestCase):
             # which would seem be indicative of deeper problems
             shutil.rmtree(tempdir, ignore_errors=True)
 
-    @skipIf(
-        not stdout_fileno_available(),
-        'Disabled until use of sys.stdout.fileno is possible in CI test suite'
-    )
     def test_split_multibyte_characters_shiftjis(self):
+        if not stdout_fileno_available() and 'TEST_VT_CHILD' not in os.environ:
+            self.run_test_in_subprocess(
+                'test_split_multibyte_characters_shiftjis'
+            )
+            return
         block_size = 1024
         encoding = 'shift-jis'
         try:
