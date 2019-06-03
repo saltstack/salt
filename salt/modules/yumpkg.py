@@ -2736,7 +2736,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
             # A whitespace is needed at the begining of the new line in order
             # to avoid breaking multiple line values allowed on repo files.
             value = filerepos[stanza][line]
-            if '\n' in value:
+            if isinstance(value, str) and '\n' in value:
                 value = '\n '.join(value.split('\n'))
             content += '\n{0}={1}'.format(line, value)
         content += '\n{0}\n'.format(comments)
@@ -2876,7 +2876,7 @@ def mod_repo(repo, basedir=None, **kwargs):
             # A whitespace is needed at the begining of the new line in order
             # to avoid breaking multiple line values allowed on repo files.
             value = filerepos[stanza][line]
-            if '\n' in value:
+            if isinstance(value, str) and '\n' in value:
                 value = '\n '.join(value.split('\n'))
             content += '{0}={1}\n'.format(
                 line,
