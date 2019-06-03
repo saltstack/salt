@@ -9,7 +9,7 @@ import os
 
 # Import Salt Libs
 import salt.modules.chocolatey as chocolatey
-import salt.utils
+import salt.utils.platform
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -18,7 +18,7 @@ from tests.support.mock import MagicMock, patch
 
 
 @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
-@skipIf(not salt.utils.is_windows(), 'Not a Windows system')
+@skipIf(not salt.utils.platform.is_windows(), 'Not a Windows system')
 class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Chocolatey private functions tests
