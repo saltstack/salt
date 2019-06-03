@@ -23,6 +23,7 @@ import time
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -722,8 +723,8 @@ def import_key(text=None,
     if filename:
         try:
             with salt.utils.files.flopen(filename, 'rb') as _fp:
-                lines = _fp.readlines()
-                text = ''.join(lines)
+                text = ''.join([salt.utils.stringutils.to_unicode(x)
+                    for x in _fp.readlines()])
         except IOError:
             raise SaltInvocationError('filename does not exist.')
 
@@ -1021,7 +1022,7 @@ def sign(user=None,
                 signed_data = gpg.sign_file(_fp, keyid=keyid, passphrase=gpg_passphrase)
         if output:
             with salt.utils.files.flopen(output, 'w') as fout:
-                fout.write(signed_data.data)
+                fout.write(salt.utils.stringutils.to_bytes(signed_data.data))
     else:
         raise SaltInvocationError('filename or text must be passed.')
     return signed_data.data
@@ -1168,7 +1169,7 @@ def encrypt(user=None,
             # This version does not allow us to encrypt using the
             # file stream # have to read in the contents and encrypt.
             with salt.utils.files.flopen(filename, 'rb') as _fp:
-                _contents = _fp.read()
+                _contents = salt.utils.stringutils.to_unicode(_fp.read())
             result = gpg.encrypt(_contents, recipients, passphrase=gpg_passphrase, output=output)
         else:
             # This version allows encrypting the file stream
