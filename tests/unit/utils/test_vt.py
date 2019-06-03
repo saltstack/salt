@@ -32,6 +32,15 @@ import salt.utils.stringutils
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
+def stdout_fileno_available():
+    """
+        Tests if sys.stdout.fileno is available in this testing enviroment
+    """
+    try:
+        sys.stdout.fileno()
+        return True
+    except:
+        return False   
 
 class VTTestCase(TestCase):
 
@@ -216,16 +225,6 @@ class VTTestCase(TestCase):
             self.assertIsNone(stdout)
         finally:
             term.close(terminate=True, kill=True)
-
-    def stdout_fileno_available():
-        """
-            Tests if sys.stdout.fileno is available in this testing enviroment
-        """
-        try:
-            sys.stdout.fileno()
-            return True
-        except:
-            return False            
             
     @skipIf(
         not stdout_fileno_available(),
