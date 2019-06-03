@@ -123,6 +123,54 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if repo is not None:
                 self.run_function('pkg.del_repo', [repo])
 
+    def test_mod_del_repo_multiline_values(self):
+        '''
+        test modifying and deleting a software repository defined with multiline values
+        '''
+        os_grain = self.run_function('grains.item', ['os'])['os']
+        repo = None
+        try:
+            if os_grain in ['CentOS', 'RedHat', 'SUSE']:
+                my_baseurl = 'http://my.fake.repo/foo/bar/\n http://my.fake.repo.alt/foo/bar/'
+                expected_get_repo_baseurl = 'http://my.fake.repo/foo/bar/\nhttp://my.fake.repo.alt/foo/bar/'
+                major_release = int(
+                    self.run_function(
+                        'grains.item',
+                        ['osmajorrelease']
+                    )['osmajorrelease']
+                )
+                repo = 'fakerepo'
+                name = 'Fake repo for RHEL/CentOS/SUSE'
+                baseurl = my_baseurl
+                gpgkey = 'https://my.fake.repo/foo/bar/MY-GPG-KEY.pub'
+                failovermethod = 'priority'
+                gpgcheck = 1
+                enabled = 1
+                ret = self.run_function(
+                    'pkg.mod_repo',
+                    [repo],
+                    name=name,
+                    baseurl=baseurl,
+                    gpgkey=gpgkey,
+                    gpgcheck=gpgcheck,
+                    enabled=enabled,
+                    failovermethod=failovermethod,
+                )
+                # return data from pkg.mod_repo contains the file modified at
+                # the top level, so use next(iter(ret)) to get that key
+                self.assertNotEqual(ret, {})
+                repo_info = ret[next(iter(ret))]
+                self.assertIn(repo, repo_info)
+                self.assertEqual(repo_info[repo]['baseurl'], my_baseurl)
+                ret = self.run_function('pkg.get_repo', [repo])
+                self.assertEqual(ret['baseurl'], expected_get_repo_baseurl)
+                self.run_function('pkg.mod_repo', [repo])
+                ret = self.run_function('pkg.get_repo', [repo])
+                self.assertEqual(ret['baseurl'], expected_get_repo_baseurl)
+        finally:
+            if repo is not None:
+                self.run_function('pkg.del_repo', [repo])
+
     @requires_salt_modules('pkg.owner')
     def test_owner(self):
         '''
