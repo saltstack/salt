@@ -2625,6 +2625,7 @@ class Minion(MinionBase):
                                                        opts=self.opts,
                                                        listen=False)
                     event.fire_event(beacons, '__beacons_return')
+                    event.destroy()
 
             new_periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(
                     handle_beacons, loop_interval * 1000)
