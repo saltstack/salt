@@ -1059,13 +1059,12 @@ def __process_multiprocessing_logging_queue(opts, queue):
         setup_extended_logging(opts)
     while True:
         try:
-            record_dict = queue.get()
-            if record_dict is None:
+            record = queue.get()
+            if record is None:
                 # A sentinel to stop processing the queue
                 break
             # Just log everything, filtering will happen on the main process
             # logging handlers
-            record = logging.makeLogRecord(record_dict)
             logger = logging.getLogger(record.name)
             logger.handle(record)
         except (EOFError, KeyboardInterrupt, SystemExit):
