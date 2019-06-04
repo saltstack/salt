@@ -6,7 +6,6 @@ import os
 import shutil
 import tempfile
 import time
-from pprint import pprint
 
 # Salt libs
 import salt.utils.files
