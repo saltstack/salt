@@ -26,7 +26,6 @@ import salt.utils.locales
 import salt.utils.platform
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party Libs
 from salt.ext import six
@@ -617,16 +616,19 @@ def get_system_info():
     ret['processors'] = 0
     ret['processors_logical'] = 0
     ret['processor_cores'] = 0
-    if _LooseVersion(platform.version()) >= _LooseVersion('10.0'):
-        ret['processor_cores_enabled'] = 0
+    ret['processor_cores_enabled'] = 0
     ret['processor_manufacturer'] = processors[0].Manufacturer
     ret['processor_max_clock_speed'] = six.text_type(processors[0].MaxClockSpeed) + 'MHz'
     for system in processors:
         ret['processors'] += 1
         ret['processors_logical'] += system.NumberOfLogicalProcessors
         ret['processor_cores'] += system.NumberOfCores
-        if _LooseVersion(platform.version()) >= _LooseVersion('10.0'):
+        try:
             ret['processor_cores_enabled'] += system.NumberOfEnabledCore
+        except AttributeError:
+            pass
+    if ret['processor_cores_enabled'] == 0:
+        ret.pop('processor_cores_enabled', False)
 
     system = conn.Win32_BIOS()[0]
     ret.update({'hardware_serial': system.SerialNumber,
