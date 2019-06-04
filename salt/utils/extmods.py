@@ -73,6 +73,7 @@ def sync(opts,
     source = salt.utils.url.create('_' + form)
     mod_dir = os.path.join(opts['extension_modules'], '{0}'.format(form))
     touched = False
+    fileclient = None
     with salt.utils.files.set_umask(0o077):
         try:
             if not os.path.isdir(mod_dir):
@@ -151,4 +152,7 @@ def sync(opts,
                         shutil.rmtree(emptydir, ignore_errors=True)
         except Exception as exc:
             log.error('Failed to sync %s module: %s', form, exc)
+        finally:
+            if fileclient:
+                fileclient.destroy()
     return ret, touched

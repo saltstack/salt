@@ -8,7 +8,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Salt Libs
-import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 
 # Salttesting libs

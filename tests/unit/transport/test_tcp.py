@@ -111,7 +111,7 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config, crypt='clear')
 
     def tearDown(self):
-        self.channel.stop()
+        self.channel.close()
         del self.channel.obj
 
     @classmethod
@@ -129,7 +129,7 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config)
 
     def tearDown(self):
-        self.channel.stop()
+        self.channel.close()
         del self.channel.obj
 
     @classmethod
@@ -140,17 +140,6 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         '''
         raise tornado.gen.Return((payload, {'fun': 'send'}))
 
-#    @skipIf(True, 'meh')
-#    def test_normalization(self):
-#        pass
-#
-#    @skipIf(True, 'meh')
-#    def test_basic(self):
-#        pass
-#
-#    # TODO: make failed returns have a specific framing so we can raise the same exception
-#    # on encrypted channels
-#    @skipIf(True, 'meh')
     @flaky
     def test_badload(self):
         '''

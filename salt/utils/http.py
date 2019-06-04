@@ -580,6 +580,7 @@ def query(url,
         # Run tornado HTTPClient in a thread so that it does not stop the
         # current IOLoop.
         thread_result = {}
+
         def target():
             try:
                 download_client = HTTPClient(max_body_size=max_body) \
@@ -593,6 +594,7 @@ def query(url,
                 if status is True:
                     thread_result['status'] = 0
                 thread_result['error'] = six.text_type(exc)
+
         thread = threading.Thread(target=target)
         thread.start()
         thread.join()

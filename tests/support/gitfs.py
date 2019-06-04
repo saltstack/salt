@@ -906,7 +906,7 @@ class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):
     '''
 
     def tearDown(self):
-        super(GitPillarTestBase, self).tearDown()
+        super(GitPillarHTTPTestBase, self).tearDown()
 
     def setUp(self):
         '''

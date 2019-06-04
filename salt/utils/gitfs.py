@@ -19,7 +19,6 @@ import stat
 import subprocess
 import sys
 import time
-import tornado.ioloop
 import weakref
 from datetime import datetime
 
@@ -2435,16 +2434,19 @@ class GitBase(object):
 
         # if there is a change, fire an event
         if self.opts.get('fileserver_events', False):
-            with salt.utils.event.get_event(
+            event = salt.utils.event.get_event(
                     'master',
                     self.opts['sock_dir'],
                     self.opts['transport'],
                     opts=self.opts,
-                    listen=False) as event:
+                    listen=False)
+            try:
                 event.fire_event(
                     data,
                     tagify(['gitfs', 'update'], prefix='fileserver')
                 )
+            finally:
+                event.destroy()
         try:
             salt.fileserver.reap_fileserver_cache_dir(
                 self.hash_cachedir,

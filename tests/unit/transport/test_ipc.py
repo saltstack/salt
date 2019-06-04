@@ -39,6 +39,9 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
     '''
     Test the req server/client pair
     '''
+    def get_new_ioloop(self):
+        return salt.utils.asynchronous.IOLoop()
+
     def setUp(self):
         super(BaseIPCReqCase, self).setUp()
         #self._start_handlers = dict(self.io_loop._handlers)
@@ -55,6 +58,7 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
 
     def tearDown(self):
         super(BaseIPCReqCase, self).tearDown()
+        self.io_loop.real_close()
         #failures = []
         try:
             self.server_channel.close()
@@ -103,6 +107,7 @@ class IPCMessageClient(BaseIPCReqCase):
     def tearDown(self):
         super(IPCMessageClient, self).tearDown()
         try:
+            self.channel.close()
             # Make sure we close no matter what we've done in the tests
             del self.channel
         except socket.error as exc:

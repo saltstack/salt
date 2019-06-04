@@ -136,7 +136,6 @@ class SyncClientMixin(object):
         '''
         load = kwargs
         load['cmd'] = self.client
-
         with salt.transport.client.ReqChannel.factory(self.opts,
                                                       crypt='clear',
                                                       usage='master_call') as channel:

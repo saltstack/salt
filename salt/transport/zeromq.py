@@ -67,15 +67,21 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-@tornado.gen.coroutine
-def run_future(future):
-    while not future.done():
-        try:
-            yield tornado.gen.with_timeout(timedelta(seconds=1), future)
-        except tornado.gen.TimeoutError:
-            pass
-        yield tornado.gen.moment
-    raise tornado.gen.Return(future.result())
+
+if salt.utils.asynchronous.OLD_TORNADO:
+    def run_future(future):
+        return future
+else:
+    @tornado.gen.coroutine
+    def run_future(future):
+        while not future.done():
+            try:
+                yield tornado.gen.with_timeout(timedelta(seconds=1), future)
+            except tornado.gen.TimeoutError:
+                pass
+            yield tornado.gen.moment
+        raise tornado.gen.Return(future.result())
+
 
 def _get_master_uri(master_ip,
                     master_port,
@@ -127,12 +133,15 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
     # This class is only a singleton per minion/master pair
     # mapping of io_loop -> {key -> channel}
     instance_map = weakref.WeakKeyDictionary()
-    _coroutines = [
+    async_methods = [
         'crypted_transfer_decode_dictentry',
         '_crypted_transfer',
         '_do_transfer',
         '_uncrypted_transfer',
         'send',
+    ]
+    close_methods = [
+        'close',
     ]
 
     def __new__(cls, opts, **kwargs):
@@ -230,10 +239,6 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         self._closing = False
 
     def close(self):
-        if hasattr(self, 'message_client'):
-            self.message_client.destroy()
-
-    def __del__(self):
         '''
         Since the message_client creates sockets and assigns them to the IOLoop we have to
         specifically destroy them, since we aren't the only ones with references to the FDs
@@ -353,7 +358,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         @tornado.gen.coroutine
         def _do_transfer():
             # Yield control to the caller. When send() completes, resume by populating data with the Future.result
-            fdata =  self.message_client.send(
+            fdata = self.message_client.send(
                 self._package_load(self.auth.crypticle.dumps(load)),
                 timeout=timeout,
                 tries=tries,
@@ -424,8 +429,8 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         if self.io_loop is None:
             install_zmq()
             # TODO: Validate we can switch to salt.utils.asynchronous here.
-            self.io_loop = ZMQDefaultLoop.current()
-            #self.io_loop = salt.utils.asynchronous.IOLoop()
+            #self.io_loop = ZMQDefaultLoop.current()
+            self.io_loop = salt.utils.asynchronous.IOLoop()
 
         self.hexid = hashlib.sha1(salt.utils.stringutils.to_bytes(self.opts['id'])).hexdigest()
         self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
@@ -1142,8 +1147,8 @@ class AsyncReqMessageClient(object):
         if io_loop is None:
             install_zmq()
             # TODO: Validate we can switch to salt.utils.asynchronous here.
-            self.io_loop = ZMQDefaultLoop.current()
-            #self.io_loop = salt.utils.asynchronous.IOLoop()
+            #self.io_loop = ZMQDefaultLoop.current()
+            self.io_loop = salt.utils.asynchronous.IOLoop()
         else:
             self.io_loop = io_loop
 

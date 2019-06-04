@@ -64,7 +64,8 @@ class EventSender(Process):
         self.wait = wait
 
     def run(self):
-        with salt.utils.event.MasterEvent(SOCK_DIR, listen=False) as me:
+        me = salt.utils.event.MasterEvent(SOCK_DIR, listen=False)
+        try:
             time.sleep(self.wait)
             me.fire_event(self.data, self.tag)
             # Wait a few seconds before tearing down the zmq context
@@ -73,6 +74,8 @@ class EventSender(Process):
                 time.sleep(10)
             else:
                 time.sleep(2)
+        finally:
+            me.destroy()
 
 
 @contextmanager
@@ -321,16 +324,19 @@ class TestSaltEvent(TestCase):
         '''Test a large number of events, send all then recv all'''
         with eventpublisher_process(self.sock_dir):
             with salt.utils.event.MasterEvent(SOCK_DIR, listen=True) as me:
-                # Must not exceed zmq HWM
-                for i in range(500):
-                    try:
-                        me.fire_event({'data': '{0}'.format(i)}, 'testevents')
-                    except Exception:
-                        me.connect_pull()
-                        me.fire_event({'data': '{0}'.format(i)}, 'testevents')
-                for i in range(500):
-                    evt = me.get_event(tag='testevents')
-                    self.assertGotEvent(evt, {'data': '{0}'.format(i)}, 'Event {0}'.format(i))
+                try:
+                    # Must not exceed zmq HWM
+                    for i in range(500):
+                        try:
+                            me.fire_event({'data': '{0}'.format(i)}, 'testevents')
+                        except Exception:
+                            me.connect_pull()
+                            me.fire_event({'data': '{0}'.format(i)}, 'testevents')
+                    for i in range(500):
+                        evt = me.get_event(tag='testevents')
+                        self.assertGotEvent(evt, {'data': '{0}'.format(i)}, 'Event {0}'.format(i))
+                finally:
+                    me.destroy()
 
     # Test the fire_master function. As it wraps the underlying fire_event,
     # we don't need to perform extensive testing.
@@ -361,6 +367,10 @@ class TestAsyncEventPublisher(AsyncTestCase):
         self.event = salt.utils.event.get_event('minion', opts=self.opts, io_loop=self.io_loop)
         self.event.subscribe('')
         self.event.set_event_handler(self._handle_publish)
+
+    def tearDown(self):
+        self.event.destroy()
+        self.publisher.close()
 
     def _handle_publish(self, raw):
         self.tag, self.data = salt.utils.event.SaltEvent.unpack(raw)

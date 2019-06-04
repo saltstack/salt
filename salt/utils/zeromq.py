@@ -50,6 +50,7 @@ if ZMQDefaultLoop is None:
 # to validate everything with py2 and older tornado versions.
 #ZMQDefaultLoop = salt.utils.asynchronous.IOLoop
 
+
 def install_zmq():
     '''
     While pyzmq 17 no longer needs any special integration for tornado,

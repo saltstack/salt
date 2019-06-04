@@ -224,11 +224,14 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     # This class is only a singleton per minion/master pair
     # mapping of io_loop -> {key -> channel}
     instance_map = weakref.WeakKeyDictionary()
-    _coroutines = [
+    async_methods = [
         'crypted_transfer_decode_dictentry',
         '_crypted_transfer',
         '_uncrypted_transfer',
         'send',
+    ]
+    close_methods = [
+        'close',
     ]
 
     def __new__(cls, opts, **kwargs):
@@ -545,9 +548,6 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             req_channel = salt.utils.asynchronous.SyncWrapper(
                 AsyncTCPReqChannel,
                 (self.opts,),
-                stop_methods=[
-                    'close',
-                ],
                 loop_kwarg='io_loop',
             )
             try:
@@ -557,7 +557,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             except Exception:
                 log.info('fire_master failed: %s', traceback.format_exc())
             finally:
-                req_channel.stop()
+                req_channel.close()
         else:
             self._reconnected = True
 
@@ -622,12 +622,16 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
     def __init__(self, opts):
         salt.transport.server.ReqServerChannel.__init__(self, opts)
         self._socket = None
+        self._closing = False
 
     @property
     def socket(self):
         return self._socket
 
     def close(self):
+        if self._closing:
+            return
+        self._closing = True
         if self._socket is not None:
             try:
                 self._socket.shutdown(socket.SHUT_RDWR)
@@ -1102,6 +1106,10 @@ class SaltMessageClient(object):
                     self._connecting_future.result() is not True):
                 yield self._connecting_future
             unpacker = msgpack.Unpacker()
+            # TODO: Wean of __del__
+            # Local reference since we might try to catch the exception after
+            # tornado.iostream has been GC'ed.
+            StreamClosedError = tornado.iostream.StreamClosedError
             while not self._closing:
                 try:
                     self._read_until_future = self._stream.read_bytes(4096, partial=True)
@@ -1124,7 +1132,7 @@ class SaltMessageClient(object):
                                 self.io_loop.spawn_callback(self._on_recv, header, body)
                             else:
                                 log.error('Got response for message_id %s that we are not tracking', message_id)
-                except tornado.iostream.StreamClosedError as e:
+                except StreamClosedError as e:
                     log.debug('tcp stream to %s:%s closed, unable to recv', self.host, self.port)
                     for future in six.itervalues(self.send_future_map):
                         future.set_exception(e)
@@ -1561,9 +1569,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         #pub_sock = salt.transport.ipc.IPCMessageClient(self.opts, io_loop=self.io_loop)
         pub_sock = salt.utils.asynchronous.SyncWrapper(
             salt.transport.ipc.IPCMessageClient,
-            [pull_uri,],
-            async_methods=['connect',],
-            stop_methods=['close',],
+            [pull_uri],
             loop_kwarg='io_loop',
         )
         try:
@@ -1584,4 +1590,4 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             # Send it over IPC!
             pub_sock.send(int_payload)
         finally:
-            pub_sock.stop()
+            pub_sock.close()

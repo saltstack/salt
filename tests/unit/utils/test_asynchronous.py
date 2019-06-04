@@ -12,7 +12,7 @@ import salt.utils.asynchronous as asynchronous
 
 
 class HelperA(object):
-    _coroutines = [
+    async_methods = [
         'sleep',
     ]
 
@@ -26,7 +26,7 @@ class HelperA(object):
 
 
 class HelperB(object):
-    _coroutines = [
+    async_methods = [
         'sleep',
     ]
 

@@ -24,7 +24,7 @@ import salt.serializers.msgpack
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range
-from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
+from salt.utils.zeromq import zmq, ZMQ_VERSION_INFO
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 import tornado.gen  # pylint: disable=F0401
@@ -1022,7 +1022,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         Bind to the local port
         '''
         # using ZMQIOLoop since we *might* need zmq in there
-        install_zmq()
         self.io_loop = salt.utils.asynchronous.IOLoop()
         self.io_loop.make_current()
         for req_channel in self.req_channels:
