@@ -1172,6 +1172,8 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             filemod._line_match(src=src, probe='here is something'), 0)
         self.assertEqual(
+            filemod._line_match(src=src, probe='here is something 1'), 1)
+        self.assertEqual(
             filemod._line_match(src=src, probe='and here is something'), 1)
 
     @with_tempfile()
