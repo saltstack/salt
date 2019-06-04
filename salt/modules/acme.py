@@ -42,6 +42,7 @@ import os
 
 # Import salt libs
 import salt.utils.path
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ def _expires(name):
     cert_file = _cert_file(name, 'cert')
     # Use the salt module if available
     if 'tls.cert_info' in __salt__:
-        expiry = __salt__['tls.cert_info'](cert_file)['not_after']
+        expiry = __salt__['tls.cert_info'](cert_file).get('not_after', 0)
     # Cobble it together using the openssl binary
     else:
         openssl_cmd = 'openssl x509 -in {0} -noout -enddate'.format(cert_file)
@@ -93,8 +94,8 @@ def _renew_by(name, window=None):
     '''
     Date before a certificate should be renewed
 
-    :param name: Common Name of the certificate (DNS name of certificate)
-    :param window: days before expiry date to renew
+    :param str name: Common Name of the certificate (DNS name of certificate)
+    :param int window: days before expiry date to renew
     :return datetime object of first renewal date
     '''
     expiry = _expires(name)
@@ -161,7 +162,8 @@ def cert(name,
 
     .. code-block:: bash
 
-        salt 'gitlab.example.com' acme.cert dev.example.com "[gitlab.example.com]" test_cert=True renew=14 webroot=/opt/gitlab/embedded/service/gitlab-rails/public
+        salt 'gitlab.example.com' acme.cert dev.example.com "[gitlab.example.com]" test_cert=True \
+        renew=14 webroot=/opt/gitlab/embedded/service/gitlab-rails/public
     '''
 
     cmd = [LEA, 'certonly', '--non-interactive', '--agree-tos']
@@ -235,9 +237,13 @@ def cert(name,
             cmd.append('--expand')
             res = __salt__['cmd.run_all'](' '.join(cmd))
             if res['retcode'] != 0:
-                return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
+                return {'result': False,
+                        'comment': ('Certificate {0} renewal failed with:\n{1}'
+                                    ''.format(name, res['stderr']))}
         else:
-            return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
+            return {'result': False,
+                    'comment': ('Certificate {0} renewal failed with:\n{1}'
+                                ''.format(name, res['stderr']))}
 
     if 'no action taken' in res['stdout']:
         comment = 'Certificate {0} unchanged'.format(cert_file)
@@ -268,7 +274,7 @@ def certs():
 
         salt 'vhost.example.com' acme.certs
     '''
-    return __salt__['file.readdir'](LE_LIVE)[2:]
+    return [item for item in __salt__['file.readdir'](LE_LIVE)[2:] if os.path.isdir(item)]
 
 
 def info(name):
@@ -278,7 +284,7 @@ def info(name):
     .. note::
         Will output tls.cert_info if that's available, or OpenSSL text if not
 
-    :param name: CommonName of cert
+    :param str name: CommonName of certificate
 
     CLI example:
 
@@ -286,6 +292,8 @@ def info(name):
 
         salt 'gitlab.example.com' acme.info dev.example.com
     '''
+    if not has(name):
+        return None
     cert_file = _cert_file(name, 'cert')
     # Use the salt module if available
     if 'tls.cert_info' in __salt__:
@@ -304,7 +312,7 @@ def expires(name):
     '''
     The expiry date of a certificate in ISO format
 
-    :param name: CommonName of cert
+    :param str name: CommonName of certificate
 
     CLI example:
 
@@ -319,7 +327,7 @@ def has(name):
     '''
     Test if a certificate is in the Let's Encrypt Live directory
 
-    :param name: CommonName of cert
+    :param str name: CommonName of certificate
 
     Code example:
 
@@ -335,8 +343,8 @@ def renew_by(name, window=None):
     '''
     Date in ISO format when a certificate should first be renewed
 
-    :param name: CommonName of cert
-    :param window: number of days before expiry when renewal should take place
+    :param str name: CommonName of certificate
+    :param int window: number of days before expiry when renewal should take place
     '''
     return _renew_by(name, window).isoformat()
 
@@ -345,8 +353,8 @@ def needs_renewal(name, window=None):
     '''
     Check if a certificate needs renewal
 
-    :param name: CommonName of cert
-    :param window: Window in days to renew earlier or True/force to just return True
+    :param str name: CommonName of certificate
+    :param bool/str/int window: Window in days to renew earlier or True/force to just return True
 
     Code example:
 
@@ -359,5 +367,14 @@ def needs_renewal(name, window=None):
     '''
     if window is not None and window in ('force', 'Force', True):
         return True
+
+    if window:
+        if not (isinstance(window, int) or (hasattr(window, 'isdigit') and window.isdigit())):
+            raise SaltInvocationError(
+                'The argument "window", if provided, must be one of the following : '
+                'True (boolean), "force" or "Force" (str) or a numerical value in days.'
+            )
+        else:
+            window = int(window)
 
     return _renew_by(name, window) <= datetime.datetime.today()
