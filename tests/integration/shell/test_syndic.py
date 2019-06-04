@@ -34,11 +34,11 @@ log = logging.getLogger(__name__)
 def session_salt_syndic(request, session_salt_master_of_masters, session_salt_syndic):
     request.session.stats_processes.update(OrderedDict((
         ('Salt Syndic Master', psutil.Process(session_salt_master_of_masters.pid)),
-        ('       Salt Syndic', psutil.Process(session_salt_syndic.pid)),
+        ('Salt Syndic', psutil.Process(session_salt_syndic.pid)),
     )).items())
     yield session_salt_syndic
     request.session.stats_processes.pop('Salt Syndic Master')
-    request.session.stats_processes.pop('       Salt Syndic')
+    request.session.stats_processes.pop('Salt Syndic')
 
     # Stop daemons now(they would be stopped at the end of the test run session
     for daemon in (session_salt_syndic, session_salt_master_of_masters):

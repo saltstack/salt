@@ -28,9 +28,9 @@ def default_session_daemons(request,
                             ):
 
     request.session.stats_processes.update(OrderedDict((
-        ('       Salt Master', psutil.Process(session_salt_master.pid)),
-        ('       Salt Minion', psutil.Process(session_salt_minion.pid)),
-        ('   Salt Sub Minion', psutil.Process(session_secondary_salt_minion.pid)),
+        ('Salt Master', psutil.Process(session_salt_master.pid)),
+        ('Salt Minion', psutil.Process(session_salt_minion.pid)),
+        ('Salt Sub Minion', psutil.Process(session_secondary_salt_minion.pid)),
     )).items())
 
     # Run tests
