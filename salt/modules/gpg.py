@@ -1010,13 +1010,13 @@ def sign(user=None,
 
     gnupg_version = _LooseVersion(gnupg.__version__)
     if text:
-        if gnupg_version >= '1.3.1':
+        if gnupg_version >= _LooseVersion('1.3.1'):
             signed_data = gpg.sign(text, default_key=keyid, passphrase=gpg_passphrase)
         else:
             signed_data = gpg.sign(text, keyid=keyid, passphrase=gpg_passphrase)
     elif filename:
         with salt.utils.files.flopen(filename, 'rb') as _fp:
-            if gnupg_version >= '1.3.1':
+            if gnupg_version >= _LooseVersion('1.3.1'):
                 signed_data = gpg.sign(text, default_key=keyid, passphrase=gpg_passphrase)
             else:
                 signed_data = gpg.sign_file(_fp, keyid=keyid, passphrase=gpg_passphrase)
@@ -1025,6 +1025,7 @@ def sign(user=None,
                 fout.write(salt.utils.stringutils.to_bytes(signed_data.data))
     else:
         raise SaltInvocationError('filename or text must be passed.')
+
     return signed_data.data
 
 
