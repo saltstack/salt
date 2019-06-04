@@ -29,6 +29,10 @@ See also the module documentation
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
+# Import salt libs
+import salt.utils.dictdiffer
+import salt.ext.six as six
+
 log = logging.getLogger(__name__)
 
 
@@ -67,67 +71,52 @@ def cert(name,
     :param mode: mode of the private key file
     :param certname: Name of the certificate to save
     '''
+    ret = {'name': name, 'result': 'changeme', 'comment': [], 'changes': {}}
+    action = None
 
-    if __opts__['test']:
-        ret = {
-            'name': name,
-            'changes': {},
-            'result': None
-        }
-        window = None
-        try:
-            window = int(renew)
-        except Exception:
-            pass
-
-        comment = 'Certificate {0} '.format(name)
-        if not __salt__['acme.has'](name):
-            comment += 'would have been obtained'
-        elif __salt__['acme.needs_renewal'](name, window):
-            comment += 'would have been renewed'
-        else:
-            comment += 'would not have been touched'
-            ret['result'] = True
-        ret['comment'] = comment
-        return ret
-
+    current_certificate = {}
+    new_certificate = {}
     if not __salt__['acme.has'](name):
-        old = None
+        action = 'obtain'
+    elif __salt__['acme.needs_renewal'](name, renew):
+        action = 'renew'
+        current_certificate = __salt__['acme.info'](name)
     else:
-        old = __salt__['acme.info'](name)
+        ret['result'] = True
+        ret['comment'].append('Certificate {} exists and does not need renewal.'
+                              ''.format(name))
 
-    res = __salt__['acme.cert'](
-        name,
-        aliases=aliases,
-        email=email,
-        webroot=webroot,
-        certname=certname,
-        test_cert=test_cert,
-        renew=renew,
-        keysize=keysize,
-        server=server,
-        owner=owner,
-        group=group,
-        mode=mode
-    )
-
-    ret = {
-        'name': name,
-        'result': res['result'] is not False,
-        'comment': res['comment']
-    }
-
-    if res['result'] is None:
-        ret['changes'] = {}
-    else:
-        if not __salt__['acme.has'](name):
-            new = None
+    if action:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'].append('Certificate {} would have been {}ed.'
+                                  ''.format(name, action))
+            ret['changes'] = {'old': 'current certificate', 'new': 'new certificate'}
         else:
-            new = __salt__['acme.info'](name)
-
-        ret['changes'] = {
-            'old': old,
-            'new': new
-        }
-
+            res = __salt__['acme.cert'](
+                name,
+                aliases=aliases,
+                email=email,
+                webroot=webroot,
+                certname=certname,
+                test_cert=test_cert,
+                renew=renew,
+                keysize=keysize,
+                server=server,
+                owner=owner,
+                group=group,
+                mode=mode,
+                preferred_challenges=preferred_challenges,
+                tls_sni_01_port=tls_sni_01_port,
+                tls_sni_01_address=tls_sni_01_address,
+                http_01_port=http_01_port,
+                http_01_address=http_01_address,
+                dns_plugin=dns_plugin,
+                dns_plugin_credentials=dns_plugin_credentials,
+            )
+            ret['result'] = res['result']
+            ret['comment'].append(res['comment'])
+            if ret['result']:
+                new_certificate = __salt__['acme.info'](name)
+            ret['changes'] = salt.utils.dictdiffer.deep_diff(current_certificate, new_certificate)
     return ret
