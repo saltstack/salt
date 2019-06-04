@@ -256,7 +256,7 @@ class VTTestCase(TestCase):
             self.assertIsNone(stdout)
         finally:
             term.close(terminate=True, kill=True)
-            
+
     def test_split_multibyte_characters_unicode(self):
         '''
             Tests that the vt correctly handles multibyte characters that are
@@ -319,6 +319,11 @@ class VTTestCase(TestCase):
             shutil.rmtree(tempdir, ignore_errors=True)
 
     def test_split_multibyte_characters_shiftjis(self):
+        '''
+            Tests that the vt correctly handles multibyte characters that are
+            split between blocks of transmitted data.
+            Uses shift-jis encoding to make sure code doesn't assume unicode.
+        '''
         if not stdout_fileno_available() and 'TEST_VT_CHILD' not in os.environ:
             self.run_test_in_subprocess(
                 'test_split_multibyte_characters_shiftjis'
