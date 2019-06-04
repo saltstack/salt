@@ -2545,10 +2545,10 @@ class Minion(MinionBase):
                 except Exception:
                     log.critical('The beacon errored: ', exc_info=True)
                 if beacons:
-                    event = salt.utils.event.get_event('minion',
-                                                       opts=self.opts,
-                                                       listen=False)
-                    event.fire_event(beacons, '__beacons_return')
+                    with salt.utils.event.get_event('minion',
+                                                    opts=self.opts,
+                                                    listen=False) as event:
+                        event.fire_event(beacons, '__beacons_return')
 
             new_periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(
                     handle_beacons, loop_interval * 1000)
