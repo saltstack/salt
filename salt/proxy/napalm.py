@@ -7,7 +7,7 @@ NAPALM: Network Automation and Programmability Abstraction Layer with Multivendo
 
 Proxy minion for managing network devices via NAPALM_ library.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
