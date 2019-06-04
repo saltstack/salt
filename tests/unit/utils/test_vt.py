@@ -258,6 +258,10 @@ class VTTestCase(TestCase):
             term.close(terminate=True, kill=True)
             
     def test_split_multibyte_characters_unicode(self):
+        '''
+            Tests that the vt correctly handles multibyte characters that are
+            split between blocks of transmitted data.
+        '''
         if not stdout_fileno_available() and 'TEST_VT_CHILD' not in os.environ:
             self.run_test_in_subprocess(
                 'test_split_multibyte_characters_unicode'
