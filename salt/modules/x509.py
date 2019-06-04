@@ -1377,7 +1377,7 @@ def create_certificate(
         if 'csr' in kwargs:
             kwargs['csr'] = get_pem_entry(
                 kwargs['csr'],
-                pem_type='CERTIFICATE REQUEST').replace('\n', '')
+                pem_type='CERTIFICATE REQUEST').decode().replace('\n', '')
         if 'public_key' in kwargs:
             # Strip newlines to make passing through as cli functions easier
             kwargs['public_key'] = salt.utils.stringutils.to_str(get_public_key(
