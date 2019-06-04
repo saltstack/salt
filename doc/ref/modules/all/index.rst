@@ -23,6 +23,7 @@ execution modules
 
     acme
     aix_group
+    aixpkg
     aliases
     alternatives
     ansiblegate
