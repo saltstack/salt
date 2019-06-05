@@ -25,6 +25,19 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Validate the host state
     '''
+    hostname = 'salt'
+    localhost_ip = '127.0.0.1'
+    ip_list = ['203.0.113.113', '203.0.113.14']
+    default_hosts = {
+        ip_list[0]: [hostname],
+        ip_list[1]: [hostname],
+    }
+
+    def setUp(self):
+        self.add_host_mock = MagicMock(return_value=True)
+        self.rm_host_mock = MagicMock(return_value=True)
+        self.list_hosts_mock = MagicMock(return_value=self.default_hosts)
+
     def setup_loader_modules(self):
         return {
             host: {
@@ -280,6 +293,77 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             assert ret['changes'] == {}, ret['changes']
             assert add_host.mock_calls == [], add_host.mock_calls
             assert rm_host.mock_calls == [], rm_host.mock_calls
+
+    def test_host_present_should_return_True_if_test_and_no_changes(self):
+        expected = {
+            'comment': 'Host {} ({}) already present'.format(
+                self.hostname,
+                self.ip_list[0],
+            ),
+            'changes': {},
+            'name': self.hostname,
+            'result': True,
+        }
+        list_hosts = MagicMock(
+            return_value={self.ip_list[0]: [self.hostname]},
+        )
+        with patch.dict(host.__salt__,
+                        {'hosts.list_hosts': list_hosts,
+                         'hosts.add_host': self.add_host_mock,
+                         'hosts.rm_host': self.rm_host_mock}):
+            with patch.dict(host.__opts__, {'test': True}):
+                ret = host.present(self.hostname, self.ip_list[:1])
+
+                self.assertDictEqual(ret, expected)
+
+    def test_host_present_should_return_None_if_test_and_adding(self):
+        expected = {
+            'comment': '\n'.join([
+                'Host {} ({}) already present',
+                'Host {} ({}) would be added',
+            ]).format(
+                self.hostname,
+                self.ip_list[0],
+                self.hostname,
+                self.ip_list[1],
+            ),
+            'changes': {'added': {self.ip_list[1]: [self.hostname]}},
+            'name': self.hostname,
+            'result': None,
+        }
+        list_hosts = MagicMock(
+            return_value={self.ip_list[0]: [self.hostname]},
+        )
+        with patch.dict(host.__salt__,
+                        {'hosts.list_hosts': list_hosts,
+                         'hosts.add_host': self.add_host_mock,
+                         'hosts.rm_host': self.rm_host_mock}):
+            with patch.dict(host.__opts__, {'test': True}):
+                ret = host.present(self.hostname, self.ip_list)
+                self.assertDictEqual(ret, expected)
+
+    def test_host_present_should_return_None_if_test_and_removing(self):
+        expected = {
+            'comment': '\n'.join([
+                'Host {} ({}) already present',
+                'Host {} ({}) would be removed',
+            ]).format(
+                self.hostname,
+                self.ip_list[0],
+                self.hostname,
+                self.ip_list[1],
+            ),
+            'changes': {'removed': {self.ip_list[1]: [self.hostname]}},
+            'name': self.hostname,
+            'result': None,
+        }
+        with patch.dict(host.__salt__,
+                        {'hosts.list_hosts': self.list_hosts_mock,
+                         'hosts.add_host': self.add_host_mock,
+                         'hosts.rm_host': self.rm_host_mock}):
+            with patch.dict(host.__opts__, {'test': True}):
+                ret = host.present(self.hostname, self.ip_list[:1], clean=True)
+                self.assertDictEqual(ret, expected)
 
     def test_absent(self):
         '''

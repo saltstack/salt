@@ -137,7 +137,7 @@ def _convert_to_datetime(unix_timestamp):
         return 'Invalid Timestamp'
 
 
-def info(name):
+def info(name, **kwargs):
     '''
     Return information for the specified user
 

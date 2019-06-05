@@ -98,6 +98,7 @@ state modules
     file
     firewall
     firewalld
+    flatpak
     gem
     git
     github
@@ -257,6 +258,7 @@ state modules
     rvm
     salt_proxy
     saltmod
+    saltutil
     schedule
     selinux
     serverdensity_device
