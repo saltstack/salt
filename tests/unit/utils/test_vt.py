@@ -69,6 +69,7 @@ class VTTestCase(TestCase):
                     sys.executable,
                     os.path.join(test_root, 'tests/runtests.py'),
                     '--name=unit.utils.test_vt.VTTestCase.' + test_name,
+                    '--verbose',
                 ),
                 cwd=test_root,
                 env=dict(os.environ, TEST_VT_CHILD='1'),
