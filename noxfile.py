@@ -892,14 +892,20 @@ def lint_tests(session):
     _lint(session, '.testing.pylintrc', flags, paths)
 
 
-@nox.session(python='2.7')
+@nox.session(python='3')
 def docs(session):
     '''
     Build Salt's Documentation
     '''
-    session.install('--progress-bar=off', '-r', 'requirements/static/py2.7/docs.txt', silent=PIP_INSTALL_SILENT)
+    pydir = _get_pydir(session)
+    if pydir == 'py3.4':
+        session.error('Sphinx only runs on Python >= 3.5')
+    session.install(
+        '--progress-bar=off',
+        '-r', 'requirements/static/{}/docs.txt'.format(pydir),
+        silent=PIP_INSTALL_SILENT)
     os.chdir('doc/')
     session.run('make', 'clean', external=True)
-    session.run('make', 'html', external=True)
+    session.run('make', 'html', 'SPHINXOPTS=-W', external=True)
     session.run('tar', '-czvf', 'doc-archive.tar.gz', '_build/html')
     os.chdir('..')
