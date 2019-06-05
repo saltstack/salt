@@ -45,7 +45,7 @@ Connection module for Amazon DynamoDB
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
@@ -53,9 +53,11 @@ logger = logging.getLogger(__name__)
 logging.getLogger('boto').setLevel(logging.INFO)
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
+import salt.utils.versions
+
 try:
     #pylint: disable=unused-import
     import boto
@@ -74,10 +76,10 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The module boto_dynamodb could not be loaded: boto libraries not found')
-    __utils__['boto.assign_funcs'](__name__, 'dynamodb2', pack=__salt__)
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(check_boto3=False)
+    if has_boto_reqs is True:
+        __utils__['boto.assign_funcs'](__name__, 'dynamodb2', pack=__salt__)
+    return has_boto_reqs
 
 
 def create_table(table_name, region=None, key=None, keyid=None, profile=None,

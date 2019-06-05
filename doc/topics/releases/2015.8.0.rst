@@ -21,7 +21,6 @@ See the following links for instructions:
 - :ref:`Red Hat / CentOS 5, 6, 7 <installation-rhel-repo>`
 - :ref:`Debian 8 <installation-debian-repo>`
 - :ref:`Windows <windows-installer>`
-- :ref:`FreeBSD <freebsd-upstream>`
 
 Send Event on State Completion
 ==============================
@@ -105,7 +104,7 @@ bringing with it the ability to access authenticated repositories.
 
 Using the new features will require updates to the git ext_pillar
 configuration, further details can be found in the :ref:`pillar.git_pillar
-<git-pillar-2015-8-0-and-later>` docs.
+<git-pillar-configuration>` docs.
 
 .. _pygit2: https://github.com/libgit2/pygit2
 

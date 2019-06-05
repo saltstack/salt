@@ -3,41 +3,33 @@
 Tests of utilities that support multiple masters in Salt Raet
 
 '''
-from __future__ import absolute_import
-# pylint: skip-file
-# pylint: disable=C0103
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 from salt.ext.six.moves import map
+# pylint: disable=blacklisted-import
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
     import unittest
+# pylint: enable=blacklisted-import
 
-import os
-import stat
-import time
-import tempfile
-import shutil
-
-from ioflo.aid.odicting import odict
-from ioflo.aid.timing import Timer, StoreTimer
+from ioflo.aid.timing import StoreTimer
 from ioflo.base import storing
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-from raet import raeting
-
-from salt.daemons import parse_hostname,  extract_masters
+from salt.daemons import parse_hostname, extract_masters
 
 
 def setUpModule():
     console.reinit(verbosity=console.Wordage.concise)
 
+
 def tearDownModule():
     pass
 
-class BasicTestCase(unittest.TestCase):
-    """"""
+
+class BasicTestCase(unittest.TestCase):  # pylint: disable=moved-test-case-class
 
     def setUp(self):
         self.store = storing.Store(stamp=0.0)
@@ -47,8 +39,6 @@ class BasicTestCase(unittest.TestCase):
 
     def tearDown(self):
         pass
-
-
 
     def testParseHostname(self):
         '''
@@ -88,7 +78,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEquals(parse_hostname('  fe80::1%lo0  ', self.port),
                                                 ('fe80::1%lo0', 4506))
 
-
         self.assertEquals(parse_hostname('localhost 4510', self.port),
                                                ('localhost', 4510))
         self.assertEquals(parse_hostname('127.0.0.1 4510', self.port),
@@ -105,7 +94,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEquals(parse_hostname('fe80::1%lo0 4510', self.port),
                                                 ('fe80::1%lo0', 4510))
 
-
         self.assertEquals(parse_hostname('  localhost     4510 ', self.port),
                                                ('localhost', 4510))
         self.assertEquals(parse_hostname('   127.0.0.1    4510   ', self.port),
@@ -121,7 +109,6 @@ class BasicTestCase(unittest.TestCase):
                  4510))
         self.assertEquals(parse_hostname('   fe80::1%lo0   4510   ', self.port),
                                                 ('fe80::1%lo0', 4510))
-
 
         self.assertEquals(parse_hostname('localhost abcde', self.port), None)
         self.assertEquals(parse_hostname('127.0.0.1 a4510', self.port), None)
@@ -149,7 +136,6 @@ class BasicTestCase(unittest.TestCase):
                                                       ('fe80::1%lo0:4510', 4506))
         self.assertEquals(parse_hostname('localhost::4510', self.port),
                                                        ('localhost::4510', 4506))
-
 
     def testExtractMastersSingle(self):
         '''
@@ -188,7 +174,6 @@ class BasicTestCase(unittest.TestCase):
                               dict(external=('127.0.0.1', 4510),
                                    internal=None),
                           ])
-
 
         master = '10.0.2.23'
         self.opts.update(master=master)
@@ -240,8 +225,7 @@ class BasicTestCase(unittest.TestCase):
 
         master = dict(internal='10.0.2.23 4510')
         self.opts.update(master=master)
-        self.assertEquals(extract_masters(self.opts),[])
-
+        self.assertEquals(extract_masters(self.opts), [])
 
     def testExtractMastersMultiple(self):
         '''
@@ -332,21 +316,23 @@ def runOne(test):
     suite = unittest.TestSuite([test])
     unittest.TextTestRunner(verbosity=2).run(suite)
 
+
 def runSome():
     '''
     Unittest runner
     '''
-    tests =  []
+    tests = []
     names = [
-                'testParseHostname',
-                'testExtractMastersSingle',
-                'testExtractMastersMultiple',
-            ]
+        'testParseHostname',
+        'testExtractMastersSingle',
+        'testExtractMastersMultiple',
+    ]
 
     tests.extend(list(list(map(BasicTestCase, names))))
 
     suite = unittest.TestSuite(tests)
     unittest.TextTestRunner(verbosity=2).run(suite)
+
 
 def runAll():
     '''
@@ -357,12 +343,13 @@ def runAll():
 
     unittest.TextTestRunner(verbosity=2).run(suite)
 
+
 if __name__ == '__main__' and __package__ is None:
 
     #console.reinit(verbosity=console.Wordage.concise)
 
-    #runAll() #run all unittests
+    runAll()  # run all unittests
 
-    runSome()#only run some
+    #runSome()  # only run some
 
     #runOne('testParseHostname')

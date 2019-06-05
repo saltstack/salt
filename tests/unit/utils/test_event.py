@@ -8,7 +8,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import hashlib
 import time
@@ -25,9 +25,10 @@ from multiprocessing import Process
 from tests.support.unit import expectedFailure, skipIf, TestCase
 
 # Import salt libs
+import salt.utils.event
+import salt.utils.stringutils
 import tests.integration as integration
 from salt.utils.process import clean_proc
-from salt.utils import event, to_bytes
 
 # Import 3rd-+arty libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -41,7 +42,7 @@ if getattr(zmq, 'IPC_PATH_MAX_LEN', 103) <= 103:
 
 @contextmanager
 def eventpublisher_process():
-    proc = event.EventPublisher({'sock_dir': SOCK_DIR})
+    proc = salt.utils.event.EventPublisher({'sock_dir': SOCK_DIR})
     proc.start()
     try:
         if os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None:
@@ -62,7 +63,7 @@ class EventSender(Process):
         self.wait = wait
 
     def run(self):
-        me = event.MasterEvent(SOCK_DIR, listen=False)
+        me = salt.utils.event.MasterEvent(SOCK_DIR, listen=False)
         time.sleep(self.wait)
         me.fire_event(self.data, self.tag)
         # Wait a few seconds before tearing down the zmq context
@@ -98,7 +99,7 @@ class TestSaltEvent(TestCase):
             self.assertEqual(data[key], evt[key], assertMsg)
 
     def test_master_event(self):
-        me = event.MasterEvent(SOCK_DIR, listen=False)
+        me = salt.utils.event.MasterEvent(SOCK_DIR, listen=False)
         self.assertEqual(
             me.puburi, '{0}'.format(
                 os.path.join(SOCK_DIR, 'master_event_pub.ipc')
@@ -113,8 +114,8 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event(self):
         opts = dict(id='foo', sock_dir=SOCK_DIR)
-        id_hash = hashlib.sha256(to_bytes(opts['id'])).hexdigest()[:10]
-        me = event.MinionEvent(opts, listen=False)
+        id_hash = hashlib.sha256(salt.utils.stringutils.to_bytes(opts['id'])).hexdigest()[:10]
+        me = salt.utils.event.MinionEvent(opts, listen=False)
         self.assertEqual(
             me.puburi,
             '{0}'.format(
@@ -134,13 +135,13 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event_tcp_ipc_mode(self):
         opts = dict(id='foo', ipc_mode='tcp')
-        me = event.MinionEvent(opts, listen=False)
+        me = salt.utils.event.MinionEvent(opts, listen=False)
         self.assertEqual(me.puburi, 4510)
         self.assertEqual(me.pulluri, 4511)
 
     def test_minion_event_no_id(self):
-        me = event.MinionEvent(dict(sock_dir=SOCK_DIR), listen=False)
-        id_hash = hashlib.sha256(to_bytes('')).hexdigest()[:10]
+        me = salt.utils.event.MinionEvent(dict(sock_dir=SOCK_DIR), listen=False)
+        id_hash = hashlib.sha256(salt.utils.stringutils.to_bytes('')).hexdigest()[:10]
         self.assertEqual(
             me.puburi,
             '{0}'.format(
@@ -161,7 +162,7 @@ class TestSaltEvent(TestCase):
     def test_event_single(self):
         '''Test a single event is received'''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='evt1')
             self.assertGotEvent(evt1, {'data': 'foo1'})
@@ -169,7 +170,7 @@ class TestSaltEvent(TestCase):
     def test_event_single_no_block(self):
         '''Test a single event is received, no block'''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             start = time.time()
             finish = start + 5
             evt1 = me.get_event(wait=0, tag='evt1', no_block=True)
@@ -185,7 +186,7 @@ class TestSaltEvent(TestCase):
     def test_event_single_wait_0_no_block_False(self):
         '''Test a single event is received with wait=0 and no_block=False and doesn't spin the while loop'''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             me.fire_event({'data': 'foo1'}, 'evt1')
             # This is too fast and will be None but assures we're not blocking
             evt1 = me.get_event(wait=0, tag='evt1', no_block=False)
@@ -194,7 +195,7 @@ class TestSaltEvent(TestCase):
     def test_event_timeout(self):
         '''Test no event is received if the timeout is reached'''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='evt1')
             self.assertGotEvent(evt1, {'data': 'foo1'})
@@ -204,7 +205,7 @@ class TestSaltEvent(TestCase):
     def test_event_no_timeout(self):
         '''Test no wait timeout, we should block forever, until we get one '''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             with eventsender_process({'data': 'foo2'}, 'evt2', 5):
                 evt = me.get_event(tag='evt2', wait=0, no_block=False)
             self.assertGotEvent(evt, {'data': 'foo2'})
@@ -212,7 +213,7 @@ class TestSaltEvent(TestCase):
     def test_event_matching(self):
         '''Test a startswith match'''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='ev')
             self.assertGotEvent(evt1, {'data': 'foo1'})
@@ -220,7 +221,7 @@ class TestSaltEvent(TestCase):
     def test_event_matching_regex(self):
         '''Test a regex match'''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='^ev', match_type='regex')
             self.assertGotEvent(evt1, {'data': 'foo1'})
@@ -228,7 +229,7 @@ class TestSaltEvent(TestCase):
     def test_event_matching_all(self):
         '''Test an all match'''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='')
             self.assertGotEvent(evt1, {'data': 'foo1'})
@@ -236,7 +237,7 @@ class TestSaltEvent(TestCase):
     def test_event_matching_all_when_tag_is_None(self):
         '''Test event matching all when not passing a tag'''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event()
             self.assertGotEvent(evt1, {'data': 'foo1'})
@@ -244,7 +245,7 @@ class TestSaltEvent(TestCase):
     def test_event_not_subscribed(self):
         '''Test get_event drops non-subscribed events'''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             me.fire_event({'data': 'foo1'}, 'evt1')
             me.fire_event({'data': 'foo2'}, 'evt2')
             evt2 = me.get_event(tag='evt2')
@@ -255,7 +256,7 @@ class TestSaltEvent(TestCase):
     def test_event_subscription_cache(self):
         '''Test subscriptions cache a message until requested'''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             me.subscribe('evt1')
             me.fire_event({'data': 'foo1'}, 'evt1')
             me.fire_event({'data': 'foo2'}, 'evt2')
@@ -267,7 +268,7 @@ class TestSaltEvent(TestCase):
     def test_event_subscriptions_cache_regex(self):
         '''Test regex subscriptions cache a message until requested'''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             me.subscribe('e..1$', 'regex')
             me.fire_event({'data': 'foo1'}, 'evt1')
             me.fire_event({'data': 'foo2'}, 'evt2')
@@ -279,8 +280,8 @@ class TestSaltEvent(TestCase):
     def test_event_multiple_clients(self):
         '''Test event is received by multiple clients'''
         with eventpublisher_process():
-            me1 = event.MasterEvent(SOCK_DIR, listen=True)
-            me2 = event.MasterEvent(SOCK_DIR, listen=True)
+            me1 = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
+            me2 = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             # We need to sleep here to avoid a race condition wherein
             # the second socket may not be connected by the time the first socket
             # sends the event.
@@ -296,7 +297,7 @@ class TestSaltEvent(TestCase):
         '''Test nested event subscriptions do not drop events, get event for all tags'''
         # Show why not to call get_event(tag='')
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             me.fire_event({'data': 'foo1'}, 'evt1')
             me.fire_event({'data': 'foo2'}, 'evt2')
             evt2 = me.get_event(tag='')
@@ -307,7 +308,7 @@ class TestSaltEvent(TestCase):
     def test_event_many(self):
         '''Test a large number of events, one at a time'''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             for i in range(500):
                 me.fire_event({'data': '{0}'.format(i)}, 'testevents')
                 evt = me.get_event(tag='testevents')
@@ -316,7 +317,7 @@ class TestSaltEvent(TestCase):
     def test_event_many_backlog(self):
         '''Test a large number of events, send all then recv all'''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             # Must not exceed zmq HWM
             for i in range(500):
                 me.fire_event({'data': '{0}'.format(i)}, 'testevents')
@@ -329,7 +330,7 @@ class TestSaltEvent(TestCase):
     def test_send_master_event(self):
         '''Tests that sending an event through fire_master generates expected event'''
         with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
             data = {'data': 'foo1'}
             me.fire_master(data, 'test_master')
 
@@ -344,21 +345,21 @@ class TestAsyncEventPublisher(AsyncTestCase):
     def setUp(self):
         super(TestAsyncEventPublisher, self).setUp()
         self.opts = {'sock_dir': SOCK_DIR}
-        self.publisher = event.AsyncEventPublisher(
+        self.publisher = salt.utils.event.AsyncEventPublisher(
             self.opts,
             self.io_loop,
         )
-        self.event = event.get_event('minion', opts=self.opts, io_loop=self.io_loop)
+        self.event = salt.utils.event.get_event('minion', opts=self.opts, io_loop=self.io_loop)
         self.event.subscribe('')
         self.event.set_event_handler(self._handle_publish)
 
     def _handle_publish(self, raw):
-        self.tag, self.data = event.SaltEvent.unpack(raw)
+        self.tag, self.data = salt.utils.event.SaltEvent.unpack(raw)
         self.stop()
 
     def test_event_subscription(self):
         '''Test a single event is received'''
-        me = event.MinionEvent(self.opts, listen=True)
+        me = salt.utils.event.MinionEvent(self.opts, listen=True)
         me.fire_event({'data': 'foo1'}, 'evt1')
         self.wait()
         evt1 = me.get_event(tag='evt1')

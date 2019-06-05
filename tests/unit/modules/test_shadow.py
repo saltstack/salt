@@ -4,12 +4,13 @@
 '''
 
 # Import Pytohn libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
-from salt.utils import is_linux
+import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import skip_if_not_root
 
 # Import salt libs
 try:
@@ -19,7 +20,7 @@ except ImportError:
     HAS_SHADOW = False
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 _PASSWORD = 'lamepassword'
@@ -41,7 +42,8 @@ _HASHES = dict(
 )
 
 
-@skipIf(not is_linux(), 'minion is not Linux')
+@skipIf(not salt.utils.platform.is_linux(), 'minion is not Linux')
+@skipIf(not HAS_SHADOW, 'shadow module is not available')
 class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -61,3 +63,10 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
                 ),
                 hash_info['pw_hash']
             )
+
+    @skip_if_not_root
+    def test_list_users(self):
+        '''
+        Test if it returns a list of all users
+        '''
+        self.assertTrue(shadow.list_users())

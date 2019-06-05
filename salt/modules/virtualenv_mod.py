@@ -6,7 +6,7 @@ Create virtualenv environments.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import glob
 import shutil
 import logging
@@ -14,8 +14,9 @@ import os
 import sys
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.verify
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six import string_types
@@ -29,7 +30,7 @@ KNOWN_BINARY_NAMES = frozenset([
 log = logging.getLogger(__name__)
 
 __opts__ = {
-    'venv_bin': salt.utils.which_bin(KNOWN_BINARY_NAMES) or 'virtualenv'
+    'venv_bin': salt.utils.path.which_bin(KNOWN_BINARY_NAMES) or 'virtualenv'
 }
 
 __pillar__ = {}
@@ -191,7 +192,7 @@ def create(path,
                 cmd.append('--distribute')
 
         if python is not None and python.strip() != '':
-            if not salt.utils.which(python):
+            if not salt.utils.path.which(python):
                 raise CommandExecutionError(
                     'Cannot find requested python ({0}).'.format(python)
                 )
@@ -263,7 +264,7 @@ def create(path,
         return ret
 
     # Check if distribute and pip are already installed
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         venv_python = os.path.join(path, 'Scripts', 'python.exe')
         venv_pip = os.path.join(path, 'Scripts', 'pip.exe')
         venv_setuptools = os.path.join(path, 'Scripts', 'easy_install.exe')
@@ -457,12 +458,12 @@ def get_resource_content(venv,
 
 
 def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         tmppath = salt.utils.files.mkstemp(dir=cwd)
     else:
         tmppath = __salt__['cp.cache_file'](source, saltenv)
 
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         shutil.copyfile(fn_, tmppath)
         os.chmod(tmppath, 0o500)

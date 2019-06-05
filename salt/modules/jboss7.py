@@ -23,16 +23,16 @@ Example:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 import logging
 
 # Import Salt libs
+import salt.utils.dictdiffer as dictdiffer
 from salt.exceptions import SaltInvocationError
-from salt.utils import dictdiffer
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -201,7 +201,7 @@ def __format_value(key, value, ds_attributes):
             raise Exception("Don't know how to convert {0} to BOOLEAN type".format(value))
 
     elif type_ == 'INT':
-        return str(value)
+        return six.text_type(value)
     elif type_ == 'STRING':
         return '"{0}"'.format(value)
     else:
@@ -476,7 +476,7 @@ def list_deployments(jboss_config):
     deployments = []
     if len(command_result['stdout']) > 0:
         deployments = re.split('\\s*', command_result['stdout'])
-    log.debug('deployments=%s', str(deployments))
+    log.debug('deployments=%s', deployments)
     return deployments
 
 

@@ -8,16 +8,19 @@ Service support for RHEL-based systems, including support for both upstart and s
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import glob
 import logging
 import os
 import stat
+import fnmatch
+import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -30,15 +33,14 @@ __virtualname__ = 'service'
 
 # Import upstart module if needed
 HAS_UPSTART = False
-if salt.utils.which('initctl'):
+if salt.utils.path.which('initctl'):
     try:
         # Don't re-invent the wheel, import the helper functions from the
         # upstart module.
-        from salt.modules.upstart \
-            import _upstart_enable, _upstart_disable, _upstart_is_enabled
+        from salt.modules.upstart_service import _upstart_enable, _upstart_disable, _upstart_is_enabled
     except Exception as exc:
         log.error('Unable to import helper functions from '
-                  'salt.modules.upstart: {0}'.format(exc))
+                  'salt.modules.upstart: %s', exc)
     else:
         HAS_UPSTART = True
 
@@ -55,6 +57,7 @@ def __virtual__():
     # Enable on these platforms only.
     enable = set((
         'XenServer',
+        'XCP-ng',
         'RedHat',
         'CentOS',
         'ScientificLinux',
@@ -71,18 +74,18 @@ def __virtual__():
     if __grains__['os'] in enable:
 
         if __grains__['os'] == 'SUSE':
-            if str(__grains__['osrelease']).startswith('11'):
+            if six.text_type(__grains__['osrelease']).startswith('11'):
                 return __virtualname__
             else:
                 return (False, 'Cannot load rh_service module on SUSE > 11')
 
         osrelease_major = __grains__.get('osrelease_info', [0])[0]
 
-        if __grains__['os'] == 'XenServer':
+        if __grains__['os'] in ('XenServer', 'XCP-ng'):
             if osrelease_major >= 7:
                 return (
                     False,
-                    'XenServer >= 7 uses systemd, will not load rh_service.py '
+                    'XenServer and XCP-ng >= 7 use systemd, will not load rh_service.py '
                     'as virtual \'service\''
                 )
             return __virtualname__
@@ -128,10 +131,10 @@ def _chkconfig_add(name):
     '''
     cmd = '/sbin/chkconfig --add {0}'.format(name)
     if __salt__['cmd.retcode'](cmd, python_shell=False) == 0:
-        log.info('Added initscript "{0}" to chkconfig'.format(name))
+        log.info('Added initscript "%s" to chkconfig', name)
         return True
     else:
-        log.error('Unable to add initscript "{0}" to chkconfig'.format(name))
+        log.error('Unable to add initscript "%s" to chkconfig', name)
         return False
 
 
@@ -474,22 +477,46 @@ def reload_(name):
 
 def status(name, sig=None):
     '''
-    Return the status for a service, returns a bool whether the service is
-    running.
+    Return the status for a service.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
+
+    .. versionchanged:: 2018.3.0
+        The service name can now be a glob (e.g. ``salt*``)
+
+    Args:
+        name (str): The name of the service to check
+        sig (str): Signature to use to find the service via ps
+
+    Returns:
+        bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.status <service name>
+        salt '*' service.status <service name> [service signature]
     '''
-    if _service_is_upstart(name):
-        cmd = 'status {0}'.format(name)
-        return 'start/running' in __salt__['cmd.run'](cmd, python_shell=False)
     if sig:
         return bool(__salt__['status.pid'](sig))
-    cmd = '/sbin/service {0} status'.format(name)
-    return __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=True) == 0
+
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    if contains_globbing:
+        services = fnmatch.filter(get_all(), name)
+    else:
+        services = [name]
+    results = {}
+    for service in services:
+        if _service_is_upstart(service):
+            cmd = 'status {0}'.format(service)
+            results[service] = 'start/running' in __salt__['cmd.run'](cmd, python_shell=False)
+        else:
+            cmd = '/sbin/service {0} status'.format(service)
+            results[service] = __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=True) == 0
+    if contains_globbing:
+        return results
+    return results[name]
 
 
 def delete(name, **kwargs):

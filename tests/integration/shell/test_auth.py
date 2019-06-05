@@ -4,19 +4,23 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import pwd
-import grp
+try:
+    import pwd
+    import grp
+except ImportError:
+    pwd, grp = None, None
 import random
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
+from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.utils.pycrypto import gen_hash
 
 # Import 3rd-party libs
@@ -44,6 +48,7 @@ def gen_password():
 
 
 @skip_if_not_root
+@skipIf(pwd is None, 'Skip if no pwd module exists')
 @destructiveTest
 class AuthTest(ShellCase):
     '''
@@ -59,7 +64,7 @@ class AuthTest(ShellCase):
     def setUp(self):
         for user in (self.userA, self.userB):
             try:
-                if salt.utils.is_darwin() and user not in str(self.run_call('user.list_users')):
+                if salt.utils.platform.is_darwin() and user not in str(self.run_call('user.list_users')):
                     # workaround for https://github.com/saltstack/salt-jenkins/issues/504
                     raise KeyError
                 pwd.getpwnam(user)
@@ -68,7 +73,7 @@ class AuthTest(ShellCase):
 
         # only put userB into the group for the group auth test
         try:
-            if salt.utils.is_darwin() and self.group not in str(self.run_call('group.info {0}'.format(self.group))):
+            if salt.utils.platform.is_darwin() and self.group not in str(self.run_call('group.info {0}'.format(self.group))):
                 # workaround for https://github.com/saltstack/salt-jenkins/issues/504
                 raise KeyError
             grp.getgrnam(self.group)
@@ -100,7 +105,7 @@ class AuthTest(ShellCase):
         # set user password
         set_pw_cmd = "shadow.set_password {0} '{1}'".format(
                 self.userA,
-                password if salt.utils.is_darwin() else hashed_pwd
+                password if salt.utils.platform.is_darwin() else hashed_pwd
         )
         self.run_call(set_pw_cmd)
 
@@ -121,7 +126,7 @@ class AuthTest(ShellCase):
                '--username nouser --password {0}'.format('abcd1234'))
         resp = self.run_salt(cmd)
         self.assertTrue(
-            'Failed to authenticate' in ''.join(resp)
+            'Authentication error occurred.' in ''.join(resp)
         )
 
     def test_pam_auth_valid_group(self):
@@ -133,7 +138,7 @@ class AuthTest(ShellCase):
         # set user password
         set_pw_cmd = "shadow.set_password {0} '{1}'".format(
                 self.userB,
-                password if salt.utils.is_darwin() else hashed_pwd
+                password if salt.utils.platform.is_darwin() else hashed_pwd
         )
         self.run_call(set_pw_cmd)
 

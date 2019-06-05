@@ -29,7 +29,7 @@ Allows for looping over execution modules.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
@@ -77,6 +77,11 @@ def until(name,
            'changes': {},
            'result': False,
            'comment': ''}
+
+    if m_args is None:
+        m_args = ()
+    if m_kwargs is None:
+        m_kwargs = {}
 
     if name not in __salt__:
         ret['comment'] = 'Cannot find module {0}'.format(name)

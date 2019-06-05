@@ -17,9 +17,6 @@ import signal
 import shutil
 import logging
 
-# Import 3rd-party libs
-import yaml
-
 # Import Salt Testing libs
 import tests.integration.utils
 from tests.support.case import ShellCase
@@ -29,10 +26,12 @@ from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.integration.utils import testprogram
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.yaml
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -50,6 +49,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         'subminion',
     )
 
+    @skipIf(salt.utils.platform.is_darwin(), 'Test is flaky on macosx')
     def test_issue_7754(self):
         old_cwd = os.getcwd()
         config_dir = os.path.join(TMP, 'issue-7754')
@@ -60,14 +60,12 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
         config_file_name = 'minion'
         pid_path = os.path.join(config_dir, '{0}.pid'.format(config_file_name))
-        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
-            config = yaml.load(fhr.read())
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+            config = salt.utils.yaml.safe_load(fhr)
             config['log_file'] = 'file:///tmp/log/LOG_LOCAL3'
 
-            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
-                fhw.write(
-                    yaml.dump(config, default_flow_style=False)
-                )
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
 
         ret = self.run_script(
             self._call_binary_,
@@ -82,7 +80,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
         # Now kill it if still running
         if os.path.exists(pid_path):
-            with salt.utils.fopen(pid_path) as fhr:
+            with salt.utils.files.fopen(pid_path) as fhr:
                 try:
                     os.kill(int(fhr.read()), signal.SIGKILL)
                 except OSError:
@@ -204,7 +202,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         default_dir = os.path.join(sysconf_dir, 'default')
         if not os.path.exists(default_dir):
             os.makedirs(default_dir)
-        with salt.utils.fopen(os.path.join(default_dir, 'salt'), 'w') as defaults:
+        with salt.utils.files.fopen(os.path.join(default_dir, 'salt'), 'w') as defaults:
             # Test suites is quite slow - extend the timeout
             defaults.write(
                 'TIMEOUT=60\n'
@@ -275,9 +273,12 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             for minion in minions:
                 minion.shutdown()
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_exit_status_unknown_user(self):
         '''
         Ensure correct exit status when the minion is configured to run as an unknown user.
+
+        Skipped on windows because daemonization not supported
         '''
 
         minion = testprogram.TestDaemonSaltMinion(
@@ -306,6 +307,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             minion.shutdown()
 
     # pylint: disable=invalid-name
+#    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_exit_status_unknown_argument(self):
         '''
         Ensure correct exit status when an unknown argument is passed to salt-minion.
@@ -335,9 +337,12 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             # cause timeout exeptions and respective traceback
             minion.shutdown()
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_exit_status_correct_usage(self):
         '''
         Ensure correct exit status when salt-minion starts correctly.
+
+        Skipped on windows because daemonization not supported
         '''
 
         minion = testprogram.TestDaemonSaltMinion(

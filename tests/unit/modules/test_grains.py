@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import copy
 
@@ -19,7 +19,7 @@ from tests.support.mock import (
 # Import Salt libs
 from salt.exceptions import SaltException
 import salt.modules.grains as grainsmod
-from salt.utils import dictupdate
+import salt.utils.dictupdate as dictupdate
 
 # Import 3rd-party libs
 from salt.utils.odict import OrderedDict

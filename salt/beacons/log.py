@@ -7,11 +7,13 @@ Beacon to fire events at specific log messages.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.platform
+from salt.ext.six.moves import map
 
 
 try:
@@ -34,7 +36,7 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if not salt.utils.is_windows() and HAS_REGEX:
+    if not salt.utils.platform.is_windows() and HAS_REGEX:
         return __virtualname__
     return False
 
@@ -47,13 +49,20 @@ def _get_loc():
         return __context__[LOC_KEY]
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
+    _config = {}
+    list(map(_config.update, config))
+
     # Configuration for log beacon should be a list of dicts
-    if not isinstance(config, dict):
-        return False, ('Configuration for log beacon must be a dictionary.')
+    if not isinstance(config, list):
+        return False, ('Configuration for log beacon must be a list.')
+
+    if 'file' not in _config:
+        return False, ('Configuration for log beacon '
+                       'must contain file option.')
     return True, 'Valid beacon configuration'
 
 
@@ -66,9 +75,10 @@ def beacon(config):
 
         beacons:
             log:
-              file: <path>
-              <tag>:
-                regex: <pattern>
+              - file: <path>
+              - tags:
+                  <tag>:
+                    regex: <pattern>
 
     .. note::
 
@@ -76,16 +86,19 @@ def beacon(config):
 
     .. _re: https://docs.python.org/3.6/library/re.html#regular-expression-syntax
     '''
+    _config = {}
+    list(map(_config.update, config))
+
     ret = []
 
-    if 'file' not in config:
+    if 'file' not in _config:
         event = SKEL.copy()
         event['tag'] = 'global'
         event['error'] = 'file not defined in config'
         ret.append(event)
         return ret
 
-    with salt.utils.fopen(config['file'], 'r') as fp_:
+    with salt.utils.files.fopen(_config['file'], 'r') as fp_:
         loc = __context__.get(LOC_KEY, 0)
         if loc == 0:
             fp_.seek(0, 2)
@@ -97,16 +110,17 @@ def beacon(config):
         fp_.seek(loc)
 
         txt = fp_.read()
+        log.info('txt %s', txt)
 
         d = {}
-        for tag in config:
-            if 'regex' not in config[tag]:
+        for tag in _config.get('tags', {}):
+            if 'regex' not in _config['tags'][tag]:
                 continue
-            if len(config[tag]['regex']) < 1:
+            if len(_config['tags'][tag]['regex']) < 1:
                 continue
             try:
-                d[tag] = re.compile(r'{0}'.format(config[tag]['regex']))
-            except Exception:
+                d[tag] = re.compile(r'{0}'.format(_config['tags'][tag]['regex']))
+            except Exception as e:
                 event = SKEL.copy()
                 event['tag'] = tag
                 event['error'] = 'bad regex'

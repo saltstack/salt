@@ -4,13 +4,13 @@ Manage GlusterFS pool.
 '''
 
 # Import python libs
-from __future__ import generators
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, \
+    print_function, generators
 import logging
-import socket
 
 # Import salt libs
 import salt.utils.cloud as suc
+import salt.utils.network
 from salt.exceptions import SaltCloudException
 
 log = logging.getLogger(__name__)
@@ -65,15 +65,21 @@ def peered(name):
 
     try:
         suc.check_name(name, 'a-zA-Z0-9._-')
-    except SaltCloudException as e:
+    except SaltCloudException:
         ret['comment'] = 'Invalid characters in peer name.'
         return ret
 
-    # Check if the name resolves to localhost
-    if socket.gethostbyname(name) in __salt__['network.ip_addrs']():
-        ret['result'] = True
-        ret['comment'] = 'Peering with localhost is not needed'
-        return ret
+    # Check if the name resolves to one of this minion IP addresses
+    name_ips = salt.utils.network.host_to_ips(name)
+    if name_ips is not None:
+        # if it is None, it means resolution fails, let's not hide
+        # it from the user.
+        this_ips = set(salt.utils.network.ip_addrs())
+        this_ips.update(salt.utils.network.ip_addrs6())
+        if this_ips.intersection(name_ips):
+            ret['result'] = True
+            ret['comment'] = 'Peering with localhost is not needed'
+            return ret
 
     peers = __salt__['glusterfs.peer_status']()
 
@@ -87,8 +93,7 @@ def peered(name):
         ret['result'] = None
         return ret
 
-    peered = __salt__['glusterfs.peer'](name)
-    if not peered:
+    if not __salt__['glusterfs.peer'](name):
         ret['comment'] = 'Failed to peer with {0}, please check logs for errors'.format(name)
         return ret
 
@@ -104,7 +109,7 @@ def peered(name):
 
 
 def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
-            transport='tcp', start=False, force=False):
+                   transport='tcp', start=False, force=False):
     '''
     Ensure that the volume exists
 
@@ -153,9 +158,10 @@ def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
             ret['result'] = None
             return ret
 
-        vol_created = __salt__['glusterfs.create_volume'](name, bricks, stripe,
-                                                  replica, device_vg,
-                                                  transport, start, force)
+        vol_created = __salt__['glusterfs.create_volume'](
+            name, bricks, stripe,
+            replica, device_vg,
+            transport, start, force)
 
         if not vol_created:
             ret['comment'] = 'Creation of volume {0} failed'.format(name)

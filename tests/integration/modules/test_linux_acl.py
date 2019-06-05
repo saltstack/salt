@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 
@@ -12,8 +12,8 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
-import salt.utils
-# from salt.modules import linux_acl as acl
+import salt.utils.files
+import salt.utils.user
 
 
 # Acl package should be installed to test linux_acl module
@@ -28,7 +28,7 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
         # Blindly copied from tests.integration.modules.file; Refactoring?
         self.myfile = os.path.join(TMP, 'myfile')
-        with salt.utils.fopen(self.myfile, 'w+') as fp:
+        with salt.utils.files.fopen(self.myfile, 'w+') as fp:
             fp.write('Hello\n')
         self.mydir = os.path.join(TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):
@@ -59,8 +59,8 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
 
     def test_getfacl_w_single_file_without_acl(self):
         ret = self.run_function('acl.getfacl', arg=[self.myfile])
-        user = salt.utils.get_user()
-        group = salt.utils.get_default_group(user)
+        user = salt.utils.user.get_user()
+        group = salt.utils.user.get_default_group(user)
         self.maxDiff = None
         self.assertEqual(
             ret,

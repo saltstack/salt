@@ -12,16 +12,18 @@
 # pylint: disable=repr-flag-used-in-string,wrong-import-order
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import errno
 import functools
 import inspect
 import logging
 import os
+import random
 import shutil
 import signal
 import socket
+import string
 import subprocess
 import sys
 import tempfile
@@ -34,8 +36,7 @@ import types
 
 # Import 3rd-party libs
 import psutil  # pylint: disable=3rd-party-module-not-gated
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
 from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,redefined-builtin
 try:
     from pytestsalt.utils import get_unused_localhost_port  # pylint: disable=unused-import
@@ -54,16 +55,18 @@ except ImportError:
 from tests.support.unit import skip, _id
 from tests.support.mock import patch
 from tests.support.paths import FILES, TMP
-if salt.utils.is_windows():
+
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.stringutils
+
+if salt.utils.platform.is_windows():
     import salt.utils.win_functions
 else:
     import pwd
 
-# Import Salt libs
-import salt.utils
-
 log = logging.getLogger(__name__)
-
 
 HAS_SYMLINKS = None
 
@@ -77,7 +80,10 @@ def no_symlinks():
         return not HAS_SYMLINKS
     output = ''
     try:
-        output = subprocess.check_output('git config --get core.symlinks', shell=True)
+        output = subprocess.Popen(
+            ['git', 'config', '--get', 'core.symlinks'],
+            cwd=TMP,
+            stdout=subprocess.PIPE).communicate()[0]
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
@@ -203,9 +209,12 @@ def flaky(caller=None, condition=True):
                 return caller(cls)
             except Exception as exc:
                 if attempt >= 3:
-                    raise exc
+                    six.reraise(*sys.exc_info())
                 backoff_time = attempt ** 2
-                log.info('Found Exception. Waiting %s seconds to retry.', backoff_time)
+                log.info(
+                    'Found Exception. Waiting %s seconds to retry.',
+                    backoff_time
+                )
                 time.sleep(backoff_time)
         return cls
     return wrap
@@ -253,11 +262,11 @@ class RedirectStdStreams(object):
 
     def __init__(self, stdout=None, stderr=None):
         # Late import
-        import salt.utils
+        import salt.utils.files
         if stdout is None:
-            stdout = salt.utils.fopen(os.devnull, 'w')  # pylint: disable=resource-leakage
+            stdout = salt.utils.files.fopen(os.devnull, 'w')  # pylint: disable=resource-leakage
         if stderr is None:
-            stderr = salt.utils.fopen(os.devnull, 'w')  # pylint: disable=resource-leakage
+            stderr = salt.utils.files.fopen(os.devnull, 'w')  # pylint: disable=resource-leakage
 
         self.__stdout = stdout
         self.__stderr = stderr
@@ -463,6 +472,7 @@ class ForceImportErrorOn(object):
                 self.__module_names[modname] = set(entry[1:])
             else:
                 self.__module_names[entry] = None
+        self.__original_import = builtins.__import__
         self.patcher = patch.object(builtins, '__import__', self.__fake_import__)
 
     def patch_import_function(self):
@@ -471,7 +481,12 @@ class ForceImportErrorOn(object):
     def restore_import_funtion(self):
         self.patcher.stop()
 
-    def __fake_import__(self, name, globals_, locals_, fromlist, level=-1):
+    def __fake_import__(self,
+                        name,
+                        globals_={} if six.PY2 else None,
+                        locals_={} if six.PY2 else None,
+                        fromlist=[] if six.PY2 else (),
+                        level=-1 if six.PY2 else 0):
         if name in self.__module_names:
             importerror_fromlist = self.__module_names.get(name)
             if importerror_fromlist is None:
@@ -487,7 +502,6 @@ class ForceImportErrorOn(object):
                         )
                     )
                 )
-
         return self.__original_import(name, globals_, locals_, fromlist, level)
 
     def __enter__(self):
@@ -646,7 +660,7 @@ def with_system_user(username, on_existing='delete', delete=True, password=None)
             # Let's add the user to the system.
             log.debug('Creating system user {0!r}'.format(username))
             kwargs = {'timeout': 60}
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 kwargs.update({'password': password})
             create_user = cls.run_function('user.add', [username], **kwargs)
             if not create_user:
@@ -987,22 +1001,35 @@ def with_system_user_and_group(username, group,
     return decorator
 
 
-def with_tempfile(func):
-    '''
-    Generates a tempfile and cleans it up when test completes.
-    '''
-    @functools.wraps(func)
-    def wrapper(self, *args, **kwargs):
-        fd_, name = tempfile.mkstemp(prefix='__salt.test.', dir=TMP)
-        os.close(fd_)
-        del fd_
-        ret = func(self, name, *args, **kwargs)
-        try:
+class WithTempfile(object):
+    def __init__(self, **kwargs):
+        self.create = kwargs.pop('create', True)
+        if 'dir' not in kwargs:
+            kwargs['dir'] = TMP
+        if 'prefix' not in kwargs:
+            kwargs['prefix'] = '__salt.test.'
+        self.kwargs = kwargs
+
+    def __call__(self, func):
+        self.func = func
+        return functools.wraps(func)(
+            lambda testcase, *args, **kwargs: self.wrap(testcase, *args, **kwargs)  # pylint: disable=W0108
+        )
+
+    def wrap(self, testcase, *args, **kwargs):
+        name = salt.utils.files.mkstemp(**self.kwargs)
+        if not self.create:
             os.remove(name)
-        except Exception:
-            pass
-        return ret
-    return wrapper
+        try:
+            return self.func(testcase, name, *args, **kwargs)
+        finally:
+            try:
+                os.remove(name)
+            except OSError:
+                pass
+
+
+with_tempfile = WithTempfile
 
 
 class WithTempdir(object):
@@ -1106,7 +1133,7 @@ def requires_salt_modules(*names):
 
 
 def skip_if_binaries_missing(*binaries, **kwargs):
-    import salt.utils
+    import salt.utils.path
     if len(binaries) == 1:
         if isinstance(binaries[0], (list, tuple, set, frozenset)):
             binaries = binaries[0]
@@ -1121,14 +1148,14 @@ def skip_if_binaries_missing(*binaries, **kwargs):
         )
     if check_all:
         for binary in binaries:
-            if salt.utils.which(binary) is None:
+            if salt.utils.path.which(binary) is None:
                 return skip(
                     '{0}The {1!r} binary was not found'.format(
                         message and '{0}. '.format(message) or '',
                         binary
                     )
                 )
-    elif salt.utils.which_bin(binaries) is None:
+    elif salt.utils.path.which_bin(binaries) is None:
         return skip(
             '{0}None of the following binaries was found: {1}'.format(
                 message and '{0}. '.format(message) or '',
@@ -1414,6 +1441,25 @@ def http_basic_auth(login_cb=lambda username, password: False):
     return wrapper
 
 
+def generate_random_name(prefix, size=6):
+    '''
+    Generates a random name by combining the provided prefix with a randomly generated
+    ascii string.
+
+    .. versionadded:: 2018.3.0
+
+    prefix
+        The string to prefix onto the randomly generated ascii string.
+
+    size
+        The number of characters to generate. Default: 6.
+    '''
+    return prefix + ''.join(
+        random.choice(string.ascii_uppercase + string.digits)
+        for x in range(size)
+    )
+
+
 class Webserver(object):
     '''
     Starts a tornado webserver on 127.0.0.1 on a random available port
@@ -1567,7 +1613,7 @@ def this_user():
     '''
     Get the user associated with the current process.
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return salt.utils.win_functions.get_current_user(with_domain=False)
     return pwd.getpwuid(os.getuid())[0]
 
@@ -1576,11 +1622,11 @@ def dedent(text, linesep=os.linesep):
     '''
     A wrapper around textwrap.dedent that also sets line endings.
     '''
-    linesep = salt.utils.to_unicode(linesep)
-    unicode_text = textwrap.dedent(salt.utils.to_unicode(text))
+    linesep = salt.utils.stringutils.to_unicode(linesep)
+    unicode_text = textwrap.dedent(salt.utils.stringutils.to_unicode(text))
     clean_text = linesep.join(unicode_text.splitlines())
     if unicode_text.endswith(u'\n'):
         clean_text += linesep
     if not isinstance(text, six.text_type):
-        return salt.utils.to_bytes(clean_text)
+        return salt.utils.stringutils.to_bytes(clean_text)
     return clean_text

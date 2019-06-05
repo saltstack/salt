@@ -12,20 +12,21 @@ Manage the information stored in the known_hosts files.
         - present
         - user: root
         - fingerprint: 16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48
+        - fingerprint_hash_type: md5
 
     example.com:
       ssh_known_hosts:
         - absent
         - user: root
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-# Import python libs
+# Import Python libs
 import os
 
-# Import salt libs
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandNotFoundError
-import salt.utils
 
 # Define the state's virtual name
 __virtualname__ = 'ssh_known_hosts'
@@ -35,7 +36,7 @@ def __virtual__():
     '''
     Does not work on Windows, requires ssh module functions
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return False, 'ssh_known_hosts: Does not support Windows'
 
     return __virtualname__
@@ -61,6 +62,9 @@ def present(
 
     name
         The name of the remote host (e.g. "github.com")
+        Note that only a single hostname is supported, if foo.example.com and
+        bar.example.com have the same host you will need two separate Salt
+        States to represent them.
 
     user
         The user who owns the ssh authorized keys file to modify
@@ -174,13 +178,13 @@ def present(
         return dict(ret, result=False, comment=result['error'])
     else:  # 'updated'
         if key:
-            new_key = result['new']['key']
+            new_key = result['new'][0]['key']
             return dict(ret,
                     changes={'old': result['old'], 'new': result['new']},
                     comment='{0}\'s key saved to {1} (key: {2})'.format(
                              name, config, new_key))
         else:
-            fingerprint = result['new']['fingerprint']
+            fingerprint = result['new'][0]['fingerprint']
             return dict(ret,
                     changes={'old': result['old'], 'new': result['new']},
                     comment='{0}\'s key saved to {1} (fingerprint: {2})'.format(
@@ -193,6 +197,9 @@ def absent(name, user=None, config=None):
 
     name
         The host name
+        Note that only single host names are supported.  If foo.example.com
+        and bar.example.com are the same machine and you need to exclude both,
+        you will need one Salt state for each.
 
     user
         The user who owns the ssh authorized keys file to modify
@@ -218,7 +225,7 @@ def absent(name, user=None, config=None):
         ret['result'] = False
         return dict(ret, comment=comment)
 
-    known_host = __salt__['ssh.get_known_host'](user=user, hostname=name, config=config)
+    known_host = __salt__['ssh.get_known_host_entries'](user=user, hostname=name, config=config)
     if not known_host:
         return dict(ret, comment='Host is already absent')
 

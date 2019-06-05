@@ -4,24 +4,26 @@ Module to provide RabbitMQ compatibility to Salt.
 Todo: A lot, need to add cluster support, logging, and minion configuration
 data.
 '''
-from __future__ import absolute_import
-
-# Import python libs
-import json
-import re
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
-import os.path
 import random
+import re
 import string
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.itertools
-import salt.ext.six as six
-from salt.exceptions import SaltInvocationError
+import salt.utils.json
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.user
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
+
+# Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves import range
-from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ def __virtual__():
     global RABBITMQCTL
     global RABBITMQ_PLUGINS
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         from salt.ext.six.moves import winreg
         key = None
         try:
@@ -71,8 +73,8 @@ def __virtual__():
             if key is not None:
                 winreg.CloseKey(key)
     else:
-        RABBITMQCTL = salt.utils.which('rabbitmqctl')
-        RABBITMQ_PLUGINS = salt.utils.which('rabbitmq-plugins')
+        RABBITMQCTL = salt.utils.path.which('rabbitmqctl')
+        RABBITMQ_PLUGINS = salt.utils.path.which('rabbitmq-plugins')
 
     if not RABBITMQCTL:
         return (False, 'Module rabbitmq: module only works when RabbitMQ is installed')
@@ -180,8 +182,8 @@ def _output_to_dict(cmdoutput, values_mapper=None):
             # set it to an empty string to preserve rabbitmq reporting behavior.
             # e.g. A user's permission string for '/' is set to ['', '', ''],
             # Rabbitmq reports this only as '/' from the rabbitmqctl command.
-            log.debug('Could not find any values for key \'{0}\'. '
-                      'Setting to \'{0}\' to an empty string.'.format(row))
+            log.debug('Could not find any values for key \'%s\'. '
+                      'Setting to \'%s\' to an empty string.', row, row)
             ret[row] = ''
             continue
         ret[key] = values_mapper(values)
@@ -219,8 +221,8 @@ def list_users(runas=None):
     # Windows runas currently requires a password.
     # Due to this, don't use a default value for
     # runas in Windows.
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_users', '-q'],
         reset_system_locale=False,
@@ -243,8 +245,8 @@ def list_vhosts(runas=None):
 
         salt '*' rabbitmq.list_vhosts
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_vhosts', '-q'],
         reset_system_locale=False,
@@ -264,8 +266,8 @@ def user_exists(name, runas=None):
 
         salt '*' rabbitmq.user_exists rabbit_user
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     return name in list_users(runas=runas)
 
 
@@ -279,8 +281,8 @@ def vhost_exists(name, runas=None):
 
         salt '*' rabbitmq.vhost_exists rabbit_host
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     return name in list_vhosts(runas=runas)
 
 
@@ -302,10 +304,10 @@ def add_user(name, password=None, runas=None):
         password = ''.join(random.SystemRandom().choice(
             string.ascii_uppercase + string.digits) for x in range(15))
 
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         # On Windows, if the password contains a special character
         # such as '|', normal execution will fail. For example:
         # cmd: rabbitmq.add_user abc "asdf|def"
@@ -351,8 +353,8 @@ def delete_user(name, runas=None):
 
         salt '*' rabbitmq.delete_user rabbit_user
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'delete_user', name],
         reset_system_locale=False,
@@ -373,9 +375,9 @@ def change_password(name, password, runas=None):
 
         salt '*' rabbitmq.change_password rabbit_user password
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
-    if salt.utils.is_windows():
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
+    if salt.utils.platform.is_windows():
         # On Windows, if the password contains a special character
         # such as '|', normal execution will fail. For example:
         # cmd: rabbitmq.add_user abc "asdf|def"
@@ -410,8 +412,8 @@ def clear_password(name, runas=None):
 
         salt '*' rabbitmq.clear_password rabbit_user
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'clear_password', name],
         reset_system_locale=False,
@@ -436,8 +438,8 @@ def check_password(name, password, runas=None):
     '''
     # try to get the rabbitmq-version - adapted from _get_rabbitmq_plugin
 
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
 
     try:
         res = __salt__['cmd.run']([RABBITMQCTL, 'status'], reset_system_locale=False, runas=runas, python_shell=False)
@@ -455,7 +457,7 @@ def check_password(name, password, runas=None):
 
     # rabbitmq introduced a native api to check a username and password in version 3.5.7.
     if tuple(version) >= (3, 5, 7):
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # On Windows, if the password contains a special character
             # such as '|', normal execution will fail. For example:
             # cmd: rabbitmq.add_user abc "asdf|def"
@@ -513,8 +515,8 @@ def add_vhost(vhost, runas=None):
 
         salt '*' rabbitmq add_vhost '<vhost_name>'
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'add_vhost', vhost],
         reset_system_locale=False,
@@ -535,8 +537,8 @@ def delete_vhost(vhost, runas=None):
 
         salt '*' rabbitmq.delete_vhost '<vhost_name>'
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'delete_vhost', vhost],
         reset_system_locale=False,
@@ -556,8 +558,8 @@ def set_permissions(vhost, user, conf='.*', write='.*', read='.*', runas=None):
 
         salt '*' rabbitmq.set_permissions myvhost myuser
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'set_permissions', '-p',
          vhost, user, conf, write, read],
@@ -578,8 +580,8 @@ def list_permissions(vhost, runas=None):
 
         salt '*' rabbitmq.list_permissions /myvhost
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_permissions', '-q', '-p', vhost],
         reset_system_locale=False,
@@ -599,8 +601,8 @@ def list_user_permissions(name, runas=None):
 
         salt '*' rabbitmq.list_user_permissions user
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_user_permissions', name, '-q'],
         reset_system_locale=False,
@@ -619,8 +621,8 @@ def set_user_tags(name, tags, runas=None):
 
         salt '*' rabbitmq.set_user_tags myadmin administrator
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
 
     if not isinstance(tags, (list, tuple)):
         tags = [tags]
@@ -644,8 +646,8 @@ def status(runas=None):
 
         salt '*' rabbitmq.status
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'status'],
         reset_system_locale=False,
@@ -665,8 +667,8 @@ def cluster_status(runas=None):
 
         salt '*' rabbitmq.cluster_status
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'cluster_status'],
         reset_system_locale=False,
@@ -691,8 +693,8 @@ def join_cluster(host, user='rabbit', ram_node=None, runas=None):
         cmd.append('--ram')
     cmd.append('{0}@{1}'.format(user, host))
 
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     stop_app(runas)
     res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     start_app(runas)
@@ -710,8 +712,8 @@ def stop_app(runas=None):
 
         salt '*' rabbitmq.stop_app
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'stop_app'],
         reset_system_locale=False,
@@ -731,8 +733,8 @@ def start_app(runas=None):
 
         salt '*' rabbitmq.start_app
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'start_app'],
         reset_system_locale=False,
@@ -752,8 +754,8 @@ def reset(runas=None):
 
         salt '*' rabbitmq.reset
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'reset'],
         reset_system_locale=False,
@@ -773,8 +775,8 @@ def force_reset(runas=None):
 
         salt '*' rabbitmq.force_reset
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'force_reset'],
         reset_system_locale=False,
@@ -794,8 +796,8 @@ def list_queues(runas=None, *args):
 
         salt '*' rabbitmq.list_queues messages consumers
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     cmd = [RABBITMQCTL, 'list_queues', '-q']
     cmd.extend(args)
     res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
@@ -816,8 +818,8 @@ def list_queues_vhost(vhost, runas=None, *args):
 
         salt '*' rabbitmq.list_queues messages consumers
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     cmd = [RABBITMQCTL, 'list_queues', '-q', '-p', vhost]
     cmd.extend(args)
     res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
@@ -839,8 +841,8 @@ def list_policies(vhost="/", runas=None):
         salt '*' rabbitmq.list_policies
     '''
     ret = {}
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'list_policies', '-q', '-p', vhost],
         reset_system_locale=False,
@@ -848,29 +850,54 @@ def list_policies(vhost="/", runas=None):
         python_shell=False)
     _check_response(res)
     output = res['stdout']
+
+    if __grains__['os_family'] != 'FreeBSD':
+        version = __salt__['pkg.version']('rabbitmq-server').split('-')[0]
+    else:
+        version = __salt__['pkg.version']('rabbitmq').split('-')[0]
+
     for line in _output_lines_to_list(output):
         parts = line.split('\t')
+
         if len(parts) not in (5, 6):
             continue
+
         vhost, name = parts[0], parts[1]
         if vhost not in ret:
             ret[vhost] = {}
         ret[vhost][name] = {}
-        # How many fields are there? - 'apply_to' was inserted in position
-        # 2 at some point
-        offset = len(parts) - 5
-        if len(parts) == 6:
-            ret[vhost][name]['apply_to'] = parts[2]
-        ret[vhost][name].update({
-            'pattern': parts[offset+2],
-            'definition': parts[offset+3],
-            'priority': parts[offset+4]
-        })
+
+        if _LooseVersion(version) >= _LooseVersion("3.7"):
+            # in version 3.7 the position of apply_to and pattern has been
+            # switched
+            ret[vhost][name]['pattern'] = parts[2]
+            ret[vhost][name]['apply_to'] = parts[3]
+            ret[vhost][name]['definition'] = parts[4]
+            ret[vhost][name]['priority'] = parts[5]
+        else:
+            # How many fields are there? - 'apply_to' was inserted in position
+            # 2 at some point
+            # and in version 3.7 the position of apply_to and pattern has been
+            # switched
+            offset = len(parts) - 5
+            if len(parts) == 6:
+                ret[vhost][name]['apply_to'] = parts[2]
+            ret[vhost][name].update({
+                'pattern': parts[offset+2],
+                'definition': parts[offset+3],
+                'priority': parts[offset+4]
+            })
 
     return ret
 
 
-def set_policy(vhost, name, pattern, definition, priority=None, runas=None):
+def set_policy(vhost,
+               name,
+               pattern,
+               definition,
+               priority=None,
+               runas=None,
+               apply_to=None):
     '''
     Set a policy based on rabbitmqctl set_policy.
 
@@ -882,10 +909,10 @@ def set_policy(vhost, name, pattern, definition, priority=None, runas=None):
 
         salt '*' rabbitmq.set_policy / HA '.*' '{"ha-mode":"all"}'
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     if isinstance(definition, dict):
-        definition = json.dumps(definition)
+        definition = salt.utils.json.dumps(definition)
     if not isinstance(definition, six.string_types):
         raise SaltInvocationError(
             'The \'definition\' argument must be a dictionary or JSON string'
@@ -893,6 +920,8 @@ def set_policy(vhost, name, pattern, definition, priority=None, runas=None):
     cmd = [RABBITMQCTL, 'set_policy', '-p', vhost]
     if priority:
         cmd.extend(['--priority', priority])
+    if apply_to:
+        cmd.extend(['--apply-to', apply_to])
     cmd.extend([name, pattern, definition])
     res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     log.debug('Set policy: %s', res['stdout'])
@@ -911,14 +940,14 @@ def delete_policy(vhost, name, runas=None):
 
         salt '*' rabbitmq.delete_policy / HA
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     res = __salt__['cmd.run_all'](
         [RABBITMQCTL, 'clear_policy', '-p', vhost, name],
         reset_system_locale=False,
         runas=runas,
         python_shell=False)
-    log.debug('Delete policy: {0}'.format(res['stdout']))
+    log.debug('Delete policy: %s', res['stdout'])
     return _format_response(res, 'Deleted')
 
 
@@ -934,8 +963,8 @@ def policy_exists(vhost, name, runas=None):
 
         salt '*' rabbitmq.policy_exists / HA
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     policies = list_policies(runas=runas)
     return bool(vhost in policies and name in policies[vhost])
 
@@ -950,8 +979,8 @@ def list_available_plugins(runas=None):
 
             salt '*' rabbitmq.list_available_plugins
         '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'list', '-m']
     ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, python_shell=False, runas=runas)
     _check_response(ret)
@@ -968,8 +997,8 @@ def list_enabled_plugins(runas=None):
 
             salt '*' rabbitmq.list_enabled_plugins
         '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'list', '-m', '-e']
     ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, python_shell=False, runas=runas)
     _check_response(ret)
@@ -986,8 +1015,8 @@ def plugin_is_enabled(name, runas=None):
 
         salt '*' rabbitmq.plugin_is_enabled rabbitmq_plugin_name
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     return name in list_enabled_plugins(runas)
 
 
@@ -1001,8 +1030,8 @@ def enable_plugin(name, runas=None):
 
         salt '*' rabbitmq.enable_plugin foo
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'enable', name]
     ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     return _format_response(ret, 'Enabled')
@@ -1018,8 +1047,8 @@ def disable_plugin(name, runas=None):
 
         salt '*' rabbitmq.disable_plugin foo
     '''
-    if runas is None and not salt.utils.is_windows():
-        runas = salt.utils.get_user()
+    if runas is None and not salt.utils.platform.is_windows():
+        runas = salt.utils.user.get_user()
     cmd = [_get_rabbitmq_plugin(), 'disable', name]
     ret = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     return _format_response(ret, 'Disabled')

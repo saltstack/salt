@@ -5,14 +5,18 @@ not running server versions of Windows. Some functions are only available on
 Windows 10.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-# Import python libs
+# Import Python libs
 import re
 import logging
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
+import salt.utils.versions
+
+# Import 3rd party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 __virtualname__ = "dism"
@@ -22,7 +26,7 @@ def __virtual__():
     '''
     Only work on Windows
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, "Only available on Windows systems"
 
     return __virtualname__
@@ -73,7 +77,7 @@ def add_capability(capability,
 
         salt '*' dism.add_capability Tools.Graphics.DirectX~~~~0.0.1.0
     '''
-    if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
         raise NotImplementedError(
             '`install_capability` is not available on this version of Windows: '
             '{0}'.format(__grains__['osversion']))
@@ -118,7 +122,7 @@ def remove_capability(capability, image=None, restart=False):
 
         salt '*' dism.remove_capability Tools.Graphics.DirectX~~~~0.0.1.0
     '''
-    if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
         raise NotImplementedError(
             '`uninstall_capability` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
@@ -157,7 +161,7 @@ def get_capabilities(image=None):
 
         salt '*' dism.get_capabilities
     '''
-    if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
         raise NotImplementedError(
             '`installed_capabilities` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
@@ -197,7 +201,7 @@ def installed_capabilities(image=None):
 
         salt '*' dism.installed_capabilities
     '''
-    if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
         raise NotImplementedError(
             '`installed_capabilities` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
@@ -226,7 +230,7 @@ def available_capabilities(image=None):
 
         salt '*' dism.installed_capabilities
     '''
-    if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
         raise NotImplementedError(
             '`installed_capabilities` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
@@ -573,7 +577,7 @@ def package_info(package, image=None):
 
     if out['retcode'] == 0:
         ret = dict()
-        for line in str(out['stdout']).splitlines():
+        for line in six.text_type(out['stdout']).splitlines():
             if ' : ' in line:
                 info = line.split(' : ')
                 if len(info) < 2:

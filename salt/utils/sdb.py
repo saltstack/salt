@@ -5,7 +5,7 @@ Basic functions for accessing the SDB interface
 For configuration options, see the docs for specific sdb
 modules.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import random

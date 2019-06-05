@@ -77,14 +77,12 @@ Connection module for Amazon CognitoIdentity
 # pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
-import salt.utils.boto3
 import salt.utils.compat
-import salt.utils
-from salt.utils.versions import LooseVersion as _LooseVersion
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -110,22 +108,13 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto_version = '2.8.0'
-    required_boto3_version = '1.2.1'
     # the boto_cognitoidentity execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    if not HAS_BOTO:
-        return (False, 'The boto_cognitoidentity module could not be loaded: '
-                'boto libraries not found')
-    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return (False, 'The boto_cognitoidentity module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto_version))
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_cognitoidentity module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto3_version))
-    else:
-        return True
+    return salt.utils.versions.check_boto_reqs(
+        boto_ver='2.8.0',
+        boto3_ver='1.2.1'
+    )
 
 
 def __init__(opts):
@@ -141,7 +130,7 @@ def _find_identity_pool_ids(name, pool_id, conn):
     '''
     ids = []
     if pool_id is None:
-        for pools in salt.utils.boto3.paged_call(conn.list_identity_pools,
+        for pools in __utils__['boto3.paged_call'](conn.list_identity_pools,
                          marker_flag='NextToken', marker_arg='NextToken', MaxResults=25):
             for pool in pools['IdentityPools']:
                 if pool['IdentityPoolName'] == name:
@@ -184,7 +173,7 @@ def describe_identity_pools(IdentityPoolName, IdentityPoolId=None,
         else:
             return {'identity_pools': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create_identity_pool(IdentityPoolName,
@@ -226,7 +215,7 @@ def create_identity_pool(IdentityPoolName,
 
         return {'created': True, 'identity_pool': response}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'created': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def delete_identity_pools(IdentityPoolName, IdentityPoolId=None,
@@ -260,7 +249,7 @@ def delete_identity_pools(IdentityPoolName, IdentityPoolId=None,
         else:
             return {'deleted': False, 'count': count}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def get_identity_pool_roles(IdentityPoolName, IdentityPoolId=None,
@@ -294,7 +283,7 @@ def get_identity_pool_roles(IdentityPoolName, IdentityPoolId=None,
         else:
             return {'identity_pool_roles': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def _get_role_arn(name, **conn_params):
@@ -359,7 +348,7 @@ def set_identity_pool_roles(IdentityPoolId, AuthenticatedRole=None, Unauthentica
 
         return {'set': True, 'roles': Roles}
     except ClientError as e:
-        return {'set': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'set': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def update_identity_pool(IdentityPoolId,
@@ -430,4 +419,4 @@ def update_identity_pool(IdentityPoolId,
 
         return {'updated': True, 'identity_pool': response}
     except ClientError as e:
-        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'updated': False, 'error': __utils__['boto3.get_error'](e)}

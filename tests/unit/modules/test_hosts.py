@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -16,8 +16,11 @@ from tests.support.mock import (
 )
 # Import Salt Libs
 import salt.modules.hosts as hosts
-import salt.utils
+import salt.utils.data
+import salt.utils.platform
+import salt.utils.stringutils
 from salt.ext.six.moves import StringIO
+from salt.ext import six
 
 
 class HostsTestCase(TestCase, LoaderModuleMockMixin):
@@ -94,7 +97,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         Tests true if the alias is set
         '''
         hosts_file = '/etc/hosts'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             hosts_file = r'C:\Windows\System32\Drivers\etc\hosts'
 
         with patch('salt.modules.hosts.__get_hosts_filename',
@@ -111,7 +114,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.hosts.__get_hosts_filename',
                    MagicMock(return_value='/etc/hosts')), \
                 patch('os.path.isfile', MagicMock(return_value=True)), \
-                    patch('salt.utils.fopen', mock_open()):
+                    patch('salt.utils.files.fopen', mock_open(b'')):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
                 self.assertTrue(hosts.set_host('10.10.10.10', 'Salt1'))
@@ -130,12 +133,13 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                 '1.1.1.1 foofoo.foofoo foofoo',
             ))]
 
-            class TmpStringIO(StringIO):
+            class TmpStringIO(StringIO, object):
                 def __init__(self, fn, mode='r'):
+                    self.mode = mode
                     initial_value = data[0]
-                    if 'w' in mode:
+                    if 'w' in self.mode:
                         initial_value = ''
-                    StringIO.__init__(self, initial_value)
+                    super(TmpStringIO, self).__init__(initial_value)
 
                 def __enter__(self):
                     return self
@@ -156,12 +160,46 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                         data[0] = self.getvalue()
                     StringIO.close(self)
 
+                def read(self, *args):
+                    ret = super(TmpStringIO, self).read(*args)
+                    if six.PY3 and 'b' in self.mode:
+                        return salt.utils.stringutils.to_bytes(ret)
+                    else:
+                        return ret
+
+                def write(self, s, *args):
+                    if six.PY3:
+                        if 'b' in self.mode:
+                            if not isinstance(s, bytes):
+                                # Make this act like a binary filehandle
+                                raise TypeError("a bytes-like object is required, not 'str'")
+                            # The StringIO wants a str type, it won't take
+                            # bytes. Convert before writing to it.
+                            return super(TmpStringIO, self).write(
+                                salt.utils.stringutils.to_str(s), *args)
+                        else:
+                            if not isinstance(s, str):
+                                # Make this act like a non-binary filehandle
+                                raise TypeError("write() argument must be str, not bytes")
+                    return super(TmpStringIO, self).write(s, *args)
+
+                def readlines(self):
+                    ret = super(TmpStringIO, self).readlines()
+                    if six.PY3 and 'b' in self.mode:
+                        return salt.utils.data.encode(ret)
+                    else:
+                        return ret
+
+                def writelines(self, lines):
+                    for line in lines:
+                        self.write(line)
+
             expected = '\n'.join((
                 '2.2.2.2 bar.barbar bar',
                 '3.3.3.3 asdf.asdfadsf asdf',
             )) + '\n'
 
-            with patch('salt.utils.fopen', TmpStringIO):
+            with patch('salt.utils.files.fopen', TmpStringIO):
                 mock_opt = MagicMock(return_value=None)
                 with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
                     self.assertTrue(hosts.set_host('1.1.1.1', ' '))
@@ -174,7 +212,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if specified host entry gets removed from the hosts file
         '''
-        with patch('salt.utils.fopen', mock_open()), \
+        with patch('salt.utils.files.fopen', mock_open(b'')), \
                 patch('salt.modules.hosts.__get_hosts_filename',
                       MagicMock(return_value='/etc/hosts')), \
                 patch('salt.modules.hosts.has_pair',
@@ -198,10 +236,10 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         Tests if specified host entry gets added from the hosts file
         '''
         hosts_file = '/etc/hosts'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             hosts_file = r'C:\Windows\System32\Drivers\etc\hosts'
 
-        with patch('salt.utils.fopen', mock_open()), \
+        with patch('salt.utils.files.fopen', mock_open()), \
                 patch('salt.modules.hosts.__get_hosts_filename',
                       MagicMock(return_value=hosts_file)):
             mock_opt = MagicMock(return_value=None)
@@ -212,7 +250,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if specified host entry gets added from the hosts file
         '''
-        with patch('salt.utils.fopen', mock_open()), \
+        with patch('salt.utils.files.fopen', mock_open()), \
                 patch('os.path.isfile', MagicMock(return_value=False)):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
@@ -222,7 +260,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if specified host entry gets added from the hosts file
         '''
-        with patch('salt.utils.fopen', mock_open()), \
+        with patch('salt.utils.files.fopen', mock_open()), \
                 patch('os.path.isfile', MagicMock(return_value=True)):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):

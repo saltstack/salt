@@ -3,12 +3,12 @@
 Start the salt-master
 '''
 
+import salt.utils.platform
 from salt.scripts import salt_master
-from salt.utils import is_windows
 
 
 if __name__ == '__main__':
-    if is_windows():
+    if salt.utils.platform.is_windows():
         # Since this file does not have a '.py' extension, when running on
         # Windows, spawning any addional processes will fail due to Python
         # not being able to load this 'module' in the new process.

@@ -2,27 +2,32 @@
 '''
 Create ssh executor system
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 # Import python libs
 import logging
 import os
 import tarfile
 import tempfile
-import json
 import shutil
 from contextlib import closing
 
 # Import salt libs
 import salt.client.ssh.shell
 import salt.client.ssh
-import salt.utils
 import salt.utils.files
+import salt.utils.json
+import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
+import salt.utils.verify
 import salt.roster
 import salt.state
 import salt.loader
 import salt.minion
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -84,7 +89,7 @@ class SSHHighState(salt.state.BaseHighState):
         '''
         return
 
-    def _ext_nodes(self):
+    def _master_tops(self):
         '''
         Evaluate master_tops locally
         '''
@@ -108,10 +113,8 @@ class SSHHighState(salt.state.BaseHighState):
             except Exception as exc:
                 # If anything happens in the top generation, log it and move on
                 log.error(
-                    'Top function {0} failed with error {1} for minion '
-                    '{2}'.format(
-                        fun, exc, self.opts['id']
-                    )
+                    'Top function %s failed with error %s for minion %s',
+                    fun, exc, self.opts['id']
                 )
         return ret
 
@@ -132,9 +135,9 @@ def lowstate_file_refs(chunks, extras=''):
             elif state.startswith('__'):
                 continue
             crefs.extend(salt_refs(chunk[state]))
+        if saltenv not in refs:
+            refs[saltenv] = []
         if crefs:
-            if saltenv not in refs:
-                refs[saltenv] = []
             refs[saltenv].append(crefs)
     if extras:
         extra_refs = extras.split(',')
@@ -152,7 +155,7 @@ def salt_refs(data, ret=None):
     proto = 'salt://'
     if ret is None:
         ret = []
-    if isinstance(data, str):
+    if isinstance(data, six.string_types):
         if data.startswith(proto) and data not in ret:
             ret.append(data)
     if isinstance(data, list):
@@ -164,7 +167,7 @@ def salt_refs(data, ret=None):
     return ret
 
 
-def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
+def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None, roster_grains=None):
     '''
     Generate the execution package from the saltenv file refs and a low state
     data structure
@@ -173,6 +176,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
     trans_tar = salt.utils.files.mkstemp()
     lowfn = os.path.join(gendir, 'lowstate.json')
     pillarfn = os.path.join(gendir, 'pillar.json')
+    roster_grainsfn = os.path.join(gendir, 'roster_grains.json')
     sync_refs = [
             [salt.utils.url.create('_modules')],
             [salt.utils.url.create('_states')],
@@ -182,11 +186,14 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
             [salt.utils.url.create('_output')],
             [salt.utils.url.create('_utils')],
             ]
-    with salt.utils.fopen(lowfn, 'w+') as fp_:
-        fp_.write(json.dumps(chunks))
+    with salt.utils.files.fopen(lowfn, 'w+') as fp_:
+        salt.utils.json.dump(chunks, fp_)
     if pillar:
-        with salt.utils.fopen(pillarfn, 'w+') as fp_:
-            fp_.write(json.dumps(pillar))
+        with salt.utils.files.fopen(pillarfn, 'w+') as fp_:
+            salt.utils.json.dump(pillar, fp_)
+    if roster_grains:
+        with salt.utils.files.fopen(roster_grainsfn, 'w+') as fp_:
+            salt.utils.json.dump(roster_grains, fp_)
 
     if id_ is None:
         id_ = ''
@@ -194,7 +201,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
         cachedir = os.path.join('salt-ssh', id_).rstrip(os.sep)
     except AttributeError:
         # Minion ID should always be a str, but don't let an int break this
-        cachedir = os.path.join('salt-ssh', str(id_)).rstrip(os.sep)
+        cachedir = os.path.join('salt-ssh', six.text_type(id_)).rstrip(os.sep)
 
     for saltenv in file_refs:
         # Location where files in this saltenv will be cached
@@ -242,7 +249,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
         cwd = None
     os.chdir(gendir)
     with closing(tarfile.open(trans_tar, 'w:gz')) as tfp:
-        for root, dirs, files in os.walk(gendir):
+        for root, dirs, files in salt.utils.path.os_walk(gendir):
             for name in files:
                 full = os.path.join(root, name)
                 tfp.add(full[len(gendir):].lstrip(os.sep))

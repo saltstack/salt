@@ -19,7 +19,7 @@ opts['caller_floscript']
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import modules
@@ -35,22 +35,31 @@ __all__ = ['core', 'worker', 'maint', 'zero', 'dummy', 'jobber', 'reactor']
 
 # Import salt libs
 import salt.daemons.masterapi
+import salt.utils.stringutils
+from salt.ext import six
 
 # Import 3rd-party libs
 import ioflo.app.run  # pylint: disable=3rd-party-module-not-gated
-import salt.ext.six as six
 
 
 def explode_opts(opts):
     '''
     Explode the opts into a preloads list
     '''
-    preloads = [('.salt.opts', dict(value=opts))]
+    preloads = [(salt.utils.stringutils.to_str('.salt.opts'), dict(value=opts))]
     for key, val in six.iteritems(opts):
         ukey = key.replace('.', '_')
-        preloads.append(('.salt.etc.{0}'.format(ukey), dict(value=val)))
-    preloads.append(('.salt.etc.id', dict(value=opts['id'])))
+        preloads.append((salt.utils.stringutils.to_str('.salt.etc.{0}'.format(ukey)), dict(value=val)))
+    preloads.append((salt.utils.stringutils.to_str('.salt.etc.id'), dict(value=opts['id'])))
     return preloads
+
+
+def warn_deprecated():
+    salt.utils.versions.warn_until(
+        'Neon',
+        'The \'raet\' transport has been deprecated and will be removed in '
+        'Salt {version}. Please use \'zeromq\' or \'tcp\' transport instead.'
+    )
 
 
 class IofloMaster(object):
@@ -61,11 +70,12 @@ class IofloMaster(object):
         '''
         Assign self.opts
         '''
+        warn_deprecated()
         self.opts = opts
         self.preloads = explode_opts(self.opts)
         self.access_keys = salt.daemons.masterapi.access_keys(self.opts)
         self.preloads.append(
-                ('.salt.access_keys', dict(value=self.access_keys)))
+                (salt.utils.stringutils.to_str('.salt.access_keys'), dict(value=self.access_keys)))
 
     def start(self, behaviors=None):
         '''
@@ -109,7 +119,9 @@ class IofloMinion(object):
         '''
         Assign self.opts
         '''
+        warn_deprecated()
         self.opts = opts
+        self.restart = False
 
     def tune_in(self, behaviors=None):
         '''

@@ -55,7 +55,9 @@ Notes
       3.10.0-327.22.2.el7.x86_64
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
+
+from salt.ext import six
 
 
 # Private
@@ -210,7 +212,7 @@ def war_deployed(name,
     # Return
     if deploy_res.startswith('OK'):
         ret['result'] = True
-        ret['comment'] = str(__salt__['tomcat.ls'](url, timeout)[name])
+        ret['comment'] = six.text_type(__salt__['tomcat.ls'](url, timeout)[name])
         ret['changes']['deploy'] = ('deployed {0} with {1}'.
                                     format(name, specified_ver))
     else:

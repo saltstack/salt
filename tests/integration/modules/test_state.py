@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import os
 import shutil
 import sys
@@ -12,19 +13,54 @@ import time
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import with_tempdir
 from tests.support.unit import skipIf
-from tests.support.paths import TMP, BASE_FILES
+from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.atomicfile
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
-DEFAULT_ENDING = salt.utils.to_bytes(os.linesep)
+log = logging.getLogger(__name__)
+
+
+DEFAULT_ENDING = salt.utils.stringutils.to_bytes(os.linesep)
+
+
+def trim_line_end(line):
+    '''
+    Remove CRLF or LF from the end of line.
+    '''
+    if line[-2:] == salt.utils.stringutils.to_bytes('\r\n'):
+        return line[:-2]
+    elif line[-1:] == salt.utils.stringutils.to_bytes('\n'):
+        return line[:-1]
+    raise Exception("Invalid line ending")
+
+
+def reline(source, dest, force=False, ending=DEFAULT_ENDING):
+    '''
+    Normalize the line endings of a file.
+    '''
+    fp, tmp = tempfile.mkstemp()
+    os.close(fp)
+    with salt.utils.files.fopen(tmp, 'wb') as tmp_fd:
+        with salt.utils.files.fopen(source, 'rb') as fd:
+            lines = fd.readlines()
+            for line in lines:
+                line_noend = trim_line_end(line)
+                tmp_fd.write(line_noend + ending)
+    if os.path.exists(dest) and force:
+        os.remove(dest)
+    os.rename(tmp, dest)
 
 
 class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
@@ -40,16 +76,14 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             '''
             Normalize the line endings of a file.
             '''
-            with salt.utils.fopen(path, 'rb') as fhr:
+            with salt.utils.files.fopen(path, 'rb') as fhr:
                 lines = fhr.read().splitlines()
             with salt.utils.atomicfile.atomic_open(path, 'wb') as fhw:
                 for line in lines:
                     fhw.write(line + ending)
 
         destpath = os.path.join(BASE_FILES, 'testappend', 'firstif')
-        _reline(destpath)
         destpath = os.path.join(BASE_FILES, 'testappend', 'secondif')
-        _reline(destpath)
 
     def test_show_highstate(self):
         '''
@@ -129,7 +163,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertTrue(isinstance(ret['__sls__'], type(None)))
 
         for state, ret in sls2.items():
-            self.assertTrue(isinstance(ret['__sls__'], str))
+            self.assertTrue(isinstance(ret['__sls__'], six.string_types))
 
     def _remove_request_cache_file(self):
         '''
@@ -176,14 +210,14 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         self._remove_request_cache_file()
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.run_function('state.request', mods='modules.state.requested_win')
         else:
             self.run_function('state.request', mods='modules.state.requested')
 
         ret = self.run_function('state.run_request')
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             key = 'cmd_|-count_root_dir_contents_|-Get-ChildItem C:\\\\ | Measure-Object | %{$_.Count}_|-run'
         else:
             key = 'cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run'
@@ -202,25 +236,28 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.run_request')
         self.assertEqual(ret, {})
 
-    def test_issue_1896_file_append_source(self):
+    @with_tempdir()
+    def test_issue_1896_file_append_source(self, base_dir):
         '''
         Verify that we can append a file's contents
         '''
-        testfile = os.path.join(TMP, 'test.append')
-        if os.path.isfile(testfile):
-            os.unlink(testfile)
+        testfile = os.path.join(base_dir, 'test.append')
 
-        ret = self.run_function('state.sls', mods='testappend')
+        ret = self.run_state('file.touch', name=testfile)
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state(
+            'file.append',
+            name=testfile,
+            source='salt://testappend/firstif')
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state(
+            'file.append',
+            name=testfile,
+            source='salt://testappend/secondif')
         self.assertSaltTrueReturn(ret)
 
-        ret = self.run_function('state.sls', mods='testappend.step-1')
-        self.assertSaltTrueReturn(ret)
-
-        ret = self.run_function('state.sls', mods='testappend.step-2')
-        self.assertSaltTrueReturn(ret)
-
-        with salt.utils.fopen(testfile, 'r') as fp_:
-            testfile_contents = fp_.read()
+        with salt.utils.files.fopen(testfile, 'r') as fp_:
+            testfile_contents = salt.utils.stringutils.to_unicode(fp_.read())
 
         contents = textwrap.dedent('''\
             # set variable identifying the chroot you work in (used in the prompt below)
@@ -234,23 +271,26 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             fi
             ''')
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             new_contents = contents.splitlines()
             contents = os.linesep.join(new_contents)
             contents += os.linesep
 
-        self.assertMultiLineEqual(
-                contents, testfile_contents)
+        self.assertMultiLineEqual(contents, testfile_contents)
 
-        # Re-append switching order
-        ret = self.run_function('state.sls', mods='testappend.step-2')
+        ret = self.run_state(
+            'file.append',
+            name=testfile,
+            source='salt://testappend/secondif')
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state(
+            'file.append',
+            name=testfile,
+            source='salt://testappend/firstif')
         self.assertSaltTrueReturn(ret)
 
-        ret = self.run_function('state.sls', mods='testappend.step-1')
-        self.assertSaltTrueReturn(ret)
-
-        with salt.utils.fopen(testfile, 'r') as fp_:
-            testfile_contents = fp_.read()
+        with salt.utils.files.fopen(testfile, 'r') as fp_:
+            testfile_contents = salt.utils.stringutils.to_unicode(fp_.read())
 
         self.assertMultiLineEqual(contents, testfile_contents)
 
@@ -269,6 +309,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         '''
         testfile = os.path.join(TMP, 'issue-1876')
+
         sls = self.run_function('state.sls', mods='issue-1876')
         self.assertIn(
             'ID \'{0}\' in SLS \'issue-1876\' contains multiple state '
@@ -288,7 +329,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             fi
             ''')
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             new_contents = expected.splitlines()
             expected = os.linesep.join(new_contents)
             expected += os.linesep
@@ -316,8 +357,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Does it match?
         try:
-            with salt.utils.fopen(testfile, 'r') as fp_:
-                contents = fp_.read()
+            with salt.utils.files.fopen(testfile, 'r') as fp_:
+                contents = salt.utils.stringutils.to_unicode(fp_.read())
             self.assertMultiLineEqual(expected, contents)
             # Make sure we don't re-append existing text
             ret = self.run_function(
@@ -330,8 +371,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertSaltTrueReturn(ret)
 
-            with salt.utils.fopen(testfile, 'r') as fp_:
-                contents = fp_.read()
+            with salt.utils.files.fopen(testfile, 'r') as fp_:
+                contents = salt.utils.stringutils.to_unicode(fp_.read())
             self.assertMultiLineEqual(expected, contents)
         except Exception:
             if os.path.exists(testfile):
@@ -365,7 +406,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isfile(pillar['exclude-test']))
         self.assertFalse(os.path.isfile(pillar['to-include-test']))
 
-    @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+    @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
     def test_issue_2068_template_str(self):
         venv_dir = os.path.join(
             TMP, 'issue-2068-template-str'
@@ -388,8 +429,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             'files', 'file', 'base', 'issue-2068-template-str-no-dot.sls'
         )
 
-        with salt.utils.fopen(template_path, 'r') as fp_:
-            template = fp_.read()
+        with salt.utils.files.fopen(template_path, 'r') as fp_:
+            template = salt.utils.stringutils.to_unicode(fp_.read())
             ret = self.run_function(
                 'state.template_str', [template], timeout=120
             )
@@ -414,8 +455,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             'files', 'file', 'base', 'issue-2068-template-str.sls'
         )
 
-        with salt.utils.fopen(template_path, 'r') as fp_:
-            template = fp_.read()
+        with salt.utils.files.fopen(template_path, 'r') as fp_:
+            template = salt.utils.stringutils.to_unicode(fp_.read())
         ret = self.run_function(
             'state.template_str', [template], timeout=120
         )
@@ -725,6 +766,243 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             ['A recursive requisite was found, SLS "requisites.require_recursion_error1" ID "B" ID "A"']
         )
 
+    def test_requisites_require_any(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        expected_result = {
+            'cmd_|-A_|-echo A_|-run': {
+                '__run_num__': 3,
+                'comment': 'Command "echo A" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-B_|-echo B_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo B" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-C_|-$(which false)_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "$(which false)" run',
+                'result': False,
+                'changes': True,
+            },
+            'cmd_|-D_|-echo D_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo D" run',
+                'result': True,
+                'changes': True,
+            },
+        }
+        ret = self.run_function('state.sls', mods='requisites.require_any')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual(expected_result, result)
+
+    def test_requisites_require_any_fail(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        ret = self.run_function('state.sls', mods='requisites.require_any_fail')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertIn('One or more requisite failed',
+                      result['cmd_|-D_|-echo D_|-run']['comment'])
+
+    def test_requisites_watch_any(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        if salt.utils.platform.is_windows():
+            cmd_true = 'exit'
+            cmd_false = 'exit /B 1'
+        else:
+            cmd_true = 'true'
+            cmd_false = 'false'
+        expected_result = {
+            'cmd_|-A_|-{0}_|-wait'.format(cmd_true): {
+                '__run_num__': 4,
+                'comment': 'Command "{0}" run'.format(cmd_true),
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-B_|-{0}_|-run'.format(cmd_true): {
+                '__run_num__': 0,
+                'comment': 'Command "{0}" run'.format(cmd_true),
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-C_|-{0}_|-run'.format(cmd_false): {
+                '__run_num__': 1,
+                'comment': 'Command "{0}" run'.format(cmd_false),
+                'result': False,
+                'changes': True,
+            },
+            'cmd_|-D_|-{0}_|-run'.format(cmd_true): {
+                '__run_num__': 2,
+                'comment': 'Command "{0}" run'.format(cmd_true),
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-E_|-{0}_|-wait'.format(cmd_true): {
+                '__run_num__': 9,
+                'comment': 'Command "{0}" run'.format(cmd_true),
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-F_|-{0}_|-run'.format(cmd_true): {
+                '__run_num__': 5,
+                'comment': 'Command "{0}" run'.format(cmd_true),
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-G_|-{0}_|-run'.format(cmd_false): {
+                '__run_num__': 6,
+                'comment': 'Command "{0}" run'.format(cmd_false),
+                'result': False,
+                'changes': True,
+            },
+            'cmd_|-H_|-{0}_|-run'.format(cmd_false): {
+                '__run_num__': 7,
+                'comment': 'Command "{0}" run'.format(cmd_false),
+                'result': False,
+                'changes': True,
+            },
+        }
+        ret = self.run_function('state.sls', mods='requisites.watch_any')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual(expected_result, result)
+
+    def test_requisites_watch_any_fail(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        ret = self.run_function('state.sls', mods='requisites.watch_any_fail')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertIn('One or more requisite failed',
+                      result['cmd_|-A_|-true_|-wait']['comment'])
+
+    def test_requisites_onchanges_any(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        expected_result = {
+            'cmd_|-another_changing_state_|-echo "Changed!"_|-run': {
+                '__run_num__': 1,
+                'changes': True,
+                'comment': 'Command "echo "Changed!"" run',
+                'result': True
+            },
+            'cmd_|-changing_state_|-echo "Changed!"_|-run': {
+                '__run_num__': 0,
+                'changes': True,
+                'comment': 'Command "echo "Changed!"" run',
+                'result': True
+            },
+            'cmd_|-test_one_changing_states_|-echo "Success!"_|-run': {
+                '__run_num__': 4,
+                'changes': True,
+                'comment': 'Command "echo "Success!"" run',
+                'result': True
+            },
+            'cmd_|-test_two_non_changing_states_|-echo "Should not run"_|-run': {
+                '__run_num__': 5,
+                'changes': False,
+                'comment': 'State was not run because none of the onchanges reqs changed',
+                'result': True
+            },
+            'pip_|-another_non_changing_state_|-mock_|-installed': {
+                '__run_num__': 3,
+                'changes': False,
+                'comment': 'Python package mock was already installed\nAll specified packages are already installed',
+                'result': True
+            },
+            'pip_|-non_changing_state_|-mock_|-installed': {
+                '__run_num__': 2,
+                'changes': False,
+                'comment': 'Python package mock was already installed\nAll specified packages are already installed',
+                'result': True
+            }
+        }
+        ret = self.run_function('state.sls', mods='requisites.onchanges_any')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual(expected_result, result)
+
+    def test_requisites_onfail_any(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        expected_result = {
+            'cmd_|-a_|-exit 0_|-run': {
+                '__run_num__': 0,
+                'changes': True,
+                'comment': 'Command "exit 0" run',
+                'result': True
+            },
+            'cmd_|-b_|-exit 1_|-run': {
+                '__run_num__': 1,
+                'changes': True,
+                'comment': 'Command "exit 1" run',
+                'result': False
+            },
+            'cmd_|-c_|-exit 0_|-run': {
+                '__run_num__': 2,
+                'changes': True,
+                'comment': 'Command "exit 0" run',
+                'result': True
+            },
+            'cmd_|-d_|-echo itworked_|-run': {
+                '__run_num__': 3,
+                'changes': True,
+                'comment': 'Command "echo itworked" run',
+                'result': True},
+            'cmd_|-e_|-exit 0_|-run': {
+                '__run_num__': 4,
+                'changes': True,
+                'comment': 'Command "exit 0" run',
+                'result': True
+            },
+            'cmd_|-f_|-exit 0_|-run': {
+                '__run_num__': 5,
+                'changes': True,
+                'comment': 'Command "exit 0" run',
+                'result': True
+            },
+            'cmd_|-g_|-exit 0_|-run': {
+                '__run_num__': 6,
+                'changes': True,
+                'comment': 'Command "exit 0" run',
+                'result': True
+            },
+            'cmd_|-h_|-echo itworked_|-run': {
+                '__run_num__': 7,
+                'changes': False,
+                'comment': 'State was not run because onfail req did not change',
+                'result': True
+            }
+        }
+        ret = self.run_function('state.sls', mods='requisites.onfail_any')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual(expected_result, result)
+
     def test_requisites_full_sls(self):
         '''
         Teste the sls special command in requisites
@@ -755,6 +1033,65 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         # TODO: not done
         #ret = self.run_function('state.sls', mods='requisites.fullsls_prereq')
         #self.assertEqual(['sls command can only be used with require requisite'], ret)
+
+    def test_requisites_require_no_state_module(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        expected_result = {
+            'cmd_|-A_|-echo A fifth_|-run': {
+                '__run_num__': 4,
+                'comment': 'Command "echo A fifth" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-B_|-echo B second_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo B second" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-C_|-echo C third_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo C third" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-D_|-echo D first_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo D first" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-E_|-echo E fourth_|-run': {
+                '__run_num__': 3,
+                'comment': 'Command "echo E fourth" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-G_|-echo G_|-run': {
+                '__run_num__': 5,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   require:\n'
+                           + '                       id: Z\n',
+                'result': False,
+                'changes': False,
+            },
+            'cmd_|-H_|-echo H_|-run': {
+                '__run_num__': 6,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   require:\n'
+                           + '                       id: Z\n',
+                'result': False,
+                'changes': False,
+            }
+        }
+        ret = self.run_function('state.sls', mods='requisites.require_no_state_module')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual(expected_result, result)
 
     def test_requisites_prereq_simple_ordering_and_errors(self):
         '''
@@ -790,6 +1127,30 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 'comment': 'The following requisites were not found:\n'
                            + '                   prereq:\n'
                            + '                       foobar: A\n',
+                'result': False,
+                'changes': False}
+        }
+        expected_result_simple_no_state_module = {
+            'cmd_|-A_|-echo A third_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo A third" run',
+                'result': True,
+                'changes': True},
+            'cmd_|-B_|-echo B first_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo B first" run',
+                'result': True,
+                'changes': True},
+            'cmd_|-C_|-echo C second_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo C second" run',
+                'result': True,
+                'changes': True},
+            'cmd_|-I_|-echo I_|-run': {
+                '__run_num__': 3,
+                'comment': 'The following requisites were not found:\n'
+                           + '                   prereq:\n'
+                           + '                       id: Z\n',
                 'result': False,
                 'changes': False}
         }
@@ -923,6 +1284,11 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         #    ret,
         #    ['A recursive requisite was found, SLS "requisites.prereq_recursion_error" ID "B" ID "A"']
         #)
+
+        ret = self.run_function('state.sls', mods='requisites.prereq_simple_no_state_module')
+        result = self.normalize_ret(ret)
+        self.assertEqual(expected_result_simple_no_state_module, result)
+
     def test_infinite_recursion_sls_prereq(self):
         ret = self.run_function('state.sls', mods='requisites.prereq_sls_infinite_recursion')
         self.assertSaltTrueReturn(ret)
@@ -936,7 +1302,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.sls', mods='requisites.use')
         self.assertReturnNonEmptySaltType(ret)
         for item, descr in six.iteritems(ret):
-            self.assertEqual(descr['comment'], 'onlyif execution failed')
+            self.assertEqual(descr['comment'], 'onlyif condition is false')
 
         # TODO: issue #8802 : use recursions undetected
         # issue is closed as use does not actually inherit requisites
@@ -959,6 +1325,16 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         #    + ' ID "A" ID "A"'
         #])
 
+    def test_requisites_use_no_state_module(self):
+        '''
+        Call sls file containing several use_in and use.
+
+        '''
+        ret = self.run_function('state.sls', mods='requisites.use_no_state_module')
+        self.assertReturnNonEmptySaltType(ret)
+        for item, descr in six.iteritems(ret):
+            self.assertEqual(descr['comment'], 'onlyif condition is false')
+
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(TMP, 'prod-cheese-file')
         try:
@@ -967,10 +1343,10 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertSaltTrueReturn(ret)
             self.assertTrue(os.path.isfile(tgt))
-            with salt.utils.fopen(tgt, 'r') as cheese:
-                data = cheese.read()
-                self.assertIn('Gromit', data)
-                self.assertIn('Comte', data)
+            with salt.utils.files.fopen(tgt, 'r') as cheese:
+                data = salt.utils.stringutils.to_unicode(cheese.read())
+            self.assertIn('Gromit', data)
+            self.assertIn('Comte', data)
         finally:
             if os.path.islink(tgt):
                 os.unlink(tgt)
@@ -1037,6 +1413,16 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         expected_result = 'State was not run because none of the onchanges reqs changed'
         self.assertIn(expected_result, test_data)
 
+    def test_onchanges_requisite_no_state_module(self):
+        '''
+        Tests a simple state using the onchanges requisite without state modules
+        '''
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onchanges_simple_no_state_module')
+        test_data = state_run['cmd_|-test_changing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
     def test_onchanges_requisite_with_duration(self):
         '''
         Tests a simple state using the onchanges requisite
@@ -1093,6 +1479,24 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Only run the state once and keep the return data
         state_run = self.run_function('state.sls', mods='requisites.onfail_in_simple')
+
+        # First, test the result of the state run when a failure is expected to happen
+        test_data = state_run['cmd_|-test_failing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when a failure is not expected to happen
+        test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onfail req did not change'
+        self.assertIn(expected_result, test_data)
+
+    def test_onfail_requisite_no_state_module(self):
+        '''
+        Tests a simple state using the onfail requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onfail_simple_no_state_module')
 
         # First, test the result of the state run when a failure is expected to happen
         test_data = state_run['cmd_|-test_failing_state_|-echo "Success!"_|-run']['comment']
@@ -1227,6 +1631,21 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         listener_state = 'cmd_|-listener_test_listening_resolution_two_|-echo "Successful listen resolution"_|-mod_watch'
         self.assertIn(listener_state, state_run)
 
+    def test_listen_requisite_no_state_module(self):
+        '''
+        Tests a simple state using the listen requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_simple_no_state_module')
+        # First, test the result of the state run when a listener is expected to trigger
+        listener_state = 'cmd_|-listener_test_listening_change_state_|-echo "Listening State"_|-mod_watch'
+        self.assertIn(listener_state, state_run)
+
+        # Then, test the result of the state run when a listener should not trigger
+        absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
+        self.assertNotIn(absent_state, state_run)
+
     def test_listen_in_requisite_resolution_names(self):
         '''
         Verify listen_in requisite lookups use ID declaration to check for changes
@@ -1326,7 +1745,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         testfile = os.path.join(TMP, 'retry_file')
         time.sleep(30)
-        open(testfile, 'a').close()  # pylint: disable=resource-leakage
+        with salt.utils.files.fopen(testfile, 'a'):
+            pass
 
     def test_retry_option_eventual_success(self):
         '''
@@ -1450,3 +1870,165 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         expected = sorted(['Command "{0}" run'.format(x)
                            for x in (short_command, long_command)])
         assert comments == expected, '{0} != {1}'.format(comments, expected)
+
+    def _add_runtime_pillar(self, pillar):
+        '''
+        helper class to add pillar data at runtime
+        '''
+        import salt.utils.yaml
+        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE,
+                                                 'pillar.sls'), 'w') as fp:
+            salt.utils.yaml.safe_dump(pillar, fp)
+
+        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     base:
+                       '*':
+                         - pillar
+                     '''))
+
+        self.run_function('saltutil.refresh_pillar')
+        self.run_function('test.sleep', [5])
+
+    def test_state_sls_id_test(self):
+        '''
+        test state.sls_id when test is set
+        to true in pillar data
+        '''
+        self._add_runtime_pillar(pillar={'test': True})
+        testfile = os.path.join(TMP, 'testfile')
+        comment = 'The file {0} is set to be changed'.format(testfile)
+        ret = self.run_function('state.sls', ['core'])
+
+        for key, val in ret.items():
+            self.assertEqual(val['comment'], comment)
+            self.assertEqual(val['changes'], {'newfile': testfile})
+
+    def test_state_sls_id_test_state_test_post_run(self):
+        '''
+        test state.sls_id when test is set to
+        true post the state already being run previously
+        '''
+        file_name = os.path.join(TMP, 'testfile')
+        ret = self.run_function('state.sls', ['core'])
+        for key, val in ret.items():
+            self.assertEqual(val['comment'],
+                             'File {0} updated'.format(file_name))
+            self.assertEqual(val['changes']['diff'], 'New file')
+
+        self._add_runtime_pillar(pillar={'test': True})
+        ret = self.run_function('state.sls', ['core'])
+
+        for key, val in ret.items():
+            self.assertEqual(
+                val['comment'],
+                'The file {0} is in the correct state'.format(file_name))
+            self.assertEqual(val['changes'], {})
+
+    def test_state_sls_id_test_true(self):
+        '''
+        test state.sls_id when test=True is passed as arg
+        '''
+        file_name = os.path.join(TMP, 'testfile')
+        ret = self.run_function('state.sls', ['core'], test=True)
+        for key, val in ret.items():
+            self.assertEqual(
+                val['comment'],
+                'The file {0} is set to be changed'.format(file_name))
+            self.assertEqual(val['changes'], {'newfile': file_name})
+
+    def test_state_sls_id_test_true_post_run(self):
+        '''
+        test state.sls_id when test is set to true as an
+        arg post the state already being run previously
+        '''
+        file_name = os.path.join(TMP, 'testfile')
+        ret = self.run_function('state.sls', ['core'])
+        for key, val in ret.items():
+            self.assertEqual(val['comment'],
+                             'File {0} updated'.format(file_name))
+            self.assertEqual(val['changes']['diff'], 'New file')
+
+        ret = self.run_function('state.sls', ['core'], test=True)
+
+        for key, val in ret.items():
+            self.assertEqual(
+                val['comment'],
+                'The file {0} is in the correct state'.format(file_name))
+            self.assertEqual(val['changes'], {})
+
+    def test_state_sls_id_test_false_pillar_true(self):
+        '''
+        test state.sls_id when test is set to false as an
+        arg and minion_state_test is set to True. Should
+        return test=False.
+        '''
+        file_name = os.path.join(TMP, 'testfile')
+        self._add_runtime_pillar(pillar={'test': True})
+        ret = self.run_function('state.sls', ['core'], test=False)
+
+        for key, val in ret.items():
+            self.assertEqual(val['comment'],
+                             'File {0} updated'.format(file_name))
+            self.assertEqual(val['changes']['diff'], 'New file')
+
+    @skipIf(six.PY3 and salt.utils.platform.is_darwin(), 'Test is broken on macosx and PY3')
+    def test_state_sls_unicode_characters(self):
+        '''
+        test state.sls when state file contains non-ascii characters
+        '''
+        ret = self.run_function('state.sls', ['issue-46672'])
+        log.debug('== ret %s ==', type(ret))
+
+        _expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
+        self.assertIn(_expected, ret)
+
+    @skipIf(six.PY3 and salt.utils.platform.is_darwin(), 'Test is broken on macosx and PY3')
+    def test_state_sls_unicode_characters_cmd_output(self):
+        '''
+        test the output from running and echo command with non-ascii
+        characters.
+        '''
+        ret = self.run_function('state.sls', ['issue-46672-a'])
+        key = list(ret.keys())[0]
+        log.debug('== ret %s ==', type(ret))
+        _expected = 'This is Æ test!'
+        if salt.utils.platform.is_windows():
+            # Windows cmd.exe will mangle the output using cmd's codepage.
+            if six.PY2:
+                _expected = "'This is A+ test!'"
+            else:
+                _expected = "'This is ’ test!'"
+        self.assertEqual(_expected, ret[key]['changes']['stdout'])
+
+    def tearDown(self):
+        nonbase_file = os.path.join(TMP, 'nonbase_env')
+        if os.path.isfile(nonbase_file):
+            os.remove(nonbase_file)
+
+        # remove old pillar data
+        for filename in os.listdir(TMP_PILLAR_TREE):
+            os.remove(os.path.join(TMP_PILLAR_TREE, filename))
+        self.run_function('saltutil.refresh_pillar')
+        self.run_function('test.sleep', [5])
+
+        # remove testfile added in core.sls state file
+        state_file = os.path.join(TMP, 'testfile')
+        if os.path.isfile(state_file):
+            os.remove(state_file)
+
+    def test_state_sls_integer_name(self):
+        '''
+        This tests the case where the state file is named
+        only with integers
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='12345'
+        )
+
+        state_id = 'test_|-always-passes_|-always-passes_|-succeed_without_changes'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'Success!')
+        self.assertTrue(state_run[state_id]['result'])

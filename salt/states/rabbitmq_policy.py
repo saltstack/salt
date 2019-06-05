@@ -17,12 +17,12 @@ Example:
         - pattern: '.*'
         - definition: '{"ha-mode": "all"}'
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
+import salt.utils.path
 import json
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def __virtual__():
     '''
     Only load if RabbitMQ is installed.
     '''
-    return salt.utils.which('rabbitmqctl') is not None
+    return salt.utils.path.which('rabbitmqctl') is not None
 
 
 def present(name,
@@ -39,7 +39,8 @@ def present(name,
             definition,
             priority=0,
             vhost='/',
-            runas=None):
+            runas=None,
+            apply_to=None):
     '''
     Ensure the RabbitMQ policy exists.
 
@@ -57,6 +58,8 @@ def present(name,
         Virtual host to apply to (defaults to '/')
     runas
         Name of the user to run the command as
+    apply_to
+        Apply policy to 'queues', 'exchanges' or 'all' (default to 'all')
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     result = {}
@@ -72,6 +75,8 @@ def present(name,
         new_definition = json.loads(definition) if definition else ''
         if current_definition != new_definition:
             updates.append('Definition')
+        if apply_to and (policy.get('apply-to') != apply_to):
+            updates.append('Applyto')
         if int(policy.get('priority')) != priority:
             updates.append('Priority')
 
@@ -90,7 +95,8 @@ def present(name,
                                                      pattern,
                                                      definition,
                                                      priority=priority,
-                                                     runas=runas)
+                                                     runas=runas,
+                                                     apply_to=apply_to)
     elif updates:
         ret['changes'].update({'old': policy, 'new': updates})
         if __opts__['test']:
@@ -102,7 +108,8 @@ def present(name,
                                                      pattern,
                                                      definition,
                                                      priority=priority,
-                                                     runas=runas)
+                                                     runas=runas,
+                                                     apply_to=apply_to)
 
     if 'Error' in result:
         ret['result'] = False

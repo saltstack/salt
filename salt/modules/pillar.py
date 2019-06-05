@@ -2,7 +2,7 @@
 '''
 Extract the pillar data for this minion
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import collections
@@ -11,13 +11,16 @@ import collections
 import copy
 import os
 import logging
-import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
 import salt.pillar
-import salt.utils
 import salt.utils.crypt
+import salt.utils.data
+import salt.utils.dictupdate
+import salt.utils.functools
+import salt.utils.odict
+import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
 
@@ -135,7 +138,7 @@ def get(key,
 
     if merge:
         if isinstance(default, dict):
-            ret = salt.utils.traverse_dict_and_list(
+            ret = salt.utils.data.traverse_dict_and_list(
                 pillar_dict,
                 key,
                 {},
@@ -153,7 +156,7 @@ def get(key,
                     'skipped.', default, ret, type(ret).__name__
                 )
         elif isinstance(default, list):
-            ret = salt.utils.traverse_dict_and_list(  # pylint: disable=redefined-variable-type
+            ret = salt.utils.data.traverse_dict_and_list(  # pylint: disable=redefined-variable-type
                 pillar_dict,
                 key,
                 [],
@@ -175,10 +178,11 @@ def get(key,
                 default, type(default).__name__
             )
 
-    ret = salt.utils.traverse_dict_and_list(pillar_dict,
-                                            key,
-                                            default,
-                                            delimiter)
+    ret = salt.utils.data.traverse_dict_and_list(
+        pillar_dict,
+        key,
+        default,
+        delimiter)
     if ret is KeyError:
         raise KeyError('Pillar key not found: {0}'.format(key))
 
@@ -243,7 +247,7 @@ def items(*args, **kwargs):
     pillarenv = kwargs.get('pillarenv')
     if pillarenv is None:
         if __opts__.get('pillarenv_from_saltenv', False):
-            pillarenv = kwargs.get('saltenv') or __opts__['environment']
+            pillarenv = kwargs.get('saltenv') or __opts__['saltenv']
         else:
             pillarenv = __opts__['pillarenv']
 
@@ -274,7 +278,7 @@ def items(*args, **kwargs):
 
 
 # Allow pillar.data to also be used to return pillar data
-data = salt.utils.alias_function(items, 'data')
+data = salt.utils.functools.alias_function(items, 'data')
 
 
 def _obfuscate_inner(var):
@@ -408,10 +412,11 @@ def item(*args, **kwargs):
 
     try:
         for arg in args:
-            ret[arg] = salt.utils.traverse_dict_and_list(pillar_dict,
-                                                         arg,
-                                                         default,
-                                                         delimiter)
+            ret[arg] = salt.utils.data.traverse_dict_and_list(
+                pillar_dict,
+                arg,
+                default,
+                delimiter)
     except KeyError:
         pass
 
@@ -463,8 +468,8 @@ def ext(external, pillar=None):
 
         .. code-block:: python
 
-            >>> import yaml
-            >>> ext_pillar = yaml.safe_load("""
+            >>> import salt.utils.yaml
+            >>> ext_pillar = salt.utils.yaml.safe_load("""
             ... ext_pillar:
             ...   - git:
             ...     - issue38440 https://github.com/terminalmage/git_pillar:
@@ -497,12 +502,12 @@ def ext(external, pillar=None):
         salt '*' pillar.ext "{'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}"
     '''
     if isinstance(external, six.string_types):
-        external = yaml.safe_load(external)
+        external = salt.utils.yaml.safe_load(external)
     pillar_obj = salt.pillar.get_pillar(
         __opts__,
         __grains__,
         __opts__['id'],
-        __opts__['environment'],
+        __opts__['saltenv'],
         ext=external,
         pillar_override=pillar)
 
@@ -529,7 +534,7 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
 
         salt '*' pillar.keys web:sites
     '''
-    ret = salt.utils.traverse_dict_and_list(
+    ret = salt.utils.data.traverse_dict_and_list(
         __pillar__, key, KeyError, delimiter)
 
     if ret is KeyError:
@@ -645,9 +650,9 @@ def filter_by(lookup_dict,
 
         salt '*' pillar.filter_by '{web: Serve it up, db: I query, default: x_x}' role
     '''
-    return salt.utils.filter_by(lookup_dict=lookup_dict,
-                                lookup=pillar,
-                                traverse=__pillar__,
-                                merge=merge,
-                                default=default,
-                                base=base)
+    return salt.utils.data.filter_by(lookup_dict=lookup_dict,
+                                     lookup=pillar,
+                                     traverse=__pillar__,
+                                     merge=merge,
+                                     default=default,
+                                     base=base)

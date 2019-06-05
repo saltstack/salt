@@ -4,17 +4,20 @@ Integration tests for the saltutil module.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import time
 import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import flaky
 from tests.support.paths import TMP_PILLAR_TREE
+from tests.support.unit import skipIf
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.files
+import salt.utils.stringutils
 
 
 class SaltUtilModuleTest(ModuleCase):
@@ -94,7 +97,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
-                           'output': []}
+                           'output': [],
+                           'thorium': []}
         ret = self.run_function('saltutil.sync_all')
         self.assertEqual(ret, expected_return)
 
@@ -114,7 +118,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
-                           'output': []}
+                           'output': [],
+                           'thorium': []}
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['salttest']})
         self.assertEqual(ret, expected_return)
 
@@ -137,7 +142,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
-                           'output': []}
+                           'output': [],
+                           'thorium': []}
         ret = self.run_function('saltutil.sync_all', extmod_blacklist={'modules': ['runtests_decorators']})
         self.assertEqual(ret, expected_return)
 
@@ -157,17 +163,20 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
-                           'output': []}
+                           'output': [],
+                           'thorium': []}
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['runtests_decorators']},
                                 extmod_blacklist={'modules': ['runtests_decorators']})
         self.assertEqual(ret, expected_return)
 
 
+@skipIf(True, 'Pillar refresh test is flaky. Skipping for now.')
 class SaltUtilSyncPillarTest(ModuleCase):
     '''
     Testcase for the saltutil sync pillar module
     '''
 
+    @flaky
     def test_pillar_refresh(self):
         '''
         test pillar refresh module
@@ -177,17 +186,19 @@ class SaltUtilSyncPillarTest(ModuleCase):
         pre_pillar = self.run_function('pillar.raw')
         self.assertNotIn(pillar_key, pre_pillar.get(pillar_key, 'didnotwork'))
 
-        with salt.utils.fopen(os.path.join(TMP_PILLAR_TREE, 'add_pillar.sls'), 'w') as fp:
-            fp.write('{0}: itworked'.format(pillar_key))
+        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'add_pillar.sls'), 'w') as fp:
+            fp.write(salt.utils.stringutils.to_str(
+                '{0}: itworked'.format(pillar_key)
+            ))
 
-        with salt.utils.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
+        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
             fp.write(textwrap.dedent('''\
                      base:
                        '*':
                          - add_pillar
                      '''))
 
-        pillar_refresh = self.run_function('saltutil.refresh_pillar')
+        self.run_function('saltutil.refresh_pillar')
 
         pillar = False
         timeout = time.time() + 30

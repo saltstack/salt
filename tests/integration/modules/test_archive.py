@@ -3,7 +3,7 @@
 Tests for the archive state
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import textwrap
@@ -15,7 +15,10 @@ from tests.support.paths import TMP
 from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
 
 # Import 3rd party libs
 from salt.ext import six
@@ -64,12 +67,12 @@ class ArchiveTest(ModuleCase):
             filename = 'file®'
         else:
             filename = 'file'
-        with salt.utils.fopen(os.path.join(self.src, filename), 'wb') as theorem:
-            if six.PY3 and salt.utils.is_windows():
+        with salt.utils.files.fopen(os.path.join(self.src, filename), 'wb') as theorem:
+            if six.PY3 and salt.utils.platform.is_windows():
                 encoding = 'utf-8'
             else:
                 encoding = None
-            theorem.write(salt.utils.to_bytes(textwrap.dedent('''\
+            theorem.write(salt.utils.stringutils.to_bytes(textwrap.dedent('''\
                 Compression theorem of computational complexity theory:
 
                 Given a Gödel numbering $φ$ of the computable functions and a
@@ -114,7 +117,7 @@ class ArchiveTest(ModuleCase):
 
         def normdir(path):
             normdir = os.path.normcase(os.path.abspath(path))
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 # Remove the drive portion of path
                 if len(normdir) >= 2 and normdir[1] == ':':
                     normdir = normdir.split(':', 1)[1]
@@ -140,7 +143,7 @@ class ArchiveTest(ModuleCase):
             self.assertTrue(dir_in_ret)
         self.assertTrue(file_in_ret)
 
-    @skipIf(not salt.utils.which('tar'), 'Cannot find tar executable')
+    @skipIf(not salt.utils.path.which('tar'), 'Cannot find tar executable')
     def test_tar_pack(self):
         '''
         Validate using the tar function to create archives
@@ -149,12 +152,12 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.tar', ['-cvf', self.arch], sources=self.src)
-        self.assertTrue(isinstance(ret, list), str(ret))
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which('tar'), 'Cannot find tar executable')
+    @skipIf(not salt.utils.path.which('tar'), 'Cannot find tar executable')
     def test_tar_unpack(self):
         '''
         Validate using the tar function to extract archives
@@ -164,12 +167,56 @@ class ArchiveTest(ModuleCase):
 
         # Test extract archive
         ret = self.run_function('archive.tar', ['-xvf', self.arch], dest=self.dst)
-        self.assertTrue(isinstance(ret, list), str(ret))
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which('gzip'), 'Cannot find gzip executable')
+    @skipIf(not salt.utils.path.which('tar'), 'Cannot find tar executable')
+    def test_tar_pack_unicode(self):
+        '''
+        Validate using the tar function to create archives
+        '''
+        self._set_up(arch_fmt='tar', unicode_filename=True)
+
+        # Test create archive
+        ret = self.run_function('archive.tar', ['-cvf', self.arch], sources=self.src)
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        self._assert_artifacts_in_ret(ret)
+
+        self._tear_down()
+
+    @skipIf(not salt.utils.path.which('tar'), 'Cannot find tar executable')
+    def test_tar_unpack_unicode(self):
+        '''
+        Validate using the tar function to extract archives
+        '''
+        self._set_up(arch_fmt='tar', unicode_filename=True)
+        self.run_function('archive.tar', ['-cvf', self.arch], sources=self.src)
+
+        # Test extract archive
+        ret = self.run_function('archive.tar', ['-xvf', self.arch], dest=self.dst)
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        self._assert_artifacts_in_ret(ret)
+
+        self._tear_down()
+
+    @skipIf(not salt.utils.path.which('tar'), 'Cannot find tar executable')
+    def test_tar_list_unicode(self):
+        '''
+        Validate using the tar function to extract archives
+        '''
+        self._set_up(arch_fmt='tar', unicode_filename=True)
+        self.run_function('archive.tar', ['-cvf', self.arch], sources=self.src)
+
+        # Test list archive
+        ret = self.run_function('archive.list', name=self.arch)
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        self._assert_artifacts_in_ret(ret)
+
+        self._tear_down()
+
+    @skipIf(not salt.utils.path.which('gzip'), 'Cannot find gzip executable')
     def test_gzip(self):
         '''
         Validate using the gzip function
@@ -178,13 +225,13 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.gzip', [self.src_file], options='-v')
-        self.assertTrue(isinstance(ret, list), str(ret))
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
         self._assert_artifacts_in_ret(ret, file_only=True)
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which('gzip'), 'Cannot find gzip executable')
-    @skipIf(not salt.utils.which('gunzip'), 'Cannot find gunzip executable')
+    @skipIf(not salt.utils.path.which('gzip'), 'Cannot find gzip executable')
+    @skipIf(not salt.utils.path.which('gunzip'), 'Cannot find gunzip executable')
     def test_gunzip(self):
         '''
         Validate using the gunzip function
@@ -194,12 +241,12 @@ class ArchiveTest(ModuleCase):
 
         # Test extract archive
         ret = self.run_function('archive.gunzip', [self.src_file + '.gz'], options='-v')
-        self.assertTrue(isinstance(ret, list), str(ret))
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
         self._assert_artifacts_in_ret(ret, file_only=True)
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which('zip'), 'Cannot find zip executable')
+    @skipIf(not salt.utils.path.which('zip'), 'Cannot find zip executable')
     def test_cmd_zip(self):
         '''
         Validate using the cmd_zip function
@@ -208,13 +255,13 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.cmd_zip', [self.arch, self.src])
-        self.assertTrue(isinstance(ret, list), str(ret))
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which('zip'), 'Cannot find zip executable')
-    @skipIf(not salt.utils.which('unzip'), 'Cannot find unzip executable')
+    @skipIf(not salt.utils.path.which('zip'), 'Cannot find zip executable')
+    @skipIf(not salt.utils.path.which('unzip'), 'Cannot find unzip executable')
     def test_cmd_unzip(self):
         '''
         Validate using the cmd_unzip function
@@ -224,7 +271,7 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.cmd_unzip', [self.arch, self.dst])
-        self.assertTrue(isinstance(ret, list), str(ret))
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -238,7 +285,7 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.zip', [self.arch, self.src])
-        self.assertTrue(isinstance(ret, list), str(ret))
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -258,7 +305,7 @@ class ArchiveTest(ModuleCase):
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which('rar'), 'Cannot find rar executable')
+    @skipIf(not salt.utils.path.which('rar'), 'Cannot find rar executable')
     def test_rar(self):
         '''
         Validate using the rar function
@@ -267,13 +314,13 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.rar', [self.arch, self.src])
-        self.assertTrue(isinstance(ret, list), str(ret))
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which('rar'), 'Cannot find rar executable')
-    @skipIf(not salt.utils.which('unrar'), 'Cannot find unrar executable')
+    @skipIf(not salt.utils.path.which('rar'), 'Cannot find rar executable')
+    @skipIf(not salt.utils.path.which('unrar'), 'Cannot find unrar executable')
     def test_unrar(self):
         '''
         Validate using the unrar function
@@ -283,7 +330,7 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.unrar', [self.arch, self.dst])
-        self.assertTrue(isinstance(ret, list), str(ret))
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()

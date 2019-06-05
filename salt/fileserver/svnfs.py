@@ -4,13 +4,17 @@ Subversion Fileserver Backend
 
 After enabling this backend, branches and tags in a remote subversion
 repository are exposed to salt as different environments. To enable this
-backend, add ``svn`` to the :conf_master:`fileserver_backend` option in the
+backend, add ``svnfs`` to the :conf_master:`fileserver_backend` option in the
 Master config file.
 
 .. code-block:: yaml
 
     fileserver_backend:
-      - svn
+      - svnfs
+
+.. note::
+    ``svn`` also works here. Prior to the 2018.3.0 release, *only* ``svn``
+    would work.
 
 This backend assumes a standard svn layout with directories for ``branches``,
 ``tags``, and ``trunk``, at the repository root.
@@ -28,7 +32,7 @@ This backend assumes a standard svn layout with directories for ``branches``,
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import errno
 import fnmatch
@@ -42,7 +46,7 @@ from salt.exceptions import FileserverConfigError
 PER_REMOTE_OVERRIDES = ('mountpoint', 'root', 'trunk', 'branches', 'tags')
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 HAS_SVN = False
 try:
@@ -54,8 +58,14 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.files
+import salt.utils.gzip_util
+import salt.utils.hashutils
+import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.url
+import salt.utils.versions
 import salt.fileserver
 from salt.utils.event import tagify
 
@@ -99,9 +109,9 @@ def _rev(repo):
     except (pysvn._pysvn.ClientError, TypeError,
             KeyError, AttributeError) as exc:
         log.error(
-            'Error retrieving revision ID for svnfs remote {0} '
-            '(cachedir: {1}): {2}'
-            .format(repo['url'], repo['repo'], exc)
+            'Error retrieving revision ID for svnfs remote %s '
+            '(cachedir: %s): %s',
+            repo['url'], repo['repo'], exc
         )
     else:
         return repo_info['revision'].number
@@ -136,14 +146,14 @@ def init():
             repo_url = next(iter(remote))
             per_remote_conf = dict(
                 [(key, six.text_type(val)) for key, val in
-                 six.iteritems(salt.utils.repack_dictlist(remote[repo_url]))]
+                 six.iteritems(salt.utils.data.repack_dictlist(remote[repo_url]))]
             )
             if not per_remote_conf:
                 log.error(
-                    'Invalid per-remote configuration for remote {0}. If no '
+                    'Invalid per-remote configuration for remote %s. If no '
                     'per-remote parameters are being specified, there may be '
                     'a trailing colon after the URL, which should be removed. '
-                    'Check the master configuration file.'.format(repo_url)
+                    'Check the master configuration file.', repo_url
                 )
                 _failhard()
 
@@ -151,11 +161,10 @@ def init():
             for param in (x for x in per_remote_conf
                           if x not in PER_REMOTE_OVERRIDES):
                 log.error(
-                    'Invalid configuration parameter \'{0}\' for remote {1}. '
-                    'Valid parameters are: {2}. See the documentation for '
-                    'further information.'.format(
-                        param, repo_url, ', '.join(PER_REMOTE_OVERRIDES)
-                    )
+                    'Invalid configuration parameter \'%s\' for remote %s. '
+                    'Valid parameters are: %s. See the documentation for '
+                    'further information.',
+                    param, repo_url, ', '.join(PER_REMOTE_OVERRIDES)
                 )
                 per_remote_errors = True
             if per_remote_errors:
@@ -167,8 +176,8 @@ def init():
 
         if not isinstance(repo_url, six.string_types):
             log.error(
-                'Invalid svnfs remote {0}. Remotes must be strings, you may '
-                'need to enclose the URL in quotes'.format(repo_url)
+                'Invalid svnfs remote %s. Remotes must be strings, you may '
+                'need to enclose the URL in quotes', repo_url
             )
             _failhard()
 
@@ -194,8 +203,8 @@ def init():
                 new_remote = True
             except pysvn._pysvn.ClientError as exc:
                 log.error(
-                    'Failed to initialize svnfs remote \'{0}\': {1}'
-                    .format(repo_url, exc)
+                    'Failed to initialize svnfs remote \'%s\': %s',
+                    repo_url, exc
                 )
                 _failhard()
         else:
@@ -205,10 +214,10 @@ def init():
                 CLIENT.status(rp_)
             except pysvn._pysvn.ClientError as exc:
                 log.error(
-                    'Cache path {0} (corresponding remote: {1}) exists but is '
+                    'Cache path %s (corresponding remote: %s) exists but is '
                     'not a valid subversion checkout. You will need to '
                     'manually delete this directory on the master to continue '
-                    'to use this svnfs remote.'.format(rp_, repo_url)
+                    'to use this svnfs remote.', rp_, repo_url
                 )
                 _failhard()
 
@@ -224,19 +233,21 @@ def init():
     if new_remote:
         remote_map = os.path.join(__opts__['cachedir'], 'svnfs/remote_map.txt')
         try:
-            with salt.utils.fopen(remote_map, 'w+') as fp_:
+            with salt.utils.files.fopen(remote_map, 'w+') as fp_:
                 timestamp = datetime.now().strftime('%d %b %Y %H:%M:%S.%f')
                 fp_.write('# svnfs_remote map as of {0}\n'.format(timestamp))
                 for repo_conf in repos:
                     fp_.write(
-                        '{0} = {1}\n'.format(
-                            repo_conf['hash'], repo_conf['url']
+                        salt.utils.stringutils.to_str(
+                            '{0} = {1}\n'.format(
+                                repo_conf['hash'], repo_conf['url']
+                            )
                         )
                     )
         except OSError:
             pass
         else:
-            log.info('Wrote new svnfs_remote map to {0}'.format(remote_map))
+            log.info('Wrote new svnfs_remote map to %s', remote_map)
 
     return repos
 
@@ -271,12 +282,12 @@ def _clear_old_remotes():
                 shutil.rmtree(rdir)
             except OSError as exc:
                 log.error(
-                    'Unable to remove old svnfs remote cachedir {0}: {1}'
-                    .format(rdir, exc)
+                    'Unable to remove old svnfs remote cachedir %s: %s',
+                    rdir, exc
                 )
                 failed.append(rdir)
             else:
-                log.debug('svnfs removed old cachedir {0}'.format(rdir))
+                log.debug('svnfs removed old cachedir %s', rdir)
     for fdir in failed:
         to_remove.remove(fdir)
     return bool(to_remove), repos
@@ -367,7 +378,7 @@ def lock(remote=None):
         failed = []
         if not os.path.exists(repo['lockfile']):
             try:
-                with salt.utils.fopen(repo['lockfile'], 'w+') as fp_:
+                with salt.utils.files.fopen(repo['lockfile'], 'w+') as fp_:
                     fp_.write('')
             except (IOError, OSError) as exc:
                 msg = ('Unable to set update lock for {0} ({1}): {2} '
@@ -414,27 +425,28 @@ def update():
     for repo in repos:
         if os.path.exists(repo['lockfile']):
             log.warning(
-                'Update lockfile is present for svnfs remote {0}, skipping. '
+                'Update lockfile is present for svnfs remote %s, skipping. '
                 'If this warning persists, it is possible that the update '
-                'process was interrupted. Removing {1} or running '
+                'process was interrupted. Removing %s or running '
                 '\'salt-run fileserver.clear_lock svnfs\' will allow updates '
-                'to continue for this remote.'
-                .format(repo['url'], repo['lockfile'])
+                'to continue for this remote.', repo['url'], repo['lockfile']
             )
             continue
         _, errors = lock(repo)
         if errors:
-            log.error('Unable to set update lock for svnfs remote {0}, '
-                      'skipping.'.format(repo['url']))
+            log.error(
+                'Unable to set update lock for svnfs remote %s, skipping.',
+                repo['url']
+            )
             continue
-        log.debug('svnfs is fetching from {0}'.format(repo['url']))
+        log.debug('svnfs is fetching from %s', repo['url'])
         old_rev = _rev(repo)
         try:
             CLIENT.update(repo['repo'])
         except pysvn._pysvn.ClientError as exc:
             log.error(
-                'Error updating svnfs remote {0} (cachedir: {1}): {2}'
-                .format(repo['url'], repo['cachedir'], exc)
+                'Error updating svnfs remote %s (cachedir: %s): %s',
+                repo['url'], repo['cachedir'], exc
             )
 
         new_rev = _rev(repo)
@@ -453,19 +465,19 @@ def update():
             os.makedirs(env_cachedir)
         new_envs = envs(ignore_cache=True)
         serial = salt.payload.Serial(__opts__)
-        with salt.utils.fopen(env_cache, 'wb+') as fp_:
+        with salt.utils.files.fopen(env_cache, 'wb+') as fp_:
             fp_.write(serial.dumps(new_envs))
-            log.trace('Wrote env cache data to {0}'.format(env_cache))
+            log.trace('Wrote env cache data to %s', env_cache)
 
     # if there is a change, fire an event
     if __opts__.get('fileserver_events', False):
-        event = salt.utils.event.get_event(
+        with salt.utils.event.get_event(
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
                 opts=__opts__,
-                listen=False)
-        event.fire_event(data, tagify(['svnfs', 'update'], prefix='fileserver'))
+                listen=False) as event:
+            event.fire_event(data, tagify(['svnfs', 'update'], prefix='fileserver'))
     try:
         salt.fileserver.reap_fileserver_cache_dir(
             os.path.join(__opts__['cachedir'], 'svnfs/hash'),
@@ -481,10 +493,30 @@ def _env_is_exposed(env):
     Check if an environment is exposed by comparing it against a whitelist and
     blacklist.
     '''
-    return salt.utils.check_whitelist_blacklist(
+    if __opts__['svnfs_env_whitelist']:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The svnfs_env_whitelist config option has been renamed to '
+            'svnfs_saltenv_whitelist. Please update your configuration.'
+        )
+        whitelist = __opts__['svnfs_env_whitelist']
+    else:
+        whitelist = __opts__['svnfs_saltenv_whitelist']
+
+    if __opts__['svnfs_env_blacklist']:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The svnfs_env_blacklist config option has been renamed to '
+            'svnfs_saltenv_blacklist. Please update your configuration.'
+        )
+        blacklist = __opts__['svnfs_env_blacklist']
+    else:
+        blacklist = __opts__['svnfs_saltenv_blacklist']
+
+    return salt.utils.stringutils.check_whitelist_blacklist(
         env,
-        whitelist=__opts__['svnfs_env_whitelist'],
-        blacklist=__opts__['svnfs_env_blacklist']
+        whitelist=whitelist,
+        blacklist=blacklist,
     )
 
 
@@ -505,9 +537,9 @@ def envs(ignore_cache=False):
             ret.add('base')
         else:
             log.error(
-                'svnfs trunk path \'{0}\' does not exist in repo {1}, no base '
-                'environment will be provided by this remote'
-                .format(repo['trunk'], repo['url'])
+                'svnfs trunk path \'%s\' does not exist in repo %s, no base '
+                'environment will be provided by this remote',
+                repo['trunk'], repo['url']
             )
 
         branches = os.path.join(repo['repo'], repo['branches'])
@@ -515,8 +547,8 @@ def envs(ignore_cache=False):
             ret.update(os.listdir(branches))
         else:
             log.error(
-                'svnfs branches path \'{0}\' does not exist in repo {1}'
-                .format(repo['branches'], repo['url'])
+                'svnfs branches path \'%s\' does not exist in repo %s',
+                repo['branches'], repo['url']
             )
 
         tags = os.path.join(repo['repo'], repo['tags'])
@@ -524,8 +556,8 @@ def envs(ignore_cache=False):
             ret.update(os.listdir(tags))
         else:
             log.error(
-                'svnfs tags path \'{0}\' does not exist in repo {1}'
-                .format(repo['tags'], repo['url'])
+                'svnfs tags path \'%s\' does not exist in repo %s',
+                repo['tags'], repo['url']
             )
     return [x for x in sorted(ret) if _env_is_exposed(x)]
 
@@ -608,12 +640,7 @@ def serve_file(load, fnd):
     Return a chunk from a file based on the data received
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     ret = {'data': '',
@@ -625,10 +652,10 @@ def serve_file(load, fnd):
     ret['dest'] = fnd['rel']
     gzip = load.get('gzip', None)
     fpath = os.path.normpath(fnd['path'])
-    with salt.utils.fopen(fpath, 'rb') as fp_:
+    with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
-        if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+        if data and six.PY3 and not salt.utils.files.is_binary(fpath):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
@@ -642,12 +669,7 @@ def file_hash(load, fnd):
     Return a file hash, the hash type is set in the master config file
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if not all(x in load for x in ('path', 'saltenv')):
@@ -669,13 +691,14 @@ def file_hash(load, fnd):
     # Check if the hash is cached
     # Cache file's contents should be "hash:mtime"
     cache_path = os.path.join(__opts__['cachedir'],
-                              'svnfs/hash',
+                              'svnfs',
+                              'hash',
                               saltenv,
                               '{0}.hash.{1}'.format(relpath,
                                                     __opts__['hash_type']))
     # If we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
-        with salt.utils.fopen(cache_path, 'rb') as fp_:
+        with salt.utils.files.fopen(cache_path, 'rb') as fp_:
             hsum, mtime = fp_.read().split(':')
             if os.path.getmtime(path) == mtime:
                 # check if mtime changed
@@ -683,13 +706,13 @@ def file_hash(load, fnd):
                 return ret
 
     # if we don't have a cache entry-- lets make one
-    ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
+    ret['hsum'] = salt.utils.hashutils.get_hash(path, __opts__['hash_type'])
     cache_dir = os.path.dirname(cache_path)
     # make cache directory if it doesn't exist
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
-    with salt.utils.fopen(cache_path, 'w') as fp_:
+    with salt.utils.files.fopen(cache_path, 'w') as fp_:
         fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
 
     return ret
@@ -700,12 +723,7 @@ def _file_lists(load, form):
     Return a dict containing the file lists for files, dirs, emptydirs and symlinks
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if 'saltenv' not in load or load['saltenv'] not in envs():
@@ -716,7 +734,7 @@ def _file_lists(load, form):
         try:
             os.makedirs(list_cachedir)
         except os.error:
-            log.critical('Unable to make cachedir {0}'.format(list_cachedir))
+            log.critical('Unable to make cachedir %s', list_cachedir)
             return []
     list_cache = os.path.join(list_cachedir, '{0}.p'.format(load['saltenv']))
     w_lock = os.path.join(list_cachedir, '.{0}.w'.format(load['saltenv']))
@@ -744,7 +762,7 @@ def _file_lists(load, form):
                     # svnfs root (global or per-remote) does not exist in env
                     continue
 
-            for root, dirs, files in os.walk(env_root):
+            for root, dirs, files in salt.utils.path.os_walk(env_root):
                 relpath = os.path.relpath(root, env_root)
                 dir_rel_fn = os.path.join(repo['mountpoint'], relpath)
                 if relpath != '.':

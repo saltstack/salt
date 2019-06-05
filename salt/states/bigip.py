@@ -6,12 +6,13 @@ A state module designed to enforce load-balancing configurations for F5 Big-IP e
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-import json
+# Import Salt libs
+import salt.utils.json
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 #set up virtual function
@@ -123,7 +124,7 @@ def _test_output(ret, action, params):
         ret['comment'] += 'The modify action will attempt to modify an existing entity only if it exists.\n'
 
     ret['comment'] += 'An iControl REST Request will be made using the parameters:\n'
-    ret['comment'] += json.dumps(params, indent=4)
+    ret['comment'] += salt.utils.json.dumps(params, indent=4)
 
     ret['changes'] = {}
     # Return ``None`` when running with ``test=true``.

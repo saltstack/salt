@@ -13,6 +13,7 @@ state modules
     acme
     alias
     alternatives
+    ansiblegate
     apache
     apache_conf
     apache_module
@@ -31,6 +32,7 @@ state modules
     boto_apigateway
     boto_asg
     boto_cfn
+    boto_cloudfront
     boto_cloudtrail
     boto_cloudwatch_alarm
     boto_cloudwatch_event
@@ -95,6 +97,7 @@ state modules
     git
     github
     glance
+    glance_image
     glusterfs
     gnomedesktop
     gpg
@@ -111,7 +114,6 @@ state modules
     hg
     hipchat
     host
-    htpasswd
     http
     icinga2
     ifttt
@@ -122,7 +124,10 @@ state modules
     influxdb_database
     influxdb_retention_policy
     influxdb_user
-    infoblox
+    infoblox_a
+    infoblox_cname
+    infoblox_host_record
+    infoblox_range
     ini_manage
     ipmi
     ipset
@@ -132,15 +137,27 @@ state modules
     junos
     k8s
     kapacitor
+    kernelpkg
     keyboard
     keystone
+    keystone_domain
+    keystone_endpoint
+    keystone_group
+    keystone_project
+    keystone_role
+    keystone_role_grant
+    keystone_service
+    keystone_user
     kmod
     kubernetes
     layman
     ldap
     libcloud_dns
+    libcloud_loadbalancer
+    libcloud_storage
     linux_acl
     locale
+    logadm
     logrotate
     loop
     lvm
@@ -148,13 +165,13 @@ state modules
     lvs_service
     lxc
     mac_assistive
-    mac_defaults
+    macdefaults
     mac_keychain
-    mac_package
+    macpackage
     mac_xattr
     makeconf
     marathon_app
-    mdadm
+    mdadm_raid
     memcached
     modjk
     modjk_worker
@@ -174,7 +191,12 @@ state modules
     netsnmp
     netusers
     network
-    netyang
+    net_napalm_yang
+    neutron_network
+    neutron_secgroup
+    neutron_secgroup_rule
+    neutron_subnet
+    nfs_export
     nftables
     npm
     ntp
@@ -182,6 +204,7 @@ state modules
     openstack_config
     openvswitch_bridge
     openvswitch_port
+    opsgenie
     pagerduty
     pagerduty_escalation_policy
     pagerduty_schedule
@@ -246,7 +269,6 @@ state modules
     stateconf
     status
     statuspage
-    stormpath_account
     supervisord
     svn
     sysctl
@@ -262,11 +284,13 @@ state modules
     tuned
     uptime
     user
+    vagrant
     vault
     vbox_guest
     victorops
     virt
     virtualenv_mod
+    webutil
     win_certutil
     win_dacl
     win_dism
@@ -298,4 +322,5 @@ state modules
     zk_concurrency
     zfs
     zone
+    zookeeper
     zpool

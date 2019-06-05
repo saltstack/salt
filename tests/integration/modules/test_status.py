@@ -1,23 +1,25 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import random
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 # Import Salt libs
-import salt.utils
 from salt.ext import six
+import salt.utils.platform
 
 
 class StatusModuleTest(ModuleCase):
     '''
     Test the status module
     '''
-    @skipIf(salt.utils.is_windows(), 'minion is windows')
+    @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
+    @flaky
     def test_status_pid(self):
         '''
         status.pid
@@ -28,7 +30,7 @@ class StatusModuleTest(ModuleCase):
         grep_salt = self.run_function('cmd.run', ['ps aux | grep salt'])
         self.assertIn(random_pid, grep_salt)
 
-    @skipIf(not salt.utils.is_windows(), 'windows only test')
+    @skipIf(not salt.utils.platform.is_windows(), 'windows only test')
     def test_status_cpuload(self):
         '''
         status.cpuload
@@ -36,7 +38,7 @@ class StatusModuleTest(ModuleCase):
         ret = self.run_function('status.cpuload')
         self.assertTrue(isinstance(ret, float))
 
-    @skipIf(not salt.utils.is_windows(), 'windows only test')
+    @skipIf(not salt.utils.platform.is_windows(), 'windows only test')
     def test_status_saltmem(self):
         '''
         status.saltmem
@@ -49,9 +51,9 @@ class StatusModuleTest(ModuleCase):
         status.diskusage
         '''
         ret = self.run_function('status.diskusage')
-        if salt.utils.is_darwin():
+        if salt.utils.platform.is_darwin():
             self.assertIn('not yet supported on this platform', ret)
-        elif salt.utils.is_windows():
+        elif salt.utils.platform.is_windows():
             self.assertTrue(isinstance(ret['percent'], float))
         else:
             self.assertIn('total', str(ret))
@@ -71,7 +73,7 @@ class StatusModuleTest(ModuleCase):
         '''
         ret = self.run_function('status.uptime')
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.assertTrue(isinstance(ret, float))
         else:
             self.assertTrue(isinstance(ret['days'], int))

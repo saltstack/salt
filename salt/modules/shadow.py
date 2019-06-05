@@ -8,7 +8,7 @@ Manage the shadow file on Linux systems
     *'shadow.info' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -19,8 +19,11 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.files
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 try:
     import salt.utils.pycrypto
     HAS_CRYPT = True
@@ -208,7 +211,7 @@ def lock_password(name):
     '''
     .. versionadded:: 2016.11.0
 
-    Lock the password from name user
+    Lock the password from specified user
 
     CLI Example:
 
@@ -276,7 +279,7 @@ def set_password(name, password, use_usermod=False):
 
         salt '*' shadow.set_password root '$1$UYCIxa628.9qXjpQCjM4a..'
     '''
-    if not salt.utils.is_true(use_usermod):
+    if not salt.utils.data.is_true(use_usermod):
         # Edit the shadow file directly
         # ALT Linux uses tcb to store password hashes. More information found
         # in manpage (http://docs.altlinux.org/manpages/tcb.5.html)
@@ -288,19 +291,20 @@ def set_password(name, password, use_usermod=False):
         if not os.path.isfile(s_file):
             return ret
         lines = []
-        with salt.utils.fopen(s_file, 'rb') as fp_:
+        with salt.utils.files.fopen(s_file, 'rb') as fp_:
             for line in fp_:
-                line = salt.utils.to_str(line)
+                line = salt.utils.stringutils.to_unicode(line)
                 comps = line.strip().split(':')
                 if comps[0] != name:
                     lines.append(line)
                     continue
                 changed_date = datetime.datetime.today() - datetime.datetime(1970, 1, 1)
                 comps[1] = password
-                comps[2] = str(changed_date.days)
+                comps[2] = six.text_type(changed_date.days)
                 line = ':'.join(comps)
                 lines.append('{0}\n'.format(line))
-        with salt.utils.fopen(s_file, 'w+') as fp_:
+        with salt.utils.files.fopen(s_file, 'w+') as fp_:
+            lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
             fp_.writelines(lines)
         uinfo = info(name)
         return uinfo['passwd'] == password
@@ -345,8 +349,8 @@ def set_date(name, date):
 
         salt '*' shadow.set_date username 0
     '''
-    cmd = 'chage -d {0} {1}'.format(date, name)
-    return not __salt__['cmd.run'](cmd, python_shell=False)
+    cmd = ['chage', '-d', date, name]
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
 
 
 def set_expire(name, expire):
@@ -363,5 +367,20 @@ def set_expire(name, expire):
 
         salt '*' shadow.set_expire username -1
     '''
-    cmd = 'chage -E {0} {1}'.format(expire, name)
-    return not __salt__['cmd.run'](cmd, python_shell=False)
+    cmd = ['chage', '-E', expire, name]
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+
+
+def list_users():
+    '''
+    .. versionadded:: 2018.3.0
+
+    Return a list of all shadow users
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.list_users
+    '''
+    return sorted([user.sp_nam for user in spwd.getspall()])

@@ -3,19 +3,22 @@
 Manage basic template commands
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
+# Import Python libs
 import time
 import os
 import codecs
 import logging
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.files
+import salt.utils.locales
 import salt.utils.stringio
-import salt.ext.six as six
+import salt.utils.versions
+
+# Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves import StringIO
 
 log = logging.getLogger(__name__)
@@ -45,29 +48,24 @@ def compile_template(template,
     # if any error occurs, we return an empty dictionary
     ret = {}
 
-    log.debug('compile template: {0}'.format(template))
+    log.debug('compile template: %s', template)
 
     if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     if template != ':string:':
         # Template was specified incorrectly
         if not isinstance(template, six.string_types):
-            log.error('Template was specified incorrectly: {0}'.format(template))
+            log.error('Template was specified incorrectly: %s', template)
             return ret
         # Template does not exist
         if not os.path.isfile(template):
-            log.error('Template does not exist: {0}'.format(template))
+            log.error('Template does not exist: %s', template)
             return ret
         # Template is an empty file
-        if salt.utils.is_empty(template):
-            log.debug('Template is an empty file: {0}'.format(template))
+        if salt.utils.files.is_empty(template):
+            log.debug('Template is an empty file: %s', template)
             return ret
 
         with codecs.open(template, encoding=SLS_ENCODING) as ifile:
@@ -75,7 +73,7 @@ def compile_template(template,
             input_data = ifile.read()
             if not input_data.strip():
                 # Template is nothing but whitespace
-                log.error('Template is nothing but whitespace: {0}'.format(template))
+                log.error('Template is nothing but whitespace: %s', template)
                 return ret
 
     # Get the list of render funcs in the render pipe line.
@@ -94,11 +92,10 @@ def compile_template(template,
         start = time.time()
         ret = render(input_data, saltenv, sls, **render_kwargs)
         log.profile(
-            'Time (in seconds) to render \'{0}\' using \'{1}\' renderer: {2}'.format(
-                template,
-                render.__module__.split('.')[-1],
-                time.time() - start
-            )
+            'Time (in seconds) to render \'%s\' using \'%s\' renderer: %s',
+            template,
+            render.__module__.split('.')[-1],
+            time.time() - start
         )
         if ret is None:
             # The file is empty or is being written elsewhere
@@ -110,10 +107,11 @@ def compile_template(template,
             # yaml, mako, or another engine which renders to a data
             # structure) we don't want to log this.
             if salt.utils.stringio.is_readable(ret):
-                log.debug('Rendered data from file: {0}:\n{1}'.format(
+                log.debug(
+                    'Rendered data from file: %s:\n%s',
                     template,
-                    ret.read()))    # pylint: disable=no-member
-                ret.seek(0)         # pylint: disable=no-member
+                    salt.utils.locales.sdecode(ret.read()))  # pylint: disable=no-member
+                ret.seek(0)  # pylint: disable=no-member
 
     # Preserve newlines from original template
     if windows_newline:
@@ -140,7 +138,7 @@ def compile_template_str(template, renderers, default, blacklist, whitelist):
     derived from the template.
     '''
     fn_ = salt.utils.files.mkstemp()
-    with salt.utils.fopen(fn_, 'wb') as ofile:
+    with salt.utils.files.fopen(fn_, 'wb') as ofile:
         ofile.write(SLS_ENCODER(template)[0])
     return compile_template(fn_, renderers, default, blacklist, whitelist)
 
@@ -168,8 +166,8 @@ def template_shebang(template, renderers, default, blacklist, whitelist, input_d
     if template == ':string:':
         line = input_data.split()[0]
     else:
-        with salt.utils.fopen(template, 'r') as ifile:
-            line = ifile.readline()
+        with salt.utils.files.fopen(template, 'r') as ifile:
+            line = salt.utils.stringutils.to_unicode(ifile.readline())
 
     # Check if it starts with a shebang and not a path
     if line.startswith('#!') and not line.startswith('#!/'):
@@ -221,11 +219,12 @@ def check_render_pipe_str(pipestr, renderers, blacklist, whitelist):
             if whitelist and name not in whitelist or \
                     blacklist and name in blacklist:
                 log.warning(
-                    'The renderer "{0}" is disallowed by configuration and '
-                    'will be skipped.'.format(name))
+                    'The renderer "%s" is disallowed by configuration and '
+                    'will be skipped.', name
+                )
                 continue
             results.append((renderers[name], argline.strip()))
         return results
     except KeyError:
-        log.error('The renderer "{0}" is not available'.format(pipestr))
+        log.error('The renderer "%s" is not available', pipestr)
         return []

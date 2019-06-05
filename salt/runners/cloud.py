@@ -6,7 +6,7 @@ The Salt Cloud Runner
 This runner wraps the functionality of salt cloud making salt cloud routines
 available to all internal apis via the runner system
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -14,14 +14,11 @@ import os
 
 # Import Salt libs
 import salt.cloud
+import salt.utils.args
 from salt.exceptions import SaltCloudConfigError
 
 # Get logging started
 log = logging.getLogger(__name__)
-
-
-def _filter_kwargs(k):
-    return dict((x, k[x]) for x in k if not x.startswith('__'))
 
 
 def _get_client():
@@ -114,24 +111,28 @@ def profile(prof=None, instances=None, opts=None, **kwargs):
     client = _get_client()
     if isinstance(opts, dict):
         client.opts.update(opts)
-    info = client.profile(prof, instances, **_filter_kwargs(kwargs))
+    info = client.profile(prof, instances, **salt.utils.args.clean_kwargs(**kwargs))
     return info
 
 
-def map_run(path=None, **kwargs):
+def map_run(path=None, opts=None, **kwargs):
     '''
     Execute a salt cloud map file
     '''
     client = _get_client()
-    info = client.map_run(path, **_filter_kwargs(kwargs))
+    if isinstance(opts, dict):
+        client.opts.update(opts)
+    info = client.map_run(path, **salt.utils.args.clean_kwargs(**kwargs))
     return info
 
 
-def destroy(instances):
+def destroy(instances, opts=None):
     '''
     Destroy the named vm(s)
     '''
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     info = client.destroy(instances)
     return info
 
@@ -141,6 +142,7 @@ def action(func=None,
            instances=None,
            provider=None,
            instance=None,
+           opts=None,
            **kwargs):
     '''
     Execute a single action on the given map/provider/instance
@@ -153,8 +155,17 @@ def action(func=None,
     '''
     info = {}
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     try:
-        info = client.action(func, cloudmap, instances, provider, instance, _filter_kwargs(kwargs))
+        info = client.action(
+            func,
+            cloudmap,
+            instances,
+            provider,
+            instance,
+            salt.utils.args.clean_kwargs(**kwargs)
+        )
     except SaltCloudConfigError as err:
         log.error(err)
     return info
@@ -172,12 +183,8 @@ def create(provider, instances, opts=None, **kwargs):
             image=ami-1624987f size='t1.micro' ssh_username=ec2-user \
             securitygroup=default delvol_on_destroy=True
     '''
-    create_kwargs = {}
-    for kwarg in kwargs:
-        if not kwarg.startswith('__'):
-            create_kwargs[kwarg] = kwargs[kwarg]
     client = _get_client()
     if isinstance(opts, dict):
         client.opts.update(opts)
-    info = client.create(provider, instances, **create_kwargs)
+    info = client.create(provider, instances, **salt.utils.args.clean_kwargs(**kwargs))
     return info

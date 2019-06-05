@@ -8,7 +8,7 @@ Helpers for the NAPALM modules.
 .. versionadded:: 2017.7.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python stdlib
 import logging
@@ -115,14 +115,14 @@ def reconnect(force=False, **kwargs):  # pylint: disable=unused-argument
        force:  # even if alive, but the user wants to force a restart
         proxyid = __opts__.get('proxyid') or __opts__.get('id')
         # close the connection
-        log.info('Closing the NAPALM proxy connection with {proxyid}'.format(proxyid=proxyid))
+        log.info('Closing the NAPALM proxy connection with %s', proxyid)
         salt.utils.napalm.call(
             napalm_device,  # pylint: disable=undefined-variable
             'close',
             **{}
         )
         # and re-open
-        log.info('Re-opening the NAPALM proxy connection with {proxyid}'.format(proxyid=proxyid))
+        log.info('Re-opening the NAPALM proxy connection with %s', proxyid)
         salt.utils.napalm.call(
             napalm_device,  # pylint: disable=undefined-variable
             'open',

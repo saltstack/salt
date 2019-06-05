@@ -5,7 +5,7 @@ NAPALM NTP
 
 Manages NTP on network devices.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -21,7 +21,7 @@ Dependencies
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import logging
 log = logging.getLogger(__file__)
@@ -113,6 +113,17 @@ def servers(**kwargs):  # pylint: disable=unused-argument
     .. code-block:: bash
 
         salt '*' ntp.servers
+
+    Example output:
+
+    .. code-block:: python
+
+        [
+            '192.168.0.1',
+            '172.17.17.1',
+            '172.17.17.2',
+            '2400:cb00:6:1024::c71b:840a'
+        ]
     '''
 
     ntp_servers = salt.utils.napalm.call(
@@ -165,12 +176,12 @@ def stats(peer=None, **kwargs):  # pylint: disable=unused-argument
 
         [
             {
-                'remote'        : u'188.114.101.4',
-                'referenceid'   : u'188.114.100.1',
+                'remote'        : '188.114.101.4',
+                'referenceid'   : '188.114.100.1',
                 'synchronized'  : True,
                 'stratum'       : 4,
-                'type'          : u'-',
-                'when'          : u'107',
+                'type'          : '-',
+                'when'          : '107',
                 'hostpoll'      : 256,
                 'reachability'  : 377,
                 'delay'         : 164.228,

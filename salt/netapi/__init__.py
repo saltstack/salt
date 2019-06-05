@@ -2,7 +2,7 @@
 '''
 Make api awesomeness
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import Python libs
 import inspect
 import os
@@ -14,12 +14,12 @@ import salt.config
 import salt.runner
 import salt.syspaths
 import salt.wheel
-import salt.utils
+import salt.utils.args
 import salt.client.ssh.client
 import salt.exceptions
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class NetapiClient(object):
@@ -71,7 +71,7 @@ class NetapiClient(object):
                     'No authentication credentials given')
 
         l_fun = getattr(self, low['client'])
-        f_call = salt.utils.format_call(l_fun, low)
+        f_call = salt.utils.args.format_call(l_fun, low)
         return l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
     def local_async(self, *args, **kwargs):

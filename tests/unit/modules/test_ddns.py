@@ -3,9 +3,8 @@
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import textwrap
-import json
 try:
     import dns.query
     import dns.tsigkeyring
@@ -26,6 +25,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.json
 import salt.modules.ddns as ddns
 
 
@@ -109,7 +109,7 @@ class DDNSTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test to delete a DNS record.
         '''
-        file_data = json.dumps({'A': 'B'})
+        file_data = salt.utils.json.dumps({'A': 'B'})
 
         class MockAnswer(object):
             def __init__(self, *args, **kwargs):
@@ -122,7 +122,7 @@ class DDNSTestCase(TestCase, LoaderModuleMockMixin):
             return MockAnswer
 
         with patch.object(dns.query, 'udp', mock_udp_query()):
-            with patch('salt.utils.fopen', mock_open(read_data=file_data), create=True):
+            with patch('salt.utils.files.fopen', mock_open(read_data=file_data), create=True):
                 with patch.object(dns.tsigkeyring, 'from_text', return_value=True):
                     with patch.object(ddns, '_get_keyring', return_value=None):
                         with patch.object(ddns, '_config', return_value=None):

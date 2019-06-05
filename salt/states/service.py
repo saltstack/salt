@@ -57,18 +57,18 @@ set the reload value to True:
     :ref:`Requisites <requisites>` documentation.
 
 '''
-
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.platform
 from salt.utils.args import get_function_argspec as _argspec
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 SYSTEMD_ONLY = ('no_block', 'unmask', 'unmask_runtime')
 
@@ -255,7 +255,7 @@ def _disable(name, started, result=True, **kwargs):
         return ret
 
     # Service can be disabled
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         # service.disabled in Windows returns True for services that are set to
         # Manual start, so we need to check specifically for Disabled
         before_toggle_disable_status = __salt__['service.info'](name)['StartType'] in ['Disabled']
@@ -400,11 +400,14 @@ def running(name,
 
     # Convert enable to boolean in case user passed a string value
     if isinstance(enable, six.string_types):
-        enable = salt.utils.is_true(enable)
+        enable = salt.utils.data.is_true(enable)
 
     # Check if the service is available
     try:
         if not _available(name, ret):
+            if __opts__.get('test'):
+                ret['result'] = None
+                ret['comment'] = 'Service {0} not present; if created in this state run, it would have been started'.format(name)
             return ret
     except CommandExecutionError as exc:
         ret['result'] = False
@@ -449,7 +452,7 @@ def running(name,
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
 
-    if salt.utils.is_windows() and kwargs.get('timeout', False):
+    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
         start_kwargs.update({'timeout': kwargs.get('timeout')})
 
     try:
@@ -547,14 +550,18 @@ def dead(name,
 
     # Convert enable to boolean in case user passed a string value
     if isinstance(enable, six.string_types):
-        enable = salt.utils.is_true(enable)
+        enable = salt.utils.data.is_true(enable)
 
     # Check if the service is available
     try:
         if not _available(name, ret):
-            # A non-available service is OK here, don't let the state fail
-            # because of it.
-            ret['result'] = True
+            if __opts__.get('test'):
+                ret['result'] = None
+                ret['comment'] = 'Service {0} not present; if created in this state run, it would have been stopped'.format(name)
+            else:
+                # A non-available service is OK here, don't let the state fail
+                # because of it.
+                ret['result'] = True
             return ret
     except CommandExecutionError as exc:
         ret['result'] = False
@@ -565,7 +572,7 @@ def dead(name,
     # command, so it is just an indicator but can not be fully trusted
     before_toggle_status = __salt__['service.status'](name, sig)
     if 'service.enabled' in __salt__:
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # service.enabled in Windows returns True for services that are set
             # to Auto start, but services set to Manual can also be disabled
             before_toggle_enable_status = __salt__['service.info'](name)['StartType'] in ['Auto', 'Manual']
@@ -594,7 +601,7 @@ def dead(name,
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
 
-    if salt.utils.is_windows() and kwargs.get('timeout', False):
+    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
         stop_kwargs.update({'timeout': kwargs.get('timeout')})
 
     func_ret = __salt__['service.stop'](name, **stop_kwargs)

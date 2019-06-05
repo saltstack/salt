@@ -12,12 +12,12 @@ Install, enable and disable assistive access on macOS minions
         - enabled: True
 '''
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -29,7 +29,8 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin() and _LooseVersion(__grains__['osrelease']) >= _LooseVersion('10.9'):
+    if salt.utils.platform.is_darwin() \
+            and _LooseVersion(__grains__['osrelease']) >= _LooseVersion('10.9'):
         return True
     return False
 

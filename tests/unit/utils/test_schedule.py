@@ -4,10 +4,11 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
+import datetime
+import logging
 import os
-import time
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
@@ -26,17 +27,7 @@ except ImportError:
     _CRON_SUPPORTED = False
 # pylint: enable=import-error
 
-
-ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
-SOCK_DIR = os.path.join(ROOT_DIR, 'test-socks')
-
-DEFAULT_CONFIG = salt.config.minion_config(None)
-DEFAULT_CONFIG['conf_dir'] = ROOT_DIR
-DEFAULT_CONFIG['root_dir'] = ROOT_DIR
-DEFAULT_CONFIG['sock_dir'] = SOCK_DIR
-DEFAULT_CONFIG['pki_dir'] = os.path.join(ROOT_DIR, 'pki')
-DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
-
+log = logging.getLogger(__name__)
 
 # pylint: disable=too-many-public-methods,invalid-name
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -45,9 +36,24 @@ class ScheduleTestCase(TestCase):
     Unit tests for salt.utils.schedule module
     '''
 
+    @classmethod
+    def setUpClass(cls):
+        root_dir = os.path.join(integration.TMP, 'schedule-unit-tests')
+        default_config = salt.config.minion_config(None)
+        default_config['conf_dir'] = default_config['root_dir'] = root_dir
+        default_config['sock_dir'] = os.path.join(root_dir, 'test-socks')
+        default_config['pki_dir'] = os.path.join(root_dir, 'pki')
+        default_config['cachedir'] = os.path.join(root_dir, 'cache')
+        cls.default_config = default_config
+
+    @classmethod
+    def tearDownClass(cls):
+        delattr(cls, 'default_config')
+
     def setUp(self):
         with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
-            self.schedule = Schedule(copy.deepcopy(DEFAULT_CONFIG), {}, returners={})
+            self.schedule = Schedule(copy.deepcopy(self.default_config), {}, returners={})
+        self.addCleanup(delattr, self, 'schedule')
 
     # delete_job tests
 
@@ -294,7 +300,7 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts.update({'pillar': {'schedule': {}}})
         self.schedule.opts.update({'schedule': {'testjob': {'function': 'test.true', 'seconds': 60}}})
-        now = int(time.time())
+        now = datetime.datetime.now()
         self.schedule.eval()
         self.assertTrue(self.schedule.opts['schedule']['testjob']['_next_fire_time'] > now)
 
@@ -305,9 +311,9 @@ class ScheduleTestCase(TestCase):
         self.schedule.opts.update({'pillar': {'schedule': {}}})
         self.schedule.opts.update(
             {'schedule': {'testjob': {'function': 'test.true', 'seconds': 60, 'splay': 5}}})
-        now = int(time.time())
+        now = datetime.datetime.now()
         self.schedule.eval()
-        self.assertTrue(self.schedule.opts['schedule']['testjob']['_splay'] - now > 60)
+        self.assertTrue((self.schedule.opts['schedule']['testjob']['_splay'] - now).total_seconds() > 60)
 
     @skipIf(not _CRON_SUPPORTED, 'croniter module not installed')
     def test_eval_schedule_cron(self):
@@ -316,7 +322,7 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts.update({'pillar': {'schedule': {}}})
         self.schedule.opts.update({'schedule': {'testjob': {'function': 'test.true', 'cron': '* * * * *'}}})
-        now = int(time.time())
+        now = datetime.datetime.now()
         self.schedule.eval()
         self.assertTrue(self.schedule.opts['schedule']['testjob']['_next_fire_time'] > now)
 
@@ -331,3 +337,42 @@ class ScheduleTestCase(TestCase):
         self.schedule.eval()
         self.assertTrue(self.schedule.opts['schedule']['testjob']['_splay'] >
                         self.schedule.opts['schedule']['testjob']['_next_fire_time'])
+
+    def test_handle_func_schedule_minion_blackout(self):
+        '''
+        Tests eval if the schedule from pillar is not a dictionary
+        '''
+        self.schedule.opts.update({'pillar': {'schedule': {}}})
+        self.schedule.opts.update({'grains': {'minion_blackout': True}})
+
+        self.schedule.opts.update(
+            {'schedule': {'testjob': {'function': 'test.true',
+                                      'seconds': 60}}})
+        data = {'function': 'test.true',
+                '_next_scheduled_fire_time': datetime.datetime(2018,
+                                                               11,
+                                                               21,
+                                                               14,
+                                                               9,
+                                                               53,
+                                                               903438),
+                'run': True,
+                'name': 'testjob',
+                'seconds': 60,
+                '_splay': None,
+                '_seconds': 60,
+                'jid_include': True,
+                'maxrunning': 1,
+                '_next_fire_time': datetime.datetime(2018,
+                                                     11,
+                                                     21,
+                                                     14,
+                                                     8,
+                                                     53,
+                                                     903438)}
+
+        with patch.object(salt.utils.schedule, 'log') as log_mock:
+            with patch('salt.utils.process.daemonize'), \
+                patch('sys.platform', 'linux2'):
+                self.schedule.handle_func(False, 'test.ping', data)
+                self.assertTrue(log_mock.exception.called)

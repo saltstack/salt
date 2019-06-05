@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-# Import Pytohn libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.modules.linux_acl as linux_acl
@@ -100,63 +100,70 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_modfacl__u_w_single_arg(self):
         linux_acl.modfacl(*(self.u_acl + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd, self.quoted_file]), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd, self.quoted_file]), python_shell=False, raise_err=False)
 
     def test_modfacl__u_w_multiple_args(self):
         linux_acl.modfacl(*(self.u_acl + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd] + self.quoted_files), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd] + self.quoted_files), python_shell=False, raise_err=False)
 
     def test_modfacl__user_w_single_arg(self):
         linux_acl.modfacl(*(self.user_acl + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd, self.quoted_file]), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd, self.quoted_file]), python_shell=False, raise_err=False)
 
     def test_modfacl__user_w_multiple_args(self):
         linux_acl.modfacl(*(self.user_acl + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd] + self.quoted_files), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd] + self.quoted_files), python_shell=False, raise_err=False)
 
     def test_modfacl__g_w_single_arg(self):
         linux_acl.modfacl(*(self.g_acl + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd, self.quoted_file]), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd, self.quoted_file]), python_shell=False, raise_err=False)
 
     def test_modfacl__g_w_multiple_args(self):
         linux_acl.modfacl(*(self.g_acl + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd] + self.quoted_files), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd] + self.quoted_files), python_shell=False, raise_err=False)
 
     def test_modfacl__group_w_single_arg(self):
         linux_acl.modfacl(*(self.group_acl + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd, self.quoted_file]), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd, self.quoted_file]), python_shell=False, raise_err=False)
 
     def test_modfacl__group_w_multiple_args(self):
         linux_acl.modfacl(*(self.group_acl + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd] + self.quoted_files), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd] + self.quoted_files), python_shell=False, raise_err=False)
 
     def test_modfacl__d_u_w_single_arg(self):
         linux_acl.modfacl(*(self.d_u_acl + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd, self.quoted_file]), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd, self.quoted_file]), python_shell=False, raise_err=False)
 
     def test_modfacl__d_u_w_multiple_args(self):
         linux_acl.modfacl(*(self.d_u_acl + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd] + self.quoted_files), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd] + self.quoted_files), python_shell=False, raise_err=False)
 
     def test_modfacl__d_user_w_single_arg(self):
         linux_acl.modfacl(*(self.d_user_acl + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd, self.quoted_file]), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd, self.quoted_file]), python_shell=False, raise_err=False)
 
     def test_modfacl__d_user_w_multiple_args(self):
         linux_acl.modfacl(*(self.d_user_acl + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd] + self.quoted_files), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd] + self.quoted_files), python_shell=False, raise_err=False)
 
     def test_modfacl__default_user_w_single_arg(self):
         linux_acl.modfacl(*(self.default_user_acl + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd, self.quoted_file]), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd, self.quoted_file]), python_shell=False, raise_err=False)
 
     def test_modfacl__default_user_w_multiple_args(self):
         linux_acl.modfacl(*(self.default_user_acl + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd] + self.quoted_files), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd] + self.quoted_files), python_shell=False, raise_err=False)
 
     def test_modfacl__recursive_w_multiple_args(self):
         linux_acl.modfacl(*(self.user_acl + self.files), recursive=True)
-        self.cmdrun.assert_called_once_with('setfacl -R -m ' + ' '.join([self.user_acl_cmd] + self.quoted_files), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -R -m ' + ' '.join([self.user_acl_cmd] + self.quoted_files), python_shell=False, raise_err=False)
+
+    def test_modfacl_raise_err(self):
+        mock = MagicMock(side_effect=CommandExecutionError('Custom err'))
+        with patch.dict(linux_acl.__salt__, {'cmd.run': mock}):
+            with self.assertRaises(CommandExecutionError) as excinfo:
+                linux_acl.modfacl(*(self.user_acl + self.files), raise_err=True)
+            self.assertEqual(excinfo.exception.strerror, 'Custom err')
 
     def test_delfacl_wo_args(self):
         for acl in [self.u_acl, self.user_acl, self.g_acl, self.group_acl]:

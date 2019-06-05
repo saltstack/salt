@@ -16,7 +16,7 @@ import threading
 from tests.support.case import ModuleCase
 
 # Import salt libs
-from salt.utils import event
+import salt.utils.event as event
 
 # Import 3rd-party libs
 from salt.ext.six.moves.queue import Queue, Empty  # pylint: disable=import-error,no-name-in-module

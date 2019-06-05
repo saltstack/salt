@@ -13,7 +13,7 @@ Sign, encrypt and sign plus encrypt text and files.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import functools
 import logging
 import os
@@ -21,13 +21,13 @@ import re
 import time
 
 # Import salt libs
-import salt.utils
-import salt.syspaths
+import salt.utils.files
+import salt.utils.path
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -85,7 +85,7 @@ def _gpg():
     Returns the path to the gpg binary
     '''
     # Get the path to the gpg binary.
-    return salt.utils.which('gpg')
+    return salt.utils.path.which('gpg')
 
 
 def __virtual__():
@@ -127,7 +127,7 @@ def _get_user_gnupghome(user):
     Return default GnuPG home directory path for a user
     '''
     if user == 'salt':
-        gnupghome = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+        gnupghome = os.path.join(__salt__['config.get']('config_dir'), 'gpgkeys')
     else:
         gnupghome = os.path.join(_get_user_info(user)['home'], '.gnupg')
 
@@ -181,7 +181,7 @@ def _create_gpg(user=None, gnupghome=None):
         gnupghome = _get_user_gnupghome(user)
 
     if GPG_1_3_1:
-        gpg = gnupg.GPG(homedir=gnupghome)
+        gpg = gnupg.GPG(homedir=gnupghome)  # pylint: disable=unexpected-keyword-arg
     else:
         gpg = gnupg.GPG(gnupghome=gnupghome)
 
@@ -540,12 +540,12 @@ def delete_key(keyid=None,
             ret['res'] = False
             ret['message'] = 'Secret key exists, delete first or pass delete_secret=True.'
             return ret
-        elif skey and delete_secret and str(gpg.delete_keys(fingerprint, True)) == 'ok':
+        elif skey and delete_secret and six.text_type(gpg.delete_keys(fingerprint, True)) == 'ok':
             # Delete the secret key
             ret['message'] = 'Secret key for {0} deleted\n'.format(fingerprint)
 
         # Delete the public key
-        if str(gpg.delete_keys(fingerprint)) == 'ok':
+        if six.text_type(gpg.delete_keys(fingerprint)) == 'ok':
             ret['message'] += 'Public key for {0} deleted'.format(fingerprint)
         ret['res'] = True
         return ret
@@ -721,7 +721,7 @@ def import_key(text=None,
 
     if filename:
         try:
-            with salt.utils.flopen(filename, 'rb') as _fp:
+            with salt.utils.files.flopen(filename, 'rb') as _fp:
                 lines = _fp.readlines()
                 text = ''.join(lines)
         except IOError:
@@ -923,8 +923,8 @@ def trust_key(keyid=None,
     _user = user
 
     if user == 'salt':
-        homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
-        cmd.extend([' --homedir', homeDir])
+        homeDir = os.path.join(__salt__['config.get']('config_dir'), 'gpgkeys')
+        cmd.extend(['--homedir', homeDir])
         _user = 'root'
     res = __salt__['cmd.run_all'](cmd,
                                   stdin=stdin,
@@ -1014,13 +1014,13 @@ def sign(user=None,
         else:
             signed_data = gpg.sign(text, keyid=keyid, passphrase=gpg_passphrase)
     elif filename:
-        with salt.utils.flopen(filename, 'rb') as _fp:
+        with salt.utils.files.flopen(filename, 'rb') as _fp:
             if gnupg_version >= '1.3.1':
                 signed_data = gpg.sign(text, default_key=keyid, passphrase=gpg_passphrase)
             else:
                 signed_data = gpg.sign_file(_fp, keyid=keyid, passphrase=gpg_passphrase)
         if output:
-            with salt.utils.flopen(output, 'w') as fout:
+            with salt.utils.files.flopen(output, 'w') as fout:
                 fout.write(signed_data.data)
     else:
         raise SaltInvocationError('filename or text must be passed.')
@@ -1030,7 +1030,8 @@ def sign(user=None,
 def verify(text=None,
            user=None,
            filename=None,
-           gnupghome=None):
+           gnupghome=None,
+           signature=None):
     '''
     Verify a message or file
 
@@ -1048,14 +1049,17 @@ def verify(text=None,
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
+    signature
+        Specify the filename of a detached signature.
+
+        .. versionadded:: 2018.3.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' gpg.verify text='Hello there.  How are you?'
-
         salt '*' gpg.verify filename='/path/to/important.file'
-
         salt '*' gpg.verify filename='/path/to/important.file' use_passphrase=True
 
     '''
@@ -1064,8 +1068,14 @@ def verify(text=None,
     if text:
         verified = gpg.verify(text)
     elif filename:
-        with salt.utils.flopen(filename, 'rb') as _fp:
-            verified = gpg.verify_file(_fp)
+        if signature:
+            # need to call with fopen instead of flopen due to:
+            # https://bitbucket.org/vinay.sajip/python-gnupg/issues/76/verify_file-closes-passed-file-handle
+            with salt.utils.files.fopen(signature, 'rb') as _fp:
+                verified = gpg.verify_file(_fp, filename)
+        else:
+            with salt.utils.files.flopen(filename, 'rb') as _fp:
+                verified = gpg.verify_file(_fp)
     else:
         raise SaltInvocationError('filename or text must be passed.')
 
@@ -1074,7 +1084,7 @@ def verify(text=None,
         ret['res'] = True
         ret['username'] = verified.username
         ret['key_id'] = verified.key_id
-        ret['trust_level'] = VERIFY_TRUST_LEVELS[str(verified.trust_level)]
+        ret['trust_level'] = VERIFY_TRUST_LEVELS[six.text_type(verified.trust_level)]
         ret['message'] = 'The signature is verified.'
     else:
         ret['res'] = False
@@ -1157,12 +1167,12 @@ def encrypt(user=None,
         if GPG_1_3_1:
             # This version does not allow us to encrypt using the
             # file stream # have to read in the contents and encrypt.
-            with salt.utils.flopen(filename, 'rb') as _fp:
+            with salt.utils.files.flopen(filename, 'rb') as _fp:
                 _contents = _fp.read()
             result = gpg.encrypt(_contents, recipients, passphrase=gpg_passphrase, output=output)
         else:
             # This version allows encrypting the file stream
-            with salt.utils.flopen(filename, 'rb') as _fp:
+            with salt.utils.files.flopen(filename, 'rb') as _fp:
                 if output:
                     result = gpg.encrypt_file(_fp, recipients, passphrase=gpg_passphrase, output=output, sign=sign)
                 else:
@@ -1248,7 +1258,7 @@ def decrypt(user=None,
     if text:
         result = gpg.decrypt(text, passphrase=gpg_passphrase)
     elif filename:
-        with salt.utils.flopen(filename, 'rb') as _fp:
+        with salt.utils.files.flopen(filename, 'rb') as _fp:
             if output:
                 result = gpg.decrypt_file(_fp, passphrase=gpg_passphrase, output=output)
             else:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -48,7 +48,7 @@ class PillarModuleTest(ModuleCase):
     def test_issue_5951_actual_file_roots_in_opts(self):
         self.assertIn(
             TMP_STATE_TREE,
-            self.run_function('pillar.data')['test_ext_pillar_opts']['file_roots']['base']
+            self.run_function('pillar.data')['ext_pillar_opts']['file_roots']['base']
         )
 
     def test_pillar_items(self):

@@ -3,7 +3,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import Salt Testing Libs
@@ -96,7 +96,7 @@ class SshKnownHostsTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(ssh_known_hosts.present(name, user), ret)
 
             result = {'status': 'updated', 'error': '',
-                      'new': {'fingerprint': fingerprint, 'key': key},
+                      'new': [{'fingerprint': fingerprint, 'key': key}],
                       'old': ''}
             mock = MagicMock(return_value=result)
             with patch.dict(ssh_known_hosts.__salt__,
@@ -104,8 +104,8 @@ class SshKnownHostsTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ("{0}'s key saved to .ssh/known_hosts (key: {1})"
                         .format(name, key))
                 ret.update({'comment': comt, 'result': True,
-                            'changes': {'new': {'fingerprint': fingerprint,
-                                                'key': key}, 'old': ''}})
+                            'changes': {'new': [{'fingerprint': fingerprint,
+                                                'key': key}], 'old': ''}})
                 self.assertDictEqual(ssh_known_hosts.present(name, user,
                                                              key=key), ret)
 
@@ -136,14 +136,14 @@ class SshKnownHostsTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(return_value=False)
         with patch.dict(ssh_known_hosts.__salt__,
-                        {'ssh.get_known_host': mock}):
+                        {'ssh.get_known_host_entries': mock}):
             comt = ('Host is already absent')
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(ssh_known_hosts.absent(name, user), ret)
 
         mock = MagicMock(return_value=True)
         with patch.dict(ssh_known_hosts.__salt__,
-                        {'ssh.get_known_host': mock}):
+                        {'ssh.get_known_host_entries': mock}):
             with patch.dict(ssh_known_hosts.__opts__, {'test': True}):
                 comt = ('Key for github.com is set to be'
                         ' removed from .ssh/known_hosts')

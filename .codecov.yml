@@ -3,7 +3,7 @@ codecov:
     - drone.saltstack.com
     - jenkinsci.saltstack.com
 
-  branch: 2017.7
+  branch: 2018.3
 
   notify:
     require_ci_to_pass: no

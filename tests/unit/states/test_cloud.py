@@ -3,7 +3,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -47,7 +47,7 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(cloud.__salt__, {'cmd.retcode': mock,
                                          'cloud.has_instance': mock_bool,
                                          'cloud.create': mock_dict}):
-            comt = ('onlyif execution failed')
+            comt = ('onlyif condition is false')
             ret.update({'comment': comt})
             self.assertDictEqual(cloud.present(name, cloud_provider,
                                                onlyif=False), ret)
@@ -55,7 +55,7 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(cloud.present(name, cloud_provider, onlyif=''),
                                  ret)
 
-            comt = ('unless execution succeeded')
+            comt = ('unless condition is true')
             ret.update({'comment': comt})
             self.assertDictEqual(cloud.present(name, cloud_provider,
                                                unless=True), ret)
@@ -98,13 +98,13 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(cloud.__salt__, {'cmd.retcode': mock,
                                          'cloud.has_instance': mock_bool,
                                          'cloud.destroy': mock_dict}):
-            comt = ('onlyif execution failed')
+            comt = ('onlyif condition is false')
             ret.update({'comment': comt})
             self.assertDictEqual(cloud.absent(name, onlyif=False), ret)
 
             self.assertDictEqual(cloud.absent(name, onlyif=''), ret)
 
-            comt = ('unless execution succeeded')
+            comt = ('unless condition is true')
             ret.update({'comment': comt})
             self.assertDictEqual(cloud.absent(name, unless=True), ret)
 
@@ -152,14 +152,14 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(cloud.__salt__, {'cmd.retcode': mock,
                                          'cloud.profile': mock_d,
                                          'cloud.action': mock_dict}):
-            comt = ('onlyif execution failed')
+            comt = ('onlyif condition is false')
             ret.update({'comment': comt})
             self.assertDictEqual(cloud.profile(name, profile, onlyif=False),
                                  ret)
 
             self.assertDictEqual(cloud.profile(name, profile, onlyif=''), ret)
 
-            comt = ('unless execution succeeded')
+            comt = ('unless condition is true')
             ret.update({'comment': comt})
             self.assertDictEqual(cloud.profile(name, profile, unless=True), ret)
 

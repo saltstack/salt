@@ -94,6 +94,26 @@ By user, by minion:
           <minion compound target>:
             - <regex to match function>
 
+By user, by runner/wheel:
+
+.. code-block:: yaml
+
+    external_auth:
+      <eauth backend>:
+        <user or group%>:
+          <@runner or @wheel>:
+            - <regex to match function>
+
+By user, by runner+wheel module:
+
+.. code-block:: yaml
+
+    external_auth:
+      <eauth backend>:
+        <user or group%>:
+          <@module_name>:
+            - <regex to match function without module_name>
+
 Groups
 ------
 
@@ -128,6 +148,14 @@ Positional arguments or keyword arguments to functions can also be whitelisted.
                 kwargs:
                   'kwa': 'kwa.*'
                   'kwb': 'kwb'
+          - '@runner':
+            - 'runner_mod.*':
+                args:
+                - 'a.*'
+                - 'b.*'
+                kwargs:
+                  'kwa': 'kwa.*'
+                  'kwb': 'kwb'
 
 The rules:
 
@@ -152,7 +180,7 @@ any user on the same system as the master with the ``-a`` option:
 
 .. code-block:: bash
 
-    $ salt -a pam web\* test.ping
+    $ salt -a pam web\* test.version
 
 The system will ask the user for the credentials required by the
 authentication system and then publish the command.
@@ -170,7 +198,7 @@ adding a ``-T`` option when authenticating:
 
 .. code-block:: bash
 
-    $ salt -T -a pam web\* test.ping
+    $ salt -T -a pam web\* test.version
 
 Now a token will be created that has an expiration of 12 hours (by default).
 This token is stored in a file named ``salt_token`` in the active user's home

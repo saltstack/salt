@@ -23,6 +23,16 @@ versions of salt has been delayed to a later release.
 
 For now, to use tornado 5.0, the python 2 version of salt must be used.
 
+Tornado 5.0 Support for Python 2 Only
+-------------------------------------
+
+Tornado 5.0 moves to using asyncio for all python3 versions.  Because of this
+and changes in asyncio between python 3.4 and 3.5 to only be able to use one
+ioloop, which requires some rearchitecting, support for tornado 5.0 and python3
+versions of salt has been delayed to a later release.
+
+For now, to use tornado 5.0, the python 2 version of salt must be used.
+
 Option to Return to Previous Pillar Include Behavior
 ====================================================
 

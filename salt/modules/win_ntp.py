@@ -4,13 +4,13 @@ Management of NTP servers on Windows
 
 .. versionadded:: 2014.1.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-# Import python libs
+# Import Python libs
 import logging
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ def __virtual__():
     '''
     This only supports Windows
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return (False, "Module win_system: module only works on Windows systems")
     return __virtualname__
 

@@ -20,14 +20,14 @@ Required python modules: pycassa
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
 import salt.utils.jid
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import pycassa  # pylint: disable=import-error
     HAS_PYCASSA = True
@@ -68,9 +68,9 @@ def returner(ret):
                'id': ret['id']}
     if isinstance(ret['return'], dict):
         for key, value in six.iteritems(ret['return']):
-            columns['return.{0}'.format(key)] = str(value)
+            columns['return.{0}'.format(key)] = six.text_type(value)
     else:
-        columns['return'] = str(ret['return'])
+        columns['return'] = six.text_type(ret['return'])
 
     log.debug(columns)
     ccf.insert(ret['jid'], columns)
@@ -80,4 +80,4 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

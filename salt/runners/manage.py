@@ -5,7 +5,7 @@ and what hosts are down
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import operator
 import re
@@ -16,14 +16,17 @@ import logging
 import uuid
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
 import salt.key
-import salt.utils
 import salt.utils.compat
+import salt.utils.files
 import salt.utils.minions
+import salt.utils.path
+import salt.utils.raetevent
+import salt.utils.versions
 import salt.client
 import salt.client.ssh
 import salt.wheel
@@ -68,7 +71,7 @@ def _ping(tgt, tgt_type, timeout, gather_job_timeout):
 
 
 def _warn_expr_form():
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'the target type should be passed using the \'tgt_type\' '
         'argument instead of \'expr_form\'. Support for using '
@@ -141,7 +144,7 @@ def key_regen():
         print(client_error)
         return False
 
-    for root, _, files in os.walk(__opts__['pki_dir']):
+    for root, _, files in salt.utils.path.os_walk(__opts__['pki_dir']):
         for fn_ in files:
             path = os.path.join(root, fn_)
             try:
@@ -716,7 +719,6 @@ def versions():
 def bootstrap(version='develop',
               script=None,
               hosts='',
-              root_user=False,
               script_args='',
               roster='flat',
               ssh_user=None,
@@ -736,14 +738,6 @@ def bootstrap(version='develop',
     hosts
         Comma-separated hosts [example: hosts='host1.local,host2.local']. These
         hosts need to exist in the specified roster.
-
-    root_user : False
-        Prepend ``root@`` to each host. Default changed in Salt 2016.11.0 from ``True``
-        to ``False``.
-
-        .. versionchanged:: 2016.11.0
-
-        .. deprecated:: Oxygen
 
     script_args
         Any additional arguments that you want to pass to the script.
@@ -802,19 +796,8 @@ def bootstrap(version='develop',
         salt-run manage.bootstrap hosts='host1,host2' version='v0.17'
         salt-run manage.bootstrap hosts='host1,host2' version='v0.17' \
             script='https://bootstrap.saltstack.com/develop'
-        salt-run manage.bootstrap hosts='ec2-user@host1,ec2-user@host2' \
-            root_user=False
 
     '''
-    dep_warning = (
-        'Starting with Salt 2016.11.0, manage.bootstrap now uses Salt SSH to '
-        'connect, and requires a roster entry. Please ensure that a roster '
-        'entry exists for this host. Non-roster hosts will no longer be '
-        'supported starting with Salt Oxygen.'
-    )
-    if root_user is True:
-        salt.utils.warn_until('Oxygen', dep_warning)
-
     if script is None:
         script = 'https://bootstrap.saltstack.com'
 
@@ -855,21 +838,7 @@ def bootstrap(version='develop',
             client_opts['argv'] = ['file.remove', tmp_dir]
             salt.client.ssh.SSH(client_opts).run()
         except SaltSystemExit as exc:
-            if 'No hosts found with target' in str(exc):
-                log.warning('The host {0} was not found in the Salt SSH roster '
-                            'system. Attempting to log in without Salt SSH.')
-                salt.utils.warn_until('Oxygen', dep_warning)
-                ret = subprocess.call([
-                    'ssh',
-                    ('root@' if root_user else '') + host,
-                    'python -c \'import urllib; '
-                    'print urllib.urlopen('
-                    '"' + script + '"'
-                    ').read()\' | sh -s -- git ' + version
-                ])
-                return ret
-            else:
-                log.error(str(exc))
+            log.error(six.text_type(exc))
 
 
 def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
@@ -997,7 +966,7 @@ objShell.Exec("{1}{2}")'''
                  '  >>' + x + '.vbs\ncscript.exe /NoLogo ' + x + '.vbs'
 
     batch_path = tempfile.mkstemp(suffix='.bat')[1]
-    with salt.utils.fopen(batch_path, 'wb') as batch_file:
+    with salt.utils.files.fopen(batch_path, 'wb') as batch_file:
         batch_file.write(batch)
 
     for host in hosts.split(","):

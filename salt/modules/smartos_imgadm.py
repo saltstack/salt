@@ -2,15 +2,15 @@
 '''
 Module for running imgadm command on SmartOS
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
-import json
 
 # Import Salt libs
-import salt.utils
-import salt.utils.decorators as decorators
+import salt.utils.json
+import salt.utils.path
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -23,14 +23,6 @@ __func_alias__ = {
 
 # Define the module's virtual name
 __virtualname__ = 'imgadm'
-
-
-@decorators.memoize
-def _check_imgadm():
-    '''
-    Looks to see if imgadm is present on the system
-    '''
-    return salt.utils.which('imgadm')
 
 
 def _exit_status(retcode):
@@ -69,11 +61,12 @@ def __virtual__():
     '''
     Provides imgadm only on SmartOS
     '''
-    if salt.utils.is_smartos_globalzone() and _check_imgadm():
+    if salt.utils.platform.is_smartos_globalzone() and \
+            salt.utils.path.which('imgadm'):
         return __virtualname__
     return (
         False,
-        '{0} module can only be loaded on SmartOS computed nodes'.format(
+        '{0} module can only be loaded on SmartOS compute nodes'.format(
             __virtualname__
         )
     )
@@ -90,8 +83,7 @@ def version():
         salt '*' imgadm.version
     '''
     ret = {}
-    imgadm = _check_imgadm()
-    cmd = '{0} --version'.format(imgadm)
+    cmd = 'imgadm --version'
     res = __salt__['cmd.run'](cmd).splitlines()
     ret = res[0].split()
     return ret[-1]
@@ -110,10 +102,8 @@ def update_installed(uuid=''):
 
         salt '*' imgadm.update [uuid]
     '''
-    imgadm = _check_imgadm()
-    if imgadm:
-        cmd = '{0} update {1}'.format(imgadm, uuid).rstrip()
-        __salt__['cmd.run'](cmd)
+    cmd = 'imgadm update {0}'.format(uuid).rstrip()
+    __salt__['cmd.run'](cmd)
     return {}
 
 
@@ -134,8 +124,7 @@ def avail(search=None, verbose=False):
         salt '*' imgadm.avail verbose=True
     '''
     ret = {}
-    imgadm = _check_imgadm()
-    cmd = '{0} avail -j'.format(imgadm)
+    cmd = 'imgadm avail -j'
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     result = {}
@@ -143,7 +132,7 @@ def avail(search=None, verbose=False):
         ret['Error'] = _exit_status(retcode)
         return ret
 
-    for image in json.loads(res['stdout']):
+    for image in salt.utils.json.loads(res['stdout']):
         if image['manifest']['disabled'] or not image['manifest']['public']:
             continue
         if search and search not in image['manifest']['name']:
@@ -168,8 +157,7 @@ def list_installed(verbose=False):
         salt '*' imgadm.list [verbose=True]
     '''
     ret = {}
-    imgadm = _check_imgadm()
-    cmd = '{0} list -j'.format(imgadm)
+    cmd = 'imgadm list -j'
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     result = {}
@@ -177,7 +165,7 @@ def list_installed(verbose=False):
         ret['Error'] = _exit_status(retcode)
         return ret
 
-    for image in json.loads(res['stdout']):
+    for image in salt.utils.json.loads(res['stdout']):
         result[image['manifest']['uuid']] = _parse_image_meta(image, verbose)
 
     return result
@@ -197,14 +185,13 @@ def show(uuid):
         salt '*' imgadm.show e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
-    imgadm = _check_imgadm()
-    cmd = '{0} show {1}'.format(imgadm, uuid)
+    cmd = 'imgadm show {0}'.format(uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    ret = json.loads(res['stdout'])
+    ret = salt.utils.json.loads(res['stdout'])
     return ret
 
 
@@ -222,14 +209,13 @@ def get(uuid):
         salt '*' imgadm.get e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
-    imgadm = _check_imgadm()
-    cmd = '{0} get {1}'.format(imgadm, uuid)
+    cmd = 'imgadm get {0}'.format(uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    ret = json.loads(res['stdout'])
+    ret = salt.utils.json.loads(res['stdout'])
     return ret
 
 
@@ -249,8 +235,7 @@ def import_image(uuid, verbose=False):
         salt '*' imgadm.import e42f8c84-bbea-11e2-b920-078fab2aab1f [verbose=True]
     '''
     ret = {}
-    imgadm = _check_imgadm()
-    cmd = '{0} import {1}'.format(imgadm, uuid)
+    cmd = 'imgadm import {0}'.format(uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
     if retcode != 0:
@@ -274,8 +259,7 @@ def delete(uuid):
         salt '*' imgadm.delete e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
-    imgadm = _check_imgadm()
-    cmd = '{0} delete {1}'.format(imgadm, uuid)
+    cmd = 'imgadm delete {0}'.format(uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
     if retcode != 0:
@@ -304,8 +288,7 @@ def vacuum(verbose=False):
         salt '*' imgadm.vacuum [verbose=True]
     '''
     ret = {}
-    imgadm = _check_imgadm()
-    cmd = '{0} vacuum -f'.format(imgadm)
+    cmd = 'imgadm vacuum -f'
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     if retcode != 0:

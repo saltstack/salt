@@ -27,12 +27,12 @@ Oracle DataBase connection module
         oracle.dbs.<db>.uri: connection credentials in format:
             user/password@host[:port]/sid[ as {sysdba|sysoper}]
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import logging
 from salt.utils.decorators import depends
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -101,7 +101,7 @@ def _connect(uri):
     else:
         host = hostport_l[0]
         port = 1521
-    log.debug('connect: {0}'.format((user, password, host, port, sid, mode)))
+    log.debug('connect: %s', (user, password, host, port, sid, mode))
     # force UTF-8 client encoding
     os.environ['NLS_LANG'] = '.AL32UTF8'
     conn = cx_Oracle.connect(user, password,
@@ -122,7 +122,7 @@ def run_query(db, query):
 
         salt '*' oracle.run_query my_db "select * from my_table"
     '''
-    log.debug('run query on {0}: {1}'.format(db, query))
+    log.debug('run query on %s: %s', db, query)
     conn = _connect(show_dbs(db)[db]['uri'])
     return conn.cursor().execute(query).fetchall()
 
@@ -139,14 +139,14 @@ def show_dbs(*dbs):
         salt '*' oracle.show_dbs my_db
     '''
     if dbs:
-        log.debug('get dbs from pillar: {0}'.format(dbs))
+        log.debug('get dbs from pillar: %s', dbs)
         result = {}
         for db in dbs:
             result[db] = __salt__['pillar.get']('oracle:dbs:' + db)
         return result
     else:
         pillar_dbs = __salt__['pillar.get']('oracle:dbs')
-        log.debug('get all ({0}) dbs from pillar'.format(len(pillar_dbs)))
+        log.debug('get all (%s) dbs from pillar', len(pillar_dbs))
         return pillar_dbs
 
 
@@ -168,12 +168,12 @@ def version(*dbs):
         ]
     result = {}
     if dbs:
-        log.debug('get db versions for: {0}'.format(dbs))
+        log.debug('get db versions for: %s', dbs)
         for db in dbs:
             if db in pillar_dbs:
                 result[db] = get_version(db)
     else:
-        log.debug('get all({0}) dbs versions'.format(len(dbs)))
+        log.debug('get all (%s) dbs versions', len(dbs))
         for db in dbs:
             result[db] = get_version(db)
     return result
@@ -190,7 +190,7 @@ def client_version():
 
         salt '*' oracle.client_version
     '''
-    return '.'.join((str(x) for x in cx_Oracle.clientversion()))
+    return '.'.join((six.text_type(x) for x in cx_Oracle.clientversion()))
 
 
 def show_pillar(item=None):

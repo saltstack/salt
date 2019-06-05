@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.path
 import salt.modules.at as at
 
 
@@ -99,21 +99,21 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
         Tests for remove jobs from the queue.
         """
         with patch('salt.modules.at.atq', MagicMock(return_value=self.atq_output)):
-            with patch.object(salt.utils, 'which', return_value=None):
+            with patch.object(salt.utils.path, 'which', return_value=None):
                 self.assertEqual(at.atrm(), "'at.atrm' is not available.")
 
-            with patch.object(salt.utils, 'which', return_value=True):
+            with patch.object(salt.utils.path, 'which', return_value=True):
                 self.assertDictEqual(at.atrm(), {'jobs': {'removed': [],
                                                           'tag': None}})
 
             with patch.object(at, '_cmd', return_value=True):
-                with patch.object(salt.utils, 'which', return_value=True):
+                with patch.object(salt.utils.path, 'which', return_value=True):
                     self.assertDictEqual(at.atrm('all'),
                                          {'jobs': {'removed': ['101'],
                                                    'tag': None}})
 
             with patch.object(at, '_cmd', return_value=True):
-                with patch.object(salt.utils, 'which', return_value=True):
+                with patch.object(salt.utils.path, 'which', return_value=True):
                     self.assertDictEqual(at.atrm(101),
                                          {'jobs': {'removed': ['101'],
                                                    'tag': None}})
@@ -149,11 +149,11 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.at.atq', MagicMock(return_value=self.atq_output)):
             self.assertDictEqual(at.at(), {'jobs': []})
 
-            with patch.object(salt.utils, 'which', return_value=None):
+            with patch.object(salt.utils.path, 'which', return_value=None):
                 self.assertEqual(at.at('12:05am', '/sbin/reboot', tag='reboot'),
                                  "'at.at' is not available.")
 
-            with patch.object(salt.utils, 'which', return_value=True):
+            with patch.object(salt.utils.path, 'which', return_value=True):
                 with patch.dict(at.__grains__, {'os_family': 'RedHat'}):
                     mock = MagicMock(return_value=None)
                     with patch.dict(at.__salt__, {'cmd.run': mock}):

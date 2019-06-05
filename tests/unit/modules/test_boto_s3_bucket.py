@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import random
 import string
 import logging
@@ -23,7 +23,7 @@ import salt.modules.boto_s3_bucket as boto_s3_bucket
 from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,unused-import
@@ -56,6 +56,7 @@ def _has_required_boto():
         return False
     else:
         return True
+
 
 if _has_required_boto():
     region = 'us-east-1'
@@ -205,7 +206,10 @@ class BotoS3BucketTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS
-        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['boto3', 'args', 'systemd', 'path', 'platform'],
+            context={})
         return {boto_s3_bucket: {'__utils__': utils}}
 
     def setUp(self):

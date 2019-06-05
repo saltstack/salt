@@ -4,7 +4,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing libs
@@ -20,7 +20,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.archive as archive
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
-import salt.utils
+import salt.utils.platform
 
 
 def _isfile_side_effect(path):
@@ -65,10 +65,10 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
         archive.extracted tar options
         '''
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             source = 'c:\\tmp\\foo.tar.gz'
             tmp_dir = 'c:\\tmp\\test_extracted_tar'
-        elif salt.utils.is_darwin():
+        elif salt.utils.platform.is_darwin():
             source = '/private/tmp/foo.tar.gz'
             tmp_dir = '/private/tmp/test_extracted_tar'
         else:
@@ -82,11 +82,11 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
             'z -v -weird-long-opt arg',
         ]
         ret_tar_opts = [
-            ['tar', 'x', '--no-anchored', 'foo', '-f'],
+            ['tar', 'xv', '--no-anchored', 'foo', '-f'],
             ['tar', 'xv', '-p', '--opt', '-f'],
-            ['tar', 'x', '-v', '-p', '-f'],
-            ['tar', 'x', '--long-opt', '-z', '-f'],
-            ['tar', 'xz', '-v', '-weird-long-opt', 'arg', '-f'],
+            ['tar', 'xv', '-p', '-f'],
+            ['tar', 'xv', '--long-opt', '-z', '-f'],
+            ['tar', 'xvz', '-weird-long-opt', 'arg', '-f'],
         ]
 
         mock_true = MagicMock(return_value=True)
@@ -117,7 +117,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                               'file.source_list': mock_source_list}),\
                 patch.dict(archive.__states__, {'file.directory': mock_true}),\
                 patch.object(os.path, 'isfile', isfile_mock),\
-                patch('salt.utils.which', MagicMock(return_value=True)):
+                patch('salt.utils.path.which', MagicMock(return_value=True)):
 
             for test_opts, ret_opts in zip(test_tar_opts, ret_tar_opts):
                 archive.extracted(tmp_dir, source, options=test_opts,
@@ -157,13 +157,13 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                            'file.source_list': mock_source_list}),\
                 patch.dict(archive.__states__, {'file.directory': mock_true}),\
                 patch.object(os.path, 'isfile', isfile_mock),\
-                patch('salt.utils.which', MagicMock(return_value=True)):
+                patch('salt.utils.path.which', MagicMock(return_value=True)):
             ret = archive.extracted(os.path.join(os.sep + 'tmp', 'out'),
                                     source,
                                     options='xvzf',
                                     enforce_toplevel=False,
                                     keep=True)
-            self.assertEqual(ret['changes']['extracted_files'], 'stdout')
+            self.assertEqual(ret['changes']['extracted_files'], ['stdout'])
 
     def test_tar_bsdtar(self):
         '''
@@ -196,13 +196,13 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                            'file.source_list': mock_source_list}),\
                 patch.dict(archive.__states__, {'file.directory': mock_true}),\
                 patch.object(os.path, 'isfile', isfile_mock),\
-                patch('salt.utils.which', MagicMock(return_value=True)):
+                patch('salt.utils.path.which', MagicMock(return_value=True)):
             ret = archive.extracted(os.path.join(os.sep + 'tmp', 'out'),
                                     source,
                                     options='xvzf',
                                     enforce_toplevel=False,
                                     keep=True)
-            self.assertEqual(ret['changes']['extracted_files'], 'stderr')
+            self.assertEqual(ret['changes']['extracted_files'], ['stderr'])
 
     def test_extracted_when_if_missing_path_exists(self):
         '''

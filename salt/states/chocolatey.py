@@ -3,13 +3,20 @@
 '''
 Manage Chocolatey package installs
 .. versionadded:: 2016.3.0
+
+.. note::
+    Chocolatey pulls data from the Chocolatey internet database to determine
+    current versions, find available versions, etc. This is normally a slow
+    operation and may be optimized by specifying a local, smaller chocolatey
+    repo.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
 
@@ -94,8 +101,7 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
     # Package not installed
     if name.lower() not in [package.lower() for package in pre_install.keys()]:
         if version:
-            ret['changes'] = {name: 'Version {0} will be installed'
-                                    ''.format(version)}
+            ret['changes'] = {name: 'Version {0} will be installed'.format(version)}
         else:
             ret['changes'] = {name: 'Latest version will be installed'}
 
@@ -113,16 +119,14 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
         installed_version = version_info[full_name]['installed'][0]
 
         if version:
-            if salt.utils.compare_versions(
+            if salt.utils.versions.compare(
                     ver1=installed_version, oper="==", ver2=version):
                 if force:
                     ret['changes'] = {
                         name: 'Version {0} will be reinstalled'.format(version)}
-                    ret['comment'] = 'Reinstall {0} {1}' \
-                                     ''.format(full_name, version)
+                    ret['comment'] = 'Reinstall {0} {1}'.format(full_name, version)
                 else:
-                    ret['comment'] = '{0} {1} is already installed' \
-                                     ''.format(name, version)
+                    ret['comment'] = '{0} {1} is already installed'.format(name, version)
                     if __opts__['test']:
                         ret['result'] = None
                     return ret
@@ -130,27 +134,29 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
                 if allow_multiple:
                     ret['changes'] = {
                         name: 'Version {0} will be installed side by side with '
-                              'Version {1} if supported'
-                              ''.format(version, installed_version)}
-                    ret['comment'] = 'Install {0} {1} side-by-side with {0} {2}' \
-                                     ''.format(full_name, version, installed_version)
+                              'Version {1} if supported'.format(version, installed_version)
+                    }
+                    ret['comment'] = (
+                        'Install {0} {1} side-by-side with {0} {2}'.format(
+                            full_name, version, installed_version
+                        )
+                    )
                 else:
                     ret['changes'] = {
-                        name: 'Version {0} will be installed over Version {1} '
-                              ''.format(version, installed_version)}
-                    ret['comment'] = 'Install {0} {1} over {0} {2}' \
-                                     ''.format(full_name, version, installed_version)
+                        name: 'Version {0} will be installed over Version {1}'.format(version, installed_version)
+                    }
+                    ret['comment'] = 'Install {0} {1} over {0} {2}'.format(
+                        full_name, version, installed_version
+                    )
                     force = True
         else:
             version = installed_version
             if force:
                 ret['changes'] = {
                     name: 'Version {0} will be reinstalled'.format(version)}
-                ret['comment'] = 'Reinstall {0} {1}' \
-                                 ''.format(full_name, version)
+                ret['comment'] = 'Reinstall {0} {1}'.format(full_name, version)
             else:
-                ret['comment'] = '{0} {1} is already installed' \
-                                 ''.format(name, version)
+                ret['comment'] = '{0} {1} is already installed'.format(name, version)
                 if __opts__['test']:
                     ret['result'] = None
                 return ret
@@ -183,7 +189,7 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
     # Get list of installed packages after 'chocolatey.install'
     post_install = __salt__['chocolatey.list'](local_only=True)
 
-    ret['changes'] = salt.utils.compare_dicts(pre_install, post_install)
+    ret['changes'] = salt.utils.data.compare_dicts(pre_install, post_install)
 
     return ret
 
@@ -229,11 +235,13 @@ def uninstalled(name, version=None, uninstall_args=None, override_args=False):
     # Determine if package is installed
     if name.lower() in [package.lower() for package in pre_uninstall.keys()]:
         try:
-            ret['changes'] = {name: '{0} version {1} will be removed'
-                                    ''.format(name, pre_uninstall[name][0])}
+            ret['changes'] = {
+                name: '{0} version {1} will be removed'.format(
+                    name, pre_uninstall[name][0]
+                )
+            }
         except KeyError:
-            ret['changes'] = {name: '{0} will be removed'
-                                    ''.format(name)}
+            ret['changes'] = {name: '{0} will be removed'.format(name)}
     else:
         ret['comment'] = 'The package {0} is not installed'.format(name)
         return ret
@@ -260,6 +268,174 @@ def uninstalled(name, version=None, uninstall_args=None, override_args=False):
     # Get list of installed packages after 'chocolatey.uninstall'
     post_uninstall = __salt__['chocolatey.list'](local_only=True)
 
-    ret['changes'] = salt.utils.compare_dicts(pre_uninstall, post_uninstall)
+    ret['changes'] = salt.utils.data.compare_dicts(pre_uninstall, post_uninstall)
+
+    return ret
+
+
+def upgraded(name,
+             version=None,
+             source=None,
+             force=False,
+             pre_versions=False,
+             install_args=None,
+             override_args=False,
+             force_x86=False,
+             package_args=None):
+    '''
+    Upgrades a package. Will install the package if not installed.
+
+    .. versionadded:: 2018.3.0
+
+    Args:
+
+        name (str):
+            The name of the package to be installed. Required.
+
+        version (str):
+            Install a specific version of the package. Defaults to latest
+            version. If the version is greater than the one installed then the
+            specified version will be installed. Default is ``None``.
+
+        source (str):
+            Chocolatey repository (directory, share or remote URL, feed).
+            Defaults to the official Chocolatey feed. Default is ``None``.
+
+        force (bool):
+            ``True`` will reinstall an existing package with the same version.
+            Default is ``False``.
+
+        pre_versions (bool):
+            ``True`` will nclude pre-release packages. Default is ``False``.
+
+        install_args (str):
+            Install arguments you want to pass to the installation process, i.e
+            product key or feature list. Default is ``None``.
+
+        override_args (bool):
+            ``True`` will override the original install arguments (for the
+            native installer) in the package and use those specified in
+            ``install_args``. ``False`` will append install_args to the end of
+            the default arguments. Default is ``False``.
+
+        force_x86 (bool):
+            ``True`` forces 32bit installation on 64 bit systems. Default is
+            ``False``.
+
+        package_args (str):
+            Arguments you want to pass to the package. Default is ``None``.
+
+    .. code-block:: yaml
+
+        upgrade_some_package:
+          chocolatey.upgraded:
+            - name: packagename
+            - version: '12.04'
+            - source: 'mychocolatey/source'
+    '''
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
+
+    # Get list of currently installed packages
+    pre_install = __salt__['chocolatey.list'](local_only=True)
+
+    # Determine if there are changes
+    # Package not installed
+    if name.lower() not in [package.lower() for package in pre_install.keys()]:
+        if version:
+            ret['changes'][name] = 'Version {0} will be installed'.format(version)
+            ret['comment'] = 'Install version {0}'.format(version)
+        else:
+            ret['changes'][name] = 'Latest version will be installed'
+            ret['comment'] = 'Install latest version'
+
+    # Package installed
+    else:
+        version_info = __salt__['chocolatey.version'](name, check_remote=True)
+
+        # Get the actual full name out of version_info
+        full_name = name
+        for pkg in version_info:
+            if name.lower() == pkg.lower():
+                full_name = pkg
+
+        installed_version = version_info[full_name]['installed'][0]
+
+        # If version is not passed, use available... if available is available
+        if not version:
+            if 'available' in version_info[full_name]:
+                version = version_info[full_name]['available'][0]
+
+        if version:
+            # If installed version and new version are the same
+            if salt.utils.versions.compare(
+                    ver1=installed_version,
+                    oper="==",
+                    ver2=version):
+                if force:
+                    ret['changes'][name] = 'Version {0} will be reinstalled'.format(version)
+                    ret['comment'] = 'Reinstall {0} {1}'.format(full_name, version)
+                else:
+                    ret['comment'] = '{0} {1} is already installed'.format(
+                        name, installed_version
+                    )
+            else:
+                # If installed version is older than new version
+                if salt.utils.versions.compare(
+                        ver1=installed_version, oper="<", ver2=version):
+                    ret['changes'][name] = 'Version {0} will be upgraded to Version {1}'.format(
+                        installed_version, version
+                    )
+                    ret['comment'] = 'Upgrade {0} {1} to {2}'.format(
+                        full_name, installed_version, version
+                    )
+                # If installed version is newer than new version
+                else:
+                    ret['comment'] = (
+                        '{0} {1} (newer) is already installed'.format(
+                            name, installed_version
+                        )
+                    )
+        # Catch all for a condition where version is not passed and there is no
+        # available version
+        else:
+            ret['comment'] = 'No version found to install'
+
+    # Return if there are no changes to be made
+    if not ret['changes']:
+        return ret
+
+    # Return if running in test mode
+    if __opts__['test']:
+        ret['result'] = None
+        return ret
+
+    # Install the package
+    result = __salt__['chocolatey.upgrade'](name=name,
+                                            version=version,
+                                            source=source,
+                                            force=force,
+                                            pre_versions=pre_versions,
+                                            install_args=install_args,
+                                            override_args=override_args,
+                                            force_x86=force_x86,
+                                            package_args=package_args)
+
+    if 'Running chocolatey failed' not in result:
+        ret['comment'] = 'Package {0} upgraded successfully'.format(name)
+        ret['result'] = True
+    else:
+        ret['comment'] = 'Failed to upgrade the package {0}'.format(name)
+        ret['result'] = False
+
+    # Get list of installed packages after 'chocolatey.install'
+    post_install = __salt__['chocolatey.list'](local_only=True)
+
+    # Prior to this, ret['changes'] would have contained expected changes,
+    # replace them with the actual changes now that we have completed the
+    # installation.
+    ret['changes'] = salt.utils.data.compare_dicts(pre_install, post_install)
 
     return ret

@@ -8,16 +8,18 @@ Pkgutil support for Solaris
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.functools
 import salt.utils.pkg
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-import salt.ext.six as six
+from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = 'pkgutil'
@@ -27,7 +29,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Solaris
     '''
-    if __grains__['os'] == 'Solaris':
+    if __grains__['os_family'] == 'Solaris':
         return __virtualname__
     return (False, 'The pkgutil execution module cannot be loaded: '
             'only available on Solaris systems.')
@@ -82,7 +84,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
 
         salt '*' pkgutil.list_upgrades
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
     upgrades = {}
     lines = __salt__['cmd.run_stdout'](
@@ -112,7 +114,7 @@ def upgrade(refresh=True):
 
         salt '*' pkgutil.upgrade
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     old = list_pkgs()
@@ -123,7 +125,7 @@ def upgrade(refresh=True):
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -139,9 +141,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs versions_as_list=True
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    if salt.utils.data.is_true(kwargs.get('removed')):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
@@ -202,7 +204,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkgutil.latest_version CSWpython
         salt '*' pkgutil.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
     if not names:
         return ''
@@ -227,7 +229,7 @@ def latest_version(*names, **kwargs):
         if name in names:
             cver = pkgs.get(name, '')
             nver = version_rev.split(',')[0]
-            if not cver or salt.utils.compare_versions(ver1=cver,
+            if not cver or salt.utils.versions.compare(ver1=cver,
                                                        oper='<',
                                                        ver2=nver):
                 # Remove revision for version comparison
@@ -240,7 +242,7 @@ def latest_version(*names, **kwargs):
 
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
@@ -302,7 +304,7 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -346,7 +348,7 @@ def remove(name=None, pkgs=None, **kwargs):
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def purge(name=None, pkgs=None, **kwargs):

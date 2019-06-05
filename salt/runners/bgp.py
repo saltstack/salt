@@ -97,9 +97,7 @@ Configuration
               - flap_count
             outputter: yaml
 '''
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import third party libs
 try:
@@ -335,7 +333,7 @@ def neighbors(*asns, **kwargs):
         title_parts = []
         if asns:
             title_parts.append('BGP Neighbors for {asns}'.format(
-                asns=', '.join([str(asn) for asn in asns])
+                asns=', '.join([six.text_type(asn) for asn in asns])
             ))
         if neighbor_ip:
             title_parts.append('Selecting neighbors having the remote IP address: {ipaddr}'.format(ipaddr=neighbor_ip))

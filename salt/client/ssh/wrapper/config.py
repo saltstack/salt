@@ -4,16 +4,17 @@ Return config information
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import re
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.files
 import salt.syspaths as syspaths
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Set up the default values for all systems
 DEFAULTS = {'mongo.db': 'salt',
@@ -34,7 +35,7 @@ DEFAULTS = {'mongo.db': 'salt',
             'solr.request_timeout': None,
             'solr.init_script': '/etc/rc.d/solr',
             'solr.dih.import_options': {'clean': False, 'optimize': True,
-                                        'commit': True, 'verbose': False},
+                                         'commit': True, 'verbose': False},
             'solr.backup_path': None,
             'solr.num_backups': 1,
             'poudriere.config': '/usr/local/etc/poudriere.conf',
@@ -81,7 +82,7 @@ def manage_mode(mode):
     # config.manage_mode should no longer be invoked from the __salt__ dunder
     # in Salt code, this function is only being left here for backwards
     # compatibility.
-    return salt.utils.normalize_mode(mode)
+    return salt.utils.files.normalize_mode(mode)
 
 
 def valid_fileproto(uri):
@@ -151,14 +152,14 @@ def merge(value,
     if not omit_opts:
         if value in __opts__:
             ret = __opts__[value]
-            if isinstance(ret, str):
+            if isinstance(ret, six.string_types):
                 return ret
     if not omit_master:
         if value in __pillar__.get('master', {}):
             tmp = __pillar__['master'][value]
             if ret is None:
                 ret = tmp
-                if isinstance(ret, str):
+                if isinstance(ret, six.string_types):
                     return ret
             elif isinstance(ret, dict) and isinstance(tmp, dict):
                 tmp.update(ret)
@@ -171,7 +172,7 @@ def merge(value,
             tmp = __pillar__[value]
             if ret is None:
                 ret = tmp
-                if isinstance(ret, str):
+                if isinstance(ret, six.string_types):
                     return ret
             elif isinstance(ret, dict) and isinstance(tmp, dict):
                 tmp.update(ret)
@@ -215,16 +216,16 @@ def get(key, default=''):
 
         salt '*' config.get pkg:apache
     '''
-    ret = salt.utils.traverse_dict_and_list(__opts__, key, '_|-')
+    ret = salt.utils.data.traverse_dict_and_list(__opts__, key, '_|-')
     if ret != '_|-':
         return ret
-    ret = salt.utils.traverse_dict_and_list(__grains__, key, '_|-')
+    ret = salt.utils.data.traverse_dict_and_list(__grains__, key, '_|-')
     if ret != '_|-':
         return ret
-    ret = salt.utils.traverse_dict_and_list(__pillar__, key, '_|-')
+    ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, '_|-')
     if ret != '_|-':
         return ret
-    ret = salt.utils.traverse_dict_and_list(__pillar__.get('master', {}), key, '_|-')
+    ret = salt.utils.data.traverse_dict_and_list(__pillar__.get('master', {}), key, '_|-')
     if ret != '_|-':
         return ret
     return default

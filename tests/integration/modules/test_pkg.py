@@ -1,37 +1,40 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
+import pprint
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.helpers import (
     destructiveTest,
+    flaky,
     requires_network,
     requires_salt_modules,
 )
 from tests.support.unit import skipIf
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.pkg
+import salt.utils.platform
 
 
+@flaky
 class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the pkg module
     '''
     def setUp(self):
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.run_function('pkg.refresh_db')
 
         os_release = self.run_function('grains.get', ['osrelease'])
 
-        if salt.utils.is_darwin() and int(os_release.split('.')[1]) >= 13:
+        if salt.utils.platform.is_darwin() and int(os_release.split('.')[1]) >= 13:
             self.pkg = 'wget'
-        elif salt.utils.is_windows():
+        elif salt.utils.platform.is_windows():
             self.pkg = 'putty'
         else:
             self.pkg = 'htop'
@@ -77,16 +80,28 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test modifying and deleting a software repository
         '''
         os_grain = self.run_function('grains.item', ['os'])['os']
+        repo = None
 
         try:
-            repo = None
             if os_grain == 'Ubuntu':
                 repo = 'ppa:otto-kesselgulasch/gimp-edge'
                 uri = 'http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu'
                 ret = self.run_function('pkg.mod_repo', [repo, 'comps=main'])
                 self.assertNotEqual(ret, {})
                 ret = self.run_function('pkg.get_repo', [repo])
-                self.assertEqual(ret['uri'], uri)
+
+                if not isinstance(ret, dict):
+                    self.fail(
+                        'The \'pkg.get_repo\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+                    )
+
+                self.assertEqual(
+                    ret['uri'],
+                    uri,
+                    msg='The URI did not match. Full return:\n{}'.format(
+                        pprint.pformat(ret)
+                    )
+                )
             elif os_grain == 'CentOS':
                 major_release = int(
                     self.run_function(
@@ -162,6 +177,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             test_install()
             test_remove()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on windows")
     @requires_salt_modules('pkg.hold', 'pkg.unhold')
     @requires_network()
     @destructiveTest
@@ -170,15 +186,15 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test holding and unholding a package
         '''
         os_family = self.run_function('grains.item', ['os_family'])['os_family']
-        os_major_release = self.run_function('grains.item', ['osmajorrelease'])['osmajorrelease']
         available = self.run_function('sys.doc', ['pkg.hold'])
+        version_lock = None
+        lock_pkg = 'yum-plugin-versionlock'
 
         if available:
             self.run_function('pkg.install', [self.pkg])
             if os_family == 'RedHat':
-                lock_pkg = 'yum-versionlock' if os_major_release == '5' else 'yum-plugin-versionlock'
-                versionlock = self.run_function('pkg.version', [lock_pkg])
-                if not versionlock:
+                version_lock = self.run_function('pkg.version', [lock_pkg])
+                if not version_lock:
                     self.run_function('pkg.install', [lock_pkg])
 
             hold_ret = self.run_function('pkg.hold', [self.pkg])
@@ -190,7 +206,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertTrue(unhold_ret[self.pkg]['result'])
 
             if os_family == 'RedHat':
-                if not versionlock:
+                if not version_lock:
                     self.run_function('pkg.remove', [lock_pkg])
             self.run_function('pkg.remove', [self.pkg])
 
@@ -260,7 +276,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_network()
     @destructiveTest
-    @skipIf(salt.utils.is_windows(), 'pkg.upgrade not available on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'pkg.upgrade not available on Windows')
     def test_pkg_upgrade_has_pending_upgrades(self):
         '''
         Test running a system upgrade when there are packages that need upgrading
@@ -278,9 +294,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             # Therefore, we'll choose from several packages to make sure we get
             # one that is suitable for this test.
             packages = ('hwinfo', 'avrdude', 'diffoscope', 'vim')
-
             available = self.run_function('pkg.list_repo_pkgs', packages)
-            versions = self.run_function('pkg.version', packages)
 
             for package in packages:
                 try:
@@ -291,7 +305,6 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                     continue
                 else:
                     target = package
-                    current = versions[target]
                     break
             else:
                 # None of the packages have more than one version available, so
@@ -328,26 +341,19 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 if os_family == 'Debian':
                     args = ['dist_upgrade=True']
                 ret = self.run_function(func, args)
-
-                if 'Problem encountered' in ret:
-                    self.skipTest('A problem was encountered when running pkg.upgrade. This test is '
-                                  'meant to catch no-ops or problems with the salt function itself, '
-                                  'not problems with actual package installation. Skipping.')
-
-                # The changes dictionary should not be empty.
                 self.assertNotEqual(ret, {})
-                if 'changes' in ret:
-                    self.assertNotEqual(ret['changes'], {})
 
     @destructiveTest
-    @skipIf(salt.utils.is_darwin(), 'minion is mac')
+    @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
+    @skipIf(salt.utils.platform.is_darwin(), 'minion is mac')
     def test_pkg_latest_version(self):
         '''
-        check that pkg.latest_version returns the latest version of the uninstalled package (it does not install the package, just checking the version)
+        Check that pkg.latest_version returns the latest version of the uninstalled package.
+        The package is not installed. Only the package version is checked.
         '''
         grains = self.run_function('grains.items')
         remove = False
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             cmd_info = self.run_function('pkg.version', [self.pkg])
             remove = False if cmd_info == '' else True
         else:
@@ -357,11 +363,12 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         # remove package if its installed
         if remove:
-            cmd_remove = self.run_function('pkg.remove', [self.pkg])
+            self.run_function('pkg.remove', [self.pkg])
 
+        cmd_pkg = []
         if grains['os_family'] == 'RedHat':
             cmd_pkg = self.run_function('cmd.run', ['yum list {0}'.format(self.pkg)])
-        elif salt.utils.is_windows():
+        elif salt.utils.platform.is_windows():
             cmd_pkg = self.run_function('pkg.list_available', [self.pkg])
         elif grains['os_family'] == 'Debian':
             cmd_pkg = self.run_function('cmd.run', ['apt list {0}'.format(self.pkg)])

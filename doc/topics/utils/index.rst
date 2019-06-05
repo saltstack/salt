@@ -81,6 +81,10 @@ the ``foo`` utility module with a ``__virtual__`` function.
     def bar():
         return 'baz'
 
+.. versionadded:: 2018.3.0
+    Instantiating objects from classes declared in util modules works with
+    Master side modules, such as Runners, Outputters, etc.
+
 Also you could even write your utility modules in object oriented fashion:
 
 .. code-block:: python

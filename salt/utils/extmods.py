@@ -2,7 +2,7 @@
 '''
 Functions used to sync external modules
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -12,6 +12,8 @@ import shutil
 # Import salt libs
 import salt.fileclient
 import salt.utils.files
+import salt.utils.hashutils
+import salt.utils.path
 import salt.utils.url
 
 # Import 3rd-party libs
@@ -22,7 +24,7 @@ log = logging.getLogger(__name__)
 
 def _list_emptydirs(rootdir):
     emptydirs = []
-    for root, dirs, files in os.walk(rootdir):
+    for root, dirs, files in salt.utils.path.os_walk(rootdir):
         if not files and not dirs:
             emptydirs.append(root)
     return emptydirs
@@ -30,14 +32,18 @@ def _list_emptydirs(rootdir):
 
 def _listdir_recursively(rootdir):
     file_list = []
-    for root, dirs, files in os.walk(rootdir):
+    for root, dirs, files in salt.utils.path.os_walk(rootdir):
         for filename in files:
             relpath = os.path.relpath(root, rootdir).strip('.')
             file_list.append(os.path.join(relpath, filename))
     return file_list
 
 
-def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
+def sync(opts,
+         form,
+         saltenv=None,
+         extmod_whitelist=None,
+         extmod_blacklist=None):
     '''
     Sync custom modules into the extension_modules directory
     '''
@@ -49,14 +55,16 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
     elif isinstance(extmod_whitelist, six.string_types):
         extmod_whitelist = {form: extmod_whitelist.split(',')}
     elif not isinstance(extmod_whitelist, dict):
-        log.error('extmod_whitelist must be a string or dictionary: {0}'.format(extmod_whitelist))
+        log.error('extmod_whitelist must be a string or dictionary: %s',
+                  extmod_whitelist)
 
     if extmod_blacklist is None:
         extmod_blacklist = opts['extmod_blacklist']
     elif isinstance(extmod_blacklist, six.string_types):
         extmod_blacklist = {form: extmod_blacklist.split(',')}
     elif not isinstance(extmod_blacklist, dict):
-        log.error('extmod_blacklist must be a string or dictionary: {0}'.format(extmod_blacklist))
+        log.error('extmod_blacklist must be a string or dictionary: %s',
+                  extmod_blacklist)
 
     if isinstance(saltenv, six.string_types):
         saltenv = saltenv.split(',')
@@ -68,18 +76,18 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
     with salt.utils.files.set_umask(0o077):
         try:
             if not os.path.isdir(mod_dir):
-                log.info('Creating module dir \'{0}\''.format(mod_dir))
+                log.info('Creating module dir \'%s\'', mod_dir)
                 try:
                     os.makedirs(mod_dir)
                 except (IOError, OSError):
                     log.error(
-                        'Cannot create cache module directory {0}. Check '
-                        'permissions.'.format(mod_dir)
+                        'Cannot create cache module directory %s. Check '
+                        'permissions.', mod_dir
                     )
             fileclient = salt.fileclient.get_file_client(opts)
             for sub_env in saltenv:
                 log.info(
-                    'Syncing {0} for environment \'{1}\''.format(form, sub_env)
+                    'Syncing %s for environment \'%s\'', form, sub_env
                 )
                 cache = []
                 log.info(
@@ -98,7 +106,7 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
                         sub_env,
                         '_{0}'.format(form)
                         )
-                log.debug('Local cache dir: \'{0}\''.format(local_cache_dir))
+                log.debug('Local cache dir: \'%s\'', local_cache_dir)
                 for fn_ in cache:
                     relpath = os.path.relpath(fn_, local_cache_dir)
                     relname = os.path.splitext(relpath)[0].replace(os.sep, '.')
@@ -108,12 +116,12 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
                         continue
                     remote.add(relpath)
                     dest = os.path.join(mod_dir, relpath)
-                    log.info('Copying \'{0}\' to \'{1}\''.format(fn_, dest))
+                    log.info('Copying \'%s\' to \'%s\'', fn_, dest)
                     if os.path.isfile(dest):
                         # The file is present, if the sum differs replace it
                         hash_type = opts.get('hash_type', 'md5')
-                        src_digest = salt.utils.get_hash(fn_, hash_type)
-                        dst_digest = salt.utils.get_hash(dest, hash_type)
+                        src_digest = salt.utils.hashutils.get_hash(fn_, hash_type)
+                        dst_digest = salt.utils.hashutils.get_hash(dest, hash_type)
                         if src_digest != dst_digest:
                             # The downloaded file differs, replace!
                             shutil.copyfile(fn_, dest)
@@ -142,5 +150,5 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
                         touched = True
                         shutil.rmtree(emptydir, ignore_errors=True)
         except Exception as exc:
-            log.error('Failed to sync {0} module: {1}'.format(form, exc))
+            log.error('Failed to sync %s module: %s', form, exc)
     return ret, touched

@@ -11,6 +11,10 @@ A state module to manage Gentoo's ``make.conf`` file
       makeconf.present:
         - value: '-j3'
 '''
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -27,7 +31,7 @@ def _make_set(var):
     if var is None:
         return set()
     if not isinstance(var, list):
-        if isinstance(var, str):
+        if isinstance(var, six.string_types):
             var = var.split()
         else:
             var = list(var)

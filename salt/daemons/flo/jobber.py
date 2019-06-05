@@ -6,7 +6,7 @@ Jobber Behaviors
 # pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import types
@@ -14,20 +14,23 @@ import logging
 import traceback
 import multiprocessing
 import subprocess
-import json
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.daemons.masterapi
 import salt.utils.args
-import salt.utils
+import salt.utils.data
+import salt.utils.files
+import salt.utils.json
+import salt.utils.kinds as kinds
+import salt.utils.process
+import salt.utils.stringutils
 import salt.transport
 from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
-from salt.executors import FUNCTION_EXECUTORS
-from salt.utils import kinds, is_windows
+from salt.utils.platform import is_windows
 from salt.utils.event import tagify
 
 from salt.exceptions import (
@@ -42,13 +45,13 @@ log = logging.getLogger(__name__)
 
 
 @ioflo.base.deeding.deedify(
-        'SaltRaetShellJobberCheck',
-        ioinits={'opts': '.salt.opts',
-                 'grains': '.salt.grains',
-                 'fun': '.salt.var.fun',
-                 'matcher': '.salt.matcher',
-                 'shells': '.salt.var.shells',
-                 'stack': '.salt.road.manor.stack'})
+        salt.utils.stringutils.to_str('SaltRaetShellJobberCheck'),
+        ioinits={'opts': salt.utils.stringutils.to_str('.salt.opts'),
+                 'grains': salt.utils.stringutils.to_str('.salt.grains'),
+                 'fun': salt.utils.stringutils.to_str('.salt.var.fun'),
+                 'matcher': salt.utils.stringutils.to_str('.salt.matcher'),
+                 'shells': salt.utils.stringutils.to_str('.salt.var.shells'),
+                 'stack': salt.utils.stringutils.to_str('.salt.road.manor.stack')})
 def jobber_check(self):
     '''
     Iterate over the shell jobbers and return the ones that have finished
@@ -59,7 +62,10 @@ def jobber_check(self):
             rms.append(jid)
             data = self.shells.value[jid]
             stdout, stderr = data['proc'].communicate()
-            ret = json.loads(salt.utils.to_str(stdout), object_hook=salt.utils.decode_dict)['local']
+            ret = salt.utils.json.loads(
+                stdout,
+                object_hook=salt.utils.data.encode_dict if six.PY2 else None
+            )['local']
             route = {'src': (self.stack.value.local.name, 'manor', 'jid_ret'),
                      'dst': (data['msg']['route']['src'][0], None, 'remote_cmd')}
             ret['cmd'] = '_return'
@@ -75,13 +81,14 @@ def jobber_check(self):
 
 
 @ioflo.base.deeding.deedify(
-        'SaltRaetShellJobber',
-        ioinits={'opts': '.salt.opts',
-                 'grains': '.salt.grains',
-                 'fun': '.salt.var.fun',
-                 'matcher': '.salt.matcher',
-                 'modules': '.salt.loader.modules',
-                 'shells': {'ipath': '.salt.var.shells', 'ival': {}}})
+        salt.utils.stringutils.to_str('SaltRaetShellJobber'),
+        ioinits={'opts': salt.utils.stringutils.to_str('.salt.opts'),
+                 'grains': salt.utils.stringutils.to_str('.salt.grains'),
+                 'fun': salt.utils.stringutils.to_str('.salt.var.fun'),
+                 'matcher': salt.utils.stringutils.to_str('.salt.matcher'),
+                 'modules': salt.utils.stringutils.to_str('.salt.loader.modules'),
+                 'shells': {'ipath': salt.utils.stringutils.to_str('.salt.var.shells'),
+                            'ival': {}}})
 def shell_jobber(self):
     '''
     Shell jobber start!
@@ -138,15 +145,15 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
     do salt raet nix jobber
 
     '''
-    Ioinits = {'opts_store': '.salt.opts',
-               'grains': '.salt.grains',
-               'modules': '.salt.loader.modules',
-               'returners': '.salt.loader.returners',
-               'module_executors': '.salt.loader.executors',
-               'fun': '.salt.var.fun',
-               'matcher': '.salt.matcher',
-               'executors': '.salt.track.executors',
-               'road_stack': '.salt.road.manor.stack', }
+    Ioinits = {'opts_store': salt.utils.stringutils.to_str('.salt.opts'),
+               'grains': salt.utils.stringutils.to_str('.salt.grains'),
+               'modules': salt.utils.stringutils.to_str('.salt.loader.modules'),
+               'returners': salt.utils.stringutils.to_str('.salt.loader.returners'),
+               'module_executors': salt.utils.stringutils.to_str('.salt.loader.executors'),
+               'fun': salt.utils.stringutils.to_str('.salt.var.fun'),
+               'matcher': salt.utils.stringutils.to_str('.salt.matcher'),
+               'executors': salt.utils.stringutils.to_str('.salt.track.executors'),
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'), }
 
     def _prepare(self):
         '''
@@ -212,7 +219,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         except (KeyError, AttributeError, TypeError):
             pass
         else:
-            if isinstance(oput, str):
+            if isinstance(oput, six.string_types):
                 ret['out'] = oput
         msg = {'route': route, 'load': ret}
         stack.transmit(msg, stack.fetchUidByName('manor'))
@@ -235,13 +242,15 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                 continue
             if 'user' in data:
                 log.info(
-                        'User {0[user]} Executing command {0[fun]} with jid '
-                        '{0[jid]}'.format(data))
+                    'User %s Executing command %s with jid %s',
+                    data['user'], data['fun'], data['jid']
+                )
             else:
                 log.info(
-                        'Executing command {0[fun]} with jid {0[jid]}'.format(data)
-                        )
-            log.debug('Command details {0}'.format(data))
+                    'Executing command %s with jid %s',
+                    data['fun'], data['jid']
+                )
+            log.debug('Command details %s', data)
 
             if is_windows():
                 # SaltRaetNixJobber is not picklable. Pickling is necessary
@@ -252,9 +261,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                 try:
                     self.proc_run(msg)
                 except Exception as exc:
-                    log.error(
-                            'Exception caught by jobber: {0}'.format(exc),
-                            exc_info=True)
+                    log.error('Exception caught by jobber: %s', exc, exc_info=True)
             else:
                 process = multiprocessing.Process(
                         target=self.proc_run,
@@ -270,7 +277,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         data = msg['pub']
         fn_ = os.path.join(self.proc_dir, data['jid'])
         self.opts['__ex_id'] = data['jid']
-        salt.utils.daemonize_if(self.opts)
+        salt.utils.process.daemonize_if(self.opts)
 
         salt.transport.jobber_stack = stack = self._setup_jobber_stack()
         # set up return destination from source
@@ -280,7 +287,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)
-        with salt.utils.fopen(fn_, 'w+b') as fp_:
+        with salt.utils.files.fopen(fn_, 'w+b') as fp_:
             fp_.write(self.serial.dumps(sdata))
         ret = {'success': False}
         function_name = data['fun']
@@ -295,31 +302,25 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                     data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
 
-                executors = data.get('module_executors') or self.opts.get('module_executors', ['direct_call.get'])
+                executors = data.get('module_executors') or self.opts.get('module_executors', ['direct_call'])
                 if isinstance(executors, six.string_types):
                     executors = [executors]
                 elif not isinstance(executors, list) or not executors:
-                    raise SaltInvocationError("Wrong executors specification: {0}. String or non-empty list expected".
-                                              format(executors))
-                if self.opts.get('sudo_user', '') and executors[-1] != 'sudo.get':
-                    if executors[-1] in FUNCTION_EXECUTORS:
-                        executors[-1] = 'sudo.get'  # replace
-                    else:
-                        executors.append('sudo.get')  # append
-                log.trace("Executors list {0}".format(executors))
+                    raise SaltInvocationError(
+                        'Wrong executors specification: {0}. String or '
+                        'non-empty list expected'.format(executors)
+                    )
+                if self.opts.get('sudo_user', '') and executors[-1] != 'sudo':
+                    executors[-1] = 'sudo'  # replace
+                log.trace("Executors list %s", executors)
 
-                # Get executors
-                def get_executor(name):
-                    executor_class = self.module_executors.value.get(name)
-                    if executor_class is None:
+                for name in executors:
+                    fname = '{0}.execute'.format(name)
+                    if fname not in self.module_executors.value:
                         raise SaltInvocationError("Executor '{0}' is not available".format(name))
-                    return executor_class
-                # Get the last one that is function executor
-                executor = get_executor(executors.pop())(self.opts, data, func, args, kwargs)
-                # Instantiate others from bottom to the top
-                for executor_name in reversed(executors):
-                    executor = get_executor(executor_name)(self.opts, data, executor)
-                return_data = executor.execute()
+                    return_data = self.module_executors.value[fname](self.opts, data, func, args, kwargs)
+                    if return_data is not None:
+                        break
 
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0
@@ -332,7 +333,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                                 iret = []
                             iret.append(single)
                         tag = tagify(
-                                [data['jid'], 'prog', self.opts['id'], str(ind)],
+                                [data['jid'], 'prog', self.opts['id'], six.text_type(ind)],
                                 'job')
                         event_data = {'return': single}
                         self._fire_master(event_data, tag)  # Need to look into this
@@ -353,19 +354,15 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                 ret['return'] = '{0}: {1}'.format(msg, exc)
             except CommandExecutionError as exc:
                 log.error(
-                    'A command in \'{0}\' had a problem: {1}'.format(
-                        function_name,
-                        exc
-                    ),
+                    'A command in \'%s\' had a problem: %s',
+                    function_name, exc,
                     exc_info_on_loglevel=logging.DEBUG
                 )
                 ret['return'] = 'ERROR: {0}'.format(exc)
             except SaltInvocationError as exc:
                 log.error(
-                    'Problem executing \'{0}\': {1}'.format(
-                        function_name,
-                        exc
-                    ),
+                    'Problem executing \'%s\': %s',
+                    function_name, exc,
                     exc_info_on_loglevel=logging.DEBUG
                 )
                 ret['return'] = 'ERROR executing \'{0}\': {1}'.format(
@@ -395,12 +392,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                         returner
                     )](ret)
                 except Exception as exc:
-                    log.error(
-                        'The return failed for job {0} {1}'.format(
-                        data['jid'],
-                        exc
-                        )
-                    )
+                    log.error('The return failed for job %s %s', data['jid'], exc)
         console.concise("Closing Jobber Stack {0}\n".format(stack.name))
         stack.server.close()
         salt.transport.jobber_stack = None

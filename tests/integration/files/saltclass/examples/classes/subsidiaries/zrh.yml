@@ -1,0 +1,24 @@
+classes:
+  - roles.app
+  # This should validate that we process a class only once
+  - app.borgbackup
+  # As this one should not be processed
+  # and would override in turn overrides from app.borgbackup
+  - app.ssh.server
+
+pillars:
+  default:
+    network:
+      sub: Zurich
+      dns:
+        srv1: 10.30.0.1
+        srv2: 10.30.0.2
+        domain: zrh.example.com
+      ntp:
+        srv1: 10.0.0.127
+    users:
+      adm1:
+        uid: 250
+        gid: 250
+        gecos: 'Super user admin1'
+        homedir: /srv/app/1

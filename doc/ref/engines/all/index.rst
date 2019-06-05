@@ -16,7 +16,7 @@ engine modules
     ircbot
     junos_syslog
     logentries
-    logstash
+    logstash_engine
     napalm_syslog
     reactor
     redis_sentinel

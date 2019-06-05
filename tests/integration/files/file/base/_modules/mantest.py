@@ -6,23 +6,31 @@ Helpers for testing man pages
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
+import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Tesing libs
 from tests.support.paths import CODE_DIR
 
+log = logging.getLogger(__name__)
+
 
 def install(rootdir):
     if not os.path.exists(rootdir):
         os.makedirs(rootdir)
-        return __salt__['cmd.retcode'](
-            [sys.executable,
-             os.path.join(CODE_DIR, 'setup.py'),
-             'install', '--root={0}'.format(rootdir)]) == 0
-    return True
+    return __salt__['cmd.run_all'](
+        [
+            sys.executable,
+            os.path.join(CODE_DIR, 'setup.py'),
+            'install', '--root={0}'.format(rootdir)
+        ],
+        redirect_stderr=True
+    )
 
 
 def search(manpages, rootdir):
@@ -35,7 +43,7 @@ def search(manpages, rootdir):
         # Using list because we will be modifying the set during iteration
         for manpage_fn in list(manpage_fns):
             if manpage_fn in files:
-                manpage_path = salt.utils.path_join(root, manpage_fn)
+                manpage_path = salt.utils.path.join(root, manpage_fn)
                 manpage_paths[manpage_fn] = manpage_path
                 manpage_fns.remove(manpage_fn)
 
@@ -49,8 +57,8 @@ def search(manpages, rootdir):
 
     failed = {}
     for manpage in sorted(manpages):
-        with salt.utils.fopen(manpage_paths[manpage]) as fp_:
-            contents = salt.utils.to_unicode(fp_.read())
+        with salt.utils.files.fopen(manpage_paths[manpage]) as fp_:
+            contents = salt.utils.stringutils.to_unicode(fp_.read())
         # Check for search string in contents
         for search_string in manpages[manpage]:
             if search_string not in contents:

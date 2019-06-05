@@ -4,7 +4,7 @@ Test the verification routines
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import getpass
 import os
 import sys
@@ -34,7 +34,7 @@ from tests.support.mock import (
 )
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 from salt.utils.verify import (
     check_user,
     verify_env,
@@ -47,6 +47,7 @@ from salt.utils.verify import (
 )
 
 # Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
@@ -111,6 +112,7 @@ class TestVerify(TestCase):
     def test_verify_env(self):
         root_dir = tempfile.mkdtemp(dir=TMP)
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
+        key_dir = os.path.join(root_dir, 'key_dir')
         verify_env([var_dir], getpass.getuser(), root_dir=root_dir)
         self.assertTrue(os.path.exists(var_dir))
         dir_stat = os.stat(var_dir)
@@ -188,9 +190,9 @@ class TestVerify(TestCase):
                                       (127, 'WARNING'), (196, 'CRITICAL')):
 
                     for n in range(prev, newmax):
-                        kpath = os.path.join(keys_dir, str(n))
-                        with salt.utils.fopen(kpath, 'w') as fp_:
-                            fp_.write(str(n))
+                        kpath = os.path.join(keys_dir, six.text_type(n))
+                        with salt.utils.files.fopen(kpath, 'w') as fp_:
+                            fp_.write(str(n))  # future lint: disable=blacklisted-function
 
                     opts = {
                         'max_open_files': newmax,
@@ -223,9 +225,9 @@ class TestVerify(TestCase):
 
                 newmax = mof_test
                 for n in range(prev, newmax):
-                    kpath = os.path.join(keys_dir, str(n))
-                    with salt.utils.fopen(kpath, 'w') as fp_:
-                        fp_.write(str(n))
+                    kpath = os.path.join(keys_dir, six.text_type(n))
+                    with salt.utils.files.fopen(kpath, 'w') as fp_:
+                        fp_.write(str(n))  # future lint: disable=blacklisted-function
 
                 opts = {
                     'max_open_files': newmax,
@@ -250,11 +252,11 @@ class TestVerify(TestCase):
                     self.skipTest('We\'ve hit the max open files setting')
                 raise
             finally:
-                shutil.rmtree(tempdir)
                 if sys.platform.startswith('win'):
                     win32file._setmaxstdio(mof_h)
                 else:
                     resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
+                shutil.rmtree(tempdir)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_verify_log(self):

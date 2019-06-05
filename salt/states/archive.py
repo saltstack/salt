@@ -6,7 +6,7 @@ Extract an archive
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
 import os
@@ -18,13 +18,16 @@ import tarfile
 from contextlib import closing
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import shlex_quote as _cmd_quote
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.args
 import salt.utils.files
+import salt.utils.hashutils
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.url
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
@@ -58,7 +61,7 @@ def _add_explanation(ret, source_hash_trigger, contents_missing):
 
 
 def _gen_checksum(path):
-    return {'hsum': salt.utils.get_hash(path, form=__opts__['hash_type']),
+    return {'hsum': salt.utils.hashutils.get_hash(path, form=__opts__['hash_type']),
             'hash_type': __opts__['hash_type']}
 
 
@@ -67,24 +70,24 @@ def _checksum_file_path(path):
         relpath = '.'.join((os.path.relpath(path, __opts__['cachedir']), 'hash'))
         if re.match(r'..[/\\]', relpath):
             # path is a local file
-            relpath = salt.utils.path_join(
+            relpath = salt.utils.path.join(
                 'local',
                 os.path.splitdrive(path)[-1].lstrip('/\\'),
             )
     except ValueError as exc:
         # The path is on a different drive (Windows)
-        if str(exc).startswith('path is on'):
+        if six.text_type(exc).startswith('path is on'):
             drive, path = os.path.splitdrive(path)
-            relpath = salt.utils.path_join(
+            relpath = salt.utils.path.join(
                 'local',
                 drive.rstrip(':'),
                 path.lstrip('/\\'),
             )
         elif str(exc).startswith('Cannot mix UNC'):
-            relpath = salt.utils.path_join('unc', path)
+            relpath = salt.utils.path.join('unc', path)
         else:
             raise
-    ret = salt.utils.path_join(__opts__['cachedir'], 'archive_hash', relpath)
+    ret = salt.utils.path.join(__opts__['cachedir'], 'archive_hash', relpath)
     log.debug('Using checksum file %s for cached archive file %s', ret, path)
     return ret
 
@@ -101,7 +104,7 @@ def _update_checksum(path):
         lines = []
         try:
             try:
-                with salt.utils.fopen(checksum_file, 'r') as fp_:
+                with salt.utils.files.fopen(checksum_file, 'r') as fp_:
                     for line in fp_:
                         try:
                             lines.append(line.rstrip('\n').split(':', 1))
@@ -111,7 +114,7 @@ def _update_checksum(path):
                 if exc.errno != errno.ENOENT:
                     raise
 
-            with salt.utils.fopen(checksum_file, 'w') as fp_:
+            with salt.utils.files.fopen(checksum_file, 'w') as fp_:
                 for line in lines:
                     if line[0] == hash_type:
                         line[1] = hsum
@@ -130,7 +133,7 @@ def _read_cached_checksum(path, form=None):
         form = __opts__['hash_type']
     checksum_file = _checksum_file_path(path)
     try:
-        with salt.utils.fopen(checksum_file, 'r') as fp_:
+        with salt.utils.files.fopen(checksum_file, 'r') as fp_:
             for line in fp_:
                 # Should only be one line in this file but just in case it
                 # isn't, read only a single line to avoid overuse of memory.
@@ -239,7 +242,6 @@ def extracted(name,
                 - source: salt://apps/src/myapp-16.2.4.tar.gz
                 - user: www
                 - group: www
-                - tar_options: --strip-components=1
 
         With the rewrite for 2016.11.0, these workarounds are no longer
         necessary. ``if_missing`` is still a supported argument, but it is no
@@ -460,8 +462,6 @@ def extracted(name,
         ``tar``/``unzip`` implementation on the minion's OS.
 
         .. versionadded:: 2016.11.0
-            The ``tar_options`` and ``zip_options`` parameters have been
-            deprecated in favor of a single argument name.
         .. versionchanged:: 2015.8.11,2016.3.2
             XZ-compressed tar archives no longer require ``J`` to manually be
             set in the ``options``, they are now detected automatically and
@@ -472,15 +472,6 @@ def extracted(name,
         .. note::
             For tar archives, main operators like ``-x``, ``--extract``,
             ``--get``, ``-c`` and ``-f``/``--file`` should *not* be used here.
-
-    tar_options
-        .. deprecated:: 2016.11.0
-            Use ``options`` instead.
-
-    zip_options
-        .. versionadded:: 2016.3.1
-        .. deprecated:: 2016.11.0
-            Use ``options`` instead.
 
     list_options
         **For tar archives only.** This state uses :py:func:`archive.list
@@ -672,7 +663,7 @@ def extracted(name,
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
 
     # Remove pub kwargs as they're irrelevant here.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     if 'keep_source' in kwargs and 'keep' in kwargs:
         ret.setdefault('warnings', []).append(
@@ -745,7 +736,7 @@ def extracted(name,
         return ret
 
     if user or group:
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             ret['comment'] = \
                 'User/group ownership cannot be enforced on Windows minions'
             return ret
@@ -784,6 +775,11 @@ def extracted(name,
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = exc.strerror
+        return ret
+
+    if not source_match:
+        ret['result'] = False
+        ret['comment'] = 'Invalid source "{0}"'.format(source)
         return ret
 
     urlparsed_source = _urlparse(source_match)
@@ -835,23 +831,8 @@ def extracted(name,
         )
         return ret
 
-    tar_options = kwargs.pop('tar_options', None)
-    zip_options = kwargs.pop('zip_options', None)
-    if tar_options:
-        msg = ('The \'tar_options\' argument has been deprecated, please use '
-               '\'options\' instead.')
-        salt.utils.warn_until('Oxygen', msg)
-        ret.setdefault('warnings', []).append(msg)
-        options = tar_options
-    elif zip_options:
-        msg = ('The \'zip_options\' argument has been deprecated, please use '
-               '\'options\' instead.')
-        salt.utils.warn_until('Oxygen', msg)
-        ret.setdefault('warnings', []).append(msg)
-        options = zip_options
-
     if options is not None and not isinstance(options, six.string_types):
-        options = str(options)
+        options = six.text_type(options)
 
     strip_components = None
     if options and archive_format == 'tar':
@@ -992,7 +973,7 @@ def extracted(name,
             ret['comment'] = msg
             return ret
         else:
-            log.debug('file.cached: {0}'.format(result))
+            log.debug('file.cached: %s', result)
 
         if result['result']:
             # Get the path of the file in the minion cache
@@ -1130,7 +1111,7 @@ def extracted(name,
                                          and not stat.S_ISDIR(x)),
                      (contents['links'], stat.S_ISLNK)):
                 for path in path_list:
-                    full_path = os.path.join(name, path)
+                    full_path = salt.utils.path.join(name, path)
                     try:
                         path_mode = os.lstat(full_path.rstrip(os.sep)).st_mode
                         if not func(path_mode):
@@ -1182,7 +1163,7 @@ def extracted(name,
                         for path in incorrect_type:
                             full_path = os.path.join(name, path)
                             try:
-                                salt.utils.rm_rf(full_path.rstrip(os.sep))
+                                salt.utils.files.rm_rf(full_path.rstrip(os.sep))
                                 ret['changes'].setdefault(
                                     'removed', []).append(full_path)
                                 extraction_needed = True
@@ -1242,7 +1223,7 @@ def extracted(name,
                 full_path = os.path.join(name, path)
                 try:
                     log.debug('Removing %s', full_path)
-                    salt.utils.rm_rf(full_path.rstrip(os.sep))
+                    salt.utils.files.rm_rf(full_path.rstrip(os.sep))
                     ret['changes'].setdefault(
                         'removed', []).append(full_path)
                 except OSError as exc:
@@ -1263,7 +1244,7 @@ def extracted(name,
             __states__['file.directory'](name, user=user, makedirs=True)
             created_destdir = True
 
-        log.debug('Extracting {0} to {1}'.format(cached, name))
+        log.debug('Extracting %s to %s', cached, name)
         try:
             if archive_format == 'zip':
                 if use_cmd_unzip:
@@ -1284,6 +1265,7 @@ def extracted(name,
                                                       options=options,
                                                       trim_output=trim_output,
                                                       password=password,
+                                                      extract_perms=extract_perms,
                                                       **kwargs)
             elif archive_format == 'rar':
                 try:
@@ -1298,12 +1280,12 @@ def extracted(name,
                 if options is None:
                     try:
                         with closing(tarfile.open(cached, 'r')) as tar:
-                            tar.extractall(name)
+                            tar.extractall(salt.utils.stringutils.to_str(name))
                             files = tar.getnames()
                             if trim_output:
                                 files = files[:trim_output]
                     except tarfile.ReadError:
-                        if salt.utils.which('xz'):
+                        if salt.utils.path.which('xz'):
                             if __salt__['cmd.retcode'](
                                     ['xz', '-t', cached],
                                     python_shell=False,
@@ -1361,17 +1343,20 @@ def extracted(name,
                             )
                             return ret
                 else:
-                    if not salt.utils.which('tar'):
+                    if not salt.utils.path.which('tar'):
                         ret['comment'] = (
                             'tar command not available, it might not be '
                             'installed on minion'
                         )
                         return ret
 
-                    tar_opts = shlex.split(options)
+                    # Ignore verbose file list options as we are already using
+                    # "v" below in tar_shortopts
+                    tar_opts = [x for x in shlex.split(options)
+                                if x not in ('v', '-v', '--verbose')]
 
                     tar_cmd = ['tar']
-                    tar_shortopts = 'x'
+                    tar_shortopts = 'xv'
                     tar_longopts = []
 
                     for position, opt in enumerate(tar_opts):
@@ -1401,9 +1386,9 @@ def extracted(name,
                         ret['changes'] = results
                         return ret
                     if _is_bsdtar():
-                        files = results['stderr']
+                        files = results['stderr'].splitlines()
                     else:
-                        files = results['stdout']
+                        files = results['stdout'].splitlines()
                     if not files:
                         files = 'no tar output so far'
         except CommandExecutionError as exc:
@@ -1454,25 +1439,19 @@ def extracted(name,
                 dir_result = __states__['file.directory'](full_path,
                                                           user=user,
                                                           group=group,
-                                                          recurse=recurse,
-                                                          test=__opts__['test'])
+                                                          recurse=recurse)
                 log.debug('file.directory: %s', dir_result)
 
-                if __opts__['test']:
-                    if dir_result.get('pchanges'):
-                        ret['changes']['updated ownership'] = True
-                else:
-                    try:
-                        if dir_result['result']:
-                            if dir_result['changes']:
-                                ret['changes']['updated ownership'] = True
-                        else:
-                            enforce_failed.append(full_path)
-                    except (KeyError, TypeError):
-                        log.warning(
-                            'Bad state return %s for file.directory state on %s',
-                            dir_result, dirname
-                        )
+                if dir_result.get('changes'):
+                    ret['changes']['updated ownership'] = True
+                try:
+                    if not dir_result['result']:
+                        enforce_failed.append(full_path)
+                except (KeyError, TypeError):
+                    log.warning(
+                        'Bad state return %s for file.directory state on %s',
+                        dir_result, dirname
+                    )
 
         for filename in enforce_files + enforce_links:
             full_path = os.path.join(name, filename)

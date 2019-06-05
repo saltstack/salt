@@ -1,0 +1,4 @@
+pillars:
+  sshd:
+    root_access: no
+    ssh_port: 22

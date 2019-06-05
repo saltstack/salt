@@ -3,7 +3,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -48,7 +48,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
             mocked_fopen = MagicMock(return_value=True)
             mocked_fopen.__enter__ = MagicMock(return_value=mocked_fopen)
             mocked_fopen.__exit__ = MagicMock()
-            with patch('salt.utils.fopen', MagicMock(return_value=mocked_fopen)):
+            with patch('salt.utils.files.fopen', MagicMock(return_value=mocked_fopen)):
                 with patch('salt.payload.Serial.loads', MagicMock(return_value=True)):
                     with patch.dict(data.__opts__, {'cachedir': '/'}):
                         self.assertTrue(data.load())
@@ -60,7 +60,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         Test if it replace the entire datastore with a passed data structure
         '''
         with patch.dict(data.__opts__, {'cachedir': '/'}):
-            with patch('salt.utils.fopen', mock_open()):
+            with patch('salt.utils.files.fopen', mock_open()):
                 self.assertTrue(data.dump('{"eggs": "spam"}'))
 
     def test_dump_isinstance(self):
@@ -76,7 +76,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(data.__opts__, {'cachedir': '/'}):
             mock = MagicMock(side_effect=IOError(''))
-            with patch('salt.utils.fopen', mock):
+            with patch('salt.utils.files.fopen', mock):
                 self.assertFalse(data.dump('{"eggs": "spam"}'))
 
     # 'update' function tests: 1

@@ -7,17 +7,17 @@ Execution module for Cisco Network Services Orchestrator Proxy minions
 For documentation on setting up the cisconso proxy minion look in the documentation
 for :mod:`salt.proxy.cisconso<salt.proxy.cisconso>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-import salt.utils
-import salt.ext.six as six
+import salt.utils.platform
+from salt.ext import six
 
 __proxyenabled__ = ['cisconso']
 __virtualname__ = 'cisconso'
 
 
 def __virtual__():
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return __virtualname__
     return (False, 'The cisconso execution module failed to load: '
             'only available on proxy minions.')

@@ -6,17 +6,17 @@ Manage Dell DRAC.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import re
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
-import salt.utils
+import salt.utils.path
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves import map
 
@@ -29,12 +29,12 @@ try:
 except (NameError, KeyError):
     import salt.modules.cmdmod
     __salt__ = {
-        'cmd.run_all': salt.modules.cmdmod._run_all_quiet
+        'cmd.run_all': salt.modules.cmdmod.run_all
     }
 
 
 def __virtual__():
-    if salt.utils.which('racadm'):
+    if salt.utils.path.which('racadm'):
         return True
 
     return (False, 'The drac execution module cannot be loaded: racadm binary not in path.')
@@ -95,8 +95,7 @@ def __execute_cmd(command, host=None,
         output_loglevel='quiet')
 
     if cmd['retcode'] != 0:
-        log.warning('racadm return an exit code \'{0}\'.'
-                    .format(cmd['retcode']))
+        log.warning('racadm returned an exit code of %s', cmd['retcode'])
         return False
 
     return True
@@ -129,8 +128,7 @@ def __execute_ret(command, host=None,
         output_loglevel='quiet')
 
     if cmd['retcode'] != 0:
-        log.warning('racadm return an exit code \'{0}\'.'
-                    .format(cmd['retcode']))
+        log.warning('racadm returned an exit code of %s', cmd['retcode'])
     else:
         fmtlines = []
         for l in cmd['stdout'].splitlines():
@@ -193,8 +191,7 @@ def system_info(host=None,
                         module=module)
 
     if cmd['retcode'] != 0:
-        log.warning('racadm return an exit code \'{0}\'.'
-                    .format(cmd['retcode']))
+        log.warning('racadm returned an exit code of %s', cmd['retcode'])
         return cmd
 
     return __parse_drac(cmd['stdout'])
@@ -272,8 +269,7 @@ def network_info(host=None,
                         module=module)
 
     if cmd['retcode'] != 0:
-        log.warning('racadm return an exit code \'{0}\'.'
-                    .format(cmd['retcode']))
+        log.warning('racadm returned an exit code of %s', cmd['retcode'])
 
     cmd['stdout'] = 'Network:\n' + 'Device = ' + module + '\n' + \
                     cmd['stdout']
@@ -395,8 +391,7 @@ def list_users(host=None,
                             admin_password=admin_password)
 
         if cmd['retcode'] != 0:
-            log.warning('racadm return an exit code \'{0}\'.'
-                        .format(cmd['retcode']))
+            log.warning('racadm returned an exit code of %s', cmd['retcode'])
 
         for user in cmd['stdout'].splitlines():
             if not user.startswith('cfg'):
@@ -444,7 +439,7 @@ def delete_user(username,
                              admin_password=admin_password)
 
     else:
-        log.warning('\'{0}\' does not exist'.format(username))
+        log.warning('User \'%s\' does not exist', username)
         return False
 
 
@@ -485,7 +480,7 @@ def change_password(username, password, uid=None, host=None,
                              host=host, admin_username=admin_username,
                              admin_password=admin_password, module=module)
     else:
-        log.warning('\'{0}\' does not exist'.format(username))
+        log.warning('racadm: user \'%s\' does not exist', username)
         return False
 
 
@@ -567,7 +562,7 @@ def create_user(username, password, permissions,
         users = list_users()
 
     if username in users:
-        log.warning('\'{0}\' already exists'.format(username))
+        log.warning('racadm: user \'%s\' already exists', username)
         return False
 
     for idx in six.iterkeys(users):
@@ -923,7 +918,7 @@ def server_pxe(host=None,
             log.warning('failed to set boot order')
             return False
 
-    log.warning('failed to to configure PXE boot')
+    log.warning('failed to configure PXE boot')
     return False
 
 
@@ -1007,7 +1002,7 @@ def get_slotname(slot, host=None, admin_username=None, admin_password=None):
                            admin_password=admin_password)
     # The keys for this dictionary are strings, not integers, so convert the
     # argument to a string
-    slot = str(slot)
+    slot = six.text_type(slot)
     return slots[slot]['slotname']
 
 

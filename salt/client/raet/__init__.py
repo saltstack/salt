@@ -2,7 +2,7 @@
 '''
 The client libs to communicate with the salt master when running raet
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -12,9 +12,9 @@ import logging
 # Import Salt libs
 import salt.config
 import salt.client
-import salt.utils
+import salt.utils.kinds as kinds
+import salt.utils.versions
 import salt.syspaths as syspaths
-from salt.utils import kinds
 
 try:
     from raet import raeting, nacling
@@ -50,7 +50,7 @@ class LocalClient(salt.client.LocalClient):
         Publish the command!
         '''
         if 'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '

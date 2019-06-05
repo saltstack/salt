@@ -4,7 +4,7 @@ Simple Smoke Tests for Connected Proxy Minion
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -12,7 +12,7 @@ from tests.support.case import ModuleCase
 
 class ProxyMinionSimpleTestCase(ModuleCase):
     '''
-    Test minion blackout functionality
+    Test proxy minion functionality
     '''
     def test_can_it_ping(self):
         '''

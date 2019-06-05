@@ -5,17 +5,19 @@ Module for interfacing with SysFS
 .. seealso:: https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt
 .. versionadded:: 2016.3.0
 '''
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 import stat
 
-# Import external libs
-import salt.ext.six as six
+# Import Salt libs
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 
-# Import salt libs
-import salt.utils
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +26,7 @@ def __virtual__():
     '''
     Only work on Linux
     '''
-    return salt.utils.is_linux()
+    return salt.utils.platform.is_linux()
 
 
 def attr(key, value=None):
@@ -62,9 +64,11 @@ def write(key, value):
     '''
     try:
         key = target(key)
-        log.trace('Writing {0} to {1}'.format(value, key))
-        with salt.utils.fopen(key, 'w') as twriter:
-            twriter.write('{0}\n'.format(value))
+        log.trace('Writing %s to %s', value, key)
+        with salt.utils.files.fopen(key, 'w') as twriter:
+            twriter.write(
+                salt.utils.stringutils.to_str('{0}\n'.format(value))
+            )
             return True
     except Exception:
         return False
@@ -113,7 +117,7 @@ def read(key, root=''):
         return result
     else:
         try:
-            log.trace('Reading {0}...'.format(key))
+            log.trace('Reading %s...', key)
 
             # Certain things in SysFS are pipes 'n such.
             # This opens it non-blocking, which prevents indefinite blocking
@@ -155,7 +159,7 @@ def target(key, full=True):
     key = os.path.realpath(key)
 
     if not os.path.exists(key):
-        log.debug('Unkown SysFS key {0}'.format(key))
+        log.debug('Unkown SysFS key %s', key)
         return False
     elif full:
         return key
@@ -223,14 +227,14 @@ def interfaces(root):
 
     root = target(root)
     if root is False or not os.path.isdir(root):
-        log.error('SysFS {0} not a dir'.format(root))
+        log.error('SysFS %s not a dir', root)
         return False
 
     readwrites = []
     reads = []
     writes = []
 
-    for path, _, files in os.walk(root, followlinks=False):
+    for path, _, files in salt.utils.path.os_walk(root, followlinks=False):
         for afile in files:
             canpath = os.path.join(path, afile)
 
@@ -250,7 +254,7 @@ def interfaces(root):
             elif is_r:
                 reads.append(relpath)
             else:
-                log.warning('Unable to find any interfaces in {0}'.format(canpath))
+                log.warning('Unable to find any interfaces in %s', canpath)
 
     return {
         'r': reads,

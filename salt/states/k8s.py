@@ -25,10 +25,10 @@ Manage Kubernetes
         - node: myothernodename
         - apiserver: http://mykubeapiserer:8080
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import salt libs
-import salt.utils
+import salt.utils.versions
 
 
 __virtualname__ = 'k8s'
@@ -74,7 +74,7 @@ def label_present(
         'kubernetes.node_label_present. Update your SLS to use the new '
         'function name to get rid of this warning.'
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
 
     return ret
@@ -109,7 +109,7 @@ def label_absent(
         'kubernetes.node_label_absent. Update your SLS to use the new '
         'function name to get rid of this warning.'
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
 
     return ret
@@ -145,7 +145,7 @@ def label_folder_absent(
         'function name to get rid of this warning.'
 
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
 
     return ret

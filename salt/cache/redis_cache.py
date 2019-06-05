@@ -66,6 +66,29 @@ host: ``localhost``
 port: ``6379``
     The Redis server port.
 
+cluster_mode: ``False``
+    Whether cluster_mode is enabled or not
+
+cluster.startup_nodes:
+    A list of host, port dictionaries pointing to cluster members. At least one is required
+    but multiple nodes are better
+
+    .. code-block:: yaml
+
+        cache.redis.cluster.startup_nodes
+          - host: redis-member-1
+            port: 6379
+          - host: redis-member-2
+            port: 6379
+
+cluster.skip_full_coverage_check: ``False``
+    Some cluster providers restrict certain redis commands such as CONFIG for enhanced security.
+    Set this option to true to skip checks that required advanced privileges.
+
+    .. note::
+
+        Most cloud hosted redis clusters will require this to be set to ``True``
+
 db: ``'0'``
     The database index.
 
@@ -74,6 +97,12 @@ db: ``'0'``
 
 password:
     Redis connection password.
+
+unix_socket_path:
+
+    .. versionadded:: 2018.3.1
+
+    Path to a UNIX socket for access. Overrides `host` / `port`.
 
 Configuration Example:
 
@@ -87,9 +116,27 @@ Configuration Example:
     cache.redis.bank_keys_prefix: #BANKEYS
     cache.redis.key_prefix: #KEY
     cache.redis.separator: '@'
+
+Cluster Configuration Example:
+
+.. code-block:: yaml
+
+    cache.redis.cluster_mode: true
+    cache.redis.cluster.skip_full_coverage_check: true
+    cache.redis.cluster.startup_nodes:
+      - host: redis-member-1
+        port: 6379
+      - host: redis-member-2
+        port: 6379
+    cache.redis.db: '0'
+    cache.redis.password: my pass
+    cache.redis.bank_prefix: #BANK
+    cache.redis.bank_keys_prefix: #BANKEYS
+    cache.redis.key_prefix: #KEY
+    cache.redis.separator: '@'
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import stdlib
 import logging
@@ -102,6 +149,12 @@ try:
     HAS_REDIS = True
 except ImportError:
     HAS_REDIS = False
+
+try:
+    from rediscluster import StrictRedisCluster
+    HAS_REDIS_CLUSTER = True
+except ImportError:
+    HAS_REDIS_CLUSTER = False
 
 # Import salt
 from salt.ext.six.moves import range
@@ -131,9 +184,13 @@ REDIS_SERVER = None
 def __virtual__():
     '''
     The redis library must be installed for this module to work.
+
+    The redis redis cluster library must be installed if cluster_mode is True
     '''
     if not HAS_REDIS:
         return (False, "Please install the python-redis package.")
+    if not HAS_REDIS_CLUSTER and _get_redis_cache_opts()['cluster_mode']:
+        return (False, "Please install the redis-py-cluster package.")
     return __virtualname__
 
 
@@ -152,8 +209,12 @@ def _get_redis_cache_opts():
     return {
         'host': __opts__.get('cache.redis.host', 'localhost'),
         'port': __opts__.get('cache.redis.port', 6379),
+        'unix_socket_path': __opts__.get('cache.redis.unix_socket_path', None),
         'db': __opts__.get('cache.redis.db', '0'),
-        'password': __opts__.get('cache.redis.password', '')
+        'password': __opts__.get('cache.redis.password', ''),
+        'cluster_mode': __opts__.get('cache.redis.cluster_mode', False),
+        'startup_nodes': __opts__.get('cache.redis.cluster.startup_nodes', {}),
+        'skip_full_coverage_check': __opts__.get('cache.redis.cluster.skip_full_coverage_check', False),
     }
 
 
@@ -167,10 +228,16 @@ def _get_redis_server(opts=None):
         return REDIS_SERVER
     if not opts:
         opts = _get_redis_cache_opts()
-    REDIS_SERVER = redis.Redis(opts['host'],
-                               opts['port'],
-                               db=opts['db'],
-                               password=opts['password'])
+
+    if opts['cluster_mode']:
+        REDIS_SERVER = StrictRedisCluster(startup_nodes=opts['startup_nodes'],
+                                          skip_full_coverage_check=opts['skip_full_coverage_check'])
+    else:
+        REDIS_SERVER = redis.StrictRedis(opts['host'],
+                                   opts['port'],
+                                   unix_socket_path=opts['unix_socket_path'],
+                                   db=opts['db'],
+                                   password=opts['password'])
     return REDIS_SERVER
 
 
@@ -235,7 +302,7 @@ def _build_bank_hier(bank, redis_pipe):
     for bank_name in bank_list[1:]:
         prev_bank_redis_key = _get_bank_redis_key(parent_bank_path)
         redis_pipe.sadd(prev_bank_redis_key, bank_name)
-        log.debug('Adding {bname} to {bkey}'.format(bname=bank_name, bkey=prev_bank_redis_key))
+        log.debug('Adding %s to %s', bank_name, prev_bank_redis_key)
         parent_bank_path = '{curr_path}/{bank_name}'.format(
             curr_path=parent_bank_path,
             bank_name=bank_name
@@ -279,13 +346,9 @@ def store(bank, key, data):
         _build_bank_hier(bank, redis_pipe)
         value = __context__['serial'].dumps(data)
         redis_pipe.set(redis_key, value)
-        log.debug('Setting the value for {key} under {bank} ({redis_key})'.format(
-            key=key,
-            bank=bank,
-            redis_key=redis_key
-        ))
+        log.debug('Setting the value for %s under %s (%s)', key, bank, redis_key)
         redis_pipe.sadd(redis_bank_keys, key)
-        log.debug('Adding {key} to {bkey}'.format(key=key, bkey=redis_bank_keys))
+        log.debug('Adding %s to %s', key, redis_bank_keys)
         redis_pipe.execute()
     except (RedisConnectionError, RedisResponseError) as rerr:
         mesg = 'Cannot set the Redis cache key {rkey}: {rerr}'.format(rkey=redis_key,
@@ -343,10 +406,10 @@ def flush(bank, key=None):
             bank_keys_redis_key = _get_bank_keys_redis_key(bank_to_remove)
             # Redis key of the SET that stores the bank keys
             redis_pipe.smembers(bank_keys_redis_key)  # fetch these keys
-            log.debug('Fetching the keys of the {bpath} bank ({bkey})'.format(
-                bpath=bank_to_remove,
-                bkey=bank_keys_redis_key
-            ))
+            log.debug(
+                'Fetching the keys of the %s bank (%s)',
+                bank_to_remove, bank_keys_redis_key
+            )
         try:
             log.debug('Executing the pipe...')
             subtree_keys = redis_pipe.execute()  # here are the keys under these banks to be removed
@@ -368,41 +431,35 @@ def flush(bank, key=None):
             for key in bank_keys:
                 redis_key = _get_key_redis_key(bank_path, key)
                 redis_pipe.delete(redis_key)  # kill 'em all!
-                log.debug('Removing the key {key} under the {bpath} bank ({bkey})'.format(
-                    key=key,
-                    bpath=bank_path,
-                    bkey=redis_key
-                ))
+                log.debug(
+                    'Removing the key %s under the %s bank (%s)',
+                    key, bank_path, redis_key
+                )
             bank_keys_redis_key = _get_bank_keys_redis_key(bank_path)
             redis_pipe.delete(bank_keys_redis_key)
-            log.debug('Removing the bank-keys key for the {bpath} bank ({bkey})'.format(
-                bpath=bank_path,
-                bkey=bank_keys_redis_key
-            ))
+            log.debug(
+                'Removing the bank-keys key for the %s bank (%s)',
+                bank_path, bank_keys_redis_key
+            )
             # delete the Redis key where are stored
             # the list of keys under this bank
             bank_key = _get_bank_redis_key(bank_path)
             redis_pipe.delete(bank_key)
-            log.debug('Removing the {bpath} bank ({bkey})'.format(
-                bpath=bank_path,
-                bkey=bank_key
-            ))
+            log.debug('Removing the %s bank (%s)', bank_path, bank_key)
             # delete the bank key itself
     else:
         redis_key = _get_key_redis_key(bank, key)
         redis_pipe.delete(redis_key)  # delete the key cached
-        log.debug('Removing the key {key} under the {bank} bank ({bkey})'.format(
-            key=key,
-            bank=bank,
-            bkey=redis_key
-        ))
+        log.debug(
+            'Removing the key %s under the %s bank (%s)',
+            key, bank, redis_key
+        )
         bank_keys_redis_key = _get_bank_keys_redis_key(bank)
         redis_pipe.srem(bank_keys_redis_key, key)
-        log.debug('De-referencing the key {key} from the bank-keys of the {bank} bank ({bkey})'.format(
-            key=key,
-            bank=bank,
-            bkey=bank_keys_redis_key
-        ))
+        log.debug(
+            'De-referencing the key %s from the bank-keys of the %s bank (%s)',
+            key, bank, bank_keys_redis_key
+        )
         # but also its reference from $BANKEYS list
     try:
         redis_pipe.execute()  # Fluuuush

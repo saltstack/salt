@@ -8,11 +8,11 @@
 
     This utility allows parsing a file in chunks.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import salt libs
-import salt.ext.six as six
-import salt.utils
+import salt.utils.files
+import salt.utils.stringutils
 from salt.exceptions import SaltException
 
 
@@ -57,7 +57,7 @@ class BufferedReader(object):
         if 'a' in mode or 'w' in mode:
             raise InvalidFileMode("Cannot open file in write or append mode")
         self.__path = path
-        self.__file = salt.utils.fopen(self.__path, mode)  # pylint: disable=resource-leakage
+        self.__file = salt.utils.files.fopen(self.__path, mode)  # pylint: disable=resource-leakage
         self.__max_in_mem = max_in_mem
         self.__chunk_size = chunk_size
         self.__buffered = None
@@ -85,14 +85,11 @@ class BufferedReader(object):
             multiplier = 1
             self.__buffered = self.__buffered[self.__chunk_size:]
 
-        if six.PY3:
-            # Data is a byte object in Python 3
-            # Decode it in order to append to self.__buffered str later
-            data = self.__file.read(self.__chunk_size * multiplier).decode(
-                __salt_system_encoding__
-            )
-        else:
-            data = self.__file.read(self.__chunk_size * multiplier)
+        data = self.__file.read(self.__chunk_size * multiplier)
+        # Data is a byte object in Python 3
+        # Decode it in order to append to self.__buffered str later
+        # Use the salt util in case it's already a string (Windows)
+        data = salt.utils.stringutils.to_str(data)
 
         if not data:
             self.__file.close()

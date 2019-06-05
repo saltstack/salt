@@ -29,7 +29,7 @@
 # https://bitbucket.org/Lawouach/cherrypy-recipes/src/50aff88dc4e24206518ec32e1c32af043f2729da/testing/unit/serverless/cptestcase.py
 
 # Import Python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import TestCase
@@ -37,9 +37,11 @@ from tests.support.case import TestCase
 # Import 3rd-party libs
 # pylint: disable=import-error
 import cherrypy  # pylint: disable=3rd-party-module-not-gated
-import salt.ext.six as six
-from salt.ext.six.moves import StringIO
+from salt.ext import six
+from salt.ext.six import BytesIO
 # pylint: enable=import-error
+
+import salt.utils.stringutils
 
 # Not strictly speaking mandatory but just makes sense
 cherrypy.config.update({'environment': "test_suite"})
@@ -92,7 +94,7 @@ class BaseCherryPyTestCase(TestCase):
         fd = None
         if body is not None:
             h['content-length'] = '{0}'.format(len(body))
-            fd = StringIO(body)
+            fd = BytesIO(salt.utils.stringutils.to_bytes(body))
 
         if headers is not None:
             h.update(headers)
@@ -117,7 +119,7 @@ class BaseCherryPyTestCase(TestCase):
                 fd.close()
                 fd = None
 
-        if response.output_status.startswith(six.b('500')):
+        if response.output_status.startswith(b'500'):
             response_body = response.collapse_body()
             if six.PY3:
                 response_body = response_body.decode(__salt_system_encoding__)

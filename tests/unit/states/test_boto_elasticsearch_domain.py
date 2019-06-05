@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import random
 import string
@@ -12,7 +12,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.loader
 from salt.utils.versions import LooseVersion
 import salt.states.boto_elasticsearch_domain as boto_elasticsearch_domain
@@ -54,6 +54,7 @@ def _has_required_boto():
     else:
         return True
 
+
 if _has_required_boto():
     region = 'us-east-1'
     access_key = 'GKTADJGHEIQSXMKKRBJ08H'
@@ -87,7 +88,10 @@ class BotoElasticsearchDomainStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         ctx = {}
-        utils = salt.loader.utils(self.opts, whitelist=['boto3'], context=ctx)
+        utils = salt.loader.utils(
+            self.opts,
+            whitelist=['boto3', 'args', 'systemd', 'path', 'platform'],
+            context=ctx)
         serializers = salt.loader.serializers(self.opts)
         self.funcs = funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_elasticsearch_domain'])
         self.salt_states = salt.loader.states(opts=self.opts, functions=funcs, utils=utils, whitelist=['boto_elasticsearch_domain'],
@@ -168,7 +172,7 @@ class BotoElasticsearchDomainTestCase(BotoElasticsearchDomainStateTestCaseBase, 
                          'domain present',
                          **domain_ret)
         self.assertTrue(result['result'])
-        self.assertEqual(result['changes'], {'new': {'AccessPolicies': {}}, 'old': {'AccessPolicies': {u'a': u'b'}}})
+        self.assertEqual(result['changes'], {'new': {'AccessPolicies': {}}, 'old': {'AccessPolicies': {'a': 'b'}}})
 
     def test_present_with_failure(self):
         self.conn.describe_elasticsearch_domain.side_effect = not_found_error

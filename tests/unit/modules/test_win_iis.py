@@ -7,12 +7,12 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
 import salt.modules.win_iis as win_iis
+import salt.utils.json
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -78,7 +78,7 @@ VDIR_LIST = {
 
 LIST_APPS_SRVMGR = {
     'retcode': 0,
-    'stdout': json.dumps([{
+    'stdout': salt.utils.json.dumps([{
         'applicationPool': 'MyTestPool',
         'name': 'testApp', 'path': '/testApp',
         'PhysicalPath': r'C:\inetpub\apps\testApp',
@@ -89,7 +89,7 @@ LIST_APPS_SRVMGR = {
 
 LIST_APPPOOLS_SRVMGR = {
     'retcode': 0,
-    'stdout': json.dumps([{
+    'stdout': salt.utils.json.dumps([{
         'name': 'MyTestPool', 'state': 'Started',
         'Applications': {
             'value': ['MyTestSite'],
@@ -100,7 +100,7 @@ LIST_APPPOOLS_SRVMGR = {
 
 LIST_VDIRS_SRVMGR = {
     'retcode': 0,
-    'stdout': json.dumps([{
+    'stdout': salt.utils.json.dumps([{
         'name': 'TestVdir',
         'physicalPath': r'C:\inetpub\vdirs\TestVdir'
     }])
@@ -108,7 +108,7 @@ LIST_VDIRS_SRVMGR = {
 
 CONTAINER_SETTING = {
     'retcode': 0,
-    'stdout': json.dumps([{
+    'stdout': salt.utils.json.dumps([{
         'managedPipelineMode': 'Integrated'
     }])
 }
@@ -346,7 +346,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value={'9988776655443322111000AAABBBCCCDDDEEEFFF': None})), \
                 patch('salt.modules.win_iis._srvmgr',
                       MagicMock(return_value={'retcode': 0, 'stdout': 10})), \
-                patch('json.loads', MagicMock(return_value=[{'MajorVersion': 10, 'MinorVersion': 0}])), \
+                patch('salt.utils.json.loads', MagicMock(return_value=[{'MajorVersion': 10, 'MinorVersion': 0}])), \
                 patch('salt.modules.win_iis.list_bindings',
                       MagicMock(return_value=BINDING_LIST)), \
                patch('salt.modules.win_iis.list_cert_bindings',

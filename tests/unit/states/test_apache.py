@@ -3,7 +3,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -17,7 +17,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.states.apache as apache
-import salt.utils
+import salt.utils.files
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -45,13 +45,13 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
                    'changes': {},
                    'comment': ''}
 
-            with patch.object(salt.utils, 'fopen', mock_open(read_data=config)):
+            with patch.object(salt.utils.files, 'fopen', mock_open(read_data=config)):
                 mock_config = MagicMock(return_value=config)
                 with patch.dict(apache.__salt__, {'apache.config': mock_config}):
                     ret.update({'comment': 'Configuration is up to date.'})
                     self.assertDictEqual(apache.configfile(name, config), ret)
 
-            with patch.object(salt.utils, 'fopen', mock_open(read_data=config)):
+            with patch.object(salt.utils.files, 'fopen', mock_open(read_data=config)):
                 mock_config = MagicMock(return_value=new_config)
                 with patch.dict(apache.__salt__, {'apache.config': mock_config}):
                     ret.update({'comment': 'Configuration will update.',
@@ -61,7 +61,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(apache.__opts__, {'test': True}):
                         self.assertDictEqual(apache.configfile(name, new_config), ret)
 
-            with patch.object(salt.utils, 'fopen', mock_open(read_data=config)):
+            with patch.object(salt.utils.files, 'fopen', mock_open(read_data=config)):
                 mock_config = MagicMock(return_value=new_config)
                 with patch.dict(apache.__salt__, {'apache.config': mock_config}):
                     ret.update({'comment': 'Successfully created configuration.',

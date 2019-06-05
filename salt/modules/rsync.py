@@ -7,14 +7,17 @@ Wrapper for rsync
 This data can also be passed into :ref:`pillar <pillar-walk-through>`.
 Options passed into opts will overwrite options passed into pillar.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import errno
 import logging
+import re
+import tempfile
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -26,7 +29,7 @@ def __virtual__():
     '''
     Only load module if rsync binary is present
     '''
-    if salt.utils.which('rsync'):
+    if salt.utils.path.which('rsync'):
         return __virtualname__
     return (False, 'The rsync execution module cannot be loaded: '
             'the rsync binary is not in the path.')
@@ -68,7 +71,9 @@ def rsync(src,
           exclude=None,
           excludefrom=None,
           dryrun=False,
-          rsh=None):
+          rsh=None,
+          additional_opts=None,
+          saltenv='base'):
     '''
     .. versionchanged:: 2016.3.0
         Return data now contains just the output of the rsync command, instead
@@ -77,12 +82,61 @@ def rsync(src,
 
     Rsync files from src to dst
 
+    src
+        The source location where files will be rsynced from.
+
+    dst
+        The destination location where files will be rsynced to.
+
+    delete : False
+        Whether to enable the rsync `--delete` flag, which
+        will delete extraneous files from dest dirs
+
+    force : False
+        Whether to enable the rsync `--force` flag, which
+        will force deletion of dirs even if not empty.
+
+    update : False
+        Whether to enable the rsync `--update` flag, which
+        forces rsync to skip any files which exist on the
+        destination and have a modified time that is newer
+        than the source file.
+
+    passwordfile
+        A file that contains a password for accessing an
+        rsync daemon.  The file should contain just the
+        password.
+
+    exclude
+        Whether to enable the rsync `--exclude` flag, which
+        will exclude files matching a PATTERN.
+
+    excludefrom
+        Whether to enable the rsync `--excludefrom` flag, which
+        will read exclude patterns from a file.
+
+    dryrun : False
+        Whether to enable the rsync `--dry-run` flag, which
+        will perform a trial run with no changes made.
+
+    rsh
+        Whether to enable the rsync `--rsh` flag, to
+        specify the remote shell to use.
+
+    additional_opts
+        Any additional rsync options, should be specified as a list.
+
+   saltenv
+           Specify a salt fileserver environment to be used.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' rsync.rsync {src} {dst} {delete=True} {update=True} {passwordfile=/etc/pass.crt} {exclude=xx} {rsh}
         salt '*' rsync.rsync {src} {dst} {delete=True} {excludefrom=/xx.ini} {rsh}
+
+        salt '*' rsync.rsync {src} {dst} {delete=True} {excludefrom=/xx.ini} additional_opts='["--partial", "--bwlimit=5000"]'
     '''
     if not src:
         src = __salt__['config.option']('rsync.src')
@@ -107,13 +161,59 @@ def rsync(src,
     if not src or not dst:
         raise SaltInvocationError('src and dst cannot be empty')
 
-    option = _check(delete, force, update, passwordfile, exclude, excludefrom, dryrun, rsh)
+    tmp_src = None
+    if src.startswith('salt://'):
+        _src = src
+        _path = re.sub('salt://', '', _src)
+        src_is_dir = False
+        if _path in __salt__['cp.list_master_dirs'](saltenv=saltenv):
+            src_is_dir = True
+
+        if src_is_dir:
+            tmp_src = tempfile.mkdtemp()
+            dir_src = __salt__['cp.get_dir'](_src,
+                                             tmp_src,
+                                             saltenv)
+            if dir_src:
+                src = tmp_src
+                # Ensure src ends in / so we
+                # get the contents not the tmpdir
+                # itself.
+                if not src.endswith('/'):
+                    src = '{0}/'.format(src)
+            else:
+                raise CommandExecutionError('{0} does not exist'.format(src))
+        else:
+            tmp_src = salt.utils.files.mkstemp()
+            file_src = __salt__['cp.get_file'](_src,
+                                               tmp_src,
+                                               saltenv)
+            if file_src:
+                src = tmp_src
+            else:
+                raise CommandExecutionError('{0} does not exist'.format(src))
+
+    option = _check(delete,
+                    force,
+                    update,
+                    passwordfile,
+                    exclude,
+                    excludefrom,
+                    dryrun,
+                    rsh)
+
+    if additional_opts and isinstance(additional_opts, list):
+        option = option + additional_opts
+
     cmd = ['rsync'] + option + [src, dst]
-    log.debug('Running rsync command: {0}'.format(cmd))
+    log.debug('Running rsync command: %s', cmd)
     try:
         return __salt__['cmd.run_all'](cmd, python_shell=False)
     except (IOError, OSError) as exc:
         raise CommandExecutionError(exc.strerror)
+    finally:
+        if tmp_src:
+            __salt__['file.remove'](tmp_src)
 
 
 def version():
@@ -163,9 +263,9 @@ def config(conf_path='/etc/rsyncd.conf'):
     '''
     ret = ''
     try:
-        with salt.utils.fopen(conf_path, 'r') as fp_:
+        with salt.utils.files.fopen(conf_path, 'r') as fp_:
             for line in fp_:
-                ret += line
+                ret += salt.utils.stringutils.to_unicode(line)
     except IOError as exc:
         if exc.errno == errno.ENOENT:
             raise CommandExecutionError('{0} does not exist'.format(conf_path))

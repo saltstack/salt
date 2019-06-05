@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import codecs
 import glob
 import logging
 import os
 import textwrap
-import yaml
 
-import salt.utils
 import salt.loader
+import salt.utils.data
+import salt.utils.files
 import salt.utils.reactor as reactor
+import salt.utils.yaml
 
 from tests.support.unit import TestCase, skipIf
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
@@ -390,10 +391,10 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
         Load the reactor config for mocking
         '''
         cls.opts = cls.get_temp_config('master')
-        reactor_config = yaml.safe_load(REACTOR_CONFIG)
+        reactor_config = salt.utils.yaml.safe_load(REACTOR_CONFIG)
         cls.opts.update(reactor_config)
         cls.reactor = reactor.Reactor(cls.opts)
-        cls.reaction_map = salt.utils.repack_dictlist(reactor_config['reactor'])
+        cls.reaction_map = salt.utils.data.repack_dictlist(reactor_config['reactor'])
         renderers = salt.loader.render(cls.opts, {})
         cls.render_pipe = [(renderers[x], '') for x in ('jinja', 'yaml')]
 
@@ -441,7 +442,7 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
                             os.path, 'isfile',
                             MagicMock(return_value=True)):
                         with patch.object(
-                                salt.utils, 'is_empty',
+                                salt.utils.files, 'is_empty',
                                 MagicMock(return_value=False)):
                             with patch.object(
                                     codecs, 'open',

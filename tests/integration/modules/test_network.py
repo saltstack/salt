@@ -8,9 +8,10 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.path
+import salt.utils.platform
 
-URL = 'repo.saltstack.com'
+URL = 'google-public-dns-a.google.com'
 
 
 class NetworkTest(ModuleCase):
@@ -26,7 +27,7 @@ class NetworkTest(ModuleCase):
         for out in exp_out:
             self.assertIn(out, ret.lower())
 
-    @skipIf(salt.utils.is_darwin(), 'not supported on macosx')
+    @skipIf(salt.utils.platform.is_darwin(), 'not supported on macosx')
     def test_network_netstat(self):
         '''
         network.netstat
@@ -41,14 +42,14 @@ class NetworkTest(ModuleCase):
         '''
         network.traceroute
         '''
-        if not salt.utils.which('traceroute') and not salt.utils.is_windows():
+        if not salt.utils.path.which('traceroute') and not salt.utils.platform.is_windows():
             self.skipTest('traceroute not installed')
         ret = self.run_function('network.traceroute', [URL])
         exp_out = ['hostname', 'ip']
         for out in exp_out:
             self.assertIn(out, exp_out)
 
-    @skipIf(not salt.utils.is_windows(), 'windows only test')
+    @skipIf(not salt.utils.platform.is_windows(), 'windows only test')
     def test_network_nslookup(self):
         '''
         network.nslookup

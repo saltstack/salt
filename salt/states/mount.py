@@ -24,8 +24,18 @@ Mount any type of mountable filesystem with the mounted function:
         - pass_num: 2
         - persist: True
         - mkmnt: True
+
+    /var/lib/bigdata:
+      mount.mounted:
+        - device: /srv/bigdata
+        - fstype: none
+        - opts: bind
+        - dump: 0
+        - pass_num: 0
+        - persist: True
+        - mkmnt: True
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os.path
@@ -35,7 +45,7 @@ import re
 from salt.ext.six import string_types
 
 import logging
-import salt.ext.six as six
+from salt.ext import six
 log = logging.getLogger(__name__)
 
 
@@ -65,7 +75,8 @@ def mounted(name,
             extra_mount_invisible_keys=None,
             extra_mount_ignore_fs_keys=None,
             extra_mount_translate_options=None,
-            hidden_opts=None):
+            hidden_opts=None,
+            **kwargs):
     '''
     Verify that a device is mounted
 
@@ -186,6 +197,8 @@ def mounted(name,
            'result': True,
            'comment': ''}
 
+    update_mount_cache = False
+
     if not name:
         ret['result'] = False
         ret['comment'] = 'Must provide name to mount.mounted'
@@ -207,6 +220,11 @@ def mounted(name,
     # Defaults is not a valid option on Mac OS
     if __grains__['os'] in ['MacOS', 'Darwin'] and opts == 'defaults':
         opts = 'noowners'
+
+    # Defaults is not a valid option on AIX
+    if __grains__['os'] in ['AIX']:
+        if opts == 'defaults':
+            opts = ''
 
     # Make sure that opts is correct, it can be a list or a comma delimited
     # string
@@ -401,7 +419,7 @@ def mounted(name,
                             _info = __salt__[name_id_opts[_param]](_givenid)
                             if _info and _param in _info:
                                 _id = _info[_param]
-                        opt = _param + '=' + str(_id)
+                        opt = _param + '=' + six.text_type(_id)
 
                     _active_superopts = active[real_name].get('superopts', [])
                     for _active_opt in _active_superopts:
@@ -445,6 +463,50 @@ def mounted(name,
                                 # don't write remount into fstab
                                 if 'remount' in opts:
                                     opts.remove('remount')
+
+                            # Update the cache
+                            update_mount_cache = True
+
+                mount_cache = __salt__['mount.read_mount_cache'](real_name)
+                if 'opts' in mount_cache:
+                    _missing = [opt for opt in mount_cache['opts']
+                                if opt not in opts]
+
+                    if _missing:
+                        if __opts__['test']:
+                            ret['result'] = None
+                            ret['comment'] = ('Remount would be forced because'
+                                              ' options ({0})'
+                                              'changed'.format(','.join(_missing)))
+                            return ret
+                        else:
+                            # Some file systems require umounting and mounting if options change
+                            # add others to list that require similiar functionality
+                            if fstype in ['nfs', 'cvfs'] or fstype.startswith('fuse'):
+                                ret['changes']['umount'] = "Forced unmount and mount because " \
+                                                            + "options ({0}) changed".format(opt)
+                                unmount_result = __salt__['mount.umount'](real_name)
+                                if unmount_result is True:
+                                    mount_result = __salt__['mount.mount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
+                                    ret['result'] = mount_result
+                                else:
+                                    ret['result'] = False
+                                    ret['comment'] = 'Unable to unmount {0}: {1}.'.format(real_name, unmount_result)
+                                    return ret
+                            else:
+                                ret['changes']['umount'] = "Forced remount because " \
+                                                            + "options ({0}) changed".format(opt)
+                                remount_result = __salt__['mount.remount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
+                                ret['result'] = remount_result
+                                # Cleanup after the remount, so we
+                                # don't write remount into fstab
+                                if 'remount' in opts:
+                                    opts.remove('remount')
+
+                        update_mount_cache = True
+                else:
+                    update_mount_cache = True
+
             if real_device not in device_list:
                 # name matches but device doesn't - need to umount
                 _device_mismatch_is_ignored = None
@@ -453,16 +515,16 @@ def mounted(name,
                         if re.match(regex, _device):
                             _device_mismatch_is_ignored = _device
                             break
-                if __opts__['test']:
-                    ret['result'] = None
-                    ret['comment'] = "An umount would have been forced " \
-                                     + "because devices do not match.  Watched: " \
-                                     + device
-                elif _device_mismatch_is_ignored:
+                if _device_mismatch_is_ignored:
                     ret['result'] = True
                     ret['comment'] = "An umount will not be forced " \
                                      + "because device matched device_name_regex: " \
                                      + _device_mismatch_is_ignored
+                elif __opts__['test']:
+                    ret['result'] = None
+                    ret['comment'] = "An umount would have been forced " \
+                                     + "because devices do not match.  Watched: " \
+                                     + device
                 else:
                     ret['changes']['umount'] = "Forced unmount because devices " \
                                                + "don't match. Wanted: " + device
@@ -475,6 +537,7 @@ def mounted(name,
                         ret['comment'] = "Unable to unmount"
                         ret['result'] = None
                         return ret
+                    update_mount_cache = True
             else:
                 ret['comment'] = 'Target was already mounted'
     # using a duplicate check so I can catch the results of a umount
@@ -498,6 +561,7 @@ def mounted(name,
 
             out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts, user=user)
             active = __salt__['mount.active'](extended=True)
+            update_mount_cache = True
             if isinstance(out, string_types):
                 # Failed to (re)mount, the state has failed!
                 ret['comment'] = out
@@ -527,9 +591,14 @@ def mounted(name,
                 ret['comment'] = '{0} not mounted'.format(name)
 
     if persist:
-        # Override default for Mac OS
-        if __grains__['os'] in ['MacOS', 'Darwin'] and config == '/etc/fstab':
-            config = "/etc/auto_salt"
+        if '/etc/fstab' == config:
+            # Override default for Mac OS
+            if __grains__['os'] in ['MacOS', 'Darwin']:
+                config = "/etc/auto_salt"
+
+            # Override default for AIX
+            elif 'AIX' in __grains__['os']:
+                config = "/etc/filesystems"
 
         if __opts__['test']:
             if __grains__['os'] in ['MacOS', 'Darwin']:
@@ -539,6 +608,15 @@ def mounted(name,
                                                        opts,
                                                        config,
                                                        test=True)
+            elif __grains__['os'] in ['AIX']:
+                out = __salt__['mount.set_filesystems'](name,
+                                                  device,
+                                                  fstype,
+                                                  opts,
+                                                  mount,
+                                                  config,
+                                                  test=True,
+                                                  match_on=match_on)
             else:
                 out = __salt__['mount.set_fstab'](name,
                                                   device,
@@ -587,6 +665,14 @@ def mounted(name,
                                                        fstype,
                                                        opts,
                                                        config)
+            elif __grains__['os'] in ['AIX']:
+                out = __salt__['mount.set_filesystems'](name,
+                                                  device,
+                                                  fstype,
+                                                  opts,
+                                                  mount,
+                                                  config,
+                                                  match_on=match_on)
             else:
                 out = __salt__['mount.set_fstab'](name,
                                                   device,
@@ -596,6 +682,13 @@ def mounted(name,
                                                   pass_num,
                                                   config,
                                                   match_on=match_on)
+
+        if update_mount_cache:
+            cache_result = __salt__['mount.write_mount_cache'](real_name,
+                                                               device,
+                                                               mkmnt=mkmnt,
+                                                               fstype=fstype,
+                                                               mount_opts=opts)
 
         if out == 'present':
             ret['comment'] += '. Entry already exists in the fstab.'
@@ -661,7 +754,15 @@ def swap(name, persist=True, config='/etc/fstab'):
             ret['result'] = False
 
     if persist:
-        fstab_data = __salt__['mount.fstab'](config)
+        device_key_name = 'device'
+        if 'AIX' in __grains__['os']:
+            device_key_name = 'dev'
+            if '/etc/fstab' == config:
+                # Override default for AIX
+                config = "/etc/filesystems"
+            fstab_data = __salt__['mount.filesystems'](config)
+        else:
+            fstab_data = __salt__['mount.fstab'](config)
         if __opts__['test']:
             if name not in fstab_data and name not in [fstab_data[item]['device'] for item in fstab_data]:
                 ret['result'] = None
@@ -671,19 +772,25 @@ def swap(name, persist=True, config='/etc/fstab'):
             return ret
 
         if 'none' in fstab_data:
-            if fstab_data['none']['device'] == name and \
+            if fstab_data['none'][device_key_name] == name and \
                fstab_data['none']['fstype'] != 'swap':
                 return ret
 
-        # present, new, change, bad config
-        # Make sure the entry is in the fstab
-        out = __salt__['mount.set_fstab']('none',
-                                          name,
-                                          'swap',
-                                          ['defaults'],
-                                          0,
-                                          0,
-                                          config)
+        if 'AIX' in __grains__['os']:
+            out = None
+            ret['result'] = False
+            ret['comment'] += '. swap not present in /etc/filesystems on AIX.'
+            return ret
+        else:
+            # present, new, change, bad config
+            # Make sure the entry is in the fstab
+            out = __salt__['mount.set_fstab']('none',
+                                              name,
+                                              'swap',
+                                              ['defaults'],
+                                              0,
+                                              0,
+                                              config)
         if out == 'present':
             return ret
         if out == 'new':
@@ -705,7 +812,8 @@ def unmounted(name,
               device=None,
               config='/etc/fstab',
               persist=False,
-              user=None):
+              user=None,
+              **kwargs):
     '''
     .. versionadded:: 0.17.0
 
@@ -735,6 +843,8 @@ def unmounted(name,
            'result': True,
            'comment': ''}
 
+    update_mount_cache = False
+
     if not name:
         ret['result'] = False
         ret['comment'] = 'Must provide name to mount.unmounted'
@@ -754,8 +864,10 @@ def unmounted(name,
             return ret
         if device:
             out = __salt__['mount.umount'](name, device, user=user)
+            update_mount_cache = True
         else:
             out = __salt__['mount.umount'](name, user=user)
+            update_mount_cache = True
         if isinstance(out, string_types):
             # Failed to umount, the state has failed!
             ret['comment'] = out
@@ -768,11 +880,20 @@ def unmounted(name,
             ret['comment'] = 'Execute set to False, Target was not unmounted'
             ret['result'] = True
 
+    if update_mount_cache:
+        cache_result = __salt__['mount.delete_mount_cache'](name)
+
     if persist:
+        device_key_name = 'device'
         # Override default for Mac OS
         if __grains__['os'] in ['MacOS', 'Darwin'] and config == '/etc/fstab':
             config = "/etc/auto_salt"
             fstab_data = __salt__['mount.automaster'](config)
+        elif 'AIX' in __grains__['os']:
+            device_key_name = 'dev'
+            if config == '/etc/fstab':
+                config = "/etc/filesystems"
+            fstab_data = __salt__['mount.filesystems'](config)
         else:
             fstab_data = __salt__['mount.fstab'](config)
 
@@ -780,7 +901,7 @@ def unmounted(name,
             ret['comment'] += '. fstab entry not found'
         else:
             if device:
-                if fstab_data[name]['device'] != device:
+                if fstab_data[name][device_key_name] != device:
                     ret['comment'] += '. fstab entry for device {0} not found'.format(device)
                     return ret
             if __opts__['test']:
@@ -792,6 +913,8 @@ def unmounted(name,
             else:
                 if __grains__['os'] in ['MacOS', 'Darwin']:
                     out = __salt__['mount.rm_automaster'](name, device, config)
+                elif 'AIX' in __grains__['os']:
+                    out = __salt__['mount.rm_filesystems'](name, device, config)
                 else:
                     out = __salt__['mount.rm_fstab'](name, device, config)
                 if out is not True:

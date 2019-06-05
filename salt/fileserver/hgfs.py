@@ -2,13 +2,17 @@
 '''
 Mercurial Fileserver Backend
 
-To enable, add ``hg`` to the :conf_master:`fileserver_backend` option in the
+To enable, add ``hgfs`` to the :conf_master:`fileserver_backend` option in the
 Master config file.
 
 .. code-block:: yaml
 
     fileserver_backend:
-      - hg
+      - hgfs
+
+.. note::
+    ``hg`` also works here. Prior to the 2018.3.0 release, *only* ``hg`` would
+    work.
 
 After enabling this backend, branches, bookmarks, and tags in a remote
 mercurial repository are exposed to salt as different environments. This
@@ -33,7 +37,7 @@ will set the desired branch method. Possible values are: ``branches``,
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import errno
 import fnmatch
@@ -49,7 +53,7 @@ VALID_BRANCH_METHODS = ('branches', 'bookmarks', 'mixed')
 PER_REMOTE_OVERRIDES = ('base', 'branch_method', 'mountpoint', 'root')
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 try:
     import hglib
@@ -59,8 +63,13 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.files
+import salt.utils.gzip_util
+import salt.utils.hashutils
+import salt.utils.stringutils
 import salt.utils.url
+import salt.utils.versions
 import salt.fileserver
 from salt.utils.event import tagify
 
@@ -82,8 +91,8 @@ def __virtual__():
         return False
     if __opts__['hgfs_branch_method'] not in VALID_BRANCH_METHODS:
         log.error(
-            'Invalid hgfs_branch_method \'{0}\'. Valid methods are: {1}'
-            .format(__opts__['hgfs_branch_method'], VALID_BRANCH_METHODS)
+            'Invalid hgfs_branch_method \'%s\'. Valid methods are: %s',
+            __opts__['hgfs_branch_method'], VALID_BRANCH_METHODS
         )
         return False
     return __virtualname__
@@ -200,15 +209,14 @@ def init():
             repo_url = next(iter(remote))
             per_remote_conf = dict(
                 [(key, six.text_type(val)) for key, val in
-                 six.iteritems(salt.utils.repack_dictlist(remote[repo_url]))]
+                 six.iteritems(salt.utils.data.repack_dictlist(remote[repo_url]))]
             )
             if not per_remote_conf:
                 log.error(
-                    'Invalid per-remote configuration for hgfs remote {0}. If '
+                    'Invalid per-remote configuration for hgfs remote %s. If '
                     'no per-remote parameters are being specified, there may '
                     'be a trailing colon after the URL, which should be '
-                    'removed. Check the master configuration file.'
-                    .format(repo_url)
+                    'removed. Check the master configuration file.', repo_url
                 )
                 _failhard()
 
@@ -217,10 +225,9 @@ def init():
                                     per_remote_defaults['branch_method'])
             if branch_method not in VALID_BRANCH_METHODS:
                 log.error(
-                    'Invalid branch_method \'{0}\' for remote {1}. Valid '
-                    'branch methods are: {2}. This remote will be ignored.'
-                    .format(branch_method, repo_url,
-                            ', '.join(VALID_BRANCH_METHODS))
+                    'Invalid branch_method \'%s\' for remote %s. Valid '
+                    'branch methods are: %s. This remote will be ignored.',
+                    branch_method, repo_url, ', '.join(VALID_BRANCH_METHODS)
                 )
                 _failhard()
 
@@ -228,11 +235,10 @@ def init():
             for param in (x for x in per_remote_conf
                           if x not in PER_REMOTE_OVERRIDES):
                 log.error(
-                    'Invalid configuration parameter \'{0}\' for remote {1}. '
-                    'Valid parameters are: {2}. See the documentation for '
-                    'further information.'.format(
-                        param, repo_url, ', '.join(PER_REMOTE_OVERRIDES)
-                    )
+                    'Invalid configuration parameter \'%s\' for remote %s. '
+                    'Valid parameters are: %s. See the documentation for '
+                    'further information.',
+                    param, repo_url, ', '.join(PER_REMOTE_OVERRIDES)
                 )
                 per_remote_errors = True
             if per_remote_errors:
@@ -244,8 +250,8 @@ def init():
 
         if not isinstance(repo_url, six.string_types):
             log.error(
-                'Invalid hgfs remote {0}. Remotes must be strings, you may '
-                'need to enclose the URL in quotes'.format(repo_url)
+                'Invalid hgfs remote %s. Remotes must be strings, you may '
+                'need to enclose the URL in quotes', repo_url
             )
             _failhard()
 
@@ -271,16 +277,16 @@ def init():
             repo = hglib.open(rp_)
         except hglib.error.ServerError:
             log.error(
-                'Cache path {0} (corresponding remote: {1}) exists but is not '
+                'Cache path %s (corresponding remote: %s) exists but is not '
                 'a valid mercurial repository. You will need to manually '
                 'delete this directory on the master to continue to use this '
-                'hgfs remote.'.format(rp_, repo_url)
+                'hgfs remote.', rp_, repo_url
             )
             _failhard()
         except Exception as exc:
             log.error(
-                'Exception \'{0}\' encountered while initializing hgfs remote '
-                '{1}'.format(exc, repo_url)
+                'Exception \'%s\' encountered while initializing hgfs '
+                'remote %s', exc, repo_url
             )
             _failhard()
 
@@ -295,9 +301,13 @@ def init():
         if not refs:
             # Write an hgrc defining the remote URL
             hgconfpath = os.path.join(rp_, '.hg', 'hgrc')
-            with salt.utils.fopen(hgconfpath, 'w+') as hgconfig:
+            with salt.utils.files.fopen(hgconfpath, 'w+') as hgconfig:
                 hgconfig.write('[paths]\n')
-                hgconfig.write('default = {0}\n'.format(repo_url))
+                hgconfig.write(
+                    salt.utils.stringutils.to_str(
+                        'default = {0}\n'.format(repo_url)
+                    )
+                )
 
         repo_conf.update({
             'repo': repo,
@@ -314,15 +324,19 @@ def init():
     if new_remote:
         remote_map = os.path.join(__opts__['cachedir'], 'hgfs/remote_map.txt')
         try:
-            with salt.utils.fopen(remote_map, 'w+') as fp_:
+            with salt.utils.files.fopen(remote_map, 'w+') as fp_:
                 timestamp = datetime.now().strftime('%d %b %Y %H:%M:%S.%f')
                 fp_.write('# hgfs_remote map as of {0}\n'.format(timestamp))
                 for repo in repos:
-                    fp_.write('{0} = {1}\n'.format(repo['hash'], repo['url']))
+                    fp_.write(
+                        salt.utils.stringutils.to_str(
+                            '{0} = {1}\n'.format(repo['hash'], repo['url'])
+                        )
+                    )
         except OSError:
             pass
         else:
-            log.info('Wrote new hgfs_remote map to {0}'.format(remote_map))
+            log.info('Wrote new hgfs_remote map to %s', remote_map)
 
     return repos
 
@@ -357,12 +371,12 @@ def _clear_old_remotes():
                 shutil.rmtree(rdir)
             except OSError as exc:
                 log.error(
-                    'Unable to remove old hgfs remote cachedir {0}: {1}'
-                    .format(rdir, exc)
+                    'Unable to remove old hgfs remote cachedir %s: %s',
+                    rdir, exc
                 )
                 failed.append(rdir)
             else:
-                log.debug('hgfs removed old cachedir {0}'.format(rdir))
+                log.debug('hgfs removed old cachedir %s', rdir)
     for fdir in failed:
         to_remove.remove(fdir)
     return bool(to_remove), repos
@@ -453,8 +467,8 @@ def lock(remote=None):
         failed = []
         if not os.path.exists(repo['lockfile']):
             try:
-                with salt.utils.fopen(repo['lockfile'], 'w+') as fp_:
-                    fp_.write('')
+                with salt.utils.files.fopen(repo['lockfile'], 'w'):
+                    pass
             except (IOError, OSError) as exc:
                 msg = ('Unable to set update lock for {0} ({1}): {2} '
                        .format(repo['url'], repo['lockfile'], exc))
@@ -500,29 +514,29 @@ def update():
     for repo in repos:
         if os.path.exists(repo['lockfile']):
             log.warning(
-                'Update lockfile is present for hgfs remote {0}, skipping. '
+                'Update lockfile is present for hgfs remote %s, skipping. '
                 'If this warning persists, it is possible that the update '
-                'process was interrupted. Removing {1} or running '
+                'process was interrupted. Removing %s or running '
                 '\'salt-run fileserver.clear_lock hgfs\' will allow updates '
-                'to continue for this remote.'
-                .format(repo['url'], repo['lockfile'])
+                'to continue for this remote.', repo['url'], repo['lockfile']
             )
             continue
         _, errors = lock(repo)
         if errors:
-            log.error('Unable to set update lock for hgfs remote {0}, '
-                      'skipping.'.format(repo['url']))
+            log.error(
+                'Unable to set update lock for hgfs remote %s, skipping.',
+                repo['url']
+            )
             continue
-        log.debug('hgfs is fetching from {0}'.format(repo['url']))
+        log.debug('hgfs is fetching from %s', repo['url'])
         repo['repo'].open()
         curtip = repo['repo'].tip()
         try:
             repo['repo'].pull()
         except Exception as exc:
             log.error(
-                'Exception {0} caught while updating hgfs remote {1}'
-                .format(exc, repo['url']),
-                exc_info_on_loglevel=logging.DEBUG
+                'Exception %s caught while updating hgfs remote %s',
+                exc, repo['url'], exc_info_on_loglevel=logging.DEBUG
             )
         else:
             newtip = repo['repo'].tip()
@@ -538,19 +552,19 @@ def update():
             os.makedirs(env_cachedir)
         new_envs = envs(ignore_cache=True)
         serial = salt.payload.Serial(__opts__)
-        with salt.utils.fopen(env_cache, 'wb+') as fp_:
+        with salt.utils.files.fopen(env_cache, 'wb+') as fp_:
             fp_.write(serial.dumps(new_envs))
-            log.trace('Wrote env cache data to {0}'.format(env_cache))
+            log.trace('Wrote env cache data to %s', env_cache)
 
     # if there is a change, fire an event
     if __opts__.get('fileserver_events', False):
-        event = salt.utils.event.get_event(
+        with salt.utils.event.get_event(
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
                 opts=__opts__,
-                listen=False)
-        event.fire_event(data, tagify(['hgfs', 'update'], prefix='fileserver'))
+                listen=False) as event:
+            event.fire_event(data, tagify(['hgfs', 'update'], prefix='fileserver'))
     try:
         salt.fileserver.reap_fileserver_cache_dir(
             os.path.join(__opts__['cachedir'], 'hgfs/hash'),
@@ -566,10 +580,30 @@ def _env_is_exposed(env):
     Check if an environment is exposed by comparing it against a whitelist and
     blacklist.
     '''
-    return salt.utils.check_whitelist_blacklist(
+    if __opts__['hgfs_env_whitelist']:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The hgfs_env_whitelist config option has been renamed to '
+            'hgfs_saltenv_whitelist. Please update your configuration.'
+        )
+        whitelist = __opts__['hgfs_env_whitelist']
+    else:
+        whitelist = __opts__['hgfs_saltenv_whitelist']
+
+    if __opts__['hgfs_env_blacklist']:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The hgfs_env_blacklist config option has been renamed to '
+            'hgfs_saltenv_blacklist. Please update your configuration.'
+        )
+        blacklist = __opts__['hgfs_env_blacklist']
+    else:
+        blacklist = __opts__['hgfs_saltenv_blacklist']
+
+    return salt.utils.stringutils.check_whitelist_blacklist(
         env,
-        whitelist=__opts__['hgfs_env_whitelist'],
-        blacklist=__opts__['hgfs_env_blacklist']
+        whitelist=whitelist,
+        blacklist=blacklist,
     )
 
 
@@ -658,7 +692,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             continue
         salt.fileserver.wait_lock(lk_fn, dest)
         if os.path.isfile(blobshadest) and os.path.isfile(dest):
-            with salt.utils.fopen(blobshadest, 'r') as fp_:
+            with salt.utils.files.fopen(blobshadest, 'r') as fp_:
                 sha = fp_.read()
                 if sha == ref[2]:
                     fnd['rel'] = path
@@ -672,14 +706,14 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
         except hglib.error.CommandError:
             repo['repo'].close()
             continue
-        with salt.utils.fopen(lk_fn, 'w+') as fp_:
-            fp_.write('')
+        with salt.utils.files.fopen(lk_fn, 'w'):
+            pass
         for filename in glob.glob(hashes_glob):
             try:
                 os.remove(filename)
             except Exception:
                 pass
-        with salt.utils.fopen(blobshadest, 'w+') as fp_:
+        with salt.utils.files.fopen(blobshadest, 'w+') as fp_:
             fp_.write(ref[2])
         try:
             os.remove(lk_fn)
@@ -713,12 +747,7 @@ def serve_file(load, fnd):
     Return a chunk from a file based on the data received
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     ret = {'data': '',
@@ -730,10 +759,10 @@ def serve_file(load, fnd):
     ret['dest'] = fnd['rel']
     gzip = load.get('gzip', None)
     fpath = os.path.normpath(fnd['path'])
-    with salt.utils.fopen(fpath, 'rb') as fp_:
+    with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
-        if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+        if data and six.PY3 and not salt.utils.files.is_binary(fpath):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
@@ -747,12 +776,7 @@ def file_hash(load, fnd):
     Return a file hash, the hash type is set in the master config file
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if not all(x in load for x in ('path', 'saltenv')):
@@ -766,13 +790,13 @@ def file_hash(load, fnd):
                             '{0}.hash.{1}'.format(relpath,
                                                   __opts__['hash_type']))
     if not os.path.isfile(hashdest):
-        ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
-        with salt.utils.fopen(hashdest, 'w+') as fp_:
+        ret['hsum'] = salt.utils.hashutils.get_hash(path, __opts__['hash_type'])
+        with salt.utils.files.fopen(hashdest, 'w+') as fp_:
             fp_.write(ret['hsum'])
         return ret
     else:
-        with salt.utils.fopen(hashdest, 'rb') as fp_:
-            ret['hsum'] = fp_.read()
+        with salt.utils.files.fopen(hashdest, 'rb') as fp_:
+            ret['hsum'] = salt.utils.stringutils.to_unicode(fp_.read())
         return ret
 
 
@@ -781,12 +805,7 @@ def _file_lists(load, form):
     Return a dict containing the file lists for files and dirs
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/hgfs')
@@ -794,7 +813,7 @@ def _file_lists(load, form):
         try:
             os.makedirs(list_cachedir)
         except os.error:
-            log.critical('Unable to make cachedir {0}'.format(list_cachedir))
+            log.critical('Unable to make cachedir %s', list_cachedir)
             return []
     list_cache = os.path.join(list_cachedir, '{0}.p'.format(load['saltenv']))
     w_lock = os.path.join(list_cachedir, '.{0}.w'.format(load['saltenv']))
@@ -829,12 +848,7 @@ def _get_file_list(load):
     Get a list of all files on the file server in a specified environment
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if 'saltenv' not in load or load['saltenv'] not in envs():
@@ -874,12 +888,7 @@ def _get_dir_list(load):
     Get a list of all directories on the master
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if 'saltenv' not in load or load['saltenv'] not in envs():

@@ -2,7 +2,7 @@
 '''
 This is a dummy proxy-minion designed for testing the proxy minion subsystem.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -11,7 +11,7 @@ import logging
 
 # Import Salt libs
 import salt.ext.six as six
-import salt.utils
+import salt.utils.files
 
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ['dummy']
@@ -39,9 +39,8 @@ def __virtual__():
 
 
 def _save_state(details):
-    pck = open(FILENAME, 'wb')  # pylint: disable=W8470
-    pickle.dump(details, pck)
-    pck.close()
+    with salt.utils.files.fopen(FILENAME, 'wb') as pck:
+        pickle.dump(details, pck)
 
 
 def _load_state():
@@ -51,7 +50,7 @@ def _load_state():
         else:
             mode = 'r'
 
-        with salt.utils.fopen(FILENAME, mode) as pck:
+        with salt.utils.files.fopen(FILENAME, mode) as pck:
             DETAILS = pickle.load(pck)
     except EOFError:
         DETAILS = {}
@@ -195,7 +194,7 @@ def uptodate():
     for p in DETAILS['packages']:
         version_float = float(DETAILS['packages'][p])
         version_float = version_float + 1.0
-        DETAILS['packages'][p] = str(version_float)
+        DETAILS['packages'][p] = six.text_type(version_float)
     return DETAILS['packages']
 
 

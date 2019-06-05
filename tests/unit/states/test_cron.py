@@ -4,7 +4,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -260,10 +260,12 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             get_crontab(),
             '# Lines below here are managed by Salt, do not edit\n'
             '# First crontab\n'
-            '# second multi-line comment SALT_CRON_IDENTIFIER:1\n'
+            '# second multi-line comment\n'
+            '#  SALT_CRON_IDENTIFIER:1\n'
             '* 1 * * * foo\n'
             '# Second crontab\n'
-            '# multi-line comment SALT_CRON_IDENTIFIER:2\n'
+            '# multi-line comment\n'
+            '#  SALT_CRON_IDENTIFIER:2\n'
             '* 1 * * * foo')
 
     def test_existing_unmanaged_jobs_are_made_managed(self):

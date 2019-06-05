@@ -115,11 +115,10 @@ Name                            Description
 ==============================  ==================================================================================
 
 .. note::
-    The ``local`` and ``caller`` reaction types will be renamed for the Oxygen
-    release. These reaction types were named after Salt's internal client
-    interfaces, and are not intuitively named. Both ``local`` and ``caller``
-    will continue to work in Reactor SLS files, but for the Oxygen release the
-    documentation will be updated to reflect the new preferred naming.
+    The ``local`` and ``caller`` reaction types will likely be renamed in a
+    future release. These reaction types were named after Salt's internal
+    client interfaces, and are not intuitively named. Both ``local`` and
+    ``caller`` will continue to work in Reactor SLS files, however.
 
 Where to Put Reactor SLS Files
 ==============================

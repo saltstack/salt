@@ -7,8 +7,7 @@ Salt-cp can be used to distribute configuration files
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import errno
 import logging
@@ -18,12 +17,15 @@ import sys
 
 # Import salt libs
 import salt.client
+import salt.output
+import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.itertools
 import salt.utils.minions
-from salt.utils import parsers, to_bytes, print_cli
-from salt.utils.verify import verify_log
-import salt.output
+import salt.utils.parsers
+import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.verify
 
 # Import 3rd party libs
 from salt.ext import six
@@ -31,7 +33,7 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 
-class SaltCPCli(parsers.SaltCPOptionParser):
+class SaltCPCli(salt.utils.parsers.SaltCPOptionParser):
     '''
     Run the salt-cp command line client
     '''
@@ -44,7 +46,7 @@ class SaltCPCli(parsers.SaltCPOptionParser):
 
         # Setup file logging!
         self.setup_logfile_logger()
-        verify_log(self.config)
+        salt.utils.verify.verify_log(self.config)
 
         cp_ = SaltCP(self.config)
         cp_.run()
@@ -56,7 +58,7 @@ class SaltCP(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.is_windows = salt.utils.is_windows()
+        self.is_windows = salt.utils.platform.is_windows()
 
     def _mode(self, path):
         if self.is_windows:
@@ -109,7 +111,7 @@ class SaltCP(object):
             err = 'The referenced file, {0} is not available.'.format(fn_)
             sys.stderr.write(err + '\n')
             sys.exit(42)
-        with salt.utils.fopen(fn_, 'r') as fp_:
+        with salt.utils.files.fopen(fn_, 'r') as fp_:
             data = fp_.read()
         return {fn_: data}
 
@@ -123,8 +125,10 @@ class SaltCP(object):
             if os.path.isfile(fn_):
                 files.update(self._file_dict(fn_))
             elif os.path.isdir(fn_):
-                print_cli(fn_ + ' is a directory, only files are supported in non-chunked mode. '
-                                'Use "--chunked" command line argument.')
+                salt.utils.stringutils.print_cli(
+                    fn_ + ' is a directory, only files are supported '
+                    'in non-chunked mode. Use "--chunked" command '
+                    'line argument.')
                 sys.exit(1)
         return files
 
@@ -179,9 +183,10 @@ class SaltCP(object):
             if gzip \
             else salt.utils.itertools.read_file
 
-        minions = salt.utils.minions.CkMinions(self.opts).check_minions(
+        _res = salt.utils.minions.CkMinions(self.opts).check_minions(
             tgt,
             tgt_type=selected_target_option or 'glob')
+        minions = _res['minions']
 
         local = salt.client.get_local_client(self.opts['conf_file'])
 
@@ -211,7 +216,7 @@ class SaltCP(object):
             index = 1
             failed = {}
             for chunk in reader(fn_, chunk_size=self.opts['salt_cp_chunk_size']):
-                chunk = base64.b64encode(to_bytes(chunk))
+                chunk = base64.b64encode(salt.utils.stringutils.to_bytes(chunk))
                 append = index > 1
                 log.debug(
                     'Copying %s to %starget \'%s\' as %s%s',
@@ -266,7 +271,7 @@ class SaltCP(object):
             log.debug(
                 'Creating empty dir %s on %starget \'%s\'',
                 dirname,
-                '{0} '.format(selected_target_option)
+                '{0} '.format(selected_target_option)  # pylint: disable=str-format-in-logging
                     if selected_target_option
                     else '',
                 tgt,

@@ -5,14 +5,15 @@ Windows Service module.
 .. versionchanged:: 2016.11.0 - Rewritten to use PyWin32
 '''
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
+import fnmatch
 import logging
 import re
-import salt.utils
 import time
 
-# Import salt libs
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd party libs
@@ -92,7 +93,7 @@ def __virtual__():
     '''
     Only works on Windows systems with PyWin32 installed
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Module win_service: module only works on Windows.'
 
     if not HAS_WIN32_MODS:
@@ -612,24 +613,39 @@ def execute_salt_restart_task():
 
 def status(name, *args, **kwargs):
     '''
-    Return the status for a service
+    Return the status for a service.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
+
+    .. versionchanged:: 2018.3.0
+        The service name can now be a glob (e.g. ``salt*``)
 
     Args:
         name (str): The name of the service to check
 
     Returns:
         bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.status <service name> [service signature]
+        salt '*' service.status <service name>
     '''
-    if info(name)['Status'] in ['Running', 'Stop Pending']:
-        return True
 
-    return False
+    results = {}
+    all_services = get_all()
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    if contains_globbing:
+        services = fnmatch.filter(all_services, name)
+    else:
+        services = [name]
+    for service in services:
+        results[service] = info(service)['Status'] in ['Running', 'Stop Pending']
+    if contains_globbing:
+        return results
+    return results[name]
 
 
 def getsid(name):
@@ -665,7 +681,8 @@ def modify(name,
            account_name=None,
            account_password=None,
            run_interactive=None):
-    r'''
+    # pylint: disable=anomalous-backslash-in-string
+    '''
     Modify a service's parameters. Changes will not be made for parameters that
     are not passed.
 
@@ -735,7 +752,7 @@ def modify(name,
 
         account_name (str):
             The name of the account under which the service should run. For
-            ``own`` type services this should be in the ``domain\username``
+            ``own`` type services this should be in the ``domain\\username``
             format. The following are examples of valid built-in service
             accounts:
 
@@ -762,7 +779,9 @@ def modify(name,
     .. code-block:: bash
 
         salt '*' service.modify spooler start_type=disabled
+
     '''
+    # pylint: enable=anomalous-backslash-in-string
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms681987(v=vs.85).aspx
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms681988(v-vs.85).aspx
     handle_scm = win32service.OpenSCManager(
@@ -812,7 +831,7 @@ def modify(name,
     if service_type is not win32service.SERVICE_NO_CHANGE:
         flags = list()
         for bit in SERVICE_TYPE:
-            if service_type & bit:
+            if isinstance(bit, int) and service_type & bit:
                 flags.append(SERVICE_TYPE[bit])
 
         changes['ServiceType'] = flags if flags else service_type
@@ -889,12 +908,26 @@ def modify(name,
     return changes
 
 
-def enable(name, **kwargs):
+def enable(name, start_type='auto', start_delayed=False, **kwargs):
     '''
     Enable the named service to start at boot
 
     Args:
         name (str): The name of the service to enable.
+
+        start_type (str): Specifies the service start type. Valid options are as
+            follows:
+
+            - boot: Device driver that is loaded by the boot loader
+            - system: Device driver that is started during kernel initialization
+            - auto: Service that automatically starts
+            - manual: Service must be started manually
+            - disabled: Service cannot be started
+
+        start_delayed (bool): Set the service to Auto(Delayed Start). Only valid
+            if the start_type is set to ``Auto``. If service_type is not passed,
+            but the service is already set to ``Auto``, then the flag will be
+            set.
 
     Returns:
         bool: ``True`` if successful, ``False`` otherwise
@@ -905,8 +938,13 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name>
     '''
-    modify(name, start_type='Auto')
-    return info(name)['StartType'] == 'Auto'
+
+    modify(name, start_type=start_type, start_delayed=start_delayed)
+    svcstat = info(name)
+    if start_type.lower() == 'auto':
+        return svcstat['StartType'].lower() == start_type.lower() and svcstat['StartTypeDelayed'] == start_delayed
+    else:
+        return svcstat['StartType'].lower() == start_type.lower()
 
 
 def disable(name, **kwargs):
@@ -982,7 +1020,7 @@ def create(name,
            account_password=None,
            run_interactive=False,
            **kwargs):
-    r'''
+    '''
     Create the named service.
 
     .. versionadded:: 2015.8.0
@@ -1053,7 +1091,7 @@ def create(name,
 
         account_name (str):
             The name of the account under which the service should run. For
-            ``own`` type services this should be in the ``domain\username``
+            ``own`` type services this should be in the ``domain\\username``
             format. The following are examples of valid built-in service
             accounts:
 
@@ -1081,99 +1119,8 @@ def create(name,
 
         salt '*' service.create <service name> <path to exe> display_name='<display name>'
     '''
-    # Deprecations
-    if 'binpath' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The \'binpath\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use \'bin_path\' '
-            'instead.'
-        )
-        if bin_path is None:
-            bin_path = kwargs.pop('binpath')
-
-    if 'DisplayName' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The \'DisplayName\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use \'display_name\' '
-            'instead.'
-        )
-        if display_name is None:
-            display_name = kwargs.pop('DisplayName')
-
     if display_name is None:
         display_name = name
-
-    if 'type' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The \'type\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use \'service_type\' '
-            'instead.'
-        )
-        if service_type is None:
-            service_type = kwargs.pop('type')
-
-    if 'start' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The \'start\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use \'start_type\' '
-            'instead.'
-        )
-        if start_type is None:
-            start_type = kwargs.pop('start')
-
-    if 'error' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The \'error\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use \'error_control\' '
-            'instead.'
-        )
-        if error_control is None:
-            error_control = kwargs.pop('error')
-
-    if 'group' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The \'group\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use '
-            '\'load_order_group\' instead.'
-        )
-        if load_order_group is None:
-            load_order_group = kwargs.pop('group')
-
-    if 'depend' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The \'depend\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use \'dependencies\' '
-            'instead.'
-        )
-        if dependencies is None:
-            dependencies = kwargs.pop('depend')
-
-    if 'obj' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The \'obj\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use \'account_name\' '
-            'instead.'
-        )
-        if account_name is None:
-            account_name = kwargs.pop('obj')
-
-    if 'password' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The \'password\' argument to service.create is deprecated, and '
-            'will be removed in Salt {version}. Please use '
-            '\'account_password\' instead.'
-        )
-        if account_password is None:
-            account_password = kwargs.pop('password')
 
     # Test if the service already exists
     if name in get_all():
@@ -1250,110 +1197,6 @@ def create(name,
     win32service.CloseServiceHandle(handle_svc)
 
     return info(name)
-
-
-def config(name,
-           bin_path=None,
-           display_name=None,
-           svc_type=None,
-           start_type=None,
-           error=None,
-           group=None,
-           tag=None,
-           depend=None,
-           obj=None,
-           password=None,
-           **kwargs):
-    r'''
-    .. deprecated:: 2016.11.0
-        Use ``service.modify`` instead
-
-    Modify the named service. Because this is deprecated it will use the passed
-    parameters to run ``service.modify`` instead.
-
-    Args:
-
-        name (str): Specifies the service name. This is not the display_name
-
-        bin_path (str): Specifies the path to the service binary file.
-            Backslashes must be escaped, eg: C:\\path\\to\\binary.exe
-
-        display_name (str): the name to be displayed in the service manager
-
-        svc_type (str): Specifies the service type. Default is ``own``.
-            Valid options are as follows:
-
-            - kernel: Driver service
-            - filesystem: File system driver service
-            - adapter: Adapter driver service (reserved)
-            - recognizer: Recognizer driver service (reserved)
-            - own (default): Service runs in its own process
-            - share: Service shares a process with one or more other services
-
-        start_type (str): Specifies the service start type. Valid options are as
-            follows:
-
-            - boot: Device driver that is loaded by the boot loader
-            - system: Device driver that is started during kernel initialization
-            - auto: Service that automatically starts
-            - manual (default): Service must be started manually
-            - disabled: Service cannot be started
-
-        error (str): The severity of the error, and action taken, if this
-            service fails to start. Valid options are as follows:
-
-            - normal (normal): Error is logged and a message box is displayed
-            - severe: Error is logged and computer attempts a restart with the
-              last known good configuration
-            - critical: Error is logged, computer attempts to restart with the
-              last known good configuration, system halts on failure
-            - ignore: Error is logged and startup continues, no notification is
-              given to the user
-
-        group: The name of the load order group to which this service
-            belongs
-
-        depend (list): A list of services or load ordering groups that
-            must start before this service
-
-        obj (str): The name of the account under which the service should run.
-            For ``own`` type services this should be in the ``domain\username``
-            format. The following are examples of valid built-in service
-            accounts:
-
-            - NT Authority\\LocalService
-            - NT Authority\\NetworkService
-            - NT Authority\\LocalSystem
-            - .\\LocalSystem
-
-        password (str): The password for the account name specified in
-            ``account_name``. For the above built-in accounts, this can be None.
-            Otherwise a password must be specified.
-
-    Returns:
-        dict: a dictionary of changes made
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' service.config <service name> <path to exe> display_name='<display name>'
-    '''
-    salt.utils.warn_until(
-        'Oxygen',
-        'The \'service.change\' function is deprecated, and will be removed in '
-        'Salt {version}. Please use \'service.modify\' instead.')
-
-    return modify(name=name,
-                  bin_path=bin_path,
-                  display_name=display_name,
-                  service_type=svc_type,
-                  start_type=start_type,
-                  error_control=error,
-                  load_order_group=group,
-                  dependencies=depend,
-                  account_name=obj,
-                  account_password=password)
 
 
 def delete(name, timeout=90):

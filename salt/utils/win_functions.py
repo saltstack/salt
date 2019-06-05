@@ -3,7 +3,7 @@
 Various functions to be used by windows during start up and to monkey patch
 missing functions in other modules
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import platform
 import re
 import ctypes
@@ -79,18 +79,27 @@ def get_user_groups(name, sid=False):
     Returns:
         list: A list of group names or sids
     '''
-    if name == 'SYSTEM':
+    groups = []
+    if name.upper() == 'SYSTEM':
         # 'win32net.NetUserGetLocalGroups' will fail if you pass in 'SYSTEM'.
-        groups = [name]
+        groups = ['SYSTEM']
     else:
-        groups = win32net.NetUserGetLocalGroups(None, name)
+        try:
+            groups = win32net.NetUserGetLocalGroups(None, name)
+        except win32net.error as exc:
+            if exc.winerror == 5:
+                # Try without LG_INCLUDE_INDIRECT flag, because the user might
+                # not have permissions for it
+                groups = win32net.NetUserGetLocalGroups(None, name, 0)
+            else:
+                raise
 
     if not sid:
         return groups
 
-    ret_groups = set()
+    ret_groups = []
     for group in groups:
-        ret_groups.add(get_sid_from_name(group))
+        ret_groups.append(get_sid_from_name(group))
 
     return ret_groups
 
@@ -114,7 +123,7 @@ def get_sid_from_name(name):
         sid = win32security.LookupAccountName(None, name)[0]
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'User {0} not found: {1}'.format(name, exc.strerror))
+            'User {0} not found: {1}'.format(name, exc))
 
     return win32security.ConvertSidToStringSid(sid)
 
@@ -122,6 +131,12 @@ def get_sid_from_name(name):
 def get_current_user(with_domain=True):
     '''
     Gets the user executing the process
+
+    Args:
+
+        with_domain (bool):
+            ``True`` will prepend the user name with the machine name or domain
+            separated by a backslash
 
     Returns:
         str: The user name
@@ -140,7 +155,7 @@ def get_current_user(with_domain=True):
             user_name = win32api.GetUserName()
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'Failed to get current user: {0}'.format(exc.strerror))
+            'Failed to get current user: {0}'.format(exc))
 
     if not user_name:
         return False
@@ -164,6 +179,15 @@ def get_sam_name(username):
         return '\\'.join([platform.node()[:15].upper(), username])
     username, domain, _ = win32security.LookupAccountSid(None, sid_obj)
     return '\\'.join([domain, username])
+
+
+def enable_ctrl_logoff_handler():
+    if HAS_WIN32:
+        ctrl_logoff_event = 5
+        win32api.SetConsoleCtrlHandler(
+            lambda event: True if event == ctrl_logoff_event else False,
+            1
+        )
 
 
 def escape_argument(arg, escape=True):

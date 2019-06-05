@@ -5,7 +5,7 @@ NAPALM Probes
 
 Manages RPM/SLA probes on the network device.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -22,7 +22,7 @@ Dependencies
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python lib
 import logging
@@ -142,7 +142,7 @@ def results(**kwargs):  # pylint: disable=unused-argument
                     'last_test_loss'        : 0,
                     'round_trip_jitter'     : -59.0,
                     'target'                : '192.168.0.1',
-                    'source'                : '192.168.0.2'
+                    'source'                : '192.168.0.2',
                     'probe_count'           : 15,
                     'current_test_min_delay': 63.138
                 },
@@ -160,7 +160,7 @@ def results(**kwargs):  # pylint: disable=unused-argument
                     'last_test_loss'        : 0,
                     'round_trip_jitter'     : -34.0,
                     'target'                : '172.17.17.1',
-                    'source'                : '172.17.17.2'
+                    'source'                : '172.17.17.2',
                     'probe_count'           : 15,
                     'current_test_min_delay': 176.402
                 }

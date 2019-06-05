@@ -12,6 +12,28 @@ config, these are the defaults:
     redis.host: 'salt'
     redis.port: 6379
 
+.. versionadded:: 2018.3.1
+
+    Alternatively a UNIX socket can be specified by `unix_socket_path`:
+
+.. code-block:: yaml
+
+    redis.db: '0'
+    redis.unix_socket_path: /var/run/redis/redis.sock
+
+Cluster Mode Example:
+
+.. code-block:: yaml
+
+    redis.db: '0'
+    redis.cluster_mode: true
+    redis.cluster.skip_full_coverage_check: true
+    redis.cluster.startup_nodes:
+      - host: redis-member-1
+        port: 6379
+      - host: redis-member-2
+        port: 6379
+
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
 the default location:
@@ -44,33 +66,77 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 
     salt '*' test.ping --return redis --return_kwargs '{"db": "another-salt"}'
 
-'''
+Redis Cluster Mode Options:
 
-# Import python libs
-from __future__ import absolute_import
-import json
+cluster_mode: ``False``
+    Whether cluster_mode is enabled or not
+
+cluster.startup_nodes:
+    A list of host, port dictionaries pointing to cluster members. At least one is required
+    but multiple nodes are better
+
+    .. code-block:: yaml
+
+        cache.redis.cluster.startup_nodes
+          - host: redis-member-1
+            port: 6379
+          - host: redis-member-2
+            port: 6379
+
+cluster.skip_full_coverage_check: ``False``
+    Some cluster providers restrict certain redis commands such as CONFIG for enhanced security.
+    Set this option to true to skip checks that required advanced privileges.
+
+    .. note::
+
+        Most cloud hosted redis clusters will require this to be set to ``True``
+
+
+'''
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 # Import Salt libs
-import salt.ext.six as six
-import salt.utils
-import salt.utils.jid
 import salt.returners
+import salt.utils.jid
+import salt.utils.json
+import salt.utils.platform
 
-# Import third party libs
+# Import 3rd-party libs
+from salt.ext import six
 try:
     import redis
     HAS_REDIS = True
 except ImportError:
     HAS_REDIS = False
 
+log = logging.getLogger(__name__)
+
+try:
+    from rediscluster import StrictRedisCluster
+    HAS_REDIS_CLUSTER = True
+except ImportError:
+    HAS_REDIS_CLUSTER = False
+
+REDIS_POOL = None
+
 # Define the module's virtual name
 __virtualname__ = 'redis'
 
 
 def __virtual__():
+    '''
+    The redis library must be installed for this module to work.
+
+    The redis redis cluster library must be installed if cluster_mode is True
+    '''
+
     if not HAS_REDIS:
         return False, 'Could not import redis returner; ' \
                       'redis python client is not installed.'
+    if not HAS_REDIS_CLUSTER and _get_options().get('cluster_mode', False):
+        return (False, "Please install the redis-py-cluster package.")
     return __virtualname__
 
 
@@ -80,13 +146,22 @@ def _get_options(ret=None):
     '''
     attrs = {'host': 'host',
              'port': 'port',
-             'db': 'db'}
+             'unix_socket_path': 'unix_socket_path',
+             'db': 'db',
+             'cluster_mode': 'cluster_mode',
+             'startup_nodes': 'cluster.startup_nodes',
+             'skip_full_coverage_check': 'cluster.skip_full_coverage_check',
+             }
 
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return {
             'host': __opts__.get('redis.host', 'salt'),
             'port': __opts__.get('redis.port', 6379),
-            'db': __opts__.get('redis.db', '0')
+            'unix_socket_path': __opts__.get('redis.unix_socket_path', None),
+            'db': __opts__.get('redis.db', '0'),
+            'cluster_mode': __opts__.get('redis.cluster_mode', False),
+            'startup_nodes': __opts__.get('redis.cluster.startup_nodes', {}),
+            'skip_full_coverage_check': __opts__.get('redis.cluster.skip_full_coverage_check', False)
         }
 
     _options = salt.returners.get_returner_options(__virtualname__,
@@ -102,14 +177,20 @@ def _get_serv(ret=None):
     Return a redis server object
     '''
     _options = _get_options(ret)
-    host = _options.get('host')
-    port = _options.get('port')
-    db = _options.get('db')
-
-    return redis.Redis(
-            host=host,
-            port=port,
-            db=db)
+    global REDIS_POOL
+    if REDIS_POOL:
+        return REDIS_POOL
+    elif _options.get('cluster_mode'):
+        REDIS_POOL = StrictRedisCluster(startup_nodes=_options.get('startup_nodes'),
+                                        skip_full_coverage_check=_options.get('skip_full_coverage_check'),
+                                        decode_responses=True)
+    else:
+        REDIS_POOL = redis.StrictRedis(host=_options.get('host'),
+                                       port=_options.get('port'),
+                                       unix_socket_path=_options.get('unix_socket_path', None),
+                                       db=_options.get('db'),
+                                       decode_responses=True)
+    return REDIS_POOL
 
 
 def _get_ttl():
@@ -123,7 +204,7 @@ def returner(ret):
     serv = _get_serv(ret)
     pipeline = serv.pipeline(transaction=False)
     minion, jid = ret['id'], ret['jid']
-    pipeline.hset('ret:{0}'.format(jid), minion, json.dumps(ret))
+    pipeline.hset('ret:{0}'.format(jid), minion, salt.utils.json.dumps(ret))
     pipeline.expire('ret:{0}'.format(jid), _get_ttl())
     pipeline.set('{0}:{1}'.format(minion, ret['fun']), jid)
     pipeline.sadd('minions', minion)
@@ -135,7 +216,7 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid
     '''
     serv = _get_serv(ret=None)
-    serv.setex('load:{0}'.format(jid), json.dumps(load), _get_ttl())
+    serv.setex('load:{0}'.format(jid), _get_ttl(), salt.utils.json.dumps(load))
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
@@ -152,7 +233,7 @@ def get_load(jid):
     serv = _get_serv(ret=None)
     data = serv.get('load:{0}'.format(jid))
     if data:
-        return json.loads(data)
+        return salt.utils.json.loads(data)
     return {}
 
 
@@ -164,7 +245,7 @@ def get_jid(jid):
     ret = {}
     for minion, data in six.iteritems(serv.hgetall('ret:{0}'.format(jid))):
         if data:
-            ret[minion] = json.loads(data)
+            ret[minion] = salt.utils.json.loads(data)
     return ret
 
 
@@ -184,7 +265,7 @@ def get_fun(fun):
             continue
         data = serv.get('{0}:{1}'.format(minion, jid))
         if data:
-            ret[minion] = json.loads(data)
+            ret[minion] = salt.utils.json.loads(data)
     return ret
 
 
@@ -197,7 +278,7 @@ def get_jids():
     for s in serv.mget(serv.keys('load:*')):
         if s is None:
             continue
-        load = json.loads(s)
+        load = salt.utils.json.loads(s)
         jid = load['jid']
         ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
     return ret
@@ -221,18 +302,20 @@ def clean_old_jobs():
     do manually cleaning here.
     '''
     serv = _get_serv(ret=None)
+    ret_jids = serv.keys('ret:*')
     living_jids = set(serv.keys('load:*'))
     to_remove = []
-    for ret_key in serv.keys('ret:*'):
+    for ret_key in ret_jids:
         load_key = ret_key.replace('ret:', 'load:', 1)
         if load_key not in living_jids:
             to_remove.append(ret_key)
     if len(to_remove) != 0:
         serv.delete(*to_remove)
+        log.debug('clean old jobs: %s', to_remove)
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

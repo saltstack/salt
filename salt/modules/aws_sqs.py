@@ -4,13 +4,13 @@ Support for the Amazon Simple Queue Service.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import json
 
 # Import salt libs
-import salt.utils
-import salt.ext.six as six
+import salt.utils.json
+import salt.utils.path
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ _OUTPUT = '--output json'
 
 
 def __virtual__():
-    if salt.utils.which('aws'):
+    if salt.utils.path.which('aws'):
         # awscli is installed, load the module
         return True
     return (False, 'The module aws_sqs could not be loaded: aws command not found')
@@ -65,7 +65,7 @@ def _run_aws(cmd, region, opts, user, **kwargs):
 
     rtn = __salt__['cmd.run'](cmd, runas=user, python_shell=False)
 
-    return json.loads(rtn) if rtn else ''
+    return salt.utils.json.loads(rtn) if rtn else ''
 
 
 def receive_message(queue, region, num=1, opts=None, user=None):
@@ -103,7 +103,7 @@ def receive_message(queue, region, num=1, opts=None, user=None):
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
     if queue not in url_map:
-        log.info('"{0}" queue does not exist.'.format(queue))
+        log.info('"%s" queue does not exist.', queue)
         return ret
 
     out = _run_aws('receive-message', region, opts, user, queue=url_map[queue],
@@ -144,7 +144,7 @@ def delete_message(queue, region, receipthandle, opts=None, user=None):
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
     if queue not in url_map:
-        log.info('"{0}" queue does not exist.'.format(queue))
+        log.info('"%s" queue does not exist.', queue)
         return False
 
     out = _run_aws('delete-message', region, opts, user,

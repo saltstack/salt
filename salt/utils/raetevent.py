@@ -7,7 +7,7 @@ This module is used to manage events via RAET
 # pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 import time
@@ -18,17 +18,26 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils.event
-from salt.utils import kinds
+import salt.utils.kinds as kinds
 from salt import transport
 from salt import syspaths
-from raet import raeting, nacling
-from raet.lane.stacking import LaneStack
-from raet.lane.yarding import RemoteYard
+
+try:
+    from raet import raeting, nacling
+    from raet.lane.stacking import LaneStack
+    from raet.lane.yarding import RemoteYard
+    HAS_RAET = True
+except ImportError:
+    HAS_RAET = False
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    return HAS_RAET
 
 
 class RAETEvent(object):
@@ -48,7 +57,20 @@ class RAETEvent(object):
         self.ryn = 'manor'  # remote yard name
         self.connected = False
         self.cpub = False
+        self.__load_cache_regex()
         self.__prep_stack(listen)
+
+    @classmethod
+    def __load_cache_regex(cls):
+        '''
+        Initialize the regular expression cache and put it in the
+        class namespace. The regex search strings will be prepend with '^'
+        '''
+        # This is in the class namespace, to minimize cache memory
+        # usage and maximize cache hits
+        # The prepend='^' is to reduce differences in behavior between
+        # the default 'startswith' and the optional 'regex' match_type
+        cls.cache_regex = salt.utils.cache.CacheRegex(prepend='^')
 
     def __prep_stack(self, listen):
         '''
@@ -59,7 +81,7 @@ class RAETEvent(object):
                 self.stack = transport.jobber_stack
             else:
                 self.stack = transport.jobber_stack = self._setup_stack(ryn=self.ryn)
-        log.debug("RAETEvent Using Jobber Stack at = {0}\n".format(self.stack.ha))
+        log.debug("RAETEvent Using Jobber Stack at = %s\n", self.stack.ha)
         if listen:
             self.subscribe()
 
@@ -110,14 +132,14 @@ class RAETEvent(object):
                                    dirpath=self.sock_dir))
         return stack
 
-    def subscribe(self, tag=None):
+    def subscribe(self, tag=None, match_type=None):
         '''
         Included for compat with zeromq events, not required
         '''
         if not self.connected:
             self.connect_pub()
 
-    def unsubscribe(self, tag=None):
+    def unsubscribe(self, tag=None, match_type=None):
         '''
         Included for compat with zeromq events, not required
         '''
@@ -170,7 +192,7 @@ class RAETEvent(object):
                 if 'tag' not in msg and 'data' not in msg:
                     # Invalid event, how did this get here?
                     continue
-                if not msg['tag'].startswith(tag):
+                if not msg['tag'].startswith(tag) and self.cache_regex.get(tag).search(msg['tag']) is None:
                     # Not what we are looking for, throw it away
                     continue
                 if full:
@@ -211,7 +233,7 @@ class RAETEvent(object):
         identifier "tag"
         '''
         # Timeout is retained for compat with zeromq events
-        if not str(tag):  # no empty tags allowed
+        if not six.text_type(tag):  # no empty tags allowed
             raise ValueError('Empty tag.')
 
         if not isinstance(data, MutableMapping):  # data must be dict

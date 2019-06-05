@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import hashlib
 import logging
 import os
@@ -12,7 +12,7 @@ from salt.utils.versions import StrictVersion as _StrictVersion
 
 __virtualname__ = os.path.abspath(__file__).rsplit(os.sep)[-2] or 'rest_tornado'
 
-logger = logging.getLogger(__virtualname__)
+log = logging.getLogger(__virtualname__)
 
 # we require at least 4.0, as that includes all the Future's stuff we use
 min_tornado_version = '4.0'
@@ -22,10 +22,10 @@ try:
     if _StrictVersion(tornado.version) >= _StrictVersion(min_tornado_version):
         has_tornado = True
     else:
-        logger.error('rest_tornado requires at least tornado {0}'.format(min_tornado_version))
+        log.error('rest_tornado requires at least tornado %s', min_tornado_version)
 except (ImportError, TypeError) as err:
     has_tornado = False
-    logger.error('ImportError! {0}'.format(str(err)))
+    log.error('ImportError! %s', err)
 
 
 def __virtual__():
@@ -41,7 +41,7 @@ def get_application(opts):
     try:
         from . import saltnado
     except ImportError as err:
-        logger.error('ImportError! {0}'.format(str(err)))
+        log.error('ImportError! %s', err)
         return None
 
     mod_opts = opts.get(__virtualname__, {})
@@ -65,7 +65,7 @@ def get_application(opts):
         token_pattern = r"([0-9A-Fa-f]{{{0}}})".format(len(getattr(hashlib, opts.get('hash_type', 'md5'))().hexdigest()))
         all_events_pattern = r"/all_events/{0}".format(token_pattern)
         formatted_events_pattern = r"/formatted_events/{0}".format(token_pattern)
-        logger.debug("All events URL pattern is {0}".format(all_events_pattern))
+        log.debug("All events URL pattern is %s", all_events_pattern)
         paths += [
             # Matches /all_events/[0-9A-Fa-f]{n}
             # Where n is the length of hexdigest
@@ -103,7 +103,7 @@ def start():
     kwargs = {}
     if not mod_opts.get('disable_ssl', False):
         if 'ssl_crt' not in mod_opts:
-            logger.error("Not starting '%s'. Options 'ssl_crt' and "
+            log.error("Not starting '%s'. Options 'ssl_crt' and "
                     "'ssl_key' are required if SSL is not disabled.",
                     __name__)
 
@@ -124,7 +124,7 @@ def start():
                          )
         http_server.start(mod_opts['num_processes'])
     except Exception:
-        logger.error('Rest_tornado unable to bind to port {0}'.format(mod_opts['port']), exc_info=True)
+        log.error('Rest_tornado unable to bind to port %s', mod_opts['port'], exc_info=True)
         raise SystemExit(1)
 
     try:

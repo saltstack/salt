@@ -141,7 +141,7 @@ If the master seems to be unresponsive, a SIGUSR1 can be passed to the
 salt-master threads to display what piece of code is executing. This debug
 information can be invaluable in tracking down bugs.
 
-To pass a SIGUSR1 to the master, first make sure the minion is running in the
+To pass a SIGUSR1 to the master, first make sure the master is running in the
 foreground. Stop the service if it is running as a daemon, and start it in the
 foreground like so:
 
@@ -218,6 +218,10 @@ commands (by default it is 5 seconds) or by modifying the master
 configuration file: ``/etc/salt/master`` and setting the ``timeout`` value to
 change the default timeout for all commands, and then restarting the
 salt-master service.
+
+If a ``state.apply`` run takes too long, you can find a bottleneck by adding the
+:py:mod:`--out=profile <salt.output.profile>` option.
+
 
 Salt Master Auth Flooding
 =========================

@@ -42,6 +42,7 @@ pillar modules
     reclass_adapter
     redismod
     s3
+    saltclass
     sql_base
     sqlcipher
     sqlite3
@@ -52,4 +53,3 @@ pillar modules
     venafi
     virtkey
     vmware_pillar
-

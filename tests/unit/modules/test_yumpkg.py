@@ -2,6 +2,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -15,7 +16,9 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
+import salt.modules.rpm_lowpkg as rpm
 import salt.modules.yumpkg as yumpkg
+import salt.modules.pkg_resource as pkg_resource
 
 LIST_REPOS = {
     'base': {
@@ -69,6 +72,166 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 },
             }
         }
+
+    def test_list_pkgs(self):
+        '''
+        Test packages listing.
+
+        :return:
+        '''
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+
+        rpm_out = [
+            'python-urlgrabber_|-(none)_|-3.10_|-8.el7_|-noarch_|-(none)_|-1487838471',
+            'alsa-lib_|-(none)_|-1.1.1_|-1.el7_|-x86_64_|-(none)_|-1487838475',
+            'gnupg2_|-(none)_|-2.0.22_|-4.el7_|-x86_64_|-(none)_|-1487838477',
+            'rpm-python_|-(none)_|-4.11.3_|-21.el7_|-x86_64_|-(none)_|-1487838477',
+            'pygpgme_|-(none)_|-0.3_|-9.el7_|-x86_64_|-(none)_|-1487838478',
+            'yum_|-(none)_|-3.4.3_|-150.el7.centos_|-noarch_|-(none)_|-1487838479',
+            'lzo_|-(none)_|-2.06_|-8.el7_|-x86_64_|-(none)_|-1487838479',
+            'qrencode-libs_|-(none)_|-3.4.1_|-3.el7_|-x86_64_|-(none)_|-1487838480',
+            'ustr_|-(none)_|-1.0.4_|-16.el7_|-x86_64_|-(none)_|-1487838480',
+            'shadow-utils_|-2_|-4.1.5.1_|-24.el7_|-x86_64_|-(none)_|-1487838481',
+            'util-linux_|-(none)_|-2.23.2_|-33.el7_|-x86_64_|-(none)_|-1487838484',
+            'openssh_|-(none)_|-6.6.1p1_|-33.el7_3_|-x86_64_|-(none)_|-1487838485',
+            'virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486',
+        ]
+        with patch.dict(yumpkg.__grains__, {'osarch': 'x86_64'}), \
+             patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}):
+            pkgs = yumpkg.list_pkgs(versions_as_list=True)
+            for pkg_name, pkg_version in {
+                'python-urlgrabber': '3.10-8.el7',
+                'alsa-lib': '1.1.1-1.el7',
+                'gnupg2': '2.0.22-4.el7',
+                'rpm-python': '4.11.3-21.el7',
+                'pygpgme': '0.3-9.el7',
+                'yum': '3.4.3-150.el7.centos',
+                'lzo': '2.06-8.el7',
+                'qrencode-libs': '3.4.1-3.el7',
+                'ustr': '1.0.4-16.el7',
+                'shadow-utils': '2:4.1.5.1-24.el7',
+                'util-linux': '2.23.2-33.el7',
+                'openssh': '6.6.1p1-33.el7_3',
+                'virt-what': '1.13-8.el7'}.items():
+                self.assertTrue(pkgs.get(pkg_name))
+                self.assertEqual(pkgs[pkg_name], [pkg_version])
+
+    def test_list_pkgs_with_attr(self):
+        '''
+        Test packages listing with the attr parameter
+
+        :return:
+        '''
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+
+        rpm_out = [
+            'python-urlgrabber_|-(none)_|-3.10_|-8.el7_|-noarch_|-(none)_|-1487838471',
+            'alsa-lib_|-(none)_|-1.1.1_|-1.el7_|-x86_64_|-(none)_|-1487838475',
+            'gnupg2_|-(none)_|-2.0.22_|-4.el7_|-x86_64_|-(none)_|-1487838477',
+            'rpm-python_|-(none)_|-4.11.3_|-21.el7_|-x86_64_|-(none)_|-1487838477',
+            'pygpgme_|-(none)_|-0.3_|-9.el7_|-x86_64_|-(none)_|-1487838478',
+            'yum_|-(none)_|-3.4.3_|-150.el7.centos_|-noarch_|-(none)_|-1487838479',
+            'lzo_|-(none)_|-2.06_|-8.el7_|-x86_64_|-(none)_|-1487838479',
+            'qrencode-libs_|-(none)_|-3.4.1_|-3.el7_|-x86_64_|-(none)_|-1487838480',
+            'ustr_|-(none)_|-1.0.4_|-16.el7_|-x86_64_|-(none)_|-1487838480',
+            'shadow-utils_|-2_|-4.1.5.1_|-24.el7_|-x86_64_|-(none)_|-1487838481',
+            'util-linux_|-(none)_|-2.23.2_|-33.el7_|-x86_64_|-(none)_|-1487838484',
+            'openssh_|-(none)_|-6.6.1p1_|-33.el7_3_|-x86_64_|-(none)_|-1487838485',
+            'virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486',
+        ]
+        with patch.dict(yumpkg.__grains__, {'osarch': 'x86_64'}), \
+             patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}):
+            pkgs = yumpkg.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
+            for pkg_name, pkg_attr in {
+                'python-urlgrabber': {
+                    'version': '3.10',
+                    'release': '8.el7',
+                    'arch': 'noarch',
+                    'install_date_time_t': 1487838471,
+                },
+                'alsa-lib': {
+                    'version': '1.1.1',
+                    'release': '1.el7',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1487838475,
+                },
+                'gnupg2': {
+                    'version': '2.0.22',
+                    'release': '4.el7',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1487838477,
+                },
+                'rpm-python': {
+                    'version': '4.11.3',
+                    'release': '21.el7',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1487838477,
+                },
+                'pygpgme': {
+                    'version': '0.3',
+                    'release': '9.el7',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1487838478,
+                },
+                'yum': {
+                    'version': '3.4.3',
+                    'release': '150.el7.centos',
+                    'arch': 'noarch',
+                    'install_date_time_t': 1487838479,
+                },
+                'lzo': {
+                    'version': '2.06',
+                    'release': '8.el7',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1487838479,
+                },
+                'qrencode-libs': {
+                    'version': '3.4.1',
+                    'release': '3.el7',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1487838480,
+                },
+                'ustr': {
+                    'version': '1.0.4',
+                    'release': '16.el7',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1487838480,
+                },
+                'shadow-utils': {
+                    'epoch': '2',
+                    'version': '4.1.5.1',
+                    'release': '24.el7',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1487838481,
+                },
+                'util-linux': {
+                    'version': '2.23.2',
+                    'release': '33.el7',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1487838484,
+                },
+                'openssh': {
+                    'version': '6.6.1p1',
+                    'release': '33.el7_3',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1487838485,
+                },
+                'virt-what': {
+                    'version': '1.13',
+                    'release': '8.el7',
+                    'install_date_time_t': 1487838486,
+                    'arch': 'x86_64',
+                }}.items():
+                self.assertTrue(pkgs.get(pkg_name))
+                self.assertEqual(pkgs[pkg_name], [pkg_attr])
 
     def test_latest_version_with_options(self):
         with patch.object(yumpkg, 'list_pkgs', MagicMock(return_value={})):
@@ -406,6 +569,51 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     output_loglevel='trace',
                     python_shell=False,
                     redirect_stderr=True)
+
+    def test_install_with_epoch(self):
+        '''
+        Tests that we properly identify a version containing an epoch as an
+        upgrade instead of a downgrade.
+        '''
+        name = 'foo'
+        old = '8:3.8.12-6.n.el7'
+        new = '9:3.8.12-4.n.el7'
+        list_pkgs_mock = MagicMock(side_effect=lambda **kwargs: {name: [old] if kwargs.get('versions_as_list', False) else old})
+        cmd_mock = MagicMock(return_value={
+            'pid': 12345,
+            'retcode': 0,
+            'stdout': '',
+            'stderr': '',
+        })
+        salt_mock = {
+            'cmd.run_all': cmd_mock,
+            'lowpkg.version_cmp': rpm.version_cmp,
+            'pkg_resource.parse_targets': MagicMock(return_value=(
+                {name: new}, 'repository'
+            )),
+        }
+        full_pkg_string = '-'.join((name, new[2:]))
+        with patch.object(yumpkg, 'list_pkgs', list_pkgs_mock), \
+                patch('salt.utils.systemd.has_scope',
+                      MagicMock(return_value=False)), \
+                patch.dict(yumpkg.__salt__, salt_mock):
+
+            # Test yum
+            expected = ['yum', '-y', 'install', full_pkg_string]
+            with patch.dict(yumpkg.__grains__, {'os': 'CentOS', 'osrelease': 7}):
+                yumpkg.install('foo', version=new)
+                call = cmd_mock.mock_calls[0][1][0]
+                assert call == expected, call
+
+            # Test dnf
+            expected = ['dnf', '-y', '--best', '--allowerasing',
+                        'install', full_pkg_string]
+            yumpkg.__context__.pop('yum_bin')
+            cmd_mock.reset_mock()
+            with patch.dict(yumpkg.__grains__, {'os': 'Fedora', 'osrelease': 27}):
+                yumpkg.install('foo', version=new)
+                call = cmd_mock.mock_calls[0][1][0]
+                assert call == expected, call
 
     def test_upgrade_with_options(self):
         with patch.object(yumpkg, 'list_pkgs', MagicMock(return_value={})), \

@@ -15,7 +15,7 @@ the minion config:
 .. code-block:: yaml
 
     beacons:
-      status: {}
+      status: []
 
 By default, all of the information from the following execution module
 functions will be returned:
@@ -90,25 +90,25 @@ markers for specific list items:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 import datetime
 import salt.exceptions
 
 # Import salt libs
-import salt.utils
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'status'
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the the config is a dict
     '''
-    if not isinstance(config, dict):
-        return False, ('Configuration for status beacon must be a dictionary.')
+    if not isinstance(config, list):
+        return False, ('Configuration for status beacon must be a list.')
     return True, 'Valid beacon configuration'
 
 
@@ -123,7 +123,7 @@ def beacon(config):
     log.debug(config)
     ctime = datetime.datetime.utcnow().isoformat()
     ret = {}
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return [{
             'tag': ctime,
             'data': ret,
@@ -149,8 +149,8 @@ def beacon(config):
             try:
                 data = __salt__['status.{0}'.format(func)]()
             except salt.exceptions.CommandExecutionError as exc:
-                log.debug('Status beacon attempted to process function {0} '
-                          'but encountered error: {1}'.format(func, exc))
+                log.debug('Status beacon attempted to process function %s '
+                          'but encountered error: %s', func, exc)
                 continue
             if not isinstance(entry[func], list):
                 func_items = [entry[func]]

@@ -5,7 +5,7 @@ NAPALM Route
 
 Retrieves route details from network devices.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -17,7 +17,7 @@ Dependencies
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import logging
 log = logging.getLogger(__file__)
@@ -82,7 +82,7 @@ def show(destination, protocol=None, **kwargs):  # pylint: disable=unused-argume
 
     .. code-block:: bash
 
-        salt 'my_router' route.show
+        salt 'my_router' route.show 172.16.0.0/25
         salt 'my_router' route.show 172.16.0.0/25 bgp
 
     Output example:

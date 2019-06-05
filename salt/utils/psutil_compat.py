@@ -11,10 +11,10 @@ Built off of http://grodola.blogspot.com/2014/01/psutil-20-porting.html
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 # No exception handling, as we want ImportError if psutil doesn't exist
 import psutil  # pylint: disable=3rd-party-module-not-gated

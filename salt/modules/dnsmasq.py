@@ -4,13 +4,17 @@ Module for managing dnsmasq
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -19,8 +23,12 @@ def __virtual__():
     '''
     Only work on POSIX-like systems.
     '''
-    if salt.utils.is_windows():
-        return (False, 'dnsmasq execution module cannot be loaded: only works on non-Windows systems.')
+    if salt.utils.platform.is_windows():
+        return (
+            False,
+            'dnsmasq execution module cannot be loaded: only works on '
+            'non-Windows systems.'
+        )
     return True
 
 
@@ -109,7 +117,7 @@ def set_config(config_file='/etc/dnsmasq.conf', follow=True, **kwargs):
         ret_kwargs[key] = kwargs[key]
 
         if key in dnsopts:
-            if isinstance(dnsopts[key], str):
+            if isinstance(dnsopts[key], six.string_types):
                 for config in includes:
                     __salt__['file.sed'](path=config,
                                          before='^{0}=.*'.format(key),
@@ -163,8 +171,9 @@ def _parse_dnamasq(filename):
             'Error: No such file \'{0}\''.format(filename)
         )
 
-    with salt.utils.fopen(filename, 'r') as fp_:
+    with salt.utils.files.fopen(filename, 'r') as fp_:
         for line in fp_:
+            line = salt.utils.stringutils.to_unicode(line)
             if not line.strip():
                 continue
             if line.startswith('#'):
@@ -172,7 +181,7 @@ def _parse_dnamasq(filename):
             if '=' in line:
                 comps = line.split('=')
                 if comps[0] in fileopts:
-                    if isinstance(fileopts[comps[0]], str):
+                    if isinstance(fileopts[comps[0]], six.string_types):
                         temp = fileopts[comps[0]]
                         fileopts[comps[0]] = [temp]
                     fileopts[comps[0]].append(comps[1].strip())

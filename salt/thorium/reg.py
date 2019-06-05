@@ -5,8 +5,8 @@ values are stored and computed, such as averages etc.
 '''
 
 # import python libs
-from __future__ import absolute_import, division
-import salt.utils
+from __future__ import absolute_import, division, print_function, unicode_literals
+import salt.utils.stringutils
 
 __func_alias__ = {
     'set_': 'set',
@@ -35,7 +35,7 @@ def set_(name, add, match):
         __reg__[name] = {}
         __reg__[name]['val'] = set()
     for event in __events__:
-        if salt.utils.expr_match(event['tag'], match):
+        if salt.utils.stringutils.expr_match(event['tag'], match):
             try:
                 val = event['data']['data'].get(add)
             except KeyError:
@@ -79,7 +79,7 @@ def list_(name, add, match, stamp=False, prune=0):
             event_data = event['data']['data']
         except KeyError:
             event_data = event['data']
-        if salt.utils.expr_match(event['tag'], match):
+        if salt.utils.stringutils.expr_match(event['tag'], match):
             item = {}
             for key in add:
                 if key in event_data:
@@ -121,7 +121,7 @@ def mean(name, add, match):
             event_data = event['data']['data']
         except KeyError:
             event_data = event['data']
-        if salt.utils.expr_match(event['tag'], match):
+        if salt.utils.stringutils.expr_match(event['tag'], match):
             if add in event_data:
                 try:
                     comp = int(event_data)

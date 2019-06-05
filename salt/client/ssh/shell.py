@@ -2,22 +2,23 @@
 '''
 Manage transport commands via ssh
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 # Import python libs
 import re
 import os
 import sys
-import json
 import time
 import logging
 import subprocess
 
 # Import salt libs
 import salt.defaults.exitcodes
-import salt.utils
+import salt.utils.json
 import salt.utils.nb_popen
 import salt.utils.vt
+
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ class Shell(object):
         self.host = host.strip('[]')
         self.user = user
         self.port = port
-        self.passwd = str(passwd) if passwd else passwd
+        self.passwd = six.text_type(passwd) if passwd else passwd
         self.priv = priv
         self.timeout = timeout
         self.sudo = sudo
@@ -137,7 +138,7 @@ class Shell(object):
             options.append('UserKnownHostsFile={0}'.format(known_hosts))
         if self.port:
             options.append('Port={0}'.format(self.port))
-        if self.priv:
+        if self.priv and self.priv != 'agent-forwarding':
             options.append('IdentityFile={0}'.format(self.priv))
         if self.user:
             options.append('User={0}'.format(self.user))
@@ -191,7 +192,7 @@ class Shell(object):
 
     def _ssh_opts(self):
         return ' '.join(['-o {0}'.format(opt)
-                        for opt in self.ssh_options])
+                          for opt in self.ssh_options])
 
     def _copy_id_str_old(self):
         '''
@@ -254,7 +255,7 @@ class Shell(object):
             command.append(self.priv and self._key_opts() or self._passwd_opts())
         if ssh != 'scp' and self.remote_port_forwards:
             command.append(' '.join(['-R {0}'.format(item)
-                                     for item in self.remote_port_forwards.split(',')]))
+                                      for item in self.remote_port_forwards.split(',')]))
         if self.ssh_options:
             command.append(self._ssh_opts())
 
@@ -419,7 +420,7 @@ class Shell(object):
                                       'flag:\n{0}').format(stdout)
                         return ret_stdout, '', 254
                 elif buff and buff.endswith('_||ext_mods||_'):
-                    mods_raw = json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
+                    mods_raw = salt.utils.json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
                     term.sendline(mods_raw)
                 if stdout:
                     old_stdout = stdout

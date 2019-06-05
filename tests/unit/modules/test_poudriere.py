@@ -78,7 +78,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='/tmp/salt')
         with patch.dict(poudriere.__salt__, {'config.option': mock}), \
-                patch('salt.utils.fopen', mock_open()), \
+                patch('salt.utils.files.fopen', mock_open()), \
                 patch.object(poudriere, '_check_config_exists',
                               MagicMock(side_effect=[True, False])):
             self.assertDictEqual(poudriere.parse_config(), {})

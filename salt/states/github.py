@@ -16,13 +16,13 @@ This state is used to ensure presence of users in the Organization.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import time
 import datetime
 import logging
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import range
 
@@ -123,29 +123,30 @@ def absent(name, profile="github", **kwargs):
 
     target = __salt__['github.get_user'](name, profile=profile, **kwargs)
 
-    if not target:
+    if target:
+        if isinstance(target, bool) or target.get('in_org', False):
+            if __opts__['test']:
+                ret['comment'] = "User {0} will be deleted".format(name)
+                ret['result'] = None
+                return ret
+
+            result = __salt__['github.remove_user'](name, profile=profile, **kwargs)
+
+            if result:
+                ret['comment'] = 'Deleted user {0}'.format(name)
+                ret['changes'].setdefault('old', 'User {0} exists'.format(name))
+                ret['changes'].setdefault('new', 'User {0} deleted'.format(name))
+                ret['result'] = True
+            else:
+                ret['comment'] = 'Failed to delete {0}'.format(name)
+                ret['result'] = False
+        else:
+            ret['comment'] = "User {0} has already been deleted!".format(name)
+            ret['result'] = True
+    else:
         ret['comment'] = 'User {0} does not exist'.format(name)
         ret['result'] = True
         return ret
-    elif isinstance(target, bool) and target:
-        if __opts__['test']:
-            ret['comment'] = "User {0} will be deleted".format(name)
-            ret['result'] = None
-            return ret
-
-        result = __salt__['github.remove_user'](name, profile=profile, **kwargs)
-
-        if result:
-            ret['comment'] = 'Deleted user {0}'.format(name)
-            ret['changes'].setdefault('old', 'User {0} exists'.format(name))
-            ret['changes'].setdefault('new', 'User {0} deleted'.format(name))
-            ret['result'] = True
-        else:
-            ret['comment'] = 'Failed to delete {0}'.format(name)
-            ret['result'] = False
-    else:
-        ret['comment'] = "User {0} has already been deleted!".format(name)
-        ret['result'] = True
 
     return ret
 
@@ -340,7 +341,7 @@ def team_present(
     current_members = __salt__['github.list_team_members'](name, profile=profile)
 
     for member, member_info in six.iteritems(members or {}):
-        log.info('Checking member {0} in team {1}'.format(member, name))
+        log.info('Checking member %s in team %s', member, name)
 
         if member.lower() not in current_members:
             if (enforce_mfa and _member_violates_mfa(member, member_info,
@@ -630,8 +631,9 @@ def repo_present(
                         name, profile=profile, **kwargs)
                     break
                 except CommandExecutionError as e:
-                    log.info("Attempt {0} to fetch new repo {1} failed".format(
-                        attempt, name))
+                    log.info("Attempt %s to fetch new repo %s failed",
+                             attempt,
+                             name)
 
             if current_teams is None:
                 ret['result'] = False

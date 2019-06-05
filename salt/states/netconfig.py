@@ -5,7 +5,7 @@ Network Config
 
 Manage the configuration on a network device given a specific static config or template.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -18,7 +18,7 @@ Dependencies
 .. versionadded:: 2017.7.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 log = logging.getLogger(__name__)
@@ -61,6 +61,7 @@ def _update_config(template_name,
                    template_user='root',
                    template_group='root',
                    template_mode='755',
+                   template_attrs='--------------e----',
                    saltenv=None,
                    template_engine='jinja',
                    skip_verify=False,
@@ -84,6 +85,7 @@ def _update_config(template_name,
                                          template_user=template_user,
                                          template_group=template_group,
                                          template_mode=template_mode,
+                                         template_attrs=template_attrs,
                                          saltenv=saltenv,
                                          template_engine=template_engine,
                                          skip_verify=skip_verify,
@@ -108,6 +110,7 @@ def managed(name,
             template_user='root',
             template_group='root',
             template_mode='755',
+            template_attrs='--------------e----',
             saltenv=None,
             template_engine='jinja',
             skip_verify=False,
@@ -183,8 +186,13 @@ def managed(name,
     template_user: root
         Group owner of file.
 
-    template_user: 755
+    template_mode: 755
         Permissions of file
+
+    template_attrs: "--------------e----"
+        Attributes of file (see `man lsattr`)
+
+        .. versionadded:: 2018.3.0
 
     saltenv: base
         Specifies the template environment. This will influence the relative imports inside the templates.
@@ -358,6 +366,7 @@ def managed(name,
                                        template_user=template_user,
                                        template_group=template_group,
                                        template_mode=template_mode,
+                                       template_attrs=template_attrs,
                                        saltenv=saltenv,
                                        template_engine=template_engine,
                                        skip_verify=skip_verify,

@@ -6,9 +6,14 @@ Management of Zabbix users.
 
 
 '''
-from __future__ import absolute_import
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 from json import loads, dumps
 from copy import deepcopy
+
+# Import Salt libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -111,20 +116,20 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
         medias_list = list()
         for key, value in medias_dict.items():
             # Load media values or default values
-            active = '0' if str(value.get('active', 'true')).lower() == 'true' else '1'
-            mediatype_sls = str(value.get('mediatype', 'mail')).lower()
-            mediatypeid = str(media_type.get(mediatype_sls, 1))
+            active = '0' if six.text_type(value.get('active', 'true')).lower() == 'true' else '1'
+            mediatype_sls = six.text_type(value.get('mediatype', 'mail')).lower()
+            mediatypeid = six.text_type(media_type.get(mediatype_sls, 1))
             period = value.get('period', '1-7,00:00-24:00')
             sendto = value.get('sendto', key)
 
             severity_sls = value.get('severity', 'HD')
-            severity_bin = str()
+            severity_bin = six.text_type()
             for sev in media_severities:
                 if sev in severity_sls:
                     severity_bin += '1'
                 else:
                     severity_bin += '0'
-            severity = str(int(severity_bin, 2))
+            severity = six.text_type(int(severity_bin, 2))
 
             medias_list.append({'active': active,
                                 'mediatypeid': mediatypeid,
@@ -199,7 +204,7 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
                 if usrgrp_diff:
                     error.append('Unable to update grpup(s): {0}'.format(usrgrp_diff))
 
-                ret['changes']['usrgrps'] = str(updated_groups)
+                ret['changes']['usrgrps'] = six.text_type(updated_groups)
 
             if password_reset:
                 updated_password = __salt__['zabbix.user_update'](userid, passwd=passwd, **connection_args)
@@ -226,7 +231,7 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
                     if 'error' in updatemed:
                         error.append(updatemed['error'])
 
-                ret['changes']['medias'] = str(medias_formated)
+                ret['changes']['medias'] = six.text_type(medias_formated)
 
         else:
             ret['comment'] = comment_user_exists
@@ -239,13 +244,13 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
             ret['changes'] = changes_user_created
         else:
             ret['result'] = False
-            ret['comment'] = comment_user_notcreated + str(user_create['error'])
+            ret['comment'] = comment_user_notcreated + six.text_type(user_create['error'])
 
     # error detected
     if error:
         ret['changes'] = {}
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
 
     return ret
 
@@ -314,6 +319,6 @@ def absent(name, **kwargs):
             ret['changes'] = changes_user_deleted
         else:
             ret['result'] = False
-            ret['comment'] = comment_user_notdeleted + str(user_delete['error'])
+            ret['comment'] = comment_user_notdeleted + six.text_type(user_delete['error'])
 
     return ret

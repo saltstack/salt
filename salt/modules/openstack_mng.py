@@ -8,12 +8,13 @@ Module for OpenStack Management
 :platform:      linux
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os.path
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -80,8 +81,12 @@ def restart_service(service_name, minimum_running_time=None):
         services = __salt__['cmd.run'](['/usr/bin/openstack-service', 'list', service_name]).split('\n')
         for service in services:
             service_info = __salt__['service.show'](service)
-            with salt.utils.fopen('/proc/uptime') as rfh:
-                boot_time = float(rfh.read().split(' ')[0])
+            with salt.utils.files.fopen('/proc/uptime') as rfh:
+                boot_time = float(
+                    salt.utils.stringutils.to_unicode(
+                        rfh.read()
+                    ).split(' ')[0]
+                )
 
             expr_time = int(service_info.get('ExecMainStartTimestampMonotonic', 0)) / 1000000 < boot_time - minimum_running_time
             expr_active = service_info.get('ActiveState') == "active"

@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
@@ -40,14 +40,9 @@ class QemuimgTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch.object(os.path, 'isdir',
                               MagicMock(side_effect=[False, True, True])):
-                self.assertEqual(qemu_img.make_image('location', 'size', 'fmt'),
-                                 '')
+                self.assertEqual(qemu_img.make_image('location', 'size', 'fmt'), '')
 
                 with patch.dict(qemu_img.__salt__,
-                                {'cmd.retcode': MagicMock(side_effect=[False,
-                                                                       True])}):
-                    self.assertEqual(qemu_img.make_image('location', 'size',
-                                                         'fmt'), 'location')
-
-                    self.assertEqual(qemu_img.make_image('location', 'size',
-                                                         'fmt'), '')
+                                {'cmd.retcode': MagicMock(side_effect=[False, True])}):
+                    self.assertEqual(qemu_img.make_image('location', 'size', 'fmt'), 'location')
+                    self.assertEqual(qemu_img.make_image('location', 'size', 'fmt'), '')

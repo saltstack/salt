@@ -11,9 +11,9 @@ Synopsis
 
     salt -E '.*' [ options ] sys.doc cmd
 
-    salt -G 'os:Arch.*' [ options ] test.ping
+    salt -G 'os:Arch.*' [ options ] test.version
 
-    salt -C 'G@os:Arch.* and webserv* or G@kernel:FreeBSD' [ options ] test.ping
+    salt -C 'G@os:Arch.* and webserv* or G@kernel:FreeBSD' [ options ] test.version
 
 Description
 ===========
@@ -73,7 +73,7 @@ Options
 
     Pass in an external authentication medium to validate against. The
     credentials will be prompted for. The options are `auto`,
-    `keystone`, `ldap`, `pam`, and `stormpath`. Can be used with the -T
+    `keystone`, `ldap`, and `pam`. Can be used with the -T
     option.
 
 .. option:: -T, --make-token

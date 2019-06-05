@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import tempfile
@@ -13,10 +13,12 @@ from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import 3rd-party libs
-import yaml
+from salt.ext import six
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.yaml
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
@@ -37,11 +39,11 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         try:
             add_user = self.run_call('user.add {0} createhome=False'.format(USERA))
             add_pwd = self.run_call('shadow.set_password {0} \'{1}\''.format(USERA,
-                                    USERA_PWD if salt.utils.is_darwin() else HASHED_USERA_PWD))
+                                    USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD))
             self.assertTrue(add_user)
             self.assertTrue(add_pwd)
             user_list = self.run_call('user.list_users')
-            self.assertIn(USERA, str(user_list))
+            self.assertIn(USERA, six.text_type(user_list))
         except AssertionError:
             self.run_call('user.delete {0} remove=True'.format(USERA))
             self.skipTest(
@@ -65,7 +67,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         pki_dir = self.master_opts['pki_dir']
         key = os.path.join(pki_dir, 'minions', min_name)
 
-        with salt.utils.fopen(key, 'w') as fp:
+        with salt.utils.files.fopen(key, 'w') as fp:
             fp.write(textwrap.dedent('''\
                      -----BEGIN PUBLIC KEY-----
                      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoqIZDtcQtqUNs0wC7qQz
@@ -130,8 +132,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         data = self.run_key('-L --out json')
         ret = {}
         try:
-            import json
-            ret = json.loads('\n'.join(data))
+            import salt.utils.json
+            ret = salt.utils.json.loads('\n'.join(data))
         except ValueError:
             pass
 
@@ -154,8 +156,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         data = self.run_key('-L --out yaml')
         ret = {}
         try:
-            import yaml
-            ret = yaml.load('\n'.join(data))
+            import salt.utils.yaml
+            ret = salt.utils.yaml.safe_load('\n'.join(data))
         except Exception:
             pass
 
@@ -230,8 +232,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         test salt-key -l with wrong eauth
         '''
         data = self.run_key('-l acc --eauth wrongeauth --username {0} --password {1}'.format(USERA, USERA_PWD))
-        expect = ['The specified external authentication system "wrongeauth" is not available']
-        self.assertEqual(data, expect)
+        expect = r"^The specified external authentication system \"wrongeauth\" is not available\tAvailable eauth types: auto, .*"
+        self.assertRegex("\t".join(data), expect)
 
     def test_list_un(self):
         '''
@@ -254,6 +256,9 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             for fname in key_names:
                 self.assertTrue(os.path.isfile(os.path.join(tempdir, fname)))
         finally:
+            for dirname, dirs, files in os.walk(tempdir):
+                for filename in files:
+                    os.chmod(os.path.join(dirname, filename), 0o700)
             shutil.rmtree(tempdir)
 
     def test_keys_generation_keysize_minmax(self):
@@ -286,13 +291,11 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         os.chdir(config_dir)
 
         config_file_name = 'master'
-        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
-            config = yaml.load(fhr.read())
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+            config = salt.utils.yaml.safe_load(fhr)
             config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
-                fhw.write(
-                    yaml.dump(config, default_flow_style=False)
-                )
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
         ret = self.run_script(
             self._call_binary_,
             '--config-dir {0} -L'.format(

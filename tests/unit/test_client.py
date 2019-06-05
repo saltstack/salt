@@ -4,7 +4,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 import tests.integration as integration
@@ -13,7 +13,7 @@ from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
 from salt import client
-import salt.utils
+import salt.utils.platform
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltClientError, SaltReqTimeoutError
 )
@@ -80,7 +80,7 @@ class LocalClientTestCase(TestCase,
                                                     kwarg=None, tgt_type='list', full_return=True,
                                                     ret='')
 
-    @skipIf(salt.utils.is_windows(), 'Not supported on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'Not supported on Windows')
     def test_pub(self):
         '''
         Tests that the client cleanly returns when the publisher is not running
@@ -103,7 +103,7 @@ class LocalClientTestCase(TestCase,
                                   self.client.pub,
                                   'non_existent_group', 'test.ping', tgt_type='nodegroup')
 
-    @skipIf(not salt.utils.is_windows(), 'Windows only test')
+    @skipIf(not salt.utils.platform.is_windows(), 'Windows only test')
     def test_pub_win32(self):
         '''
         Tests that the client raises a timeout error when using ZeroMQ's TCP

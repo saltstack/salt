@@ -3,21 +3,22 @@
 The service module for macOS
 .. versionadded:: 2016.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
 import re
-import plistlib
 
 # Import salt libs
-import salt.utils
-import salt.utils.decorators as decorators
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = 'service'
@@ -31,15 +32,15 @@ def __virtual__():
     '''
     Only for macOS with launchctl
     '''
-    if not salt.utils.is_darwin():
+    if not salt.utils.platform.is_darwin():
         return (False, 'Failed to load the mac_service module:\n'
                        'Only available on macOS systems.')
 
-    if not salt.utils.which('launchctl'):
+    if not salt.utils.path.which('launchctl'):
         return (False, 'Failed to load the mac_service module:\n'
                        'Required binary not found: "launchctl"')
 
-    if not salt.utils.which('plutil'):
+    if not salt.utils.path.which('plutil'):
         return (False, 'Failed to load the mac_service module:\n'
                        'Required binary not found: "plutil"')
 
@@ -50,86 +51,19 @@ def __virtual__():
     return __virtualname__
 
 
-def _launchd_paths():
+def _name_in_services(name, services):
     '''
-    Paths where launchd services can be found
-    '''
-    return [
-        '/Library/LaunchAgents',
-        '/Library/LaunchDaemons',
-        '/System/Library/LaunchAgents',
-        '/System/Library/LaunchDaemons',
-    ]
-
-
-@decorators.memoize
-def _available_services():
-    '''
-    Return a dictionary of all available services on the system
-    '''
-    available_services = dict()
-    for launch_dir in _launchd_paths():
-        for root, dirs, files in os.walk(launch_dir):
-            for file_name in files:
-
-                # Must be a plist file
-                if not file_name.endswith('.plist'):
-                    continue
-
-                # Follow symbolic links of files in _launchd_paths
-                file_path = os.path.join(root, file_name)
-                true_path = os.path.realpath(file_path)
-
-                # ignore broken symlinks
-                if not os.path.exists(true_path):
-                    continue
-
-                try:
-                    # This assumes most of the plist files
-                    # will be already in XML format
-                    with salt.utils.fopen(file_path):
-                        plist = plistlib.readPlist(true_path)
-
-                except Exception:
-                    # If plistlib is unable to read the file we'll need to use
-                    # the system provided plutil program to do the conversion
-                    cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
-                        true_path)
-                    plist_xml = __salt__['cmd.run'](cmd, output_loglevel='quiet')
-                    if six.PY2:
-                        plist = plistlib.readPlistFromString(plist_xml)
-                    else:
-                        plist = plistlib.readPlistFromBytes(
-                            salt.utils.to_bytes(plist_xml))
-
-                try:
-                    available_services[plist.Label.lower()] = {
-                        'file_name': file_name,
-                        'file_path': true_path,
-                        'plist': plist}
-                except AttributeError:
-                    # Handle malformed plist files
-                    available_services[os.path.basename(file_name).lower()] = {
-                        'file_name': file_name,
-                        'file_path': true_path,
-                        'plist': plist}
-
-    return available_services
-
-
-def _get_service(name):
-    '''
-    Get information about a service.  If the service is not found, raise an
-    error
+    Checks to see if the given service is in the given services.
 
     :param str name: Service label, file name, or full path
 
-    :return: The service information for the service, otherwise an Error
+    :param dict services: The currently available services.
+
+    :return: The service information for the service, otherwise
+    an empty dictionary
+
     :rtype: dict
     '''
-    services = _available_services()
-    name = name.lower()
-
     if name in services:
         # Match on label
         return services[name]
@@ -143,8 +77,50 @@ def _get_service(name):
             # Match on basename
             return service
 
-    # Could not find service
-    raise CommandExecutionError('Service not found: {0}'.format(name))
+    return dict()
+
+
+def _get_service(name):
+    '''
+    Get information about a service.  If the service is not found, raise an
+    error
+
+    :param str name: Service label, file name, or full path
+
+    :return: The service information for the service, otherwise an Error
+    :rtype: dict
+    '''
+    services = __utils__['mac_utils.available_services']()
+    name = name.lower()
+
+    service = _name_in_services(name, services)
+
+    # if we would the service we can return it
+    if service:
+        return service
+
+    # if we got here our service is not available, now we can check to see if
+    # we received a cached batch of services, if not we did a fresh check
+    # so we need to raise that the service could not be found.
+    try:
+        if not __context__['using_cached_services']:
+            raise CommandExecutionError('Service not found: {0}'.format(name))
+    except KeyError:
+        pass
+
+    # we used a cached version to check, a service could have been made
+    # between now and then, we should refresh our available services.
+    services = __utils__['mac_utils.available_services'](refresh=True)
+
+    # check to see if we found the service we are looking for.
+    service = _name_in_services(name, services)
+
+    if not service:
+        # Could not find the service after refresh raise.
+        raise CommandExecutionError('Service not found: {0}'.format(name))
+
+    # found it :)
+    return service
 
 
 def show(name):
@@ -192,26 +168,7 @@ def launchctl(sub_cmd, *args, **kwargs):
 
         salt '*' service.launchctl debug org.cups.cupsd
     '''
-    # Get return type
-    return_stdout = kwargs.pop('return_stdout', False)
-
-    # Construct command
-    cmd = ['launchctl', sub_cmd]
-    cmd.extend(args)
-
-    # Run command
-    kwargs['python_shell'] = False
-    ret = __salt__['cmd.run_all'](cmd, **kwargs)
-
-    # Raise an error or return successful result
-    if ret['retcode']:
-        out = 'Failed to {0} service:\n'.format(sub_cmd)
-        out += 'stdout: {0}\n'.format(ret['stdout'])
-        out += 'stderr: {0}\n'.format(ret['stderr'])
-        out += 'retcode: {0}\n'.format(ret['retcode'])
-        raise CommandExecutionError(out)
-    else:
-        return ret['stdout'] if return_stdout else True
+    return __utils__['mac_utils.launchctl'](sub_cmd, *args, **kwargs)
 
 
 def list_(name=None, runas=None):
@@ -242,13 +199,11 @@ def list_(name=None, runas=None):
         return launchctl('list',
                          label,
                          return_stdout=True,
-                         output_loglevel='trace',
                          runas=runas)
 
     # Collect information on all services: will raise an error if it fails
     return launchctl('list',
                      return_stdout=True,
-                     output_loglevel='trace',
                      runas=runas)
 
 
@@ -516,11 +471,10 @@ def disabled(name, runas=None, domain='system'):
 
         salt '*' service.disabled org.cups.cupsd
     '''
-    ret = False
+
     disabled = launchctl('print-disabled',
                          domain,
                          return_stdout=True,
-                         output_loglevel='trace',
                          runas=runas)
     for service in disabled.split("\n"):
         if name in service:
@@ -554,7 +508,7 @@ def get_all(runas=None):
     enabled = get_enabled(runas=runas)
 
     # Get list of all services
-    available = list(_available_services().keys())
+    available = list(__utils__['mac_utils.available_services']().keys())
 
     # Return composite list
     return sorted(set(enabled + available))

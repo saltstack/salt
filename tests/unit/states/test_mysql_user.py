@@ -3,7 +3,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -16,7 +16,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.states.mysql_user as mysql_user
-import salt.utils
+import salt.utils.data
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -49,7 +49,7 @@ class MysqlUserTestCase(TestCase, LoaderModuleMockMixin):
         mock_str = MagicMock(return_value='salt')
         mock_none = MagicMock(return_value=None)
         mock_sn = MagicMock(side_effect=[None, 'salt', None, None, None])
-        with patch.object(salt.utils, 'is_true', mock_f):
+        with patch.object(salt.utils.data, 'is_true', mock_f):
             comt = ('Either password or password_hash must be specified,'
                     ' unless allow_passwordless is True')
             ret.update({'comment': comt})
@@ -57,7 +57,7 @@ class MysqlUserTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(mysql_user.__salt__, {'mysql.user_exists': mock,
                                               'mysql.user_chpass': mock_t}):
-            with patch.object(salt.utils, 'is_true', mock_t):
+            with patch.object(salt.utils.data, 'is_true', mock_t):
                 comt = ('User frank@localhost is already present'
                         ' with passwordless login')
                 ret.update({'comment': comt, 'result': True})

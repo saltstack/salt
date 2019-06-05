@@ -4,8 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, unicode_literals, print_function
 import textwrap
 
 # Import Salt Testing Libs
@@ -19,6 +18,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.json
 import salt.modules.npm as npm
 from salt.exceptions import CommandExecutionError
 
@@ -102,7 +102,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
             mock_err = MagicMock(side_effect=ValueError())
             # When JSON isn't successfully parsed, return should equal input
-            with patch.object(json, 'loads', mock_err):
+            with patch.object(salt.utils.json, 'loads', mock_err):
                 self.assertEqual(npm.install('coffee-script'), 'SALT')
 
     # 'uninstall' function tests: 1
@@ -133,7 +133,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
                                        'stdout': '{"salt": ["SALT"]}'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
             mock_err = MagicMock(return_value={'dependencies': 'SALT'})
-            with patch.object(json, 'loads', mock_err):
+            with patch.object(salt.utils.json, 'loads', mock_err):
                 self.assertEqual(npm.list_('coffee-script'), 'SALT')
 
     # 'cache_clean' function tests: 1

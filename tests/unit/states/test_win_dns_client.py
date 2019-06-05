@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -46,7 +46,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value=[2, 'salt'])
             with patch.dict(win_dns_client.__salt__,
                             {'win_dns_client.get_dns_servers': mock}):
-                ret.update({'changes': {}, 'comment': "[2, 'salt'] are already"
+                ret.update({'changes': {}, 'comment': repr([2, 'salt']) + " are already"
                             " configured", 'result': True})
                 self.assertDictEqual(win_dns_client.dns_exists('salt',
                                                                [2, 'salt']),

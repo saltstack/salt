@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -102,7 +102,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
 
         val = {'pre': [], 'crons': [{'path': '/home/cybage',
                                      'mask': 'IN_MODIFY',
-                                     'cmd': 'echo "SALT"', 'comment': ''}]}
+                                     'cmd': 'echo "SALT"'}]}
         with patch.object(incron, 'list_tab',
                           MagicMock(return_value=val)):
             self.assertEqual(incron.set_job('cybage', '/home/cybage',
@@ -135,7 +135,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
 
         val = {'pre': [], 'crons': [{'path': '/home/cybage',
                                      'mask': 'IN_MODIFY,IN_DELETE',
-                                     'cmd': 'echo "SALT"', 'comment': ''}]}
+                                     'cmd': 'echo "SALT"'}]}
         with patch.object(incron, 'list_tab',
                           MagicMock(return_value=val)):
             mock = MagicMock(return_value='incrontab')

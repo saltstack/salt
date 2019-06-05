@@ -2,10 +2,10 @@
 '''
 macOS implementations of various commands in the "desktop" interface
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
@@ -16,7 +16,7 @@ def __virtual__():
     '''
     Only load on Mac systems
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return __virtualname__
     return False, 'Cannot load macOS desktop module: This is not a macOS host.'
 

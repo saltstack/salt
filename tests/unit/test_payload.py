@@ -7,26 +7,26 @@
     ~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-# Import Salt libs
-from __future__ import absolute_import
+# Import python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 import errno
 import threading
+import datetime
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import MockWraps
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
-# Import salt libs
-import salt.payload
+# Import Salt libs
+from salt.utils import immutabletypes
 from salt.utils.odict import OrderedDict
 import salt.exceptions
+import salt.payload
 
 # Import 3rd-party libs
-import msgpack
 import zmq
-import salt.ext.six as six
+from salt.ext import six
 
 import logging
 
@@ -49,15 +49,109 @@ class PayloadTestCase(TestCase):
                 self.assertNoOrderedDict(chunk)
 
     def test_list_nested_odicts(self):
-        with patch('msgpack.version', (0, 1, 13)):
-            msgpack.dumps = MockWraps(
-                msgpack.dumps, 1, TypeError('ODict TypeError Forced')
-            )
-            payload = salt.payload.Serial('msgpack')
-            idata = {'pillar': [OrderedDict(environment='dev')]}
-            odata = payload.loads(payload.dumps(idata.copy()))
-            self.assertNoOrderedDict(odata)
-            self.assertEqual(idata, odata)
+        payload = salt.payload.Serial('msgpack')
+        idata = {'pillar': [OrderedDict(environment='dev')]}
+        odata = payload.loads(payload.dumps(idata.copy()))
+        self.assertNoOrderedDict(odata)
+        self.assertEqual(idata, odata)
+
+    def test_datetime_dump_load(self):
+        '''
+        Check the custom datetime handler can understand itself
+        '''
+        payload = salt.payload.Serial('msgpack')
+        dtvalue = datetime.datetime(2001, 2, 3, 4, 5, 6, 7)
+        idata = {dtvalue: dtvalue}
+        sdata = payload.dumps(idata.copy())
+        odata = payload.loads(sdata)
+        self.assertEqual(
+                sdata,
+                b'\x81\xc7\x18N20010203T04:05:06.000007\xc7\x18N20010203T04:05:06.000007')
+        self.assertEqual(idata, odata)
+
+    def test_verylong_dump_load(self):
+        '''
+        Test verylong encoder/decoder
+        '''
+        payload = salt.payload.Serial('msgpack')
+        idata = {'jid': 20180227140750302662}
+        sdata = payload.dumps(idata.copy())
+        odata = payload.loads(sdata)
+        idata['jid'] = '{0}'.format(idata['jid'])
+        self.assertEqual(idata, odata)
+
+    def test_immutable_dict_dump_load(self):
+        '''
+        Test immutable dict encoder/decoder
+        '''
+        payload = salt.payload.Serial('msgpack')
+        idata = {'dict': {'key': 'value'}}
+        sdata = payload.dumps({'dict': immutabletypes.ImmutableDict(idata['dict'])})
+        odata = payload.loads(sdata)
+        self.assertEqual(idata, odata)
+
+    def test_immutable_list_dump_load(self):
+        '''
+        Test immutable list encoder/decoder
+        '''
+        payload = salt.payload.Serial('msgpack')
+        idata = {'list': [1, 2, 3]}
+        sdata = payload.dumps({'list': immutabletypes.ImmutableList(idata['list'])})
+        odata = payload.loads(sdata)
+        self.assertEqual(idata, odata)
+
+    def test_immutable_set_dump_load(self):
+        '''
+        Test immutable set encoder/decoder
+        '''
+        payload = salt.payload.Serial('msgpack')
+        idata = {'set': ['red', 'green', 'blue']}
+        sdata = payload.dumps({'set': immutabletypes.ImmutableSet(idata['set'])})
+        odata = payload.loads(sdata)
+        self.assertEqual(idata, odata)
+
+    def test_odict_dump_load(self):
+        '''
+        Test odict just works. It wasn't until msgpack 0.2.0
+        '''
+        payload = salt.payload.Serial('msgpack')
+        data = OrderedDict()
+        data['a'] = 'b'
+        data['y'] = 'z'
+        data['j'] = 'k'
+        data['w'] = 'x'
+        sdata = payload.dumps({'set': data})
+        odata = payload.loads(sdata)
+        self.assertEqual({'set': dict(data)}, odata)
+
+    def test_mixed_dump_load(self):
+        '''
+        Test we can handle all exceptions at once
+        '''
+        payload = salt.payload.Serial('msgpack')
+        dtvalue = datetime.datetime(2001, 2, 3, 4, 5, 6, 7)
+        od = OrderedDict()
+        od['a'] = 'b'
+        od['y'] = 'z'
+        od['j'] = 'k'
+        od['w'] = 'x'
+        idata = {dtvalue: dtvalue,  # datetime
+                 'jid': 20180227140750302662,  # long int
+                 'dict': immutabletypes.ImmutableDict({'key': 'value'}),  # immutable dict
+                 'list': immutabletypes.ImmutableList([1, 2, 3]),  # immutable list
+                 'set': immutabletypes.ImmutableSet(('red', 'green', 'blue')),  # immutable set
+                 'odict': od,  # odict
+                 }
+        edata = {dtvalue: dtvalue,  # datetime, == input
+                 'jid': '20180227140750302662',  # string repr of long int
+                 'dict': {'key': 'value'},  # builtin dict
+                 'list': [1, 2, 3],  # builtin list
+                 'set': ['red', 'green', 'blue'],  # builtin set
+                 'odict': dict(od),  # builtin dict
+                 }
+        sdata = payload.dumps(idata)
+        odata = payload.loads(sdata)
+        self.assertEqual(edata, odata)
 
 
 class SREQTestCase(TestCase):
@@ -84,9 +178,10 @@ class SREQTestCase(TestCase):
                     #  Wait for next request from client
                     message = socket.recv(zmq.NOBLOCK)
                     msg_deserialized = payload.loads(message)
-                    log.info('Echo server received message: {0}'.format(msg_deserialized))
+                    log.info('Echo server received message: %s', msg_deserialized)
                     if isinstance(msg_deserialized['load'], dict) and msg_deserialized['load'].get('sleep'):
-                        log.info('Test echo server sleeping for {0} seconds'.format(msg_deserialized['load']['sleep']))
+                        log.info('Test echo server sleeping for %s seconds',
+                                 msg_deserialized['load']['sleep'])
                         time.sleep(msg_deserialized['load']['sleep'])
                     socket.send(message)
                 except zmq.ZMQError as exc:
@@ -169,3 +264,27 @@ class SREQTestCase(TestCase):
         # ensure no exceptions when we go to destroy the sreq, since __del__
         # swallows exceptions, we have to call destroy directly
         sreq.destroy()
+
+    def test_raw_vs_encoding_none(self):
+        '''
+        Test that we handle the new raw parameter in 5.0.2 correctly based on
+        encoding. When encoding is None loads should return bytes
+        '''
+        payload = salt.payload.Serial('msgpack')
+        dtvalue = datetime.datetime(2001, 2, 3, 4, 5, 6, 7)
+        idata = {dtvalue: 'strval'}
+        sdata = payload.dumps(idata.copy())
+        odata = payload.loads(sdata, encoding=None)
+        assert isinstance(odata[dtvalue], six.string_types)
+
+    def test_raw_vs_encoding_utf8(self):
+        '''
+        Test that we handle the new raw parameter in 5.0.2 correctly based on
+        encoding. When encoding is utf-8 loads should return unicode
+        '''
+        payload = salt.payload.Serial('msgpack')
+        dtvalue = datetime.datetime(2001, 2, 3, 4, 5, 6, 7)
+        idata = {dtvalue: 'strval'}
+        sdata = payload.dumps(idata.copy())
+        odata = payload.loads(sdata, encoding='utf-8')
+        assert isinstance(odata[dtvalue], six.text_type)

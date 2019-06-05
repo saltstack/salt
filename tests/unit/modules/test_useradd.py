@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 try:
     import pwd
     HAS_PWD = True
@@ -46,7 +46,8 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
                           'fullname': 'root',
                           'roomnumber': '',
                           'workphone': '',
-                          'homephone': ''}
+                          'homephone': '',
+                          'other': ''}
 
     @classmethod
     def tearDownClass(cls):
@@ -96,7 +97,8 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
                     'fullname': 'root',
                     'roomnumber': '',
                     'workphone': '',
-                    'homephone': ''}]
+                    'homephone': '',
+                    'other': ''}]
             with patch('salt.modules.useradd._format_info', MagicMock(return_value=self.mock_pwall)):
                 self.assertEqual(useradd.getent(), ret)
 
@@ -330,6 +332,36 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(useradd, 'info', mock):
                     self.assertFalse(useradd.chhomephone('salt', 1))
 
+    # 'chother' function tests: 1
+
+    def test_chother(self):
+        '''
+        Test if the user's other GECOS attribute is changed
+        '''
+        mock = MagicMock(return_value=False)
+        with patch.object(useradd, '_get_gecos', mock):
+            self.assertFalse(useradd.chother('salt', 1))
+
+        mock = MagicMock(return_value={'other': 'foobar'})
+        with patch.object(useradd, '_get_gecos', mock):
+            self.assertTrue(useradd.chother('salt', 'foobar'))
+
+        mock = MagicMock(return_value={'other': 'foobar2'})
+        with patch.object(useradd, '_get_gecos', mock):
+            mock = MagicMock(return_value=None)
+            with patch.dict(useradd.__salt__, {'cmd.run': mock}):
+                mock = MagicMock(return_value={'other': 'foobar3'})
+                with patch.object(useradd, 'info', mock):
+                    self.assertFalse(useradd.chother('salt', 'foobar'))
+
+        mock = MagicMock(return_value={'other': 'foobar3'})
+        with patch.object(useradd, '_get_gecos', mock):
+            mock = MagicMock(return_value=None)
+            with patch.dict(useradd.__salt__, {'cmd.run': mock}):
+                mock = MagicMock(return_value={'other': 'foobar3'})
+                with patch.object(useradd, 'info', mock):
+                    self.assertFalse(useradd.chother('salt', 'foobar'))
+
     # 'info' function tests: 1
 
     @skipIf(HAS_PWD is False, 'The pwd module is not available')
@@ -355,7 +387,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it return a list of groups the named user belongs to
         '''
-        with patch('salt.utils.get_group_list', MagicMock(return_value='Salt')):
+        with patch('salt.utils.user.get_group_list', MagicMock(return_value='Salt')):
             self.assertEqual(useradd.list_groups('name'), 'Salt')
 
     # 'list_users' function tests: 1
@@ -393,3 +425,21 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(side_effect=[{'name': ''}, False, {'name': ''}])
             with patch.object(useradd, 'info', mock):
                 self.assertFalse(useradd.rename('salt', 'salt'))
+
+    def test_build_gecos_field(self):
+        '''
+        Test if gecos fields are built correctly (removing trailing commas)
+        '''
+        test_gecos = {'fullname': 'Testing',
+                      'roomnumber': 1234,
+                      'workphone': 22222,
+                      'homephone': 99999}
+        expected_gecos_fields = 'Testing,1234,22222,99999'
+        self.assertEqual(useradd._build_gecos(test_gecos), expected_gecos_fields)
+        test_gecos.pop('roomnumber')
+        test_gecos.pop('workphone')
+        expected_gecos_fields = 'Testing,,,99999'
+        self.assertEqual(useradd._build_gecos(test_gecos), expected_gecos_fields)
+        test_gecos.pop('homephone')
+        expected_gecos_fields = 'Testing'
+        self.assertEqual(useradd._build_gecos(test_gecos), expected_gecos_fields)

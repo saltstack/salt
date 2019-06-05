@@ -27,7 +27,7 @@ An example Django module that registers a function called
 
 '''
 # Import Python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libraries
@@ -61,8 +61,10 @@ def returner(ret):
     signaled = dispatch.Signal(providing_args=['ret']).send(sender='returner', ret=ret)
 
     for signal in signaled:
-        log.debug('Django returner function \'returner\' signaled {0} '
-                  'which responded with {1}'.format(signal[0], signal[1]))
+        log.debug(
+            'Django returner function \'returner\' signaled %s '
+            'which responded with %s', signal[0], signal[1]
+        )
 
 
 def save_load(jid, load, minions=None):
@@ -74,12 +76,14 @@ def save_load(jid, load, minions=None):
             sender='save_load', jid=jid, load=load)
 
     for signal in signaled:
-        log.debug('Django returner function \'save_load\' signaled {0} '
-                  'which responded with {1}'.format(signal[0], signal[1]))
+        log.debug(
+            'Django returner function \'save_load\' signaled %s '
+            'which responded with %s', signal[0], signal[1]
+        )
 
 
 def prep_jid(nocache=False, passed_jid=None):
     '''
     Do any work necessary to prepare a JID, including sending a custom ID
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

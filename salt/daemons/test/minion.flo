@@ -11,7 +11,12 @@ framer minionudpstack be active first start
       exit
          do salt raet road stack closer per inode ".salt.road.manor."
 
-framer bootstrap be active first join
+framer bootstrap be active first setup
+   frame setup
+      enter
+          do salt raet road usher minion setup per inode ".salt.road.manor."
+      go join
+
    frame join
       print Joining...
       enter
@@ -44,7 +49,7 @@ framer bootstrap be active first join
    frame message
       print Messaging...
       enter
-         do raet road stack messenger to contents "Minion 1 Hello" code 15 \
+         do raet road stack messenger with contents "Minion 1 Hello" code 15 \
             per inode ".salt.road.manor."
       go next
 

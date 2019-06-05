@@ -4,11 +4,11 @@ Manage kubernetes resources as salt states
 ==========================================
 
 NOTE: This module requires the proper pillar values set. See
-salt.modules.kubernetes for more information.
+salt.modules.kubernetesmod for more information.
 
 .. warning::
 
-    Configuration options will change in Flourine.
+    Configuration options will change in Fluorine.
 
 The kubernetes module is used to manage different kubernetes resources.
 
@@ -84,6 +84,10 @@ from __future__ import absolute_import
 
 import copy
 import logging
+
+# Import 3rd-party libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 
@@ -406,7 +410,7 @@ def namespace_absent(name, **kwargs):
     if (
             res['code'] == 200 or
             (
-                isinstance(res['status'], str) and
+                isinstance(res['status'], six.string_types) and
                 'Terminating' in res['status']
             ) or
             (
@@ -432,7 +436,7 @@ def namespace_present(name, **kwargs):
     Ensures that the named namespace is present.
 
     name
-        The name of the deployment.
+        The name of the namespace.
 
     '''
     ret = {'name': name,
@@ -449,6 +453,7 @@ def namespace_present(name, **kwargs):
             return ret
 
         res = __salt__['kubernetes.create_namespace'](name, **kwargs)
+        ret['result'] = True
         ret['changes']['namespace'] = {
             'old': {},
             'new': res}
@@ -504,8 +509,8 @@ def secret_present(
         name,
         namespace='default',
         data=None,
-        source='',
-        template='',
+        source=None,
+        template=None,
         **kwargs):
     '''
     Ensures that the named secret is present inside of the specified namespace
@@ -562,6 +567,7 @@ def secret_present(
     else:
         if __opts__['test']:
             ret['result'] = None
+            ret['comment'] = 'The secret is going to be replaced'
             return ret
 
         # TODO: improve checks  # pylint: disable=fixme
@@ -579,7 +585,7 @@ def secret_present(
     ret['changes'] = {
         # Omit values from the return. They are unencrypted
         # and can contain sensitive data.
-        'data': res['data'].keys()
+        'data': list(res['data'])
     }
     ret['result'] = True
 
@@ -594,7 +600,8 @@ def configmap_absent(name, namespace='default', **kwargs):
         The name of the configmap
 
     namespace
-        The name of the namespace
+        The namespace holding the configmap. The 'default' one is going to be
+        used unless a different one is specified.
     '''
 
     ret = {'name': name,
@@ -631,8 +638,8 @@ def configmap_present(
         name,
         namespace='default',
         data=None,
-        source='',
-        template='',
+        source=None,
+        template=None,
         **kwargs):
     '''
     Ensures that the named configmap is present inside of the specified namespace
@@ -665,6 +672,8 @@ def configmap_present(
             ret,
             '\'source\' cannot be used in combination with \'data\''
         )
+    elif data is None:
+        data = {}
 
     configmap = __salt__['kubernetes.show_configmap'](name, namespace, **kwargs)
 
@@ -686,6 +695,7 @@ def configmap_present(
     else:
         if __opts__['test']:
             ret['result'] = None
+            ret['comment'] = 'The configmap is going to be replaced'
             return ret
 
         # TODO: improve checks  # pylint: disable=fixme
@@ -927,7 +937,10 @@ def node_label_folder_absent(name, node, **kwargs):
     ret['result'] = True
     ret['changes'] = {
         'kubernetes.node_label_folder_absent': {
-            'new': new_labels, 'old': labels.keys()}}
+            'old': list(labels),
+            'new': new_labels,
+        }
+    }
     ret['comment'] = 'Label folder removed from node'
 
     return ret
@@ -975,6 +988,7 @@ def node_label_present(
     else:
         if __opts__['test']:
             ret['result'] = None
+            ret['comment'] = 'The label is going to be updated'
             return ret
 
         ret['comment'] = 'The label is already set, changing the value'

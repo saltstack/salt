@@ -14,8 +14,7 @@ This tool is accessed using `salt-extend`
 '''
 
 # Import Python libs
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, unicode_literals, print_function
 
 from datetime import date
 import logging
@@ -29,7 +28,7 @@ from jinja2 import Template
 from salt.serializers.yaml import deserialize
 from salt.ext.six.moves import zip
 from salt.utils.odict import OrderedDict
-import salt.utils
+import salt.utils.files
 import salt.version
 
 log = logging.getLogger(__name__)
@@ -56,7 +55,7 @@ def _get_template(path, option_key):
     :returns: Details about the template
     :rtype: ``tuple``
     '''
-    with salt.utils.fopen(path, "r") as template_f:
+    with salt.utils.files.fopen(path, 'r') as template_f:
         template = deserialize(template_f)
         info = (option_key, template.get('description', ''), template)
     return info
@@ -73,7 +72,7 @@ def _fetch_templates(src):
     :returns: ``list`` of ('key', 'description')
     '''
     templates = []
-    log.debug('Listing contents of {0}'.format(src))
+    log.debug('Listing contents of %s', src)
     for item in os.listdir(src):
         s = os.path.join(src, item)
         if os.path.isdir(s):
@@ -81,8 +80,8 @@ def _fetch_templates(src):
             if os.path.isfile(template_path):
                 templates.append(_get_template(template_path, item))
             else:
-                log.debug("Directory does not contain {1} {0}".format(template_path,
-                                                                      TEMPLATE_FILE_NAME))
+                log.debug("Directory does not contain %s %s", template_path,
+                          TEMPLATE_FILE_NAME)
     return templates
 
 
@@ -100,13 +99,13 @@ def _mergetree(src, dst):
         s = os.path.join(src, item)
         d = os.path.join(dst, item)
         if os.path.isdir(s):
-            log.info("Copying folder {0} to {1}".format(s, d))
+            log.info("Copying folder %s to %s", s, d)
             if os.path.exists(d):
                 _mergetree(s, d)
             else:
                 shutil.copytree(s, d)
         else:
-            log.info("Copying file {0} to {1}".format(s, d))
+            log.info("Copying file %s to %s", s, d)
             shutil.copy2(s, d)
 
 
@@ -128,7 +127,7 @@ def _mergetreejinja(src, dst, context):
         s = os.path.join(src, item)
         d = os.path.join(dst, item)
         if os.path.isdir(s):
-            log.info("Copying folder {0} to {1}".format(s, d))
+            log.info("Copying folder %s to %s", s, d)
             if os.path.exists(d):
                 _mergetreejinja(s, d, context)
             else:
@@ -137,12 +136,12 @@ def _mergetreejinja(src, dst, context):
         else:
             if item != TEMPLATE_FILE_NAME:
                 d = Template(d).render(context)
-                log.info("Copying file {0} to {1}".format(s, d))
-                with salt.utils.fopen(s, 'r') as source_file:
-                    src_contents = source_file.read()
+                log.info("Copying file %s to %s", s, d)
+                with salt.utils.files.fopen(s, 'r') as source_file:
+                    src_contents = salt.utils.stringutils.to_unicode(source_file.read())
                     dest_contents = Template(src_contents).render(context)
-                with salt.utils.fopen(d, 'w') as dest_file:
-                    dest_file.write(dest_contents)
+                with salt.utils.files.fopen(d, 'w') as dest_file:
+                    dest_file.write(salt.utils.stringutils.to_str(dest_contents))
 
 
 def _prompt_user_variable(var_name, default_value):
@@ -176,16 +175,16 @@ def _prompt_choice(var_name, options):
     :returns: The selected user
     '''
     choice_map = OrderedDict(
-        (u'{0}'.format(i), value) for i, value in enumerate(options, 1) if value[0] != 'test'
+        ('{0}'.format(i), value) for i, value in enumerate(options, 1) if value[0] != 'test'
     )
     choices = choice_map.keys()
-    default = u'1'
+    default = '1'
 
-    choice_lines = [u'{0} - {1} - {2}'.format(c[0], c[1][0], c[1][1]) for c in choice_map.items()]
-    prompt = u'\n'.join((
-        u'Select {0}:'.format(var_name),
-        u'\n'.join(choice_lines),
-        u'Choose from {0}'.format(u', '.join(choices))
+    choice_lines = ['{0} - {1} - {2}'.format(c[0], c[1][0], c[1][1]) for c in choice_map.items()]
+    prompt = '\n'.join((
+        'Select {0}:'.format(var_name),
+        '\n'.join(choice_lines),
+        'Choose from {0}'.format(', '.join(choices))
     ))
 
     user_choice = click.prompt(
@@ -301,7 +300,7 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
         _mergetree(temp_dir, salt_dir)
         path = salt_dir
 
-    log.info('New module stored in {0}'.format(path))
+    log.info('New module stored in %s', path)
     return path
 
 

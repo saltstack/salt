@@ -4,7 +4,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
@@ -15,7 +15,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.augeas_cfg as augeas_cfg
 from salt.exceptions import SaltInvocationError
-import salt.ext.six as six
+from salt.ext import six
 # Make sure augeas python interface is installed
 if augeas_cfg.HAS_AUGEAS:
     from augeas import Augeas as _Augeas

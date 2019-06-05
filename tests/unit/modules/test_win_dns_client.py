@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import types
 
 # Import Salt Testing Libs
@@ -20,6 +20,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.win_dns_client as win_dns_client
+import salt.utils.stringutils
 
 try:
     import wmi
@@ -73,7 +74,9 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         # wmi and pythoncom modules are platform specific...
-        mock_pythoncom = types.ModuleType('pythoncom')
+        mock_pythoncom = types.ModuleType(
+            salt.utils.stringutils.to_str('pythoncom')
+        )
         sys_modules_patcher = patch.dict('sys.modules',
                                          {'pythoncom': mock_pythoncom})
         sys_modules_patcher.start()

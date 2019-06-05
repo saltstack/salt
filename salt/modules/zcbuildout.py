@@ -24,7 +24,7 @@ You have those following methods:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import re
@@ -35,13 +35,15 @@ import copy
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six import string_types, text_type
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 
@@ -60,8 +62,8 @@ BASE_STATUS = {
     'outlog_by_level': None,
 }
 _URL_VERSIONS = {
-    1: u'http://downloads.buildout.org/1/bootstrap.py',
-    2: u'http://downloads.buildout.org/2/bootstrap.py',
+    1: 'http://downloads.buildout.org/1/bootstrap.py',
+    2: 'http://downloads.buildout.org/2/bootstrap.py',
 }
 DEFAULT_VER = 2
 _logger = logging.getLogger(__name__)
@@ -124,7 +126,7 @@ def _salt_callback(func, **kwargs):
         LOG.clear()
         # before returning, trying to compact the log output
         for k in ['comment', 'out', 'outlog']:
-            if status[k] and isinstance(status[k], string_types):
+            if status[k] and isinstance(status[k], six.string_types):
                 status[k] = '\n'.join([
                     log
                     for log in status[k].split('\n')
@@ -142,7 +144,7 @@ class _Logger(object):
         self._by_level = {}
 
     def _log(self, level, msg):
-        if not isinstance(msg, text_type):
+        if not isinstance(msg, six.text_type):
             msg = msg.decode('utf-8')
         if level not in self._by_level:
             self._by_level[level] = []
@@ -184,23 +186,20 @@ class _Logger(object):
 LOG = _Logger()
 
 
-def _encode_string(string):
-    if isinstance(string, text_type):
-        string = string.encode('utf-8')
-    return string
-
-
 def _encode_status(status):
-    status['out'] = _encode_string(status['out'])
-    status['outlog_by_level'] = _encode_string(status['outlog_by_level'])
+    if status['out'] is None:
+        status['out'] = None
+    else:
+        status['out'] = salt.utils.stringutils.to_unicode(status['out'])
+    status['outlog_by_level'] = salt.utils.stringutils.to_unicode(status['outlog_by_level'])
     if status['logs']:
         for i, data in enumerate(status['logs'][:]):
-            status['logs'][i] = (data[0], _encode_string(data[1]))
+            status['logs'][i] = (data[0], salt.utils.stringutils.to_unicode(data[1]))
         for logger in 'error', 'warn', 'info', 'debug':
             logs = status['logs_by_level'].get(logger, [])[:]
             if logs:
                 for i, log in enumerate(logs):
-                    status['logs_by_level'][logger][i] = _encode_string(log)
+                    status['logs_by_level'][logger][i] = salt.utils.stringutils.to_unicode(log)
     return status
 
 
@@ -217,10 +216,10 @@ def _set_status(m,
     m['logs_by_level'] = LOG.by_level.copy()
     outlog, outlog_by_level = '', ''
     m['comment'] = comment
-    if out and isinstance(out, string_types):
+    if out and isinstance(out, six.string_types):
         outlog += HR
         outlog += 'OUTPUT:\n'
-        outlog += '{0}\n'.format(_encode_string(out))
+        outlog += '{0}\n'.format(salt.utils.stringutils.to_unicode(out))
         outlog += HR
     if m['logs']:
         outlog += HR
@@ -231,13 +230,13 @@ def _set_status(m,
         outlog_by_level += HR
         for level, msg in m['logs']:
             outlog += '\n{0}: {1}\n'.format(level.upper(),
-                                            _encode_string(msg))
+                                            salt.utils.stringutils.to_unicode(msg))
         for logger in 'error', 'warn', 'info', 'debug':
             logs = m['logs_by_level'].get(logger, [])
             if logs:
                 outlog_by_level += '\n{0}:\n'.format(logger.upper())
                 for idx, log in enumerate(logs[:]):
-                    logs[idx] = _encode_string(log)
+                    logs[idx] = salt.utils.stringutils.to_unicode(log)
                 outlog_by_level += '\n'.join(logs)
                 outlog_by_level += '\n'
         outlog += HR
@@ -295,7 +294,7 @@ def _Popen(command,
     directory = os.path.abspath(directory)
     if isinstance(command, list):
         command = ' '.join(command)
-    LOG.debug(u'Running {0}'.format(command))
+    LOG.debug('Running {0}'.format(command))  # pylint: disable=str-format-in-logging
     if not loglevel:
         loglevel = 'debug'
     ret = __salt__['cmd.run_all'](
@@ -311,7 +310,9 @@ def _Popen(command,
 
 
 class _BuildoutError(CommandExecutionError):
-    '''General Buildout Error.'''
+    '''
+    General Buildout Error.
+    '''
 
 
 def _has_old_distribute(python=sys.executable, runas=None, env=()):
@@ -322,7 +323,6 @@ def _has_old_distribute(python=sys.executable, runas=None, env=()):
                '\'import pkg_resources;'
                'print pkg_resources.'
                'get_distribution(\"distribute\").location\'']
-        #LOG.debug('Run %s' % ' '.join(cmd))
         ret = _Popen(cmd, runas=runas, env=env, output=True)
         if 'distribute-0.6' in ret:
             old_distribute = True
@@ -339,7 +339,6 @@ def _has_setuptools7(python=sys.executable, runas=None, env=()):
                '\'import pkg_resources;'
                'print not pkg_resources.'
                'get_distribution("setuptools").version.startswith("0.6")\'']
-        #LOG.debug('Run %s' % ' '.join(cmd))
         ret = _Popen(cmd, runas=runas, env=env, output=True)
         if 'true' in ret.lower():
             new_st = True
@@ -379,7 +378,7 @@ def _find_cfgs(path, cfgs=None):
         if os.path.isdir(fi) and (i not in ignored):
             dirs.append(fi)
     for fpath in dirs:
-        for p, ids, ifs in os.walk(fpath):
+        for p, ids, ifs in salt.utils.path.os_walk(fpath):
             for i in ifs:
                 if i.endswith('.cfg'):
                     cfgs.append(os.path.join(p, i))
@@ -391,10 +390,12 @@ def _get_bootstrap_content(directory='.'):
     Get the current bootstrap.py script content
     '''
     try:
-        with salt.utils.fopen(os.path.join(
+        with salt.utils.files.fopen(os.path.join(
                                 os.path.abspath(directory),
                                 'bootstrap.py')) as fic:
-            oldcontent = fic.read()
+            oldcontent = salt.utils.stringutils.to_unicode(
+                fic.read()
+            )
     except (OSError, IOError):
         oldcontent = ''
     return oldcontent
@@ -416,9 +417,9 @@ def _get_buildout_ver(directory='.'):
     try:
         files = _find_cfgs(directory)
         for f in files:
-            with salt.utils.fopen(f) as fic:
+            with salt.utils.files.fopen(f) as fic:
                 buildout1re = re.compile(r'^zc\.buildout\s*=\s*1', RE_F)
-                dfic = fic.read()
+                dfic = salt.utils.stringutils.to_unicode(fic.read())
                 if (
                         ('buildout.dumppick' in dfic)
                         or
@@ -500,7 +501,7 @@ def upgrade_bootstrap(directory='.',
     else:
         buildout_ver = _get_buildout_ver(directory)
         booturl = _get_bootstrap_url(directory)
-    LOG.debug('Using {0}'.format(booturl))
+    LOG.debug('Using {0}'.format(booturl))  # pylint: disable=str-format-in-logging
     # try to download an up-to-date bootstrap
     # set defaulttimeout
     # and add possible content
@@ -518,7 +519,7 @@ def upgrade_bootstrap(directory='.',
                 if not os.path.isdir(dbuild):
                     os.makedirs(dbuild)
                 # only try to download once per buildout checkout
-                with salt.utils.fopen(os.path.join(
+                with salt.utils.files.fopen(os.path.join(
                         dbuild,
                         '{0}.updated_bootstrap'.format(buildout_ver))):
                     pass
@@ -534,17 +535,17 @@ def upgrade_bootstrap(directory='.',
             data = '\n'.join(ldata)
         if updated:
             comment = 'Bootstrap updated'
-            with salt.utils.fopen(b_py, 'w') as fic:
-                fic.write(data)
+            with salt.utils.files.fopen(b_py, 'w') as fic:
+                fic.write(salt.utils.stringutils.to_str(data))
         if dled:
-            with salt.utils.fopen(os.path.join(dbuild,
+            with salt.utils.files.fopen(os.path.join(dbuild,
                                                '{0}.updated_bootstrap'.format(
                                                    buildout_ver)), 'w') as afic:
                 afic.write('foo')
     except (OSError, IOError):
         if oldcontent:
-            with salt.utils.fopen(b_py, 'w') as fic:
-                fic.write(oldcontent)
+            with salt.utils.files.fopen(b_py, 'w') as fic:
+                fic.write(salt.utils.stringutils.to_str(oldcontent))
 
     return {'comment': comment}
 
@@ -734,8 +735,8 @@ def bootstrap(directory='.',
                       buildout_ver=buildout_ver)
     # be sure which buildout bootstrap we have
     b_py = os.path.join(directory, 'bootstrap.py')
-    with salt.utils.fopen(b_py) as fic:
-        content = fic.read()
+    with salt.utils.files.fopen(b_py) as fic:
+        content = salt.utils.stringutils.to_unicode(fic.read())
     if (
         (test_release is not False)
         and ' --accept-buildout-test-releases' in content
@@ -822,24 +823,24 @@ def run_buildout(directory='.',
     installed_cfg = os.path.join(directory, '.installed.cfg')
     argv = []
     if verbose:
-        LOG.debug(u'Buildout is running in verbose mode!')
+        LOG.debug('Buildout is running in verbose mode!')
         argv.append('-vvvvvvv')
     if not newest and os.path.exists(installed_cfg):
-        LOG.debug(u'Buildout is running in non newest mode!')
+        LOG.debug('Buildout is running in non newest mode!')
         argv.append('-N')
     if newest:
-        LOG.debug(u'Buildout is running in newest mode!')
+        LOG.debug('Buildout is running in newest mode!')
         argv.append('-n')
     if offline:
-        LOG.debug(u'Buildout is running in offline mode!')
+        LOG.debug('Buildout is running in offline mode!')
         argv.append('-o')
     if debug:
-        LOG.debug(u'Buildout is running in debug mode!')
+        LOG.debug('Buildout is running in debug mode!')
         argv.append('-D')
     cmds, outputs = [], []
     if parts:
         for part in parts:
-            LOG.info(u'Installing single part: {0}'.format(part))
+            LOG.info('Installing single part: {0}'.format(part))  # pylint: disable=str-format-in-logging
             cmd = '{0} -c {1} {2} install {3}'.format(
                 bcmd, config, ' '.join(argv), part)
             cmds.append(cmd)
@@ -853,7 +854,7 @@ def run_buildout(directory='.',
                     use_vt=use_vt)
             )
     else:
-        LOG.info(u'Installing all buildout parts')
+        LOG.info('Installing all buildout parts')
         cmd = '{0} -c {1} {2}'.format(
             bcmd, config, ' '.join(argv))
         cmds.append(cmd)
@@ -871,12 +872,12 @@ def _merge_statuses(statuses):
     status = BASE_STATUS.copy()
     status['status'] = None
     status['merged_statuses'] = True
-    status['out'] = []
+    status['out'] = ''
     for st in statuses:
         if status['status'] is not False:
             status['status'] = st['status']
         out = st['out']
-        comment = _encode_string(st['comment'])
+        comment = salt.utils.stringutils.to_unicode(st['comment'])
         logs = st['logs']
         logs_by_level = st['logs_by_level']
         outlog_by_level = st['outlog_by_level']
@@ -886,32 +887,32 @@ def _merge_statuses(statuses):
                 status['out'] = ''
             status['out'] += '\n'
             status['out'] += HR
-            out = _encode_string(out)
+            out = salt.utils.stringutils.to_unicode(out)
             status['out'] += '{0}\n'.format(out)
             status['out'] += HR
         if comment:
             if not status['comment']:
                 status['comment'] = ''
             status['comment'] += '\n{0}\n'.format(
-                _encode_string(comment))
+                salt.utils.stringutils.to_unicode(comment))
         if outlog:
             if not status['outlog']:
                 status['outlog'] = ''
-            outlog = _encode_string(outlog)
+            outlog = salt.utils.stringutils.to_unicode(outlog)
             status['outlog'] += '\n{0}'.format(HR)
             status['outlog'] += outlog
         if outlog_by_level:
             if not status['outlog_by_level']:
                 status['outlog_by_level'] = ''
             status['outlog_by_level'] += '\n{0}'.format(HR)
-            status['outlog_by_level'] += _encode_string(outlog_by_level)
+            status['outlog_by_level'] += salt.utils.stringutils.to_unicode(outlog_by_level)
         status['logs'].extend([
-            (a[0], _encode_string(a[1])) for a in logs])
+            (a[0], salt.utils.stringutils.to_unicode(a[1])) for a in logs])
         for log in logs_by_level:
             if log not in status['logs_by_level']:
                 status['logs_by_level'][log] = []
             status['logs_by_level'][log].extend(
-                [_encode_string(a) for a in logs_by_level[log]])
+                [salt.utils.stringutils.to_unicode(a) for a in logs_by_level[log]])
     return _encode_status(status)
 
 
@@ -993,7 +994,7 @@ def buildout(directory='.',
 
         salt '*' buildout.buildout /srv/mybuildout
     '''
-    LOG.info('Running buildout in {0} ({1})'.format(directory, config))
+    LOG.info('Running buildout in {0} ({1})'.format(directory, config))  # pylint: disable=str-format-in-logging
     boot_ret = bootstrap(directory,
                          config=config,
                          buildout_ver=buildout_ver,
@@ -1029,19 +1030,19 @@ def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
         status['status'] = False
         retcode = __salt__['cmd.retcode']
         if onlyif is not None:
-            if not isinstance(onlyif, string_types):
+            if not isinstance(onlyif, six.string_types):
                 if not onlyif:
-                    _valid(status, 'onlyif execution failed')
-            elif isinstance(onlyif, string_types):
+                    _valid(status, 'onlyif condition is false')
+            elif isinstance(onlyif, six.string_types):
                 if retcode(onlyif, cwd=directory, runas=runas, env=env) != 0:
-                    _valid(status, 'onlyif execution failed')
+                    _valid(status, 'onlyif condition is false')
         if unless is not None:
-            if not isinstance(unless, string_types):
+            if not isinstance(unless, six.string_types):
                 if unless:
-                    _valid(status, 'unless execution succeeded')
-            elif isinstance(unless, string_types):
+                    _valid(status, 'unless condition is true')
+            elif isinstance(unless, six.string_types):
                 if retcode(unless, cwd=directory, runas=runas, env=env, python_shell=False) == 0:
-                    _valid(status, 'unless execution succeeded')
+                    _valid(status, 'unless condition is true')
     if status['status']:
         ret = status
     return ret

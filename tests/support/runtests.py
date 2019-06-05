@@ -49,17 +49,19 @@
 # Import Python modules
 from __future__ import absolute_import, print_function
 import os
-import json
 import shutil
 import logging
 import multiprocessing
+
+import salt.utils.json
+import salt.utils.path
 
 # Import tests support libs
 import tests.support.paths as paths
 import tests.support.helpers
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import coverage  # pylint: disable=import-error
     HAS_COVERAGE = True
@@ -78,7 +80,7 @@ try:
         coverage_object.save()
 
     def multiprocessing_start(obj):
-        coverage_options = json.loads(os.environ.get('SALT_RUNTESTS_COVERAGE_OPTIONS', '{}'))
+        coverage_options = salt.utils.json.loads(os.environ.get('SALT_RUNTESTS_COVERAGE_OPTIONS', '{}'))
         if not coverage_options:
             return
 
@@ -183,7 +185,10 @@ class RuntimeVars(object):
             object.__setattr__(self, name, value)
             return
         self._vars[name] = value
+
+
 # <---- Helper Methods -----------------------------------------------------------------------------------------------
+
 
 # ----- Global Variables -------------------------------------------------------------------------------------------->
 XML_OUTPUT_DIR = os.environ.get('SALT_XML_TEST_REPORTS_DIR', os.path.join(paths.TMP, 'xml-test-reports'))
@@ -215,6 +220,8 @@ RUNTIME_VARS = RuntimeVars(
     TMP_PILLAR_TREE=paths.TMP_PILLAR_TREE,
     TMP_PRODENV_STATE_TREE=paths.TMP_PRODENV_STATE_TREE,
     RUNNING_TESTS_USER=RUNNING_TESTS_USER,
-    RUNTIME_CONFIGS={}
+    RUNTIME_CONFIGS={},
+    SHELL_TRUE_PATH=salt.utils.path.which('true'),
+    SHELL_FALSE_PATH=salt.utils.path.which('false'),
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------

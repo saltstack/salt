@@ -10,24 +10,25 @@
 # Import python libs
 from __future__ import absolute_import
 import os
-import signal
 import shutil
 import logging
-
-# Import 3rd-party libs
-import yaml
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.unit import skipIf
 from tests.integration.utils import testprogram
 
 # Import salt libs
-import salt.utils
-
+import salt.utils.files
+import salt.utils.yaml
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
+
+
+SIGKILL = 9
 
 
 class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
@@ -47,18 +48,16 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
         for fname in ('master', 'minion'):
             pid_path = os.path.join(config_dir, '{0}.pid'.format(fname))
-            with salt.utils.fopen(self.get_config_file_path(fname), 'r') as fhr:
-                config = yaml.load(fhr.read())
+            with salt.utils.files.fopen(self.get_config_file_path(fname), 'r') as fhr:
+                config = salt.utils.yaml.safe_load(fhr)
                 config['log_file'] = config['syndic_log_file'] = 'file:///tmp/log/LOG_LOCAL3'
                 config['root_dir'] = config_dir
                 if 'ret_port' in config:
                     config['ret_port'] = int(config['ret_port']) + 10
                     config['publish_port'] = int(config['publish_port']) + 10
 
-                with salt.utils.fopen(os.path.join(config_dir, fname), 'w') as fhw:
-                    fhw.write(
-                        yaml.dump(config, default_flow_style=False)
-                    )
+                with salt.utils.files.fopen(os.path.join(config_dir, fname), 'w') as fhw:
+                    salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
 
         ret = self.run_script(
             self._call_binary_,
@@ -73,9 +72,9 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
         # Now kill it if still running
         if os.path.exists(pid_path):
-            with salt.utils.fopen(pid_path) as fhr:
+            with salt.utils.files.fopen(pid_path) as fhr:
                 try:
-                    os.kill(int(fhr.read()), signal.SIGKILL)
+                    os.kill(int(fhr.read()), SIGKILL)
                 except OSError:
                     pass
         try:
@@ -85,9 +84,12 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_exit_status_unknown_user(self):
         '''
         Ensure correct exit status when the syndic is configured to run as an unknown user.
+
+        Skipped on windows because daemonization not supported
         '''
 
         syndic = testprogram.TestDaemonSaltSyndic(
@@ -115,9 +117,12 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             syndic.shutdown()
 
     # pylint: disable=invalid-name
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_exit_status_unknown_argument(self):
         '''
         Ensure correct exit status when an unknown argument is passed to salt-syndic.
+
+        Skipped on windows because daemonization not supported
         '''
 
         syndic = testprogram.TestDaemonSaltSyndic(
@@ -143,9 +148,12 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             # cause timeout exeptions and respective traceback
             syndic.shutdown()
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_exit_status_correct_usage(self):
         '''
         Ensure correct exit status when salt-syndic starts correctly.
+
+        Skipped on windows because daemonization not supported
         '''
 
         syndic = testprogram.TestDaemonSaltSyndic(

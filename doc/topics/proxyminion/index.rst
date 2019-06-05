@@ -89,7 +89,7 @@ they are being loaded for the correct proxytype, example below:
         Only work on proxy
         '''
         try:
-            if salt.utils.is_proxy() and \
+            if salt.utils.platform.is_proxy() and \
                __opts__['proxy']['proxytype'] == 'ssh_sample':
                 return __virtualname__
         except KeyError:
@@ -156,20 +156,24 @@ will need to be restarted to pick up any changes.  A corresponding utility funct
 ``saltutil.sync_proxymodules``, has been added to sync these modules to minions.
 
 In addition, a salt.utils helper function called `is_proxy()` was added to make
-it easier to tell when the running minion is a proxy minion.
+it easier to tell when the running minion is a proxy minion. **NOTE: This
+function was renamed to salt.utils.platform.is_proxy() for the 2018.3.0
+release**
 
 New in 2015.8
 -------------
 
-Starting with the 2015.8 release of Salt, proxy processes are no longer forked off from a controlling minion.
-Instead, they have their own script ``salt-proxy`` which takes mostly the same arguments that the
-standard Salt minion does with the addition of ``--proxyid``.  This is the id that the salt-proxy will
-use to identify itself to the master.  Proxy configurations are still best kept in Pillar and their format
-has not changed.
+Starting with the 2015.8 release of Salt, proxy processes are no longer forked
+off from a controlling minion.  Instead, they have their own script
+``salt-proxy`` which takes mostly the same arguments that the standard Salt
+minion does with the addition of ``--proxyid``.  This is the id that the
+salt-proxy will use to identify itself to the master.  Proxy configurations are
+still best kept in Pillar and their format has not changed.
 
-This change allows for better process control and logging.  Proxy processes can now be listed with standard
-process management utilities (``ps`` from the command line).  Also, a full Salt minion is no longer
-required (though it is still strongly recommended) on machines hosting proxies.
+This change allows for better process control and logging.  Proxy processes can
+now be listed with standard process management utilities (``ps`` from the
+command line).  Also, a full Salt minion is no longer required (though it is
+still strongly recommended) on machines hosting proxies.
 
 
 Getting Started
@@ -184,7 +188,7 @@ The key thing to remember is the left-most section of the diagram.  Salt's
 nature is to have a minion connect to a master, then the master may control
 the minion.  However, for proxy minions, the target device cannot run a minion.
 
-After the proxy minion is started and initiates its connection to the 'dumb'
+After the proxy minion is started and initiates its connection to the
 device, it connects back to the salt-master and for all intents and purposes
 looks like just another minion to the Salt master.
 
@@ -216,23 +220,23 @@ based on the diagram above:
 .. code-block:: yaml
 
     base:
-      dumbdevice1:
-        - dumbdevice1
-      dumbdevice2:
-        - dumbdevice2
-      dumbdevice3:
-        - dumbdevice3
-      dumbdevice4:
-        - dumbdevice4
-      dumbdevice5:
-        - dumbdevice5
-      dumbdevice6:
-        - dumbdevice6
-      dumbdevice7:
-        - dumbdevice7
+      net-device1:
+        - net-device1
+      net-device2:
+        - net-device2
+      net-device3:
+        - net-device3
+      i2c-device4:
+        - i2c-device4
+      i2c-device5:
+        - i2c-device5
+      433wireless-device6:
+        - 433wireless-device6
+      smsgate-device7:
+        - device7
 
 
-``/srv/pillar/dumbdevice1.sls``
+``/srv/pillar/net-device1.sls``
 
 .. code-block:: yaml
 
@@ -243,7 +247,7 @@ based on the diagram above:
       passwd: letmein
 
 
-``/srv/pillar/dumbdevice2.sls``
+``/srv/pillar/net-device2.sls``
 
 .. code-block:: yaml
 
@@ -254,7 +258,7 @@ based on the diagram above:
       passwd: letmein
 
 
-``/srv/pillar/dumbdevice3.sls``
+``/srv/pillar/net-device3.sls``
 
 .. code-block:: yaml
 
@@ -265,7 +269,7 @@ based on the diagram above:
       passwd: letmein
 
 
-``/srv/pillar/dumbdevice4.sls``
+``/srv/pillar/i2c-device4.sls``
 
 .. code-block:: yaml
 
@@ -274,7 +278,7 @@ based on the diagram above:
       i2c_address: 1
 
 
-``/srv/pillar/dumbdevice5.sls``
+``/srv/pillar/i2c-device5.sls``
 
 .. code-block:: yaml
 
@@ -283,7 +287,7 @@ based on the diagram above:
         i2c_address: 2
 
 
-``/srv/pillar/dumbdevice6.sls``
+``/srv/pillar/433wireless-device6.sls``
 
 .. code-block:: yaml
 
@@ -291,7 +295,7 @@ based on the diagram above:
         proxytype: 433mhz_wireless
 
 
-``/srv/pillar/dumbdevice7.sls``
+``/srv/pillar/smsgate-device7.sls``
 
 .. code-block:: yaml
 
@@ -305,18 +309,18 @@ the type of device that the proxy-minion is managing.
 
 In the above example
 
-- dumbdevices 1, 2, and 3 are network switches that have a management
+- net-devices 1, 2, and 3 are network switches that have a management
   interface available at a particular IP address.
 
-- dumbdevices 4 and 5 are very low-level devices controlled over an i2c bus.
+- i2c-devices 4 and 5 are very low-level devices controlled over an i2c bus.
   In this case the devices are physically connected to machine
   'minioncontroller2', and are addressable on the i2c bus at their respective
   i2c addresses.
 
-- dumbdevice6 is a 433 MHz wireless transmitter, also physically connected to
+- 433wireless-device6 is a 433 MHz wireless transmitter, also physically connected to
   minioncontroller2
 
-- dumbdevice7 is an SMS gateway connected to machine minioncontroller3 via a
+- smsgate-device7 is an SMS gateway connected to machine minioncontroller3 via a
   serial port.
 
 Because of the way pillar works, each of the salt-proxy processes that fork off the
@@ -620,9 +624,10 @@ in the proxymodule itself.  This might be useful if a proxymodule author wants t
 all the code for the proxy interface in the same place instead of splitting it between
 the proxy and grains directories.
 
-This function will only be called automatically if the configuration variable ``proxy_merge_grains_in_module``
-is set to True in the proxy configuration file (default ``/etc/salt/proxy``).  This
-variable defaults to ``True`` in the release code-named *2017.7.0*.
+This function will only be called automatically if the configuration variable
+``proxy_merge_grains_in_module`` is set to True in the proxy configuration file
+(default ``/etc/salt/proxy``).  This variable defaults to ``True`` in the
+release code-named *2017.7.0*.
 
 
 .. code: python::
@@ -641,7 +646,7 @@ variable defaults to ``True`` in the release code-named *2017.7.0*.
 
     def __virtual__():
         try:
-            if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+            if salt.utils.platform.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
                 return __virtualname__
         except KeyError:
             pass
@@ -709,7 +714,7 @@ Example from ``salt/grains/rest_sample.py``:
 
     def __virtual__():
         try:
-            if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+            if salt.utils.platform.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
                 return __virtualname__
         except KeyError:
             pass
@@ -750,7 +755,7 @@ This proxymodule enables "package" installation.
     from __future__ import absolute_import
 
     # Import python libs
-    import json
+    import salt.utils.json
     import logging
 
     # Import Salt's libs
@@ -818,7 +823,7 @@ This proxymodule enables "package" installation.
                 jsonret.append(ln_)
             if '}' in ln_:
                 in_json = False
-        return json.loads('\n'.join(jsonret))
+        return salt.utils.json.loads('\n'.join(jsonret))
 
 
     def package_list():

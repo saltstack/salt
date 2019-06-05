@@ -4,19 +4,23 @@ Execute puppet routines
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from distutils import version  # pylint: disable=no-name-in-module
 import logging
 import os
 import datetime
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.yaml
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import yaml
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 log = logging.getLogger(__name__)
 
@@ -26,7 +30,7 @@ def __virtual__():
     Only load if puppet is installed
     '''
     unavailable_exes = ', '.join(exe for exe in ('facter', 'puppet')
-                                 if salt.utils.which(exe) is None)
+                                 if salt.utils.path.which(exe) is None)
     if unavailable_exes:
         return (False,
                 ('The puppet execution module cannot be loaded: '
@@ -61,13 +65,11 @@ class _Puppet(object):
         self.kwargs = {'color': 'false'}       # e.g. --tags=apache::server
         self.args = []         # e.g. --noop
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.vardir = 'C:\\ProgramData\\PuppetLabs\\puppet\\var'
             self.rundir = 'C:\\ProgramData\\PuppetLabs\\puppet\\run'
             self.confdir = 'C:\\ProgramData\\PuppetLabs\\puppet\\etc'
-            self.useshell = True
         else:
-            self.useshell = False
             self.puppet_version = __salt__['cmd.run']('puppet --version')
             if 'Enterprise' in self.puppet_version:
                 self.vardir = '/var/opt/lib/pe-puppet'
@@ -103,7 +105,10 @@ class _Puppet(object):
             ' --{0} {1}'.format(k, v) for k, v in six.iteritems(self.kwargs)]
         )
 
-        return '{0} {1}'.format(cmd, args)
+        # Ensure that the puppet call will return 0 in case of exit code 2
+        if salt.utils.platform.is_windows():
+            return 'cmd /V:ON /c {0} {1} ^& if !ERRORLEVEL! EQU 2 (EXIT 0) ELSE (EXIT /B)'.format(cmd, args)
+        return '({0} {1}) || test $? -eq 2'.format(cmd, args)
 
     def arguments(self, args=None):
         '''
@@ -164,14 +169,9 @@ def run(*args, **kwargs):
     # args will exist as an empty list even if none have been provided
     puppet.arguments(buildargs)
 
-    puppet.kwargs.update(salt.utils.clean_kwargs(**kwargs))
+    puppet.kwargs.update(salt.utils.args.clean_kwargs(**kwargs))
 
-    ret = __salt__['cmd.run_all'](repr(puppet), python_shell=puppet.useshell)
-    if ret['retcode'] in [0, 2]:
-        ret['retcode'] = 0
-    else:
-        ret['retcode'] = 1
-
+    ret = __salt__['cmd.run_all'](repr(puppet), python_shell=True)
     return ret
 
 
@@ -243,11 +243,11 @@ def disable(message=None):
     if os.path.isfile(puppet.disabled_lockfile):
         return False
     else:
-        with salt.utils.fopen(puppet.disabled_lockfile, 'w') as lockfile:
+        with salt.utils.files.fopen(puppet.disabled_lockfile, 'w') as lockfile:
             try:
                 # Puppet chokes when no valid json is found
-                str = '{{"disabled_message":"{0}"}}'.format(message) if message is not None else '{}'
-                lockfile.write(str)
+                msg = '{{"disabled_message":"{0}"}}'.format(message) if message is not None else '{}'
+                lockfile.write(salt.utils.stringutils.to_str(msg))
                 lockfile.close()
                 return True
             except (IOError, OSError) as exc:
@@ -275,8 +275,8 @@ def status():
 
     if os.path.isfile(puppet.run_lockfile):
         try:
-            with salt.utils.fopen(puppet.run_lockfile, 'r') as fp_:
-                pid = int(fp_.read())
+            with salt.utils.files.fopen(puppet.run_lockfile, 'r') as fp_:
+                pid = int(salt.utils.stringutils.to_unicode(fp_.read()))
                 os.kill(pid, 0)  # raise an OSError if process doesn't exist
         except (OSError, ValueError):
             return 'Stale lockfile'
@@ -285,8 +285,8 @@ def status():
 
     if os.path.isfile(puppet.agent_pidfile):
         try:
-            with salt.utils.fopen(puppet.agent_pidfile, 'r') as fp_:
-                pid = int(fp_.read())
+            with salt.utils.files.fopen(puppet.agent_pidfile, 'r') as fp_:
+                pid = int(salt.utils.stringutils.to_unicode(fp_.read()))
                 os.kill(pid, 0)  # raise an OSError if process doesn't exist
         except (OSError, ValueError):
             return 'Stale pidfile'
@@ -312,8 +312,8 @@ def summary():
     puppet = _Puppet()
 
     try:
-        with salt.utils.fopen(puppet.lastrunfile, 'r') as fp_:
-            report = yaml.safe_load(fp_.read())
+        with salt.utils.files.fopen(puppet.lastrunfile, 'r') as fp_:
+            report = salt.utils.yaml.safe_load(fp_)
         result = {}
 
         if 'time' in report:
@@ -331,7 +331,7 @@ def summary():
         if 'resources' in report:
             result['resources'] = report['resources']
 
-    except yaml.YAMLError as exc:
+    except salt.utils.yaml.YAMLError as exc:
         raise CommandExecutionError(
             'YAML error parsing puppet run summary: {0}'.format(exc)
         )

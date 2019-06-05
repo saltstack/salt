@@ -3,19 +3,20 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
-
-import salt.utils
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
+
+# Import Salt libs
+import salt.utils.platform
 
 
 class BatchTest(ShellCase):
     '''
     Integration tests for the salt.cli.batch module
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         run_timeout = 180
     else:
         run_timeout = 30
@@ -24,7 +25,7 @@ class BatchTest(ShellCase):
         '''
         Tests executing a simple batch command to help catch regressions
         '''
-        ret = 'Executing run on [\'sub_minion\']'
+        ret = 'Executing run on [{0}]'.format(repr('sub_minion'))
         cmd = self.run_salt(
             '"*minion" test.echo "batch testing" -b 50%',
             timeout=self.run_timeout,
@@ -36,7 +37,7 @@ class BatchTest(ShellCase):
         Tests executing a simple batch command using a number division instead of
         a percentage with full batch CLI call.
         '''
-        ret = "Executing run on ['minion', 'sub_minion']"
+        ret = "Executing run on [{0}, {1}]".format(repr('minion'), repr('sub_minion'))
         cmd = self.run_salt(
             '"*minion" test.ping --batch-size 2',
             timeout=self.run_timeout,
@@ -49,11 +50,11 @@ class BatchTest(ShellCase):
         targeting.
         '''
         os_grain = ''
-        sub_min_ret = "Executing run on ['sub_minion']"
-        min_ret = "Executing run on ['minion']"
+        sub_min_ret = "Executing run on [{0}]".format(repr('sub_minion'))
+        min_ret = "Executing run on [{0}]".format(repr('minion'))
 
         for item in self.run_salt('minion grains.get os'):
-            if item != 'minion':
+            if item != 'minion:':
                 os_grain = item
 
         os_grain = os_grain.strip()

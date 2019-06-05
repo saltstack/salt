@@ -3,6 +3,7 @@
 Simple grain to merge the opts into the grains directly if the grain_opts
 configuration value is set
 '''
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def opts():

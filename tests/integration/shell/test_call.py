@@ -17,9 +17,6 @@ import shutil
 from datetime import datetime
 import logging
 
-# Import 3rd-party libs
-import yaml
-
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
@@ -29,9 +26,9 @@ from tests.support.helpers import destructiveTest, flaky
 from tests.integration.utils import testprogram
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
-import salt.ext.six as six
+import salt.utils.yaml
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -174,8 +171,8 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
-        with salt.utils.fopen(self.get_config_file_path('master')) as fhr:
-            master_config = yaml.load(fhr.read())
+        with salt.utils.files.fopen(self.get_config_file_path('master')) as fhr:
+            master_config = salt.utils.yaml.safe_load(fhr)
 
         master_root_dir = master_config['root_dir']
         this_minion_key = os.path.join(
@@ -204,10 +201,8 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             start = datetime.now()
             # Let's first test with a master running
 
-            with salt.utils.fopen(minion_config_file, 'w') as fh_:
-                fh_.write(
-                    yaml.dump(minion_config, default_flow_style=False)
-                )
+            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
+                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
             ret = self.run_script(
                 'salt-call',
                 '--config-dir {0} cmd.run "echo foo"'.format(
@@ -234,25 +229,20 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             # Now let's remove the master configuration
             minion_config.pop('master')
             minion_config.pop('master_port')
-            with salt.utils.fopen(minion_config_file, 'w') as fh_:
-                fh_.write(
-                    yaml.dump(minion_config, default_flow_style=False)
-                )
+            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
+                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
 
-            out = self.run_script(
+            _, timed_out = self.run_script(
                 'salt-call',
                 '--config-dir {0} cmd.run "echo foo"'.format(
                     config_dir
                 ),
                 timeout=timeout,
+                catch_timeout=True,
             )
 
             try:
-                self.assertIn(
-                    'Process took more than {0} seconds to complete. '
-                    'Process Killed!'.format(timeout),
-                    out
-                )
+                self.assertTrue(timed_out)
             except AssertionError:
                 if os.path.isfile(minion_config_file):
                     os.unlink(minion_config_file)
@@ -282,10 +272,8 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
 
             # Should work with local file client
             minion_config['file_client'] = 'local'
-            with salt.utils.fopen(minion_config_file, 'w') as fh_:
-                fh_.write(
-                    yaml.dump(minion_config, default_flow_style=False)
-                )
+            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
+                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
             ret = self.run_script(
                 'salt-call',
                 '--config-dir {0} cmd.run "echo foo"'.format(
@@ -301,6 +289,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             if os.path.isfile(this_minion_key):
                 os.unlink(this_minion_key)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_issue_7754(self):
         old_cwd = os.getcwd()
         config_dir = os.path.join(TMP, 'issue-7754')
@@ -309,13 +298,11 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
 
         os.chdir(config_dir)
 
-        with salt.utils.fopen(self.get_config_file_path('minion'), 'r') as fh_:
-            minion_config = yaml.load(fh_.read())
+        with salt.utils.files.fopen(self.get_config_file_path('minion'), 'r') as fh_:
+            minion_config = salt.utils.yaml.safe_load(fh_)
             minion_config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
-                fh_.write(
-                    yaml.dump(minion_config, default_flow_style=False)
-                )
+            with salt.utils.files.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
+                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
         ret = self.run_script(
             'salt-call',
             '--config-dir {0} cmd.run "echo foo"'.format(
@@ -339,6 +326,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_syslog_file_not_found(self):
         '''
         test when log_file is set to a syslog file that does not exist
@@ -350,12 +338,12 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
 
         os.chdir(config_dir)
 
-        with salt.utils.fopen(self.get_config_file_path('minion'), 'r') as fh_:
-            minion_config = yaml.load(fh_.read())
+        with salt.utils.files.fopen(self.get_config_file_path('minion'), 'r') as fh_:
+            minion_config = salt.utils.yaml.load(fh_.read())
             minion_config['log_file'] = 'file:///dev/doesnotexist'
-            with salt.utils.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
+            with salt.utils.files.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
                 fh_.write(
-                    yaml.dump(minion_config, default_flow_style=False)
+                    salt.utils.yaml.dump(minion_config, default_flow_style=False)
                 )
         ret = self.run_script(
             'salt-call',
@@ -397,7 +385,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 with_retcode=True
             )
 
-            with salt.utils.fopen(output_file_append) as ofa:
+            with salt.utils.files.fopen(output_file_append) as ofa:
                 output = ofa.read()
 
             self.run_script(
@@ -409,7 +397,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 catch_stderr=True,
                 with_retcode=True
             )
-            with salt.utils.fopen(output_file_append) as ofa:
+            with salt.utils.files.fopen(output_file_append) as ofa:
                 self.assertEqual(ofa.read(), output + output)
         finally:
             if os.path.exists(output_file_append):
@@ -424,14 +412,17 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 # Let's create an initial output file with some data
                 self.run_script(
                     'salt-call',
-                    '-c {0} --output-file={1} -g'.format(
-                        self.get_config_dir(),
+                    '-c {0} --output-file={1} -l trace -g'.format(
+                        self.config_dir,
                         output_file
                     ),
                     catch_stderr=True,
                     with_retcode=True
                 )
-                stat1 = os.stat(output_file)
+                try:
+                    stat1 = os.stat(output_file)
+                except OSError:
+                    self.fail('Failed to generate output file, see log for details')
 
                 # Let's change umask
                 os.umask(0o777)  # pylint: disable=blacklisted-function
@@ -445,7 +436,10 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                     catch_stderr=True,
                     with_retcode=True
                 )
-                stat2 = os.stat(output_file)
+                try:
+                    stat2 = os.stat(output_file)
+                except OSError:
+                    self.fail('Failed to generate output file, see log for details')
                 self.assertEqual(stat1.st_mode, stat2.st_mode)
                 # Data was appeneded to file
                 self.assertTrue(stat1.st_size < stat2.st_size)
@@ -463,7 +457,10 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                     catch_stderr=True,
                     with_retcode=True
                 )
-                stat3 = os.stat(output_file)
+                try:
+                    stat3 = os.stat(output_file)
+                except OSError:
+                    self.fail('Failed to generate output file, see log for details')
                 # Mode must have changed since we're creating a new log file
                 self.assertNotEqual(stat1.st_mode, stat3.st_mode)
             finally:

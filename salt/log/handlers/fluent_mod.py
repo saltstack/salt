@@ -11,7 +11,18 @@
     Fluent Logging Handler
     ----------------------
 
-    In the salt configuration file:
+    In the `fluent` configuration file:
+
+    .. code-block:: text
+
+        <source>
+          type forward
+          bind localhost
+          port 24224
+        </source>
+
+    Then, to send logs via fluent in Logstash format, add the
+    following to the salt (master and/or minion) configuration file:
 
     .. code-block:: yaml
 
@@ -19,14 +30,32 @@
           host: localhost
           port: 24224
 
-    In the fluentd_ configuration file:
+    To send logs via fluent in the Graylog raw json format, add the
+    following to the salt (master and/or minion) configuration file:
 
-    .. code-block:: text
+    .. code-block:: yaml
 
-        <source>
-          type forward
-          port 24224
-        </source>
+        fluent_handler:
+          host: localhost
+          port: 24224
+          payload_type: graylog
+          tags:
+          - salt_master.SALT
+
+    The above also illustrates the `tags` option, which allows
+    one to set descriptive (or useful) tags on records being
+    sent.  If not provided, this defaults to the single tag:
+    'salt'.  Also note that, via Graylog "magic", the 'facility'
+    of the logged message is set to 'SALT' (the portion of the
+    tag after the first period), while the tag itself will be
+    set to simply 'salt_master'.  This is a feature, not a bug :)
+
+    Note:
+    There is a third emitter, for the GELF format, but it is
+    largely untested, and I don't currently have a setup supporting
+    this config, so while it runs cleanly and outputs what LOOKS to
+    be valid GELF, any real-world feedback on its usefulness, and
+    correctness, will be appreciated.
 
     Log Level
     .........
@@ -45,14 +74,14 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import logging.handlers
 import time
 import datetime
 import socket
 import threading
-
+import types
 
 # Import salt libs
 from salt.log.setup import LOG_LEVELS
@@ -60,7 +89,7 @@ from salt.log.mixins import NewStyleClassMixIn
 import salt.utils.network
 
 # Import Third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -90,6 +119,19 @@ __virtualname__ = 'fluent'
 
 _global_sender = None
 
+# Python logger's idea of "level" is wildly at variance with
+# Graylog's (and, incidentally, the rest of the civilized world).
+syslog_levels = {
+    'EMERG': 0,
+    'ALERT': 2,
+    'CRIT': 2,
+    'ERR': 3,
+    'WARNING': 4,
+    'NOTICE': 5,
+    'INFO': 6,
+    'DEBUG': 7
+}
+
 
 def setup(tag, **kwargs):
     host = kwargs.get('host', 'localhost')
@@ -115,55 +157,133 @@ def __virtual__():
 
 
 def setup_handlers():
-    host = port = address = None
+    host = port = None
 
     if 'fluent_handler' in __opts__:
         host = __opts__['fluent_handler'].get('host', None)
         port = __opts__['fluent_handler'].get('port', None)
-        version = __opts__['fluent_handler'].get('version', 1)
+        payload_type = __opts__['fluent_handler'].get('payload_type', None)
+        # in general, you want the value of tag to ALSO be a member of tags
+        tags = __opts__['fluent_handler'].get('tags', ['salt'])
+        tag = tags[0] if len(tags) else 'salt'
+        if payload_type == 'graylog':
+            version = 0
+        elif payload_type == 'gelf':
+            # We only support version 1.1 (the latest) of GELF...
+            version = 1.1
+        else:
+            # Default to logstash for backwards compat
+            payload_type = 'logstash'
+            version = __opts__['fluent_handler'].get('version', 1)
 
         if host is None and port is None:
             log.debug(
                 'The required \'fluent_handler\' configuration keys, '
                 '\'host\' and/or \'port\', are not properly configured. Not '
-                'configuring the fluent logging handler.'
+                'enabling the fluent logging handler.'
             )
         else:
-            logstash_formatter = LogstashFormatter(version=version)
-            fluent_handler = FluentHandler('salt', host=host, port=port)
-            fluent_handler.setFormatter(logstash_formatter)
+            formatter = MessageFormatter(payload_type=payload_type, version=version, tags=tags)
+            fluent_handler = FluentHandler(tag, host=host, port=port)
+            fluent_handler.setFormatter(formatter)
             fluent_handler.setLevel(
-                LOG_LEVELS[
-                    __opts__['fluent_handler'].get(
-                        'log_level',
-                        # Not set? Get the main salt log_level setting on the
-                        # configuration file
-                        __opts__.get(
-                            'log_level',
-                            # Also not set?! Default to 'error'
-                            'error'
-                        )
-                    )
-                ]
+                LOG_LEVELS[__opts__['fluent_handler'].get('log_level', __opts__.get('log_level', 'error'))]
             )
             yield fluent_handler
 
-    if host is None and port is None and address is None:
+    if host is None and port is None:
         yield False
 
 
-class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
-    def __init__(self, msg_type='logstash', msg_path='logstash', version=1):
-        self.msg_path = msg_path
-        self.msg_type = msg_type
+class MessageFormatter(logging.Formatter, NewStyleClassMixIn):
+    def __init__(self, payload_type, version, tags, msg_type=None, msg_path=None):
+        self.payload_type = payload_type
         self.version = version
-        self.format = getattr(self, 'format_v{0}'.format(version))
-        super(LogstashFormatter, self).__init__(fmt=None, datefmt=None)
+        self.tag = tags[0] if len(tags) else 'salt'  # 'salt' for backwards compat
+        self.tags = tags
+        self.msg_path = msg_path if msg_path else payload_type
+        self.msg_type = msg_type if msg_type else payload_type
+        format_func = 'format_{0}_v{1}'.format(payload_type, version).replace('.', '_')
+        self.format = getattr(self, format_func)
+        super(MessageFormatter, self).__init__(fmt=None, datefmt=None)
 
     def formatTime(self, record, datefmt=None):
+        if self.payload_type == 'gelf':   # GELF uses epoch times
+            return record.created
         return datetime.datetime.utcfromtimestamp(record.created).isoformat()[:-3] + 'Z'
 
-    def format_v0(self, record):
+    def format_graylog_v0(self, record):
+        '''
+        Graylog 'raw' format is essentially the raw record, minimally munged to provide
+        the bare minimum that td-agent requires to accept and route the event.  This is
+        well suited to a config where the client td-agents log directly to Graylog.
+        '''
+        message_dict = {
+            'message': record.getMessage(),
+            'timestamp': self.formatTime(record),
+            # Graylog uses syslog levels, not whatever it is Python does...
+            'level': syslog_levels.get(record.levelname, 'ALERT'),
+            'tag': self.tag
+        }
+
+        if record.exc_info:
+            exc_info = self.formatException(record.exc_info)
+            message_dict.update({'full_message': exc_info})
+
+        # Add any extra attributes to the message field
+        for key, value in six.iteritems(record.__dict__):
+            if key in ('args', 'asctime', 'bracketlevel', 'bracketname', 'bracketprocess',
+                       'created', 'exc_info', 'exc_text', 'id', 'levelname', 'levelno', 'msecs',
+                       'msecs', 'message', 'msg', 'relativeCreated', 'version'):
+                # These are already handled above or explicitly pruned.
+                continue
+
+            if isinstance(value, (six.string_types, bool, dict, float, int, list, types.NoneType)):  # pylint: disable=W1699
+                val = value
+            else:
+                val = repr(value)
+            message_dict.update({'{0}'.format(key): val})
+        return message_dict
+
+    def format_gelf_v1_1(self, record):
+        '''
+        If your agent is (or can be) configured to forward pre-formed GELF to Graylog
+        with ZERO fluent processing, this function is for YOU, pal...
+        '''
+        message_dict = {
+            'version': self.version,
+            'host': salt.utils.network.get_fqhostname(),
+            'short_message': record.getMessage(),
+            'timestamp': self.formatTime(record),
+            'level': syslog_levels.get(record.levelname, 'ALERT'),
+            "_tag": self.tag
+        }
+
+        if record.exc_info:
+            exc_info = self.formatException(record.exc_info)
+            message_dict.update({'full_message': exc_info})
+
+        # Add any extra attributes to the message field
+        for key, value in six.iteritems(record.__dict__):
+            if key in ('args', 'asctime', 'bracketlevel', 'bracketname', 'bracketprocess',
+                       'created', 'exc_info', 'exc_text', 'id', 'levelname', 'levelno', 'msecs',
+                       'msecs', 'message', 'msg', 'relativeCreated', 'version'):
+                # These are already handled above or explicitly avoided.
+                continue
+
+            if isinstance(value, (six.string_types, bool, dict, float, int, list, types.NoneType)):  # pylint: disable=W1699
+                val = value
+            else:
+                val = repr(value)
+            # GELF spec require "non-standard" fields to be prefixed with '_' (underscore).
+            message_dict.update({'_{0}'.format(key): val})
+
+        return message_dict
+
+    def format_logstash_v0(self, record):
+        '''
+        Messages are formatted in logstash's expected format.
+        '''
         host = salt.utils.network.get_fqhostname()
         message_dict = {
             '@timestamp': self.formatTime(record),
@@ -185,7 +305,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
             ),
             '@source_host': host,
             '@source_path': self.msg_path,
-            '@tags': ['salt'],
+            '@tags': self.tags,
             '@type': self.msg_type,
         }
 
@@ -215,7 +335,10 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
             message_dict['@fields'][key] = repr(value)
         return message_dict
 
-    def format_v1(self, record):
+    def format_logstash_v1(self, record):
+        '''
+        Messages are formatted in logstash's expected format.
+        '''
         message_dict = {
             '@version': 1,
             '@timestamp': self.formatTime(record),
@@ -229,7 +352,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
             'funcName': record.funcName,
             'processName': record.processName,
             'message': record.getMessage(),
-            'tags': ['salt'],
+            'tags': self.tags,
             'type': self.msg_type
         }
 

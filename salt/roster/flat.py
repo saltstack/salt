@@ -2,7 +2,7 @@
 '''
 Read in the roster from a flat file using the renderer system
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import fnmatch
@@ -20,8 +20,9 @@ except ImportError:
 
 # Import Salt libs
 import salt.loader
+import salt.config
+from salt.ext import six
 from salt.template import compile_template
-from salt.ext.six import string_types
 from salt.roster import get_roster_file
 
 import logging
@@ -44,7 +45,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
                            **kwargs)
     conditioned_raw = {}
     for minion in raw:
-        conditioned_raw[str(minion)] = raw[minion]
+        conditioned_raw[six.text_type(minion)] = salt.config.apply_sdb(raw[minion])
     rmatcher = RosterMatcher(conditioned_raw, tgt, tgt_type, 'ipv4')
     return rmatcher.targets()
 
@@ -144,7 +145,7 @@ class RosterMatcher(object):
         Return the configured ip
         '''
         ret = copy.deepcopy(__opts__.get('roster_defaults', {}))
-        if isinstance(self.raw[minion], string_types):
+        if isinstance(self.raw[minion], six.string_types):
             ret.update({'host': self.raw[minion]})
             return ret
         elif isinstance(self.raw[minion], dict):
@@ -161,5 +162,5 @@ def _convert_range_to_list(tgt, range_server):
     try:
         return r.expand(tgt)
     except seco.range.RangeException as err:
-        log.error('Range server exception: {0}'.format(err))
+        log.error('Range server exception: %s', err)
         return []

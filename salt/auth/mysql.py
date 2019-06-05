@@ -49,7 +49,7 @@ Enable MySQL authentication.
 :depends:   - MySQL-python Python module
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 log = logging.getLogger(__name__)
@@ -75,7 +75,7 @@ def __get_connection_info():
 
         conn_info['auth_sql'] = __opts__['mysql_auth']['auth_sql']
     except KeyError as e:
-        log.error('{0} does not exist'.format(e))
+        log.error('%s does not exist', e)
         return None
 
     return conn_info

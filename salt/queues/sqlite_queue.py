@@ -12,16 +12,18 @@ to another location::
 
     sqlite_queue_dir: /home/myuser/salt/master/queues
 '''
-
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import glob
 import logging
 import os
 import re
-import sqlite3 as lite
+import sqlite3
+import salt.utils.json
 from salt.exceptions import SaltInvocationError
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -41,9 +43,9 @@ def _conn(queue):
     '''
     queue_dir = __opts__['sqlite_queue_dir']
     db = os.path.join(queue_dir, '{0}.db'.format(queue))
-    log.debug('Connecting to:  {0}'.format(db))
+    log.debug('Connecting to: %s', db)
 
-    con = lite.connect(db)
+    con = sqlite3.connect(db)
     tables = _list_tables(con)
     if queue not in tables:
         _create_table(con, queue)
@@ -54,7 +56,7 @@ def _list_tables(con):
     with con:
         cur = con.cursor()
         cmd = 'SELECT name FROM sqlite_master WHERE type = "table"'
-        log.debug('SQL Query: {0}'.format(cmd))
+        log.debug('SQL Query: %s', cmd)
         cur.execute(cmd)
         result = cur.fetchall()
         return [x[0] for x in result]
@@ -65,7 +67,7 @@ def _create_table(con, queue):
         cur = con.cursor()
         cmd = 'CREATE TABLE {0}(id INTEGER PRIMARY KEY, '\
               'name TEXT UNIQUE)'.format(queue)
-        log.debug('SQL Query: {0}'.format(cmd))
+        log.debug('SQL Query: %s', cmd)
         cur.execute(cmd)
     return True
 
@@ -78,7 +80,7 @@ def _list_items(queue):
     with con:
         cur = con.cursor()
         cmd = 'SELECT name FROM {0}'.format(queue)
-        log.debug('SQL Query: {0}'.format(cmd))
+        log.debug('SQL Query: %s', cmd)
         cur.execute(cmd)
         contents = cur.fetchall()
     return contents
@@ -139,27 +141,37 @@ def insert(queue, items):
     con = _conn(queue)
     with con:
         cur = con.cursor()
-        if isinstance(items, str):
+        if isinstance(items, six.string_types):
             items = _quote_escape(items)
             cmd = '''INSERT INTO {0}(name) VALUES('{1}')'''.format(queue, items)
-            log.debug('SQL Query: {0}'.format(cmd))
+            log.debug('SQL Query: %s', cmd)
             try:
                 cur.execute(cmd)
-            except lite.IntegrityError as esc:
+            except sqlite3.IntegrityError as esc:
                 return('Item already exists in this queue. '
                        'sqlite error: {0}'.format(esc))
         if isinstance(items, list):
             items = [_quote_escape(el) for el in items]
             cmd = "INSERT INTO {0}(name) VALUES(?)".format(queue)
-            log.debug('SQL Query: {0}'.format(cmd))
+            log.debug('SQL Query: %s', cmd)
             newitems = []
             for item in items:
                 newitems.append((item,))
                 # we need a list of one item tuples here
             try:
                 cur.executemany(cmd, newitems)
-            except lite.IntegrityError as esc:
+            except sqlite3.IntegrityError as esc:
                 return('One or more items already exists in this queue. '
+                       'sqlite error: {0}'.format(esc))
+        if isinstance(items, dict):
+            items = salt.utils.json.dumps(items).replace('"', "'")
+            items = _quote_escape(items)
+            cmd = str('''INSERT INTO {0}(name) VALUES('{1}')''').format(queue, items)  # future lint: disable=blacklisted-function
+            log.debug('SQL Query: %s', cmd)
+            try:
+                cur.execute(cmd)
+            except sqlite3.IntegrityError as esc:
+                return('Item already exists in this queue. '
                        'sqlite error: {0}'.format(esc))
     return True
 
@@ -171,25 +183,32 @@ def delete(queue, items):
     con = _conn(queue)
     with con:
         cur = con.cursor()
-        if isinstance(items, str):
+        if isinstance(items, six.string_types):
             items = _quote_escape(items)
             cmd = """DELETE FROM {0} WHERE name = '{1}'""".format(queue, items)
-            log.debug('SQL Query: {0}'.format(cmd))
+            log.debug('SQL Query: %s', cmd)
             cur.execute(cmd)
             return True
         if isinstance(items, list):
             items = [_quote_escape(el) for el in items]
             cmd = 'DELETE FROM {0} WHERE name = ?'.format(queue)
-            log.debug('SQL Query: {0}'.format(cmd))
+            log.debug('SQL Query: %s', cmd)
             newitems = []
             for item in items:
                 newitems.append((item,))
                 # we need a list of one item tuples here
             cur.executemany(cmd, newitems)
+        if isinstance(items, dict):
+            items = salt.utils.json.dumps(items).replace('"', "'")
+            items = _quote_escape(items)
+            cmd = ("""DELETE FROM {0} WHERE name = '{1}'""").format(queue, items)  # future lint: disable=blacklisted-function
+            log.debug('SQL Query: %s', cmd)
+            cur.execute(cmd)
+            return True
         return True
 
 
-def pop(queue, quantity=1):
+def pop(queue, quantity=1, is_runner=False):
     '''
     Pop one or more or all items from the queue return them.
     '''
@@ -202,7 +221,7 @@ def pop(queue, quantity=1):
                          'Error: "{0}".'.format(exc))
             raise SaltInvocationError(error_txt)
         cmd = ''.join([cmd, ' LIMIT {0}'.format(quantity)])
-    log.debug('SQL Query: {0}'.format(cmd))
+    log.debug('SQL Query: %s', cmd)
     con = _conn(queue)
     items = []
     with con:
@@ -215,9 +234,11 @@ def pop(queue, quantity=1):
             del_cmd = '''DELETE FROM {0} WHERE name IN ("{1}")'''.format(
                 queue, itemlist)
 
-            log.debug('SQL Query: {0}'.format(del_cmd))
+            log.debug('SQL Query: %s', del_cmd)
 
             cur.execute(del_cmd)
         con.commit()
+    if is_runner:
+        items = [salt.utils.json.loads(item[0].replace("'", '"')) for item in result]
     log.info(items)
     return items

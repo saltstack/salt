@@ -3,9 +3,9 @@
 Template render systems
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
+# Import Python libs
 import codecs
 import os
 import logging
@@ -13,10 +13,10 @@ import tempfile
 import traceback
 import sys
 
-# Import third party libs
+# Import 3rd-party libs
 import jinja2
 import jinja2.ext
-import salt.ext.six as six
+from salt.ext import six
 
 if sys.version_info[:2] >= (3, 5):
     import importlib.machinery  # pylint: disable=no-name-in-module,import-error
@@ -26,19 +26,23 @@ else:
     import imp
     USE_IMPORTLIB = False
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.data
+import salt.utils.dateutils
 import salt.utils.http
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.yamlencoding
 import salt.utils.locales
 import salt.utils.hashutils
+import salt.utils.stringutils
 from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
 import salt.utils.jinja
 import salt.utils.network
 from salt.utils.odict import OrderedDict
+from salt.utils.decorators.jinja import JinjaFilter, JinjaTest, JinjaGlobal
 from salt import __path__ as saltpath
 
 log = logging.getLogger(__name__)
@@ -150,26 +154,23 @@ def wrap_tmpl_func(render_str):
                         ValueError,
                         OSError,
                         IOError) as exc:
-                    if salt.utils.is_bin_file(tmplsrc):
+                    if salt.utils.files.is_binary(tmplsrc):
                         # Template is a bin file, return the raw file
                         return dict(result=True, data=tmplsrc)
                     log.error(
-                        'Exception occurred while reading file '
-                        '{0}: {1}'.format(tmplsrc, exc),
-                        # Show full traceback if debug logging is enabled
+                        'Exception occurred while reading file %s: %s',
+                        tmplsrc, exc,
                         exc_info_on_loglevel=logging.DEBUG
                     )
-                    raise exc
+                    six.reraise(*sys.exc_info())
         else:  # assume tmplsrc is file-like.
             tmplstr = tmplsrc.read()
             tmplsrc.close()
         try:
             output = render_str(tmplstr, context, tmplpath)
-            if six.PY2:
-                output = output.encode(SLS_ENCODING)
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 newline = False
-                if output.endswith(('\n', os.linesep)):
+                if salt.utils.stringutils.to_unicode(output, encoding=SLS_ENCODING).endswith(('\n', os.linesep)):
                     newline = True
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
@@ -177,8 +178,8 @@ def wrap_tmpl_func(render_str):
                     output += os.linesep
 
         except SaltRenderError as exc:
-            log.error("Rendering exception occurred: {0}".format(exc))
-            #return dict(result=False, data=str(exc))
+            log.exception('Rendering exception occurred')
+            #return dict(result=False, data=six.text_type(exc))
             raise
         except Exception:
             return dict(result=False, data=traceback.format_exc())
@@ -186,9 +187,7 @@ def wrap_tmpl_func(render_str):
             if to_str:  # then render as string
                 return dict(result=True, data=output)
             with tempfile.NamedTemporaryFile('wb', delete=False, prefix=salt.utils.files.TEMPFILE_PREFIX) as outf:
-                if six.PY3:
-                    output = output.encode(SLS_ENCODING)
-                outf.write(output)
+                outf.write(salt.utils.stringutils.to_bytes(output, encoding=SLS_ENCODING))
                 # Note: If nothing is replaced or added by the rendering
                 #       function, then the contents of the output file will
                 #       be exactly the same as the input.
@@ -206,7 +205,8 @@ def _get_jinja_error_slug(tb_data):
         return [
             x
             for x in tb_data if x[2] in ('top-level template code',
-                                         'template')
+                                         'template',
+                                         '<module>')
         ][-1]
     except IndexError:
         pass
@@ -218,7 +218,7 @@ def _get_jinja_error_message(tb_data):
     '''
     try:
         line = _get_jinja_error_slug(tb_data)
-        return u'{0}({1}):\n{3}'.format(*line)
+        return '{0}({1}):\n{3}'.format(*line)
     except IndexError:
         pass
     return None
@@ -276,9 +276,9 @@ def _get_jinja_error(trace, context=None):
     if add_log:
         if template_path:
             out = '\n{0}\n'.format(msg.splitlines()[0])
-            with salt.utils.fopen(template_path) as fp_:
-                template_contents = fp_.read()
-            out += salt.utils.get_context(
+            with salt.utils.files.fopen(template_path) as fp_:
+                template_contents = salt.utils.stringutils.to_unicode(fp_.read())
+            out += salt.utils.stringutils.get_context(
                 template_contents,
                 line,
                 marker='    <======================')
@@ -317,16 +317,40 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         env_args['extensions'].append('jinja2.ext.loopcontrols')
     env_args['extensions'].append(salt.utils.jinja.SerializerExtension)
 
+    opt_jinja_env = opts.get('jinja_env', {})
+    opt_jinja_sls_env = opts.get('jinja_sls_env', {})
+
+    opt_jinja_env = opt_jinja_env if isinstance(opt_jinja_env, dict) else {}
+    opt_jinja_sls_env = opt_jinja_sls_env if isinstance(opt_jinja_sls_env, dict) else {}
+
     # Pass through trim_blocks and lstrip_blocks Jinja parameters
     # trim_blocks removes newlines around Jinja blocks
     # lstrip_blocks strips tabs and spaces from the beginning of
     # line to the start of a block.
     if opts.get('jinja_trim_blocks', False):
         log.debug('Jinja2 trim_blocks is enabled')
-        env_args['trim_blocks'] = True
+        log.warning('jinja_trim_blocks is deprecated and will be removed in a future release, please use jinja_env and/or jinja_sls_env instead')
+        opt_jinja_env['trim_blocks'] = True
+        opt_jinja_sls_env['trim_blocks'] = True
     if opts.get('jinja_lstrip_blocks', False):
         log.debug('Jinja2 lstrip_blocks is enabled')
-        env_args['lstrip_blocks'] = True
+        log.warning('jinja_lstrip_blocks is deprecated and will be removed in a future release, please use jinja_env and/or jinja_sls_env instead')
+        opt_jinja_env['lstrip_blocks'] = True
+        opt_jinja_sls_env['lstrip_blocks'] = True
+
+    def opt_jinja_env_helper(opts, optname):
+        for k, v in six.iteritems(opts):
+            k = k.lower()
+            if hasattr(jinja2.defaults, k.upper()):
+                log.debug('Jinja2 environment %s was set to %s by %s', k, v, optname)
+                env_args[k] = v
+            else:
+                log.warning('Jinja2 environment %s is not recognized', k)
+
+    if 'sls' in context and context['sls'] != '':
+        opt_jinja_env_helper(opt_jinja_sls_env, 'jinja_sls_env')
+    else:
+        opt_jinja_env_helper(opt_jinja_env, 'jinja_env')
 
     if opts.get('allow_undefined', False):
         jinja_env = jinja2.Environment(**env_args)
@@ -334,75 +358,19 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined,
                                        **env_args)
 
-    jinja_env.filters['strftime'] = salt.utils.date_format
-    jinja_env.filters['sequence'] = salt.utils.jinja.ensure_sequence_filter
-    jinja_env.filters['http_query'] = salt.utils.http.query
-    jinja_env.filters['to_bool'] = salt.utils.jinja.to_bool
-    jinja_env.filters['exactly_n_true'] = salt.utils.exactly_n
-    jinja_env.filters['exactly_one_true'] = salt.utils.exactly_one
-    jinja_env.filters['quote'] = salt.utils.jinja.quote
-    jinja_env.filters['regex_search'] = salt.utils.jinja.regex_search
-    jinja_env.filters['regex_match'] = salt.utils.jinja.regex_match
-    jinja_env.filters['regex_replace'] = salt.utils.jinja.regex_replace
-    jinja_env.filters['uuid'] = salt.utils.jinja.uuid_
-    jinja_env.filters['min'] = salt.utils.jinja.lst_min
-    jinja_env.filters['max'] = salt.utils.jinja.lst_max
-    jinja_env.filters['avg'] = salt.utils.jinja.lst_avg
-    jinja_env.filters['union'] = salt.utils.jinja.union
-    jinja_env.filters['intersect'] = salt.utils.jinja.intersect
-    jinja_env.filters['difference'] = salt.utils.jinja.difference
-    jinja_env.filters['symmetric_difference'] = salt.utils.jinja.symmetric_difference
-    jinja_env.filters['md5'] = salt.utils.hashutils.md5_digest
-    jinja_env.filters['sha256'] = salt.utils.hashutils.sha256_digest
-    jinja_env.filters['sha512'] = salt.utils.hashutils.sha512_digest
-    jinja_env.filters['hmac'] = salt.utils.hashutils.hmac_signature
-    jinja_env.filters['is_sorted'] = salt.utils.isorted
-    jinja_env.filters['is_text_file'] = salt.utils.istextfile
-    jinja_env.filters['is_empty_file'] = salt.utils.is_empty
-    jinja_env.filters['is_binary_file'] = salt.utils.is_bin_file
-    jinja_env.filters['file_hashsum'] = salt.utils.get_hash
-    jinja_env.filters['is_hex'] = salt.utils.is_hex
-    jinja_env.filters['path_join'] = salt.utils.path_join
-    jinja_env.filters['dns_check'] = salt.utils.dns_check
-    jinja_env.filters['list_files'] = salt.utils.list_files
-    jinja_env.filters['which'] = salt.utils.which
-    jinja_env.filters['random_str'] = salt.utils.rand_str
-    jinja_env.filters['get_uid'] = salt.utils.get_uid
-    jinja_env.filters['mysql_to_dict'] = salt.utils.mysql_to_dict
-    jinja_env.filters['contains_whitespace'] = salt.utils.contains_whitespace
-    jinja_env.filters['str_to_num'] = salt.utils.str_to_num
-    jinja_env.filters['check_whitelist_blacklist'] = salt.utils.check_whitelist_blacklist
-    jinja_env.filters['mac_str_to_bytes'] = salt.utils.mac_str_to_bytes
-    jinja_env.filters['date_format'] = salt.utils.date_format
-    jinja_env.filters['compare_dicts'] = salt.utils.compare_dicts
-    jinja_env.filters['compare_lists'] = salt.utils.compare_lists
-    jinja_env.filters['json_decode_list'] = salt.utils.decode_list
-    jinja_env.filters['json_decode_dict'] = salt.utils.decode_dict
-    jinja_env.filters['is_list'] = salt.utils.is_list
-    jinja_env.filters['is_iter'] = salt.utils.is_iter
-    jinja_env.filters['to_bytes'] = salt.utils.to_bytes
-    jinja_env.filters['substring_in_list'] = salt.utils.substr_in_list
-    jinja_env.filters['base64_encode'] = salt.utils.hashutils.base64_b64encode
-    jinja_env.filters['base64_decode'] = salt.utils.hashutils.base64_b64decode
-    jinja_env.filters['yaml_dquote'] = salt.utils.yamlencoding.yaml_dquote
-    jinja_env.filters['yaml_squote'] = salt.utils.yamlencoding.yaml_squote
-    jinja_env.filters['yaml_encode'] = salt.utils.yamlencoding.yaml_encode
-    jinja_env.filters['gen_mac'] = salt.utils.gen_mac
-    jinja_env.filters['is_ip'] = salt.utils.network.is_ip_filter  # check if valid IP address
-    jinja_env.filters['is_ipv4'] = salt.utils.network.is_ipv4_filter  # check if valid IPv4 address
-    jinja_env.filters['is_ipv6'] = salt.utils.network.is_ipv6_filter  # check if valid IPv6 address
-    jinja_env.filters['ipaddr'] = salt.utils.network.ipaddr  # filter IP addresses
-    jinja_env.filters['ipv4'] = salt.utils.network.ipv4  # filter IPv4-only addresses
-    jinja_env.filters['ipv6'] = salt.utils.network.ipv6  # filter IPv6-only addresses
-    jinja_env.filters['ip_host'] = salt.utils.network.ip_host  # return the network interface IP
-    jinja_env.filters['network_hosts'] = salt.utils.network.network_hosts  # return the hosts within a network
-    jinja_env.filters['network_size'] = salt.utils.network.network_size  # return the network size
+    tojson_filter = jinja_env.filters.get('tojson')
+    jinja_env.tests.update(JinjaTest.salt_jinja_tests)
+    jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
+    if tojson_filter is not None:
+        # Use the existing tojson filter, if present (jinja2 >= 2.9)
+        jinja_env.filters['tojson'] = tojson_filter
+    jinja_env.globals.update(JinjaGlobal.salt_jinja_globals)
 
     # globals
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = salt.utils.jinja.show_full_context
 
-    jinja_env.tests['list'] = salt.utils.is_list
+    jinja_env.tests['list'] = salt.utils.data.is_list
 
     decoded_context = {}
     for key, value in six.iteritems(context):
@@ -411,7 +379,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             continue
 
         try:
-            decoded_context[key] = salt.utils.to_unicode(value, encoding=SLS_ENCODING)
+            decoded_context[key] = salt.utils.stringutils.to_unicode(value, encoding=SLS_ENCODING)
         except UnicodeDecodeError as ex:
             log.debug(
                 "Failed to decode using default encoding (%s), trying system encoding",
@@ -423,14 +391,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         template = jinja_env.from_string(tmplstr)
         template.globals.update(decoded_context)
         output = template.render(**decoded_context)
-    except jinja2.exceptions.TemplateSyntaxError as exc:
-        trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=decoded_context)
-        if not line:
-            tmplstr = ''
-        raise SaltRenderError('Jinja syntax error: {0}{1}'.format(exc, out),
-                              line,
-                              tmplstr)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         out = _get_jinja_error(trace, context=decoded_context)[1]
@@ -441,6 +401,16 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             'Jinja variable {0}{1}'.format(
                 exc, out),
             buf=tmplstr)
+    except (jinja2.exceptions.TemplateRuntimeError,
+            jinja2.exceptions.TemplateSyntaxError) as exc:
+        trace = traceback.extract_tb(sys.exc_info()[2])
+        line, out = _get_jinja_error(trace, context=decoded_context)
+        if not line:
+            tmplstr = ''
+        raise SaltRenderError(
+            'Jinja syntax error: {0}{1}'.format(exc, out),
+            line,
+            tmplstr)
     except (SaltInvocationError, CommandExecutionError) as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         line, out = _get_jinja_error(trace, context=decoded_context)
@@ -459,12 +429,12 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             tmplstr = ''
         else:
             tmplstr += '\n{0}'.format(tracestr)
-        log.debug("Jinja Error")
-        log.debug("Exception: {0}".format(exc))
-        log.debug("Out: {0}".format(out))
-        log.debug("Line: {0}".format(line))
-        log.debug("TmplStr: {0}".format(tmplstr))
-        log.debug("TraceStr: {0}".format(tracestr))
+        log.debug('Jinja Error')
+        log.debug('Exception:', exc_info=True)
+        log.debug('Out: %s', out)
+        log.debug('Line: %s', line)
+        log.debug('TmplStr: %s', tmplstr)
+        log.debug('TraceStr: %s', tracestr)
 
         raise SaltRenderError('Jinja error: {0}{1}'.format(exc, out),
                               line,
@@ -549,7 +519,7 @@ def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
     Render a Cheetah template.
     '''
     from Cheetah.Template import Template
-    return str(Template(tmplstr, searchList=[context]))
+    return salt.utils.data.decode(Template(tmplstr, searchList=[context]))
 # pylint: enable=3rd-party-module-not-gated
 
 
@@ -598,8 +568,8 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
             return {'result': True,
                     'data': data}
         tgt = salt.utils.files.mkstemp()
-        with salt.utils.fopen(tgt, 'w+') as target:
-            target.write(data)
+        with salt.utils.files.fopen(tgt, 'w+') as target:
+            target.write(salt.utils.stringutils.to_str(data))
         return {'result': True,
                 'data': tgt}
     except Exception:

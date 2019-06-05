@@ -8,7 +8,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -17,6 +17,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.returners.smtp_return as smtp
+from salt.utils.jinja import SaltCacheLoader
 
 try:
     import gnupg  # pylint: disable=unused-import
@@ -72,7 +73,8 @@ class SMTPReturnerTestCase(TestCase, LoaderModuleMockMixin):
                    'gpgowner': '',
                    'subject': ''}
 
-        with patch('salt.returners.smtp_return._get_options', MagicMock(return_value=options)):
+        with patch('salt.returners.smtp_return._get_options', MagicMock(return_value=options)), \
+             patch.object(SaltCacheLoader, 'file_client', MagicMock()):
             smtp.returner(ret)
             self.assertTrue(mocked_smtplib.return_value.sendmail.called)
 

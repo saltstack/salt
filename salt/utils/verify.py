@@ -2,7 +2,7 @@
 '''
 A few checks to make sure the environment is sane
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 
@@ -27,12 +27,14 @@ from salt.log.setup import LOG_LEVELS
 from salt.exceptions import SaltClientError, SaltSystemExit, \
     CommandExecutionError
 import salt.defaults.exitcodes
-import salt.utils
 import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.user
 
 log = logging.getLogger(__name__)
 
-ROOT_DIR = 'c:\\salt' if salt.utils.is_windows() else '/'
+ROOT_DIR = 'c:\\salt' if salt.utils.platform.is_windows() else '/'
 
 
 def zmq_version():
@@ -148,7 +150,7 @@ def verify_files(files, user):
     '''
     Verify that the named files exist and are owned by the named user
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return True
     import pwd  # after confirming not running Windows
     try:
@@ -170,8 +172,8 @@ def verify_files(files, user):
                     if err.errno != errno.EEXIST:
                         raise
             if not os.path.isfile(fn_):
-                with salt.utils.fopen(fn_, 'w+') as fp_:
-                    fp_.write('')
+                with salt.utils.files.fopen(fn_, 'w'):
+                    pass
 
         except IOError as err:
             if os.path.isfile(dirname):
@@ -195,19 +197,28 @@ def verify_files(files, user):
     return True
 
 
-def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False, root_dir=ROOT_DIR):
+def verify_env(
+        dirs,
+        user,
+        permissive=False,
+        pki_dir='',
+        skip_extra=False,
+        root_dir=ROOT_DIR):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
-    if salt.utils.is_windows():
-        return win_verify_env(root_dir, dirs, permissive, pki_dir, skip_extra)
+    if salt.utils.platform.is_windows():
+        return win_verify_env(root_dir,
+                              dirs,
+                              permissive=permissive,
+                              skip_extra=skip_extra)
     import pwd  # after confirming not running Windows
     try:
         pwnam = pwd.getpwnam(user)
         uid = pwnam[2]
         gid = pwnam[3]
-        groups = salt.utils.get_gid_list(user, include_default=False)
+        groups = salt.utils.user.get_gid_list(user, include_default=False)
 
     except KeyError:
         err = ('Failed to prepare the Salt environment for user '
@@ -245,7 +256,7 @@ def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False, root_
                 fsubdir = os.path.join(dir_, subdir)
                 if '{0}jobs'.format(os.path.sep) in fsubdir:
                     continue
-                for root, dirs, files in os.walk(fsubdir):
+                for root, dirs, files in salt.utils.path.os_walk(fsubdir):
                     for name in files:
                         if name.startswith('.'):
                             continue
@@ -300,9 +311,9 @@ def check_user(user):
     '''
     Check user and assign process uid/gid.
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return True
-    if user == salt.utils.get_user():
+    if user == salt.utils.user.get_user():
         return True
     import pwd  # after confirming not running Windows
     try:
@@ -311,7 +322,7 @@ def check_user(user):
             if hasattr(os, 'initgroups'):
                 os.initgroups(user, pwuser.pw_gid)  # pylint: disable=minimum-python-version
             else:
-                os.setgroups(salt.utils.get_gid_list(user, include_default=False))
+                os.setgroups(salt.utils.user.get_gid_list(user, include_default=False))
             os.setgid(pwuser.pw_gid)
             os.setuid(pwuser.pw_uid)
 
@@ -383,7 +394,7 @@ def check_path_traversal(path, user='root', skip_perm_errors=False):
             if not os.path.exists(tpath):
                 msg += ' Path does not exist.'
             else:
-                current_user = salt.utils.get_user()
+                current_user = salt.utils.user.get_user()
                 # Make the error message more intelligent based on how
                 # the user invokes salt-call or whatever other script.
                 if user != current_user:
@@ -418,9 +429,8 @@ def check_max_open_files(opts):
     accepted_count = len(os.listdir(accepted_keys_dir))
 
     log.debug(
-        'This salt-master instance has accepted {0} minion keys.'.format(
-            accepted_count
-        )
+        'This salt-master instance has accepted %s minion keys.',
+        accepted_count
     )
 
     level = logging.INFO
@@ -487,7 +497,7 @@ def valid_id(opts, id_):
     Returns if the passed id is valid
     '''
     try:
-        if any(x in id_ for x in ('/', '\\', '\0')):
+        if any(x in id_ for x in ('/', '\\', str('\0'))):
             return False
         return bool(clean_path(opts['pki_dir'], id_))
     except (AttributeError, KeyError, TypeError, UnicodeDecodeError):
@@ -525,7 +535,12 @@ def verify_log(opts):
         log.warning('Insecure logging configuration detected! Sensitive data may be logged.')
 
 
-def win_verify_env(path, dirs, permissive=False, pki_dir='', skip_extra=False):
+def win_verify_env(
+        path,
+        dirs,
+        permissive=False,
+        pki_dir='',
+        skip_extra=False):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt

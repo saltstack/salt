@@ -8,9 +8,9 @@ Perform an HTTP query and statefully return the result
 '''
 
 # Import python libs
-from __future__ import absolute_import
-import re
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import re
 import time
 
 __monitor__ = [
@@ -165,5 +165,5 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
         else:
             # Space requests out by delaying for an interval
             if 'request_interval' in kwargs:
-                log.debug("delaying query for {0} seconds.".format(kwargs['request_interval']))
+                log.debug('delaying query for %s seconds.', kwargs['request_interval'])
                 time.sleep(kwargs['request_interval'])

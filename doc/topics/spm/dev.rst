@@ -259,7 +259,7 @@ This function will not generally be more complex than:
 .. code-block:: python
 
     def hash_file(path, hashobj, conn=None):
-        with salt.utils.fopen(path, 'r') as f:
+        with salt.utils.files.fopen(path, 'r') as f:
             hashobj.update(f.read())
             return hashobj.hexdigest()
 

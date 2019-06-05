@@ -3,7 +3,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import copy
 
@@ -19,7 +19,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.scsi as scsi
-import salt.utils
+import salt.utils.path
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -60,7 +60,7 @@ class ScsiTestCase(TestCase, LoaderModuleMockMixin):
         result_size['[0:0:0:0]']['size'] = '1.20TB'
 
         mock = MagicMock(return_value='/usr/bin/lsscsi')
-        with patch.object(salt.utils, 'which', mock):
+        with patch.object(salt.utils.path, 'which', mock):
             # get_size = True
 
             cmd_mock = MagicMock(return_value=lsscsi_size)
@@ -77,7 +77,7 @@ class ScsiTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(scsi.ls_(get_size=False), result)
 
         mock = MagicMock(return_value=None)
-        with patch.object(salt.utils, 'which', mock):
+        with patch.object(salt.utils.path, 'which', mock):
             self.assertEqual(scsi.ls_(), 'scsi.ls not available - lsscsi command not found')
 
     def test_rescan_all(self):

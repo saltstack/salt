@@ -9,10 +9,10 @@ from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
 # Import Salt libs
-import salt.utils
+import salt.utils.platform
 
 
-@skipIf(not salt.utils.is_windows(), 'windows test only')
+@skipIf(not salt.utils.platform.is_windows(), 'windows test only')
 class WinDNSTest(ModuleCase):
     '''
     Test for salt.modules.win_dns_client

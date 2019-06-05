@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
+'''
+Custom YAML loading in Salt
+'''
+
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import re
+import sys
 import warnings
 
-# Import third party libs
-import re
-import yaml
+import yaml  # pylint: disable=blacklisted-import
 from yaml.nodes import MappingNode, SequenceNode
 from yaml.constructor import ConstructorError
 try:
@@ -14,11 +18,12 @@ try:
 except Exception:
     pass
 
-# This function is safe and needs to stay as yaml.load. The load function
-# accepts a custom loader, and every time this function is used in Salt
-# the custom loader defined below is used. This should be altered though to
-# not require the custom loader to be explicitly added.
-load = yaml.load  # pylint: disable=C0103
+import salt.utils.stringutils
+
+# Import 3rd-party libs
+from salt.ext import six
+
+__all__ = ['SaltYamlSafeLoader', 'load', 'safe_load']
 
 
 class DuplicateKeyWarning(RuntimeWarning):
@@ -38,18 +43,24 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
     to make things like sls file more intuitive.
     '''
     def __init__(self, stream, dictclass=dict):
-        yaml.SafeLoader.__init__(self, stream)
+        super(SaltYamlSafeLoader, self).__init__(stream)
         if dictclass is not dict:
             # then assume ordered dict and use it for both !map and !omap
             self.add_constructor(
-                u'tag:yaml.org,2002:map',
+                'tag:yaml.org,2002:map',
                 type(self).construct_yaml_map)
             self.add_constructor(
-                u'tag:yaml.org,2002:omap',
+                'tag:yaml.org,2002:omap',
                 type(self).construct_yaml_map)
         self.add_constructor(
-            u'tag:yaml.org,2002:python/unicode',
+            'tag:yaml.org,2002:str',
+            type(self).construct_yaml_str)
+        self.add_constructor(
+            'tag:yaml.org,2002:python/unicode',
             type(self).construct_unicode)
+        self.add_constructor(
+            'tag:yaml.org,2002:timestamp',
+            type(self).construct_scalar)
         self.dictclass = dictclass
 
     def construct_yaml_map(self, node):
@@ -74,18 +85,25 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
 
         self.flatten_mapping(node)
 
+        context = 'while constructing a mapping'
         mapping = self.dictclass()
         for key_node, value_node in node.value:
             key = self.construct_object(key_node, deep=deep)
             try:
                 hash(key)
             except TypeError:
-                err = ('While constructing a mapping {0} found unacceptable '
-                       'key {1}').format(node.start_mark, key_node.start_mark)
-                raise ConstructorError(err)
+                raise ConstructorError(
+                    context,
+                    node.start_mark,
+                    "found unacceptable key {0}".format(key_node.value),
+                    key_node.start_mark)
             value = self.construct_object(value_node, deep=deep)
             if key in mapping:
-                raise ConstructorError('Conflicting ID \'{0}\''.format(key))
+                raise ConstructorError(
+                    context,
+                    node.start_mark,
+                    "found conflicting ID '{0}'".format(key),
+                    key_node.start_mark)
             mapping[key] = value
         return mapping
 
@@ -110,13 +128,58 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
                 node.value = eval(node.value, {}, {})  # pylint: disable=W0123
         return super(SaltYamlSafeLoader, self).construct_scalar(node)
 
+    def construct_yaml_str(self, node):
+        value = self.construct_scalar(node)
+        return salt.utils.stringutils.to_unicode(value)
+
+    def fetch_plain(self):
+        '''
+        Handle unicode literal strings which appear inline in the YAML
+        '''
+        orig_line = self.line
+        orig_column = self.column
+        orig_pointer = self.pointer
+        try:
+            return super(SaltYamlSafeLoader, self).fetch_plain()
+        except yaml.scanner.ScannerError as exc:
+            problem_line = self.line
+            problem_column = self.column
+            problem_pointer = self.pointer
+            if exc.problem == "found unexpected ':'":
+                # Reset to prior position
+                self.line = orig_line
+                self.column = orig_column
+                self.pointer = orig_pointer
+                if self.peek(0) == 'u':
+                    # Might be a unicode literal string, check for 2nd char and
+                    # call the appropriate fetch func if it's a quote
+                    quote_char = self.peek(1)
+                    if quote_char in ("'", '"'):
+                        # Skip the "u" prefix by advancing the column and
+                        # pointer by 1
+                        self.column += 1
+                        self.pointer += 1
+                        if quote_char == '\'':
+                            return self.fetch_single()
+                        else:
+                            return self.fetch_double()
+                    else:
+                        # This wasn't a unicode literal string, so the caught
+                        # exception was correct. Restore the old position and
+                        # then raise the caught exception.
+                        self.line = problem_line
+                        self.column = problem_column
+                        self.pointer = problem_pointer
+            # Raise the caught exception
+            six.reraise(*sys.exc_info())
+
     def flatten_mapping(self, node):
         merge = []
         index = 0
         while index < len(node.value):
             key_node, value_node = node.value[index]
 
-            if key_node.tag == u'tag:yaml.org,2002:merge':
+            if key_node.tag == 'tag:yaml.org,2002:merge':
                 del node.value[index]
                 if isinstance(value_node, MappingNode):
                     self.flatten_mapping(value_node)
@@ -139,8 +202,8 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
                                            node.start_mark,
                                            "expected a mapping or list of mappings for merging, but found {0}".format(value_node.id),
                                            value_node.start_mark)
-            elif key_node.tag == u'tag:yaml.org,2002:value':
-                key_node.tag = u'tag:yaml.org,2002:str'
+            elif key_node.tag == 'tag:yaml.org,2002:value':
+                key_node.tag = 'tag:yaml.org,2002:str'
                 index += 1
             else:
                 index += 1
@@ -150,3 +213,16 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
             mergeable_items = [x for x in merge if x[0].value not in existing_nodes]
 
             node.value = mergeable_items + node.value
+
+
+def load(stream, Loader=SaltYamlSafeLoader):
+    return yaml.load(stream, Loader=Loader)
+
+
+def safe_load(stream, Loader=SaltYamlSafeLoader):
+    '''
+    .. versionadded:: 2018.3.0
+
+    Helper function which automagically uses our custom loader.
+    '''
+    return yaml.load(stream, Loader=Loader)

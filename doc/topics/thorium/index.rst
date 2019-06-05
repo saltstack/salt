@@ -4,18 +4,6 @@
 Thorium Complex Reactor
 =======================
 
-.. note::
-
-    Thorium is a provisional feature of Salt and is subject to change
-    and removal if the feature proves to not be a viable solution.
-
-.. note::
-
-    Thorium was added to Salt as an experimental feature in the 2016.3.0
-    release, as of 2016.3.0 this feature is considered experimental, no
-    guarantees are made for support of any kind yet.
-
-
 The original Salt Reactor is based on the idea of listening for a specific
 event and then reacting to it. This model comes with many logical limitations,
 for instance it is very difficult (and hacky) to fire a reaction based on
@@ -58,6 +46,14 @@ Writing Thorium Formulas
 Like some other Salt subsystems, Thorium uses its own directory structure. The
 default location for this structure is ``/srv/thorium/``, but it can be changed
 using the ``thorium_roots`` setting in the ``master`` configuration file.
+
+This would explicitly set the roots to the default:
+
+.. code-block:: yaml
+
+    thorium_roots:
+      base:
+        - /srv/thorium
 
 Example ``thorium_roots`` configuration:
 
@@ -113,7 +109,7 @@ the key from the master when the minion has been gone for 60 seconds:
       key.timeout:
         - delete: 60
         - require:
-          - status: startreg
+          - status: statreg
 
 There are two stanzas in this formula, whose IDs are ``statreg`` and
 ``keydel``. The first stanza, ``statreg``, tells Thorium to keep track of
@@ -277,12 +273,12 @@ event bus, and returns ``True`` if that event's tag matches. For example:
         run_remote_ex:
           local.cmd:
             - tgt: '*'
-            - func: test.ping
+            - func: test.version
             - require:
               - check: salt/foo/*/bar
 
 This formula will look for an event whose tag is ``salt/foo/<anything>/bar`` and
-if it comes in, issue a ``test.ping`` to all minions.
+if it comes in, issue a ``test.version`` to all minions.
 
 
 Register Persistence

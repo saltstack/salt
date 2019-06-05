@@ -5,7 +5,7 @@ Beacon to monitor network adapter setting changes on Linux
 .. versionadded:: 2016.3.0
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 # Import third party libs
 try:
     from pyroute2 import IPDB
@@ -18,6 +18,8 @@ import ast
 import re
 import salt.loader
 import logging
+from salt.ext.six.moves import map
+
 log = logging.getLogger(__name__)
 
 __virtual_name__ = 'network_settings'
@@ -45,24 +47,29 @@ def __virtual__():
     return False
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
-    if not isinstance(config, dict):
+    if not isinstance(config, list):
         return False, ('Configuration for network_settings '
-                       'beacon must be a dictionary.')
+                       'beacon must be a list.')
     else:
-        for item in config:
-            if item == 'coalesce':
-                continue
-            if not isinstance(config[item], dict):
-                return False, ('Configuration for network_settings beacon must be a '
-                               'dictionary of dictionaries.')
-            else:
-                if not all(j in ATTRS for j in config[item]):
-                    return False, ('Invalid configuration item in Beacon '
-                                   'configuration.')
+        _config = {}
+        list(map(_config.update, config))
+
+        interfaces = _config.get('interfaces', {})
+        if isinstance(interfaces, list):
+            #Old syntax
+            return False, ('interfaces section for network_settings beacon'
+                           ' must be a dictionary.')
+
+        for item in interfaces:
+            if not isinstance(_config['interfaces'][item], dict):
+                return False, ('Interface attributes for network_settings beacon'
+                               ' must be a dictionary.')
+            if not all(j in ATTRS for j in _config['interfaces'][item]):
+                return False, ('Invalid attributes in beacon configuration.')
     return True, 'Valid beacon configuration'
 
 
@@ -75,9 +82,10 @@ def _copy_interfaces_info(interfaces):
     for interface in interfaces:
         _interface_attrs_cpy = set()
         for attr in ATTRS:
-            attr_dict = Hashabledict()
-            attr_dict[attr] = repr(interfaces[interface][attr])
-            _interface_attrs_cpy.add(attr_dict)
+            if attr in interfaces[interface]:
+                attr_dict = Hashabledict()
+                attr_dict[attr] = repr(interfaces[interface][attr])
+                _interface_attrs_cpy.add(attr_dict)
         ret[interface] = _interface_attrs_cpy
 
     return ret
@@ -89,8 +97,8 @@ def beacon(config):
 
     By default, the beacon will emit when there is a value change on one of the
     settings on watch. The config also support the onvalue parameter for each
-    setting, which instruct the beacon to only emit if the setting changed to the
-    value defined.
+    setting, which instruct the beacon to only emit if the setting changed to
+    the value defined.
 
     Example Config
 
@@ -98,12 +106,13 @@ def beacon(config):
 
         beacons:
           network_settings:
-            eth0:
-              ipaddr:
-              promiscuity:
-                onvalue: 1
-            eth1:
-              linkmode:
+            - interfaces:
+                eth0:
+                  ipaddr:
+                  promiscuity:
+                    onvalue: 1
+                eth1:
+                  linkmode:
 
     The config above will check for value changes on eth0 ipaddr and eth1 linkmode. It will also
     emit if the promiscuity value changes to 1.
@@ -118,12 +127,16 @@ def beacon(config):
 
         beacons:
           network_settings:
-            coalesce: True
-            eth0:
-              ipaddr:
-              promiscuity:
+            - coalesce: True
+            - interfaces:
+                eth0:
+                  ipaddr:
+                  promiscuity:
 
     '''
+    _config = {}
+    list(map(_config.update, config))
+
     ret = []
     interfaces = []
     expanded_config = {}
@@ -137,45 +150,51 @@ def beacon(config):
     if not LAST_STATS:
         LAST_STATS = _stats
 
-    if 'coalesce' in config and config['coalesce']:
+    if 'coalesce' in _config and _config['coalesce']:
         coalesce = True
         changes = {}
 
+    log.debug('_stats %s', _stats)
     # Get list of interfaces included in config that are registered in the
     # system, including interfaces defined by wildcards (eth*, wlan*)
-    for item in config:
-        if item == 'coalesce':
-            continue
-        if item in _stats:
-            interfaces.append(item)
+    for interface in _config.get('interfaces', {}):
+        if interface in _stats:
+            interfaces.append(interface)
         else:
             # No direct match, try with * wildcard regexp
-            interface_regexp = item.replace('*', '[0-9]+')
+            interface_regexp = interface.replace('*', '[0-9]+')
             for interface in _stats:
                 match = re.search(interface_regexp, interface)
                 if match:
                     interfaces.append(match.group())
-                    expanded_config[match.group()] = config[item]
+                    expanded_config[match.group()] = config['interfaces'][interface]
 
     if expanded_config:
         config.update(expanded_config)
 
+        # config updated so update _config
+        list(map(_config.update, config))
+
+    log.debug('interfaces %s', interfaces)
     for interface in interfaces:
         _send_event = False
         _diff_stats = _stats[interface] - LAST_STATS[interface]
         _ret_diff = {}
+        interface_config = _config['interfaces'][interface]
 
+        log.debug('_diff_stats %s', _diff_stats)
         if _diff_stats:
             _diff_stats_dict = {}
             LAST_STATS[interface] = _stats[interface]
 
             for item in _diff_stats:
                 _diff_stats_dict.update(item)
-            for attr in config[interface]:
+            for attr in interface_config:
                 if attr in _diff_stats_dict:
                     config_value = None
-                    if config[interface][attr] and 'onvalue' in config[interface][attr]:
-                        config_value = config[interface][attr]['onvalue']
+                    if interface_config[attr] and \
+                       'onvalue' in interface_config[attr]:
+                        config_value = interface_config[attr]['onvalue']
                     new_value = ast.literal_eval(_diff_stats_dict[attr])
                     if not config_value or config_value == new_value:
                         _send_event = True
@@ -185,7 +204,9 @@ def beacon(config):
                 if coalesce:
                     changes[interface] = _ret_diff
                 else:
-                    ret.append({'tag': interface, 'interface': interface, 'change': _ret_diff})
+                    ret.append({'tag': interface,
+                                'interface': interface,
+                                'change': _ret_diff})
 
     if coalesce and changes:
         grains_info = salt.loader.grains(__opts__, True)

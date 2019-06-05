@@ -13,6 +13,7 @@ typically rather simple:
       pkgng.update_packaging_site:
         - name: "http://192.168.0.2"
 '''
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def update_packaging_site(name):

@@ -5,16 +5,18 @@ A dead simple module wrapping calls to the Chocolatey package manager
 
 .. versionadded:: 2014.1.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
-import os.path
+import os
 import re
 import tempfile
+from requests.structures import CaseInsensitiveDict
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.platform
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError, \
     SaltInvocationError
@@ -36,7 +38,7 @@ def __virtual__():
     for simulating UAC forces a GUI prompt, and is not compatible with
     salt-minion running as SYSTEM.
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return (False, 'Cannot load module chocolatey: Chocolatey requires '
                        'Windows')
 
@@ -47,49 +49,74 @@ def __virtual__():
     return 'chocolatey'
 
 
-def _clear_context(context):
+def _clear_context():
     '''
     Clear variables stored in __context__. Run this function when a new version
     of chocolatey is installed.
     '''
-    for var in (x for x in __context__ if x.startswith('chocolatey.')):
-        context.pop(var)
+    choco_items = [x for x in __context__ if x.startswith('chocolatey.')]
+    for var in choco_items:
+        __context__.pop(var)
 
 
-def _yes(context):
+def _yes():
     '''
     Returns ['--yes'] if on v0.9.9.0 or later, otherwise returns an empty list
+    Confirm all prompts (--yes_ is available on v0.9.9.0 or later
     '''
     if 'chocolatey._yes' in __context__:
-        return context['chocolatey._yes']
+        return __context__['chocolatey._yes']
     if _LooseVersion(chocolatey_version()) >= _LooseVersion('0.9.9'):
         answer = ['--yes']
     else:
         answer = []
-    context['chocolatey._yes'] = answer
+    __context__['chocolatey._yes'] = answer
+    return __context__['chocolatey._yes']
+
+
+def _no_progress():
+    '''
+    Returns ['--no-progress'] if on v0.10.4 or later, otherwise returns an
+    empty list
+    '''
+    if 'chocolatey._no_progress' in __context__:
+        return __context__['chocolatey._no_progress']
+    if _LooseVersion(chocolatey_version()) >= _LooseVersion('0.10.4'):
+        answer = ['--no-progress']
+    else:
+        log.warning('--no-progress unsupported in choco < 0.10.4')
+        answer = []
+    __context__['chocolatey._no_progress'] = answer
     return answer
 
 
-def _find_chocolatey(context, salt):
+def _find_chocolatey():
     '''
     Returns the full path to chocolatey.bat on the host.
     '''
-    if 'chocolatey._path' in context:
-        return context['chocolatey._path']
-    choc_defaults = ['C:\\Chocolatey\\bin\\chocolatey.bat',
-                     'C:\\ProgramData\\Chocolatey\\bin\\chocolatey.exe', ]
+    # Check context
+    if 'chocolatey._path' in __context__:
+        return __context__['chocolatey._path']
 
-    choc_path = salt['cmd.which']('chocolatey.exe')
-    if not choc_path:
-        for choc_dir in choc_defaults:
-            if salt['cmd.has_exec'](choc_dir):
-                choc_path = choc_dir
-    if not choc_path:
-        err = ('Chocolatey not installed. Use chocolatey.bootstrap to '
-                'install the Chocolatey package manager.')
-        raise CommandExecutionError(err)
-    context['chocolatey._path'] = choc_path
-    return choc_path
+    # Check the path
+    choc_path = __salt__['cmd.which']('chocolatey.exe')
+    if choc_path:
+        __context__['chocolatey._path'] = choc_path
+        return __context__['chocolatey._path']
+
+    # Check in common locations
+    choc_defaults = [
+        os.path.join(os.environ.get('ProgramData'), 'Chocolatey', 'bin', 'chocolatey.exe'),
+        os.path.join(os.environ.get('SystemDrive'), 'Chocolatey', 'bin', 'chocolatey.bat')]
+    for choc_exe in choc_defaults:
+        if os.path.isfile(choc_exe):
+            __context__['chocolatey._path'] = choc_exe
+            return __context__['chocolatey._path']
+
+    # Not installed, raise an error
+    err = ('Chocolatey not installed. Use chocolatey.bootstrap to '
+            'install the Chocolatey package manager.')
+    raise CommandExecutionError(err)
 
 
 def chocolatey_version():
@@ -105,7 +132,7 @@ def chocolatey_version():
     if 'chocolatey._version' in __context__:
         return __context__['chocolatey._version']
 
-    cmd = [_find_chocolatey(__context__, __salt__)]
+    cmd = [_find_chocolatey()]
     cmd.append('-v')
     out = __salt__['cmd.run'](cmd, python_shell=False)
     __context__['chocolatey._version'] = out
@@ -138,7 +165,7 @@ def bootstrap(force=False):
     '''
     # Check if Chocolatey is already present in the path
     try:
-        choc_path = _find_chocolatey(__context__, __salt__)
+        choc_path = _find_chocolatey()
     except CommandExecutionError:
         choc_path = None
     if choc_path and not force:
@@ -202,8 +229,9 @@ def bootstrap(force=False):
     result = __salt__['cmd.run_all'](cmd, python_shell=True)
 
     if result['retcode'] != 0:
-        err = 'Bootstrapping Chocolatey failed: {0}'.format(result['stderr'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Bootstrapping Chocolatey failed: {0}'.format(result['stderr'])
+        )
 
     return result['stdout']
 
@@ -253,13 +281,13 @@ def list_(narrow=None,
         salt '*' chocolatey.list <narrow>
         salt '*' chocolatey.list <narrow> all_versions=True
     '''
-    choc_path = _find_chocolatey(__context__, __salt__)
+    choc_path = _find_chocolatey()
     cmd = [choc_path, 'list']
     if narrow:
         cmd.append(narrow)
-    if salt.utils.is_true(all_versions):
+    if salt.utils.data.is_true(all_versions):
         cmd.append('--allversions')
-    if salt.utils.is_true(pre_versions):
+    if salt.utils.data.is_true(pre_versions):
         cmd.append('--prerelease')
     if source:
         cmd.extend(['--source', source])
@@ -273,11 +301,17 @@ def list_(narrow=None,
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] != 0:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+    # Chocolatey introduced Enhanced Exit Codes starting with version 0.10.12
+    # Exit Code 2 means there were no results, but is not a failure
+    # This may start to effect other functions in the future as Chocolatey
+    # moves more functions to this new paradigm
+    # https://github.com/chocolatey/choco/issues/1758
+    if result['retcode'] not in [0, 2]:
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
-    ret = {}
+    ret = CaseInsensitiveDict({})
     pkg_re = re.compile(r'(\S+)\|(\S+)')
     for line in result['stdout'].split('\n'):
         if line.startswith("No packages"):
@@ -306,13 +340,14 @@ def list_webpi():
 
         salt '*' chocolatey.list_webpi
     '''
-    choc_path = _find_chocolatey(__context__, __salt__)
+    choc_path = _find_chocolatey()
     cmd = [choc_path, 'list', '--source', 'webpi']
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 
@@ -331,13 +366,14 @@ def list_windowsfeatures():
 
         salt '*' chocolatey.list_windowsfeatures
     '''
-    choc_path = _find_chocolatey(__context__, __salt__)
+    choc_path = _find_chocolatey()
     cmd = [choc_path, 'list', '--source', 'windowsfeatures']
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 
@@ -351,7 +387,8 @@ def install(name,
             override_args=False,
             force_x86=False,
             package_args=None,
-            allow_multiple=False):
+            allow_multiple=False,
+            execution_timeout=None):
     '''
     Instructs Chocolatey to install a package.
 
@@ -407,6 +444,11 @@ def install(name,
 
             .. versionadded:: 2017.7.0
 
+        execution_timeout (str):
+        Chocolatey execution timeout value you want to pass to the installation process. Default is None.
+
+            .. versionadded:: 2018.3.0
+
     Returns:
         str: The output of the ``chocolatey`` command
 
@@ -422,7 +464,7 @@ def install(name,
         raise SaltInvocationError(
             'Cannot use \'force\' in conjunction with \'allow_multiple\'')
 
-    choc_path = _find_chocolatey(__context__, __salt__)
+    choc_path = _find_chocolatey()
     # chocolatey helpfully only supports a single package argument
     # CORRECTION: it also supports multiple package names separated by spaces
     # but any additional arguments apply to ALL packages specified
@@ -431,9 +473,9 @@ def install(name,
         cmd.extend(['--version', version])
     if source:
         cmd.extend(['--source', source])
-    if salt.utils.is_true(force):
+    if salt.utils.data.is_true(force):
         cmd.append('--force')
-    if salt.utils.is_true(pre_versions):
+    if salt.utils.data.is_true(pre_versions):
         cmd.append('--prerelease')
     if install_args:
         cmd.extend(['--installarguments', install_args])
@@ -445,15 +487,21 @@ def install(name,
         cmd.extend(['--packageparameters', package_args])
     if allow_multiple:
         cmd.append('--allow-multiple')
-    cmd.extend(_yes(__context__))
+    if execution_timeout:
+        cmd.extend(['--execution-timeout', execution_timeout])
+
+    # Salt doesn't need to see the progress
+    cmd.extend(_no_progress())
+    cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     if name == 'chocolatey':
-        _clear_context(__context__)
+        _clear_context()
 
     return result['stdout']
 
@@ -553,24 +601,24 @@ def install_missing(name, version=None, source=None):
         salt '*' chocolatey.install_missing <package name>
         salt '*' chocolatey.install_missing <package name> version=<package version>
     '''
-    choc_path = _find_chocolatey(__context__, __salt__)
     if _LooseVersion(chocolatey_version()) >= _LooseVersion('0.9.8.24'):
         log.warning('installmissing is deprecated, using install')
         return install(name, version=version)
 
     # chocolatey helpfully only supports a single package argument
-    cmd = [choc_path, 'installmissing', name]
+    cmd = [_find_chocolatey(), 'installmissing', name]
     if version:
         cmd.extend(['--version', version])
     if source:
         cmd.extend(['--source', source])
     # Shouldn't need this as this code should never run on v0.9.9 and newer
-    cmd.extend(_yes(__context__))
+    cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 
@@ -688,21 +736,21 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
         salt '*' chocolatey.uninstall <package name> version=<package version>
         salt '*' chocolatey.uninstall <package name> version=<package version> uninstall_args=<args> override_args=True
     '''
-    choc_path = _find_chocolatey(__context__, __salt__)
     # chocolatey helpfully only supports a single package argument
-    cmd = [choc_path, 'uninstall', name]
+    cmd = [_find_chocolatey(), 'uninstall', name]
     if version:
         cmd.extend(['--version', version])
     if uninstall_args:
         cmd.extend(['--uninstallarguments', uninstall_args])
     if override_args:
         cmd.extend(['--overridearguments'])
-    cmd.extend(_yes(__context__))
+    cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1605, 1614, 1641]:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 
@@ -720,7 +768,7 @@ def upgrade(name,
     .. versionadded:: 2016.3.4
 
     Instructs Chocolatey to upgrade packages on the system. (update is being
-    deprecated)
+    deprecated). This command will install the package if not installed.
 
     Args:
 
@@ -769,15 +817,14 @@ def upgrade(name,
         salt "*" chocolatey.upgrade <package name> pre_versions=True
     '''
     # chocolatey helpfully only supports a single package argument
-    choc_path = _find_chocolatey(__context__, __salt__)
-    cmd = [choc_path, 'upgrade', name]
+    cmd = [_find_chocolatey(), 'upgrade', name]
     if version:
-        cmd.extend(['-version', version])
+        cmd.extend(['--version', version])
     if source:
         cmd.extend(['--source', source])
-    if salt.utils.is_true(force):
+    if salt.utils.data.is_true(force):
         cmd.append('--force')
-    if salt.utils.is_true(pre_versions):
+    if salt.utils.data.is_true(pre_versions):
         cmd.append('--prerelease')
     if install_args:
         cmd.extend(['--installarguments', install_args])
@@ -787,13 +834,17 @@ def upgrade(name,
         cmd.append('--forcex86')
     if package_args:
         cmd.extend(['--packageparameters', package_args])
-    cmd.extend(_yes(__context__))
+
+    # Salt doesn't need to see the progress
+    cmd.extend(_no_progress())
+    cmd.extend(_yes())
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 
@@ -821,22 +872,25 @@ def update(name, source=None, pre_versions=False):
         salt "*" chocolatey.update <package name> pre_versions=True
     '''
     # chocolatey helpfully only supports a single package argument
-    choc_path = _find_chocolatey(__context__, __salt__)
     if _LooseVersion(chocolatey_version()) >= _LooseVersion('0.9.8.24'):
         log.warning('update is deprecated, using upgrade')
         return upgrade(name, source=source, pre_versions=pre_versions)
 
-    cmd = [choc_path, 'update', name]
+    cmd = [_find_chocolatey(), 'update', name]
     if source:
         cmd.extend(['--source', source])
-    if salt.utils.is_true(pre_versions):
+    if salt.utils.data.is_true(pre_versions):
         cmd.append('--prerelease')
-    cmd.extend(_yes(__context__))
+
+    # Salt doesn't need to see the progress
+    cmd.extend(_no_progress())
+    cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 
@@ -874,6 +928,7 @@ def version(name, check_remote=False, source=None, pre_versions=False):
         salt "*" chocolatey.version <package name> check_remote=True
     '''
     installed = list_(narrow=name, local_only=True)
+    installed = {k.lower(): v for k, v in installed.items()}
 
     packages = {}
     lower_name = name.lower()
@@ -883,6 +938,7 @@ def version(name, check_remote=False, source=None, pre_versions=False):
 
     if check_remote:
         available = list_(narrow=name, pre_versions=pre_versions, source=source)
+        available = {k.lower(): v for k, v in available.items()}
 
         for pkg in packages:
             packages[pkg] = {'installed': installed[pkg],
@@ -917,8 +973,7 @@ def add_source(name, source_location, username=None, password=None):
         salt '*' chocolatey.add_source <source name> <source_location> user=<user> password=<password>
 
     '''
-    choc_path = _find_chocolatey(__context__, __salt__)
-    cmd = [choc_path, 'sources', 'add', '--name', name, '--source', source_location]
+    cmd = [_find_chocolatey(), 'sources', 'add', '--name', name, '--source', source_location]
     if username:
         cmd.extend(['--user', username])
     if password:
@@ -926,8 +981,9 @@ def add_source(name, source_location, username=None, password=None):
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 
@@ -943,13 +999,13 @@ def _change_source_state(name, state):
         State in which you want the chocolatey repository.
 
     '''
-    choc_path = _find_chocolatey(__context__, __salt__)
-    cmd = [choc_path, 'source', state, '--name', name]
+    cmd = [_find_chocolatey(), 'source', state, '--name', name]
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
-        raise CommandExecutionError(err)
+        raise CommandExecutionError(
+            'Running chocolatey failed: {0}'.format(result['stdout'])
+        )
 
     return result['stdout']
 

@@ -6,19 +6,22 @@ The core behaviors used by minion and master
 # pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
-from __future__ import absolute_import
-import os
-import time
-import random
-import logging
+from __future__ import absolute_import, print_function, unicode_literals
 import itertools
+import logging
+import os
+import random
+import sys
+import time
 from collections import deque
 from _socket import gaierror
 
 # Import salt libs
 import salt.daemons.masterapi
 import salt.utils.args
+import salt.utils.kinds as kinds
 import salt.utils.process
+import salt.utils.stringutils
 import salt.transport
 import salt.engines
 
@@ -32,7 +35,7 @@ from raet.lane.stacking import LaneStack
 from salt import daemons
 from salt.daemons import salting
 from salt.exceptions import SaltException
-from salt.utils import kinds, is_windows
+from salt.utils.platform import is_windows
 from salt.utils.event import tagify
 
 # Import ioflo libs
@@ -59,7 +62,7 @@ try:
 except ImportError:
     pass
 # pylint: disable=no-name-in-module,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
@@ -76,7 +79,7 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-                'opts': '.salt.opts',
+                'opts': salt.utils.stringutils.to_str('.salt.opts'),
             }
 
     def action(self):
@@ -117,9 +120,10 @@ class SaltRaetRoadClustered(ioflo.base.deeding.Deed):
     go next if .salt.road.manor.cluster.clustered
 
     '''
-    Ioinits = odict(inode=".salt.road.manor.",
-                    clustered=odict(ipath='cluster.clustered', ival=False),
-                    opts='.salt.opts',)
+    Ioinits = odict(inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+                    clustered=odict(ipath=salt.utils.stringutils.to_str('cluster.clustered'),
+                                    ival=False),
+                    opts=salt.utils.stringutils.to_str('.salt.opts'),)
 
     def action(self, **kwa):
         '''
@@ -132,7 +136,7 @@ class SaltRaetProcessManagerSetup(ioflo.base.deeding.Deed):
     '''
     Set up the process manager object
     '''
-    Ioinits = {'proc_mgr': '.salt.usr.proc_mgr'}
+    Ioinits = {'proc_mgr': salt.utils.stringutils.to_str('.salt.usr.proc_mgr')}
 
     def action(self):
         '''
@@ -152,9 +156,9 @@ class SaltRaetRoadUsherMinionSetup(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        ushers='ushers',
-        opts='.salt.opts')
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        ushers=salt.utils.stringutils.to_str('ushers'),
+        opts=salt.utils.stringutils.to_str('.salt.opts'))
 
     def action(self):
         '''
@@ -181,9 +185,9 @@ class SaltRaetRoadUsherMasterSetup(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        ushers='ushers',
-        opts='.salt.opts')
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        ushers=salt.utils.stringutils.to_str('ushers'),
+        opts=salt.utils.stringutils.to_str('.salt.opts'))
 
     def action(self):
         '''
@@ -208,10 +212,10 @@ class SaltRaetRoadClusterLoadSetup(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode='.salt.road.manor.',
-        masters={'ipath': 'cluster.masters', 'ival': odict()},
-        stack='stack',
-        opts='.salt.opts',)
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        masters={'ipath': salt.utils.stringutils.to_str('cluster.masters'), 'ival': odict()},
+        stack=salt.utils.stringutils.to_str('stack'),
+        opts=salt.utils.stringutils.to_str('.salt.opts'),)
 
     def action(self, **kwa):
         '''
@@ -232,14 +236,14 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-            'inode': 'salt.road.manor.',
-            'stack': 'stack',
-            'opts': '.salt.opts',
-            'txmsgs': {'ipath': 'txmsgs',
+            'inode': salt.utils.stringutils.to_str('salt.road.manor.'),
+            'stack': salt.utils.stringutils.to_str('stack'),
+            'opts': salt.utils.stringutils.to_str('.salt.opts'),
+            'txmsgs': {'ipath': salt.utils.stringutils.to_str('txmsgs'),
                        'ival': deque()},
-            'rxmsgs': {'ipath': 'rxmsgs',
+            'rxmsgs': {'ipath': salt.utils.stringutils.to_str('rxmsgs'),
                        'ival': deque()},
-            'local': {'ipath': 'local',
+            'local': {'ipath': salt.utils.stringutils.to_str('local'),
                       'ival': {'main': False,
                                'mutable': False,
                                'uid': None,
@@ -334,8 +338,8 @@ class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        stack='stack', )
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        stack=salt.utils.stringutils.to_str('stack'), )
 
     def action(self, **kwa):
         '''
@@ -358,10 +362,10 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-                    inode=".salt.road.manor.",
-                    stack='stack',
-                    ushers='ushers',
-                    opts='.salt.opts')
+                    inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+                    stack=salt.utils.stringutils.to_str('stack'),
+                    ushers=salt.utils.stringutils.to_str('ushers'),
+                    opts=salt.utils.stringutils.to_str('.salt.opts'))
 
     def action(self, **kwa):
         '''
@@ -397,9 +401,9 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                                                      ha=mha,
                                                      kind=kinds.applKinds.master))
                     except gaierror as ex:
-                        log.warning("Unable to connect to master {0}: {1}".format(mha, ex))
-                        if self.opts.value.get('master_type') != 'failover':
-                            raise ex
+                        log.warning("Unable to connect to master %s: %s", mha, ex)
+                        if self.opts.value.get('master_type') not in ('failover', 'distributed'):
+                            six.reraise(*sys.exc_info())
                 if not stack.remotes:
                     raise ex
 
@@ -418,13 +422,14 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        stack='stack',
-        status=odict(ipath='status', ival=odict(joined=False,
-                                                allowed=False,
-                                                alived=False,
-                                                rejected=False,
-                                                idle=False, )))
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        stack=salt.utils.stringutils.to_str('stack'),
+        status=odict(ipath=salt.utils.stringutils.to_str('status'),
+                     ival=odict(joined=False,
+                                allowed=False,
+                                alived=False,
+                                rejected=False,
+                                idle=False, )))
 
     def action(self, **kwa):
         '''
@@ -449,13 +454,14 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        stack='stack',
-        status=odict(ipath='status', ival=odict(joined=False,
-                                                allowed=False,
-                                                alived=False,
-                                                rejected=False,
-                                                idle=False, )))
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        stack=salt.utils.stringutils.to_str('stack'),
+        status=odict(ipath=salt.utils.stringutils.to_str('status'),
+                     ival=odict(joined=False,
+                                allowed=False,
+                                alived=False,
+                                rejected=False,
+                                idle=False, )))
 
     def action(self, **kwa):
         '''
@@ -482,8 +488,8 @@ class SaltRaetRoadStackAllower(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        stack='stack', )
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        stack=salt.utils.stringutils.to_str('stack'), )
 
     def action(self, **kwa):
         '''
@@ -507,13 +513,14 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        stack='stack',
-        status=odict(ipath='status', ival=odict(joined=False,
-                                                allowed=False,
-                                                alived=False,
-                                                rejected=False,
-                                                idle=False, )))
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        stack=salt.utils.stringutils.to_str('stack'),
+        status=odict(ipath=salt.utils.stringutils.to_str('status'),
+                     ival=odict(joined=False,
+                                allowed=False,
+                                alived=False,
+                                rejected=False,
+                                idle=False, )))
 
     def action(self, **kwa):
         '''
@@ -536,19 +543,19 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        stack='stack',
-        alloweds={'ipath': '.salt.var.presence.alloweds',
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        stack=salt.utils.stringutils.to_str('stack'),
+        alloweds={'ipath': salt.utils.stringutils.to_str('.salt.var.presence.alloweds'),
                   'ival': odict()},
-        aliveds={'ipath': '.salt.var.presence.aliveds',
+        aliveds={'ipath': salt.utils.stringutils.to_str('.salt.var.presence.aliveds'),
                  'ival': odict()},
-        reapeds={'ipath': '.salt.var.presence.reapeds',
+        reapeds={'ipath': salt.utils.stringutils.to_str('.salt.var.presence.reapeds'),
                          'ival': odict()},
-        availables={'ipath': '.salt.var.presence.availables',
+        availables={'ipath': salt.utils.stringutils.to_str('.salt.var.presence.availables'),
                     'ival': set()},
-        changeds={'ipath': '.salt.var.presence.changeds',
+        changeds={'ipath': salt.utils.stringutils.to_str('.salt.var.presence.changeds'),
                   'ival': odict(plus=set(), minus=set())},
-        event='.salt.event.events',)
+        event=salt.utils.stringutils.to_str('.salt.event.events'),)
 
     def _fire_events(self):
         stack = self.stack.value
@@ -614,8 +621,8 @@ class SaltRaetRoadStackPrinter(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".salt.road.manor.",
-        rxmsgs=odict(ipath='rxmsgs', ival=deque()),)
+        inode=salt.utils.stringutils.to_str('.salt.road.manor.'),
+        rxmsgs=odict(ipath=salt.utils.stringutils.to_str('rxmsgs'), ival=deque()),)
 
     def action(self, **kwa):
         '''
@@ -635,14 +642,14 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
     do salt load modules at enter
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'grains': '.salt.grains',
-               'utils': '.salt.loader.utils',
-               'modules': '.salt.loader.modules',
-               'grain_time': '.salt.var.grain_time',
-               'module_refresh': '.salt.var.module_refresh',
-               'returners': '.salt.loader.returners',
-               'module_executors': '.salt.loader.executors'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'grains': salt.utils.stringutils.to_str('.salt.grains'),
+               'utils': salt.utils.stringutils.to_str('.salt.loader.utils'),
+               'modules': salt.utils.stringutils.to_str('.salt.loader.modules'),
+               'grain_time': salt.utils.stringutils.to_str('.salt.var.grain_time'),
+               'module_refresh': salt.utils.stringutils.to_str('.salt.var.module_refresh'),
+               'returners': salt.utils.stringutils.to_str('.salt.loader.returners'),
+               'module_executors': salt.utils.stringutils.to_str('.salt.loader.executors')}
 
     def _prepare(self):
         self._load_modules()
@@ -662,13 +669,11 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
         # this feature ONLY works on *nix like OSs (resource module doesn't work on windows)
         modules_max_memory = False
         if self.opts.value.get('modules_max_memory', -1) > 0 and HAS_PSUTIL and HAS_RESOURCE:
-            log.debug(
-                    'modules_max_memory set, enforcing a maximum of {0}'.format(
-                        self.opts.value['modules_max_memory'])
-                    )
+            log.debug('modules_max_memory set, enforcing a maximum of %s',
+                      self.opts.value['modules_max_memory'])
             modules_max_memory = True
             old_mem_limit = resource.getrlimit(resource.RLIMIT_AS)
-            rss, vms = psutil.Process(os.getpid()).memory_info()
+            rss, vms = psutil.Process(os.getpid()).memory_info()[:2]
             mem_limit = rss + vms + self.opts.value['modules_max_memory']
             resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
         elif self.opts.value.get('modules_max_memory', -1) > 0:
@@ -703,13 +708,14 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
 
     do salt load pillar
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'pillar': '.salt.pillar',
-               'grains': '.salt.grains',
-               'modules': '.salt.loader.modules',
-               'pillar_refresh': '.salt.var.pillar_refresh',
-               'road_stack': '.salt.road.manor.stack',
-               'master_estate_name': '.salt.track.master_estate_name', }
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'pillar': salt.utils.stringutils.to_str('.salt.pillar'),
+               'grains': salt.utils.stringutils.to_str('.salt.grains'),
+               'modules': salt.utils.stringutils.to_str('.salt.loader.modules'),
+               'pillar_refresh': salt.utils.stringutils.to_str('.salt.var.pillar_refresh'),
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
+               'master_estate_name': salt.utils.stringutils.to_str('.salt.track.master_estate_name')
+               }
 
     def action(self):
         '''
@@ -735,7 +741,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
                  'dst': (master.name, None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
-                'saltenv': self.opts.value['environment'],
+                'saltenv': self.opts.value['saltenv'],
                 'ver': '2',
                 'cmd': '_pillar'}
         self.road_stack.value.transmit({'route': route, 'load': load},
@@ -762,11 +768,11 @@ class SaltSchedule(ioflo.base.deeding.Deed):
     do salt schedule
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'grains': '.salt.grains',
-               'utils': '.salt.loader.utils',
-               'modules': '.salt.loader.modules',
-               'returners': '.salt.loader.returners'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'grains': salt.utils.stringutils.to_str('.salt.grains'),
+               'utils': salt.utils.stringutils.to_str('.salt.loader.utils'),
+               'modules': salt.utils.stringutils.to_str('.salt.loader.modules'),
+               'returners': salt.utils.stringutils.to_str('.salt.loader.returners')}
 
     def _prepare(self):
         '''
@@ -796,21 +802,21 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
     do salt raet manor lane setup at enter
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'event_yards': '.salt.event.yards',
-               'local_cmd': '.salt.var.local_cmd',
-               'remote_cmd': '.salt.var.remote_cmd',
-               'publish': '.salt.var.publish',
-               'fun': '.salt.var.fun',
-               'worker_verify': '.salt.var.worker_verify',
-               'event': '.salt.event.events',
-               'event_req': '.salt.event.event_req',
-               'presence_req': '.salt.presence.event_req',
-               'stats_req': '.salt.stats.event_req',
-               'workers': '.salt.track.workers',
-               'inode': '.salt.lane.manor.',
-               'stack': 'stack',
-               'local': {'ipath': 'local',
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'event_yards': salt.utils.stringutils.to_str('.salt.event.yards'),
+               'local_cmd': salt.utils.stringutils.to_str('.salt.var.local_cmd'),
+               'remote_cmd': salt.utils.stringutils.to_str('.salt.var.remote_cmd'),
+               'publish': salt.utils.stringutils.to_str('.salt.var.publish'),
+               'fun': salt.utils.stringutils.to_str('.salt.var.fun'),
+               'worker_verify': salt.utils.stringutils.to_str('.salt.var.worker_verify'),
+               'event': salt.utils.stringutils.to_str('.salt.event.events'),
+               'event_req': salt.utils.stringutils.to_str('.salt.event.event_req'),
+               'presence_req': salt.utils.stringutils.to_str('.salt.presence.event_req'),
+               'stats_req': salt.utils.stringutils.to_str('.salt.stats.event_req'),
+               'workers': salt.utils.stringutils.to_str('.salt.track.workers'),
+               'inode': salt.utils.stringutils.to_str('.salt.lane.manor.'),
+               'stack': salt.utils.stringutils.to_str('stack'),
+               'local': {'ipath': salt.utils.stringutils.to_str('local'),
                           'ival': {'lanename': 'master',
                                    'bufcnt': 100}},
             }
@@ -865,7 +871,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
         self.presence_req.value = deque()
         self.stats_req.value = deque()
         self.publish.value = deque()
-        self.worker_verify.value = salt.utils.rand_string()
+        self.worker_verify.value = salt.utils.stringutils.random()
         if self.opts.value.get('worker_threads'):
             worker_seed = []
             for index in range(self.opts.value['worker_threads']):
@@ -882,7 +888,7 @@ class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
 
     '''
     Ioinits = odict(
-        inode=".salt.lane.manor",
+        inode='.salt.lane.manor',
         stack='stack',)
 
     def action(self, **kwa):
@@ -902,7 +908,7 @@ class SaltRaetRoadStackService(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-               'road_stack': '.salt.road.manor.stack',
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
                }
 
     def action(self):
@@ -921,7 +927,7 @@ class SaltRaetRoadStackServiceRx(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-               'road_stack': '.salt.road.manor.stack',
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
                }
 
     def action(self):
@@ -942,7 +948,7 @@ class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
     # Yes, this class is identical to RX, this is because we still need to
     # separate out rx and tx in raet itself
     Ioinits = {
-               'road_stack': '.salt.road.manor.stack',
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
                }
 
     def action(self):
@@ -961,7 +967,7 @@ class SaltRaetLaneStackServiceRx(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-               'lane_stack': '.salt.lane.manor.stack',
+               'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
                }
 
     def action(self):
@@ -982,7 +988,7 @@ class SaltRaetLaneStackServiceTx(ioflo.base.deeding.Deed):
     # Yes, this class is identical to RX, this is because we still need to
     # separate out rx and tx in raet itself
     Ioinits = {
-               'lane_stack': '.salt.lane.manor.stack',
+               'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
                }
 
     def action(self):
@@ -999,22 +1005,23 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
     This is a base class
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'local_cmd': '.salt.var.local_cmd',
-               'remote_cmd': '.salt.var.remote_cmd',
-               'publish': '.salt.var.publish',
-               'fun': '.salt.var.fun',
-               'event': '.salt.event.events',
-               'event_req': '.salt.event.event_req',  # deque
-               'presence_req': '.salt.presence.event_req',  # deque
-               'stats_req': '.salt.stats.event_req',  # deque
-               'availables': '.salt.var.presence.availables',  # set()
-               'workers': '.salt.track.workers',
-               'worker_verify': '.salt.var.worker_verify',
-               'lane_stack': '.salt.lane.manor.stack',
-               'road_stack': '.salt.road.manor.stack',
-               'master_estate_name': '.salt.track.master_estate_name',
-               'laters': {'ipath': '.salt.lane.manor.laters',  # requeuing when not yet routable
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'local_cmd': salt.utils.stringutils.to_str('.salt.var.local_cmd'),
+               'remote_cmd': salt.utils.stringutils.to_str('.salt.var.remote_cmd'),
+               'publish': salt.utils.stringutils.to_str('.salt.var.publish'),
+               'fun': salt.utils.stringutils.to_str('.salt.var.fun'),
+               'event': salt.utils.stringutils.to_str('.salt.event.events'),
+               'event_req': salt.utils.stringutils.to_str('.salt.event.event_req'),  # deque
+               'presence_req': salt.utils.stringutils.to_str('.salt.presence.event_req'),  # deque
+               'stats_req': salt.utils.stringutils.to_str('.salt.stats.event_req'),  # deque
+               'availables': salt.utils.stringutils.to_str('.salt.var.presence.availables'),  # set()
+               'workers': salt.utils.stringutils.to_str('.salt.track.workers'),
+               'worker_verify': salt.utils.stringutils.to_str('.salt.var.worker_verify'),
+               'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
+               'master_estate_name': salt.utils.stringutils.to_str('.salt.track.master_estate_name'),
+               # requeuing when not yet routable
+               'laters': {'ipath': salt.utils.stringutils.to_str('.salt.lane.manor.laters'),
                           'ival': deque()}}
 
     def _process_road_rxmsg(self, msg, sender):
@@ -1104,22 +1111,22 @@ class SaltRaetRouterMaster(SaltRaetRouter):
             s_estate, s_yard, s_share = msg['route']['src']
             d_estate, d_yard, d_share = msg['route']['dst']
         except (ValueError, IndexError):
-            log.error('Received invalid message: {0}'.format(msg))
+            log.error('Received invalid message: %s', msg)
             return
 
         if s_estate is None:  # drop
             return
 
-        log.debug("**** Road Router rxMsg **** id={0} estate={1} yard={2}\n"
-                  "   msg= {3}\n".format(
-                      self.opts.value['id'],
-                      self.road_stack.value.local.name,
-                      self.lane_stack.value.local.name,
-                      msg))
+        log.debug(
+            '**** Road Router rxMsg **** id=%s estate=%s yard=%s\nmsg=%s',
+            self.opts.value['id'],
+            self.road_stack.value.local.name,
+            self.lane_stack.value.local.name,
+            msg
+        )
 
         if d_estate is not None and d_estate != self.road_stack.value.local.name:
-            log.error(
-                'Road Router Received message for wrong estate: {0}'.format(d_estate))
+            log.error('Road Router Received message for wrong estate: %s', d_estate)
             return
 
         if d_yard is not None:
@@ -1130,15 +1137,15 @@ class SaltRaetRouterMaster(SaltRaetRouter):
             return
         if d_share is None:
             # No queue destination!
-            log.error('Received message without share: {0}'.format(msg))
+            log.error('Received message without share: %s', msg)
             return
         elif d_share == 'event_fire':  # rebroadcast events from other masters
             self.event.value.append(msg)
-            #log.debug("\n**** Event Fire \n {0}\n".format(msg))
+            #log.debug("\n**** Event Fire \n %s\n", msg)
             return
         elif d_share == 'local_cmd':
             # Refuse local commands over the wire
-            log.error('Received local command remotely! Ignoring: {0}'.format(msg))
+            log.error('Received local command remotely! Ignoring: %s', msg)
             return
         elif d_share == 'remote_cmd':
             # Send it to a remote worker
@@ -1160,7 +1167,7 @@ class SaltRaetRouterMaster(SaltRaetRouter):
             s_estate, s_yard, s_share = msg['route']['src']
             d_estate, d_yard, d_share = msg['route']['dst']
         except (ValueError, IndexError):
-            log.error('Lane Router Received invalid message: {0}'.format(msg))
+            log.error('Lane Router Received invalid message: %s', msg)
             return
 
         if s_yard is None:
@@ -1170,12 +1177,13 @@ class SaltRaetRouterMaster(SaltRaetRouter):
             s_estate = self.road_stack.value.local.name
             msg['route']['src'] = (s_estate, s_yard, s_share)
 
-        log.debug("**** Lane Router rxMsg **** id={0} estate={1} yard={2}\n"
-                  "   msg={3}\n".format(
-                      self.opts.value['id'],
-                      self.road_stack.value.local.name,
-                      self.lane_stack.value.local.name,
-                      msg))
+        log.debug(
+            '**** Lane Router rxMsg **** id=%s estate=%s yard=%s\nmsg=%s',
+            self.opts.value['id'],
+            self.road_stack.value.local.name,
+            self.lane_stack.value.local.name,
+            msg
+        )
 
         if d_estate is None:
             pass
@@ -1202,23 +1210,23 @@ class SaltRaetRouterMaster(SaltRaetRouter):
             return
         if d_share is None:
             # No queue destination!
-            log.error('Lane Router Received message without share: {0}'.format(msg))
+            log.error('Lane Router Received message without share: %s', msg)
             return
         elif d_share == 'local_cmd':
             self.lane_stack.value.transmit(msg,
                                            self.lane_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'event_req':
             self.event_req.value.append(msg)
-            #log.debug("\n**** Event Subscribe \n {0}\n".format(msg))
+            #log.debug("\n**** Event Subscribe \n %s\n", msg)
         elif d_share == 'event_fire':
             self.event.value.append(msg)
-            #log.debug("\n**** Event Fire \n {0}\n".format(msg))
+            #log.debug("\n**** Event Fire \n %s\n", msg)
         elif d_share == 'presence_req':
             self.presence_req.value.append(msg)
-            #log.debug("\n**** Presence Request \n {0}\n".format(msg))
+            #log.debug("\n**** Presence Request \n %s\n", msg)
         elif d_share == 'stats_req':
             self.stats_req.value.append(msg)
-            #log.debug("\n**** Stats Request \n {0}\n".format(msg))
+            #log.debug("\n**** Stats Request \n %s\n", msg)
 
 
 class SaltRaetRouterMinion(SaltRaetRouter):
@@ -1239,22 +1247,22 @@ class SaltRaetRouterMinion(SaltRaetRouter):
             s_estate, s_yard, s_share = msg['route']['src']
             d_estate, d_yard, d_share = msg['route']['dst']
         except (ValueError, IndexError):
-            log.error('Received invalid message: {0}'.format(msg))
+            log.error('Received invalid message: %s', msg)
             return
 
         if s_estate is None:  # drop
             return
 
-        log.debug("**** Road Router rxMsg **** id={0} estate={1} yard={2}\n"
-                  "   msg= {3}\n".format(
-                      self.opts.value['id'],
-                      self.road_stack.value.local.name,
-                      self.lane_stack.value.local.name,
-                      msg))
+        log.debug(
+            '**** Road Router rxMsg **** id=%s estate=%s yard=%s\nmsg=%s',
+            self.opts.value['id'],
+            self.road_stack.value.local.name,
+            self.lane_stack.value.local.name,
+            msg
+        )
 
         if d_estate is not None and d_estate != self.road_stack.value.local.name:
-            log.error(
-                'Road Router Received message for wrong estate: {0}'.format(d_estate))
+            log.error('Road Router Received message for wrong estate: %s', d_estate)
             return
 
         if d_yard is not None:
@@ -1266,7 +1274,7 @@ class SaltRaetRouterMinion(SaltRaetRouter):
             return
         if d_share is None:
             # No queue destination!
-            log.error('Received message without share: {0}'.format(msg))
+            log.error('Received message without share: %s', msg)
             return
 
         elif d_share == 'fun':
@@ -1274,7 +1282,7 @@ class SaltRaetRouterMinion(SaltRaetRouter):
                 self.fun.value.append(msg)
         elif d_share == 'stats_req':
             self.stats_req.value.append(msg)
-            #log.debug("\n**** Stats Request \n {0}\n".format(msg))
+            #log.debug("\n**** Stats Request \n %s\n", msg)
 
     def _process_lane_rxmsg(self, msg, sender):
         '''
@@ -1288,7 +1296,7 @@ class SaltRaetRouterMinion(SaltRaetRouter):
             s_estate, s_yard, s_share = msg['route']['src']
             d_estate, d_yard, d_share = msg['route']['dst']
         except (ValueError, IndexError):
-            log.error('Lane Router Received invalid message: {0}'.format(msg))
+            log.error('Lane Router Received invalid message: %s', msg)
             return
 
         if s_yard is None:
@@ -1298,12 +1306,13 @@ class SaltRaetRouterMinion(SaltRaetRouter):
             s_estate = self.road_stack.value.local.name
             msg['route']['src'] = (s_estate, s_yard, s_share)
 
-        log.debug("**** Lane Router rxMsg **** id={0} estate={1} yard={2}\n"
-                  "   msg={3}\n".format(
-                      self.opts.value['id'],
-                      self.road_stack.value.local.name,
-                      self.lane_stack.value.local.name,
-                      msg))
+        log.debug(
+            '**** Lane Router rxMsg **** id=%s estate=%s yard=%s\nmsg=%s',
+            self.opts.value['id'],
+            self.road_stack.value.local.name,
+            self.lane_stack.value.local.name,
+            msg
+        )
 
         if d_estate is None:
             pass
@@ -1325,31 +1334,31 @@ class SaltRaetRouterMinion(SaltRaetRouter):
             return
         if d_share is None:
             # No queue destination!
-            log.error('Lane Router Received message without share: {0}'.format(msg))
+            log.error('Lane Router Received message without share: %s', msg)
             return
 
         elif d_share == 'event_req':
             self.event_req.value.append(msg)
-            #log.debug("\n**** Event Subscribe \n {0}\n".format(msg))
+            #log.debug("\n**** Event Subscribe \n %s\n", msg)
         elif d_share == 'event_fire':
             self.event.value.append(msg)
-            #log.debug("\n**** Event Fire \n {0}\n".format(msg))
+            #log.debug("\n**** Event Fire \n %s\n", msg)
 
         elif d_share == 'remote_cmd':  # assume  minion to master or salt-call
             if not self.road_stack.value.remotes:
                 log.error("**** Lane Router: Missing joined master. Unable to route "
-                          "remote_cmd. Requeuing".format())
+                          "remote_cmd. Requeuing")
                 self.laters.value.append((msg, sender))
                 return
             d_estate = self._get_master_estate_name(clustered=self.opts.get('cluster_mode', False))
             if not d_estate:
                 log.error("**** Lane Router: No available destination estate for 'remote_cmd'."
-                          "Unable to route. Requeuing".format())
+                          "Unable to route. Requeuing")
                 self.laters.value.append((msg, sender))
                 return
             msg['route']['dst'] = (d_estate, d_yard, d_share)
             log.debug("**** Lane Router: Missing destination estate for 'remote_cmd'. "
-                      "Using default route={0}.".format(msg['route']['dst']))
+                      "Using default route=%s.", msg['route']['dst'])
             self.road_stack.value.message(msg,
                                           self.road_stack.value.nameRemotes[d_estate].uid)
 
@@ -1396,15 +1405,15 @@ class SaltRaetEventer(ioflo.base.deeding.Deed):
     do salt raet eventer
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'event_yards': '.salt.event.yards',
-               'event': '.salt.event.events',
-               'event_req': '.salt.event.event_req',
-               'module_refresh': '.salt.var.module_refresh',
-               'pillar_refresh': '.salt.var.pillar_refresh',
-               'lane_stack': '.salt.lane.manor.stack',
-               'road_stack': '.salt.road.manor.stack',
-               'availables': '.salt.var.presence.availables', }
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'event_yards': salt.utils.stringutils.to_str('.salt.event.yards'),
+               'event': salt.utils.stringutils.to_str('.salt.event.events'),
+               'event_req': salt.utils.stringutils.to_str('.salt.event.event_req'),
+               'module_refresh': salt.utils.stringutils.to_str('.salt.var.module_refresh'),
+               'pillar_refresh': salt.utils.stringutils.to_str('.salt.var.pillar_refresh'),
+               'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
+               'availables': salt.utils.stringutils.to_str('.salt.var.presence.availables'), }
 
     def _register_event_yard(self, msg):
         '''
@@ -1485,13 +1494,13 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
     do salt raet presenter
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'presence_req': '.salt.presence.event_req',
-               'lane_stack': '.salt.lane.manor.stack',
-               'alloweds': '.salt.var.presence.alloweds',  # odict
-               'aliveds': '.salt.var.presence.aliveds',  # odict
-               'reapeds': '.salt.var.presence.reapeds',  # odict
-               'availables': '.salt.var.presence.availables',  # set
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'presence_req': salt.utils.stringutils.to_str('.salt.presence.event_req'),
+               'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+               'alloweds': salt.utils.stringutils.to_str('.salt.var.presence.alloweds'),  # odict
+               'aliveds': salt.utils.stringutils.to_str('.salt.var.presence.aliveds'),  # odict
+               'reapeds': salt.utils.stringutils.to_str('.salt.var.presence.reapeds'),  # odict
+               'availables': salt.utils.stringutils.to_str('.salt.var.presence.availables'),  # set
               }
 
     def _send_presence(self, msg):
@@ -1525,7 +1534,7 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
                     minions = states[state].value
                 except KeyError:
                     # error: wrong/unknown state requested
-                    log.error('Lane Router Received invalid message: {0}'.format(msg))
+                    log.error('Lane Router Received invalid message: %s', msg)
                     return
 
                 result = odict()
@@ -1560,10 +1569,10 @@ class SaltRaetStatsEventer(ioflo.base.deeding.Deed):
     do salt raet state eventer
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'stats_req': '.salt.stats.event_req',
-               'lane_stack': '.salt.lane.manor.stack',
-               'road_stack': '.salt.road.manor.stack',
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'stats_req': salt.utils.stringutils.to_str('.salt.stats.event_req'),
+               'lane_stack': salt.utils.stringutils.to_str('.salt.lane.manor.stack'),
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
     }
 
     def _send_stats(self, msg):
@@ -1579,7 +1588,7 @@ class SaltRaetStatsEventer(ioflo.base.deeding.Deed):
         elif tag == tagify('lane', 'stats'):
             return self.lane_stack.value.stats
         else:
-            log.error('Missing or invalid tag: {0}'.format(tag))
+            log.error('Missing or invalid tag: %s', tag)
             return None
 
     def action(self):
@@ -1646,10 +1655,10 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
     do salt raet publisher
 
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'publish': '.salt.var.publish',
-               'stack': '.salt.road.manor.stack',
-               'availables': '.salt.var.presence.availables',
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'publish': salt.utils.stringutils.to_str('.salt.var.publish'),
+               'stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
+               'availables': salt.utils.stringutils.to_str('.salt.var.presence.availables'),
             }
 
     def _publish(self, pub_msg):
@@ -1687,8 +1696,8 @@ class SaltRaetSetupEngines(ioflo.base.deeding.Deed):
     '''
     Start the engines!
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'proc_mgr': '.salt.usr.proc_mgr'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'proc_mgr': salt.utils.stringutils.to_str('.salt.usr.proc_mgr')}
 
     def action(self):
         '''
@@ -1701,9 +1710,9 @@ class SaltRaetSetupBeacon(ioflo.base.deeding.Deed):
     '''
     Create the Beacon subsystem
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'beacon': '.salt.beacon',
-               'modules': '.salt.loader.modules'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'beacon': salt.utils.stringutils.to_str('.salt.beacon'),
+               'modules': salt.utils.stringutils.to_str('.salt.loader.modules')}
 
     def action(self):
         '''
@@ -1718,11 +1727,11 @@ class SaltRaetBeacon(ioflo.base.deeding.Deed):
     '''
     Run the beacons
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'modules': '.salt.loader.modules',
-               'master_events': '.salt.var.master_events',
-               'event': '.salt.event.events',
-               'beacon': '.salt.beacon'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'modules': salt.utils.stringutils.to_str('.salt.loader.modules'),
+               'master_events': salt.utils.stringutils.to_str('.salt.var.master_events'),
+               'event': salt.utils.stringutils.to_str('.salt.event.events'),
+               'beacon': salt.utils.stringutils.to_str('.salt.beacon')}
 
     def action(self):
         '''
@@ -1745,9 +1754,9 @@ class SaltRaetMasterEvents(ioflo.base.deeding.Deed):
     Take the events off the master event que and send them to the master to
     be fired
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'road_stack': '.salt.road.manor.stack',
-               'master_events': '.salt.var.master_events'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'road_stack': salt.utils.stringutils.to_str('.salt.road.manor.stack'),
+               'master_events': salt.utils.stringutils.to_str('.salt.var.master_events')}
 
     def _prepare(self):
         self.master_events.value = deque()
@@ -1773,9 +1782,9 @@ class SaltRaetSetupMatcher(ioflo.base.deeding.Deed):
     '''
     Make the matcher object
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'modules': '.salt.loader.modules',
-               'matcher': '.salt.matcher'}
+    Ioinits = {'opts': salt.utils.stringutils.to_str('.salt.opts'),
+               'modules': salt.utils.stringutils.to_str('.salt.loader.modules'),
+               'matcher': salt.utils.stringutils.to_str('.salt.matcher')}
 
     def action(self):
         self.matcher.value = salt.minion.Matcher(

@@ -12,7 +12,7 @@ Wrapper for at(1) on Solaris-like systems
 
 .. versionadded:: 2017.7.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import re
@@ -23,9 +23,12 @@ import logging
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import map
+from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'at'
@@ -35,11 +38,11 @@ def __virtual__():
     '''
     We only deal with Solaris' specific version of at
     '''
-    if not salt.utils.is_sunos():
+    if not salt.utils.platform.is_sunos():
         return (False, 'The at module could not be loaded: unsupported platform')
-    if not salt.utils.which('at') or \
-        not salt.utils.which('atq') or \
-        not salt.utils.which('atrm'):
+    if not salt.utils.path.which('at') or \
+        not salt.utils.path.which('atq') or \
+        not salt.utils.path.which('atrm'):
         return (False, 'The at module could not be loaded: at command not found')
     return __virtualname__
 
@@ -93,15 +96,16 @@ def atq(tag=None):
         specs.append(tmp[5])
 
         # make sure job is str
-        job = str(job)
+        job = six.text_type(job)
 
         # search for any tags
         atjob_file = '/var/spool/cron/atjobs/{job}'.format(
             job=job
         )
         if __salt__['file.file_exists'](atjob_file):
-            with salt.utils.fopen(atjob_file, 'r') as atjob:
+            with salt.utils.files.fopen(atjob_file, 'r') as atjob:
                 for line in atjob:
+                    line = salt.utils.stringutils.to_unicode(line)
                     tmp = job_kw_regex.match(line)
                     if tmp:
                         job_tag = tmp.groups()[0]
@@ -203,7 +207,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
         return {'jobs': [], 'error': res['stderr']}
     else:
         jobid = res['stderr'].splitlines()[1]
-        jobid = str(jobid.split()[1])
+        jobid = six.text_type(jobid.split()[1])
         return atq(jobid)
 
 
@@ -224,8 +228,9 @@ def atc(jobid):
         job=jobid
     )
     if __salt__['file.file_exists'](atjob_file):
-        with salt.utils.fopen(atjob_file, 'r') as rfh:
-            return "".join(rfh.readlines())
+        with salt.utils.files.fopen(atjob_file, 'r') as rfh:
+            return ''.join([salt.utils.stringutils.to_unicode(x)
+                            for x in rfh.readlines()])
     else:
         return {'error': 'invalid job id \'{0}\''.format(jobid)}
 
@@ -244,7 +249,7 @@ def _atq(**kwargs):
     day = kwargs.get('day', None)
     month = kwargs.get('month', None)
     year = kwargs.get('year', None)
-    if year and len(str(year)) == 2:
+    if year and len(six.text_type(year)) == 2:
         year = '20{0}'.format(year)
 
     jobinfo = atq()['jobs']

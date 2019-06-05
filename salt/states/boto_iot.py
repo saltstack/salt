@@ -70,19 +70,19 @@ config:
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
 '''
-
-# Import Python Libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+import datetime
 import logging
 import os
-import os.path
-import datetime
 import time
-import json
 
-# Import Salt Libs
-import salt.utils
-from salt.ext.six import string_types
+# Import Salt libs
+import salt.utils.data
+import salt.utils.json
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -275,8 +275,10 @@ def thing_type_absent(name, thingTypeName,
 
     # wait required 5 minutes since deprecation time
     if _delete_wait_timer:
-        log.warning('wait for {0} seconds per AWS (5 minutes after deprecation time) '
-                 'before we can delete iot thing type'.format(_delete_wait_timer))
+        log.warning(
+            'wait for %s seconds per AWS (5 minutes after deprecation time) '
+            'before we can delete iot thing type', _delete_wait_timer
+        )
         time.sleep(_delete_wait_timer)
 
     # delete thing type
@@ -363,15 +365,15 @@ def policy_present(name, policyName, policyDocument,
     _describe = __salt__['boto_iot.describe_policy'](policyName=policyName,
                                   region=region, key=key, keyid=keyid, profile=profile)['policy']
 
-    if isinstance(_describe['policyDocument'], string_types):
-        describeDict = json.loads(_describe['policyDocument'])
+    if isinstance(_describe['policyDocument'], six.string_types):
+        describeDict = salt.utils.json.loads(_describe['policyDocument'])
     else:
         describeDict = _describe['policyDocument']
 
-    if isinstance(policyDocument, string_types):
-        policyDocument = json.loads(policyDocument)
+    if isinstance(policyDocument, six.string_types):
+        policyDocument = salt.utils.json.loads(policyDocument)
 
-    r = salt.utils.compare_dicts(describeDict, policyDocument)
+    r = salt.utils.data.compare_dicts(describeDict, policyDocument)
     if bool(r):
         if __opts__['test']:
             msg = 'Policy {0} set to be modified.'.format(policyName)
@@ -380,7 +382,7 @@ def policy_present(name, policyName, policyDocument,
             return ret
 
         ret['comment'] = os.linesep.join([ret['comment'], 'Policy to be modified'])
-        policyDocument = json.dumps(policyDocument)
+        policyDocument = salt.utils.json.dumps(policyDocument)
 
         r = __salt__['boto_iot.create_policy_version'](policyName=policyName,
                                                policyDocument=policyDocument,
@@ -706,8 +708,8 @@ def topic_rule_present(name, ruleName, sql, actions, description='',
     _describe = __salt__['boto_iot.describe_topic_rule'](ruleName=ruleName,
                                   region=region, key=key, keyid=keyid, profile=profile)['rule']
 
-    if isinstance(actions, string_types):
-        actions = json.loads(actions)
+    if isinstance(actions, six.string_types):
+        actions = salt.utils.json.loads(actions)
 
     need_update = False
     # cmp() function is deprecated in Python 3: use the following as a substitute for 'r'.
@@ -725,7 +727,7 @@ def topic_rule_present(name, ruleName, sql, actions, description='',
     if need_update:
         if __opts__['test']:
             msg = 'Rule {0} set to be modified.'.format(ruleName)
-            ret['changes'] = None
+            ret['changes'] = {}
             ret['comment'] = msg
             ret['result'] = None
             return ret

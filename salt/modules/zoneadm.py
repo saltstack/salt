@@ -11,13 +11,13 @@ Module for Solaris 10's zoneadm
 .. warning::
     Oracle Solaris 11's zoneadm is not supported by this module!
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
 import salt.utils.decorators
 from salt.ext.six.moves import range
 
@@ -61,11 +61,11 @@ def __virtual__():
     We are available if we are have zoneadm and are the global zone on
     Solaris 10, OmniOS, OpenIndiana, OpenSolaris, or Smartos.
     '''
-    ## note: we depend on PR#37472 to distinguish between Solaris and Oracle Solaris
-    if _is_globalzone() and salt.utils.which('zoneadm'):
-        if __grains__['os'] in ['Solaris', 'OpenSolaris', 'SmartOS', 'OmniOS', 'OpenIndiana']:
+    if _is_globalzone() and salt.utils.path.which('zoneadm'):
+        if __grains__['os'] in ['OpenSolaris', 'SmartOS', 'OmniOS', 'OpenIndiana']:
             return __virtualname__
-
+        elif __grains__['os'] == 'Oracle Solaris' and int(__grains__['osmajorrelease']) == 10:
+            return __virtualname__
     return (
         False,
         '{0} module can only be loaded in a solaris globalzone.'.format(

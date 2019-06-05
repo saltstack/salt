@@ -155,7 +155,7 @@ This state creates a private key then requests a certificate signed by ca accord
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import datetime
 import os
 import re
@@ -163,10 +163,9 @@ import copy
 
 # Import Salt Libs
 import salt.exceptions
-import salt.utils
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     from M2Crypto.RSA import RSAError
@@ -293,7 +292,7 @@ def private_key_managed(name,
           x509.private_key_managed:
             - bits: 4096
             - new: True
-            {% if salt['file.file_exists']('/etc/pki/ca.key') -%}
+            {% if salt['file.file_exists']('/etc/pki/www.key') -%}
             - prereq:
               - x509: /etc/pki/www.crt
             {%- endif %}
@@ -309,9 +308,12 @@ def private_key_managed(name,
         file_args['contents'] = __salt__['x509.create_private_key'](
             text=True, bits=bits, passphrase=passphrase, cipher=cipher, verbose=verbose)
 
+    # Ensure the key contents are a string before passing it along
+    file_args['contents'] = salt.utils.stringutils.to_str(file_args['contents'])
+
     ret = __states__['file.managed'](**file_args)
     if ret['changes'] and new_key:
-        ret['changes'] = 'New private key generated'
+        ret['changes'] = {'new': 'New private key generated'}
 
     return ret
 
@@ -549,7 +551,7 @@ def certificate_managed(name,
             if not private_ret['result']:
                 return private_ret
 
-    file_args['contents'] += certificate
+    file_args['contents'] += salt.utils.stringutils.to_str(certificate)
 
     if not append_certs:
         append_certs = []

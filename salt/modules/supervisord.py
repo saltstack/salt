@@ -6,7 +6,7 @@ virtualenv
 
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import 3rd-party libs
@@ -14,7 +14,7 @@ from salt.ext.six import string_types
 from salt.ext.six.moves import configparser  # pylint: disable=import-error
 
 # Import salt libs
-import salt.utils
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
@@ -63,10 +63,12 @@ def _ctl_cmd(cmd, name, conf_file, bin_env):
 
 
 def _get_return(ret):
-    if ret['retcode'] == 0:
-        return ret['stdout']
-    else:
-        return ''
+    retmsg = ret['stdout']
+    if ret['retcode'] != 0:
+        # This is a non 0 exit code
+        if 'ERROR' not in retmsg:
+            retmsg = 'ERROR: {}'.format(retmsg)
+    return retmsg
 
 
 def start(name='all', user=None, conf_file=None, bin_env=None):
@@ -408,7 +410,7 @@ def options(name, conf_file=None):
         raise CommandExecutionError('Process \'{0}\' not found'.format(name))
     ret = {}
     for key, val in config.items(section_name):
-        val = salt.utils.str_to_num(val.split(';')[0].strip())
+        val = salt.utils.stringutils.to_num(val.split(';')[0].strip())
         # pylint: disable=maybe-no-member
         if isinstance(val, string_types):
             if val.lower() == 'true':

@@ -97,3 +97,14 @@
 #
 #delete_sshkeys: False
 
+# Whether or not to include grains information in the /etc/salt/minion file
+# which is generated when the minion is provisioned.  For example...
+#   grains:
+#     salt-cloud:
+#       driver: ec2
+#       provider: my_ec2:ec2
+#       profile: micro_ec2
+#
+# Default: 'True'
+#
+#enable_cloud_grains: 'True'

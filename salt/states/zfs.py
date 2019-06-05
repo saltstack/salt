@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
-Management zfs datasets
+States for managing zfs datasets
 
 :maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
 :maturity:      new
-:depends:       zfs
+:depends:       salt.utils.zfs, salt.modules.zfs
 :platform:      smartos, illumos, solaris, freebsd, linux
 
 .. versionadded:: 2016.3.0
+.. versionchanged:: 2018.3.1
+  Big refactor to remove duplicate code, better type converions and improved
+  consistancy in output.
 
 .. code-block:: yaml
 
@@ -29,7 +32,7 @@ Management zfs datasets
       zfs.snapshot_present
 
     moka_origin:
-      zfs.hold_present
+      zfs.hold_present:
         - snapshot: test/shares/yuki@frozen
 
     test/shares/moka:
@@ -40,31 +43,35 @@ Management zfs datasets
       zfs.snapshot_absent
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
-from time import strftime, strptime, gmtime
+from datetime import datetime
+
+# Import Salt libs
+from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
 # Define the state's virtual name
 __virtualname__ = 'zfs'
 
+# Compare modifiers for zfs.schedule_snapshot
+comp_hour = {'minute': 0}
+comp_day = {'minute': 0, 'hour': 0}
+comp_month = {'minute': 0, 'hour': 0, 'day': 1}
+comp_year = {'minute': 0, 'hour': 0, 'day': 1, 'month': 1}
+
 
 def __virtual__():
     '''
     Provides zfs state
     '''
-    if 'zfs.create' in __salt__:
-        return True
+    if __grains__['zfs_support']:
+        return __virtualname__
     else:
-        return (
-            False,
-            '{0} state module can only be loaded on illumos, Solaris, SmartOS, FreeBSD, Linux, ...'.format(
-                __virtualname__
-            )
-        )
+        return (False, "The zfs state cannot be loaded: zfs not supported")
 
 
 def _absent(name, dataset_type, force=False, recursive=False):
@@ -81,57 +88,46 @@ def _absent(name, dataset_type, force=False, recursive=False):
         also destroy all the child datasets
 
     '''
-    dataset_type = dataset_type.lower()
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
 
-    log.debug('zfs.{0}_absent::{1}::config::force = {2}'.format(dataset_type, name, force))
-    log.debug('zfs.{0}_absent::{1}::config::recursive = {2}'.format(dataset_type, name, recursive))
+    ## log configuration
+    dataset_type = dataset_type.lower()
+    log.debug('zfs.%s_absent::%s::config::force = %s',
+              dataset_type, name, force)
+    log.debug('zfs.%s_absent::%s::config::recursive = %s',
+              dataset_type, name, recursive)
 
-    # check name and type
-    if dataset_type not in ['filesystem', 'volume', 'snapshot', 'bookmark']:
-        ret['result'] = False
-        ret['comment'] = 'unknown dateset type: {0}'.format(dataset_type)
+    ## destroy dataset if needed
+    if __salt__['zfs.exists'](name, **{'type': dataset_type}):
+        ## NOTE: dataset found with the name and dataset_type
+        if not __opts__['test']:
+            mod_res = __salt__['zfs.destroy'](name, **{'force': force, 'recursive': recursive})
+        else:
+            mod_res = OrderedDict([('destroyed', True)])
 
-    if ret['result'] and dataset_type in ['snapshot'] and '@' not in name:
-        ret['result'] = False
-        ret['comment'] = 'invalid snapshot name: {0}'.format(name)
-
-    if ret['result'] and dataset_type in ['bookmark'] and '#' not in name:
-        ret['result'] = False
-        ret['comment'] = 'invalid bookmark name: {0}'.format(name)
-
-    if ret['result'] and dataset_type in ['filesystem', 'volume']:
-        if '@' in name or '#' in name:
-            ret['result'] = False
-            ret['comment'] = 'invalid filesystem or volume name: {0}'.format(name)
-
-    # check if dataset exists
-    if ret['result']:
-        dataset = name if '#' not in name else None  # work around bookmark oddities
-        if name in __salt__['zfs.list'](dataset, **{'type': dataset_type}):  # we need to destroy it
-            result = {name: 'destroyed'}
-            if not __opts__['test']:
-                result = __salt__['zfs.destroy'](name, **{'force': force, 'recursive': recursive})
-
-            ret['result'] = name in result and result[name] == 'destroyed'
-            ret['changes'] = result if ret['result'] else {}
-            if ret['result']:
-                ret['comment'] = '{0} {1} was destroyed'.format(
-                    dataset_type,
-                    name
-                )
-            else:
-                ret['comment'] = 'failed to destroy {0}'.format(name)
-                if name in result:
-                    ret['comment'] = result[name]
-        else:  # dataset with type and name does not exist! (all good)
-            ret['comment'] = '{0} {1} is not present'.format(
+        ret['result'] = mod_res['destroyed']
+        if ret['result']:
+            ret['changes'][name] = 'destroyed'
+            ret['comment'] = '{0} {1} was destroyed'.format(
                 dataset_type,
-                name
+                name,
             )
+        else:
+            ret['comment'] = 'failed to destroy {0} {1}'.format(
+                dataset_type,
+                name,
+            )
+            if 'error' in mod_res:
+                ret['comment'] = mod_res['error']
+    else:
+        ## NOTE: no dataset found with name of the dataset_type
+        ret['comment'] = '{0} {1} is absent'.format(
+            dataset_type,
+            name
+        )
 
     return ret
 
@@ -153,7 +149,14 @@ def filesystem_absent(name, force=False, recursive=False):
         destroying the volume specified by ``name``. This module is dataset type sensitive.
 
     '''
-    return _absent(name, 'filesystem', force, recursive)
+    if not __utils__['zfs.is_dataset'](name):
+        ret = {'name': name,
+               'changes': {},
+               'result': False,
+               'comment': 'invalid dataset name: {0}'.format(name)}
+    else:
+        ret = _absent(name, 'filesystem', force, recursive)
+    return ret
 
 
 def volume_absent(name, force=False, recursive=False):
@@ -173,7 +176,14 @@ def volume_absent(name, force=False, recursive=False):
         destroying the filesystem specified by ``name``. This module is dataset type sensitive.
 
     '''
-    return _absent(name, 'volume', force, recursive)
+    if not __utils__['zfs.is_dataset'](name):
+        ret = {'name': name,
+               'changes': {},
+               'result': False,
+               'comment': 'invalid dataset name: {0}'.format(name)}
+    else:
+        ret = _absent(name, 'volume', force, recursive)
+    return ret
 
 
 def snapshot_absent(name, force=False, recursive=False):
@@ -186,8 +196,16 @@ def snapshot_absent(name, force=False, recursive=False):
         try harder to destroy the dataset (zfs destroy -f)
     recursive : boolean
         also destroy all the child datasets (zfs destroy -r)
+
     '''
-    return _absent(name, 'snapshot', force, recursive)
+    if not __utils__['zfs.is_snapshot'](name):
+        ret = {'name': name,
+               'changes': {},
+               'result': False,
+               'comment': 'invalid snapshot name: {0}'.format(name)}
+    else:
+        ret = _absent(name, 'snapshot', force, recursive)
+    return ret
 
 
 def bookmark_absent(name, force=False, recursive=False):
@@ -200,8 +218,16 @@ def bookmark_absent(name, force=False, recursive=False):
         try harder to destroy the dataset (zfs destroy -f)
     recursive : boolean
         also destroy all the child datasets (zfs destroy -r)
+
     '''
-    return _absent(name, 'bookmark', force, recursive)
+    if not __utils__['zfs.is_bookmark'](name):
+        ret = {'name': name,
+               'changes': {},
+               'result': False,
+               'comment': 'invalid bookmark name: {0}'.format(name)}
+    else:
+        ret = _absent(name, 'bookmark', force, recursive)
+    return ret
 
 
 def hold_absent(name, snapshot, recursive=False):
@@ -209,53 +235,67 @@ def hold_absent(name, snapshot, recursive=False):
     ensure hold is absent on the system
 
     name : string
-        name of holdt
+        name of hold
     snapshot : string
         name of snapshot
     recursive : boolean
         recursively releases a hold with the given tag on the snapshots of all descendent file systems.
+
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
 
-    log.debug('zfs.hold_absent::{0}::config::snapshot = {1}'.format(name, snapshot))
-    log.debug('zfs.hold_absent::{0}::config::recursive = {1}'.format(name, recursive))
+    ## log configuration
+    log.debug('zfs.hold_absent::%s::config::snapshot = %s',
+              name, snapshot)
+    log.debug('zfs.hold_absent::%s::config::recursive = %s',
+              name, recursive)
 
-    # check name and type
-    if '@' not in snapshot:
+    ## check we have a snapshot/tag name
+    if not __utils__['zfs.is_snapshot'](snapshot):
         ret['result'] = False
         ret['comment'] = 'invalid snapshot name: {0}'.format(snapshot)
+        return ret
 
-    if '@' in name or '#' in name:
+    if __utils__['zfs.is_snapshot'](name) or \
+       __utils__['zfs.is_bookmark'](name) or \
+       name == 'error':
         ret['result'] = False
         ret['comment'] = 'invalid tag name: {0}'.format(name)
+        return ret
 
-    if ret['result']:
-        result = __salt__['zfs.holds'](snapshot)
-        if snapshot not in result:
-            ret['result'] = False
-            ret['comment'] = '{0} is probably not a snapshot'.format(snapshot)
+    ## release hold if required
+    holds = __salt__['zfs.holds'](snapshot)
+    if name in holds:
+        ## NOTE: hold found for snapshot, release it
+        if not __opts__['test']:
+            mod_res = __salt__['zfs.release'](name, snapshot, **{'recursive': recursive})
         else:
-            if snapshot in result[snapshot]:
-                ret['result'] = False
-                ret['comment'] = result[snapshot]
-            elif result[snapshot] == 'no holds' or name not in result[snapshot]:
-                ret['comment'] = 'hold {0} not present'.format(name)
-            else:
-                result = {snapshot: {name: 'released'}}
-                if not __opts__['test']:
-                    result = __salt__['zfs.release'](name, snapshot, **{'recursive': recursive})
+            mod_res = OrderedDict([('released', True)])
 
-                ret['result'] = snapshot in result and name in result[snapshot]
-                if ret['result']:
-                    ret['changes'] = result[snapshot]
-                    ret['comment'] = 'hold {0} released'.format(name)
-                else:
-                    ret['comment'] = 'failed to release {0}'.format(name)
-                    if snapshot in result:
-                        ret['comment'] = result[snapshot]
+        ret['result'] = mod_res['released']
+        if ret['result']:
+            ret['changes'] = {snapshot: {name: 'released'}}
+            ret['comment'] = 'hold {0} released'.format(
+                name,
+            )
+        else:
+            ret['comment'] = 'failed to release hold {0}'.format(
+                name,
+            )
+            if 'error' in mod_res:
+                ret['comment'] = mod_res['error']
+    elif 'error' in holds:
+        ## NOTE: we have an error
+        ret['result'] = False
+        ret['comment'] = holds['error']
+    else:
+        ## NOTE: no hold found with name for snapshot
+        ret['comment'] = 'hold {0} is absent'.format(
+            name,
+        )
 
     return ret
 
@@ -270,48 +310,243 @@ def hold_present(name, snapshot, recursive=False):
         name of snapshot
     recursive : boolean
         recursively add hold with the given tag on the snapshots of all descendent file systems.
+
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
 
-    log.debug('zfs.hold_present::{0}::config::snapshot = {1}'.format(name, snapshot))
-    log.debug('zfs.hold_present::{0}::config::recursive = {1}'.format(name, recursive))
+    ## log configuration
+    log.debug('zfs.hold_present::%s::config::snapshot = %s',
+              name, snapshot)
+    log.debug('zfs.hold_present::%s::config::recursive = %s',
+              name, recursive)
 
-    # check name and type
-    if '@' not in snapshot:
+    ## check we have a snapshot/tag name
+    if not __utils__['zfs.is_snapshot'](snapshot):
         ret['result'] = False
         ret['comment'] = 'invalid snapshot name: {0}'.format(snapshot)
+        return ret
 
-    if '@' in name or '#' in name:
+    if __utils__['zfs.is_snapshot'](name) or \
+       __utils__['zfs.is_bookmark'](name) or \
+       name == 'error':
         ret['result'] = False
         ret['comment'] = 'invalid tag name: {0}'.format(name)
+        return ret
 
-    if ret['result']:
-        result = __salt__['zfs.holds'](snapshot)
-        if snapshot not in result:
-            ret['result'] = False
-            ret['comment'] = '{0} is probably not a snapshot'.format(snapshot)
+    ## place hold if required
+    holds = __salt__['zfs.holds'](snapshot)
+    if name in holds:
+        ## NOTE: hold with name already exists for snapshot
+        ret['comment'] = 'hold {0} is present for {1}'.format(
+            name,
+            snapshot,
+        )
+    else:
+        ## NOTE: no hold found with name for snapshot
+        if not __opts__['test']:
+            mod_res = __salt__['zfs.hold'](name, snapshot, **{'recursive': recursive})
         else:
-            if snapshot in result[snapshot]:
-                ret['result'] = False
-                ret['comment'] = result[snapshot]
-            elif result[snapshot] == 'no holds' or name not in result[snapshot]:  # add hold
-                result = {snapshot: {name: 'held'}}
-                if not __opts__['test']:
-                    result = __salt__['zfs.hold'](name, snapshot, **{'recursive': recursive})
+            mod_res = OrderedDict([('held', True)])
 
-                ret['result'] = snapshot in result and name in result[snapshot]
-                if ret['result']:
-                    ret['changes'] = result[snapshot]
-                    ret['comment'] = 'hold {0} added to {1}'.format(name, snapshot)
-                else:
-                    ret['comment'] = 'failed to add hold {0}'.format(name)
-                    if snapshot in result:
-                        ret['comment'] = result[snapshot]
-            else:  # hold present
-                ret['comment'] = 'hold already exists'
+        ret['result'] = mod_res['held']
+        if ret['result']:
+            ret['changes'] = OrderedDict([
+                (snapshot, OrderedDict([
+                    (name, 'held'),
+                ])),
+            ])
+            ret['comment'] = 'hold {0} added to {1}'.format(
+                name,
+                snapshot,
+            )
+        else:
+            ret['comment'] = 'failed to add hold {0} to {1}'.format(
+                name,
+                snapshot,
+            )
+            if 'error' in mod_res:
+                ret['comment'] = mod_res['error']
+
+    return ret
+
+
+def _dataset_present(dataset_type, name, volume_size=None, sparse=False, create_parent=False, properties=None, cloned_from=None):
+    '''
+    internal handler for filesystem_present/volume_present
+
+    dataset_type : string
+        volume or filesystem
+    name : string
+        name of volume
+    volume_size : string
+        size of volume
+    sparse : boolean
+        create sparse volume
+    create_parent : boolean
+        creates all the non-existing parent datasets.
+        any property specified on the command line using the -o option is ignored.
+    cloned_from : string
+        name of snapshot to clone
+    properties : dict
+        additional zfs properties (-o)
+
+    .. note::
+        ``cloned_from`` is only use if the volume does not exist yet,
+        when ``cloned_from`` is set after the volume exists it will be ignored.
+
+    .. note::
+        Properties do not get cloned, if you specify the properties in the state file
+        they will be applied on a subsequent run.
+
+        ``volume_size`` is considered a property, so the volume's size will be
+        corrected when the properties get updated if it differs from the
+        original volume.
+
+        The sparse parameter is ignored when using ``cloned_from``.
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    ## fallback dataset_type to filesystem if out of range
+    if dataset_type not in ['filesystem', 'volume']:
+        dataset_type = 'filesystem'
+
+    ## ensure properties are zfs values
+    if volume_size:
+        volume_size = __utils__['zfs.from_size'](volume_size)
+    if properties:
+        properties = __utils__['zfs.from_auto_dict'](properties)
+    elif properties is None:
+        properties = {}
+
+    ## log configuration
+    log.debug('zfs.%s_present::%s::config::volume_size = %s',
+              dataset_type, name, volume_size)
+    log.debug('zfs.%s_present::%s::config::sparse = %s',
+              dataset_type, name, sparse)
+    log.debug('zfs.%s_present::%s::config::create_parent = %s',
+              dataset_type, name, create_parent)
+    log.debug('zfs.%s_present::%s::config::cloned_from = %s',
+              dataset_type, name, cloned_from)
+    log.debug('zfs.%s_present::%s::config::properties = %s',
+              dataset_type, name, properties)
+
+    ## check we have valid filesystem name/volume name/clone snapshot
+    if not __utils__['zfs.is_dataset'](name):
+        ret['result'] = False
+        ret['comment'] = 'invalid dataset name: {1}'.format(name)
+        return ret
+
+    if cloned_from and not __utils__['zfs.is_snapshot'](cloned_from):
+        ret['result'] = False
+        ret['comment'] = '{0} is not a snapshot'.format(cloned_from)
+        return ret
+
+    ## ensure dataset is in correct state
+    ## NOTE: update the dataset
+    if __salt__['zfs.exists'](name, **{'type': dataset_type}):
+        ## NOTE: fetch current volume properties
+        properties_current = __salt__['zfs.get'](
+            name,
+            type=dataset_type,
+            fields='value',
+            depth=0,
+            parsable=True,
+        ).get(name, OrderedDict())
+
+        ## NOTE: add volsize to properties
+        if volume_size:
+            properties['volsize'] = volume_size
+
+        ## NOTE: build list of properties to update
+        properties_update = []
+        for prop in properties:
+            ## NOTE: skip unexisting properties
+            if prop not in properties_current:
+                log.warning('zfs.%s_present::%s::update - unknown property: %s',
+                    dataset_type, name, prop)
+                continue
+
+            ## NOTE: compare current and wanted value
+            if properties_current[prop]['value'] != properties[prop]:
+                properties_update.append(prop)
+
+        ## NOTE: update pool properties
+        for prop in properties_update:
+            if not __opts__['test']:
+                mod_res = __salt__['zfs.set'](name, **{prop: properties[prop]})
+            else:
+                mod_res = OrderedDict([('set', True)])
+
+            if mod_res['set']:
+                if name not in ret['changes']:
+                    ret['changes'][name] = {}
+                ret['changes'][name][prop] = properties[prop]
+            else:
+                ret['result'] = False
+                if ret['comment'] == '':
+                    ret['comment'] = 'The following properties were not updated:'
+                ret['comment'] = '{0} {1}'.format(ret['comment'], prop)
+
+        ## NOTE: update comment
+        if ret['result'] and name in ret['changes']:
+            ret['comment'] = '{0} {1} was updated'.format(dataset_type, name)
+        elif ret['result']:
+            ret['comment'] = '{0} {1} is uptodate'.format(dataset_type, name)
+        else:
+            ret['comment'] = '{0} {1} failed to be updated'.format(dataset_type, name)
+
+    ## NOTE: create or clone the dataset
+    else:
+        mod_res_action = 'cloned' if cloned_from else 'created'
+        if __opts__['test']:
+            ## NOTE: pretend to create/clone
+            mod_res = OrderedDict([
+                (mod_res_action, True),
+            ])
+        elif cloned_from:
+            ## NOTE: add volsize to properties
+            if volume_size:
+                properties['volsize'] = volume_size
+
+            ## NOTE: clone the dataset
+            mod_res = __salt__['zfs.clone'](cloned_from, name, **{
+                'create_parent': create_parent,
+                'properties': properties,
+            })
+        else:
+            ## NOTE: create the dataset
+            mod_res = __salt__['zfs.create'](name, **{
+                'create_parent': create_parent,
+                'properties': properties,
+                'volume_size': volume_size,
+                'sparse': sparse,
+            })
+
+        ret['result'] = mod_res[mod_res_action]
+        if ret['result']:
+            ret['changes'][name] = mod_res_action
+            if properties:
+                ret['changes'][name] = properties
+            ret['comment'] = '{0} {1} was {2}'.format(
+                dataset_type,
+                name,
+                mod_res_action,
+            )
+        else:
+            ret['comment'] = 'failed to {0} {1} {2}'.format(
+                mod_res_action[:-1],
+                dataset_type,
+                name,
+            )
+            if 'error' in mod_res:
+                ret['comment'] = mod_res['error']
 
     return ret
 
@@ -339,87 +574,13 @@ def filesystem_present(name, create_parent=False, properties=None, cloned_from=N
         state file they will be applied on a subsequent run.
 
     '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
-
-    # check params
-    if not properties:
-        properties = {}
-
-    log.debug('zfs.filesystem_present::{0}::config::create_parent = {1}'.format(name, create_parent))
-    log.debug('zfs.filesystem_present::{0}::config::cloned_from = {1}'.format(name, cloned_from))
-    log.debug('zfs.filesystem_present::{0}::config::properties = {1}'.format(name, properties))
-
-    for prop in properties:  # salt breaks the on/off/yes/no properties
-        if isinstance(properties[prop], bool):
-            properties[prop] = 'on' if properties[prop] else 'off'
-
-    if '@' in name or '#' in name:
-        ret['result'] = False
-        ret['comment'] = 'invalid filesystem or volume name: {0}'.format(name)
-
-    if cloned_from:
-        cloned_parent = cloned_from[:cloned_from.index('@')]
-        if '@' not in cloned_from:
-            ret['result'] = False
-            ret['comment'] = '{0} is not a snapshot'.format(cloned_from)
-        elif cloned_from not in __salt__['zfs.list'](cloned_from, **{'type': 'snapshot'}):
-            ret['result'] = False
-            ret['comment'] = 'snapshot {0} does not exist'.format(cloned_from)
-        elif cloned_parent not in __salt__['zfs.list'](cloned_parent, **{'type': 'filesystem'}):
-            ret['result'] = False
-            ret['comment'] = 'snapshot {0} is not from a filesystem'.format(cloned_from)
-
-    if ret['result']:
-        if name in __salt__['zfs.list'](name, **{'type': 'filesystem'}):  # update properties if needed
-            result = {}
-            if len(properties) > 0:
-                result = __salt__['zfs.get'](name, **{'properties': ','.join(properties.keys()), 'type': 'filesystem', 'fields': 'value', 'depth': 0})
-
-            for prop in properties:
-                if properties[prop] != result[name][prop]['value']:
-                    if name not in ret['changes']:
-                        ret['changes'][name] = {}
-                    ret['changes'][name][prop] = properties[prop]
-
-            if len(ret['changes']) > 0:
-                if not __opts__['test']:
-                    result = __salt__['zfs.set'](name, **ret['changes'][name])
-                    if name not in result:
-                        ret['result'] = False
-                    else:
-                        for prop in result[name]:
-                            if result[name][prop] != 'set':
-                                ret['result'] = False
-
-                if ret['result']:
-                    ret['comment'] = 'filesystem {0} was updated'.format(name)
-                else:
-                    ret['changes'] = {}
-                    ret['comment'] = 'filesystem {0} failed to be updated'.format(name)
-            else:
-                ret['comment'] = 'filesystem {0} is up to date'.format(name)
-        else:  # create filesystem
-            result = {name: 'created'}
-            if not __opts__['test']:
-                if not cloned_from:
-                    result = __salt__['zfs.create'](name, **{'create_parent': create_parent, 'properties': properties})
-                else:
-                    result = __salt__['zfs.clone'](cloned_from, name, **{'create_parent': create_parent, 'properties': properties})
-
-            ret['result'] = name in result
-            if ret['result']:
-                ret['result'] = result[name] == 'created' or result[name].startswith('cloned')
-            if ret['result']:
-                ret['changes'][name] = properties if len(properties) > 0 else result[name]
-                ret['comment'] = 'filesystem {0} was created'.format(name)
-            else:
-                ret['comment'] = 'failed to create filesystem {0}'.format(name)
-                if name in result:
-                    ret['comment'] = result[name]
-    return ret
+    return _dataset_present(
+        'filesystem',
+        name,
+        create_parent=create_parent,
+        properties=properties,
+        cloned_from=cloned_from,
+    )
 
 
 def volume_present(name, volume_size, sparse=False, create_parent=False, properties=None, cloned_from=None):
@@ -455,93 +616,15 @@ def volume_present(name, volume_size, sparse=False, create_parent=False, propert
         The sparse parameter is ignored when using ``cloned_from``.
 
     '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
-
-    # check params
-    if not properties:
-        properties = {}
-
-    log.debug('zfs.volume_present::{0}::config::volume_size = {1}'.format(name, volume_size))
-    log.debug('zfs.volume_present::{0}::config::sparse = {1}'.format(name, sparse))
-    log.debug('zfs.volume_present::{0}::config::create_parent = {1}'.format(name, create_parent))
-    log.debug('zfs.volume_present::{0}::config::cloned_from = {1}'.format(name, cloned_from))
-    log.debug('zfs.volume_present::{0}::config::properties = {1}'.format(name, properties))
-
-    for prop in properties:  # salt breaks the on/off/yes/no properties
-        if isinstance(properties[prop], bool):
-            properties[prop] = 'on' if properties[prop] else 'off'
-
-    if '@' in name or '#' in name:
-        ret['result'] = False
-        ret['comment'] = 'invalid filesystem or volume name: {0}'.format(name)
-
-    if cloned_from:
-        cloned_parent = cloned_from[:cloned_from.index('@')]
-        if '@' not in cloned_from:
-            ret['result'] = False
-            ret['comment'] = '{0} is not a snapshot'.format(cloned_from)
-        elif cloned_from not in __salt__['zfs.list'](cloned_from, **{'type': 'snapshot'}):
-            ret['result'] = False
-            ret['comment'] = 'snapshot {0} does not exist'.format(cloned_from)
-        elif cloned_parent not in __salt__['zfs.list'](cloned_parent, **{'type': 'volume'}):
-            ret['result'] = False
-            ret['comment'] = 'snapshot {0} is not from a volume'.format(cloned_from)
-
-    if ret['result']:
-        if name in __salt__['zfs.list'](name, **{'type': 'volume'}):  # update properties if needed
-            properties['volsize'] = volume_size  # add volume_size to properties
-            result = __salt__['zfs.get'](name, **{'properties': ','.join(properties.keys()), 'fields': 'value', 'depth': 1})
-
-            for prop in properties:
-                if properties[prop] != result[name][prop]['value']:
-                    if name not in ret['changes']:
-                        ret['changes'][name] = {}
-                    ret['changes'][name][prop] = properties[prop]
-
-            if len(ret['changes']) > 0:
-                if not __opts__['test']:
-                    result = __salt__['zfs.set'](name, **ret['changes'][name])
-                    if name not in result:
-                        ret['result'] = False
-                    else:
-                        for prop in result[name]:
-                            if result[name][prop] != 'set':
-                                ret['result'] = False
-
-                if ret['result']:
-                    ret['comment'] = 'volume {0} was updated'.format(name)
-                else:
-                    ret['changes'] = {}
-                    ret['comment'] = 'volume {0} failed to be updated'.format(name)
-            else:
-                ret['comment'] = 'volume {0} is up to date'.format(name)
-        else:  # create volume
-            result = {name: 'created'}
-            if not __opts__['test']:
-                if not cloned_from:
-                    result = __salt__['zfs.create'](name, **{
-                        'volume_size': volume_size,
-                        'sparse': sparse,
-                        'create_parent': create_parent,
-                        'properties': properties
-                    })
-                else:
-                    result = __salt__['zfs.clone'](cloned_from, name, **{'create_parent': create_parent, 'properties': properties})
-
-            ret['result'] = name in result
-            if ret['result']:
-                ret['result'] = result[name] == 'created' or result[name].startswith('cloned')
-            if ret['result']:
-                ret['changes'][name] = properties if len(properties) > 0 else result[name]
-                ret['comment'] = 'volume {0} was created'.format(name)
-            else:
-                ret['comment'] = 'failed to create volume {0}'.format(name)
-                if name in result:
-                    ret['comment'] = result[name]
-    return ret
+    return _dataset_present(
+        'volume',
+        name,
+        volume_size,
+        sparse=sparse,
+        create_parent=create_parent,
+        properties=properties,
+        cloned_from=cloned_from,
+    )
 
 
 def bookmark_present(name, snapshot):
@@ -559,33 +642,48 @@ def bookmark_present(name, snapshot):
            'result': True,
            'comment': ''}
 
-    log.debug('zfs.bookmark_present::{0}::config::snapshot = {1}'.format(name, snapshot))
+    ## log configuration
+    log.debug('zfs.bookmark_present::%s::config::snapshot = %s',
+              name, snapshot)
 
-    if '@' not in snapshot:
+    ## check we have valid snapshot/bookmark name
+    if not __utils__['zfs.is_snapshot'](snapshot):
         ret['result'] = False
-        ret['comment'] = '{0} is not a snapshot'.format(snapshot)
+        ret['comment'] = 'invalid snapshot name: {0}'.format(name)
+        return ret
 
-    if '#' not in name:
-        if '/' not in name:
-            name = '{0}#{1}'.format(snapshot[:snapshot.index('@')], name)
+    if '#' not in name and '/' not in name:
+        ## NOTE: simple snapshot name
+        #        take the snapshot name and replace the snapshot but with the simple name
+        #        e.g. pool/fs@snap + bm --> pool/fs#bm
+        name = '{0}#{1}'.format(snapshot[:snapshot.index('@')], name)
+        ret['name'] = name
+
+    if not __utils__['zfs.is_bookmark'](name):
+        ret['result'] = False
+        ret['comment'] = 'invalid bookmark name: {0}'.format(name)
+        return ret
+
+    ## ensure bookmark exists
+    if not __salt__['zfs.exists'](name, **{'type': 'bookmark'}):
+        ## NOTE: bookmark the snapshot
+        if not __opts__['test']:
+            mod_res = __salt__['zfs.bookmark'](snapshot, name)
         else:
-            ret['result'] = False
-            ret['comment'] = '{0} is not a bookmark'.format(name)
+            mod_res = OrderedDict([('bookmarked', True)])
 
-    if ret['result']:
-        if name in __salt__['zfs.list'](**{'type': 'bookmark'}):
-            ret['comment'] = 'bookmark already exists'
-        else:  # create bookmark
-            result = {snapshot: 'bookmarked'}
-            if not __opts__['test']:
-                result = __salt__['zfs.bookmark'](snapshot, name)
+        ret['result'] = mod_res['bookmarked']
+        if ret['result']:
+            ret['changes'][name] = snapshot
+            ret['comment'] = '{0} bookmarked as {1}'.format(snapshot, name)
+        else:
+            ret['comment'] = 'failed to bookmark {0}'.format(snapshot)
+            if 'error' in mod_res:
+                ret['comment'] = mod_res['error']
+    else:
+        ## NOTE: bookmark already exists
+        ret['comment'] = 'bookmark is present'
 
-            ret['result'] = snapshot in result and result[snapshot].startswith('bookmarked')
-            if ret['result']:
-                ret['changes'] = result
-                ret['comment'] = 'snapshot {0} was bookmarked as {1}'.format(snapshot, name)
-            else:
-                ret['comment'] = 'failed to create bookmark {0}'.format(name)
     return ret
 
 
@@ -609,37 +707,43 @@ def snapshot_present(name, recursive=False, properties=None):
            'result': True,
            'comment': ''}
 
-    # check params
-    if not properties:
-        properties = {}
+    ## log configuration
+    log.debug('zfs.snapshot_present::%s::config::recursive = %s',
+              name, recursive)
+    log.debug('zfs.snapshot_present::%s::config::properties = %s',
+              name, properties)
 
-    log.debug('zfs.snapshot_present::{0}::config::recursive = {1}'.format(name, recursive))
-    log.debug('zfs.snapshot_present::{0}::config::properties = {1}'.format(name, properties))
+    ## ensure properties are zfs values
+    if properties:
+        properties = __utils__['zfs.from_auto_dict'](properties)
 
-    for prop in properties:  # salt breaks the on/off/yes/no properties
-        if isinstance(properties[prop], bool):
-            properties[prop] = 'on' if properties[prop] else 'off'
-
-    if '@' not in name:
+    ## check we have valid snapshot name
+    if not __utils__['zfs.is_snapshot'](name):
         ret['result'] = False
         ret['comment'] = 'invalid snapshot name: {0}'.format(name)
+        return ret
 
-    if ret['result']:
-        if name in __salt__['zfs.list'](name, **{'type': 'snapshot'}):  # we are all good
-            ret['comment'] = 'snapshot already exists'
-        else:  # create snapshot
-            result = {name: 'snapshotted'}
-            if not __opts__['test']:
-                result = __salt__['zfs.snapshot'](name, **{'recursive': recursive, 'properties': properties})
+    ## ensure snapshot exits
+    if not __salt__['zfs.exists'](name, **{'type': 'snapshot'}):
+        ## NOTE: create the snapshot
+        if not __opts__['test']:
+            mod_res = __salt__['zfs.snapshot'](name, **{'recursive': recursive, 'properties': properties})
+        else:
+            mod_res = OrderedDict([('snapshotted', True)])
 
-            ret['result'] = name in result and result[name] == 'snapshotted'
-            if ret['result']:
-                ret['changes'][name] = properties if len(properties) > 0 else result[name]
-                ret['comment'] = 'snapshot {0} was created'.format(name)
-            else:
-                ret['comment'] = 'failed to create snapshot {0}'.format(name)
-                if name in result:
-                    ret['comment'] = result[name]
+        ret['result'] = mod_res['snapshotted']
+        if ret['result']:
+            ret['changes'][name] = 'snapshotted'
+            if properties:
+                ret['changes'][name] = properties
+            ret['comment'] = 'snapshot {0} was created'.format(name)
+        else:
+            ret['comment'] = 'failed to create snapshot {0}'.format(name)
+            if 'error' in mod_res:
+                ret['comment'] = mod_res['error']
+    else:
+        ## NOTE: snapshot already exists
+        ret['comment'] = 'snapshot is present'
 
     return ret
 
@@ -662,37 +766,138 @@ def promoted(name):
            'result': True,
            'comment': ''}
 
-    if '@' in name or '#' in name:
+    ## check we if we have a valid dataset name
+    if not __utils__['zfs.is_dataset'](name):
         ret['result'] = False
-        ret['comment'] = 'invalid filesystem or volume name: {0}'.format(name)
+        ret['comment'] = 'invalid dataset name: {0}'.format(name)
+        return ret
 
-    if ret['result']:
-        if name in __salt__['zfs.list'](name):
-            origin = '-'
+    ## ensure dataset is the primary instance
+    if not __salt__['zfs.exists'](name, **{'type': 'filesystem,volume'}):
+        ## NOTE: we don't have a dataset
+        ret['result'] = False
+        ret['comment'] = 'dataset {0} does not exist'.format(name)
+    else:
+        ## NOTE: check if we have a blank origin (-)
+        if __salt__['zfs.get'](name, **{'properties': 'origin', 'fields': 'value', 'parsable': True})[name]['origin']['value'] == '-':
+            ## NOTE: we're already promoted
+            ret['comment'] = '{0} already promoted'.format(name)
+        else:
+            ## NOTE: promote dataset
             if not __opts__['test']:
-                origin = __salt__['zfs.get'](name, **{'properties': 'origin', 'fields': 'value'})[name]['origin']['value']
-
-            if origin == '-':
-                ret['comment'] = '{0} already promoted'.format(name)
+                mod_res = __salt__['zfs.promote'](name)
             else:
-                result = {name: 'promoted'}
-                if not __opts__['test']:
-                    result = __salt__['zfs.promote'](name)
+                mod_res = OrderedDict([('promoted', True)])
 
-                ret['result'] = name in result and result[name] == 'promoted'
-                ret['changes'] = result if ret['result'] else {}
-                if ret['result']:
-                    ret['comment'] = '{0} was promoted'.format(name)
-                else:
-                    ret['comment'] = 'failed to promote {0}'.format(name)
-                    if name in result:
-                        ret['comment'] = result[name]
-
-        else:  # we don't have the dataset
-            ret['result'] = False
-            ret['comment'] = 'dataset {0} does not exist'.format(name)
+            ret['result'] = mod_res['promoted']
+            if ret['result']:
+                ret['changes'][name] = 'promoted'
+                ret['comment'] = '{0} promoted'.format(name)
+            else:
+                ret['comment'] = 'failed to promote {0}'.format(name)
+                if 'error' in mod_res:
+                    ret['comment'] = mod_res['error']
 
     return ret
+
+
+def _schedule_snapshot_retrieve(dataset, prefix, snapshots):
+    '''
+    Update snapshots dict with current snapshots
+
+    dataset: string
+        name of filesystem or volume
+    prefix : string
+        prefix for the snapshots
+        e.g. 'test' will result in snapshots being named 'test-yyyymmdd_hhmm'
+    snapshots : OrderedDict
+        preseeded OrderedDict with configuration
+
+    '''
+    ## NOTE: retrieve all snapshots for the dataset
+    for snap in sorted(__salt__['zfs.list'](dataset, **{'recursive': True, 'depth': 1, 'type': 'snapshot'}).keys()):
+        ## NOTE: we only want the actualy name
+        ##       myzpool/data@zbck-20171201_000248 -> zbck-20171201_000248
+        snap_name = snap[snap.index('@')+1:]
+
+        ## NOTE: we only want snapshots matching our prefix
+        if not snap_name.startswith('{0}-'.format(prefix)):
+            continue
+
+        ## NOTE: retrieve the holds for this snapshot
+        snap_holds = __salt__['zfs.holds'](snap)
+
+        ## NOTE: this snapshot has no holds, eligable for pruning
+        if not snap_holds:
+            snapshots['_prunable'].append(snap)
+
+        ## NOTE: update snapshots based on holds (if any)
+        ##       we are only interested in the ones from our schedule
+        ##       if we find any others we skip them
+        for hold in snap_holds:
+            if hold in snapshots['_schedule'].keys():
+                snapshots[hold].append(snap)
+
+    return snapshots
+
+
+def _schedule_snapshot_prepare(dataset, prefix, snapshots):
+    '''
+    Update snapshots dict with info for a new snapshot
+
+    dataset: string
+        name of filesystem or volume
+    prefix : string
+        prefix for the snapshots
+        e.g. 'test' will result in snapshots being named 'test-yyyymmdd_hhmm'
+    snapshots : OrderedDict
+        preseeded OrderedDict with configuration
+
+    '''
+    ## NOTE: generate new snapshot name
+    snapshot_create_name = '{dataset}@{prefix}-{timestamp}'.format(
+        dataset=dataset,
+        prefix=prefix,
+        timestamp=datetime.now().strftime('%Y%m%d_%H%M%S')
+    )
+
+    ## NOTE: figure out if we need to create the snapshot
+    timestamp_now = datetime.now().replace(second=0, microsecond=0)
+    snapshots['_create'][snapshot_create_name] = []
+    for hold, hold_count in snapshots['_schedule'].items():
+        ## NOTE: skip hold if we don't keep snapshots for it
+        if hold_count == 0:
+            continue
+
+        ## NOTE: figure out if we need the current hold on the new snapshot
+        if snapshots[hold]:
+            ## NOTE: extract datetime from snapshot name
+            timestamp = datetime.strptime(
+                snapshots[hold][-1],
+                '{0}@{1}-%Y%m%d_%H%M%S'.format(dataset, prefix),
+            ).replace(second=0, microsecond=0)
+
+            ## NOTE: compare current timestamp to timestamp from snapshot
+            if hold == 'minute' and \
+                timestamp_now <= timestamp:
+                continue
+            elif hold == 'hour' and \
+                timestamp_now.replace(**comp_hour) <= timestamp.replace(**comp_hour):
+                continue
+            elif hold == 'day' and \
+                timestamp_now.replace(**comp_day) <= timestamp.replace(**comp_day):
+                continue
+            elif hold == 'month' and \
+                timestamp_now.replace(**comp_month) <= timestamp.replace(**comp_month):
+                continue
+            elif hold == 'year' and \
+                timestamp_now.replace(**comp_year) <= timestamp.replace(**comp_year):
+                continue
+
+        ## NOTE: add hold entry for snapshot
+        snapshots['_create'][snapshot_create_name].append(hold)
+
+    return snapshots
 
 
 def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
@@ -703,7 +908,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
         name of filesystem or volume
     prefix : string
         prefix for the snapshots
-        e.g. 'test' will result in snapshots being named 'test-YYYYMMDD_HHMM'
+        e.g. 'test' will result in snapshots being named 'test-yyyymmdd_hhmm'
     recursive : boolean
         create snapshots for all children also
     schedule : dict
@@ -717,181 +922,158 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
         a schedule must be setup to automatically run the state. this means that if
         you run the state daily the hourly snapshot will only be made once per day!
 
+    .. versionchanged:: 2018.3.0
+
+        switched to localtime from gmtime so times now take into account timezones.
+
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
 
-    ## parse parameters
-    # update default schedule
-    state_schedule = schedule if schedule else {}
-    schedule = {
-        'minute': 0,
-        'hour': 0,
-        'day': 0,
-        'month': 0,
-        'year': 0,
-    }
-    for hold in state_schedule:
-        if hold not in schedule:
-            del state_schedule[hold]
-    schedule.update(state_schedule)
-    # check name
-    if name not in __salt__['zfs.list'](name, **{'type': 'filesystem'}) and name not in __salt__['zfs.list'](name, **{'type': 'volume'}):
-        ret['comment'] = '{0} is not a filesystem or a volume or does not exist'.format(name)
+    ## initialize defaults
+    schedule_holds = ['minute', 'hour', 'day', 'month', 'year']
+    snapshots = OrderedDict([
+        ('_create', OrderedDict()),
+        ('_prunable', []),
+        ('_schedule', OrderedDict()),
+    ])
+
+    ## strict configuration validation
+    ## NOTE: we need a valid dataset
+    if not __utils__['zfs.is_dataset'](name):
         ret['result'] = False
-    # check prefix
+        ret['comment'] = 'invalid dataset name: {0}'.format(name)
+
+    if not __salt__['zfs.exists'](name, **{'type': 'filesystem,volume'}):
+        ret['comment'] = 'dataset {0} does not exist'.format(name)
+        ret['result'] = False
+
+    ## NOTE: prefix must be 4 or longer
     if not prefix or len(prefix) < 4:
         ret['comment'] = 'prefix ({0}) must be at least 4 long'.format(prefix)
         ret['result'] = False
-    # check schedule
-    snap_count = 0
-    for hold in schedule:
-        if not isinstance(schedule[hold], int):
-            ret['comment'] = 'schedule values must be integers'
+
+    ## NOTE: validate schedule
+    total_count = 0
+    for hold in schedule_holds:
+        snapshots[hold] = []
+        if hold not in schedule:
+            snapshots['_schedule'][hold] = 0
+        elif isinstance(schedule[hold], int):
+            snapshots['_schedule'][hold] = schedule[hold]
+        else:
             ret['result'] = False
+            ret['comment'] = 'schedule value for {0} is not an integer'.format(
+                hold,
+            )
             break
-        snap_count += schedule[hold]
-    if ret['result'] and snap_count == 0:
-        ret['comment'] = 'at least one snapshot must be schedule'
+        total_count += snapshots['_schedule'][hold]
+    if ret['result'] and total_count == 0:
         ret['result'] = False
+        ret['comment'] = 'schedule is not valid, you need to keep atleast 1 snapshot'
 
-    # print debug info
-    log.debug('zfs.scheduled_snapshot::{0}::config::recursive = {1}'.format(name, recursive))
-    log.debug('zfs.scheduled_snapshot::{0}::config::prefix = {1}'.format(name, prefix))
-    log.debug('zfs.scheduled_snapshot::{0}::config::schedule = {1}'.format(name, schedule))
+    ## NOTE: return if configuration is not valid
+    if not ret['result']:
+        return ret
 
-    ## manage snapshots
-    if ret['result']:
-        # retrieve snapshots
-        prunable = []
-        snapshots = {}
-        for key in schedule:
-            snapshots[key] = []
+    ## retrieve existing snapshots
+    snapshots = _schedule_snapshot_retrieve(name, prefix, snapshots)
 
-        for snap in sorted(__salt__['zfs.list'](name, **{'recursive': True, 'depth': 1, 'type': 'snapshot'}).keys()):
-            if '@' not in snap:
-                continue
+    ## prepare snapshot
+    snapshots = _schedule_snapshot_prepare(name, prefix, snapshots)
 
-            snap_name = snap[snap.index('@')+1:]
-            if snap_name.startswith('{0}-'.format(prefix)):
-                holds = __salt__['zfs.holds'](snap)
-                if snap not in holds or holds[snap] == 'no holds':
-                    prunable.append(snap)
-                    continue
-                for hold in holds[snap]:
-                    hold = hold.strip()
-                    if hold not in snapshots.keys():
-                        continue
-                    snapshots[hold].append(snap)
-        log.debug('zfs.scheduled_snapshot::{0}::snapshots = {1}'.format(name, snapshots))
+    ## log configuration
+    log.debug('zfs.scheduled_snapshot::%s::config::recursive = %s',
+              name, recursive)
+    log.debug('zfs.scheduled_snapshot::%s::config::prefix = %s',
+              name, prefix)
+    log.debug('zfs.scheduled_snapshot::%s::snapshots = %s',
+              name, snapshots)
 
-        # create snapshot
-        needed_holds = []
-        current_timestamp = gmtime()
-        for hold in snapshots:
-            # check if we need need to consider hold
-            if schedule[hold] == 0:
-                continue
+    ## create snapshot(s)
+    for snapshot_name, snapshot_holds in snapshots['_create'].items():
+        ## NOTE: skip if new snapshot has no holds
+        if not snapshot_holds:
+            continue
 
-            # check we need a new snapshot for hold
-            if len(snapshots[hold]) > 0:
-                snapshots[hold].sort()
-                timestamp = strptime(snapshots[hold][-1], '{0}@{1}-%Y%m%d_%H%M%S'.format(name, prefix))
-                if hold == 'minute':
-                    if current_timestamp.tm_min <= timestamp.tm_min and \
-                       current_timestamp.tm_hour <= timestamp.tm_hour and \
-                       current_timestamp.tm_mday <= timestamp.tm_mday and \
-                       current_timestamp.tm_mon <= timestamp.tm_mon and \
-                       current_timestamp.tm_year <= timestamp.tm_year:
-                        continue
-                elif hold == 'hour':
-                    if current_timestamp.tm_hour <= timestamp.tm_hour and \
-                       current_timestamp.tm_mday <= timestamp.tm_mday and \
-                       current_timestamp.tm_mon <= timestamp.tm_mon and \
-                       current_timestamp.tm_year <= timestamp.tm_year:
-                        continue
-                elif hold == 'day':
-                    if current_timestamp.tm_mday <= timestamp.tm_mday and \
-                       current_timestamp.tm_mon <= timestamp.tm_mon and \
-                       current_timestamp.tm_year <= timestamp.tm_year:
-                        continue
-                elif hold == 'month':
-                    if current_timestamp.tm_mon <= timestamp.tm_mon and \
-                       current_timestamp.tm_year <= timestamp.tm_year:
-                        continue
-                elif hold == 'year':
-                    if current_timestamp.tm_year <= timestamp.tm_year:
-                        continue
+        ## NOTE: create snapshot
+        if not __opts__['test']:
+            mod_res = __salt__['zfs.snapshot'](snapshot_name, **{'recursive': recursive})
+        else:
+            mod_res = OrderedDict([('snapshotted', True)])
+
+        if not mod_res['snapshotted']:
+            ret['result'] = False
+            ret['comment'] = 'error creating snapshot ({0})'.format(snapshot_name)
+        else:
+            ## NOTE: create holds (if we have a snapshot)
+            for hold in snapshot_holds:
+                if not __opts__['test']:
+                    mod_res = __salt__['zfs.hold'](hold, snapshot_name, **{'recursive': recursive})
                 else:
-                    log.debug('zfs.scheduled_snapshot::{0}::hold_unknown = {1}'.format(name, hold))
+                    mod_res = OrderedDict([('held', True)])
 
-            # mark snapshot for hold as needed
-            needed_holds.append(hold)
-
-        snap_name = '{prefix}-{timestamp}'.format(
-            prefix=prefix,
-            timestamp=strftime('%Y%m%d_%H%M%S')
-        )
-        log.debug('zfs.scheduled_snapshot::{0}::needed_holds = {1}'.format(name, needed_holds))
-        if len(needed_holds) > 0:
-            snap = '{dataset}@{snapshot}'.format(dataset=name, snapshot=snap_name)
-            res = __salt__['zfs.snapshot'](snap, **{'recursive': recursive})
-            if snap not in res or res[snap] != 'snapshotted':  # something went wrong!
-                ret['comment'] = 'error creating snapshot ({0})'.format(snap)
-                ret['result'] = False
-
-            for hold in needed_holds:
-                if not ret['result']:
-                    continue  # skip if snapshot failed
-                res = __salt__['zfs.hold'](hold, snap, **{'recursive': recursive})
-                if snap not in res or hold not in res[snap] or res[snap][hold] != 'held':
-                    ret['comment'] = "{0}error adding hold ({1}) to snapshot ({2})".format(
-                        "{0}\n".format(ret['comment']) if not ret['result'] else '',
+                if not mod_res['held']:
+                    ret['result'] = False
+                    ret['comment'] = "error adding hold ({0}) to snapshot ({1})".format(
                         hold,
-                        snap
+                        snapshot_name,
                     )
-                    ret['result'] = False
-                else:  # add new snapshot to lists (for pruning)
-                    snapshots[hold].append(snap)
+                    break
 
-            if ret['result']:
-                ret['comment'] = 'scheduled snapshots were updated'
-                ret['changes']['created'] = [snap]
-                ret['changes']['pruned'] = []
+                snapshots[hold].append(snapshot_name)
 
-        # prune snapshots
-        for hold in schedule:
-            if hold not in snapshots.keys():
-                continue
-            while len(snapshots[hold]) > schedule[hold]:
-                # pop oldest snapshot and release hold
-                snap = snapshots[hold].pop(0)
-                __salt__['zfs.release'](hold, snap, **{'recursive': recursive})
-                # check if snapshot is prunable
-                holds = __salt__['zfs.holds'](snap)
-                if snap not in holds or holds[snap] == 'no holds':
-                    prunable.append(snap)
+        if ret['result']:
+            ret['comment'] = 'scheduled snapshots updated'
+            if 'created' not in ret['changes']:
+                ret['changes']['created'] = []
+            ret['changes']['created'].append(snapshot_name)
 
-        if len(prunable) > 0:
-            for snap in prunable:  # destroy if hold free
-                res = __salt__['zfs.destroy'](snap, **{'recursive': recursive})
-                if snap not in res or res[snap] != 'destroyed':
-                    ret['comment'] = "{0}error prunding snapshot ({1})".format(
-                        "{0}\n".format(ret['comment']) if not ret['result'] else '',
-                        snap
-                    )
-                    ret['result'] = False
-                else:
-                    ret['comment'] = 'scheduled snapshots were updated'
-                    if 'created' not in ret['changes']:
-                        ret['changes']['created'] = []
-                    if 'pruned' not in ret['changes']:
-                        ret['changes']['pruned'] = []
-                    ret['changes']['pruned'].append(snap)
+    ## prune hold(s)
+    for hold, hold_count in snapshots['_schedule'].items():
+        while ret['result'] and len(snapshots[hold]) > hold_count:
+            ## NOTE: pop oldest snapshot
+            snapshot_name = snapshots[hold].pop(0)
 
-    if ret['result'] and ret['comment'] == '':
+            ## NOTE: release hold for snapshot
+            if not __opts__['test']:
+                mod_res = __salt__['zfs.release'](hold, snapshot_name, **{'recursive': recursive})
+            else:
+                mod_res = OrderedDict([('released', True)])
+
+            if not mod_res['released']:
+                ret['result'] = False
+                ret['comment'] = "error adding hold ({0}) to snapshot ({1})".format(
+                    hold,
+                    snapshot_name,
+                )
+
+            ## NOTE: mark as prunable
+            if not __salt__['zfs.holds'](snapshot_name):
+                snapshots['_prunable'].append(snapshot_name)
+
+    ## prune snapshot(s)
+    for snapshot_name in snapshots['_prunable']:
+        ## NOTE: destroy snapshot
+        if not __opts__['test']:
+            mod_res = __salt__['zfs.destroy'](snapshot_name, **{'recursive': recursive})
+        else:
+            mod_res = OrderedDict([('destroyed', True)])
+
+        if not mod_res['destroyed']:
+            ret['result'] = False
+            ret['comment'] = "error prunding snapshot ({1})".format(
+                snapshot_name,
+            )
+            break
+
+    if ret['result'] and snapshots['_prunable']:
+        ret['comment'] = 'scheduled snapshots updated'
+        ret['changes']['pruned'] = snapshots['_prunable']
+
+    if ret['result'] and not ret['changes']:
         ret['comment'] = 'scheduled snapshots are up to date'
 
     return ret

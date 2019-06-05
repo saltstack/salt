@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -9,7 +9,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.modules.deb_postgres as deb_postgres
 
 LSCLUSTER = '''\
@@ -26,7 +26,7 @@ class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         self.cmd_run_all_mock = Mock(return_value={'stdout': LSCLUSTER})
         self.addCleanup(delattr, self, 'cmd_run_all_mock')
-        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/pg_createcluster'))
+        patcher = patch('salt.utils.path.which', Mock(return_value='/usr/bin/pg_createcluster'))
         patcher.start()
         self.addCleanup(patcher.stop)
         return {
@@ -71,7 +71,7 @@ class PostgresLsClusterTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         self.cmd_run_all_mock = Mock(return_value={'stdout': LSCLUSTER})
         self.addCleanup(delattr, self, 'cmd_run_all_mock')
-        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/pg_lsclusters'))
+        patcher = patch('salt.utils.path.which', Mock(return_value='/usr/bin/pg_lsclusters'))
         patcher.start()
         self.addCleanup(patcher.stop)
         return {
@@ -127,7 +127,7 @@ class PostgresDeleteClusterTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         self.cmd_run_all_mock = Mock(return_value={'stdout': LSCLUSTER})
         self.addCleanup(delattr, self, 'cmd_run_all_mock')
-        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/pg_dropcluster'))
+        patcher = patch('salt.utils.path.which', Mock(return_value='/usr/bin/pg_dropcluster'))
         patcher.start()
         self.addCleanup(patcher.stop)
         return {

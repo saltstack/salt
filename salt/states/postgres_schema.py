@@ -10,7 +10,7 @@ The postgres_schemas module is used to create and manage Postgres schemas.
     public:
       postgres_schema.present 'dbname' 'name'
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -29,7 +29,7 @@ def __virtual__():
 
 
 def present(dbname, name,
-            owner=None,
+            owner=None, user=None,
             db_user=None, db_password=None,
             db_host=None, db_port=None):
     '''
@@ -41,8 +41,8 @@ def present(dbname, name,
     name
         The name of the schema to manage
 
-    owner
-        The database user that will be the owner of the schema
+    user
+        system user all operations should be performed on behalf of
 
     db_user
         database username if different from config or default
@@ -67,7 +67,8 @@ def present(dbname, name,
         'db_user': db_user,
         'db_password': db_password,
         'db_host': db_host,
-        'db_port': db_port
+        'db_port': db_port,
+        'user': user
     }
 
     # check if schema exists
@@ -77,6 +78,11 @@ def present(dbname, name,
 
     # The schema is not present, make it!
     if schema_attr is None:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Schema {0} is set to be created' \
+                             ' in database {1}.'.format(name, dbname)
+            return ret
         cret = __salt__['postgres.schema_create'](dbname,
                                                   name,
                                                   owner=owner,
@@ -100,7 +106,7 @@ def present(dbname, name,
     return ret
 
 
-def absent(dbname, name,
+def absent(dbname, name, user=None,
            db_user=None, db_password=None,
            db_host=None, db_port=None):
     '''
@@ -111,6 +117,9 @@ def absent(dbname, name,
 
     name
         The name of the schema to remove
+
+    user
+        system user all operations should be performed on behalf of
 
     db_user
         database username if different from config or default
@@ -134,12 +143,18 @@ def absent(dbname, name,
         'db_user': db_user,
         'db_password': db_password,
         'db_host': db_host,
-        'db_port': db_port
+        'db_port': db_port,
+        'user': user
         }
 
     # check if schema exists and remove it
     if __salt__['postgres.schema_exists'](dbname, name, **db_args):
-        if __salt__['postgres.schema_remove'](dbname, name, **db_args):
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Schema {0} is set to be removed' \
+                             ' from database {1}'.format(name, dbname)
+            return ret
+        elif __salt__['postgres.schema_remove'](dbname, name, **db_args):
             ret['comment'] = 'Schema {0} has been removed' \
                              ' from database {1}'.format(name, dbname)
             ret['changes'][name] = 'Absent'

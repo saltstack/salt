@@ -25,12 +25,12 @@ The general installation process is as follows:
 4. Accept the Salt :ref:`minion keys <using-salt-key>` after the Salt minion
    connects.
 
-After this, you should be able to run a simple command and receive returns from
+After this, you should be able to run a simple command and receive salt version returns from
 all connected Salt minions.
 
 .. code-block:: bash
 
-    salt '*' test.ping
+    salt '*' test.version
 
 Quick Install
 -------------
@@ -86,7 +86,7 @@ Dependencies
 
 Salt should run on any Unix-like platform so long as the dependencies are met.
 
-* `Python 2.7`_ >= 2.7 <3.0
+* `Python`_ - Python2 >= 2.7, Python3 >= 3.4
 * `msgpack-python`_ - High-performance message interchange format
 * `YAML`_ - Python YAML bindings
 * `Jinja2`_ - parsing Salt States (configurable in the master settings)
@@ -95,7 +95,7 @@ Salt should run on any Unix-like platform so long as the dependencies are met.
   cloud service providers using a unified API
 * `Requests`_ - HTTP library
 * `Tornado`_ - Web framework and asynchronous networking library
-* `futures`_ - Backport of the concurrent.futures package from Python 3.2
+* `futures`_ - Python2 only dependency. Backport of the concurrent.futures package from Python 3.2
 
 Depending on the chosen Salt transport, `ZeroMQ`_ or `RAET`_, dependencies
 vary:
@@ -142,10 +142,11 @@ Optional Dependencies
   settings)
 * gcc - dynamic `Cython`_ module compiling
 
-.. _`Python 2.7`: http://python.org/download/
+.. _`Python`: http://python.org/download/
 .. _`ZeroMQ`: http://zeromq.org/
 .. _`pyzmq`: https://github.com/zeromq/pyzmq
 .. _`msgpack-python`:  https://pypi.python.org/pypi/msgpack-python/
+.. _`M2Crypto`: https://gitlab.com/m2crypto/m2crypto
 .. _`PyCrypto`: https://www.dlitz.net/software/pycrypto/
 .. _`YAML`: http://pyyaml.org/
 .. _`Jinja2`: http://jinja.pocoo.org/

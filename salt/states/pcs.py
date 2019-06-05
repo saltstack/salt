@@ -162,15 +162,19 @@ Create a cluster from scratch:
 
 .. versionadded:: 2016.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
+# Import Python libs
 import logging
 import os
 
-# Import salt libs
-import salt.utils
-import salt.ext.six as six
+# Import Salt libs
+import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -179,7 +183,7 @@ def __virtual__():
     '''
     Only load if pcs package is installed
     '''
-    if salt.utils.which('pcs'):
+    if salt.utils.path.which('pcs'):
         return 'pcs'
     return False
 
@@ -190,8 +194,8 @@ def _file_read(path):
     '''
     content = False
     if os.path.exists(path):
-        with salt.utils.fopen(path, 'r+') as fp_:
-            content = fp_.read()
+        with salt.utils.files.fopen(path, 'r+') as fp_:
+            content = salt.utils.stringutils.to_unicode(fp_.read())
         fp_.close()
     return content
 
@@ -200,8 +204,8 @@ def _file_write(path, content):
     '''
     Write content to a file
     '''
-    with salt.utils.fopen(path, 'w+') as fp_:
-        fp_.write(content)
+    with salt.utils.files.fopen(path, 'w+') as fp_:
+        fp_.write(salt.utils.stringutils.to_str(content))
     fp_.close()
 
 
@@ -210,7 +214,7 @@ def _get_cibpath():
     Get the path to the directory on the minion where CIB's are saved
     '''
     cibpath = os.path.join(__opts__['cachedir'], 'pcs', __env__)
-    log.trace('cibpath: {0}'.format(cibpath))
+    log.trace('cibpath: %s', cibpath)
     return cibpath
 
 
@@ -219,7 +223,7 @@ def _get_cibfile(cibname):
     Get the full path of a cached CIB-file with the name of the CIB
     '''
     cibfile = os.path.join(_get_cibpath(), '{0}.{1}'.format(cibname, 'cib'))
-    log.trace('cibfile: {0}'.format(cibfile))
+    log.trace('cibfile: %s', cibfile)
     return cibfile
 
 
@@ -228,7 +232,7 @@ def _get_cibfile_tmp(cibname):
     Get the full path of a temporary CIB-file with the name of the CIB
     '''
     cibfile_tmp = '{0}.tmp'.format(_get_cibfile(cibname))
-    log.trace('cibfile_tmp: {0}'.format(cibfile_tmp))
+    log.trace('cibfile_tmp: %s', cibfile_tmp)
     return cibfile_tmp
 
 
@@ -237,7 +241,7 @@ def _get_cibfile_cksum(cibname):
     Get the full path of the file containing a checksum of a CIB-file with the name of the CIB
     '''
     cibfile_cksum = '{0}.cksum'.format(_get_cibfile(cibname))
-    log.trace('cibfile_cksum: {0}'.format(cibfile_cksum))
+    log.trace('cibfile_cksum: %s', cibfile_cksum)
     return cibfile_cksum
 
 
@@ -278,7 +282,7 @@ def _item_present(name, item, item_id, item_type, show='show', create='create', 
     if '=' in item_id:
         item_id_key = item_id.split('=')[0].strip()
         item_id_value = item_id.replace(item_id.split('=')[0] + '=', '').strip()
-        log.trace('item_id_key={0} item_id_value={1}'.format(str(item_id_key), str(item_id_value)))
+        log.trace('item_id_key=%s item_id_value=%s', item_id_key, item_id_value)
 
     # constraints, properties, resource defaults or resource op defaults
     # do not support specifying an id on 'show' command
@@ -291,12 +295,10 @@ def _item_present(name, item, item_id, item_type, show='show', create='create', 
                                             item_type=item_type,
                                             show=show,
                                             cibfile=cibfile)
-    log.trace('Output of pcs.item_show item={0} item_id={1} item_type={2} cibfile={3}: {4}'.format(
-                                                                                                str(item),
-                                                                                                str(item_id_show),
-                                                                                                str(item_type),
-                                                                                                str(cibfile),
-                                                                                                str(is_existing)))
+    log.trace(
+        'Output of pcs.item_show item=%s item_id=%s item_type=%s cibfile=%s: %s',
+        item, item_id_show, item_type, cibfile, is_existing
+    )
 
     # key,value pairs (item_id contains =) - match key and value
     if item_id_value is not None:
@@ -321,12 +323,16 @@ def _item_present(name, item, item_id, item_type, show='show', create='create', 
             item_create_required = False
 
     if not item_create_required:
-        ret['comment'] += '{0} {1} ({2}) is already existing\n'.format(str(item), str(item_id), str(item_type))
+        ret['comment'] += '{0} {1} ({2}) is already existing\n'.format(
+            six.text_type(item), six.text_type(item_id), six.text_type(item_type)
+        )
         return ret
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] += '{0} {1} ({2}) is set to be created\n'.format(str(item), str(item_id), str(item_type))
+        ret['comment'] += '{0} {1} ({2}) is set to be created\n'.format(
+            six.text_type(item), six.text_type(item_id), six.text_type(item_type)
+        )
         return ret
 
     item_create = __salt__['pcs.item_create'](
@@ -337,16 +343,16 @@ def _item_present(name, item, item_id, item_type, show='show', create='create', 
         extra_args=extra_args,
         cibfile=cibfile)
 
-    log.trace('Output of pcs.item_create: {0}'.format(str(item_create)))
+    log.trace('Output of pcs.item_create: %s', item_create)
 
     if item_create['retcode'] in [0]:
-        ret['comment'] += 'Created {0} {1} ({2})\n'.format(str(item), str(item_id), str(item_type))
-        ret['changes'].update({item_id: {'old': '', 'new': str(item_id)}})
+        ret['comment'] += 'Created {0} {1} ({2})\n'.format(item, item_id, item_type)
+        ret['changes'].update({item_id: {'old': '', 'new': six.text_type(item_id)}})
     else:
         ret['result'] = False
-        ret['comment'] += 'Failed to create {0} {1} ({2})\n'.format(str(item), str(item_id), str(item_type))
+        ret['comment'] += 'Failed to create {0} {1} ({2})\n'.format(item, item_id, item_type)
 
-    log.trace('ret: ' + str(ret))
+    log.trace('ret: %s', ret)
 
     return ret
 
@@ -384,7 +390,7 @@ def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=Non
     auth_required = False
 
     authorized = __salt__['pcs.is_auth'](nodes=nodes)
-    log.trace('Output of pcs.is_auth: ' + str(authorized))
+    log.trace('Output of pcs.is_auth: %s', authorized)
 
     authorized_dict = {}
     for line in authorized['stdout'].splitlines():
@@ -392,7 +398,7 @@ def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=Non
         auth_state = line.split(':')[1].strip()
         if node in nodes:
             authorized_dict.update({node: auth_state})
-    log.trace('authorized_dict: ' + str(authorized_dict))
+    log.trace('authorized_dict: %s', authorized_dict)
 
     for node in nodes:
         if node in authorized_dict and authorized_dict[node] == 'Already authorized':
@@ -414,7 +420,7 @@ def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=Non
         extra_args += ['--force']
 
     authorize = __salt__['pcs.auth'](nodes=nodes, pcsuser=pcsuser, pcspasswd=pcspasswd, extra_args=extra_args)
-    log.trace('Output of pcs.auth: ' + str(authorize))
+    log.trace('Output of pcs.auth: %s', authorize)
 
     authorize_dict = {}
     for line in authorize['stdout'].splitlines():
@@ -422,7 +428,7 @@ def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=Non
         auth_state = line.split(':')[1].strip()
         if node in nodes:
             authorize_dict.update({node: auth_state})
-    log.trace('authorize_dict: ' + str(authorize_dict))
+    log.trace('authorize_dict: %s', authorize_dict)
 
     for node in nodes:
         if node in authorize_dict and authorize_dict[node] == 'Authorized':
@@ -472,7 +478,7 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=None):
     setup_required = False
 
     config_show = __salt__['pcs.config_show']()
-    log.trace('Output of pcs.config_show: '+str(config_show))
+    log.trace('Output of pcs.config_show: %s', config_show)
 
     for line in config_show['stdout'].splitlines():
         if len(line.split(':')) in [2]:
@@ -480,11 +486,11 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=None):
             value = line.split(':')[1].strip()
             if key in ['Cluster Name']:
                 if value in [pcsclustername]:
-                    ret['comment'] += 'Cluster {0} is already set up\n'.format(str(pcsclustername))
+                    ret['comment'] += 'Cluster {0} is already set up\n'.format(pcsclustername)
                 else:
                     setup_required = True
                     if __opts__['test']:
-                        ret['comment'] += 'Cluster {0} is set to set up\n'.format(str(pcsclustername))
+                        ret['comment'] += 'Cluster {0} is set to set up\n'.format(pcsclustername)
 
     if not setup_required:
         return ret
@@ -497,19 +503,19 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=None):
         extra_args = []
 
     setup = __salt__['pcs.cluster_setup'](nodes=nodes, pcsclustername=pcsclustername, extra_args=extra_args)
-    log.trace('Output of pcs.cluster_setup: ' + str(setup))
+    log.trace('Output of pcs.cluster_setup: %s', setup)
 
     setup_dict = {}
     for line in setup['stdout'].splitlines():
-        log.trace('line: ' + line)
-        log.trace('line.split(:).len: ' + str(len(line.split(':'))))
+        log.trace('line: %s', line)
+        log.trace('line.split(:).len: %s', len(line.split(':')))
         if len(line.split(':')) in [2]:
             node = line.split(':')[0].strip()
             setup_state = line.split(':')[1].strip()
             if node in nodes:
                 setup_dict.update({node: setup_state})
 
-    log.trace('setup_dict: ' + str(setup_dict))
+    log.trace('setup_dict: %s', setup_dict)
 
     for node in nodes:
         if node in setup_dict and setup_dict[node] in ['Succeeded', 'Success']:
@@ -520,9 +526,9 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=None):
             ret['comment'] += 'Failed to setup {0}\n'.format(node)
             if node in setup_dict:
                 ret['comment'] += '{0}: setup_dict: {1}\n'.format(node, setup_dict[node])
-            ret['comment'] += str(setup)
+            ret['comment'] += six.text_type(setup)
 
-    log.trace('ret: ' + str(ret))
+    log.trace('ret: %s', ret)
 
     return ret
 
@@ -559,7 +565,7 @@ def cluster_node_present(name, node, extra_args=None):
 
     is_member_cmd = ['pcs', 'status', 'nodes', 'corosync']
     is_member = __salt__['cmd.run_all'](is_member_cmd, output_loglevel='trace', python_shell=False)
-    log.trace('Output of pcs status nodes corosync: ' + str(is_member))
+    log.trace('Output of pcs status nodes corosync: %s', is_member)
 
     for line in is_member['stdout'].splitlines():
         if len(line.split(':')) in [2]:
@@ -585,18 +591,18 @@ def cluster_node_present(name, node, extra_args=None):
         extra_args = []
 
     node_add = __salt__['pcs.cluster_node_add'](node=node, extra_args=extra_args)
-    log.trace('Output of pcs.cluster_node_add: ' + str(node_add))
+    log.trace('Output of pcs.cluster_node_add: %s', node_add)
 
     node_add_dict = {}
     for line in node_add['stdout'].splitlines():
-        log.trace('line: ' + line)
-        log.trace('line.split(:).len: ' + str(len(line.split(':'))))
+        log.trace('line: %s', line)
+        log.trace('line.split(:).len: %s', len(line.split(':')))
         if len(line.split(':')) in [2]:
             current_node = line.split(':')[0].strip()
             current_node_add_state = line.split(':')[1].strip()
             if current_node in current_nodes + [node]:
                 node_add_dict.update({current_node: current_node_add_state})
-    log.trace('node_add_dict: ' + str(node_add_dict))
+    log.trace('node_add_dict: %s', node_add_dict)
 
     for current_node in current_nodes:
         if current_node in node_add_dict:
@@ -616,9 +622,9 @@ def cluster_node_present(name, node, extra_args=None):
         ret['comment'] += 'Failed to add node{0}\n'.format(node)
         if node in node_add_dict:
             ret['comment'] += '{0}: node_add_dict: {1}\n'.format(node, node_add_dict[node])
-        ret['comment'] += str(node_add)
+        ret['comment'] += six.text_type(node_add)
 
-    log.trace('ret: ' + str(ret))
+    log.trace('ret: %s', ret)
 
     return ret
 
@@ -672,7 +678,7 @@ def cib_present(name, cibname, scope=None, extra_args=None):
         __salt__['file.remove'](cibfile_tmp)
 
     cib_create = __salt__['pcs.cib_create'](cibfile=cibfile_tmp, scope=scope, extra_args=extra_args)
-    log.trace('Output of pcs.cib_create: {0}'.format(str(cib_create)))
+    log.trace('Output of pcs.cib_create: %s', cib_create)
 
     if cib_create['retcode'] not in [0] or not os.path.exists(cibfile_tmp):
         ret['result'] = False
@@ -680,14 +686,14 @@ def cib_present(name, cibname, scope=None, extra_args=None):
         return ret
 
     cib_hash_live = '{0}:{1}'.format(cib_hash_form, __salt__['file.get_hash'](path=cibfile_tmp, form=cib_hash_form))
-    log.trace('cib_hash_live: {0}'.format(str(cib_hash_live)))
+    log.trace('cib_hash_live: %s', cib_hash_live)
 
     cib_hash_cur = _file_read(path=cibfile_cksum)
 
     if cib_hash_cur not in [cib_hash_live]:
         cib_cksum_required = True
 
-    log.trace('cib_hash_cur: {0}'.format(str(cib_hash_cur)))
+    log.trace('cib_hash_cur: %s', cib_hash_cur)
 
     if not os.path.exists(cibfile) or not __salt__['file.check_hash'](path=cibfile, file_hash=cib_hash_live):
         cib_create_required = True
@@ -734,7 +740,7 @@ def cib_present(name, cibname, scope=None, extra_args=None):
             ret['result'] = False
             ret['comment'] += 'Failed to create/update checksum {0} CIB {1}\n'.format(cib_hash_live, cibname)
 
-    log.trace('ret: ' + str(ret))
+    log.trace('ret: %s', ret)
 
     return ret
 
@@ -783,7 +789,7 @@ def cib_pushed(name, cibname, scope=None, extra_args=None):
         return ret
 
     cib_hash_cibfile = '{0}:{1}'.format(cib_hash_form, __salt__['file.get_hash'](path=cibfile, form=cib_hash_form))
-    log.trace('cib_hash_cibfile: {0}'.format(str(cib_hash_cibfile)))
+    log.trace('cib_hash_cibfile: %s', cib_hash_cibfile)
 
     if _file_read(cibfile_cksum) not in [cib_hash_cibfile]:
         cib_push_required = True
@@ -798,7 +804,7 @@ def cib_pushed(name, cibname, scope=None, extra_args=None):
         return ret
 
     cib_push = __salt__['pcs.cib_push'](cibfile=cibfile, scope=scope, extra_args=extra_args)
-    log.trace('Output of pcs.cib_push: {0}'.format(str(cib_push)))
+    log.trace('Output of pcs.cib_push: %s', cib_push)
 
     if cib_push['retcode'] in [0]:
         ret['comment'] += 'Pushed CIB {0}\n'.format(cibname)
@@ -807,7 +813,7 @@ def cib_pushed(name, cibname, scope=None, extra_args=None):
         ret['result'] = False
         ret['comment'] += 'Failed to push CIB {0}\n'.format(cibname)
 
-    log.trace('ret: ' + str(ret))
+    log.trace('ret: %s', ret)
 
     return ret
 

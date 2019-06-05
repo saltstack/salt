@@ -19,13 +19,12 @@ usually located at /etc/salt/cloud. For example, add the following:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import copy
 
 # Import Salt libs
 import salt.loader
-import salt.utils
 import salt.utils.cloud
 import salt.utils.validate.net
 import salt.config

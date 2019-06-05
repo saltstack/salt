@@ -12,6 +12,7 @@ auth modules
 
     auto
     django
+    file
     keystone
     ldap
     mysql
@@ -19,5 +20,4 @@ auth modules
     pki
     rest
     sharedsecret
-    stormpath
     yubico

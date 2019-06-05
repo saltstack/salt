@@ -3,10 +3,11 @@
 Tests to try out salt key.RaetKey Potentially ephemeral
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # pylint: skip-file
 # pylint: disable=C0103
 import sys
+import salt.utils.stringutils
 from salt.ext.six.moves import map
 if sys.version_info < (2, 7):
     import unittest2 as unittest
@@ -30,11 +31,14 @@ from raet.road import estating, keeping, stacking
 
 from salt.key import RaetKey
 
+
 def setUpModule():
     console.reinit(verbosity=console.Wordage.concise)
 
+
 def tearDownModule():
     pass
+
 
 class BasicTestCase(unittest.TestCase):
     """"""
@@ -47,7 +51,7 @@ class BasicTestCase(unittest.TestCase):
 
         pkiDirpath = os.path.join(self.saltDirpath, 'pki')
         if not os.path.exists(pkiDirpath):
-                os.makedirs(pkiDirpath)
+            os.makedirs(pkiDirpath)
 
         acceptedDirpath = os.path.join(pkiDirpath, 'accepted')
         if not os.path.exists(acceptedDirpath):
@@ -81,7 +85,7 @@ class BasicTestCase(unittest.TestCase):
                         )
 
         self.mainKeeper = RaetKey(opts=self.opts)
-        self.baseDirpath = tempfile.mkdtemp(prefix="salt",  suffix="base", dir='/tmp')
+        self.baseDirpath = tempfile.mkdtemp(prefix="salt", suffix="base", dir='/tmp')
 
     def tearDown(self):
         if os.path.exists(self.saltDirpath):
@@ -119,9 +123,9 @@ class BasicTestCase(unittest.TestCase):
         self.opts['auto_accept'] = True
         self.assertTrue(self.opts['auto_accept'])
         self.assertDictEqual(self.mainKeeper.all_keys(), {'accepted': [],
-                                                            'local': [],
-                                                            'rejected': [],
-                                                            'pending': []})
+                                                          'local': [],
+                                                          'rejected': [],
+                                                          'pending': []})
 
         localkeys = self.mainKeeper.read_local()
         self.assertDictEqual(localkeys, {})
@@ -129,8 +133,9 @@ class BasicTestCase(unittest.TestCase):
         main = self.createRoadData(name='main', base=self.baseDirpath)
         self.mainKeeper.write_local(main['prihex'], main['sighex'])
         localkeys = self.mainKeeper.read_local()
-        self.assertDictEqual(localkeys, {'priv': main['prihex'],
-                                     'sign': main['sighex']})
+        self.assertDictEqual(localkeys,
+                             {'priv': salt.utils.stringutils.to_str(main['prihex']),
+                              'sign': salt.utils.stringutils.to_str(main['sighex'])})
         allkeys = self.mainKeeper.all_keys()
         self.assertDictEqual(allkeys, {'accepted': [],
                                        'local': [self.localFilepath],
@@ -147,39 +152,38 @@ class BasicTestCase(unittest.TestCase):
 
         allkeys = self.mainKeeper.all_keys()
         self.assertDictEqual(allkeys, {'accepted': ['other1', 'other2'],
-                                'local': [self.localFilepath],
-                                'pending': [],
-                                'rejected': []} )
+                                       'local': [self.localFilepath],
+                                       'pending': [],
+                                       'rejected': []})
 
         remotekeys = self.mainKeeper.read_remote(other1['name'])
-        self.assertDictEqual(remotekeys, {   'minion_id': 'other1',
-                                             'pub': other1['pubhex'],
-                                             'verify': other1['verhex']} )
+        self.assertDictEqual(remotekeys, {'minion_id': 'other1',
+                                          'pub': salt.utils.stringutils.to_str(other1['pubhex']),
+                                          'verify': salt.utils.stringutils.to_str(other1['verhex'])})
 
         remotekeys = self.mainKeeper.read_remote(other2['name'])
-        self.assertDictEqual(remotekeys, {  'minion_id': 'other2',
-                                            'pub': other2['pubhex'],
-                                            'verify': other2['verhex']} )
+        self.assertDictEqual(remotekeys, {'minion_id': 'other2',
+                                          'pub': salt.utils.stringutils.to_str(other2['pubhex']),
+                                          'verify': salt.utils.stringutils.to_str(other2['verhex'])})
 
         listkeys = self.mainKeeper.list_keys()
         self.assertDictEqual(listkeys, {'accepted': ['other1', 'other2'],
                                         'rejected': [],
                                         'pending': []})
 
-
         allremotekeys = self.mainKeeper.read_all_remote()
-        self.assertDictEqual(allremotekeys, {'other1':
-                                                 {'verify': other1['verhex'],
-                                                  'minion_id': 'other1',
-                                                  'acceptance': 'accepted',
-                                                  'pub': other1['pubhex'],},
-                                             'other2':
-                                                 {'verify': other2['verhex'],
-                                                  'minion_id': 'other2',
-                                                  'acceptance': 'accepted',
-                                                  'pub': other2['pubhex'],}
-                                            })
-
+        self.assertDictEqual(allremotekeys,
+                             {'other1':
+                                  {'verify': salt.utils.stringutils.to_str(other1['verhex']),
+                                   'minion_id': 'other1',
+                                   'acceptance': 'accepted',
+                                   'pub': salt.utils.stringutils.to_str(other1['pubhex']), },
+                              'other2':
+                                  {'verify': salt.utils.stringutils.to_str(other2['verhex']),
+                                   'minion_id': 'other2',
+                                   'acceptance': 'accepted',
+                                   'pub': salt.utils.stringutils.to_str(other2['pubhex']), }
+                              })
 
     def testManualAccept(self):
         '''
@@ -189,9 +193,9 @@ class BasicTestCase(unittest.TestCase):
         self.opts['auto_accept'] = False
         self.assertFalse(self.opts['auto_accept'])
         self.assertDictEqual(self.mainKeeper.all_keys(), {'accepted': [],
-                                                            'local': [],
-                                                            'rejected': [],
-                                                            'pending': []})
+                                                          'local': [],
+                                                          'rejected': [],
+                                                          'pending': []})
 
         localkeys = self.mainKeeper.read_local()
         self.assertDictEqual(localkeys, {})
@@ -199,8 +203,9 @@ class BasicTestCase(unittest.TestCase):
         main = self.createRoadData(name='main', base=self.baseDirpath)
         self.mainKeeper.write_local(main['prihex'], main['sighex'])
         localkeys = self.mainKeeper.read_local()
-        self.assertDictEqual(localkeys, {'priv': main['prihex'],
-                                     'sign': main['sighex']})
+        self.assertDictEqual(localkeys,
+                             {'priv': salt.utils.stringutils.to_str(main['prihex']),
+                              'sign': salt.utils.stringutils.to_str(main['sighex'])})
         allkeys = self.mainKeeper.all_keys()
         self.assertDictEqual(allkeys, {'accepted': [],
                                        'local': [self.localFilepath],
@@ -217,9 +222,9 @@ class BasicTestCase(unittest.TestCase):
 
         allkeys = self.mainKeeper.all_keys()
         self.assertDictEqual(allkeys, {'accepted': [],
-                                'local': [self.localFilepath],
-                                'pending': ['other1', 'other2'],
-                                'rejected': []} )
+                                       'local': [self.localFilepath],
+                                       'pending': ['other1', 'other2'],
+                                       'rejected': []})
 
         remotekeys = self.mainKeeper.read_remote(other1['name'])
         self.assertDictEqual(remotekeys, {})
@@ -232,56 +237,60 @@ class BasicTestCase(unittest.TestCase):
                                         'rejected': [],
                                         'pending': ['other1', 'other2']})
 
-
         allremotekeys = self.mainKeeper.read_all_remote()
-        self.assertDictEqual(allremotekeys, {'other1':
-                                                 {'verify': other1['verhex'],
-                                                  'minion_id': 'other1',
-                                                  'acceptance': 'pending',
-                                                  'pub': other1['pubhex'],},
-                                             'other2':
-                                                 {'verify': other2['verhex'],
-                                                  'minion_id': 'other2',
-                                                  'acceptance': 'pending',
-                                                  'pub': other2['pubhex'],}
-                                            })
+        self.assertDictEqual(allremotekeys,
+                             {'other1':
+                                  {'verify': salt.utils.stringutils.to_str(other1['verhex']),
+                                   'minion_id': 'other1',
+                                   'acceptance': 'pending',
+                                   'pub': salt.utils.stringutils.to_str(other1['pubhex']),
+                                   },
+                              'other2':
+                                  {'verify': salt.utils.stringutils.to_str(other2['verhex']),
+                                   'minion_id': 'other2',
+                                   'acceptance': 'pending',
+                                   'pub': salt.utils.stringutils.to_str(other2['pubhex']),
+                                   }
+                              })
 
         self.mainKeeper.accept_all()
 
         allkeys = self.mainKeeper.all_keys()
         self.assertDictEqual(allkeys, {'accepted': ['other1', 'other2'],
-                                'local': [self.localFilepath],
-                                'pending': [],
-                                'rejected': []} )
+                                       'local': [self.localFilepath],
+                                       'pending': [],
+                                       'rejected': []})
 
         remotekeys = self.mainKeeper.read_remote(other1['name'])
-        self.assertDictEqual(remotekeys, {   'minion_id': 'other1',
-                                             'pub': other1['pubhex'],
-                                             'verify': other1['verhex']} )
+        self.assertDictEqual(remotekeys, {'minion_id': 'other1',
+                                          'pub': salt.utils.stringutils.to_str(other1['pubhex']),
+                                          'verify': salt.utils.stringutils.to_str(other1['verhex'])})
 
         remotekeys = self.mainKeeper.read_remote(other2['name'])
-        self.assertDictEqual(remotekeys, {  'minion_id': 'other2',
-                                            'pub': other2['pubhex'],
-                                            'verify': other2['verhex']} )
+        self.assertDictEqual(remotekeys, {'minion_id': 'other2',
+                                          'pub': salt.utils.stringutils.to_str(other2['pubhex']),
+                                          'verify': salt.utils.stringutils.to_str(other2['verhex'])})
 
         listkeys = self.mainKeeper.list_keys()
         self.assertDictEqual(listkeys, {'accepted': ['other1', 'other2'],
                                         'rejected': [],
                                         'pending': []})
 
-
         allremotekeys = self.mainKeeper.read_all_remote()
-        self.assertDictEqual(allremotekeys, {'other1':
-                                                 {'verify': other1['verhex'],
-                                                  'minion_id': 'other1',
-                                                  'acceptance': 'accepted',
-                                                  'pub': other1['pubhex'],},
-                                             'other2':
-                                                 {'verify': other2['verhex'],
-                                                  'minion_id': 'other2',
-                                                  'acceptance': 'accepted',
-                                                  'pub': other2['pubhex'],}
-                                            })
+        self.assertDictEqual(allremotekeys,
+                             {'other1':
+                                  {'verify': salt.utils.stringutils.to_str(other1['verhex']),
+                                   'minion_id': 'other1',
+                                   'acceptance': 'accepted',
+                                   'pub': salt.utils.stringutils.to_str(other1['pubhex']),
+                                   },
+                              'other2':
+                                  {'verify': salt.utils.stringutils.to_str(other2['verhex']),
+                                   'minion_id': 'other2',
+                                   'acceptance': 'accepted',
+                                   'pub': salt.utils.stringutils.to_str(other2['pubhex']),
+                                   }
+                              })
 
     def testDelete(self):
         '''
@@ -291,9 +300,9 @@ class BasicTestCase(unittest.TestCase):
         self.opts['auto_accept'] = True
         self.assertTrue(self.opts['auto_accept'])
         self.assertDictEqual(self.mainKeeper.all_keys(), {'accepted': [],
-                                                            'local': [],
-                                                            'rejected': [],
-                                                            'pending': []})
+                                                          'local': [],
+                                                          'rejected': [],
+                                                          'pending': []})
 
         localkeys = self.mainKeeper.read_local()
         self.assertDictEqual(localkeys, {})
@@ -301,8 +310,9 @@ class BasicTestCase(unittest.TestCase):
         main = self.createRoadData(name='main', base=self.baseDirpath)
         self.mainKeeper.write_local(main['prihex'], main['sighex'])
         localkeys = self.mainKeeper.read_local()
-        self.assertDictEqual(localkeys, {'priv': main['prihex'],
-                                     'sign': main['sighex']})
+        self.assertDictEqual(localkeys,
+                             {'priv': salt.utils.stringutils.to_str(main['prihex']),
+                              'sign': salt.utils.stringutils.to_str(main['sighex'])})
         allkeys = self.mainKeeper.all_keys()
         self.assertDictEqual(allkeys, {'accepted': [],
                                        'local': [self.localFilepath],
@@ -319,70 +329,73 @@ class BasicTestCase(unittest.TestCase):
 
         allkeys = self.mainKeeper.all_keys()
         self.assertDictEqual(allkeys, {'accepted': ['other1', 'other2'],
-                                'local': [self.localFilepath],
-                                'pending': [],
-                                'rejected': []} )
+                                       'local': [self.localFilepath],
+                                       'pending': [],
+                                       'rejected': []})
 
         remotekeys = self.mainKeeper.read_remote(other1['name'])
-        self.assertDictEqual(remotekeys, {   'minion_id': 'other1',
-                                             'pub': other1['pubhex'],
-                                             'verify': other1['verhex']} )
+        self.assertDictEqual(remotekeys, {'minion_id': 'other1',
+                                          'pub': salt.utils.stringutils.to_str(other1['pubhex']),
+                                          'verify': salt.utils.stringutils.to_str(other1['verhex']),
+                                          })
 
         remotekeys = self.mainKeeper.read_remote(other2['name'])
-        self.assertDictEqual(remotekeys, {  'minion_id': 'other2',
-                                            'pub': other2['pubhex'],
-                                            'verify': other2['verhex']} )
+        self.assertDictEqual(remotekeys, {'minion_id': 'other2',
+                                          'pub': salt.utils.stringutils.to_str(other2['pubhex']),
+                                          'verify': salt.utils.stringutils.to_str(other2['verhex']),
+                                          })
 
         listkeys = self.mainKeeper.list_keys()
         self.assertDictEqual(listkeys, {'accepted': ['other1', 'other2'],
                                         'rejected': [],
                                         'pending': []})
 
-
         allremotekeys = self.mainKeeper.read_all_remote()
-        self.assertDictEqual(allremotekeys, {'other1':
-                                                 {'verify': other1['verhex'],
-                                                  'minion_id': 'other1',
-                                                  'acceptance': 'accepted',
-                                                  'pub': other1['pubhex']},
-                                             'other2':
-                                                 {'verify': other2['verhex'],
-                                                  'minion_id': 'other2',
-                                                  'acceptance': 'accepted',
-                                                  'pub': other2['pubhex'],}
-                                            })
+        self.assertDictEqual(allremotekeys,
+                             {'other1':
+                                  {'verify': salt.utils.stringutils.to_str(other1['verhex']),
+                                   'minion_id': 'other1',
+                                   'acceptance': 'accepted',
+                                   'pub': salt.utils.stringutils.to_str(other1['pubhex'])
+                                   },
+                              'other2':
+                                  {'verify': salt.utils.stringutils.to_str(other2['verhex']),
+                                   'minion_id': 'other2',
+                                   'acceptance': 'accepted',
+                                   'pub': salt.utils.stringutils.to_str(other2['pubhex']),
+                                   }
+                              })
 
         self.mainKeeper.delete_key(match=other1['name'])
 
         allkeys = self.mainKeeper.all_keys()
         self.assertDictEqual(allkeys, {'accepted': ['other2'],
-                                'local': [self.localFilepath],
-                                'pending': [],
-                                'rejected': []} )
+                                       'local': [self.localFilepath],
+                                       'pending': [],
+                                       'rejected': []})
 
         remotekeys = self.mainKeeper.read_remote(other1['name'])
-        self.assertDictEqual(remotekeys, {} )
+        self.assertDictEqual(remotekeys, {})
 
         remotekeys = self.mainKeeper.read_remote(other2['name'])
-        self.assertDictEqual(remotekeys, {  'minion_id': 'other2',
-                                            'pub': other2['pubhex'],
-                                            'verify': other2['verhex']} )
+        self.assertDictEqual(remotekeys, {'minion_id': 'other2',
+                                          'pub': salt.utils.stringutils.to_str(other2['pubhex']),
+                                          'verify': salt.utils.stringutils.to_str(other2['verhex'])})
 
         listkeys = self.mainKeeper.list_keys()
-        self.assertDictEqual(listkeys, {'accepted': [ 'other2'],
+        self.assertDictEqual(listkeys, {'accepted': ['other2'],
                                         'rejected': [],
                                         'pending': []})
 
-
         allremotekeys = self.mainKeeper.read_all_remote()
-        self.assertDictEqual(allremotekeys, {
-                                             'other2':
-                                                 {'verify': other2['verhex'],
-                                                  'minion_id': 'other2',
-                                                  'acceptance': 'accepted',
-                                                  'pub': other2['pubhex'],}
-                                             })
-
+        self.assertDictEqual(allremotekeys,
+                             {'other2':
+                                  {'verify': salt.utils.stringutils.to_str(other2['verhex']),
+                                   'minion_id': 'other2',
+                                   'acceptance': 'accepted',
+                                   'pub': salt.utils.stringutils.to_str(other2['pubhex']),
+                                   }
+                              })
 
 
 def runOne(test):
@@ -393,11 +406,12 @@ def runOne(test):
     suite = unittest.TestSuite([test])
     unittest.TextTestRunner(verbosity=2).run(suite)
 
+
 def runSome():
     '''
     Unittest runner
     '''
-    tests =  []
+    tests = []
     names = ['testAutoAccept',
              'testManualAccept',
              'testDelete']
@@ -406,6 +420,7 @@ def runSome():
 
     suite = unittest.TestSuite(tests)
     unittest.TextTestRunner(verbosity=2).run(suite)
+
 
 def runAll():
     '''
@@ -416,12 +431,12 @@ def runAll():
 
     unittest.TextTestRunner(verbosity=2).run(suite)
 
+
 if __name__ == '__main__' and __package__ is None:
+    # console.reinit(verbosity=console.Wordage.concise)
 
-    #console.reinit(verbosity=console.Wordage.concise)
+    runAll()  # run all unittests
 
-    runAll() #run all unittests
+    # runSome()  #only run some
 
-    #runSome()#only run some
-
-    #runOne('testDelete')
+    # runOne('testDelete')

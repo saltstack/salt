@@ -16,7 +16,7 @@ Utils for the NAPALM modules and proxy.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import traceback
 import logging
 import importlib
@@ -25,7 +25,7 @@ from functools import wraps
 # Import Salt libs
 from salt.ext import six as six
 import salt.output
-import salt.utils
+import salt.utils.platform
 
 # Import third party libs
 try:
@@ -65,7 +65,7 @@ def is_proxy(opts):
     '''
     Is this a NAPALM proxy?
     '''
-    return salt.utils.is_proxy() and opts.get('proxy', {}).get('proxytype') == 'napalm'
+    return salt.utils.platform.is_proxy() and opts.get('proxy', {}).get('proxytype') == 'napalm'
 
 
 def is_always_alive(opts):
@@ -86,7 +86,7 @@ def is_minion(opts):
     '''
     Is this a NAPALM straight minion?
     '''
-    return not salt.utils.is_proxy() and 'napalm' in opts
+    return not salt.utils.platform.is_proxy() and 'napalm' in opts
 
 
 def virtual(opts, virtualname, filename):
@@ -188,14 +188,14 @@ def call(napalm_device, method, *args, **kwargs):
             comment = 'Disconnected from {device}. Trying to reconnect.'.format(device=hostname)
             log.error(err_tb)
             log.error(comment)
-            log.debug('Clearing the connection with {device}'.format(device=hostname))
+            log.debug('Clearing the connection with %s', hostname)
             call(napalm_device, 'close', __retry=False)  # safely close the connection
             # Make sure we don't leave any TCP connection open behind
             #   if we fail to close properly, we might not be able to access the
-            log.debug('Re-opening the connection with {device}'.format(device=hostname))
+            log.debug('Re-opening the connection with %s', hostname)
             call(napalm_device, 'open', __retry=False)
-            log.debug('Connection re-opened with {device}'.format(device=hostname))
-            log.debug('Re-executing {method}'.format(method=method))
+            log.debug('Connection re-opened with %s', hostname)
+            log.debug('Re-executing %s', method)
             return call(napalm_device, method, *args, **kwargs)
             # If still not able to reconnect and execute the task,
             #   the proxy keepalive feature (if enabled) will attempt
@@ -259,7 +259,7 @@ def get_device_opts(opts, salt_obj=None):
     if opts.get('proxy') or opts.get('napalm'):
         opts['multiprocessing'] = device_dict.get('multiprocessing', False)
         # Most NAPALM drivers are SSH-based, so multiprocessing should default to False.
-        # But the user can be allows to have a different value for the multiprocessing, which will
+        # But the user can be allows one to have a different value for the multiprocessing, which will
         #   override the opts.
     if salt_obj and not device_dict:
         # get the connection details from the opts
@@ -316,7 +316,9 @@ def get_device(opts, salt_obj=None):
         try:
             provider_lib = importlib.import_module(network_device.get('PROVIDER'))
         except ImportError as ierr:
-            log.error('Unable to import {0}'.format(network_device.get('PROVIDER')), exc_info=True)
+            log.error('Unable to import %s',
+                      network_device.get('PROVIDER'),
+                      exc_info=True)
             log.error('Falling back to napalm-base')
     _driver_ = provider_lib.get_network_driver(network_device.get('DRIVER_NAME'))
     try:
@@ -339,9 +341,7 @@ def get_device(opts, salt_obj=None):
         )
         log.error(base_err_msg)
         log.error(
-            "Please check error: {error}".format(
-                error=error
-            )
+            "Please check error: %s", error
         )
         raise napalm_base.exceptions.ConnectionException(base_err_msg)
     return network_device
@@ -367,11 +367,11 @@ def proxy_napalm_wrap(func):
         # the execution modules will make use of this variable from now on
         # previously they were accessing the device properties through the __proxy__ object
         always_alive = opts.get('proxy', {}).get('always_alive', True)
-        if salt.utils.is_proxy() and always_alive:
+        if salt.utils.platform.is_proxy() and always_alive:
             # if it is running in a proxy and it's using the default always alive behaviour,
             # will get the cached copy of the network device
             wrapped_global_namespace['napalm_device'] = proxy['napalm.get_device']()
-        elif salt.utils.is_proxy() and not always_alive:
+        elif salt.utils.platform.is_proxy() and not always_alive:
             # if still proxy, but the user does not want the SSH session always alive
             # get a new device instance
             # which establishes a new connection
@@ -387,7 +387,7 @@ def proxy_napalm_wrap(func):
                 except napalm_base.exceptions.ConnectionException as nce:
                     log.error(nce)
                     return '{base_msg}. See log for details.'.format(
-                        base_msg=str(nce.msg)
+                        base_msg=six.text_type(nce.msg)
                     )
             else:
                 # in case the `inherit_napalm_device` is set
@@ -413,7 +413,7 @@ def proxy_napalm_wrap(func):
                 except napalm_base.exceptions.ConnectionException as nce:
                     log.error(nce)
                     return '{base_msg}. See log for details.'.format(
-                        base_msg=str(nce.msg)
+                        base_msg=six.text_type(nce.msg)
                     )
             else:
                 # in case the `inherit_napalm_device` is set
@@ -437,7 +437,6 @@ def default_ret(name):
     '''
     ret = {
         'name': name,
-        'pchanges': {},
         'changes': {},
         'result': False,
         'comment': ''
@@ -455,19 +454,14 @@ def loaded_ret(ret, loaded, test, debug, compliance_report=False, opts=None):
     '''
     # Always get the comment
     changes = {}
-    pchanges = {}
     ret['comment'] = loaded['comment']
     if 'diff' in loaded:
         changes['diff'] = loaded['diff']
-        pchanges['diff'] = loaded['diff']
     if 'compliance_report' in loaded:
         if compliance_report:
             changes['compliance_report'] = loaded['compliance_report']
-        pchanges['compliance_report'] = loaded['compliance_report']
     if debug and 'loaded_config' in loaded:
         changes['loaded_config'] = loaded['loaded_config']
-        pchanges['loaded_config'] = loaded['loaded_config']
-    ret['pchanges'] = pchanges
     if changes.get('diff'):
         ret['comment'] = '{comment_base}\n\nConfiguration diff:\n\n{diff}'.format(comment_base=ret['comment'],
                                                                                   diff=changes['diff'])

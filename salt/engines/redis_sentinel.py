@@ -26,7 +26,7 @@ events based on the channels they are subscribed to.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -64,7 +64,7 @@ class Listener(object):
             tag = 'salt/engine/redis_sentinel'
         super(Listener, self).__init__()
         self.tag = tag
-        self.redis = redis.StrictRedis(host=host, port=port)
+        self.redis = redis.StrictRedis(host=host, port=port, decode_responses=True)
         self.pubsub = self.redis.pubsub()
         self.pubsub.psubscribe(channels)
         self.fire_master = salt.utils.event.get_master_event(__opts__, __opts__['sock_dir']).fire_event
@@ -91,7 +91,7 @@ class Listener(object):
     def run(self):
         log.debug('Start Listener')
         for item in self.pubsub.listen():
-            log.debug('Item: \n{0}'.format(item))
+            log.debug('Item: %s', item)
             self.work(item)
 
 

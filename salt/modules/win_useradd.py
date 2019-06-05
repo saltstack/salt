@@ -9,7 +9,6 @@ Module for managing Windows Users
     <module-provider-override>`.
 
 :depends:
-        - pythoncom
         - pywintypes
         - win32api
         - win32con
@@ -23,28 +22,31 @@ Module for managing Windows Users
 .. note::
     This currently only works with local user accounts, not domain accounts
 '''
-from __future__ import absolute_import
-from datetime import datetime
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
+import logging
 import time
+from datetime import datetime
 
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except Exception:
     from pipes import quote as _cmd_quote
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.args
+import salt.utils.dateutils
+import salt.utils.platform
+import salt.utils.winapi
 from salt.ext import six
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
-import logging
 
 log = logging.getLogger(__name__)
 
 try:
     import pywintypes
     import wmi
-    import pythoncom
     import win32api
     import win32con
     import win32net
@@ -64,7 +66,7 @@ def __virtual__():
     '''
     Requires Windows and Windows Modules
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Module win_useradd: Windows Only'
 
     if not HAS_WIN32NET_MODS:
@@ -164,10 +166,10 @@ def add(name,
     try:
         win32net.NetUserAdd(None, 1, user_info)
     except win32net.error as exc:
-        log.error('Failed to create user {0}'.format(name))
-        log.error('nbr: {0}'.format(exc.winerror))
-        log.error('ctx: {0}'.format(exc.funcname))
-        log.error('msg: {0}'.format(exc.strerror))
+        log.error('Failed to create user %s', name)
+        log.error('nbr: %s', exc.winerror)
+        log.error('ctx: %s', exc.funcname)
+        log.error('msg: %s', exc.strerror)
         return False
 
     update(name=name,
@@ -194,7 +196,8 @@ def update(name,
            unlock_account=None,
            password_never_expires=None,
            disallow_change_password=None):
-    r'''
+    # pylint: disable=anomalous-backslash-in-string
+    '''
     Updates settings for the windows user. Name is the only required parameter.
     Settings will only be changed if the parameter is passed a value.
 
@@ -247,9 +250,10 @@ def update(name,
 
     .. code-block:: bash
 
-        salt '*' user.update bob password=secret profile=C:\Users\Bob
+        salt '*' user.update bob password=secret profile=C:\\Users\\Bob
                  home=\\server\homeshare\bob homedrive=U:
     '''
+    # pylint: enable=anomalous-backslash-in-string
     if six.PY2:
         name = _to_unicode(name)
         password = _to_unicode(password)
@@ -265,10 +269,10 @@ def update(name,
     try:
         user_info = win32net.NetUserGetInfo(None, name, 4)
     except win32net.error as exc:
-        log.error('Failed to update user {0}'.format(name))
-        log.error('nbr: {0}'.format(exc.winerror))
-        log.error('ctx: {0}'.format(exc.funcname))
-        log.error('msg: {0}'.format(exc.strerror))
+        log.error('Failed to update user %s', name)
+        log.error('nbr: %s', exc.winerror)
+        log.error('ctx: %s', exc.funcname)
+        log.error('msg: %s', exc.strerror)
         return False
 
     # Check parameters to update
@@ -292,7 +296,7 @@ def update(name,
             user_info['acct_expires'] = win32netcon.TIMEQ_FOREVER
         else:
             try:
-                dt_obj = salt.utils.date_cast(expiration_date)
+                dt_obj = salt.utils.dateutils.date_cast(expiration_date)
             except (ValueError, RuntimeError):
                 return 'Invalid Date/Time Format: {0}'.format(expiration_date)
             user_info['acct_expires'] = time.mktime(dt_obj.timetuple())
@@ -324,10 +328,10 @@ def update(name,
     try:
         win32net.NetUserSetInfo(None, name, 4, user_info)
     except win32net.error as exc:
-        log.error('Failed to update user {0}'.format(name))
-        log.error('nbr: {0}'.format(exc.winerror))
-        log.error('ctx: {0}'.format(exc.funcname))
-        log.error('msg: {0}'.format(exc.strerror))
+        log.error('Failed to update user %s', name)
+        log.error('nbr: %s', exc.winerror)
+        log.error('ctx: %s', exc.funcname)
+        log.error('msg: %s', exc.strerror)
         return False
 
     return True
@@ -366,10 +370,10 @@ def delete(name,
     try:
         user_info = win32net.NetUserGetInfo(None, name, 4)
     except win32net.error as exc:
-        log.error('User not found: {0}'.format(name))
-        log.error('nbr: {0}'.format(exc.winerror))
-        log.error('ctx: {0}'.format(exc.funcname))
-        log.error('msg: {0}'.format(exc.strerror))
+        log.error('User not found: %s', name)
+        log.error('nbr: %s', exc.winerror)
+        log.error('ctx: %s', exc.funcname)
+        log.error('msg: %s', exc.strerror)
         return False
 
     # Check if the user is logged in
@@ -378,9 +382,9 @@ def delete(name,
         sess_list = win32ts.WTSEnumerateSessions()
     except win32ts.error as exc:
         log.error('No logged in users found')
-        log.error('nbr: {0}'.format(exc.winerror))
-        log.error('ctx: {0}'.format(exc.funcname))
-        log.error('msg: {0}'.format(exc.strerror))
+        log.error('nbr: %s', exc.winerror)
+        log.error('ctx: %s', exc.funcname)
+        log.error('msg: %s', exc.strerror)
 
     # Is the user one that is logged in
     logged_in = False
@@ -397,13 +401,13 @@ def delete(name,
             try:
                 win32ts.WTSLogoffSession(win32ts.WTS_CURRENT_SERVER_HANDLE, session_id, True)
             except win32ts.error as exc:
-                log.error('User not found: {0}'.format(name))
-                log.error('nbr: {0}'.format(exc.winerror))
-                log.error('ctx: {0}'.format(exc.funcname))
-                log.error('msg: {0}'.format(exc.strerror))
+                log.error('User not found: %s', name)
+                log.error('nbr: %s', exc.winerror)
+                log.error('ctx: %s', exc.funcname)
+                log.error('msg: %s', exc.strerror)
                 return False
         else:
-            log.error('User {0} is currently logged in.'.format(name))
+            log.error('User %s is currently logged in.', name)
             return False
 
     # Remove the User Profile directory
@@ -416,20 +420,20 @@ def delete(name,
             if number == 2:  # Profile Folder Not Found
                 pass
             else:
-                log.error('Failed to remove profile for {0}'.format(name))
-                log.error('nbr: {0}'.format(exc.winerror))
-                log.error('ctx: {0}'.format(exc.funcname))
-                log.error('msg: {0}'.format(exc.strerror))
+                log.error('Failed to remove profile for %s', name)
+                log.error('nbr: %s', exc.winerror)
+                log.error('ctx: %s', exc.funcname)
+                log.error('msg: %s', exc.strerror)
                 return False
 
     # And finally remove the user account
     try:
         win32net.NetUserDel(None, name)
     except win32net.error as exc:
-        log.error('Failed to delete user {0}'.format(name))
-        log.error('nbr: {0}'.format(exc.winerror))
-        log.error('ctx: {0}'.format(exc.funcname))
-        log.error('msg: {0}'.format(exc.strerror))
+        log.error('Failed to delete user %s', name)
+        log.error('nbr: %s', exc.winerror)
+        log.error('ctx: %s', exc.funcname)
+        log.error('msg: %s', exc.strerror)
         return False
 
     return True
@@ -455,12 +459,12 @@ def getUserSid(username):
         username = _to_unicode(username)
 
     domain = win32api.GetComputerName()
-    if username.find(u'\\') != -1:
-        domain = username.split(u'\\')[0]
-        username = username.split(u'\\')[-1]
+    if username.find('\\') != -1:
+        domain = username.split('\\')[0]
+        username = username.split('\\')[-1]
     domain = domain.upper()
     return win32security.ConvertSidToStringSid(
-        win32security.LookupAccountName(None, domain + u'\\' + username)[0])
+        win32security.LookupAccountName(None, domain + '\\' + username)[0])
 
 
 def setpassword(name, password):
@@ -583,10 +587,10 @@ def chhome(name, home, **kwargs):
         name = _to_unicode(name)
         home = _to_unicode(home)
 
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     persist = kwargs.pop('persist', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
     if persist:
         log.info('Ignoring unsupported \'persist\' argument to user.chhome')
 
@@ -836,10 +840,13 @@ def _get_userprofile_from_registry(user, sid):
     '''
     profile_dir = __salt__['reg.read_value'](
         'HKEY_LOCAL_MACHINE',
-        u'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
+        'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
         'ProfileImagePath'
     )['vdata']
-    log.debug(u'user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
+    log.debug(
+        'user %s with sid=%s profile is located at "%s"',
+        user, sid, profile_dir
+    )
     return profile_dir
 
 
@@ -981,8 +988,8 @@ def rename(name, new_name):
 
     # Rename the user account
     # Connect to WMI
-    pythoncom.CoInitialize()
-    c = wmi.WMI(find_classes=0)
+    with salt.utils.winapi.Com():
+        c = wmi.WMI(find_classes=0)
 
     # Get the user object
     try:
@@ -1045,9 +1052,9 @@ def current(sam=False):
             user_name = win32api.GetUserName()
     except pywintypes.error as exc:
         log.error('Failed to get current user')
-        log.error('nbr: {0}'.format(exc.winerror))
-        log.error('ctx: {0}'.format(exc.funcname))
-        log.error('msg: {0}'.format(exc.strerror))
+        log.error('nbr: %s', exc.winerror)
+        log.error('ctx: %s', exc.funcname)
+        log.error('msg: %s', exc.strerror)
         raise CommandExecutionError('Failed to get current user', info=exc)
 
     if not user_name:

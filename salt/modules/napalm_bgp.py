@@ -5,7 +5,7 @@ NAPALM BGP
 
 Manages BGP configuration on network devices and provides statistics.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -18,7 +18,7 @@ Dependencies
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python lib
 import logging
@@ -114,11 +114,11 @@ def config(group=None, neighbor=None, **kwargs):
 
         {
             'PEERS-GROUP-NAME':{
-                'type'          : u'external',
-                'description'   : u'Here we should have a nice description',
-                'apply_groups'  : [u'BGP-PREFIX-LIMIT'],
-                'import_policy' : u'PUBLIC-PEER-IN',
-                'export_policy' : u'PUBLIC-PEER-OUT',
+                'type'          : 'external',
+                'description'   : 'Here we should have a nice description',
+                'apply_groups'  : ['BGP-PREFIX-LIMIT'],
+                'import_policy' : 'PUBLIC-PEER-IN',
+                'export_policy' : 'PUBLIC-PEER-OUT',
                 'remove_private': True,
                 'multipath'     : True,
                 'multihop_ttl'  : 30,
@@ -235,23 +235,23 @@ def neighbors(neighbor=None, **kwargs):
                         'up'                        : True,
                         'local_as'                  : 13335,
                         'remote_as'                 : 8121,
-                        'local_address'             : u'172.101.76.1',
+                        'local_address'             : '172.101.76.1',
                         'local_address_configured'  : True,
                         'local_port'                : 179,
-                        'remote_address'            : u'192.247.78.0',
-                        'router_id':                : u'192.168.0.1',
+                        'remote_address'            : '192.247.78.0',
+                        'router_id'                 : '192.168.0.1',
                         'remote_port'               : 58380,
                         'multihop'                  : False,
-                        'import_policy'             : u'4-NTT-TRANSIT-IN',
-                        'export_policy'             : u'4-NTT-TRANSIT-OUT',
+                        'import_policy'             : '4-NTT-TRANSIT-IN',
+                        'export_policy'             : '4-NTT-TRANSIT-OUT',
                         'input_messages'            : 123,
                         'output_messages'           : 13,
                         'input_updates'             : 123,
                         'output_updates'            : 5,
                         'messages_queued_out'       : 23,
-                        'connection_state'          : u'Established',
-                        'previous_connection_state' : u'EstabSync',
-                        'last_event'                : u'RecvKeepAlive',
+                        'connection_state'          : 'Established',
+                        'previous_connection_state' : 'EstabSync',
+                        'last_event'                : 'RecvKeepAlive',
                         'suppress_4byte_as'         : False,
                         'local_as_prepend'          : False,
                         'holdtime'                  : 90,

@@ -3,7 +3,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import inspect
 
 # Import Salt Testing Libs
@@ -37,3 +37,138 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value={'users': {'root': [0]}})):
             self.assertEqual(defaults.get('core:users:root'),
                              {'users': {'root': [0]}})
+
+    def test_merge_with_list_merging(self):
+        '''
+        Test deep merging of dicts with merge_lists enabled.
+        '''
+
+        src_dict = {
+            'string_key': 'string_val_src',
+            'list_key': [
+                'list_val_src',
+            ],
+            'dict_key': {
+                'dict_key_src': 'dict_val_src',
+            }
+        }
+
+        dest_dict = {
+            'string_key': 'string_val_dest',
+            'list_key': [
+                'list_val_dest',
+            ],
+            'dict_key': {
+                'dict_key_dest': 'dict_val_dest',
+            }
+        }
+
+        merged_dict = {
+            'string_key': 'string_val_src',
+            'list_key': [
+                'list_val_dest',
+                'list_val_src'
+            ],
+            'dict_key': {
+                'dict_key_dest': 'dict_val_dest',
+                'dict_key_src': 'dict_val_src'
+            }
+        }
+
+        defaults.merge(dest_dict, src_dict, merge_lists=True)
+        self.assertEqual(dest_dict, merged_dict)
+
+    def test_merge_without_list_merging(self):
+        '''
+        Test deep merging of dicts with merge_lists disabled.
+        '''
+
+        src = {
+            'string_key': 'string_val_src',
+            'list_key': [
+                'list_val_src',
+            ],
+            'dict_key': {
+                'dict_key_src': 'dict_val_src',
+            }
+        }
+
+        dest = {
+            'string_key': 'string_val_dest',
+            'list_key': [
+                'list_val_dest',
+            ],
+            'dict_key': {
+                'dict_key_dest': 'dict_val_dest',
+            }
+        }
+
+        merged = {
+            'string_key': 'string_val_src',
+            'list_key': [
+                'list_val_src'
+            ],
+            'dict_key': {
+                'dict_key_dest': 'dict_val_dest',
+                'dict_key_src': 'dict_val_src'
+            }
+        }
+
+        defaults.merge(dest, src, merge_lists=False)
+        self.assertEqual(dest, merged)
+
+    def test_merge_not_in_place(self):
+        '''
+        Test deep merging of dicts not in place.
+        '''
+
+        src = {
+            'nested_dict': {
+                'A': 'A'
+            }
+        }
+
+        dest = {
+            'nested_dict': {
+                'B': 'B'
+            }
+        }
+
+        dest_orig = {
+            'nested_dict': {
+                'B': 'B'
+            }
+        }
+
+        merged = {
+            'nested_dict': {
+                'A': 'A',
+                'B': 'B'
+            }
+        }
+
+        final = defaults.merge(dest, src, in_place=False)
+        self.assertEqual(dest, dest_orig)
+        self.assertEqual(final, merged)
+
+    def test_deepcopy(self):
+        '''
+        Test a deep copy of object.
+        '''
+
+        src = {
+            'A': 'A',
+            'B': 'B'
+        }
+
+        dist = defaults.deepcopy(src)
+        dist.update({'C': 'C'})
+
+        result = {
+            'A': 'A',
+            'B': 'B',
+            'C': 'C'
+        }
+
+        self.assertFalse(src == dist)
+        self.assertTrue(dist == result)

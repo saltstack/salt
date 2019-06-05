@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -14,20 +14,27 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 import salt.states.libcloud_dns as libcloud_dns
+from salt.modules.libcloud_dns import _simple_record, _simple_zone
 
 
 class DNSTestZone(object):
     def __init__(self, id, domain):
         self.id = id
+        self.type = 'master'
+        self.ttl = 4400
         self.domain = domain
+        self.extra = {}
 
 
 class DNSTestRecord(object):
-    def __init__(self, id, name, type, data):
+    def __init__(self, id, name, record_type, data):
         self.id = id
         self.name = name
-        self.type = type
+        self.type = record_type
+        self.ttl = 4400
         self.data = data
+        self.zone = DNSTestZone('test', 'domain')
+        self.extra = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -35,11 +42,11 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         test_records = {
-            'zone1': [DNSTestRecord(0, 'www', 'A', '127.0.0.1')]
+            'zone1': [_simple_record(DNSTestRecord(0, 'www', 'A', '127.0.0.1'))]
         }
 
         def list_zones(profile):
-            return [DNSTestZone('zone1', 'test.com')]
+            return [_simple_zone(DNSTestZone('zone1', 'test.com'))]
 
         def list_records(zone_id, profile):
             return test_records[zone_id]

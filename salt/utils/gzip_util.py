@@ -5,16 +5,16 @@
     Helper module for handling gzip consistently between 2.7+ and 2.6-
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import gzip
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six import BytesIO
 
 
@@ -96,7 +96,7 @@ def compress_file(fh_, compresslevel=9, chunk_size=1048576):
                     bytes_read = ogz.write(fh_.read(chunk_size))
                 except AttributeError:
                     # Open the file and re-attempt the read
-                    fh_ = salt.utils.fopen(fh_, 'rb')
+                    fh_ = salt.utils.files.fopen(fh_, 'rb')
                     bytes_read = ogz.write(fh_.read(chunk_size))
             yield buf.getvalue()
     finally:

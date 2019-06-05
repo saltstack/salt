@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 # import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 from copy import deepcopy
 import pkg_resources
 import os.path
+import sys
 
 # imprt salt paths
 from tests.support.paths import TESTS_DIR
@@ -51,7 +52,7 @@ except ImportError:
 
 # Import Salt Libs
 import salt.config
-import salt.ext.six as six
+from salt.ext import six
 import salt.loader
 import salt.modules.boto_elb as boto_elb
 import salt.utils.versions
@@ -84,9 +85,9 @@ def _has_required_moto():
         return False
     else:
         moto_version = salt.utils.versions.LooseVersion(pkg_resources.get_distribution('moto').version)
-        if moto_version < required_moto:
+        if moto_version < salt.utils.versions.LooseVersion(required_moto):
             return False
-        elif six.PY3 and moto_version < required_moto_py3:
+        elif six.PY3 and moto_version < salt.utils.versions.LooseVersion(required_moto_py3):
             return False
 
     return True
@@ -104,7 +105,9 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         opts = salt.config.DEFAULT_MASTER_OPTS
-        utils = salt.loader.utils(opts, whitelist=['boto'])
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['boto', 'args', 'systemd', 'path', 'platform'])
         funcs = salt.loader.minion_mods(opts, utils=utils)
         return {
             boto_elb: {
@@ -121,6 +124,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_register_instances_valid_id_result_true(self):
         '''
         tests that given a valid instance id and valid ELB that
@@ -140,6 +144,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_register_instances_valid_id_string(self):
         '''
         tests that given a string containing a instance id and valid ELB that
@@ -163,6 +168,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_deregister_instances_valid_id_result_true(self):
         '''
         tests that given an valid id the boto_elb deregister_instances method
@@ -184,6 +190,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_deregister_instances_valid_id_string(self):
         '''
         tests that given an valid id the boto_elb deregister_instances method
@@ -210,6 +217,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_deregister_instances_valid_id_list(self):
         '''
         tests that given an valid ids in the form of a list that the boto_elb

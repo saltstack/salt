@@ -6,12 +6,14 @@ Provide authentication using simple LDAP binds
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.utils.stringutils
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 # Import third party libs
@@ -39,6 +41,7 @@ __defopts__ = {'auth.ldap.basedn': '',
                'auth.ldap.persontype': 'person',
                'auth.ldap.groupclass': 'posixGroup',
                'auth.ldap.activedirectory': False,
+               'auth.ldap.freeipa': False,
                'auth.ldap.minion_stripdomains': [],
                }
 
@@ -103,9 +106,7 @@ class _LDAPConnection(object):
                 ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT,
                                 ldap.OPT_X_TLS_NEVER)
 
-            self.ldap = ldap.initialize(
-                '{0}'.format(self.uri)
-            )
+            self.ldap = ldap.initialize('{0}'.format(self.uri))
             self.ldap.protocol_version = 3  # ldap.VERSION3
             self.ldap.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
 
@@ -222,14 +223,12 @@ def _bind(username, password, anonymous=False, opts=None):
             # search for the user's DN to be used for the actual authentication
             _ldap = _LDAPConnection(**connargs).ldap
             log.debug(
-                'Running LDAP user dn search with filter:{0}, dn:{1}, '
-                'scope:{2}'.format(
-                    paramvalues['filter'], basedn, scope
-                )
+                'Running LDAP user dn search with filter:%s, dn:%s, '
+                'scope:%s', paramvalues['filter'], basedn, scope
             )
             result = _ldap.search_s(basedn, int(scope), paramvalues['filter'])
             if len(result) < 1:
-                log.warning('Unable to find user {0}'.format(username))
+                log.warning('Unable to find user %s', username)
                 return False
             elif len(result) > 1:
                 # Active Directory returns something odd.  Though we do not
@@ -245,10 +244,10 @@ def _bind(username, password, anonymous=False, opts=None):
                 cns = [tup[0] for tup in result]
                 total_not_none = sum(1 for c in cns if c is not None)
                 if total_not_none > 1:
-                    log.error('LDAP lookup found multiple results for user {0}'.format(username))
+                    log.error('LDAP lookup found multiple results for user %s', username)
                     return False
                 elif total_not_none == 0:
-                    log.error('LDAP lookup--unable to find CN matching user {0}'.format(username))
+                    log.error('LDAP lookup--unable to find CN matching user %s', username)
                     return False
 
             connargs['binddn'] = result[0][0]
@@ -264,19 +263,15 @@ def _bind(username, password, anonymous=False, opts=None):
     if paramvalues['anonymous']:
         log.debug('Attempting anonymous LDAP bind')
     else:
-        log.debug('Attempting LDAP bind with user dn: {0}'.format(connargs['binddn']))
+        log.debug('Attempting LDAP bind with user dn: %s', connargs['binddn'])
     try:
         ldap_conn = _LDAPConnection(**connargs).ldap
     except Exception:
         connargs.pop('bindpw', None)  # Don't log the password
-        log.error('Failed to authenticate user dn via LDAP: {0}'.format(connargs))
+        log.error('Failed to authenticate user dn via LDAP: %s', connargs)
         log.debug('Error authenticating user dn via LDAP:', exc_info=True)
         return False
-    log.debug(
-        'Successfully authenticated user dn via LDAP: {0}'.format(
-            connargs['binddn']
-        )
-    )
+    log.debug('Successfully authenticated user dn via LDAP: %s', connargs['binddn'])
     return ldap_conn
 
 
@@ -284,13 +279,32 @@ def auth(username, password):
     '''
     Simple LDAP auth
     '''
-    if _bind(username, password, anonymous=_config('auth_by_group_membership_only', mandatory=False) and
-                                           _config('anonymous', mandatory=False)):
-        log.debug('LDAP authentication successful')
-        return True
-    else:
-        log.error('LDAP _bind authentication FAILED')
+    if not HAS_LDAP:
+        log.error('LDAP authentication requires python-ldap module')
         return False
+
+    bind = None
+
+    # If bind credentials are configured, verify that we receive a valid bind
+    if _config('binddn', mandatory=False) and _config('bindpw', mandatory=False):
+        search_bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
+
+        # If username & password are not None, attempt to verify they are valid
+        if search_bind and username and password:
+            bind = _bind(username, password,
+                         anonymous=_config('auth_by_group_membership_only', mandatory=False)
+                         and _config('anonymous', mandatory=False))
+    else:
+        bind = _bind(username, password,
+                     anonymous=_config('auth_by_group_membership_only', mandatory=False)
+                     and _config('anonymous', mandatory=False))
+
+    if bind:
+        log.debug('LDAP authentication successful')
+        return bind
+
+    log.error('LDAP _bind authentication FAILED')
+    return False
 
 
 def groups(username, **kwargs):
@@ -310,8 +324,14 @@ def groups(username, **kwargs):
     '''
     group_list = []
 
-    bind = _bind(username, kwargs.get('password'),
-                 anonymous=_config('anonymous', mandatory=False))
+    # If bind credentials are configured, use them instead of user's
+    if _config('binddn', mandatory=False) and _config('bindpw', mandatory=False):
+        bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
+    else:
+        bind = _bind(username, kwargs.get('password', ''),
+                     anonymous=_config('auth_by_group_membership_only', mandatory=False)
+                     and _config('anonymous', mandatory=False))
+
     if bind:
         log.debug('ldap bind to determine group membership succeeded!')
 
@@ -322,29 +342,29 @@ def groups(username, **kwargs):
                                                                             _config('persontype'))
                 user_dn_results = bind.search_s(_config('basedn'),
                                                 ldap.SCOPE_SUBTREE,
-                                                get_user_dn_search, ['distinguishedName'])
+                                                get_user_dn_search, [str('distinguishedName')])  # future lint: disable=blacklisted-function
             except Exception as e:
-                log.error('Exception thrown while looking up user DN in AD: {0}'.format(e))
+                log.error('Exception thrown while looking up user DN in AD: %s', e)
                 return group_list
             if not user_dn_results:
-                log.error('Could not get distinguished name for user {0}'.format(username))
+                log.error('Could not get distinguished name for user %s', username)
                 return group_list
             # LDAP results are always tuples.  First entry in the tuple is the DN
             dn = ldap.filter.escape_filter_chars(user_dn_results[0][0])
             ldap_search_string = '(&(member={0})(objectClass={1}))'.format(dn, _config('groupclass'))
-            log.debug('Running LDAP group membership search: {0}'.format(ldap_search_string))
+            log.debug('Running LDAP group membership search: %s', ldap_search_string)
             try:
                 search_results = bind.search_s(_config('basedn'),
                                                ldap.SCOPE_SUBTREE,
                                                ldap_search_string,
-                                               [_config('accountattributename'), 'cn'])
+                                               [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])  # future lint: disable=blacklisted-function
             except Exception as e:
-                log.error('Exception thrown while retrieving group membership in AD: {0}'.format(e))
+                log.error('Exception thrown while retrieving group membership in AD: %s', e)
                 return group_list
             for _, entry in search_results:
                 if 'cn' in entry:
-                    group_list.append(entry['cn'][0])
-            log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
+                    group_list.append(salt.utils.stringutils.to_unicode(entry['cn'][0]))
+            log.debug('User %s is a member of groups: %s', username, group_list)
 
         elif _config('freeipa'):
             escaped_username = ldap.filter.escape_filter_chars(username)
@@ -353,14 +373,14 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [_config('accountattributename'), 'cn'])
+                                           [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])  # future lint: disable=blacklisted-function
 
             for entry, result in search_results:
                 for user in result[_config('accountattributename')]:
-                    if username == user.split(',')[0].split('=')[-1]:
+                    if username == salt.utils.stringutils.to_unicode(user).split(',')[0].split('=')[-1]:
                         group_list.append(entry.split(',')[0].split('=')[-1])
 
-            log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
+            log.debug('User %s is a member of groups: %s', username, group_list)
 
             if not auth(username, kwargs['password']):
                 log.error('LDAP username and password do not match')
@@ -375,17 +395,23 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [_config('accountattributename'), 'cn', _config('groupattribute')])
+                                           [salt.utils.stringutils.to_str(_config('accountattributename')),
+                                            str('cn'),  # future lint: disable=blacklisted-function
+                                            salt.utils.stringutils.to_str(_config('groupattribute'))])
             for _, entry in search_results:
-                if username in entry[_config('accountattributename')]:
-                    group_list.append(entry['cn'][0])
+                if username in salt.utils.data.decode(entry[_config('accountattributename')]):
+                    group_list.append(salt.utils.stringutils.to_unicode(entry['cn'][0]))
             for user, entry in search_results:
-                if username == user.split(',')[0].split('=')[-1]:
-                    for group in entry[_config('groupattribute')]:
-                        group_list.append(group.split(',')[0].split('=')[-1])
-            log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
+                if username == salt.utils.stringutils.to_unicode(user).split(',')[0].split('=')[-1]:
+                    for group in salt.utils.data.decode(entry[_config('groupattribute')]):
+                        group_list.append(salt.utils.stringutils.to_unicode(group).split(',')[0].split('=')[-1])
+            log.debug('User %s is a member of groups: %s', username, group_list)
 
-            if not auth(username, kwargs['password']):
+            # Only test user auth on first call for job.
+            # 'show_jid' only exists on first payload so we can use that for the conditional.
+            if 'show_jid' in kwargs and not _bind(username, kwargs.get('password'),
+                                            anonymous=_config('auth_by_group_membership_only', mandatory=False) and
+                                            _config('anonymous', mandatory=False)):
                 log.error('LDAP username and password do not match')
                 return []
     else:
@@ -432,7 +458,7 @@ def __expand_ldap_entries(entries, opts=None):
                     search_results = bind.search_s(search_base,
                                                    ldap.SCOPE_SUBTREE,
                                                    search_string,
-                                                   ['cn'])
+                                                   [str('cn')])  # future lint: disable=blacklisted-function
                     for ldap_match in search_results:
                         try:
                             minion_id = ldap_match[1]['cn'][0].lower()
@@ -454,13 +480,13 @@ def __expand_ldap_entries(entries, opts=None):
 
                     for minion_id in retrieved_minion_ids:
                         acl_tree.append({minion_id: permissions})
-                    log.trace('Expanded acl_tree is: {0}'.format(acl_tree))
+                    log.trace('Expanded acl_tree is: %s', acl_tree)
                 except ldap.NO_SUCH_OBJECT:
                     pass
             else:
                 acl_tree.append({minion_or_ou: matchers})
 
-    log.trace('__expand_ldap_entries: {0}'.format(acl_tree))
+    log.trace('__expand_ldap_entries: %s', acl_tree)
     return acl_tree
 
 

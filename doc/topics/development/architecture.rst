@@ -68,8 +68,8 @@ Each salt minion establishes a connection to the master Publisher.
 EventPublisher
 --------------
 
-The EventPublisher publishes events onto the event bus. It is bound to the
-following:
+The EventPublisher publishes master events out to any event listeners. It is
+bound to the following:
 
     * IPC: master_event_pull.ipc
     * IPC: master_event_pub.ipc
@@ -109,52 +109,52 @@ against the command target.
 The typical lifecycle of a salt job from the perspective of the master
 might be as follows:
 
-1) A command is issued on the CLI. For example, 'salt my_minion test.ping'.
+1) A command is issued on the CLI. For example, 'salt my_minion test.version'.
 
 2) The 'salt' command uses LocalClient to generate a request to the salt master
-by connecting to the ReqServer on TCP:4506 and issuing the job.
+   by connecting to the ReqServer on TCP:4506 and issuing the job.
 
 3) The salt-master ReqServer sees the request and passes it to an available
-MWorker over workers.ipc.
+   MWorker over workers.ipc.
 
 4) A worker picks up the request and handles it. First, it checks to ensure
-that the requested user has permissions to issue the command. Then, it sends
-the publish command to all connected minions. For the curious, this happens
-in ClearFuncs.publish().
+   that the requested user has permissions to issue the command. Then, it sends
+   the publish command to all connected minions. For the curious, this happens
+   in ClearFuncs.publish().
 
-5) The worker announces on the master event bus that it is about to publish
-a job to connected minions. This happens by placing the event on the master
-event bus (master_event_pull.ipc) where the EventPublisher picks it up and
-distributes it to all connected event listeners on master_event_pub.ipc.
+5) The worker announces on the master event bus that it is about to publish a
+   job to connected minions. This happens by placing the event on the master
+   event bus (master_event_pull.ipc) where the EventPublisher picks it up and
+   distributes it to all connected event listeners on master_event_pub.ipc.
 
-6) The message to the minions is encrypted and sent to the Publisher via IPC
-on publish_pull.ipc.
+6) The message to the minions is encrypted and sent to the Publisher via IPC on
+   publish_pull.ipc.
 
 7) Connected minions have a TCP session established with the Publisher on TCP
-port 4505 where they await commands. When the Publisher receives the job over
-publish_pull, it sends the jobs across the wire to the minions for processing.
+   port 4505 where they await commands. When the Publisher receives the job
+   over publish_pull, it sends the jobs across the wire to the minions for
+   processing.
 
 8) After the minions receive the request, they decrypt it and perform any
-requested work, if they determine that they are targeted to do so.
+   requested work, if they determine that they are targeted to do so.
 
 9) When the minion is ready to respond, it publishes the result of its job back
-to the master by sending the encrypted result back to the master on TCP 4506
-where it is again picked up by the ReqServer and forwarded to an available
-MWorker for processing. (Again, this happens by passing this message across
-workers.ipc to an available worker.)
+   to the master by sending the encrypted result back to the master on TCP 4506
+   where it is again picked up by the ReqServer and forwarded to an available
+   MWorker for processing. (Again, this happens by passing this message across
+   workers.ipc to an available worker.)
 
 10) When the MWorker receives the job it decrypts it and fires an event onto
-the master event bus (master_event_pull.ipc). (Again for the curious, this
-happens in AESFuncs._return().
+    the master event bus (master_event_pull.ipc). (Again for the curious, this
+    happens in AESFuncs._return().
 
 11) The EventPublisher sees this event and re-publishes it on the bus to all
-connected listeners of the master event bus (on master_event_pub.ipc). This
-is where the LocalClient has been waiting, listening to the event bus for
-minion replies. It gathers the job and stores the result.
+    connected listeners of the master event bus (on master_event_pub.ipc). This
+    is where the LocalClient has been waiting, listening to the event bus for
+    minion replies. It gathers the job and stores the result.
 
 12) When all targeted minions have replied or the timeout has been exceeded,
-the salt client displays the results of the job to the user on the CLI.
-
+    the salt client displays the results of the job to the user on the CLI.
 
 Salt Minion
 ===========
@@ -167,8 +167,8 @@ Salt. It can either operate as a stand-alone daemon which accepts commands
 locally via 'salt-call' or it can connect back to a master and receive commands
 remotely.
 
-When starting up, salt minions connect _back_ to a master defined in the minion
-config file. The connect to two ports on the master:
+When starting up, salt minions connect *back* to a master defined in the minion
+config file. They connect to two ports on the master:
 
     * TCP: 4505
         This is the connection to the master Publisher. It is on this port that
@@ -196,8 +196,8 @@ permissions can read or write to the bus as a common interface with the salt
 minion.
 
 
-Job Flow
---------
+Minion Job Flow
+---------------
 
 When a salt minion starts up, it attempts to connect to the Publisher and the
 ReqServer on the salt master. It then attempts to authenticate and once the
@@ -206,28 +206,22 @@ minion has successfully authenticated, it simply listens for jobs.
 Jobs normally come either come from the 'salt-call' script run by a local user
 on the salt minion or they can come directly from a master.
 
-Master Job Flow
----------------
+The job flow on a minion, coming from the master via a 'salt' command is as
+follows:
 
 1) A master publishes a job that is received by a minion as outlined by the
 master's job flow above.
-
 2) The minion is polling its receive socket that's connected to the master
 Publisher (TCP 4505 on master). When it detects an incoming message, it picks it
 up from the socket and decrypts it.
-
 3) A new minion process or thread is created and provided with the contents of the
 decrypted message. The _thread_return() method is provided with the contents of
 the received message.
-
 4) The new minion thread is created. The _thread_return() function starts up
 and actually calls out to the requested function contained in the job.
-
 5) The requested function runs and returns a result. [Still in thread.]
-
 6) The result of the function that's run is encrypted and returned to the
 master's ReqServer (TCP 4506 on master). [Still in thread.]
-
 7) Thread exits. Because the main thread was only blocked for the time that it
 took to initialize the worker thread, many other requests could have been
 received and processed during this time.
@@ -241,6 +235,5 @@ clear and when they are passed using encryption. There are two rules governing
 this behaviour:
 
 1) ClearFuncs is used for intra-master communication and during the initial
-authentication handshake between a minion and master during the key exhange.
-
+authentication handshake between a minion and master during the key exchange.
 2) AESFuncs is used everywhere else.

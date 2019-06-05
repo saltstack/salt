@@ -3,8 +3,8 @@
 integration tests for nilirt_ip
 '''
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 
 # Import Salt Testing libs
@@ -12,12 +12,12 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 
 @skip_if_not_root
-@skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
+@skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
 class Nilrt_ipModuleTest(ModuleCase):
     '''
     Validate the nilrt_ip module
@@ -98,13 +98,13 @@ class Nilrt_ipModuleTest(ModuleCase):
     def test_static_all(self):
         interfaces = self.__interfaces()
         for interface in interfaces:
-            result = self.run_function('ip.set_static_all', [interface, '192.168.10.4', '255.255.255.0', '192.168.10.1', '8.8.4.4 my.dns.com'])
+            result = self.run_function('ip.set_static_all', [interface, '192.168.10.4', '255.255.255.0', '192.168.10.1', '8.8.4.4 8.8.8.8'])
             self.assertTrue(result)
 
         info = self.run_function('ip.get_interfaces_details')
         for interface in info['interfaces']:
             self.assertIn('8.8.4.4', interface['ipv4']['dns'])
-            self.assertIn('my.dns.com', interface['ipv4']['dns'])
+            self.assertIn('8.8.8.8', interface['ipv4']['dns'])
             self.assertEqual(interface['ipv4']['requestmode'], 'static')
             self.assertEqual(interface['ipv4']['address'], '192.168.10.4')
             self.assertEqual(interface['ipv4']['netmask'], '255.255.255.0')

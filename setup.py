@@ -126,6 +126,7 @@ SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.t
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
 SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'raet.txt')
 SALT_WINDOWS_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req.txt')
+SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), 'README.rst')
 
 # Salt SSH Packaging Detection
 PACKAGED_FOR_SALT_SSH_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), '.salt-ssh-package')
@@ -203,6 +204,11 @@ def _check_ver(pyver, op, wanted):
     '''
     pyver = distutils.version.LooseVersion(pyver)
     wanted = distutils.version.LooseVersion(wanted)
+    if IS_PY3:
+        if not isinstance(pyver, str):
+            pyver = str(pyver)
+        if not isinstance(wanted, str):
+            wanted = str(wanted)
     return getattr(operator, '__{}__'.format(op))(pyver, wanted)
 
 
@@ -308,6 +314,7 @@ class GenerateSaltSyspaths(Command):
                 spm_formula_path=self.distribution.salt_spm_formula_dir,
                 spm_pillar_path=self.distribution.salt_spm_pillar_dir,
                 spm_reactor_path=self.distribution.salt_spm_reactor_dir,
+                home_dir=self.distribution.salt_home_dir,
             )
         )
 
@@ -510,6 +517,10 @@ class Sdist(sdist):
             self.run_command('write_salt_ssh_packaging_file')
             self.filelist.files.append(os.path.basename(PACKAGED_FOR_SALT_SSH_FILE))
 
+        if not IS_PY3 and not isinstance(base_dir, str):
+            # Work around some bad code in distutils which logs unicode paths
+            # against a str format string.
+            base_dir = base_dir.encode('utf-8')
         sdist.make_release_tree(self, base_dir, files)
 
         # Let's generate salt/_version.py to include in the sdist tarball
@@ -698,6 +709,7 @@ PIDFILE_DIR = {pidfile_dir!r}
 SPM_FORMULA_PATH = {spm_formula_path!r}
 SPM_PILLAR_PATH = {spm_pillar_path!r}
 SPM_REACTOR_PATH = {spm_reactor_path!r}
+HOME_DIR = {home_dir!r}
 '''
 
 
@@ -833,6 +845,8 @@ class SaltDistribution(distutils.dist.Distribution):
          'Salt\'s pre-configured SPM pillar directory'),
         ('salt-spm-reactor-dir=', None,
          'Salt\'s pre-configured SPM reactor directory'),
+        ('salt-home-dir=', None,
+         'Salt\'s pre-configured user home directory'),
     ]
 
     def __init__(self, attrs=None):
@@ -857,6 +871,7 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_spm_formula_dir = None
         self.salt_spm_pillar_dir = None
         self.salt_spm_reactor_dir = None
+        self.salt_home_dir = None
 
         # Salt version
         self.with_salt_version = None
@@ -864,6 +879,12 @@ class SaltDistribution(distutils.dist.Distribution):
         self.name = 'salt-ssh' if PACKAGED_FOR_SALT_SSH else 'salt'
         self.salt_version = __version__  # pylint: disable=undefined-variable
         self.description = 'Portable, distributed, remote execution and configuration management system'
+        kwargs = {}
+        if IS_PY3:
+            kwargs['encoding'] = 'utf-8'
+        with open(SALT_LONG_DESCRIPTION_FILE, **kwargs) as f:
+            self.long_description = f.read()
+        self.long_description_content_type = 'text/x-rst'
         self.author = 'Thomas S Hatch'
         self.author_email = 'thatch45@gmail.com'
         self.url = 'http://saltstack.org'
@@ -1153,6 +1174,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 'wmi',
                 'site',
                 'psutil',
+                'pytz',
             ])
         elif IS_SMARTOS_PLATFORM:
             # we have them as requirements in pkg/smartos/esky/requirements.txt

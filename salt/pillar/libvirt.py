@@ -5,7 +5,7 @@ generated using the libvirt key runner
 
 :depends: certtool
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Don't "fix" the above docstring to put it on two lines, as the sphinx
 # autosummary pulls only the first line for its description.
@@ -15,11 +15,13 @@ import os
 import subprocess
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 
 
 def __virtual__():
-    return salt.utils.which('certtool') is not None
+    return salt.utils.path.which('certtool') is not None
 
 
 def ext_pillar(minion_id,
@@ -33,28 +35,38 @@ def ext_pillar(minion_id,
             'libvirt',
             minion_id)
     cacert = os.path.join(__opts__['pki_dir'],
-            'libvirt',
-            'cacert.pem')
+                          'libvirt',
+                          'cacert.pem')
     if not os.path.isdir(key_dir):
         # No keys have been generated
-        gen_hyper_keys(minion_id)
+        gen_hyper_keys(minion_id,
+                       pillar.get('ext_pillar_virt.country', 'US'),
+                       pillar.get('ext_pillar_virt.st', 'Utah'),
+                       pillar.get('ext_pillar_virt.locality',
+                                  'Salt Lake City'),
+                       pillar.get('ext_pillar_virt.organization', 'Salted'),
+                       pillar.get('ext_pillar_virt.expiration_days', '365')
+                       )
     ret = {}
     for key in os.listdir(key_dir):
         if not key.endswith('.pem'):
             continue
         fn_ = os.path.join(key_dir, key)
-        with salt.utils.fopen(fn_, 'r') as fp_:
-            ret['libvirt.{0}'.format(key)] = fp_.read()
-    with salt.utils.fopen(cacert, 'r') as fp_:
-        ret['libvirt.cacert.pem'] = fp_.read()
+        with salt.utils.files.fopen(fn_, 'r') as fp_:
+            ret['libvirt.{0}'.format(key)] = \
+                salt.utils.stringutils.to_unicode(fp_.read())
+    with salt.utils.files.fopen(cacert, 'r') as fp_:
+        ret['libvirt.cacert.pem'] = \
+            salt.utils.stringutils.to_unicode(fp_.read())
     return ret
 
 
 def gen_hyper_keys(minion_id,
-        country='US',
-        state='Utah',
-        locality='Salt Lake City',
-        organization='Salted'):
+                   country='US',
+                   state='Utah',
+                   locality='Salt Lake City',
+                   organization='Salted',
+                   expiration_days='365'):
     '''
     Generate the keys to be used by libvirt hypervisors, this routine gens
     the keys and applies them to the pillar for the hypervisor minions
@@ -68,7 +80,7 @@ def gen_hyper_keys(minion_id,
     cacert = os.path.join(key_dir, 'cacert.pem')
     cainfo = os.path.join(key_dir, 'ca.info')
     if not os.path.isfile(cainfo):
-        with salt.utils.fopen(cainfo, 'w+') as fp_:
+        with salt.utils.files.fopen(cainfo, 'w+') as fp_:
             fp_.write('cn = salted\nca\ncert_signing_key')
     if not os.path.isfile(cakey):
         subprocess.call(
@@ -88,11 +100,14 @@ def gen_hyper_keys(minion_id,
     ccert = os.path.join(sub_dir, 'clientcert.pem')
     clientinfo = os.path.join(sub_dir, 'client.info')
     if not os.path.isfile(srvinfo):
-        with salt.utils.fopen(srvinfo, 'w+') as fp_:
-            infodat = ('organization = salted\ncn = {0}\ntls_www_server'
-                       '\nencryption_key\nsigning_key'
-                       '\ndigitalSignature').format(
-                               __grains__['fqdn'])
+        with salt.utils.files.fopen(srvinfo, 'w+') as fp_:
+            infodat = salt.utils.stringutils.to_str(
+                'organization = salted\ncn = {0}\ntls_www_server'
+                '\nencryption_key\nsigning_key'
+                '\ndigitalSignature\nexpiration_days = {1}'.format(
+                   __grains__['fqdn'], expiration_days
+                )
+            )
             fp_.write(infodat)
     if not os.path.isfile(priv):
         subprocess.call(
@@ -105,17 +120,19 @@ def gen_hyper_keys(minion_id,
                ).format(priv, cacert, cakey, srvinfo, cert)
         subprocess.call(cmd, shell=True)
     if not os.path.isfile(clientinfo):
-        with salt.utils.fopen(clientinfo, 'w+') as fp_:
-            infodat = ('country = {0}\nstate = {1}\nlocality = '
-                       '{2}\norganization = {3}\ncn = {4}\n'
-                       'tls_www_client\nencryption_key\nsigning_key\n'
-                       'digitalSignature'
-                       ).format(
-                               country,
-                               state,
-                               locality,
-                               organization,
-                               __grains__['fqdn'])
+        with salt.utils.files.fopen(clientinfo, 'w+') as fp_:
+            infodat = salt.utils.stringutils.to_str(
+                'country = {0}\nstate = {1}\nlocality = {2}\n'
+                'organization = {3}\ncn = {4}\n'
+                'tls_www_client\nencryption_key\nsigning_key\n'
+                'digitalSignature'.format(
+                    country,
+                    state,
+                    locality,
+                    organization,
+                    __grains__['fqdn']
+                )
+            )
             fp_.write(infodat)
     if not os.path.isfile(cpriv):
         subprocess.call(
