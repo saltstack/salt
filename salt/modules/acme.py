@@ -86,7 +86,6 @@ def _expires(name):
         strptime_sux_cmd = 'date --date="$({0} | cut -d= -f2)" +%s'.format(openssl_cmd)
         expiry = float(__salt__['cmd.shell'](strptime_sux_cmd, output_loglevel='quiet'))
         # expiry = datetime.datetime.strptime(expiry.split('=', 1)[-1], '%b %e %H:%M:%S %Y %Z')
-
     return datetime.datetime.fromtimestamp(expiry)
 
 
@@ -285,6 +284,7 @@ def info(name):
         Will output tls.cert_info if that's available, or OpenSSL text if not
 
     :param str name: CommonName of certificate
+    :return dict
 
     CLI example:
 
@@ -293,19 +293,22 @@ def info(name):
         salt 'gitlab.example.com' acme.info dev.example.com
     '''
     if not has(name):
-        return None
+        return {}
     cert_file = _cert_file(name, 'cert')
-    # Use the salt module if available
+    # Use the tls salt module if available
     if 'tls.cert_info' in __salt__:
         cert_info = __salt__['tls.cert_info'](cert_file)
         # Strip out the extensions object contents;
         # these trip over our poor state output
         # and they serve no real purpose here anyway
         cert_info['extensions'] = cert_info['extensions'].keys()
-        return cert_info
-    # Cobble it together using the openssl binary
-    openssl_cmd = 'openssl x509 -in {0} -noout -text'.format(cert_file)
-    return __salt__['cmd.run'](openssl_cmd, output_loglevel='quiet')
+    elif 'x509.read_certificate' in __salt__:
+        cert_info = __salt__['x509.read_certificate'](cert_file)
+    else:
+        # Cobble it together using the openssl binary
+        openssl_cmd = 'openssl x509 -in {0} -noout -text'.format(cert_file)
+        cert_info = {'text': __salt__['cmd.run'](openssl_cmd, output_loglevel='quiet')}
+    return cert_info
 
 
 def expires(name):
