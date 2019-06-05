@@ -445,7 +445,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             user_install=False,
             extra_args=None,
             **kwargs):
-    '''
+    r'''
     Install packages with pip
 
     Install packages individually or from a pip requirements file. Install
@@ -1101,7 +1101,7 @@ def freeze(bin_env=None,
            env_vars=None,
            user_install=False,
            **kwargs):
-    '''
+    r'''
     Return a list of installed packages either globally or in the specified
     virtualenv
 
@@ -1172,7 +1172,7 @@ def list_(prefix=None,
           env_vars=None,
           user_install=False,
           **kwargs):
-    '''
+    r'''
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
 

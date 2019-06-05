@@ -367,7 +367,7 @@ def installed(name,
               extra_args=None,
               user_install=False,
               **kwargs):
-    '''
+    r'''
     Make sure the package is installed
 
     name
