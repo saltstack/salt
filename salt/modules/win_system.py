@@ -625,7 +625,7 @@ def get_system_info():
         ret['processor_cores'] += system.NumberOfCores
         try:
             ret['processor_cores_enabled'] += system.NumberOfEnabledCore
-        except AttributeError:
+        except (AttributeError, TypeError):
             pass
     if ret['processor_cores_enabled'] == 0:
         ret.pop('processor_cores_enabled', False)
