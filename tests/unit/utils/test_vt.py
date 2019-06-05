@@ -34,7 +34,7 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 
 def stdout_fileno_available():
     '''
-        Tests if sys.stdout.fileno is available in this testing enviroment
+        Tests if sys.stdout.fileno is available in this testing environment
     '''
     try:
         sys.stdout.fileno()
