@@ -18,6 +18,7 @@ NO_DATEUTIL_REASON = 'python-dateutil is not installed'
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
+from tests.support.helpers import destructiveTest
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -26,17 +27,20 @@ from tests.support.mock import (
     call,
     mock_open,
     patch)
+from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.yaml
+import salt.modules.file as filemod
 import salt.states.file as filestate
 import salt.serializers.yaml as yamlserializer
 import salt.serializers.json as jsonserializer
 import salt.serializers.python as pythonserializer
 from salt.exceptions import CommandExecutionError
+from salt.ext.six.moves import range
 import salt.utils.win_functions
 
 
@@ -2096,3 +2100,67 @@ class TestSelinux(TestCase, LoaderModuleMockMixin):
                                                 }):
                 ret = filestate.managed(file_name, selinux={'seuser': 'unconfined_u', 'setype': 'user_tmp_t'})
                 self.assertEqual(True, ret['result'])
+
+
+class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filestate: {
+                '__salt__': {'file.stats': filemod.stats},
+            }
+        }
+
+    @destructiveTest
+    @skipIf(salt.utils.platform.is_windows(), 'File modes do not exist on windows')
+    def test__check_directory(self):
+        '''
+        Test the _check_directory function
+        Make sure that recursive file permission checks return correctly
+        '''
+        # set file permissions
+        # Run _check_directory function
+        # Verify that it returns correctly
+        # Delete tmp directory structure
+        root_tmp_dir = os.path.join(TMP, 'test__check_dir')
+        depth = 3
+        try:
+            def create_files(tmp_dir):
+                for f in range(depth):
+                    path = os.path.join(tmp_dir, 'file_{:03}.txt'.format(f))
+                    with salt.utils.files.fopen(path, 'w+'):
+                        os.chmod(path, 0o777)
+
+            # Create tmp directory structure
+            os.mkdir(root_tmp_dir)
+            os.chmod(root_tmp_dir, 0o777)
+            create_files(root_tmp_dir)
+
+            for d in range(depth):
+                dir_name = os.path.join(root_tmp_dir, 'dir{:03}'.format(d))
+                os.mkdir(dir_name)
+                os.chmod(dir_name, 0o777)
+                create_files(dir_name)
+                for s in range(depth):
+                    sub_dir_name = os.path.join(dir_name, 'dir{:03}'.format(s))
+                    os.mkdir(sub_dir_name)
+                    os.chmod(sub_dir_name, 0o777)
+                    create_files(sub_dir_name)
+
+            # Set some bad permissions
+            changed_files = {
+                os.path.join(root_tmp_dir, 'file_000.txt'),
+                os.path.join(root_tmp_dir, 'dir002', 'file_000.txt'),
+                os.path.join(root_tmp_dir, 'dir000', 'dir001', 'file_002.txt'),
+                os.path.join(root_tmp_dir, 'dir001', 'dir002'),
+                os.path.join(root_tmp_dir, 'dir002', 'dir000'),
+                os.path.join(root_tmp_dir, 'dir001'),
+            }
+            for c in changed_files:
+                os.chmod(c, 0o770)
+
+            ret = filestate._check_directory(root_tmp_dir, dir_mode=0o777, file_mode=0o777, recurse=['mode'])
+            self.assertSetEqual(changed_files, set(ret[-1].keys()))
+
+        finally:
+            # Cleanup
+            shutil.rmtree(root_tmp_dir)
