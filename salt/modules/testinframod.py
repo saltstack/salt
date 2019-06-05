@@ -7,7 +7,7 @@ module dynamically generates wrappers for the various resources by iterating
 over the values in the ``__all__`` variable exposed by the testinfra.modules
 namespace.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import inspect
 import logging
 import operator
@@ -217,7 +217,7 @@ def _copy_function(module_name, name=None):
             comparison: eq
     ```
     """
-    log.debug('Generating function for %s module', module_name)
+    log.debug('Generating function for testinfra.%s', module_name)
 
     def _run_tests(name, **methods):
         success = True
@@ -242,8 +242,8 @@ def _copy_function(module_name, name=None):
             elif hasattr(mod, '__call__'):
                 mod_sig = inspect.getargspec(mod.__call__)
             parameters = mod_sig.args
-        log.debug('Parameters accepted by module {0}: {1}'.format(module_name,
-                                                                  parameters))
+        log.debug('Parameters accepted by module %s: %s',
+                  module_name, parameters)
         additional_args = {}
         for arg in set(parameters).intersection(set(methods)):
             additional_args[arg] = methods.pop(arg)
@@ -256,11 +256,11 @@ def _copy_function(module_name, name=None):
             log.exception('Module failed to instantiate')
             raise
         valid_methods = {}
-        log.debug('Called methods are: {0}'.format(methods))
+        log.debug('Called methods are: %s', methods)
         for meth_name in methods:
             if not meth_name.startswith('_'):
                 valid_methods[meth_name] = methods[meth_name]
-        log.debug('Valid methods are: {0}'.format(valid_methods))
+        log.debug('Valid methods are: %s', valid_methods)
         for meth, arg in valid_methods.items():
             result = _get_method_result(mod, modinstance, meth, arg)
             assertion_result = _apply_assertion(arg, result)
@@ -277,9 +277,15 @@ def _copy_function(module_name, name=None):
                             ))
         return success, pass_msgs, fail_msgs
     func = _run_tests
+    if name is not None:
+        # types.FunctionType requires a str for __name__ attribute, using a
+        # unicode type will result in a TypeError.
+        name = str(name)  # future lint: disable=blacklisted-function
+    else:
+        name = func.__name__
     return types.FunctionType(func.__code__,
                               func.__globals__,
-                              name or func.__name__,
+                              name,
                               func.__defaults__,
                               func.__closure__)
 
@@ -296,8 +302,7 @@ def _register_functions():
         modules_ = [module_ for module_ in modules.modules]
 
     for mod_name in modules_:
-        mod_name = _to_snake_case(mod_name)
-        mod_func = _copy_function(mod_name, str(mod_name))
+        mod_func = _copy_function(mod_name, mod_name)
         mod_func.__doc__ = _build_doc(mod_name)
         __all__.append(mod_name)
         globals()[mod_name] = mod_func

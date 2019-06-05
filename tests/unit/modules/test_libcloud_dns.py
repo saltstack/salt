@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -28,6 +28,7 @@ def get_mock_driver():
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not libcloud_dns.HAS_LIBCLOUD, 'No libcloud installed')
 class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

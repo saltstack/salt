@@ -48,9 +48,7 @@ JID/MINION_ID
 return: return_data
 full_ret: full load of job return
 '''
-from __future__ import absolute_import
-
-import json
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 try:
@@ -59,9 +57,13 @@ try:
 except ImportError:
     HAS_DEPS = False
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.jid
+import salt.utils.json
+import salt.utils.minions
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -74,14 +76,18 @@ COUCHBASE_CONN = None
 DESIGN_NAME = 'couchbase_returner'
 VERIFIED_VIEWS = False
 
+_json = salt.utils.json.import_json()
+
+
+def _json_dumps(obj, **kwargs):
+    return salt.utils.json.dumps(obj, _json_module=_json)
+
 
 def __virtual__():
     if not HAS_DEPS:
         return False, 'Could not import couchbase returner; couchbase is not installed.'
 
-    # try to load some faster json libraries. In order of fastest to slowest
-    json = salt.utils.import_json()
-    couchbase.set_json_converters(json.dumps, json.loads)
+    couchbase.set_json_converters(_json_dumps, salt.utils.json.loads)
 
     return __virtualname__
 
@@ -160,14 +166,14 @@ def prep_jid(nocache=False, passed_jid=None):
     So do what you have to do to make sure that stays the case
     '''
     if passed_jid is None:
-        jid = salt.utils.jid.gen_jid()
+        jid = salt.utils.jid.gen_jid(__opts__)
     else:
         jid = passed_jid
 
     cb_ = _get_connection()
 
     try:
-        cb_.add(str(jid),
+        cb_.add(six.text_type(jid),
                {'nocache': nocache},
                ttl=_get_ttl(),
                )
@@ -188,7 +194,7 @@ def returner(load):
     hn_key = '{0}/{1}'.format(load['jid'], load['id'])
     try:
         ret_doc = {'return': load['return'],
-                   'full_ret': json.dumps(load)}
+                   'full_ret': salt.utils.json.dumps(load)}
 
         cb_.add(hn_key,
                ret_doc,
@@ -196,10 +202,8 @@ def returner(load):
                )
     except couchbase.exceptions.KeyExistsError:
         log.error(
-            'An extra return was detected from minion {0}, please verify '
-            'the minion, this could be a replay attack'.format(
-                load['id']
-            )
+            'An extra return was detected from minion %s, please verify '
+            'the minion, this could be a replay attack', load['id']
         )
         return False
 
@@ -211,22 +215,23 @@ def save_load(jid, clear_load, minion=None):
     cb_ = _get_connection()
 
     try:
-        jid_doc = cb_.get(str(jid))
+        jid_doc = cb_.get(six.text_type(jid))
     except couchbase.exceptions.NotFoundError:
-        log.warning('Could not write job cache file for jid: {0}'.format(jid))
-        return False
+        cb_.add(six.text_type(jid), {}, ttl=_get_ttl())
+        jid_doc = cb_.get(six.text_type(jid))
 
     jid_doc.value['load'] = clear_load
-    cb_.replace(str(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
+    cb_.replace(six.text_type(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
 
     # if you have a tgt, save that for the UI etc
     if 'tgt' in clear_load and clear_load['tgt'] != '':
         ckminions = salt.utils.minions.CkMinions(__opts__)
         # Retrieve the minions list
-        minions = ckminions.check_minions(
+        _res = ckminions.check_minions(
             clear_load['tgt'],
             clear_load.get('tgt_type', 'glob')
             )
+        minions = _res['minions']
         save_minions(jid, minions)
 
 
@@ -238,9 +243,9 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     cb_ = _get_connection()
 
     try:
-        jid_doc = cb_.get(str(jid))
+        jid_doc = cb_.get(six.text_type(jid))
     except couchbase.exceptions.NotFoundError:
-        log.warning('Could not write job cache file for jid: {0}'.format(jid))
+        log.warning('Could not write job cache file for jid: %s', jid)
         return False
 
     # save the minions to a cache so we can see in the UI
@@ -250,7 +255,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
         )
     else:
         jid_doc.value['minions'] = minions
-    cb_.replace(str(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
+    cb_.replace(six.text_type(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
 
 
 def get_load(jid):
@@ -260,13 +265,16 @@ def get_load(jid):
     cb_ = _get_connection()
 
     try:
-        jid_doc = cb_.get(str(jid))
+        jid_doc = cb_.get(six.text_type(jid))
     except couchbase.exceptions.NotFoundError:
         return {}
 
-    ret = jid_doc.value['load']
-    if 'minions' in jid_doc.value:
+    ret = {}
+    try:
+        ret = jid_doc.value['load']
         ret['Minions'] = jid_doc.value['minions']
+    except KeyError as e:
+        log.error(e)
 
     return ret
 
@@ -280,7 +288,7 @@ def get_jid(jid):
 
     ret = {}
 
-    for result in cb_.query(DESIGN_NAME, 'jid_returns', key=str(jid), include_docs=True):
+    for result in cb_.query(DESIGN_NAME, 'jid_returns', key=six.text_type(jid), include_docs=True):
         ret[result.value] = result.doc.value
 
     return ret

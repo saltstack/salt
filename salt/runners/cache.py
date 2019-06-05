@@ -2,7 +2,7 @@
 '''
 Return cached data from minions
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import fnmatch
 import logging
@@ -10,10 +10,12 @@ import os
 
 # Import salt libs
 import salt.config
-import salt.ext.six as six
+from salt.ext import six
 import salt.log
-import salt.utils
+import salt.utils.args
+import salt.utils.gitfs
 import salt.utils.master
+import salt.utils.versions
 import salt.payload
 import salt.cache
 import salt.fileserver.gitfs
@@ -56,7 +58,7 @@ def grains(tgt=None, tgt_type='glob', **kwargs):
         salt-run cache.grains '*'
     '''
     if 'expr_form' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'The target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -67,7 +69,7 @@ def grains(tgt=None, tgt_type='glob', **kwargs):
     if tgt is None:
         # Change ``tgt=None`` to ``tgt`` (mandatory kwarg) in Salt Sodium.
         # This behavior was changed in PR #45588 to fix Issue #45489.
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Sodium',
             'Detected missing \'tgt\' option. Cached grains will not be returned '
             'without a specified \'tgt\'. This option will be required starting in '
@@ -97,7 +99,7 @@ def pillar(tgt=None, tgt_type='glob', **kwargs):
         salt-run cache.pillar
     '''
     if 'expr_form' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'The target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -130,7 +132,7 @@ def mine(tgt=None, tgt_type='glob', **kwargs):
         salt-run cache.mine
     '''
     if 'expr_form' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'The target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -188,7 +190,7 @@ def clear_pillar(tgt=None, tgt_type='glob', expr_form=None):
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -216,7 +218,7 @@ def clear_grains(tgt=None, tgt_type='glob', expr_form=None):
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -244,7 +246,7 @@ def clear_mine(tgt=None, tgt_type='glob', expr_form=None):
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -292,7 +294,7 @@ def clear_all(tgt=None, tgt_type='glob', expr_form=None):
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -330,29 +332,40 @@ def clear_git_lock(role, remote=None, **kwargs):
         have their lock cleared. For example, a ``remote`` value of **github**
         will remove the lock from all github.com remotes.
 
-    type : update,checkout
-        The types of lock to clear. Can be ``update``, ``checkout``, or both of
-        them (either comma-separated or as a Python list).
+    type : update,checkout,mountpoint
+        The types of lock to clear. Can be one or more of ``update``,
+        ``checkout``, and ``mountpoint``, and can be passed either as a
+        comma-separated or Python list.
 
         .. versionadded:: 2015.8.8
+        .. versionchanged:: 2018.3.0
+            ``mountpoint`` lock type added
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
+        salt-run cache.clear_git_lock gitfs
         salt-run cache.clear_git_lock git_pillar
+        salt-run cache.clear_git_lock git_pillar type=update
+        salt-run cache.clear_git_lock git_pillar type=update,checkout
+        salt-run cache.clear_git_lock git_pillar type='["update", "mountpoint"]'
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
-    type_ = salt.utils.split_input(kwargs.pop('type', ['update', 'checkout']))
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    type_ = salt.utils.args.split_input(
+        kwargs.pop('type', ['update', 'checkout', 'mountpoint']))
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if role == 'gitfs':
-        git_objects = [salt.utils.gitfs.GitFS(__opts__)]
-        git_objects[0].init_remotes(
-            __opts__['gitfs_remotes'],
-           salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
-           salt.fileserver.gitfs.PER_REMOTE_ONLY)
+        git_objects = [
+            salt.utils.gitfs.GitFS(
+                __opts__,
+                __opts__['gitfs_remotes'],
+                per_remote_overrides=salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
+                per_remote_only=salt.fileserver.gitfs.PER_REMOTE_ONLY
+            )
+        ]
     elif role == 'git_pillar':
         git_objects = []
         for ext_pillar in __opts__['ext_pillar']:
@@ -360,12 +373,12 @@ def clear_git_lock(role, remote=None, **kwargs):
             if key == 'git':
                 if not isinstance(ext_pillar['git'], list):
                     continue
-                obj = salt.utils.gitfs.GitPillar(__opts__)
-                obj.init_remotes(
+                obj = salt.utils.gitfs.GitPillar(
+                    __opts__,
                     ext_pillar['git'],
-                    salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                    salt.pillar.git_pillar.PER_REMOTE_ONLY,
-                    salt.pillar.git_pillar.GLOBAL_ONLY)
+                    per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
+                    per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
+                    global_only=salt.pillar.git_pillar.GLOBAL_ONLY)
                 git_objects.append(obj)
     elif role == 'winrepo':
         winrepo_dir = __opts__['winrepo_dir']
@@ -376,12 +389,13 @@ def clear_git_lock(role, remote=None, **kwargs):
             (winrepo_remotes, winrepo_dir),
             (__opts__['winrepo_remotes_ng'], __opts__['winrepo_dir_ng'])
         ):
-            obj = salt.utils.gitfs.WinRepo(__opts__, base_dir)
-            obj.init_remotes(
+            obj = salt.utils.gitfs.WinRepo(
+                __opts__,
                 remotes,
-                salt.runners.winrepo.PER_REMOTE_OVERRIDES,
-                salt.runners.winrepo.PER_REMOTE_ONLY,
-                salt.runners.winrepo.GLOBAL_ONLY)
+                per_remote_overrides=salt.runners.winrepo.PER_REMOTE_OVERRIDES,
+                per_remote_only=salt.runners.winrepo.PER_REMOTE_ONLY,
+                global_only=salt.runners.winrepo.GLOBAL_ONLY,
+                cache_root=base_dir)
             git_objects.append(obj)
     else:
         raise SaltInvocationError('Invalid role \'{0}\''.format(role))

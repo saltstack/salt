@@ -10,10 +10,10 @@ module instead.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 import salt.config as config
 
 # Import pyrax libraries
@@ -84,13 +84,13 @@ def queues_exists(call, kwargs):
 
 def queues_show(call, kwargs):
     conn = get_conn('RackspaceQueues')
-    return salt.utils.simple_types_filter(conn.show(kwargs['name']).__dict__)
+    return salt.utils.data.simple_types_filter(conn.show(kwargs['name']).__dict__)
 
 
 def queues_create(call, kwargs):
     conn = get_conn('RackspaceQueues')
     if conn.create(kwargs['name']):
-        return salt.utils.simple_types_filter(conn.show(kwargs['name']).__dict__)
+        return salt.utils.data.simple_types_filter(conn.show(kwargs['name']).__dict__)
     else:
         return {}
 
@@ -100,4 +100,4 @@ def queues_delete(call, kwargs):
     if conn.delete(kwargs['name']):
         return {}
     else:
-        return salt.utils.simple_types_filter(conn.show(kwargs['name'].__dict__))
+        return salt.utils.data.simple_types_filter(conn.show(kwargs['name'].__dict__))

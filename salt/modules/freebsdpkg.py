@@ -72,7 +72,7 @@ variables, if set, but these values can also be overridden in several ways:
               pkg.installed:
                 - fromrepo: ftp://ftp2.freebsd.org/
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -80,10 +80,11 @@ import logging
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.functools
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -200,7 +201,7 @@ def latest_version(*names, **kwargs):
 
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def version(*names, **kwargs):
@@ -225,7 +226,7 @@ def version(*names, **kwargs):
     '''
     with_origin = kwargs.pop('with_origin', False)
     ret = __salt__['pkg_resource.version'](*names, **kwargs)
-    if not salt.utils.is_true(with_origin):
+    if not salt.utils.data.is_true(with_origin):
         return ret
     # Put the return value back into a dict since we're adding a subdict
     if len(names) == 1:
@@ -271,9 +272,9 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -281,7 +282,7 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
         ret = copy.deepcopy(__context__['pkg.list_pkgs'])
         if not versions_as_list:
             __salt__['pkg_resource.stringify'](ret)
-        if salt.utils.is_true(with_origin):
+        if salt.utils.data.is_true(with_origin):
             origins = __context__.get('pkg.origin', {})
             return dict([
                 (x, {'origin': origins.get(x, ''), 'version': y})
@@ -310,7 +311,7 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
     __context__['pkg.origin'] = origins
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
-    if salt.utils.is_true(with_origin):
+    if salt.utils.data.is_true(with_origin):
         return dict([
             (x, {'origin': origins.get(x, ''), 'version': y})
             for x, y in six.iteritems(ret)
@@ -413,7 +414,7 @@ def install(name=None,
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     _rehash()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -475,7 +476,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -487,9 +488,9 @@ def remove(name=None, pkgs=None, **kwargs):
 
 
 # Support pkg.delete to remove packages to more closely match pkg_delete
-delete = salt.utils.alias_function(remove, 'delete')
+delete = salt.utils.functools.alias_function(remove, 'delete')
 # No equivalent to purge packages, use remove instead
-purge = salt.utils.alias_function(remove, 'purge')
+purge = salt.utils.functools.alias_function(remove, 'purge')
 
 
 def _rehash():

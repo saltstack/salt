@@ -5,7 +5,7 @@ YAML Renderer for Salt
 For YAML usage information see :ref:`Understanding YAML <yaml>`.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -19,9 +19,8 @@ import salt.utils.url
 from salt.utils.yamlloader import SaltYamlSafeLoader, load
 from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltRenderError
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six import string_types
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -61,19 +60,12 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
         if len(warn_list) > 0:
             for item in warn_list:
                 log.warning(
-                    '{warn} found in {sls} saltenv={env}'.format(
-                        warn=item.message, sls=salt.utils.url.create(sls), env=saltenv
-                    )
+                    '%s found in %s saltenv=%s',
+                    item.message, salt.utils.url.create(sls), saltenv
                 )
         if not data:
             data = {}
-        else:
-            if 'config.get' in __salt__:
-                if __salt__['config.get']('yaml_utf8', False):
-                    data = _yaml_result_unicode_to_utf8(data)
-            elif __opts__.get('yaml_utf8'):
-                data = _yaml_result_unicode_to_utf8(data)
-        log.debug('Results of YAML rendering: \n{0}'.format(data))
+        log.debug('Results of YAML rendering: \n%s', data)
 
         def _validate_data(data):
             '''
@@ -94,23 +86,3 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
 
         _validate_data(data)
         return data
-
-
-def _yaml_result_unicode_to_utf8(data):
-    ''''
-    Replace `unicode` strings by utf-8 `str` in final yaml result
-
-    This is a recursive function
-    '''
-    if six.PY3:
-        return data
-    if isinstance(data, OrderedDict):
-        for key, elt in six.iteritems(data):
-            data[key] = _yaml_result_unicode_to_utf8(elt)
-    elif isinstance(data, list):
-        for i in range(len(data)):
-            data[i] = _yaml_result_unicode_to_utf8(data[i])
-    elif isinstance(data, six.text_type):
-        # here also
-        data = data.encode('utf-8')
-    return data

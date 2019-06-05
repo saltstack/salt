@@ -13,14 +13,14 @@ when identifying discrepancies in a large infrastructure managed by salt.
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.client
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 
 
@@ -101,7 +101,7 @@ def diff(*args, **kwargs):
         print(k['pool'])
         print('pool size :\n'
               '----------')
-        print('    ' + str(len(k['pool'])))
+        print('    ' + six.text_type(len(k['pool'])))
         if is_first_time:
             is_first_time = False
             print('pool result :\n'
@@ -171,11 +171,11 @@ def _get_pool_results(*args, **kwargs):
 
     # hash minion return values as a string
     for minion in sorted(minions):
-        digest = hashlib.sha256(str(minions[minion])).hexdigest()
+        digest = hashlib.sha256(six.text_type(minions[minion]).encode(__salt_system_encoding__)).hexdigest()
         if digest not in ret:
             ret[digest] = {}
             ret[digest]['pool'] = []
-            ret[digest]['result'] = str(minions[minion])
+            ret[digest]['result'] = six.text_type(minions[minion])
 
         ret[digest]['pool'].append(minion)
 

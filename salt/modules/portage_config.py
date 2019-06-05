@@ -4,16 +4,20 @@ Configure ``portage(5)``
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import shutil
 
 # Import salt libs
-import salt.utils
+import salt.utils.compat
+import salt.utils.data
+import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 try:
     import portage
@@ -54,7 +58,7 @@ def _get_portage():
     portage module must be reloaded or it can't catch the changes
     in portage.* which had been added after when the module was loaded
     '''
-    return reload(portage)
+    return salt.utils.compat.reload(portage)
 
 
 def _porttree():
@@ -75,6 +79,8 @@ def _get_config_file(conf, atom):
         if parts.cp == '*/*':
             # parts.repo will be empty if there is no repo part
             relative_path = parts.repo or "gentoo"
+        elif six.text_type(parts.cp).endswith('/*'):
+            relative_path = six.text_type(parts.cp).split("/")[0] + "_"
         else:
             relative_path = os.path.join(*[x for x in os.path.split(parts.cp) if x != '*'])
     else:
@@ -92,9 +98,27 @@ def _p_to_cp(p):
     Convert a package name or a DEPEND atom to category/package format.
     Raises an exception if program name is ambiguous.
     '''
-    ret = _porttree().dbapi.xmatch("match-all", p)
-    if ret:
-        return portage.cpv_getkey(ret[0])
+    try:
+        ret = portage.dep_getkey(p)
+        if ret:
+            return ret
+    except portage.exception.InvalidAtom:
+        pass
+
+    try:
+        ret = _porttree().dbapi.xmatch('bestmatch-visible', p)
+        if ret:
+            return portage.dep_getkey(ret)
+    except portage.exception.InvalidAtom:
+        pass
+
+    try:
+        ret = _porttree().dbapi.xmatch("match-all", p)
+        if ret:
+            return portage.cpv_getkey(ret[0])
+    except portage.exception.InvalidAtom:
+        pass
+
     return None
 
 
@@ -157,20 +181,20 @@ def _unify_keywords():
     old_path = BASE_PATH.format('keywords')
     if os.path.exists(old_path):
         if os.path.isdir(old_path):
-            for triplet in os.walk(old_path):
+            for triplet in salt.utils.path.os_walk(old_path):
                 for file_name in triplet[2]:
                     file_path = '{0}/{1}'.format(triplet[0], file_name)
-                    with salt.utils.fopen(file_path) as fh_:
+                    with salt.utils.files.fopen(file_path) as fh_:
                         for line in fh_:
-                            line = line.strip()
+                            line = salt.utils.stringutils.to_unicode(line).strip()
                             if line and not line.startswith('#'):
                                 append_to_package_conf(
                                     'accept_keywords', string=line)
             shutil.rmtree(old_path)
         else:
-            with salt.utils.fopen(old_path) as fh_:
+            with salt.utils.files.fopen(old_path) as fh_:
                 for line in fh_:
-                    line = line.strip()
+                    line = salt.utils.stringutils.to_unicode(line).strip()
                     if line and not line.startswith('#'):
                         append_to_package_conf('accept_keywords', string=line)
             os.remove(old_path)
@@ -188,12 +212,7 @@ def _package_conf_file_to_dir(file_name):
             else:
                 os.rename(path, path + '.tmpbak')
                 os.mkdir(path, 0o755)
-                with salt.utils.fopen(path + '.tmpbak') as fh_:
-                    for line in fh_:
-                        line = line.strip()
-                        if line and not line.startswith('#'):
-                            append_to_package_conf(file_name, string=line)
-                os.remove(path + '.tmpbak')
+                os.rename(path + '.tmpbak', os.path.join(path, 'tmp'))
                 return True
         else:
             os.mkdir(path, 0o755)
@@ -210,7 +229,7 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
 
         backup_files = []
 
-        for triplet in os.walk(path):
+        for triplet in salt.utils.path.os_walk(path):
             for file_name in triplet[2]:
                 file_path = '{0}/{1}'.format(triplet[0], file_name)
                 cp = triplet[0][len(path) + 1:] + '/' + file_name
@@ -218,14 +237,15 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
                 shutil.copy(file_path, file_path + '.bak')
                 backup_files.append(file_path + '.bak')
 
-                if cp[0] == '/' or cp.split('/') > 2:
-                    with salt.utils.fopen(file_path) as fp_:
-                        rearrange.extend(fp_.readlines())
+                if cp[0] == '/' or len(cp.split('/')) > 2:
+                    with salt.utils.files.fopen(file_path) as fp_:
+                        rearrange.extend(salt.utils.data.decode(fp_.readlines()))
                     os.remove(file_path)
                 else:
                     new_contents = ''
-                    with salt.utils.fopen(file_path, 'r+') as file_handler:
+                    with salt.utils.files.fopen(file_path, 'r+') as file_handler:
                         for line in file_handler:
+                            line = salt.utils.stringutils.to_unicode(line)
                             try:
                                 atom = line.strip().split()[0]
                             except IndexError:
@@ -255,7 +275,7 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
                     pass
 
         if clean:
-            for triplet in os.walk(path):
+            for triplet in salt.utils.path.os_walk(path):
                 if len(triplet[1]) == 0 and len(triplet[2]) == 0 and \
                         triplet[0] != path:
                     shutil.rmtree(triplet[0])
@@ -362,9 +382,9 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
             pass
 
         try:
-            file_handler = salt.utils.fopen(complete_file_path, 'r+')  # pylint: disable=resource-leakage
+            file_handler = salt.utils.files.fopen(complete_file_path, 'r+')  # pylint: disable=resource-leakage
         except IOError:
-            file_handler = salt.utils.fopen(complete_file_path, 'w+')  # pylint: disable=resource-leakage
+            file_handler = salt.utils.files.fopen(complete_file_path, 'w+')  # pylint: disable=resource-leakage
 
         new_contents = ''
         added = False
@@ -465,9 +485,9 @@ def get_flags_from_package_conf(conf, atom):
 
         flags = []
         try:
-            with salt.utils.fopen(package_file) as fp_:
+            with salt.utils.files.fopen(package_file) as fp_:
                 for line in fp_:
-                    line = line.strip()
+                    line = salt.utils.stringutils.to_unicode(line).strip()
                     line_package = line.split()[0]
 
                     if has_wildcard:
@@ -554,7 +574,7 @@ def is_present(conf, atom):
             atom = portage.dep.Atom(atom, allow_wildcard=True)
         has_wildcard = '*' in atom
 
-        package_file = _get_config_file(conf, str(atom))
+        package_file = _get_config_file(conf, six.text_type(atom))
 
         # wildcards are valid in confs
         if has_wildcard:
@@ -563,13 +583,13 @@ def is_present(conf, atom):
             match_list = set(_porttree().dbapi.xmatch("match-all", atom))
 
         try:
-            with salt.utils.fopen(package_file) as fp_:
+            with salt.utils.files.fopen(package_file) as fp_:
                 for line in fp_:
-                    line = line.strip()
+                    line = salt.utils.stringutils.to_unicode(line).strip()
                     line_package = line.split()[0]
 
                     if has_wildcard:
-                        if line_package == str(atom):
+                        if line_package == six.text_type(atom):
                             return True
                     else:
                         line_list = _porttree().dbapi.xmatch("match-all", line_package)

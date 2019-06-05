@@ -14,23 +14,20 @@ in ~/.ssh/known_hosts, and the remote host has this host's public key.
           - target: /tmp/example_repo
 '''
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import shutil
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from salt.states.git import _fail, _neutral_test
 
 log = logging.getLogger(__name__)
 
-if salt.utils.is_windows():
-    HG_BINARY = "hg.exe"
-else:
-    HG_BINARY = "hg"
+HG_BINARY = 'hg.exe' if salt.utils.platform.is_windows() else 'hg'
 
 
 def __virtual__():
@@ -103,9 +100,7 @@ def latest(name,
             if fail is not None:
                 return fail
         else:
-            log.debug(
-                    'target {0} is not found, "hg clone" is required'.format(
-                        target))
+            log.debug('target %s is not found, "hg clone" is required', target)
         if __opts__['test']:
             return _neutral_test(
                     ret,
@@ -119,10 +114,7 @@ def _update_repo(ret, name, target, clean, user, identity, rev, opts, update_hea
     '''
     Update the repo to a given revision. Using clean passes -C to the hg up
     '''
-    log.debug(
-            'target {0} is found, '
-            '"hg pull && hg up is probably required"'.format(target)
-    )
+    log.debug('target %s is found, "hg pull && hg up is probably required"', target)
 
     current_rev = __salt__['hg.revision'](target, user=user, rev='.')
     if not current_rev:
@@ -172,10 +164,7 @@ def _update_repo(ret, name, target, clean, user, identity, rev, opts, update_hea
 
     if current_rev != new_rev:
         revision_text = '{0} => {1}'.format(current_rev, new_rev)
-        log.info(
-                'Repository {0} updated: {1}'.format(
-                    target, revision_text)
-        )
+        log.info('Repository %s updated: %s', target, revision_text)
         ret['comment'] = 'Repository {0} updated.'.format(target)
         ret['changes']['revision'] = revision_text
     elif 'error:' in pull_out:
@@ -189,14 +178,11 @@ def _update_repo(ret, name, target, clean, user, identity, rev, opts, update_hea
 def _handle_existing(ret, target, force):
     not_empty = os.listdir(target)
     if not not_empty:
-        log.debug(
-            'target {0} found, but directory is empty, automatically '
-            'deleting'.format(target))
+        log.debug('target %s found, but directory is empty, automatically deleting', target)
         shutil.rmtree(target)
     elif force:
-        log.debug(
-            'target {0} found and is not empty. Since force option is'
-            ' in use, deleting anyway.'.format(target))
+        log.debug('target %s found and is not empty. '
+                  'Since force option is in use, deleting anyway.', target)
         shutil.rmtree(target)
     else:
         return _fail(ret, 'Directory exists, and is not empty')

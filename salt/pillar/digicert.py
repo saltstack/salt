@@ -13,9 +13,8 @@ section of your ``master`` configuration file:
     ext_pillar:
       - digicert: True
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import salt.utils
 import salt.cache
 import salt.syspaths as syspaths
 

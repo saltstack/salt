@@ -18,20 +18,20 @@ Requires that the minion_data_cache option be enabled.
 
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import time
 import logging
 
 # Import salt libs
-import salt.utils.minions
 import salt.config
 import salt.key
+import salt.utils.files
+import salt.utils.minions
 import salt.wheel
-import salt.utils
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 import msgpack
 
 log = logging.getLogger(__name__)
@@ -59,10 +59,10 @@ def start(interval=3600, expire=604800):
         minions = {}
         if os.path.exists(presence_file):
             try:
-                with salt.utils.fopen(presence_file, 'r') as f:
+                with salt.utils.files.fopen(presence_file, 'r') as f:
                     minions = msgpack.load(f)
             except IOError as e:
-                log.error('Could not open presence file {0}: {1}'.format(presence_file, e))
+                log.error('Could not open presence file %s: %s', presence_file, e)
                 time.sleep(interval)
                 continue
 
@@ -89,13 +89,13 @@ def start(interval=3600, expire=604800):
 
         if len(stale_keys):
             for k in stale_keys:
-                log.info('Removing stale key for {0}'.format(k))
+                log.info('Removing stale key for %s', k)
             wheel.cmd('key.delete', stale_keys)
             del minions[k]
 
         try:
-            with salt.utils.fopen(presence_file, 'w') as f:
+            with salt.utils.files.fopen(presence_file, 'w') as f:
                 msgpack.dump(minions, f)
         except IOError as e:
-            log.error('Could not write to presence file {0}: {1}'.format(presence_file, e))
+            log.error('Could not write to presence file %s: %s', presence_file, e)
         time.sleep(interval)

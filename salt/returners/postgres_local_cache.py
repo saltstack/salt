@@ -108,16 +108,15 @@ Required python modules: psycopg2
 '''
 
 # Import python libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import re
 import sys
 
 # Import salt libs
-import salt.utils
 import salt.utils.jid
-import salt.ext.six as six
+import salt.utils.json
+from salt.ext import six
 
 # Import third party libs
 try:
@@ -127,16 +126,6 @@ except ImportError:
     HAS_POSTGRES = False
 
 log = logging.getLogger(__name__)
-
-# load is the published job
-LOAD_P = '.load.p'
-# the list of minions that the job is targeted to (best effort match on the
-# master side)
-MINIONS_P = '.minions.p'
-# return is the "return" from the minion data
-RETURN_P = 'return.p'
-# out is the "out" from the minion data
-OUT_P = 'out.p'
 
 __virtualname__ = 'postgres_local_cache'
 
@@ -159,7 +148,7 @@ def _get_conn():
                database=__opts__['master_job_cache.postgres.db'],
                port=__opts__['master_job_cache.postgres.port'])
     except psycopg2.OperationalError:
-        log.error("Could not connect to SQL server: " + str(sys.exc_info()[0]))
+        log.error('Could not connect to SQL server: %s', sys.exc_info()[0])
         return None
     return conn
 
@@ -177,7 +166,7 @@ def _format_job_instance(job):
     Format the job instance correctly
     '''
     ret = {'Function': job.get('fun', 'unknown-function'),
-           'Arguments': json.loads(job.get('arg', '[]')),
+           'Arguments': salt.utils.json.loads(job.get('arg', '[]')),
            # unlikely but safeguard from invalid returns
            'Target': job.get('tgt', 'unknown-target'),
            'Target-type': job.get('tgt_type', 'list'),
@@ -199,7 +188,7 @@ def _gen_jid(cur):
     '''
     Generate an unique job id
     '''
-    jid = salt.utils.jid.gen_jid()
+    jid = salt.utils.jid.gen_jid(__opts__)
     sql = '''SELECT jid FROM jids WHERE jid = %s'''
     cur.execute(sql, (jid,))
     data = cur.fetchall()
@@ -243,11 +232,16 @@ def returner(load):
     sql = '''INSERT INTO salt_returns
             (fun, jid, return, id, success)
             VALUES (%s, %s, %s, %s, %s)'''
+    job_ret = {'return': six.text_type(six.text_type(load['return']), 'utf-8', 'replace')}
+    if 'retcode' in load:
+        job_ret['retcode'] = load['retcode']
+    if 'success' in load:
+        job_ret['success'] = load['success']
     cur.execute(
         sql, (
             load['fun'],
             load['jid'],
-            json.dumps(six.text_type(str(load['return']), 'utf-8', 'replace')),
+            salt.utils.json.dumps(job_ret),
             load['id'],
             load.get('success'),
         )
@@ -272,7 +266,7 @@ def event_return(events):
         sql = '''INSERT INTO salt_events
                 (tag, data, master_id)
                 VALUES (%s, %s, %s)'''
-        cur.execute(sql, (tag, json.dumps(data), __opts__['id']))
+        cur.execute(sql, (tag, salt.utils.json.dumps(data), __opts__['id']))
     _close_conn(conn)
 
 
@@ -294,14 +288,14 @@ def save_load(jid, clear_load, minions=None):
         sql, (
             jid,
             salt.utils.jid.jid_to_time(jid),
-            str(clear_load.get("tgt_type")),
-            str(clear_load.get("cmd")),
-            str(clear_load.get("tgt")),
-            str(clear_load.get("kwargs")),
-            str(clear_load.get("ret")),
-            str(clear_load.get("user")),
-            str(json.dumps(clear_load.get("arg"))),
-            str(clear_load.get("fun")),
+            six.text_type(clear_load.get("tgt_type")),
+            six.text_type(clear_load.get("cmd")),
+            six.text_type(clear_load.get("tgt")),
+            six.text_type(clear_load.get("kwargs")),
+            six.text_type(clear_load.get("ret")),
+            six.text_type(clear_load.get("user")),
+            six.text_type(salt.utils.json.dumps(clear_load.get("arg"))),
+            six.text_type(clear_load.get("fun")),
         )
     )
     # TODO: Add Metadata support when it is merged from develop
@@ -319,7 +313,7 @@ def _escape_jid(jid):
     '''
     Do proper formatting of the jid
     '''
-    jid = str(jid)
+    jid = six.text_type(jid)
     jid = re.sub(r"'*", "", jid)
     return jid
 
@@ -377,8 +371,12 @@ def get_jid(jid):
     ret = {}
     if data:
         for minion, full_ret in data:
-            ret[minion] = {}
-            ret[minion]['return'] = json.loads(full_ret)
+            ret_data = salt.utils.json.loads(full_ret)
+            if not isinstance(ret_data, dict) or 'return' not in ret_data:
+                # Convert the old format in which the return contains the only return data to the
+                # new that is dict containing 'return' and optionally 'retcode' and 'success'.
+                ret_data = {'return': ret_data}
+            ret[minion] = ret_data
     _close_conn(conn)
     return ret
 
@@ -395,7 +393,7 @@ def get_jids():
           '''FROM jids'''
     if __opts__['keep_jobs'] != 0:
         sql = sql + " WHERE started > NOW() - INTERVAL '" \
-                + str(__opts__['keep_jobs']) + "' HOUR"
+                + six.text_type(__opts__['keep_jobs']) + "' HOUR"
 
     cur.execute(sql)
     ret = {}

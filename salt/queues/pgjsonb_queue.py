@@ -40,13 +40,13 @@ Use the following Pg database schema:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from contextlib import contextmanager
-import json
 import sys
 
 # import salt libs
-import salt.ext.six as six
+import salt.utils.json
+from salt.ext import six
 from salt.exceptions import SaltInvocationError, SaltMasterError
 
 try:
@@ -93,9 +93,9 @@ def _conn(commit=False):
         yield cursor
     except psycopg2.DatabaseError as err:
         error = err.args
-        sys.stderr.write(str(error))
+        sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
-        raise err
+        six.reraise(*sys.exc_info())
     else:
         if commit:
             cursor.execute("COMMIT")
@@ -107,7 +107,7 @@ def _conn(commit=False):
 
 def _list_tables(cur):
     cmd = "select relname from pg_class where relkind='r' and relname !~ '^(pg_|sql_)';"
-    log.debug('SQL Query: {0}'.format(cmd))
+    log.debug('SQL Query: %s', cmd)
     cur.execute(cmd)
     result = cur.fetchall()
     return [x[0] for x in result]
@@ -116,7 +116,7 @@ def _list_tables(cur):
 def _create_table(cur, queue):
     cmd = 'CREATE TABLE {0}(id SERIAL PRIMARY KEY, '\
           'data jsonb NOT NULL)'.format(queue)
-    log.debug('SQL Query: {0}'.format(cmd))
+    log.debug('SQL Query: %s', cmd)
     cur.execute(cmd)
     return True
 
@@ -127,7 +127,7 @@ def _list_items(queue):
     '''
     with _conn() as cur:
         cmd = 'SELECT data FROM {0}'.format(queue)
-        log.debug('SQL Query: {0}'.format(cmd))
+        log.debug('SQL Query: %s', cmd)
         cur.execute(cmd)
         contents = cur.fetchall()
         return contents
@@ -174,8 +174,7 @@ def _queue_exists(queue):
 def handle_queue_creation(queue):
     if not _queue_exists(queue):
         with _conn(commit=True) as cur:
-            log.debug('Queue %s does not exist.'
-                      ' Creating', queue)
+            log.debug('Queue %s does not exist. Creating', queue)
             _create_table(cur, queue)
     else:
         log.debug('Queue %s already exists.', queue)
@@ -189,27 +188,23 @@ def insert(queue, items):
 
     with _conn(commit=True) as cur:
         if isinstance(items, dict):
-            items = json.dumps(items)
-            cmd = '''INSERT INTO {0}(data) VALUES('{1}')'''.format(queue, items)
-            log.debug('SQL Query: {0}'.format(cmd))
+            items = salt.utils.json.dumps(items)
+            cmd = str('''INSERT INTO {0}(data) VALUES('{1}')''').format(queue, items)  # future lint: disable=blacklisted-function
+            log.debug('SQL Query: %s', cmd)
             try:
                 cur.execute(cmd)
             except psycopg2.IntegrityError as esc:
-                return('Item already exists in this queue. '
-                       'sqlite error: {0}'.format(esc))
+                return ('Item already exists in this queue. '
+                        'postgres error: {0}'.format(esc))
         if isinstance(items, list):
-            items = [json.dumps(el) for el in items]
-            cmd = "INSERT INTO {0}(data) VALUES (%s)".format(queue)
-            log.debug('SQL Query: {0}'.format(cmd))
-            newitems = []
-            for item in items:
-                newitems.append((item,))
-                # we need a list of one item tuples here
+            items = [(salt.utils.json.dumps(el),) for el in items]
+            cmd = str("INSERT INTO {0}(data) VALUES (%s)").format(queue)  # future lint: disable=blacklisted-function
+            log.debug('SQL Query: %s', cmd)
             try:
-                cur.executemany(cmd, newitems)
+                cur.executemany(cmd, items)
             except psycopg2.IntegrityError as esc:
-                return('One or more items already exists in this queue. '
-                       'sqlite error: {0}'.format(esc))
+                return ('One or more items already exists in this queue. '
+                        'postgres error: {0}'.format(esc))
     return True
 
 
@@ -219,23 +214,21 @@ def delete(queue, items):
     '''
     with _conn(commit=True) as cur:
         if isinstance(items, dict):
-            cmd = """DELETE FROM {0} WHERE data = '{1}'""".format(queue, json.dumps(items))
-            log.debug('SQL Query: {0}'.format(cmd))
+            cmd = str("""DELETE FROM {0} WHERE data = '{1}'""").format(  # future lint: disable=blacklisted-function
+                queue,
+                salt.utils.json.dumps(items))
+            log.debug('SQL Query: %s', cmd)
             cur.execute(cmd)
             return True
         if isinstance(items, list):
-            items = [json.dumps(el) for el in items]
+            items = [(salt.utils.json.dumps(el),) for el in items]
             cmd = 'DELETE FROM {0} WHERE data = %s'.format(queue)
-            log.debug('SQL Query: {0}'.format(cmd))
-            newitems = []
-            for item in items:
-                newitems.append((item,))
-                # we need a list of one item tuples here
-            cur.executemany(cmd, newitems)
+            log.debug('SQL Query: %s', cmd)
+            cur.executemany(cmd, items)
     return True
 
 
-def pop(queue, quantity=1):
+def pop(queue, quantity=1, is_runner=False):
     '''
     Pop one or more or all items from the queue return them.
     '''
@@ -248,7 +241,7 @@ def pop(queue, quantity=1):
                          'Error: "{0}".'.format(exc))
             raise SaltInvocationError(error_txt)
         cmd = ''.join([cmd, ' LIMIT {0};'.format(quantity)])
-    log.debug('SQL Query: {0}'.format(cmd))
+    log.debug('SQL Query: %s', cmd)
     items = []
     with _conn(commit=True) as cur:
         cur.execute(cmd)
@@ -260,7 +253,7 @@ def pop(queue, quantity=1):
             del_cmd = '''DELETE FROM {0} WHERE id IN ('{1}');'''.format(
                 queue, idlist)
 
-            log.debug('SQL Query: {0}'.format(del_cmd))
+            log.debug('SQL Query: %s', del_cmd)
 
             cur.execute(del_cmd)
     return items

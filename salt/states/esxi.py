@@ -90,19 +90,46 @@ ESXi Proxy Minion, please refer to the
 configuration examples, dependency installation instructions, how to run remote
 execution functions against ESXi hosts via a Salt Proxy Minion, and a larger state
 example.
-
 '''
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import sys
+import re
 
 # Import Salt Libs
-import salt.ext.six as six
-import salt.utils
-from salt.exceptions import CommandExecutionError
+from salt.ext import six
+import salt.utils.files
+from salt.exceptions import CommandExecutionError, InvalidConfigError, \
+        VMwareObjectRetrievalError, VMwareSaltError, VMwareApiError, \
+        ArgumentValueError
+from salt.utils.decorators import depends
+from salt.config.schemas.esxi import DiskGroupsDiskScsiAddressSchema, \
+        HostCacheSchema
+
+# External libraries
+try:
+    import jsonschema
+    HAS_JSONSCHEMA = True
+except ImportError:
+    HAS_JSONSCHEMA = False
 
 # Get Logging Started
 log = logging.getLogger(__name__)
+
+try:
+    from pyVmomi import VmomiSupport
+
+    # We check the supported vim versions to infer the pyVmomi version
+    if 'vim25/6.0' in VmomiSupport.versionMap and \
+        sys.version_info > (2, 7) and sys.version_info < (2, 7, 9):
+
+        log.debug('pyVmomi not loaded: Incompatible versions '
+                  'of Python. See Issue #29537.')
+        raise ImportError()
+    HAS_PYVMOMI = True
+except ImportError:
+    HAS_PYVMOMI = False
 
 
 def __virtual__():
@@ -216,10 +243,10 @@ def coredump_configured(name, enabled, dump_ip, host_vnic='vmk0', dump_port=6500
         changes = True
 
     current_port = current_config.get('port')
-    if current_port != str(dump_port):
+    if current_port != six.text_type(dump_port):
         ret['changes'].update({'dump_port':
                               {'old': current_port,
-                               'new': str(dump_port)}})
+                               'new': six.text_type(dump_port)}})
         changes = True
 
     # Only run the command if not using test=True and changes were detected.
@@ -757,7 +784,7 @@ def ssh_configured(name,
             if not ssh_key:
                 ssh_key = ''
                 # Open ssh key file and read in contents to create one key string
-                with salt.utils.fopen(ssh_key_file, 'r') as key_file:
+                with salt.utils.files.fopen(ssh_key_file, 'r') as key_file:
                     for line in key_file:
                         if line.startswith('#'):
                             # Commented line
@@ -963,7 +990,7 @@ def syslog_configured(name,
             return ret
 
         current_val = current_syslog_config[lookup_key]
-        if str(current_val) != str(val):
+        if six.text_type(current_val) != six.text_type(val):
             # Only run the command if not using test=True
             if not __opts__['test']:
                 response = __salt__[esxi_cmd]('set_syslog_config',
@@ -996,6 +1023,576 @@ def syslog_configured(name,
         ret['comment'] = 'Syslog state will change.'
 
     return ret
+
+
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+def diskgroups_configured(name, diskgroups, erase_disks=False):
+    '''
+    Configures the disk groups to use for vsan.
+
+    This function will do the following:
+
+    1. Check whether or not all disks in the diskgroup spec exist, and raises
+       and errors if they do not.
+
+    2. Create diskgroups with the correct disk configurations if diskgroup
+       (identified by the cache disk canonical name) doesn't exist
+
+    3. Adds extra capacity disks to the existing diskgroup
+
+    Example:
+
+    .. code:: python
+
+        {
+            'cache_scsi_addr': 'vmhba1:C0:T0:L0',
+            'capacity_scsi_addrs': [
+                'vmhba2:C0:T0:L0',
+                'vmhba3:C0:T0:L0',
+                'vmhba4:C0:T0:L0',
+            ]
+        }
+
+    name
+        Mandatory state name
+
+    diskgroups
+        Disk group representation containing scsi disk addresses.
+        Scsi addresses are expected for disks in the diskgroup:
+
+    erase_disks
+        Specifies whether to erase all partitions on all disks member of the
+        disk group before the disk group is created. Default value is False.
+    '''
+    proxy_details = __salt__['esxi.get_details']()
+    hostname = proxy_details['host'] if not proxy_details.get('vcenter') \
+               else proxy_details['esxi_host']
+    log.info('Running state {0} for host \'{1}\''.format(name, hostname))
+    # Variable used to return the result of the invocation
+    ret = {'name': name,
+           'result': None,
+           'changes': {},
+           'comments': None}
+    # Signals if errors have been encountered
+    errors = False
+    # Signals if changes are required
+    changes = False
+    comments = []
+    diskgroup_changes = {}
+    si = None
+    try:
+        log.trace('Validating diskgroups_configured input')
+        schema = DiskGroupsDiskScsiAddressSchema.serialize()
+        try:
+            jsonschema.validate({'diskgroups': diskgroups,
+                                 'erase_disks': erase_disks}, schema)
+        except jsonschema.exceptions.ValidationError as exc:
+            raise InvalidConfigError(exc)
+        si = __salt__['vsphere.get_service_instance_via_proxy']()
+        host_disks = __salt__['vsphere.list_disks'](service_instance=si)
+        if not host_disks:
+            raise VMwareObjectRetrievalError(
+                'No disks retrieved from host \'{0}\''.format(hostname))
+        scsi_addr_to_disk_map = {d['scsi_address']: d for d in host_disks}
+        log.trace('scsi_addr_to_disk_map = {0}'.format(scsi_addr_to_disk_map))
+        existing_diskgroups = \
+                __salt__['vsphere.list_diskgroups'](service_instance=si)
+        cache_disk_to_existing_diskgroup_map = \
+                {dg['cache_disk']: dg for dg in existing_diskgroups}
+    except CommandExecutionError as err:
+        log.error('Error: {0}'.format(err))
+        if si:
+            __salt__['vsphere.disconnect'](si)
+        ret.update({
+            'result': False if not __opts__['test'] else None,
+            'comment': six.text_type(err)})
+        return ret
+
+    # Iterate through all of the disk groups
+    for idx, dg in enumerate(diskgroups):
+        # Check for cache disk
+        if not dg['cache_scsi_addr'] in scsi_addr_to_disk_map:
+            comments.append('No cache disk with scsi address \'{0}\' was '
+                            'found.'.format(dg['cache_scsi_addr']))
+            log.error(comments[-1])
+            errors = True
+            continue
+
+        # Check for capacity disks
+        cache_disk_id = scsi_addr_to_disk_map[dg['cache_scsi_addr']]['id']
+        cache_disk_display = '{0} (id:{1})'.format(dg['cache_scsi_addr'],
+                                                   cache_disk_id)
+        bad_scsi_addrs = []
+        capacity_disk_ids = []
+        capacity_disk_displays = []
+        for scsi_addr in dg['capacity_scsi_addrs']:
+            if scsi_addr not in scsi_addr_to_disk_map:
+                bad_scsi_addrs.append(scsi_addr)
+                continue
+            capacity_disk_ids.append(scsi_addr_to_disk_map[scsi_addr]['id'])
+            capacity_disk_displays.append(
+                '{0} (id:{1})'.format(scsi_addr, capacity_disk_ids[-1]))
+        if bad_scsi_addrs:
+            comments.append('Error in diskgroup #{0}: capacity disks with '
+                            'scsi addresses {1} were not found.'
+                            ''.format(idx,
+                                      ', '.join(['\'{0}\''.format(a)
+                                                 for a in bad_scsi_addrs])))
+            log.error(comments[-1])
+            errors = True
+            continue
+
+        if not cache_disk_to_existing_diskgroup_map.get(cache_disk_id):
+            # A new diskgroup needs to be created
+            log.trace('erase_disks = {0}'.format(erase_disks))
+            if erase_disks:
+                if __opts__['test']:
+                    comments.append('State {0} will '
+                                    'erase all disks of disk group #{1}; '
+                                    'cache disk: \'{2}\', '
+                                    'capacity disk(s): {3}.'
+                                    ''.format(name, idx, cache_disk_display,
+                                              ', '.join(
+                                                  ['\'{}\''.format(a) for a in
+                                                   capacity_disk_displays])))
+                else:
+                    # Erase disk group disks
+                    for disk_id in [cache_disk_id] + capacity_disk_ids:
+                        __salt__['vsphere.erase_disk_partitions'](
+                            disk_id=disk_id, service_instance=si)
+                    comments.append('Erased disks of diskgroup #{0}; '
+                                    'cache disk: \'{1}\', capacity disk(s): '
+                                    '{2}'.format(
+                                        idx, cache_disk_display,
+                                        ', '.join(['\'{0}\''.format(a) for a in
+                                                  capacity_disk_displays])))
+                    log.info(comments[-1])
+
+            if __opts__['test']:
+                comments.append('State {0} will create '
+                                'the disk group #{1}; cache disk: \'{2}\', '
+                                'capacity disk(s): {3}.'
+                                .format(name, idx, cache_disk_display,
+                                        ', '.join(['\'{0}\''.format(a) for a in
+                                                   capacity_disk_displays])))
+                log.info(comments[-1])
+                changes = True
+                continue
+            try:
+                __salt__['vsphere.create_diskgroup'](cache_disk_id,
+                                                     capacity_disk_ids,
+                                                     safety_checks=False,
+                                                     service_instance=si)
+            except VMwareSaltError as err:
+                comments.append('Error creating disk group #{0}: '
+                                '{1}.'.format(idx, err))
+                log.error(comments[-1])
+                errors = True
+                continue
+
+            comments.append('Created disk group #\'{0}\'.'.format(idx))
+            log.info(comments[-1])
+            diskgroup_changes[six.text_type(idx)] = \
+                 {'new': {'cache': cache_disk_display,
+                          'capacity': capacity_disk_displays}}
+            changes = True
+            continue
+
+        # The diskgroup exists; checking the capacity disks
+        log.debug('Disk group #{0} exists. Checking capacity disks: '
+                  '{1}.'.format(idx, capacity_disk_displays))
+        existing_diskgroup = \
+                cache_disk_to_existing_diskgroup_map.get(cache_disk_id)
+        existing_capacity_disk_displays = \
+                ['{0} (id:{1})'.format([d['scsi_address'] for d in host_disks
+                                        if d['id'] == disk_id][0], disk_id)
+                 for disk_id in existing_diskgroup['capacity_disks']]
+        # Populate added disks and removed disks and their displays
+        added_capacity_disk_ids = []
+        added_capacity_disk_displays = []
+        removed_capacity_disk_ids = []
+        removed_capacity_disk_displays = []
+        for disk_id in capacity_disk_ids:
+            if disk_id not in existing_diskgroup['capacity_disks']:
+                disk_scsi_addr = [d['scsi_address'] for d in host_disks
+                                  if d['id'] == disk_id][0]
+                added_capacity_disk_ids.append(disk_id)
+                added_capacity_disk_displays.append(
+                    '{0} (id:{1})'.format(disk_scsi_addr, disk_id))
+        for disk_id in existing_diskgroup['capacity_disks']:
+            if disk_id not in capacity_disk_ids:
+                disk_scsi_addr = [d['scsi_address'] for d in host_disks
+                                  if d['id'] == disk_id][0]
+                removed_capacity_disk_ids.append(disk_id)
+                removed_capacity_disk_displays.append(
+                    '{0} (id:{1})'.format(disk_scsi_addr, disk_id))
+
+        log.debug('Disk group #{0}: existing capacity disk ids: {1}; added '
+                  'capacity disk ids: {2}; removed capacity disk ids: {3}'
+                  ''.format(idx, existing_capacity_disk_displays,
+                            added_capacity_disk_displays,
+                            removed_capacity_disk_displays))
+
+        #TODO revisit this when removing capacity disks is supported
+        if removed_capacity_disk_ids:
+            comments.append(
+                'Error removing capacity disk(s) {0} from disk group #{1}; '
+                'operation is not supported.'
+                ''.format(', '.join(['\'{0}\''.format(id) for id in
+                                     removed_capacity_disk_displays]), idx))
+            log.error(comments[-1])
+            errors = True
+            continue
+
+        if added_capacity_disk_ids:
+            # Capacity disks need to be added to disk group
+
+            # Building a string representation of the capacity disks
+            # that need to be added
+            s = ', '.join(['\'{0}\''.format(id) for id in
+                           added_capacity_disk_displays])
+            if __opts__['test']:
+                comments.append('State {0} will add '
+                                'capacity disk(s) {1} to disk group #{2}.'
+                                ''.format(name, s, idx))
+                log.info(comments[-1])
+                changes = True
+                continue
+            try:
+                __salt__['vsphere.add_capacity_to_diskgroup'](
+                    cache_disk_id,
+                    added_capacity_disk_ids,
+                    safety_checks=False,
+                    service_instance=si)
+            except VMwareSaltError as err:
+                comments.append('Error adding capacity disk(s) {0} to '
+                                'disk group #{1}: {2}.'.format(s, idx, err))
+                log.error(comments[-1])
+                errors = True
+                continue
+
+            com = ('Added capacity disk(s) {0} to disk group #{1}'
+                   ''.format(s, idx))
+            log.info(com)
+            comments.append(com)
+            diskgroup_changes[six.text_type(idx)] = \
+                 {'new': {'cache': cache_disk_display,
+                          'capacity': capacity_disk_displays},
+                  'old': {'cache': cache_disk_display,
+                          'capacity': existing_capacity_disk_displays}}
+            changes = True
+            continue
+
+        # No capacity needs to be added
+        s = ('Disk group #{0} is correctly configured. Nothing to be done.'
+             ''.format(idx))
+        log.info(s)
+        comments.append(s)
+    __salt__['vsphere.disconnect'](si)
+
+    #Build the final return message
+    result = (True if not (changes or errors) else  # no changes/errors
+              None if __opts__['test'] else  # running in test mode
+              False if errors else True)  # found errors; defaults to True
+    ret.update({'result': result,
+                'comment': '\n'.join(comments),
+                'changes': diskgroup_changes})
+    return ret
+
+
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+def host_cache_configured(name, enabled, datastore, swap_size='100%',
+                          dedicated_backing_disk=False,
+                          erase_backing_disk=False):
+    '''
+    Configures the host cache used for swapping.
+
+    It will do the following:
+
+    1. Checks if backing disk exists
+
+    2. Creates the VMFS datastore if doesn't exist (datastore partition will be
+       created and use the entire disk)
+
+    3. Raises an error if ``dedicated_backing_disk`` is ``True`` and partitions
+       already exist on the backing disk
+
+    4. Configures host_cache to use a portion of the datastore for caching
+       (either a specific size or a percentage of the datastore)
+
+    Examples
+
+    Percentage swap size (can't be 100%)
+
+    .. code:: python
+
+        {
+            'enabled': true,
+            'datastore': {
+                'backing_disk_scsi_addr': 'vmhba0:C0:T0:L0',
+                'vmfs_version': 5,
+                'name': 'hostcache'
+                }
+            'dedicated_backing_disk': false
+            'swap_size': '98%',
+        }
+
+    Fixed sized swap size
+
+    .. code:: python
+
+        {
+            'enabled': true,
+            'datastore': {
+                'backing_disk_scsi_addr': 'vmhba0:C0:T0:L0',
+                'vmfs_version': 5,
+                'name': 'hostcache'
+                }
+            'dedicated_backing_disk': true
+            'swap_size': '10GiB',
+        }
+
+    name
+        Mandatory state name.
+
+    enabled
+        Specifies whether the host cache is enabled.
+
+    datastore
+        Specifies the host cache datastore.
+
+    swap_size
+        Specifies the size of the host cache swap. Can be a percentage or a
+        value in GiB. Default value is ``100%``.
+
+    dedicated_backing_disk
+        Specifies whether the backing disk is dedicated to the host cache which
+        means it must have no other partitions. Default is False
+
+    erase_backing_disk
+        Specifies whether to erase all partitions on the backing disk before
+        the datastore is created. Default value is False.
+    '''
+    log.trace('enabled = %s', enabled)
+    log.trace('datastore = %s', datastore)
+    log.trace('swap_size = %s', swap_size)
+    log.trace('erase_backing_disk = %s', erase_backing_disk)
+    # Variable used to return the result of the invocation
+    proxy_details = __salt__['esxi.get_details']()
+    hostname = proxy_details['host'] if not proxy_details.get('vcenter') \
+               else proxy_details['esxi_host']
+    log.trace('hostname = %s', hostname)
+    log.info('Running host_cache_swap_configured for host \'%s\'', hostname)
+    ret = {'name': hostname,
+           'comment': 'Default comments',
+           'result': None,
+           'changes': {}}
+    result = None if __opts__['test'] else True  # We assume success
+    needs_setting = False
+    comments = []
+    changes = {}
+    si = None
+    try:
+        log.debug('Validating host_cache_configured input')
+        schema = HostCacheSchema.serialize()
+        try:
+            jsonschema.validate({'enabled': enabled,
+                                 'datastore': datastore,
+                                 'swap_size': swap_size,
+                                 'erase_backing_disk': erase_backing_disk},
+                                schema)
+        except jsonschema.exceptions.ValidationError as exc:
+            raise InvalidConfigError(exc)
+        m = re.match(r'(\d+)(%|GiB)', swap_size)
+        swap_size_value = int(m.group(1))
+        swap_type = m.group(2)
+        log.trace('swap_size_value = %s; swap_type = %s', swap_size_value, swap_type)
+        si = __salt__['vsphere.get_service_instance_via_proxy']()
+        host_cache = __salt__['vsphere.get_host_cache'](service_instance=si)
+
+        # Check enabled
+        if host_cache['enabled'] != enabled:
+            changes.update({'enabled': {'old': host_cache['enabled'],
+                                        'new': enabled}})
+            needs_setting = True
+
+        # Check datastores
+        existing_datastores = None
+        if host_cache.get('datastore'):
+            existing_datastores = \
+                    __salt__['vsphere.list_datastores_via_proxy'](
+                        datastore_names=[datastore['name']],
+                        service_instance=si)
+        # Retrieve backing disks
+        existing_disks = __salt__['vsphere.list_disks'](
+            scsi_addresses=[datastore['backing_disk_scsi_addr']],
+            service_instance=si)
+        if not existing_disks:
+            raise VMwareObjectRetrievalError(
+                'Disk with scsi address \'{0}\' was not found in host \'{1}\''
+                ''.format(datastore['backing_disk_scsi_addr'], hostname))
+        backing_disk = existing_disks[0]
+        backing_disk_display = '{0} (id:{1})'.format(
+            backing_disk['scsi_address'], backing_disk['id'])
+        log.trace('backing_disk = %s', backing_disk_display)
+
+        existing_datastore = None
+        if not existing_datastores:
+            # Check if disk needs to be erased
+            if erase_backing_disk:
+                if __opts__['test']:
+                    comments.append('State {0} will erase '
+                                    'the backing disk \'{1}\' on host \'{2}\'.'
+                                    ''.format(name, backing_disk_display,
+                                              hostname))
+                    log.info(comments[-1])
+                else:
+                    # Erase disk
+                    __salt__['vsphere.erase_disk_partitions'](
+                        disk_id=backing_disk['id'], service_instance=si)
+                    comments.append('Erased backing disk \'{0}\' on host '
+                                    '\'{1}\'.'.format(backing_disk_display,
+                                                      hostname))
+                    log.info(comments[-1])
+            # Create the datastore
+            if __opts__['test']:
+                comments.append('State {0} will create '
+                                'the datastore \'{1}\', with backing disk '
+                                '\'{2}\', on host \'{3}\'.'
+                                ''.format(name, datastore['name'],
+                                          backing_disk_display, hostname))
+                log.info(comments[-1])
+            else:
+                if dedicated_backing_disk:
+                    # Check backing disk doesn't already have partitions
+                    partitions = __salt__['vsphere.list_disk_partitions'](
+                        disk_id=backing_disk['id'], service_instance=si)
+                    log.trace('partitions = %s', partitions)
+                    # We will ignore the mbr partitions
+                    non_mbr_partitions = [p for p in partitions
+                                          if p['format'] != 'mbr']
+                    if len(non_mbr_partitions) > 0:
+                        raise VMwareApiError(
+                            'Backing disk \'{0}\' has unexpected partitions'
+                            ''.format(backing_disk_display))
+                __salt__['vsphere.create_vmfs_datastore'](
+                    datastore['name'], existing_disks[0]['id'],
+                    datastore['vmfs_version'], service_instance=si)
+                comments.append('Created vmfs datastore \'{0}\', backed by '
+                                'disk \'{1}\', on host \'{2}\'.'
+                                ''.format(datastore['name'],
+                                          backing_disk_display, hostname))
+                log.info(comments[-1])
+                changes.update(
+                    {'datastore':
+                     {'new': {'name': datastore['name'],
+                              'backing_disk': backing_disk_display}}})
+                existing_datastore = \
+                        __salt__['vsphere.list_datastores_via_proxy'](
+                            datastore_names=[datastore['name']],
+                            service_instance=si)[0]
+            needs_setting = True
+        else:
+            # Check datastore is backed by the correct disk
+            if not existing_datastores[0].get('backing_disk_ids'):
+                raise VMwareSaltError('Datastore \'{0}\' doesn\'t have a '
+                                           'backing disk'
+                                           ''.format(datastore['name']))
+            if backing_disk['id'] not in \
+               existing_datastores[0]['backing_disk_ids']:
+
+                raise VMwareSaltError(
+                    'Datastore \'{0}\' is not backed by the correct disk: '
+                    'expected \'{1}\'; got {2}'
+                    ''.format(
+                        datastore['name'], backing_disk['id'],
+                        ', '.join(
+                            ['\'{0}\''.format(disk) for disk in
+                             existing_datastores[0]['backing_disk_ids']])))
+
+            comments.append('Datastore \'{0}\' already exists on host \'{1}\' '
+                            'and is backed by disk \'{2}\'. Nothing to be '
+                            'done.'.format(datastore['name'], hostname,
+                                           backing_disk_display))
+            existing_datastore = existing_datastores[0]
+            log.trace('existing_datastore = %s', existing_datastore)
+            log.info(comments[-1])
+
+        if existing_datastore:
+            # The following comparisons can be done if the existing_datastore
+            # is set; it may not be set if running in test mode
+            #
+            # We support percent, as well as MiB, we will convert the size
+            # to MiB, multiples of 1024 (VMware SDK limitation)
+            if swap_type == '%':
+                # Percentage swap size
+                # Convert from bytes to MiB
+                raw_size_MiB = (swap_size_value/100.0) * \
+                        (existing_datastore['capacity']/1024/1024)
+            else:
+                raw_size_MiB = swap_size_value * 1024
+            log.trace('raw_size = %sMiB', raw_size_MiB)
+            swap_size_MiB = int(raw_size_MiB/1024)*1024
+            log.trace('adjusted swap_size = %sMiB', swap_size_MiB)
+            existing_swap_size_MiB = 0
+            m = re.match(r'(\d+)MiB', host_cache.get('swap_size')) if \
+                    host_cache.get('swap_size') else None
+            if m:
+                # if swap_size from the host is set and has an expected value
+                # we are going to parse it to get the number of MiBs
+                existing_swap_size_MiB = int(m.group(1))
+            if not existing_swap_size_MiB == swap_size_MiB:
+                needs_setting = True
+                changes.update(
+                    {'swap_size':
+                     {'old': '{}GiB'.format(existing_swap_size_MiB/1024),
+                      'new': '{}GiB'.format(swap_size_MiB/1024)}})
+
+        if needs_setting:
+            if __opts__['test']:
+                comments.append('State {0} will configure '
+                                'the host cache on host \'{1}\' to: {2}.'
+                                ''.format(name, hostname,
+                                          {'enabled': enabled,
+                                           'datastore_name': datastore['name'],
+                                           'swap_size': swap_size}))
+            else:
+                if (existing_datastore['capacity'] / 1024.0**2) < \
+                   swap_size_MiB:
+
+                    raise ArgumentValueError(
+                        'Capacity of host cache datastore \'{0}\' ({1} MiB) is '
+                        'smaller than the required swap size ({2} MiB)'
+                        ''.format(existing_datastore['name'],
+                                  existing_datastore['capacity'] / 1024.0**2,
+                                  swap_size_MiB))
+                __salt__['vsphere.configure_host_cache'](
+                    enabled,
+                    datastore['name'],
+                    swap_size_MiB=swap_size_MiB,
+                    service_instance=si)
+                comments.append('Host cache configured on host '
+                                '\'{0}\'.'.format(hostname))
+        else:
+            comments.append('Host cache on host \'{0}\' is already correctly '
+                            'configured. Nothing to be done.'.format(hostname))
+            result = True
+        __salt__['vsphere.disconnect'](si)
+        log.info(comments[-1])
+        ret.update({'comment': '\n'.join(comments),
+                    'result': result,
+                    'changes': changes})
+        return ret
+    except CommandExecutionError as err:
+        log.error('Error: %s.', err)
+        if si:
+            __salt__['vsphere.disconnect'](si)
+        ret.update({
+            'result': False if not __opts__['test'] else None,
+            'comment': '{}.'.format(err)})
+        return ret
 
 
 def _lookup_syslog_config(config):

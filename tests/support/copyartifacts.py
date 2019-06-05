@@ -7,7 +7,8 @@ import argparse  # pylint: disable=minimum-python-version
 import os
 import paramiko
 import subprocess
-import yaml
+
+import salt.utils.yaml
 
 
 class DownloadArtifacts(object):
@@ -19,7 +20,7 @@ class DownloadArtifacts(object):
 
     def setup_transport(self):
         # pylint: disable=minimum-python-version
-        config = yaml.load(subprocess.check_output(['bundle', 'exec', 'kitchen', 'diagnose', self.instance]))
+        config = salt.utils.yaml.safe_load(subprocess.check_output(['bundle', 'exec', 'kitchen', 'diagnose', self.instance]))
         # pylint: enable=minimum-python-version
         state = config['instances'][self.instance]['state_file']
         tport = config['instances'][self.instance]['transport']
@@ -58,6 +59,7 @@ class DownloadArtifacts(object):
             self.sftpclient.get(remote, local)
         except IOError:
             print('Failed to copy: {0}'.format(remote))
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Jenkins Artifact Download Helper')

@@ -8,7 +8,7 @@ A state module to manage Gentoo configuration via eselect
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Define a function alias in order not to shadow built-in's
 __func_alias__ = {

@@ -24,25 +24,29 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
 # pylint: disable=invalid-name,function-redefined
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import pprint
 import logging
 
 # Import salt cloud libs
 import salt.config as config
+import salt.utils.cloud
+import salt.utils.event
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
-from salt.utils import namespaced_function
+from salt.utils.functools import namespaced_function
 from salt.exceptions import SaltCloudSystemExit
 from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.ext import six
 
 # CloudStackNetwork will be needed during creation of a new node
 # pylint: disable=import-error
 try:
     from libcloud.compute.drivers.cloudstack import CloudStackNetwork
-    # This work-around for Issue #32743 is no longer needed for libcloud >= 1.4.0.
-    # However, older versions of libcloud must still be supported with this work-around.
-    # This work-around can be removed when the required minimum version of libcloud is
-    # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
+    # This work-around for Issue #32743 is no longer needed for libcloud >=
+    # 1.4.0. However, older versions of libcloud must still be supported with
+    # this work-around. This work-around can be removed when the required
+    # minimum version of libcloud is 2.0.0 (See PR #40837 - which is
+    # implemented in Salt 2018.3.0).
     if _LooseVersion(libcloud.__version__) < _LooseVersion('1.4.0'):
         # See https://github.com/saltstack/salt/issues/32743
         import libcloud.security
@@ -160,7 +164,7 @@ def get_location(conn, vm_):
     # Default to Dallas if not otherwise set
     loc = config.get_cloud_config_value('location', vm_, __opts__, default=2)
     for location in locations:
-        if str(loc) in (str(location.id), str(location.name)):
+        if six.text_type(loc) in (six.text_type(location.id), six.text_type(location.name)):
             return location
 
 
@@ -168,8 +172,15 @@ def get_security_groups(conn, vm_):
     '''
     Return a list of security groups to use, defaulting to ['default']
     '''
-    return config.get_cloud_config_value('securitygroup', vm_, __opts__,
-                                         default=['default'])
+    securitygroup_enabled = config.get_cloud_config_value(
+        'securitygroup_enabled', vm_, __opts__, default=True
+    )
+    if securitygroup_enabled:
+        return config.get_cloud_config_value(
+            'securitygroup', vm_, __opts__, default=['default']
+        )
+    else:
+        return False
 
 
 def get_password(vm_):
@@ -245,10 +256,10 @@ def get_project(conn, vm_):
         return False
 
     for project in projects:
-        if str(projid) in (str(project.id), str(project.name)):
+        if six.text_type(projid) in (six.text_type(project.id), six.text_type(project.name)):
             return project
 
-    log.warning("Couldn't find project {0} in projects".format(projid))
+    log.warning("Couldn't find project %s in projects", projid)
     return False
 
 
@@ -270,19 +281,23 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
+        sock_dir=__opts__['sock_dir'],
         args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM %s', vm_['name'])
     conn = get_conn()
     kwargs = {
         'name': vm_['name'],
         'image': get_image(conn, vm_),
         'size': get_size(conn, vm_),
         'location': get_location(conn, vm_),
-        'ex_security_groups': get_security_groups(conn, vm_)
     }
+
+    sg = get_security_groups(conn, vm_)
+    if sg is not False:
+        kwargs['ex_security_groups'] = sg
 
     if get_keypair(vm_) is not False:
         kwargs['ex_keyname'] = get_keypair(vm_)
@@ -306,6 +321,7 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
+        sock_dir=__opts__['sock_dir'],
         args={
             'kwargs': __utils__['cloud.filter_event'](
                 'requesting',
@@ -329,12 +345,13 @@ def create(vm_):
             if 'VirtualName' not in ex_blockdevicemapping:
                 ex_blockdevicemapping['VirtualName'] = '{0}-{1}'.format(vm_['name'], len(volumes))
             __utils__['cloud.fire_event'](
-              'event',
-              'requesting volume',
-              'salt/cloud/{0}/requesting'.format(ex_blockdevicemapping['VirtualName']),
-              {'kwargs': {'name': ex_blockdevicemapping['VirtualName'],
-                          'device': ex_blockdevicemapping['DeviceName'],
-                          'size': ex_blockdevicemapping['VolumeSize']}},
+                'event',
+                'requesting volume',
+                'salt/cloud/{0}/requesting'.format(ex_blockdevicemapping['VirtualName']),
+                sock_dir=__opts__['sock_dir'],
+                args={'kwargs': {'name': ex_blockdevicemapping['VirtualName'],
+                                 'device': ex_blockdevicemapping['DeviceName'],
+                                 'size': ex_blockdevicemapping['VolumeSize']}},
             )
             try:
                 volumes[ex_blockdevicemapping['DeviceName']] = conn.create_volume(
@@ -343,11 +360,10 @@ def create(vm_):
                     )
             except Exception as exc:
                 log.error(
-                    'Error creating volume {0} on CLOUDSTACK\n\n'
+                    'Error creating volume %s on CLOUDSTACK\n\n'
                     'The following exception was thrown by libcloud when trying to '
-                    'requesting a volume: \n{1}'.format(
-                        ex_blockdevicemapping['VirtualName'], exc
-                    ),
+                    'requesting a volume: \n%s',
+                    ex_blockdevicemapping['VirtualName'], exc,
                     # Show the traceback if the debug logging level is enabled
                     exc_info_on_loglevel=logging.DEBUG
                 )
@@ -358,11 +374,10 @@ def create(vm_):
         data = conn.create_node(**kwargs)
     except Exception as exc:
         log.error(
-            'Error creating {0} on CLOUDSTACK\n\n'
+            'Error creating %s on CLOUDSTACK\n\n'
             'The following exception was thrown by libcloud when trying to '
-            'run the initial deployment: \n{1}'.format(
-                vm_['name'], str(exc)
-            ),
+            'run the initial deployment: \n%s',
+            vm_['name'], exc,
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -373,11 +388,10 @@ def create(vm_):
             conn.attach_volume(data, volumes[device_name], device_name)
         except Exception as exc:
             log.error(
-                'Error attaching volume {0} on CLOUDSTACK\n\n'
+                'Error attaching volume %s on CLOUDSTACK\n\n'
                 'The following exception was thrown by libcloud when trying to '
-                'attach a volume: \n{1}'.format(
-                    ex_blockdevicemapping.get('VirtualName', 'UNKNOWN'), exc
-                ),
+                'attach a volume: \n%s',
+                ex_blockdevicemapping.get('VirtualName', 'UNKNOWN'), exc,
                 # Show the traceback if the debug logging level is enabled
                 exc_info=log.isEnabledFor(logging.DEBUG)
             )
@@ -397,17 +411,17 @@ def create(vm_):
     if 'password' in data.extra:
         del data.extra['password']
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data.__dict__)
-        )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(data.__dict__)
     )
 
     __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
+        sock_dir=__opts__['sock_dir'],
         args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         transport=__opts__['transport']
     )
@@ -429,7 +443,8 @@ def destroy(name, conn=None, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        sock_dir=__opts__['sock_dir'],
+        args={'name': name},
     )
 
     if not conn:
@@ -437,65 +452,71 @@ def destroy(name, conn=None, call=None):
 
     node = get_node(conn, name)
     if node is None:
-        log.error('Unable to find the VM {0}'.format(name))
+        log.error('Unable to find the VM %s', name)
     volumes = conn.list_volumes(node)
     if volumes is None:
-        log.error('Unable to find volumes of the VM {0}'.format(name))
+        log.error('Unable to find volumes of the VM %s', name)
     # TODO add an option like 'delete_sshkeys' below
     for volume in volumes:
         if volume.extra['volume_type'] != 'DATADISK':
-            log.info('Ignoring volume type {0}: {1}'.format(
-                volume.extra['volume_type'], volume.name)
+            log.info(
+                'Ignoring volume type %s: %s',
+                volume.extra['volume_type'], volume.name
             )
             continue
-        log.info('Detaching volume: {0}'.format(volume.name))
+        log.info('Detaching volume: %s', volume.name)
         __utils__['cloud.fire_event'](
             'event',
             'detaching volume',
             'salt/cloud/{0}/detaching'.format(volume.name),
-            {'name': volume.name},
+            sock_dir=__opts__['sock_dir'],
+            args={'name': volume.name},
         )
         if not conn.detach_volume(volume):
-            log.error('Failed to Detach volume: {0}'.format(volume.name))
+            log.error('Failed to Detach volume: %s', volume.name)
             return False
-        log.info('Detached volume: {0}'.format(volume.name))
+        log.info('Detached volume: %s', volume.name)
         __utils__['cloud.fire_event'](
             'event',
             'detached volume',
             'salt/cloud/{0}/detached'.format(volume.name),
-            {'name': volume.name},
+            sock_dir=__opts__['sock_dir'],
+            args={'name': volume.name},
         )
 
-        log.info('Destroying volume: {0}'.format(volume.name))
+        log.info('Destroying volume: %s', volume.name)
         __utils__['cloud.fire_event'](
             'event',
             'destroying volume',
             'salt/cloud/{0}/destroying'.format(volume.name),
-            {'name': volume.name},
+            sock_dir=__opts__['sock_dir'],
+            args={'name': volume.name},
         )
         if not conn.destroy_volume(volume):
-            log.error('Failed to Destroy volume: {0}'.format(volume.name))
+            log.error('Failed to Destroy volume: %s', volume.name)
             return False
-        log.info('Destroyed volume: {0}'.format(volume.name))
+        log.info('Destroyed volume: %s', volume.name)
         __utils__['cloud.fire_event'](
             'event',
             'destroyed volume',
             'salt/cloud/{0}/destroyed'.format(volume.name),
-            {'name': volume.name},
+            sock_dir=__opts__['sock_dir'],
+            args={'name': volume.name},
         )
-    log.info('Destroying VM: {0}'.format(name))
+    log.info('Destroying VM: %s', name)
     ret = conn.destroy_node(node)
     if not ret:
-        log.error('Failed to Destroy VM: {0}'.format(name))
+        log.error('Failed to Destroy VM: %s', name)
         return False
-    log.info('Destroyed VM: {0}'.format(name))
+    log.info('Destroyed VM: %s', name)
     # Fire destroy action
     event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
     __utils__['cloud.fire_event'](
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        sock_dir=__opts__['sock_dir'],
+        args={'name': name},
     )
     if __opts__['delete_sshkeys'] is True:
         salt.utils.cloud.remove_sshkey(node.public_ips[0])

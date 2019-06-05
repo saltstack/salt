@@ -4,11 +4,11 @@ Manage Linux Containers
 =======================
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 __docformat__ = 'restructuredtext en'
 
 # Import salt libs
-import salt.utils
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
@@ -708,7 +708,7 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
     # Until a reasonable alternative for this state function is created, we need
     # to keep this function around and cannot officially remove it. Progress of
     # the new function will be tracked in https://github.com/saltstack/salt/issues/35523
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'This state is unsuitable for setting parameters that appear more '
         'than once in an LXC config file, or parameters which must appear in '

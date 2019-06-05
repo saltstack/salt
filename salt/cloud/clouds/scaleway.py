@@ -24,15 +24,16 @@ the cloud configuration at ``/etc/salt/cloud.providers`` or
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import pprint
 import time
 
 # Import Salt Libs
+from salt.ext import six
 from salt.ext.six.moves import range
 import salt.utils.cloud
+import salt.utils.json
 import salt.config as config
 from salt.exceptions import (
     SaltCloudNotFound,
@@ -101,7 +102,7 @@ def avail_images(call=None):
     for image in items['images']:
         ret[image['id']] = {}
         for item in image:
-            ret[image['id']][item] = str(image[item])
+            ret[image['id']][item] = six.text_type(image[item])
 
     return ret
 
@@ -175,7 +176,7 @@ def get_image(server_):
     ''' Return the image object to use.
     '''
     images = avail_images()
-    server_image = str(config.get_cloud_config_value(
+    server_image = six.text_type(config.get_cloud_config_value(
         'image', server_, __opts__, search_global=False
     ))
     for image in images:
@@ -224,7 +225,7 @@ def create(server_):
         transport=__opts__['transport']
     )
 
-    log.info('Creating a BareMetal server {0}'.format(server_['name']))
+    log.info('Creating a BareMetal server %s', server_['name'])
 
     access_key = config.get_cloud_config_value(
         'access_key', get_configured_provider(), __opts__, search_global=False
@@ -256,12 +257,10 @@ def create(server_):
         ret = create_node(kwargs)
     except Exception as exc:
         log.error(
-            'Error creating {0} on Scaleway\n\n'
+            'Error creating %s on Scaleway\n\n'
             'The following exception was thrown when trying to '
-            'run the initial deployment: {1}'.format(
-                server_['name'],
-                str(exc)
-            ),
+            'run the initial deployment: %s',
+            server_['name'], exc,
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -291,7 +290,7 @@ def create(server_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc))
+            raise SaltCloudSystemExit(six.text_type(exc))
 
     server_['ssh_host'] = data['public_ip']['address']
     server_['ssh_password'] = config.get_cloud_config_value(
@@ -301,11 +300,10 @@ def create(server_):
 
     ret.update(data)
 
-    log.info('Created BareMetal server \'{0[name]}\''.format(server_))
+    log.info('Created BareMetal server \'%s\'', server_['name'])
     log.debug(
-        '\'{0[name]}\' BareMetal server creation details:\n{1}'.format(
-            server_, pprint.pformat(data)
-        )
+        '\'%s\' BareMetal server creation details:\n%s',
+        server_['name'], pprint.pformat(data)
     )
 
     __utils__['cloud.fire_event'](
@@ -324,7 +322,7 @@ def query(method='servers', server_id=None, command=None, args=None,
           http_method='get'):
     ''' Make a call to the Scaleway API.
     '''
-    base_path = str(config.get_cloud_config_value(
+    base_path = six.text_type(config.get_cloud_config_value(
         'api_root',
         get_configured_provider(),
         __opts__,
@@ -347,7 +345,7 @@ def query(method='servers', server_id=None, command=None, args=None,
         'token', get_configured_provider(), __opts__, search_global=False
     )
 
-    data = json.dumps(args)
+    data = salt.utils.json.dumps(args)
 
     requester = getattr(requests, http_method)
     request = requester(
@@ -403,10 +401,8 @@ def _get_node(name):
             return list_nodes_full()[name]
         except KeyError:
             log.debug(
-                'Failed to get the data for node \'{0}\'. Remaining '
-                'attempts: {1}'.format(
-                    name, attempt
-                )
+                'Failed to get the data for node \'%s\'. Remaining '
+                'attempts: %s', name, attempt
             )
             # Just a little delay between attempts...
             time.sleep(0.5)

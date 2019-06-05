@@ -54,12 +54,12 @@ allowing users to manage their own custom rows.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
-import json
 
 # Import Salt libs
-import salt.ext.six as six
+import salt.utils.json
+from salt.ext import six
 from salt.utils.dictdiffer import DictDiffer
 
 
@@ -123,7 +123,8 @@ def present(name,
     # Build out all dashboard fields
     new_dashboard = _inherited_dashboard(
         dashboard, base_dashboards_from_pillar, ret)
-    new_dashboard['title'] = name
+    if 'title' not in new_dashboard:
+        new_dashboard['title'] = name
     rows = new_dashboard.get('rows', [])
     for i, row in enumerate(rows):
         rows[i] = _inherited_row(row, base_rows_from_pillar, ret)
@@ -174,16 +175,18 @@ def present(name,
     if updated_needed:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = ('Dashboard {0} is set to be updated, '
-                              'changes={1}').format(
-                                  name,
-                                  json.dumps(
-                                      _dashboard_diff(
-                                          _cleaned(new_dashboard),
-                                          _cleaned(old_dashboard)
-                                      ),
-                                      indent=4
-                                  ))
+            ret['comment'] = (
+                str('Dashboard {0} is set to be updated, changes={1}').format(  # future lint: blacklisted-function
+                    name,
+                    salt.utils.json.dumps(
+                        _dashboard_diff(
+                            _cleaned(new_dashboard),
+                            _cleaned(old_dashboard)
+                        ),
+                        indent=4
+                    )
+                )
+            )
             return ret
 
         response = __salt__['grafana4.create_update_dashboard'](
@@ -244,6 +247,7 @@ def absent(name, orgname=None, profile='grafana'):
 
 _IGNORED_DASHBOARD_FIELDS = [
     'id',
+    'uid',
     'originalTitle',
     'version',
 ]

@@ -45,15 +45,19 @@ configuration remains unchanged.
     :ref:`here <docker-authentication>` for more information on how to
     configure access to docker registries in :ref:`Pillar <pillar>` data.
 '''
-from __future__ import absolute_import
-import logging
-
-# Import salt libs
-from salt.exceptions import CommandExecutionError
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
-import salt.utils
+import logging
+import os
+
+# Import Salt libs
+from salt.exceptions import CommandExecutionError
+import salt.utils.args
+import salt.utils.data
 import salt.utils.docker
-import salt.ext.six as six
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -94,6 +98,8 @@ def _check_diff(changes):
     https://github.com/saltstack/salt/pull/39996#issuecomment-288025200
     '''
     for conf_dict in changes:
+        if conf_dict == 'Networks':
+            continue
         for item in changes[conf_dict]:
             if changes[conf_dict][item]['new'] is None:
                 old = changes[conf_dict][item]['old']
@@ -109,6 +115,108 @@ def _check_diff(changes):
     return False
 
 
+def _parse_networks(networks):
+    '''
+    Common logic for parsing the networks
+    '''
+    networks = salt.utils.args.split_input(networks or [])
+    if not networks:
+        networks = {}
+    else:
+        # We don't want to recurse the repack, as the values of the kwargs
+        # being passed when connecting to the network will not be dictlists.
+        networks = salt.utils.data.repack_dictlist(networks)
+        if not networks:
+            raise CommandExecutionError(
+                'Invalid network configuration (see documentation)'
+            )
+        for net_name, net_conf in six.iteritems(networks):
+            if net_conf is None:
+                networks[net_name] = {}
+            else:
+                networks[net_name] = salt.utils.data.repack_dictlist(net_conf)
+                if not networks[net_name]:
+                    raise CommandExecutionError(
+                        'Invalid configuration for network \'{0}\' '
+                        '(see documentation)'.format(net_name)
+                    )
+                for key in ('links', 'aliases'):
+                    try:
+                        networks[net_name][key] = salt.utils.args.split_input(
+                            networks[net_name][key]
+                        )
+                    except KeyError:
+                        continue
+
+        # Iterate over the networks again now, looking for
+        # incorrectly-formatted arguments
+        errors = []
+        for net_name, net_conf in six.iteritems(networks):
+            if net_conf is not None:
+                for key, val in six.iteritems(net_conf):
+                    if val is None:
+                        errors.append(
+                            'Config option \'{0}\' for network \'{1}\' is '
+                            'missing a value'.format(key, net_name)
+                        )
+        if errors:
+            raise CommandExecutionError(
+                'Invalid network configuration', info=errors)
+
+    if networks:
+        try:
+            all_networks = [
+                x['Name'] for x in __salt__['docker.networks']()
+                if 'Name' in x
+            ]
+        except CommandExecutionError as exc:
+            raise CommandExecutionError(
+                'Failed to get list of existing networks: {0}.'.format(exc)
+            )
+        else:
+            missing_networks = [
+                x for x in sorted(networks) if x not in all_networks]
+            if missing_networks:
+                raise CommandExecutionError(
+                    'The following networks are not present: {0}'.format(
+                        ', '.join(missing_networks)
+                    )
+                )
+
+    return networks
+
+
+def _resolve_image(ret, image, client_timeout):
+    '''
+    Resolve the image ID and pull the image if necessary
+    '''
+    image_id = __salt__['docker.resolve_image_id'](image)
+
+    if image_id is False:
+        if not __opts__['test']:
+            # Image not pulled locally, so try pulling it
+            try:
+                pull_result = __salt__['docker.pull'](
+                    image,
+                    client_timeout=client_timeout,
+                )
+            except Exception as exc:
+                raise CommandExecutionError(
+                    'Failed to pull {0}: {1}'.format(image, exc)
+                )
+            else:
+                ret['changes']['image'] = pull_result
+                # Try resolving again now that we've pulled
+                image_id = __salt__['docker.resolve_image_id'](image)
+                if image_id is False:
+                    # Shouldn't happen unless the pull failed
+                    raise CommandExecutionError(
+                        'Image \'{0}\' not present despite a docker pull '
+                        'raising no errors'.format(image)
+                    )
+    return image_id
+
+
 def running(name,
             image=None,
             skip_translate=None,
@@ -117,8 +225,9 @@ def running(name,
             force=False,
             watch_action='force',
             start=True,
-            shutdown_timeout=salt.utils.docker.SHUTDOWN_TIMEOUT,
+            shutdown_timeout=None,
             client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
+            networks=None,
             **kwargs):
     '''
     Ensure that a container with a specific configuration is present and
@@ -128,12 +237,9 @@ def running(name,
         Name of the container
 
     image
-        Image to use for the container. Image names can be specified either
-        using ``repo:tag`` notation, or just the repo name (in which case a tag
-        of ``latest`` is assumed).
+        Image to use for the container
 
         .. note::
-
             This state will pull the image if it is not present. However, if
             the image needs to be built from a Dockerfile or loaded from a
             saved image, or if you would like to use requisites to trigger a
@@ -141,6 +247,13 @@ def running(name,
             :py:func:`docker_image.present
             <salt.states.dockermod.image_present>` state should be used to
             manage the image.
+
+        .. versionchanged:: 2018.3.0
+            If no tag is specified in the image name, and nothing matching the
+            specified image is pulled on the minion, the ``docker pull`` that
+            retrieves the image will pull *all tags* for the image. A tag of
+            ``latest`` is no longer implicit for the pull. For this reason, it
+            is recommended to specify the image in ``repo:tag`` notation.
 
     .. _docker-container-running-skip-translate:
 
@@ -182,7 +295,7 @@ def running(name,
               docker_container.running:
                 - image: 7.3.1611
                 - skip_translate: port_bindings
-                - port_bindings: {8080: [('10.2.9.10', 80)], '4193/udp', 9314}
+                - port_bindings: {8080: [('10.2.9.10', 80)], '4193/udp': 9314}
 
         See the following links for more information:
 
@@ -191,7 +304,7 @@ def running(name,
 
     .. _docker-py: https://pypi.python.org/pypi/docker-py
     .. _`docker-py Low-level API`: http://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.create_container
-    .. _`Docker Engine API`: https://docs.docker.com/engine/api/v1.26/#operation/ContainerCreate
+    .. _`Docker Engine API`: https://docs.docker.com/engine/api/v1.33/#operation/ContainerCreate
 
     ignore_collisions : False
         Since many of docker-py_'s arguments differ in name from their CLI
@@ -247,12 +360,12 @@ def running(name,
         instances such as this, the container only needs to be started the
         first time.
 
-    shutdown_timeout : 10
+    shutdown_timeout
         If the container needs to be replaced, the container will be stopped
-        using :py:func:`docker.stop <salt.modules.dockermod.stop>`. The value
-        of this parameter will be passed to :py:func:`docker.stop
-        <salt.modules.dockermod.stop>` as the ``timeout`` value, telling Docker
-        how long to wait for a graceful shutdown before killing the container.
+        using :py:func:`docker.stop <salt.modules.dockermod.stop>`. If a
+        ``shutdown_timout`` is not set, and the container was created using
+        ``stop_timeout``, that timeout will be used. If neither of these values
+        were set, then a timeout of 10 seconds will be used.
 
         .. versionchanged:: 2017.7.0
             This option was renamed from ``stop_timeout`` to
@@ -266,6 +379,44 @@ def running(name,
         .. note::
             This is only used if Salt needs to pull the requested image.
 
+    .. _salt-states-docker-container-network-management:
+
+    **NETWORK MANAGEMENT**
+
+    .. versionadded:: 2018.3.0
+
+    The ``networks`` argument can be used to ensure that a container is
+    attached to one or more networks. Optionally, arguments can be passed to
+    the networks. In the example below, ``net1`` is being configured with
+    arguments, while ``net2`` is being configured *without* arguments:
+
+    .. code-block:: yaml
+
+        foo:
+          docker_container.running:
+            - image: myuser/myimage:foo
+            - networks:
+              - net1:
+                - aliases:
+                  - bar
+                  - baz
+                - ipv4_address: 10.0.20.50
+              - net2
+            - require:
+              - docker_network: net1
+              - docker_network: net2
+
+    The supported arguments are the ones from the docker-py's
+    `connect_container_to_network`_ function (other than ``container`` and
+    ``net_id``).
+
+    .. important::
+        Unlike with the arguments described in the **CONTAINER CONFIGURATION
+        PARAMETERS** section below, these network configuration parameters are
+        not translated at all.  Consult the `connect_container_to_network`_
+        documentation for the correct type/format of data to pass.
+
+    .. _`connect_container_to_network`: https://docker-py.readthedocs.io/en/stable/api.html#docker.api.network.NetworkApiMixin.connect_container_to_network
 
     **CONTAINER CONFIGURATION PARAMETERS**
 
@@ -300,7 +451,7 @@ def running(name,
           Additionally, the specified selinux context will be set within the
           container.
 
-        ``<read_only>`` can be either ``ro`` for read-write access, or ``ro``
+        ``<read_only>`` can be either ``rw`` for read-write access, or ``ro``
         for read-only access. When omitted, it is assumed to be read-write.
 
         ``<selinux_context>`` can be ``z`` if the volume is shared between
@@ -865,69 +1016,36 @@ def running(name,
 
     labels
         Add metadata to the container. Labels can be set both with and without
-        values:
-
-        **WITH VALUES**
-
-        The below three examples are equivalent:
-
-        .. code-block:: yaml
-
-            foo:
-              docker_container.running:
-                - image: bar/baz:latest
-                - labels: label1=value1,label2=value2
+        values, and labels with values can be passed either as ``key=value`` or
+        ``key: value`` pairs. For example, while the below would be very
+        confusing to read, it is technically valid, and demonstrates the
+        different ways in which labels can be passed:
 
         .. code-block:: yaml
 
-            foo:
-              docker_container.running:
-                - image: bar/baz:latest
+            mynet:
+              docker_network.present:
                 - labels:
-                  - label1=value1
-                  - label2=value2
+                  - foo
+                  - bar=baz
+                  - hello: world
+
+        The labels can also simply be passed as a YAML dictionary, though this
+        can be error-prone due to some :ref:`idiosyncrasies
+        <yaml-idiosyncrasies>` with how PyYAML loads nested data structures:
 
         .. code-block:: yaml
 
             foo:
-              docker_container.running:
-                - image: bar/baz:latest
+              docker_network.present:
                 - labels:
-                  - label1: value1
-                  - label2: value2
+                    foo: ''
+                    bar: baz
+                    hello: world
 
-        The labels can also simply be passed as a dictionary, though this can
-        be error-prone due to some :ref:`idiosyncrasies <yaml-idiosyncrasies>`
-        with how PyYAML loads nested data structures:
-
-        .. code-block:: yaml
-
-            foo:
-              docker_container.running:
-                - image: bar/baz:latest
-                - labels:
-                    label1: value1
-                    label2: value2
-
-        **WITHOUT VALUES**
-
-        The below two examples are equivalent:
-
-        .. code-block:: yaml
-
-            foo:
-              docker_container.running:
-                - image: bar/baz:latest
-                - labels: label1,label2
-
-        .. code-block:: yaml
-
-            foo:
-              docker_container.running:
-                - image: bar/baz:latest
-                - labels:
-                    - label1
-                    - label2
+        .. versionchanged:: 2018.3.0
+            Methods for specifying labels can now be mixed. Earlier releases
+            required either labels with or without values.
 
     links
         Link this container to another. Links can be specified as a list of
@@ -1543,105 +1661,55 @@ def running(name,
     '''
     ret = {'name': name,
            'changes': {},
-           'result': False,
+           'result': True,
            'comment': ''}
+
     if image is None:
+        ret['result'] = False
         ret['comment'] = 'The \'image\' argument is required'
         return ret
     elif not isinstance(image, six.string_types):
-        image = str(image)
+        image = six.text_type(image)
+
+    try:
+        networks = _parse_networks(networks)
+        if networks:
+            kwargs['networks'] = networks
+        image_id = _resolve_image(ret, image, client_timeout)
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        if exc.info is not None:
+            return _format_comments(ret, exc.info)
+        else:
+            ret['comment'] = exc.__str__()
+            return ret
 
     comments = []
 
     # Pop off the send_signal argument passed by the watch requisite
     send_signal = kwargs.pop('send_signal', False)
 
-    # Resolve the full name of the tag
-    expanded_tag = ':'.join(salt.utils.docker.get_repo_tag(image))
-    # Get all tags on the minion
-    all_tags = __salt__['docker.list_tags']()
-
-    resolved_id = None
-    if expanded_tag in all_tags:
-        image = expanded_tag
-    else:
-        # The passed image may have been an ID. Try to resolve the image ID by
-        # using docker.inspect_image.
-        try:
-            resolved_id = __salt__['docker.inspect_image'](image)['Id']
-        except CommandExecutionError:
-            # No matching image ID
-            pass
-        except KeyError:
-            ret.setdefault('warnings', []).append(
-                'No \'Id\' key in image inspect API return, this may be due '
-                'to a change in docker-py.'
-            )
-
-        if resolved_id is not None:
-            image = resolved_id
-        elif not __opts__['test']:
-            # Since we did not resolve the passed image to one of the image IDs
-            # on the minion, assume that the passed image is a tag that is not
-            # present on the minion (and must therefore be pulled).
-            try:
-                pull_result = __salt__['docker.pull'](
-                    image,
-                    client_timeout=client_timeout,
-                )
-            except Exception as exc:
-                ret['comment'] = 'Failed to pull {0}: {1}'.format(image, exc)
-                return ret
-            else:
-                ret['changes']['image'] = pull_result
-
-    if resolved_id is not None:
-        # No need to repeat the inspect
-        image_id = resolved_id
-    else:
-        try:
-            image_id = __salt__['docker.inspect_image'](image)['Id']
-        except CommandExecutionError:
-            if not __opts__['test']:
-                # Shouldn't happen unless the pull failed
-                ret['comment'] = (
-                    'Image \'{0}\' not present despite a docker pull raising '
-                    'no errors'.format(image)
-                )
-                return ret
-            image_id = None
-
-    if name in __salt__['docker.list_containers'](all=True):
-        try:
-            try:
-                current_image_id = \
-                    __salt__['docker.inspect_container'](name)['Image']
-            except KeyError:
-                ret['comment'] = (
-                    'Unable to detect current image for container \'{0}\'. '
-                    'This might be due to a change in the Docker API.'
-                    .format(name)
-                )
-                return ret
-        except CommandExecutionError as exc:
-            ret['comment'] = ('Error occurred checking for existence of '
-                              'container \'{0}\': {1}'.format(name, exc))
-            return ret
-    else:
+    try:
+        current_image_id = __salt__['docker.inspect_container'](name)['Image']
+    except CommandExecutionError:
         current_image_id = None
+    except KeyError:
+        ret['result'] = False
+        comments.append(
+            'Unable to detect current image for container \'{0}\'. '
+            'This might be due to a change in the Docker API.'.format(name)
+        )
+        return _format_comments(ret, comments)
 
     # Shorthand to make the below code more understandable
     exists = current_image_id is not None
 
-    if exists:
-        pre_state = __salt__['docker.state'](name)
-    else:
-        pre_state = None
+    pre_state = __salt__['docker.state'](name) if exists else None
 
-    # If True, we're definitely going to be using the temp container as the new
-    # container (because we're forcing the change, or because the image IDs
-    # differ). If False, we'll need to perform a comparison between it and the
-    # new container.
+    # If skip_comparison is True, we're definitely going to be using the temp
+    # container as the new container (because we're forcing the change, or
+    # because the image IDs differ). If False, we'll need to perform a
+    # comparison between it and the new container.
     skip_comparison = force or not exists or current_image_id != image_id
 
     if skip_comparison and __opts__['test']:
@@ -1658,7 +1726,8 @@ def running(name,
         )
         return _format_comments(ret, comments)
 
-    # Create temp container
+    # Create temp container (or just create the named container if the
+    # container does not already exist)
     try:
         temp_container = __salt__['docker.create'](
             image,
@@ -1670,6 +1739,7 @@ def running(name,
             **kwargs)
         temp_container_name = temp_container['Name']
     except KeyError as exc:
+        ret['result'] = False
         comments.append(
             'Key \'{0}\' missing from API response, this may be due to a '
             'change in the Docker Remote API. Please report this on the '
@@ -1678,6 +1748,7 @@ def running(name,
         )
         return _format_comments(ret, comments)
     except Exception as exc:
+        ret['result'] = False
         msg = exc.__str__()
         if isinstance(exc, CommandExecutionError) \
                 and isinstance(exc.info, dict) and 'invalid' in exc.info:
@@ -1691,8 +1762,11 @@ def running(name,
         return _format_comments(ret, comments)
 
     def _replace(orig, new):
+        rm_kwargs = {'stop': True}
+        if shutdown_timeout is not None:
+            rm_kwargs['timeout'] = shutdown_timeout
         ret['changes'].setdefault('container_id', {})['removed'] = \
-            __salt__['docker.rm'](name, stop=True)
+            __salt__['docker.rm'](name, **rm_kwargs)
         try:
             result = __salt__['docker.rename'](new, orig)
         except CommandExecutionError as exc:
@@ -1704,22 +1778,46 @@ def running(name,
             comments.append('Failed to replace container \'{0}\'')
         return result
 
+    def _delete_temp_container():
+        log.debug('Removing temp container \'%s\'', temp_container_name)
+        __salt__['docker.rm'](temp_container_name)
+
     # If we're not skipping the comparison, then the assumption is that
     # temp_container will be discarded, unless the comparison reveals
     # differences, in which case we'll set cleanup_temp = False to prevent it
     # from being cleaned.
     cleanup_temp = not skip_comparison
     try:
+        pre_net_connect = __salt__['docker.inspect_container'](
+            name if exists else temp_container_name)
+        for net_name, net_conf in six.iteritems(networks):
+            try:
+                __salt__['docker.connect_container_to_network'](
+                    temp_container_name,
+                    net_name,
+                    **net_conf)
+            except CommandExecutionError as exc:
+                # Shouldn't happen, stopped docker containers can be
+                # attached to networks even if the static IP lies outside
+                # of the network's subnet. An exception will be raised once
+                # you try to start the container, however.
+                ret['result'] = False
+                comments.append(exc.__str__())
+                return _format_comments(ret, comments)
+        post_net_connect = __salt__['docker.inspect_container'](
+            temp_container_name)
+
+        net_changes = __salt__['docker.compare_container_networks'](
+            pre_net_connect, post_net_connect)
+
         if not skip_comparison:
-            changes = __salt__['docker.compare_container'](
+            container_changes = __salt__['docker.compare_containers'](
                 name,
                 temp_container_name,
                 ignore='Hostname',
             )
-
-            if changes:
-                ret['changes']['container'] = changes
-                if _check_diff(changes):
+            if container_changes:
+                if _check_diff(container_changes):
                     ret.setdefault('warnings', []).append(
                         'The detected changes may be due to incorrect '
                         'handling of arguments in earlier Salt releases. If '
@@ -1730,6 +1828,8 @@ def running(name,
                         )
                     )
 
+                changes_ptr = ret['changes'].setdefault('container', {})
+                changes_ptr.update(container_changes)
                 if __opts__['test']:
                     ret['result'] = None
                     comments.append(
@@ -1738,41 +1838,53 @@ def running(name,
                             'created' if not exists else 'replaced'
                         )
                     )
-                    return _format_comments(ret, comments)
                 else:
                     # We don't want to clean the temp container, we'll be
                     # replacing the existing one with it.
                     cleanup_temp = False
                     # Replace the container
                     if not _replace(name, temp_container_name):
+                        ret['result'] = False
                         return _format_comments(ret, comments)
                     ret['changes'].setdefault('container_id', {})['added'] = \
                         temp_container['Id']
-
             else:
                 # No changes between existing container and temp container.
                 # First check if a requisite is asking to send a signal to the
                 # existing container.
                 if send_signal:
-                    try:
-                        __salt__['docker.signal'](name, signal=watch_action)
-                    except CommandExecutionError as exc:
+                    if __opts__['test']:
                         comments.append(
-                            'Failed to signal container: {0}'.format(exc)
+                            'Signal {0} would be sent to container'.format(
+                                watch_action
+                            )
                         )
-                        return _format_comments(ret, comments)
                     else:
-                        ret['changes']['signal'] = watch_action
-                        comments.append(
-                            'Sent signal {0} to container'.format(watch_action)
-                        )
-                elif ret['changes']:
+                        try:
+                            __salt__['docker.signal'](name, signal=watch_action)
+                        except CommandExecutionError as exc:
+                            ret['result'] = False
+                            comments.append(
+                                'Failed to signal container: {0}'.format(exc)
+                            )
+                            return _format_comments(ret, comments)
+                        else:
+                            ret['changes']['signal'] = watch_action
+                            comments.append(
+                                'Sent signal {0} to container'.format(watch_action)
+                            )
+                elif container_changes:
                     if not comments:
                         log.warning(
                             'docker_container.running: detected changes without '
                             'a specific comment for container \'%s\'', name
                         )
-                        comments.append('Container \'{0}\' changed.'.format(name))
+                        comments.append(
+                            'Container \'{0}\'{1} updated.'.format(
+                                name,
+                                ' would be' if __opts__['test'] else ''
+                            )
+                        )
                 else:
                     # Container was not replaced, no differences between the
                     # existing container and the temp container were detected,
@@ -1781,14 +1893,89 @@ def running(name,
                         'Container \'{0}\' is already configured as specified'
                         .format(name)
                     )
+
+        if net_changes:
+            ret['changes'].setdefault('container', {})['Networks'] = net_changes
+            if __opts__['test']:
+                ret['result'] = None
+                comments.append('Network configuration would be updated')
+            elif cleanup_temp:
+                # We only need to make network changes if the container
+                # isn't being replaced, since we would already have
+                # attached all the networks for purposes of comparison.
+                network_failure = False
+                for net_name in sorted(net_changes):
+                    errors = []
+                    disconnected = connected = False
+                    try:
+                        if name in __salt__['docker.connected'](net_name):
+                            __salt__['docker.disconnect_container_from_network'](
+                                name,
+                                net_name)
+                            disconnected = True
+                    except CommandExecutionError as exc:
+                        errors.append(exc.__str__())
+
+                    if net_name in networks:
+                        try:
+                            __salt__['docker.connect_container_to_network'](
+                                name,
+                                net_name,
+                                **networks[net_name])
+                            connected = True
+                        except CommandExecutionError as exc:
+                            errors.append(exc.__str__())
+                            if disconnected:
+                                # We succeeded in disconnecting but failed
+                                # to reconnect. This can happen if the
+                                # network's subnet has changed and we try
+                                # to reconnect with the same IP address
+                                # from the old subnet.
+                                for item in list(net_changes[net_name]):
+                                    if net_changes[net_name][item]['old'] is None:
+                                        # Since they'd both be None, just
+                                        # delete this key from the changes
+                                        del net_changes[net_name][item]
+                                    else:
+                                        net_changes[net_name][item]['new'] = None
+
+                    if errors:
+                        comments.extend(errors)
+                        network_failure = True
+
+                    ret['changes'].setdefault(
+                        'container', {}).setdefault(
+                            'Networks', {})[net_name] = net_changes[net_name]
+
+                    if disconnected and connected:
+                        comments.append(
+                            'Reconnected to network \'{0}\' with updated '
+                            'configuration'.format(net_name)
+                        )
+                    elif disconnected:
+                        comments.append(
+                            'Disconnected from network \'{0}\''.format(
+                                net_name
+                            )
+                        )
+                    elif connected:
+                        comments.append(
+                            'Connected to network \'{0}\''.format(net_name)
+                        )
+
+                if network_failure:
+                    ret['result'] = False
+                    return _format_comments(ret, comments)
     finally:
         if cleanup_temp:
-            log.debug('Removing temp container \'%s\'', temp_container_name)
-            __salt__['docker.rm'](temp_container_name)
+            _delete_temp_container()
 
     if skip_comparison:
-        if exists:
+        if not exists:
+            comments.append('Created container \'{0}\''.format(name))
+        else:
             if not _replace(name, temp_container):
+                ret['result'] = False
                 return _format_comments(ret, comments)
         ret['changes'].setdefault('container_id', {})['added'] = \
             temp_container['Id']
@@ -1805,15 +1992,48 @@ def running(name,
             ret['result'] = None
             comments.append('Container would be started')
             return _format_comments(ret, comments)
-        try:
-            post_state = __salt__['docker.start'](name)['state']['new']
-        except Exception as exc:
-            comments.append(
-                'Failed to start container \'{0}\': \'{1}\''.format(name, exc)
-            )
-            return _format_comments(ret, comments)
+        else:
+            try:
+                post_state = __salt__['docker.start'](name)['state']['new']
+            except Exception as exc:
+                ret['result'] = False
+                comments.append(
+                    'Failed to start container \'{0}\': \'{1}\''.format(name, exc)
+                )
+                return _format_comments(ret, comments)
     else:
         post_state = __salt__['docker.state'](name)
+
+    if not __opts__['test'] and post_state == 'running':
+        # Now that we're certain the container is running, check each modified
+        # network to see if the network went from static (or disconnected) to
+        # automatic IP configuration. If so, grab the automatically-assigned
+        # IPs and munge the changes dict to include them. Note that this can
+        # only be done after the container is started bceause automatic IPs are
+        # assigned at runtime.
+        contextkey = '.'.join((name, 'docker_container.running'))
+
+        def _get_nets():
+            if contextkey not in __context__:
+                new_container_info = \
+                    __salt__['docker.inspect_container'](name)
+                __context__[contextkey] = new_container_info.get(
+                    'NetworkSettings', {}).get('Networks', {})
+            return __context__[contextkey]
+        autoip_keys = __opts__['docker.compare_container_networks'].get('automatic', [])
+        for net_name, net_changes in six.iteritems(
+                ret['changes'].get('container', {}).get('Networks', {})):
+            if 'IPConfiguration' in net_changes \
+                    and net_changes['IPConfiguration']['new'] == 'automatic':
+                for key in autoip_keys:
+                    val = _get_nets().get(net_name, {}).get(key)
+                    if val:
+                        net_changes[key] = {'old': None, 'new': val}
+                        try:
+                            net_changes.pop('IPConfiguration')
+                        except KeyError:
+                            pass
+        __context__.pop(contextkey, None)
 
     if pre_state != post_state:
         ret['changes']['state'] = {'old': pre_state, 'new': post_state}
@@ -1829,18 +2049,251 @@ def running(name,
         ret['changes']['image'] = {'old': current_image_id, 'new': image_id}
 
     if post_state != 'running' and start:
+        ret['result'] = False
         comments.append('Container is not running')
-    else:
-        ret['result'] = True
 
     return _format_comments(ret, comments)
 
 
+def run(name,
+        image=None,
+        onlyif=None,
+        unless=None,
+        creates=None,
+        bg=False,
+        failhard=True,
+        replace=False,
+        force=False,
+        skip_translate=None,
+        ignore_collisions=False,
+        validate_ip_addrs=True,
+        client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
+        **kwargs):
+    '''
+    .. versionadded:: 2018.3.0
+
+    .. note::
+        If no tag is specified in the image name, and nothing matching the
+        specified image is pulled on the minion, the ``docker pull`` that
+        retrieves the image will pull *all tags* for the image. A tag of
+        ``latest`` is not implicit for the pull. For this reason, it is
+        recommended to specify the image in ``repo:tag`` notation.
+
+    Like the :py:func:`cmd.run <salt.states.cmd.run>` state, only for Docker.
+    Does the equivalent of a ``docker run`` and returns information about the
+    container that was created, as well as its output.
+
+    This state accepts the same arguments as :py:func:`docker_container.running
+    <salt.states.docker_container.running>`, with the exception of
+    ``watch_action``, ``start``, and ``shutdown_timeout`` (though the ``force``
+    argument has a different meaning in this state).
+
+    In addition, this state accepts the arguments from :py:func:`docker.logs
+    <salt.modules.dockermod.logs>`, with the exception of ``follow``, to
+    control how logs are returned.
+
+    Additionally, the following arguments are supported:
+
+    onlyif
+        A command or list of commands to run as a check. The container will
+        only run if any of the specified commands returns a zero exit status.
+
+    unless
+        A command or list of commands to run as a check. The container will
+        only run if any of the specified commands returns a non-zero exit
+        status.
+
+    creates
+        A path or list of paths. Only run if one or more of the specified paths
+        do not exist on the minion.
+
+    bg : False
+        If ``True``, run container in background and do not await or deliver
+        its results.
+
+        .. note::
+            This may not be useful in cases where other states depend on the
+            results of this state. Also, the logs will be inaccessible once the
+            container exits if ``auto_remove`` is set to ``True``, so keep this
+            in mind.
+
+    failhard : True
+        If ``True``, the state will return a ``False`` result if the exit code
+        of the container is non-zero. When this argument is set to ``False``,
+        the state will return a ``True`` result regardless of the container's
+        exit code.
+
+        .. note::
+            This has no effect if ``bg`` is set to ``True``.
+
+    replace : False
+        If ``True``, and if the named container already exists, this will
+        remove the existing container. The default behavior is to return a
+        ``False`` result when the container already exists.
+
+    force : False
+        If ``True``, and the named container already exists, *and* ``replace``
+        is also set to ``True``, then the container will be forcibly removed.
+        Otherwise, the state will not proceed and will return a ``False``
+        result.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion docker.run_container myuser/myimage command=/usr/local/bin/myscript.sh
+
+    **USAGE EXAMPLE**
+
+    .. code-block:: jinja
+
+        {% set pkg_version = salt.pillar.get('pkg_version', '1.0-1') %}
+        build_package:
+          docker_container.run:
+            - image: myuser/builder:latest
+            - binds: /home/myuser/builds:/build_dir
+            - command: /scripts/build.sh {{ pkg_version }}
+            - creates: /home/myuser/builds/myapp-{{ pkg_version }}.noarch.rpm
+            - replace: True
+            - networks:
+              - mynet
+            - require:
+              - docker_network: mynet
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    for unsupported in ('watch_action', 'start', 'shutdown_timeout', 'follow'):
+        if unsupported in kwargs:
+            ret['result'] = False
+            ret['comment'] = 'The \'{0}\' argument is not supported'.format(
+                unsupported
+            )
+            return ret
+
+    if image is None:
+        ret['result'] = False
+        ret['comment'] = 'The \'image\' argument is required'
+        return ret
+    elif not isinstance(image, six.string_types):
+        image = six.text_type(image)
+
+    cret = mod_run_check(onlyif, unless, creates)
+    if isinstance(cret, dict):
+        ret.update(cret)
+        return ret
+
+    try:
+        if 'networks' in kwargs:
+            kwargs['networks'] = _parse_networks(kwargs['networks'])
+        _resolve_image(ret, image, client_timeout)
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        if exc.info is not None:
+            return _format_comments(ret, exc.info)
+        else:
+            ret['comment'] = exc.__str__()
+            return ret
+
+    cret = mod_run_check(onlyif, unless, creates)
+    if isinstance(cret, dict):
+        ret.update(cret)
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Container would be run{0}'.format(
+            ' in the background' if bg else ''
+        )
+        return ret
+
+    if bg:
+        remove = False
+    else:
+        # We're doing a bit of a hack here, so that we can get the exit code after
+        # the container exits. Since the input translation and compilation of the
+        # host_config take place within a private function of the execution module,
+        # we manually do the handling for auto_remove here and extract if (if
+        # present) from the kwargs. This allows us to explicitly pass auto_remove
+        # as False when we run the container, so it is still present upon exit (and
+        # the exit code can be retrieved). We can then remove the container
+        # manually if auto_remove is True.
+        remove = None
+        for item in ('auto_remove', 'rm'):
+            try:
+                val = kwargs.pop(item)
+            except KeyError:
+                continue
+            if remove is not None:
+                if not ignore_collisions:
+                    ret['result'] = False
+                    ret['comment'] = (
+                        '\'rm\' is an alias for \'auto_remove\', they cannot '
+                        'both be used'
+                    )
+                    return ret
+            else:
+                remove = bool(val)
+
+        if remove is not None:
+            # We popped off the value, so replace it with False
+            kwargs['auto_remove'] = False
+        else:
+            remove = False
+
+    try:
+        ret['changes'] = __salt__['docker.run_container'](
+            image,
+            name=name,
+            skip_translate=skip_translate,
+            ignore_collisions=ignore_collisions,
+            validate_ip_addrs=validate_ip_addrs,
+            client_timeout=client_timeout,
+            bg=bg,
+            replace=replace,
+            force=force,
+            **kwargs)
+    except Exception as exc:
+        log.exception('Encountered error running container')
+        ret['result'] = False
+        ret['comment'] = 'Encountered error running container: {0}'.format(exc)
+    else:
+        if bg:
+            ret['comment'] = 'Container was run in the background'
+        else:
+            try:
+                retcode = ret['changes']['ExitCode']
+            except KeyError:
+                pass
+            else:
+                ret['result'] = False if failhard and retcode != 0 else True
+                ret['comment'] = (
+                    'Container ran and exited with a return code of '
+                    '{0}'.format(retcode)
+                )
+
+    if remove:
+        id_ = ret.get('changes', {}).get('Id')
+        if id_:
+            try:
+                __salt__['docker.rm'](ret['changes']['Id'])
+            except CommandExecutionError as exc:
+                ret.setdefault('warnings', []).append(
+                    'Failed to auto_remove container: {0}'.format(exc)
+                )
+
+    return ret
+
+
 def stopped(name=None,
             containers=None,
-            shutdown_timeout=salt.utils.docker.SHUTDOWN_TIMEOUT,
+            shutdown_timeout=None,
             unpause=False,
-            error_on_absent=True):
+            error_on_absent=True,
+            **kwargs):
     '''
     Ensure that a container (or containers) is stopped
 
@@ -1873,9 +2326,12 @@ def stopped(name=None,
         all specified containers in a single run, rather than executing the
         state separately on each image (as it would in the first example).
 
-    shutdown_timeout : 10
+    shutdown_timeout
         Timeout for graceful shutdown of the container. If this timeout is
-        exceeded, the container will be killed.
+        exceeded, the container will be killed. If this value is not passed,
+        then the container's configured ``stop_timeout`` will be observed. If
+        ``stop_timeout`` was also unset on the container, then a timeout of 10
+        seconds will be used.
 
     unpause : False
         Set to ``True`` to unpause any paused containers before stopping. If
@@ -1900,11 +2356,11 @@ def stopped(name=None,
         targets = []
         for target in containers:
             if not isinstance(target, six.string_types):
-                target = str(target)
+                target = six.text_type(target)
             targets.append(target)
     elif name:
         if not isinstance(name, six.string_types):
-            targets = [str(name)]
+            targets = [six.text_type(name)]
         else:
             targets = [name]
 
@@ -1961,7 +2417,10 @@ def stopped(name=None,
 
     stop_errors = []
     for target in to_stop:
-        changes = __salt__['docker.stop'](target, unpause=unpause)
+        stop_kwargs = {'unpause': unpause}
+        if shutdown_timeout:
+            stop_kwargs['timeout'] = shutdown_timeout
+        changes = __salt__['docker.stop'](target, **stop_kwargs)
         if changes['result'] is True:
             ret['changes'][target] = changes
         else:
@@ -2048,6 +2507,72 @@ def absent(name, force=False):
     return ret
 
 
+def mod_run_check(onlyif, unless, creates):
+    '''
+    Execute the onlyif/unless/creates logic. Returns a result dict if any of
+    the checks fail, otherwise returns True
+    '''
+    cmd_kwargs = {'use_vt': False, 'bg': False}
+
+    if onlyif is not None:
+        if isinstance(onlyif, six.string_types):
+            onlyif = [onlyif]
+        if not isinstance(onlyif, list) \
+                or not all(isinstance(x, six.string_types) for x in onlyif):
+            return {'comment': 'onlyif is not a string or list of strings',
+                    'skip_watch': True,
+                    'result': True}
+        for entry in onlyif:
+            retcode = __salt__['cmd.retcode'](
+                entry,
+                ignore_retcode=True,
+                python_shell=True)
+            if retcode != 0:
+                return {
+                    'comment': 'onlyif command {0} returned exit code of {1}'
+                               .format(entry, retcode),
+                    'skip_watch': True,
+                    'result': True
+                }
+
+    if unless is not None:
+        if isinstance(unless, six.string_types):
+            unless = [unless]
+        if not isinstance(unless, list) \
+                or not all(isinstance(x, six.string_types) for x in unless):
+            return {'comment': 'unless is not a string or list of strings',
+                    'skip_watch': True,
+                    'result': True}
+        for entry in unless:
+            retcode = __salt__['cmd.retcode'](
+                entry,
+                ignore_retcode=True,
+                python_shell=True)
+            if retcode == 0:
+                return {
+                    'comment': 'unless command {0} returned exit code of {1}'
+                               .format(entry, retcode),
+                    'skip_watch': True,
+                    'result': True
+                }
+
+    if creates is not None:
+        if isinstance(creates, six.string_types):
+            creates = [creates]
+        if not isinstance(creates, list) \
+                or not all(isinstance(x, six.string_types) for x in creates):
+            return {'comment': 'creates is not a string or list of strings',
+                    'skip_watch': True,
+                    'result': True}
+        if all(os.path.exists(x) for x in creates):
+            return {'comment': 'All specified paths in \'creates\' '
+                               'argument exist',
+                    'result': True}
+
+    # No reason to stop, return True
+    return True
+
+
 def mod_watch(name, sfun=None, **kwargs):
     '''
     The docker_container watcher, called to invoke the watch command.
@@ -2068,7 +2593,10 @@ def mod_watch(name, sfun=None, **kwargs):
         return running(name, **watch_kwargs)
 
     if sfun == 'stopped':
-        return stopped(name, **salt.utils.clean_kwargs(**kwargs))
+        return stopped(name, **salt.utils.args.clean_kwargs(**kwargs))
+
+    if sfun == 'run':
+        return run(name, **salt.utils.args.clean_kwargs(**kwargs))
 
     return {'name': name,
             'changes': {},

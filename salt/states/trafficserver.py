@@ -7,10 +7,10 @@ Control Apache Traffic Server
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt libs
-import salt.utils
+import salt.utils.versions
 
 
 def __virtual__():
@@ -260,7 +260,7 @@ def set_var(name, value):
             - value: cdn.site.domain.tld
 
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'The \'set_var\' function has been deprecated and will be removed in Salt '
         '{version}. Please use \'trafficserver.config\' instead.'

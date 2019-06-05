@@ -4,10 +4,9 @@
 '''
 
 # Import Salt Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import traceback
-import yaml
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
@@ -15,7 +14,9 @@ from tests.support.mixins import RUNTIME_VARS
 
 # Import Salt libs
 import salt.config
+import salt.utils.yaml
 from salt.output import display_output
+from salt.ext import six
 
 
 class OutputReturnTest(ShellCase):
@@ -54,7 +55,7 @@ class OutputReturnTest(ShellCase):
         '''
         Tests the return of pprint-formatted data
         '''
-        expected = ["{'local': True}"]
+        expected = ["{u'local': True}"] if six.PY2 else ["{'local': True}"]
         ret = self.run_call('test.ping --out=pprint')
         self.assertEqual(ret, expected)
 
@@ -62,7 +63,7 @@ class OutputReturnTest(ShellCase):
         '''
         Tests the return of raw-formatted data
         '''
-        expected = ["{'local': True}"]
+        expected = ["{u'local': True}"] if six.PY2 else ["{'local': True}"]
         ret = self.run_call('test.ping --out=raw')
         self.assertEqual(ret, expected)
 
@@ -90,7 +91,7 @@ class OutputReturnTest(ShellCase):
         See https://github.com/saltstack/salt/issues/49269
         '''
         dumped_yaml = '\n'.join(self.run_call('grains.items --out=yaml'))
-        loaded_yaml = yaml.load(dumped_yaml)
+        loaded_yaml = salt.utils.yaml.safe_load(dumped_yaml)
         # We just want to check that the dumped YAML loades as a dict with a
         # single top-level key, we don't care about the real contents.
         assert isinstance(loaded_yaml, dict)

@@ -64,21 +64,22 @@ create the profiles as specified above. Then add:
     etcd.returner_read_profile: my_etcd_read
     etcd.returner_write_profile: my_etcd_write
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import json
 import logging
 
 # Import salt libs
+import salt.utils.jid
+import salt.utils.json
 try:
     import salt.utils.etcd_util
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
 
-import salt.utils
-import salt.utils.jid
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -133,7 +134,7 @@ def returner(ret):
             ret['id'],
             field
         ))
-        client.set(dest, json.dumps(ret[field]), ttl=ttl)
+        client.set(dest, salt.utils.json.dumps(ret[field]), ttl=ttl)
 
 
 def save_load(jid, load, minions=None):
@@ -148,7 +149,7 @@ def save_load(jid, load, minions=None):
         ttl = __opts__.get('etcd.ttl')
     client.set(
         '/'.join((path, 'jobs', jid, '.load.p')),
-        json.dumps(load),
+        salt.utils.json.dumps(load),
         ttl=ttl,
     )
 
@@ -166,7 +167,7 @@ def get_load(jid):
     '''
     read_profile = __opts__.get('etcd.returner_read_profile')
     client, path = _get_conn(__opts__, read_profile)
-    return json.loads(client.get('/'.join((path, 'jobs', jid, '.load.p'))))
+    return salt.utils.json.loads(client.get('/'.join((path, 'jobs', jid, '.load.p'))))
 
 
 def get_jid(jid):
@@ -186,7 +187,7 @@ def get_fun():
     client, path = _get_conn(__opts__)
     items = client.get('/'.join((path, 'minions')))
     for item in items.children:
-        comps = str(item.key).split('/')
+        comps = six.text_type(item.key).split('/')
         ret[comps[-1]] = item.value
     return ret
 
@@ -200,9 +201,9 @@ def get_jids():
     items = client.get('/'.join((path, 'jobs')))
     for item in items.children:
         if item.dir is True:
-            jid = str(item.key).split('/')[-1]
+            jid = six.text_type(item.key).split('/')[-1]
             load = client.get('/'.join((item.key, '.load.p'))).value
-            ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
+            ret[jid] = salt.utils.jid.format_jid_instance(jid, salt.utils.json.loads(load))
     return ret
 
 
@@ -214,7 +215,7 @@ def get_minions():
     client, path = _get_conn(__opts__)
     items = client.get('/'.join((path, 'minions')))
     for item in items.children:
-        comps = str(item.key).split('/')
+        comps = six.text_type(item.key).split('/')
         ret.append(comps[-1])
     return ret
 
@@ -223,4 +224,4 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

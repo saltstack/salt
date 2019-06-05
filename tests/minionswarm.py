@@ -22,10 +22,11 @@ import uuid
 
 # Import salt libs
 import salt
+import salt.utils.files
+import salt.utils.yaml
 
 # Import third party libs
-import yaml
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 import tests.support.helpers
 
@@ -255,7 +256,8 @@ class Swarm(object):
             pidfile = '{0}.pid'.format(path)
             try:
                 try:
-                    pid = int(open(pidfile).read().strip())
+                    with salt.utils.files.fopen(pidfile) as fp_:
+                        pid = int(fp_.read().strip())
                     os.kill(pid, signal.SIGTERM)
                 except ValueError:
                     pass
@@ -298,8 +300,8 @@ class MinionSwarm(Swarm):
         data = {}
         if self.opts['config_dir']:
             spath = os.path.join(self.opts['config_dir'], 'minion')
-            with open(spath) as conf:
-                data = yaml.load(conf) or {}
+            with salt.utils.files.fopen(spath) as conf:
+                data = salt.utils.yaml.safe_load(conf) or {}
         minion_id = '{0}-{1}'.format(
                 self.opts['name'],
                 str(idx).zfill(self.zfill)
@@ -357,8 +359,8 @@ class MinionSwarm(Swarm):
         if self.opts['rand_uuid']:
             data['grains']['uuid'] = str(uuid.uuid4())
 
-        with open(path, 'w+') as fp_:
-            yaml.dump(data, fp_)
+        with salt.utils.files.fopen(path, 'w+') as fp_:
+            salt.utils.yaml.safe_dump(data, fp_)
         self.confs.add(dpath)
 
     def prep_configs(self):
@@ -411,8 +413,8 @@ class MasterSwarm(Swarm):
         data = {}
         if self.opts['config_dir']:
             spath = os.path.join(self.opts['config_dir'], 'master')
-            with open(spath) as conf:
-                data = yaml.load(conf)
+            with salt.utils.files.fopen(spath) as conf:
+                data = salt.utils.yaml.safe_load(conf)
         data.update({
             'log_file': os.path.join(self.conf, 'master.log'),
             'open_mode': True  # TODO Pre-seed keys
@@ -421,8 +423,8 @@ class MasterSwarm(Swarm):
         os.makedirs(self.conf)
         path = os.path.join(self.conf, 'master')
 
-        with open(path, 'w+') as fp_:
-            yaml.dump(data, fp_)
+        with salt.utils.files.fopen(path, 'w+') as fp_:
+            salt.utils.yaml.safe_dump(data, fp_)
 
     def shutdown(self):
         print('Killing master')
@@ -431,6 +433,7 @@ class MasterSwarm(Swarm):
                 shell=True
         )
         print('Master killed')
+
 
 # pylint: disable=C0103
 if __name__ == '__main__':

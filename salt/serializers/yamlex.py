@@ -103,10 +103,10 @@
 # pylint: disable=too-few-public-methods,too-many-public-methods
 
 # Import python libs
-from __future__ import absolute_import
-import logging
+from __future__ import absolute_import, print_function, unicode_literals
+import copy
 import datetime
-from copy import copy
+import logging
 
 
 # Import Salt Libs
@@ -119,7 +119,7 @@ import yaml
 from yaml.nodes import MappingNode
 from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
-import salt.ext.six as six
+from salt.ext import six
 
 __all__ = ['deserialize', 'serialize', 'available']
 
@@ -219,11 +219,11 @@ class Loader(BaseLoader):  # pylint: disable=W0232
 
             # !reset instruction applies on document only.
             # It tells to reset previous decoded value for this present key.
-            reset = key_node.tag == u'!reset'
+            reset = key_node.tag == '!reset'
 
             # even if !aggregate tag apply only to values and not keys
             # it's a reason to act as a such nazi.
-            if key_node.tag == u'!aggregate':
+            if key_node.tag == '!aggregate':
                 log.warning('!aggregate applies on values only, not on keys')
                 value_node.tag = key_node.tag
                 key_node.tag = self.resolve_sls_tag(key_node)[0]
@@ -274,7 +274,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
         except Exception:
             raise ConstructorError('unable to build reset')
 
-        node = copy(node)
+        node = copy.copy(node)
         node.tag = tag
         obj = self.construct_object(node, deep)
         if obj is None:
@@ -291,7 +291,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
         except Exception:
             raise ConstructorError('unable to build reset')
 
-        node = copy(node)
+        node = copy.copy(node)
         node.tag = tag
 
         return self.construct_object(node, deep)

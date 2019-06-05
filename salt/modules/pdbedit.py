@@ -8,7 +8,7 @@ Manage accounts in Samba's passdb using pdbedit
 
 .. versionadded:: 2017.7.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -20,7 +20,8 @@ except ImportError:
     from pipes import quote as _quote_args
 
 # Import Salt libs
-import salt.utils
+from salt.ext import six
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ def __virtual__():
     '''
     Provides pdbedit if available
     '''
-    if salt.utils.which('pdbedit'):
+    if salt.utils.path.which('pdbedit'):
         return __virtualname__
     return (
         False,
@@ -84,7 +85,7 @@ def list_users(verbose=True, hashes=False):
     users = {} if verbose else []
 
     if verbose:
-        ## parse detailed user data
+        # parse detailed user data
         res = __salt__['cmd.run_all'](
             'pdbedit --list --verbose {hashes}'.format(hashes="--smbpasswd-style" if hashes else ""),
         )
@@ -106,7 +107,7 @@ def list_users(verbose=True, hashes=False):
             if len(user_data) > 0:
                 users[user_data['unix username']] = user_data
     else:
-        ## list users
+        # list users
         res = __salt__['cmd.run_all']('pdbedit --list')
 
         if res['retcode'] > 0:
@@ -185,14 +186,14 @@ def create(login, password, password_hashed=False, machine_account=False):
     '''
     ret = 'unchanged'
 
-    ## generate nt hash if needed
+    # generate nt hash if needed
     if password_hashed:
         password_hash = password.upper()
         password = ""  # wipe password
     else:
         password_hash = generate_nt_hash(password)
 
-    ## create user
+    # create user
     if login not in list_users(False):
         # NOTE: --create requires a password, even if blank
         res = __salt__['cmd.run_all'](
@@ -208,7 +209,7 @@ def create(login, password, password_hashed=False, machine_account=False):
 
         ret = 'created'
 
-    ## update password if needed
+    # update password if needed
     user = get_user(login, True)
     if user['nt hash'] != password_hash:
         res = __salt__['cmd.run_all'](
@@ -291,7 +292,7 @@ def modify(
     '''
     ret = 'unchanged'
 
-    ## flag mapping
+    # flag mapping
     flags = {
         'domain': '--domain=',
         'full name': '--fullname=',
@@ -305,7 +306,7 @@ def modify(
         'machine sid': '-M ',
     }
 
-    ## field mapping
+    # field mapping
     provided = {
         'domain': domain,
         'full name': fullname,
@@ -319,7 +320,7 @@ def modify(
         'machine sid': machine_sid,
     }
 
-    ## update password
+    # update password
     if password:
         ret = create(login, password, password_hashed)[login]
         if ret not in ['updated', 'created', 'unchanged']:
@@ -327,13 +328,13 @@ def modify(
     elif login not in list_users(False):
         return {login: 'absent'}
 
-    ## check for changes
+    # check for changes
     current = get_user(login, hashes=True)
     changes = {}
     for key, val in provided.items():
         if key in ['user sid', 'machine sid']:
-            if val is not None and key in current and not current[key].endswith(str(val)):
-                changes[key] = str(val)
+            if val is not None and key in current and not current[key].endswith(six.text_type(val)):
+                changes[key] = six.text_type(val)
         elif key in ['account flags']:
             if val is not None:
                 if val.startswith('['):
@@ -351,7 +352,7 @@ def modify(
             if val is not None and key in current and current[key] != val:
                 changes[key] = val
 
-    ## apply changes
+    # apply changes
     if len(changes) > 0 or reset_login_hours or reset_bad_password_count:
         cmds = []
         for change in changes:

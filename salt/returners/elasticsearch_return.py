@@ -95,19 +95,19 @@ Minion configuration:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 from datetime import tzinfo, timedelta
 import uuid
 import logging
-import json
 
 # Import Salt libs
 import salt.returners
 import salt.utils.jid
+import salt.utils.json
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 __virtualname__ = 'elasticsearch'
 
@@ -220,14 +220,16 @@ def returner(ret):
 
     if job_fun in options['functions_blacklist']:
         log.info(
-            'Won\'t push new data to Elasticsearch, job with jid={0} and '
-            'function={1} which is in the user-defined list of ignored '
-            'functions'.format(job_id, job_fun))
+            'Won\'t push new data to Elasticsearch, job with jid=%s and '
+            'function=%s which is in the user-defined list of ignored '
+            'functions', job_id, job_fun
+        )
         return
-
-    if ret.get('return', None) is None:
-        log.info('Won\'t push new data to Elasticsearch, job with jid={0} was '
-                 'not successful'.format(job_id))
+    if ret.get('data', None) is None and ret.get('return') is None:
+        log.info(
+            'Won\'t push new data to Elasticsearch, job with jid=%s was '
+            'not successful', job_id
+        )
         return
 
     # Build the index name
@@ -258,7 +260,7 @@ def returner(ret):
         # index data format
         if options['states_order_output'] and isinstance(ret['return'], dict):
             index = '{0}-ordered'.format(index)
-            max_chars = len(str(len(ret['return'])))
+            max_chars = len(six.text_type(len(ret['return'])))
 
             for uid, data in six.iteritems(ret['return']):
                 # Skip keys we've already prefixed
@@ -274,7 +276,7 @@ def returner(ret):
 
                 # Prefix the key with the run order so it can be sorted
                 new_uid = '{0}_|-{1}'.format(
-                    str(data['__run_num__']).zfill(max_chars),
+                    six.text_type(data['__run_num__']).zfill(max_chars),
                     uid,
                 )
 
@@ -321,12 +323,12 @@ def returner(ret):
     }
 
     if options['debug_returner_payload']:
-        log.debug('Payload: {0}'.format(data))
+        log.debug('elasicsearch payload: %s', data)
 
     # Post the payload
     ret = __salt__['elasticsearch.document_create'](index=index,
                                                     doc_type=options['doc_type'],
-                                                    body=json.dumps(data))
+                                                    body=salt.utils.json.dumps(data))
 
 
 def event_return(events):
@@ -355,14 +357,14 @@ def event_return(events):
     ret = __salt__['elasticsearch.document_create'](index=index,
                                                     doc_type=doc_type,
                                                     id=uuid.uuid4(),
-                                                    body=json.dumps(data))
+                                                    body=salt.utils.json.dumps(data))
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
 
 
 def save_load(jid, load, minions=None):
@@ -386,7 +388,7 @@ def save_load(jid, load, minions=None):
     ret = __salt__['elasticsearch.document_create'](index=index,
                                                     doc_type=doc_type,
                                                     id=jid,
-                                                    body=json.dumps(data))
+                                                    body=salt.utils.json.dumps(data))
 
 
 def get_load(jid):
@@ -404,5 +406,5 @@ def get_load(jid):
                                                   id=jid,
                                                   doc_type=doc_type)
     if data:
-        return json.loads(data)
+        return salt.utils.json.loads(data)
     return {}

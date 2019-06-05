@@ -46,7 +46,7 @@ it must be specified in the URI:
 '''
 
 # import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import salt.cache
 
 __func_alias__ = {

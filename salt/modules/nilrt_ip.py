@@ -5,17 +5,16 @@ The networking module for NI Linux Real-Time distro
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
 # Import salt libs
-import salt.utils
 import salt.utils.validate.net
 import salt.exceptions
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import pyconnman
     HAS_PYCONNMAN = True
@@ -50,7 +49,7 @@ def __virtual__():
             if state == 'offline':
                 return False, 'Connmand is not running'
         except Exception as exc:
-            return False, str(exc)
+            return False, six.text_type(exc)
         return __virtualname__
     return False, 'The nilrt_ip module could not be loaded: unsupported OS family'
 
@@ -83,7 +82,7 @@ def _get_services():
     serviceList = []
     services = pyconnman.ConnManager().get_services()
     for path, params in services:
-        serviceList.append(str(path[len(SERVICE_PATH):]))
+        serviceList.append(six.text_type(path[len(SERVICE_PATH):]))
     return serviceList
 
 
@@ -146,8 +145,8 @@ def _get_service_info(service):
     data = {
         'name': service,
         'wireless': service_info.get_property('Type') == 'wifi',
-        'connectionid': str(service_info.get_property('Ethernet')['Interface']),
-        'HWAddress': str(service_info.get_property('Ethernet')['Address'])
+        'connectionid': six.text_type(service_info.get_property('Ethernet')['Interface']),
+        'HWAddress': six.text_type(service_info.get_property('Ethernet')['Address'])
     }
 
     state = service_info.get_property('State')
@@ -167,22 +166,22 @@ def _get_service_info(service):
                         value = 'dhcp_linklocal'
                     elif value == 'manual':
                         value = 'static'
-                data['ipv4'][info.lower()] = str(value)
+                data['ipv4'][info.lower()] = six.text_type(value)
             except Exception as exc:
-                log.warning('Unable to get IPv4 {0} for service {1}\n'.format(info, service))
+                log.warning('Unable to get IPv4 %s for service %s\n', info, service)
 
         ipv6Info = service_info.get_property('IPv6')
         for info in ['Address', 'Prefix', 'Gateway']:
             try:
                 value = ipv6Info[info]
-                data['ipv6'][info.lower()] = [str(value)]
+                data['ipv6'][info.lower()] = [six.text_type(value)]
             except Exception as exc:
-                log.warning('Unable to get IPv6 {0} for service {1}\n'.format(info, service))
+                log.warning('Unable to get IPv6 %s for service %s\n', info, service)
 
-        domains = []
-        for x in service_info.get_property('Domains'):
-            domains.append(str(x))
-        data['ipv4']['dns'] = domains
+        nameservers = []
+        for x in service_info.get_property('Nameservers'):
+            nameservers.append(six.text_type(x))
+        data['ipv4']['dns'] = nameservers
     else:
         data['up'] = False
 
@@ -202,14 +201,14 @@ def _dict_to_string(dictionary):
     for key, val in sorted(dictionary.items()):
         if isinstance(val, dict):
             for line in _dict_to_string(val):
-                ret += str(key) + '-' + line + '\n'
+                ret += six.text_type(key) + '-' + line + '\n'
         elif isinstance(val, list):
             stringList = ''
             for item in val:
-                stringList += str(item) + ' '
-            ret += str(key) + ': ' + stringList +'\n'
+                stringList += six.text_type(item) + ' '
+            ret += six.text_type(key) + ': ' + stringList +'\n'
         else:
-            ret += str(key) + ': ' + str(val) +'\n'
+            ret += six.text_type(key) + ': ' + six.text_type(val) +'\n'
     return ret.splitlines()
 
 
@@ -334,7 +333,7 @@ def set_dhcp_linklocal_all(interface):
 
     .. code-block:: bash
 
-        salt '*' ip.dhcp_linklocal_all interface-label
+        salt '*' ip.set_dhcp_linklocal_all interface-label
     '''
     service = _interface_to_service(interface)
     if not service:
@@ -347,13 +346,13 @@ def set_dhcp_linklocal_all(interface):
     ipv4['Gateway'] = dbus.String('', variant_level=1)
     try:
         service.set_property('IPv4.Configuration', ipv4)
-        service.set_property('Domains.Configuration', [''])  # reset domains list
+        service.set_property('Nameservers.Configuration', [''])  # reset nameservers list
     except Exception as exc:
         raise salt.exceptions.CommandExecutionError('Couldn\'t set dhcp linklocal for service: {0}\nError: {1}\n'.format(service, exc))
     return True
 
 
-def set_static_all(interface, address, netmask, gateway, domains):
+def set_static_all(interface, address, netmask, gateway, nameservers):
     '''
     Configure specified adapter to use ipv4 manual settings
 
@@ -361,7 +360,7 @@ def set_static_all(interface, address, netmask, gateway, domains):
     :param str address: ipv4 address
     :param str netmask: ipv4 netmask
     :param str gateway: ipv4 gateway
-    :param str domains: list of domains servers separated by spaces
+    :param str nameservers: list of nameservers servers separated by spaces
     :return: True if the settings were applied, otherwise an exception will be thrown.
     :rtype: bool
 
@@ -369,7 +368,7 @@ def set_static_all(interface, address, netmask, gateway, domains):
 
     .. code-block:: bash
 
-        salt '*' ip.dhcp_linklocal_all interface-label address netmask gateway domains
+        salt '*' ip.set_static_all interface-label address netmask gateway nameservers
     '''
     service = _interface_to_service(interface)
     if not service:
@@ -377,9 +376,15 @@ def set_static_all(interface, address, netmask, gateway, domains):
     validate, msg = _validate_ipv4([address, netmask, gateway])
     if not validate:
         raise salt.exceptions.CommandExecutionError(msg)
-    validate, msg = _space_delimited_list(domains)
-    if not validate:
-        raise salt.exceptions.CommandExecutionError(msg)
+    if nameservers:
+        validate, msg = _space_delimited_list(nameservers)
+        if not validate:
+            raise salt.exceptions.CommandExecutionError(msg)
+        if not isinstance(nameservers, list):
+            nameservers = nameservers.split(' ')
+    service = _interface_to_service(interface)
+    if not service:
+        raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
     service = pyconnman.ConnService(_add_path(service))
     ipv4 = service.get_property('IPv4.Configuration')
     ipv4['Method'] = dbus.String('manual', variant_level=1)
@@ -388,10 +393,8 @@ def set_static_all(interface, address, netmask, gateway, domains):
     ipv4['Gateway'] = dbus.String('{0}'.format(gateway), variant_level=1)
     try:
         service.set_property('IPv4.Configuration', ipv4)
-        if not isinstance(domains, list):
-            dns = domains.split(' ')
-            domains = dns
-        service.set_property('Domains.Configuration', [dbus.String('{0}'.format(d)) for d in domains])
+        if nameservers:
+            service.set_property('Nameservers.Configuration', [dbus.String('{0}'.format(d)) for d in nameservers])
     except Exception as exc:
         raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for service: {0}\nError: {1}\n'.format(service, exc))
     return True

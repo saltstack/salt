@@ -63,12 +63,11 @@ still running from the last time the process_runner task was executed.
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.loader
-import salt.ext.six as six
+from salt.ext import six
 from salt.utils.event import get_event, tagify
 from salt.exceptions import SaltInvocationError
 
@@ -171,7 +170,7 @@ def list_items(queue, backend='sqlite'):
     return ret
 
 
-def pop(queue, quantity=1, backend='sqlite'):
+def pop(queue, quantity=1, backend='sqlite', is_runner=False):
     '''
     Pop one or more or all items from a queue
 
@@ -189,11 +188,11 @@ def pop(queue, quantity=1, backend='sqlite'):
     cmd = '{0}.pop'.format(backend)
     if cmd not in queue_funcs:
         raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
-    ret = queue_funcs[cmd](quantity=quantity, queue=queue)
+    ret = queue_funcs[cmd](quantity=quantity, queue=queue, is_runner=is_runner)
     return ret
 
 
-def process_queue(queue, quantity=1, backend='sqlite'):
+def process_queue(queue, quantity=1, backend='sqlite', is_runner=False):
     '''
     Pop items off a queue and create an event on the Salt event bus to be
     processed by a Reactor.
@@ -207,24 +206,24 @@ def process_queue(queue, quantity=1, backend='sqlite'):
         salt-run queue.process_queue myqueue all backend=sqlite
     '''
     # get ready to send an event
-    event = get_event(
+    with get_event(
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
                 opts=__opts__,
-                listen=False)
-    try:
-        items = pop(queue=queue, quantity=quantity, backend=backend)
-    except SaltInvocationError as exc:
-        error_txt = '{0}'.format(exc)
-        __jid_event__.fire_event({'errors': error_txt}, 'progress')
-        return False
+                listen=False) as event_bus:
+        try:
+            items = pop(queue=queue, quantity=quantity, backend=backend, is_runner=is_runner)
+        except SaltInvocationError as exc:
+            error_txt = '{0}'.format(exc)
+            __jid_event__.fire_event({'errors': error_txt}, 'progress')
+            return False
 
-    data = {'items': items,
-            'backend': backend,
-            'queue': queue,
-            }
-    event.fire_event(data, tagify([queue, 'process'], prefix='queue'))
+        data = {'items': items,
+                'backend': backend,
+                'queue': queue,
+                }
+        event_bus.fire_event(data, tagify([queue, 'process'], prefix='queue'))
     return data
 
 
@@ -300,6 +299,6 @@ def process_runner(quantity=1, queue=None, backend=None):
 
     '''
     queue_kwargs = __get_queue_opts(queue=queue, backend=backend)
-    data = process_queue(quantity=quantity, **queue_kwargs)
+    data = process_queue(quantity=quantity, is_runner=True, **queue_kwargs)
     for job in data['items']:
         __salt__[job['fun']](*job['args'], **job['kwargs'])

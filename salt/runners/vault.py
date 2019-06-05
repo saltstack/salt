@@ -7,16 +7,19 @@
 Runner functions supporting the Vault modules. Configuration instructions are
 documented in the execution module docs.
 '''
-
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import logging
 import string
 import requests
 
+# Import Salt libs
 import salt.crypt
 import salt.exceptions
 
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -36,12 +39,28 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         If the master needs to create a token on behalf of the minion, this is
         True. This happens when the master generates minion pillars.
     '''
-    log.debug('Token generation request for {0} (impersonated by master: {1})'.
-              format(minion_id, impersonated_by_master))
+    log.debug(
+        'Token generation request for %s (impersonated by master: %s)',
+        minion_id, impersonated_by_master
+    )
     _validate_signature(minion_id, signature, impersonated_by_master)
 
     try:
         config = __opts__['vault']
+        verify = config.get('verify', None)
+
+        if config['auth']['method'] == 'approle':
+            if _selftoken_expired():
+                log.debug('Vault token expired. Recreating one')
+                # Requesting a short ttl token
+                url = '{0}/v1/auth/approle/login'.format(config['url'])
+                payload = {'role_id': config['auth']['role_id']}
+                if 'secret_id' in config['auth']:
+                    payload['secret_id'] = config['auth']['secret_id']
+                response = requests.post(url, json=payload, verify=verify)
+                if response.status_code != 200:
+                    return {'error': response.reason}
+                config['auth']['token'] = response.json()['auth']['client_token']
 
         url = '{0}/v1/auth/token/create'.format(config['url'])
         headers = {'X-Vault-Token': config['auth']['token']}
@@ -53,22 +72,26 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         payload = {
                     'policies': _get_policies(minion_id, config),
                     'num_uses': 1,
-                    'metadata': audit_data
+                    'meta': audit_data
                   }
 
         if payload['policies'] == []:
             return {'error': 'No policies matched minion'}
 
         log.trace('Sending token creation request to Vault')
-        response = requests.post(url, headers=headers, json=payload)
+        response = requests.post(url, headers=headers, json=payload, verify=verify)
 
         if response.status_code != 200:
             return {'error': response.reason}
 
         authData = response.json()['auth']
-        return {'token': authData['client_token'], 'url': config['url']}
+        return {
+            'token': authData['client_token'],
+            'url': config['url'],
+            'verify': verify,
+        }
     except Exception as e:
-        return {'error': str(e)}
+        return {'error': six.text_type(e)}
 
 
 def show_policies(minion_id):
@@ -99,7 +122,7 @@ def _validate_signature(minion_id, signature, impersonated_by_master):
     else:
         public_key = '{0}/minions/{1}'.format(pki_dir, minion_id)
 
-    log.trace('Validating signature for {0}'.format(minion_id))
+    log.trace('Validating signature for %s', minion_id)
     signature = base64.b64decode(signature)
     if not salt.crypt.verify_signature(public_key, minion_id, signature):
         raise salt.exceptions.AuthenticationError(
@@ -128,9 +151,9 @@ def _get_policies(minion_id, config):
                                                 .lower()  # Vault requirement
                                )
         except KeyError:
-            log.warning('Could not resolve policy pattern {0}'.format(pattern))
+            log.warning('Could not resolve policy pattern %s', pattern)
 
-    log.debug('{0} policies: {1}'.format(minion_id, policies))
+    log.debug('%s policies: %s', minion_id, policies)
     return policies
 
 
@@ -176,9 +199,29 @@ def _expand_pattern_lists(pattern, **mappings):
         (value, _) = f.get_field(field_name, None, mappings)
         if isinstance(value, list):
             token = '{{{0}}}'.format(field_name)
-            expanded = [pattern.replace(token, str(elem)) for elem in value]
+            expanded = [pattern.replace(token, six.text_type(elem)) for elem in value]
             for expanded_item in expanded:
                 result = _expand_pattern_lists(expanded_item, **mappings)
                 expanded_patterns += result
             return expanded_patterns
     return [pattern]
+
+
+def _selftoken_expired():
+    '''
+    Validate the current token exists and is still valid
+    '''
+    try:
+        verify = __opts__['vault'].get('verify', None)
+        url = '{0}/v1/auth/token/lookup-self'.format(__opts__['vault']['url'])
+        if 'token' not in __opts__['vault']['auth']:
+            return True
+        headers = {'X-Vault-Token': __opts__['vault']['auth']['token']}
+        response = requests.get(url, headers=headers, verify=verify)
+        if response.status_code != 200:
+            return True
+        return False
+    except Exception as e:
+        raise salt.exceptions.CommandExecutionError(
+            'Error while looking up self token : {0}'.format(six.text_type(e))
+            )

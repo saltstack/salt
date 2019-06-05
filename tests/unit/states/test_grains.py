@@ -3,11 +3,10 @@
 unit tests for the grains state
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import os
-import yaml
 import contextlib
 
 # Import Salt Testing libs
@@ -17,9 +16,12 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.stringutils
+import salt.utils.yaml
 import salt.modules.grains as grainsmod
 import salt.states.grains as grains
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -62,8 +64,8 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             grains_file = os.path.join(
                 os.path.dirname(grains.__opts__['conf_file']),
                 'grains')
-        with salt.utils.fopen(grains_file, "r") as grf:
-            grains_data = grf.read()
+        with salt.utils.files.fopen(grains_file, "r") as grf:
+            grains_data = salt.utils.stringutils.to_unicode(grf.read())
         self.assertMultiLineEqual(grains_string, grains_data)
 
     @contextlib.contextmanager
@@ -77,9 +79,8 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 else:
                     grains_file = os.path.join(
                         os.path.dirname(grains.__opts__['conf_file']), 'grains')
-                cstr = yaml.safe_dump(grains_data, default_flow_style=False)
-                with salt.utils.fopen(grains_file, "w+") as grf:
-                    grf.write(cstr)
+                with salt.utils.files.fopen(grains_file, "w+") as grf:
+                    salt.utils.yaml.safe_dump(grains_data, grf, default_flow_style=False)
                 yield
 
     # 'exists' function tests: 2
@@ -98,6 +99,13 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret['result'], True)
             self.assertEqual(ret['comment'], 'Grain exists')
             self.assertEqual(ret['changes'], {})
+
+    # 'make_hashable' function tests: 1
+
+    def test_make_hashable(self):
+        with self.setGrains({'cmplx_lst_grain': [{'a': 'aval'}, {'foo': 'bar'}]}):
+            hashable_list = {'cmplx_lst_grain': [{'a': 'aval'}, {'foo': 'bar'}]}
+            self.assertEqual(grains.make_hashable(grains.__grains__).issubset(grains.make_hashable(hashable_list)), True)
 
     # 'present' function tests: 12
 
@@ -364,7 +372,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 value=['l1', 'l2'],
                 force=True)
             self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Set grain foo to [\'l1\', \'l2\']')
+            self.assertEqual(
+                ret['comment'],
+                "Set grain foo to ['l1', 'l2']" if six.PY3
+                    else "Set grain foo to [u'l1', u'l2']"
+            )
             self.assertEqual(ret['changes'], {'foo': ['l1', 'l2']})
             self.assertEqual(
                 grains.__grains__,
@@ -382,7 +394,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 value={'k1': 'v1'},
                 force=True)
             self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Set grain foo to {\'k1\': \'v1\'}')
+            self.assertEqual(
+                ret['comment'],
+                "Set grain foo to {'k1': 'v1'}" if six.PY3
+                    else "Set grain foo to {u'k1': u'v1'}"
+            )
             self.assertEqual(ret['changes'], {'foo': {'k1': 'v1'}})
             self.assertEqual(
                 grains.__grains__,
@@ -401,7 +417,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 force=True)
             self.assertEqual(ret['result'], True)
             self.assertEqual(ret['changes'], {'foo': {'is': {'nested': ['l1', 'l2']}}})
-            self.assertEqual(ret['comment'], 'Set grain foo:is:nested to [\'l1\', \'l2\']')
+            self.assertEqual(
+                ret['comment'],
+                "Set grain foo:is:nested to ['l1', 'l2']" if six.PY3
+                    else "Set grain foo:is:nested to [u'l1', u'l2']"
+            )
             self.assertEqual(
                 grains.__grains__,
                 {'a': 'aval', 'foo': {'is': {'nested': ['l1', 'l2']}}})
@@ -420,7 +440,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 value={'k1': 'v1'},
                 force=True)
             self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Set grain foo:is:nested to {\'k1\': \'v1\'}')
+            self.assertEqual(
+                ret['comment'],
+                "Set grain foo:is:nested to {'k1': 'v1'}" if six.PY3
+                    else "Set grain foo:is:nested to {u'k1': u'v1'}"
+            )
             self.assertEqual(ret['changes'], {'foo': {'is': {'nested': {'k1': 'v1'}}, 'and': 'other'}})
             self.assertEqual(
                 grains.__grains__,
@@ -468,7 +492,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 name='foo:is:nested',
                 value={'k1': 'v1'})
             self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Set grain foo:is:nested to {\'k1\': \'v1\'}')
+            self.assertEqual(
+                ret['comment'],
+                "Set grain foo:is:nested to {'k1': 'v1'}" if six.PY3
+                    else "Set grain foo:is:nested to {u'k1': u'v1'}"
+            )
             self.assertEqual(ret['changes'], {'foo': {'is': {'nested': {'k1': 'v1'}}}})
             self.assertEqual(
                 grains.__grains__,
@@ -486,7 +514,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 name='foo:is:nested',
                 value={'k1': 'v1'})
             self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Set grain foo:is:nested to {\'k1\': \'v1\'}')
+            self.assertEqual(
+                ret['comment'],
+                "Set grain foo:is:nested to {'k1': 'v1'}" if six.PY3
+                    else "Set grain foo:is:nested to {u'k1': u'v1'}"
+            )
             self.assertEqual(ret['changes'], {'foo': ['one', {'is': {'nested': {'k1': 'v1'}}}, 'correct']})
             self.assertEqual(
                 grains.__grains__,

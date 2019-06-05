@@ -22,11 +22,11 @@
 # pylint: disable=unused-import,blacklisted-module,deprecated-method
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import logging
-import salt.ext.six as six
+from salt.ext import six
 try:
     import psutil
     HAS_PSUTIL = True
@@ -39,6 +39,17 @@ log = logging.getLogger(__name__)
 # process details when running in verbose mode
 # i.e. [CPU:15.1%|MEM:48.3%|Z:0]
 SHOW_PROC = 'NO_SHOW_PROC' not in os.environ
+
+LOREM_IPSUM = '''\
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque eget urna a arcu lacinia sagittis.
+Sed scelerisque, lacus eget malesuada vestibulum, justo diam facilisis tortor, in sodales dolor
+nibh eu urna. Aliquam iaculis massa risus, sed elementum risus accumsan id. Suspendisse mattis,
+metus sed lacinia dictum, leo orci dapibus sapien, at porttitor sapien nulla ac velit.
+Duis ac cursus leo, non varius metus. Sed laoreet felis magna, vel tempor diam malesuada nec.
+Quisque cursus odio tortor. In consequat augue nisl, eget lacinia odio vestibulum eget.
+Donec venenatis elementum arcu at rhoncus. Nunc pharetra erat in lacinia convallis. Ut condimentum
+eu mauris sit amet convallis. Morbi vulputate vel odio non laoreet. Nullam in suscipit tellus.
+Sed quis posuere urna.'''
 
 # support python < 2.7 via unittest2
 if sys.version_info < (2, 7):
@@ -256,6 +267,19 @@ class TestCase(_TestCase):
             'instead.'.format('assertNotAlmostEquals', 'assertNotAlmostEqual')
         )
         # return _TestCase.assertNotAlmostEquals(self, *args, **kwargs)
+
+    def repack_state_returns(self, state_ret):
+        '''
+        Accepts a state return dict and returns it back with the top level key
+        names rewritten such that the ID declaration is the key instead of the
+        State's unique tag. For example: 'foo' instead of
+        'file_|-foo_|-/etc/foo.conf|-managed'
+
+        This makes it easier to work with state returns when crafting asserts
+        after running states.
+        '''
+        assert isinstance(state_ret, dict), state_ret
+        return {x.split('_|-')[1]: y for x, y in six.iteritems(state_ret)}
 
     def failUnlessEqual(self, *args, **kwargs):
         raise DeprecationWarning(

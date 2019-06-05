@@ -11,17 +11,20 @@ http://misheska.com/blog/2013/06/15/using-rbenv-to-manage-multiple-versions-of-r
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import re
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.data
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -40,18 +43,18 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The rbenv execution module failed to load: only available on non-Windows systems.')
     return True
 
 
 def _shlex_split(s):
-    # from python:salt.utils.shlex_split: passing None for s will read
+    # from python:salt.utils.args.shlex_split: passing None for s will read
     # the string to split from standard input.
     if s is None:
-        ret = salt.utils.shlex_split('')
+        ret = salt.utils.args.shlex_split('')
     else:
-        ret = salt.utils.shlex_split(s)
+        ret = salt.utils.args.shlex_split(s)
 
     return ret
 
@@ -60,13 +63,13 @@ def _parse_env(env):
     if not env:
         env = {}
     if isinstance(env, list):
-        env = salt.utils.repack_dictlist(env)
+        env = salt.utils.data.repack_dictlist(env)
     if not isinstance(env, dict):
         env = {}
 
     for bad_env_key in (x for x, y in six.iteritems(env) if y is None):
-        log.error('Environment variable \'{0}\' passed without a value. '
-                  'Setting value to an empty string'.format(bad_env_key))
+        log.error('Environment variable \'%s\' passed without a value. '
+                  'Setting value to an empty string', bad_env_key)
         env[bad_env_key] = ''
 
     return env
@@ -378,12 +381,20 @@ def do(cmdline, runas=None, env=None):
     if not env:
         env = {}
 
-    env['PATH'] = '{0}/shims:{1}'.format(path, os.environ['PATH'])
+    # NOTE: Env vars (and their values) need to be str type on both Python 2
+    # and 3. The code below first normalizes all path components to unicode to
+    # stitch them together, and then converts the result back to a str type.
+    env[str('PATH')] = salt.utils.stringutils.to_str(   # future lint: disable=blacklisted-function
+        os.pathsep.join((
+            salt.utils.path.join(path, 'shims'),
+            salt.utils.stringutils.to_unicode(os.environ['PATH'])
+        ))
+    )
 
     try:
-        cmdline = salt.utils.shlex_split(cmdline)
+        cmdline = salt.utils.args.shlex_split(cmdline)
     except AttributeError:
-        cmdline = salt.utils.shlex_split(str(cmdline))
+        cmdauth = salt.utils.args.shlex_split(six.text_type(cmdline))
 
     result = __salt__['cmd.run_all'](
         cmdline,
@@ -417,9 +428,9 @@ def do_with_ruby(ruby, cmdline, runas=None):
         raise SaltInvocationError('Command must be specified')
 
     try:
-        cmdline = salt.utils.shlex_split(cmdline)
+        cmdline = salt.utils.args.shlex_split(cmdline)
     except AttributeError:
-        cmdline = salt.utils.shlex_split(str(cmdline))
+        cmdline = salt.utils.args.shlex_split(six.text_type(cmdline))
 
     env = {}
     if ruby:

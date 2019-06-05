@@ -34,14 +34,14 @@ Set up the cloud profile at ``/etc/salt/cloud.profiles`` or
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import pprint
 import logging
 import time
 
 # Import salt libs
 import salt.config as config
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode  # pylint: disable=E0611
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -218,7 +218,7 @@ def _lookup_vultrid(which_key, availkey, keyname):
     if DETAILS == {}:
         _cache_provider_details()
 
-    which_key = str(which_key)
+    which_key = six.text_type(which_key)
     try:
         return DETAILS[availkey][which_key][keyname]
     except KeyError:
@@ -255,17 +255,17 @@ def create(vm_):
 
     osid = _lookup_vultrid(vm_['image'], 'avail_images', 'OSID')
     if not osid:
-        log.error('Vultr does not have an image with id or name {0}'.format(vm_['image']))
+        log.error('Vultr does not have an image with id or name %s', vm_['image'])
         return False
 
     vpsplanid = _lookup_vultrid(vm_['size'], 'avail_sizes', 'VPSPLANID')
     if not vpsplanid:
-        log.error('Vultr does not have a size with id or name {0}'.format(vm_['size']))
+        log.error('Vultr does not have a size with id or name %s', vm_['size'])
         return False
 
     dcid = _lookup_vultrid(vm_['location'], 'avail_locations', 'DCID')
     if not dcid:
-        log.error('Vultr does not have a location with id or name {0}'.format(vm_['location']))
+        log.error('Vultr does not have a location with id or name %s', vm_['location'])
         return False
 
     kwargs = {
@@ -277,7 +277,7 @@ def create(vm_):
         'enable_private_network': enable_private_network,
     }
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM %s', vm_['name'])
 
     __utils__['cloud.fire_event'](
         'event',
@@ -293,8 +293,10 @@ def create(vm_):
     try:
         data = _query('server/create', method='POST', data=_urlencode(kwargs))
         if int(data.get('status', '200')) >= 300:
-            log.error('Error creating {0} on Vultr\n\n'
-                'Vultr API returned {1}\n'.format(vm_['name'], data))
+            log.error(
+                'Error creating %s on Vultr\n\n'
+                'Vultr API returned %s\n', vm_['name'], data
+            )
             log.error('Status 412 may mean that you are requesting an\n'
                       'invalid location, image, or size.')
 
@@ -309,11 +311,10 @@ def create(vm_):
             return False
     except Exception as exc:
         log.error(
-            'Error creating {0} on Vultr\n\n'
+            'Error creating %s on Vultr\n\n'
             'The following exception was thrown when trying to '
-            'run the initial deployment: \n{1}'.format(
-                vm_['name'], str(exc)
-            ),
+            'run the initial deployment:\n%s',
+            vm_['name'], exc,
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -332,7 +333,7 @@ def create(vm_):
         Wait for the IP address to become available
         '''
         data = show_instance(vm_['name'], call='action')
-        main_ip = str(data.get('main_ip', '0'))
+        main_ip = six.text_type(data.get('main_ip', '0'))
         if main_ip.startswith('0'):
             time.sleep(3)
             return False
@@ -345,7 +346,7 @@ def create(vm_):
         data = show_instance(vm_['name'], call='action')
         # print("Waiting for default password")
         # pprint.pprint(data)
-        if str(data.get('default_password', '')) == '':
+        if six.text_type(data.get('default_password', '')) == '':
             time.sleep(1)
             return False
         return data['default_password']
@@ -357,7 +358,7 @@ def create(vm_):
         data = show_instance(vm_['name'], call='action')
         # print("Waiting for status normal")
         # pprint.pprint(data)
-        if str(data.get('status', '')) != 'active':
+        if six.text_type(data.get('status', '')) != 'active':
             time.sleep(1)
             return False
         return data['default_password']
@@ -369,7 +370,7 @@ def create(vm_):
         data = show_instance(vm_['name'], call='action')
         # print("Waiting for server state ok")
         # pprint.pprint(data)
-        if str(data.get('server_state', '')) != 'ok':
+        if six.text_type(data.get('server_state', '')) != 'ok':
             time.sleep(1)
             return False
         return data['default_password']
@@ -408,11 +409,10 @@ def create(vm_):
 
     ret.update(show_instance(vm_['name'], call='action'))
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-        vm_, pprint.pformat(data)
-            )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(data)
     )
 
     __utils__['cloud.fire_event'](

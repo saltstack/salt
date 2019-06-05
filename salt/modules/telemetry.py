@@ -24,10 +24,16 @@ In the minion's config file:
 :depends: requests
 
 '''
-from __future__ import absolute_import
-from salt._compat import string_types
-import json
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
+
+# Import Salt libs
+import salt.utils.json
+import salt.utils.stringutils
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +64,7 @@ def _auth(api_key=None, profile='telemetry'):
     if api_key is None and profile is None:
         raise Exception("Missing api_key and profile")
     if profile:
-        if isinstance(profile, string_types):
+        if isinstance(profile, six.string_types):
             _profile = __salt__['config.option'](profile)
         elif isinstance(profile, dict):
             _profile = profile
@@ -133,7 +139,7 @@ def get_alert_config(deployment_id, metric_name=None, api_key=None, profile="tel
             get_url = _get_telemetry_base(profile) + "/alerts?deployment={0}".format(deployment_id)
             response = requests.get(get_url, headers=auth)
         except requests.exceptions.RequestException as e:
-            log.error(str(e))
+            log.error(six.text_type(e))
             return False
 
         http_result = {}
@@ -176,7 +182,7 @@ def get_notification_channel_id(notify_channel, profile="telemetry"):
     notification_channel_id = _retrieve_channel_id(notify_channel)
 
     if not notification_channel_id:
-        log.info("{0} channel does not exist, creating.".format(notify_channel))
+        log.info("%s channel does not exist, creating.", notify_channel)
 
         # create the notification channel and cache the id
         post_url = _get_telemetry_base(profile) + "/notification-channels"
@@ -185,10 +191,10 @@ def get_notification_channel_id(notify_channel, profile="telemetry"):
             "name":  notify_channel[:notify_channel.find('@')] + 'EscalationPolicy',
             "email": notify_channel
         }
-        response = requests.post(post_url, data=json.dumps(data), headers=auth)
+        response = requests.post(post_url, data=salt.utils.json.dumps(data), headers=auth)
         if response.status_code == 200:
-            log.info("Successfully created EscalationPolicy {0} with EmailNotificationChannel {1}"
-                .format(data.get('name'), notify_channel))
+            log.info("Successfully created EscalationPolicy %s with EmailNotificationChannel %s",
+                     data.get('name'), notify_channel)
             notification_channel_id = response.json().get('_id')
             __context__["telemetry.channels"][notify_channel] = notification_channel_id
         else:
@@ -213,7 +219,7 @@ def get_alarms(deployment_id, profile="telemetry"):
     try:
         response = requests.get(_get_telemetry_base(profile) + "/alerts?deployment={0}".format(deployment_id), headers=auth)
     except requests.exceptions.RequestException as e:
-        log.error(str(e))
+        log.error(six.text_type(e))
         return False
 
     if response.status_code == 200:
@@ -225,7 +231,7 @@ def get_alarms(deployment_id, profile="telemetry"):
         return 'No alarms defined for deployment: {0}'.format(deployment_id)
     else:
         # Non 200 response, sent back the error response'
-        return {'err_code': response.status_code, 'err_msg': json.loads(response.text).get('err', '')}
+        return {'err_code': response.status_code, 'err_msg': salt.utils.json.loads(response.text).get('err', '')}
 
 
 def create_alarm(deployment_id, metric_name, data, api_key=None, profile="telemetry"):
@@ -260,19 +266,23 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     }
 
     try:
-        response = requests.post(request_uri, data=json.dumps(post_body), headers=auth)
+        response = requests.post(request_uri, data=salt.utils.json.dumps(post_body), headers=auth)
     except requests.exceptions.RequestException as e:
         # TODO: May be we should retry?
-        log.error(str(e))
+        log.error(six.text_type(e))
 
     if response.status_code >= 200 and response.status_code < 300:
         # update cache
-        log.info("Created alarm on metric: {0} in deployment: {1}".format(metric_name, deployment_id))
-        log.debug("Updating cache for metric {0} in deployment {1}: {2}".format(metric_name, deployment_id, response.json()))
+        log.info('Created alarm on metric: %s in deployment: %s', metric_name, deployment_id)
+        log.debug('Updating cache for metric %s in deployment %s: %s',
+                  metric_name, deployment_id, response.json())
         _update_cache(deployment_id, metric_name, response.json())
     else:
-        log.error("Failed to create alarm on metric: {0} in deployment {1}:  payload: {2}".
-            format(metric_name, deployment_id, json.dumps(post_body)))
+        log.error(
+            'Failed to create alarm on metric: %s in '
+            'deployment %s: payload: %s',
+            metric_name, deployment_id, salt.utils.json.dumps(post_body)
+        )
 
     return response.status_code >= 200 and response.status_code < 300, response.json()
 
@@ -309,19 +319,26 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     }
 
     try:
-        response = requests.put(request_uri, data=json.dumps(post_body), headers=auth)
+        response = requests.put(request_uri, data=salt.utils.json.dumps(post_body), headers=auth)
     except requests.exceptions.RequestException as e:
-        log.error("Update failed {0}" .format(str(e)))
-        return False, str(e)
+        log.error('Update failed: %s', e)
+        return False, six.text_type(e)
 
     if response.status_code >= 200 and response.status_code < 300:
         # Also update cache
-        log.debug("Updating cache for metric {0} in deployment {1}: {2}".format(metric_name, deployment_id, response.json()))
+        log.debug('Updating cache for metric %s in deployment %s: %s',
+                  metric_name, deployment_id, response.json())
         _update_cache(deployment_id, metric_name, response.json())
-        log.info("Updated alarm on metric: {0} in deployment: {1}".format(metric_name, deployment_id))
+        log.info('Updated alarm on metric: %s in deployment: %s', metric_name, deployment_id)
         return True, response.json()
 
-    err_msg = "Failed to create alarm on metric: {0} in deployment {1}:  payload: {2}".format(metric_name, deployment_id, json.dumps(post_body))
+    err_msg = six.text_type(  # future lint: disable=blacklisted-function
+        'Failed to create alarm on metric: {0} in deployment: {1} '
+        'payload: {2}').format(
+            salt.utils.stringutils.to_unicode(metric_name),
+            salt.utils.stringutils.to_unicode(deployment_id),
+            salt.utils.json.dumps(post_body)
+        )
     log.error(err_msg)
     return False, err_msg
 
@@ -355,11 +372,12 @@ def delete_alarms(deployment_id, alert_id=None, metric_name=None, api_key=None, 
         try:
             response = requests.delete(delete_url, headers=auth)
             if metric_name:
-                log.debug("updating cache and delete {0} key from {1}".format(metric_name, deployment_id))
+                log.debug("updating cache and delete %s key from %s",
+                          metric_name, deployment_id)
                 _update_cache(deployment_id, metric_name, None)
 
         except requests.exceptions.RequestException as e:
-            log.error('Delete failed: {0}'.format(str(e)))
+            log.error('Delete failed: %s', e)
 
         if response.status_code != 200:
             failed_to_delete.append(id)

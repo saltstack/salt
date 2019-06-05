@@ -9,10 +9,10 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.ext.six.moves.configparser as configparser  # pylint: disable=E0611
 from salt.serializers import DeserializationError, SerializationError
 
@@ -97,7 +97,7 @@ def _read_dict(cp, dictionary):
     Cribbed from python3's ConfigParser.read_dict function.
     '''
     for section, keys in dictionary.items():
-        section = str(section)
+        section = six.text_type(section)
 
         if _is_defaultsect(section):
             if six.PY2:
@@ -106,7 +106,7 @@ def _read_dict(cp, dictionary):
             cp.add_section(section)
 
         for key, value in keys.items():
-            key = cp.optionxform(str(key))
+            key = cp.optionxform(six.text_type(key))
             if value is not None:
-                value = str(value)
+                value = six.text_type(value)
             cp.set(section, key, value)

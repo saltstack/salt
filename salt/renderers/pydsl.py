@@ -230,7 +230,7 @@ is enabled by setting the ``ordered`` option on ``__pydsl__``.
     __pydsl__.set(ordered=True)
 
     for i in range(10):
-        i = str(i)
+        i = six.text_type(i)
         state(i).cmd.run('echo '+i, cwd='/')
     state('1').cmd.run('echo one')
     state('2').cmd.run(name='echo two')
@@ -334,11 +334,12 @@ For example:
         my_mod = sys.modules['salt.loaded.ext.module.my_mod']
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import types
+import salt.utils.pydsl as pydsl
+import salt.utils.stringutils
 from salt.ext.six import exec_
-from salt.utils import pydsl, to_str
 from salt.utils.pydsl import PyDslError
 from salt.exceptions import SaltRenderError
 
@@ -346,13 +347,14 @@ __all__ = ['render']
 
 
 def render(template, saltenv='base', sls='', tmplpath=None, rendered_sls=None, **kws):
-    sls = to_str(sls)
+    sls = salt.utils.stringutils.to_str(sls)
     mod = types.ModuleType(sls)
     # Note: mod object is transient. It's existence only lasts as long as
     #       the lowstate data structure that the highstate in the sls file
     #       is compiled to.
 
-    mod.__name__ = sls
+    # __name__ can't be assigned a unicode
+    mod.__name__ = str(sls)  # future lint: disable=blacklisted-function
 
     # to workaround state.py's use of copy.deepcopy(chunk)
     mod.__deepcopy__ = lambda x: mod

@@ -7,14 +7,16 @@ Apache Traffic Server execution module.
 ``traffic_ctl`` is used to execute individual Traffic Server commands and to
 script multiple commands in a shell.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
 import subprocess
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
+import salt.utils.stringutils
+import salt.utils.versions
 
 __virtualname__ = 'trafficserver'
 
@@ -22,14 +24,14 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if salt.utils.which('traffic_ctl') or salt.utils.which('traffic_line'):
+    if salt.utils.path.which('traffic_ctl') or salt.utils.path.which('traffic_line'):
         return __virtualname__
     return (False, 'trafficserver execution module not loaded: '
             'neither traffic_ctl nor traffic_line was found.')
 
 
-_TRAFFICLINE = salt.utils.which('traffic_line')
-_TRAFFICCTL = salt.utils.which('traffic_ctl')
+_TRAFFICLINE = salt.utils.path.which('traffic_line')
+_TRAFFICCTL = salt.utils.path.which('traffic_ctl')
 
 
 def _traffic_ctl(*args):
@@ -57,7 +59,7 @@ def _subprocess(cmd):
 
     try:
         proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-        ret = salt.utils.to_str(proc.communicate()[0]).strip()
+        ret = salt.utils.stringutils.to_unicode(proc.communicate()[0]).strip()
         retcode = proc.wait()
 
         if ret:
@@ -213,7 +215,7 @@ def match_var(regex):
 
         salt '*' trafficserver.match_var regex
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'The \'match_var\' function has been deprecated and will be removed in Salt '
         '{version}. Please use \'match_metric\' or \'match_config\' instead.'
@@ -355,7 +357,7 @@ def read_var(*args):
 
         salt '*' trafficserver.read_var proxy.process.http.tcp_hit_count_stat
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'The \'read_var\' function has been deprecated and will be removed in Salt '
         '{version}. Please use \'read_metric\' or \'read_config\' instead.'
@@ -384,7 +386,7 @@ def set_var(variable, value):
 
         salt '*' trafficserver.set_var proxy.config.http.server_ports
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'The \'set_var\' function has been deprecated and will be removed in Salt '
         '{version}. Please use \'set_config\' instead.'

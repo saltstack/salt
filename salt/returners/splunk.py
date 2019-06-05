@@ -17,16 +17,18 @@ Run a test by using ``salt-call test.ping --return splunk``
 Written by Scott Pack (github.com/scottjpack)
 
 '''
-from __future__ import absolute_import
-
-
-import socket
-
-#Imports for http event forwarder
-import requests
-import json
-import time
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import requests
+import socket
+import time
+
+# Import salt libs
+import salt.utils.json
+
+# Import 3rd-party libs
+from salt.ext import six
 
 _max_content_bytes = 100000
 http_event_collector_SSL_verify = False
@@ -72,17 +74,18 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
     This is available on Splunk Enterprise version 6.3 or higher.
 
     '''
-    #Get Splunk Options
+    # Get Splunk Options
     opts = _get_options()
-    logging.info('Options: {0}'.format(json.dumps(opts)))
+    log.info(str('Options: %s'),  # future lint: disable=blacklisted-function
+             salt.utils.json.dumps(opts))
     http_event_collector_key = opts['token']
     http_event_collector_host = opts['indexer']
-    #Set up the collector
+    # Set up the collector
     splunk_event = http_event_collector(http_event_collector_key, http_event_collector_host)
-    #init the payload
+    # init the payload
     payload = {}
 
-    #Set up the event metadata
+    # Set up the event metadata
     if index_override is None:
         payload.update({"index": opts['index']})
     else:
@@ -92,10 +95,11 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
     else:
         payload.update({"index": sourcetype_override})
 
-    #Add the event
+    # Add the event
     payload.update({"event": event})
-    logging.info('Payload: {0}'.format(json.dumps(payload)))
-         #fire it off
+    log.info(str('Payload: %s'),  # future lint: disable=blacklisted-function
+             salt.utils.json.dumps(payload))
+    # Fire it off
     splunk_event.sendEvent(payload)
     return True
 
@@ -145,7 +149,7 @@ class http_event_collector(object):
 
         # If eventtime in epoch not passed as optional argument use current system time in epoch
         if not eventtime:
-            eventtime = str(int(time.time()))
+            eventtime = six.text_type(int(time.time()))
 
         # Fill in local hostname if not manually populated
         if 'host' not in payload:
@@ -156,7 +160,10 @@ class http_event_collector(object):
         data.update(payload)
 
         # send event to http event collector
-        r = requests.post(self.server_uri, data=json.dumps(data), headers=headers, verify=http_event_collector_SSL_verify)
+        r = requests.post(self.server_uri,
+                          data=salt.utils.json.dumps(data),
+                          headers=headers,
+                          verify=http_event_collector_SSL_verify)
 
         # Print debug info if flag set
         if http_event_collector_debug:
@@ -170,9 +177,10 @@ class http_event_collector(object):
         if 'host' not in payload:
             payload.update({"host": self.host})
 
-        payloadLength = len(json.dumps(payload))
+        serialized_payload = salt.utils.json.dumps(payload)
+        payloadLength = len(serialized_payload)
 
-        if (self.currentByteLength+payloadLength) > self.maxByteLength:
+        if (self.currentByteLength + payloadLength) > self.maxByteLength:
             self.flushBatch()
             # Print debug info if flag set
             if http_event_collector_debug:
@@ -182,13 +190,13 @@ class http_event_collector(object):
 
         # If eventtime in epoch not passed as optional argument use current system time in epoch
         if not eventtime:
-            eventtime = str(int(time.time()))
+            eventtime = six.text_type(int(time.time()))
 
         # Update time value on payload if need to use system time
         data = {"time": eventtime}
         data.update(payload)
 
-        self.batchEvents.append(json.dumps(data))
+        self.batchEvents.append(serialized_payload)
 
     def flushBatch(self):
         # Method to flush the batch list of events

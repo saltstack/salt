@@ -4,19 +4,22 @@ Setup of Python virtualenv sandboxes.
 
 .. versionadded:: 0.17.0
 '''
-from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
-# Import salt libs
+# Import Salt libs
 import salt.version
-import salt.utils
-
+import salt.utils.functools
+import salt.utils.platform
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
+# Import 3rd-party libs
 from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -64,6 +67,10 @@ def managed(name,
 
     name
         Path to the virtualenv.
+
+    venv_bin: virtualenv
+        The name (and optionally path) of the virtualenv command. This can also
+        be set globally in the minion config file as ``virtualenv.venv_bin``.
 
     requirements: None
         Path to a pip requirements file. If the path begins with ``salt://``
@@ -129,8 +136,8 @@ def managed(name,
                 PATH_VAR: '/usr/local/bin/'
     '''
     if 'no_chown' in kwargs:
-        salt.utils.warn_until(
-            'Flourine',
+        salt.utils.versions.warn_until(
+            'Fluorine',
             'The no_chown argument has been deprecated and is no longer used. '
             'Its functionality was removed in Boron.')
         kwargs.pop('no_chown')
@@ -142,7 +149,7 @@ def managed(name,
         ret['comment'] = 'Virtualenv was not detected on this system'
         return ret
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         venv_py = os.path.join(name, 'Scripts', 'python.exe')
     else:
         venv_py = os.path.join(name, 'bin', 'python')
@@ -186,7 +193,6 @@ def managed(name,
             ret['comment'] = 'Virtualenv {0} is set to be cleared'.format(name)
             return ret
         if venv_exists and not clear:
-            #ret['result'] = None
             ret['comment'] = 'Virtualenv {0} is already created'.format(name)
             return ret
         ret['result'] = None
@@ -236,8 +242,8 @@ def managed(name,
         min_version = '1.4'
         max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env=name)
-        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
-        too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
         if too_low or too_high:
             ret['result'] = False
             ret['comment'] = ('The \'use_wheel\' option is only supported in '
@@ -250,8 +256,8 @@ def managed(name,
         min_version = '1.4'
         max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env=name)
-        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
-        too_high = salt.utils.compare_versions(ver1=cur_version, oper='>', ver2=max_version)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
         if too_low or too_high:
             ret['result'] = False
             ret['comment'] = ('The \'no_use_wheel\' option is only supported in '
@@ -263,7 +269,7 @@ def managed(name,
     if no_binary:
         min_version = '7.0.0'
         cur_version = __salt__['pip.version'](bin_env=name)
-        too_low = salt.utils.compare_versions(ver1=cur_version, oper='<', ver2=min_version)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
         if too_low:
             ret['result'] = False
             ret['comment'] = ('The \'no_binary\' option is only supported in '
@@ -338,4 +344,4 @@ def managed(name,
     return ret
 
 
-manage = salt.utils.alias_function(managed, 'manage')
+manage = salt.utils.functools.alias_function(managed, 'manage')
