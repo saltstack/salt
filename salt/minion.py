@@ -421,6 +421,7 @@ def service_name():
 class MinionBase(object):
     def __init__(self, opts):
         self.opts = opts
+        self.beacons_leader = opts.get('beacons_leader', True)
 
     @staticmethod
     def process_schedule(minion, loop_interval):
@@ -995,8 +996,8 @@ class MinionManager(MinionBase):
             s_opts = copy.deepcopy(self.opts)
             s_opts['master'] = master
             s_opts['multimaster'] = True
+            s_opts['beacons_leader'] = beacons_leader
             if beacons_leader:
-                s_opts['beacons_leader'] = beacons_leader
                 beacons_leader = False
             minion = self._create_minion_object(s_opts,
                                                 s_opts['auth_timeout'],
@@ -2185,7 +2186,7 @@ class Minion(MinionBase):
         '''
         Refresh the functions and returners.
         '''
-        if not self.opts.get('beacons_leader', False):
+        if not self.beacons_leader:
             return
         log.debug('Refreshing beacons.')
         self.beacons = salt.beacons.Beacon(self.opts, self.functions)
@@ -2267,7 +2268,7 @@ class Minion(MinionBase):
         '''
         Manage Beacons
         '''
-        if not self.opts.get('beacons_leader', False):
+        if not self.beacons_leader:
             return
 
         func = data.get('func', None)
@@ -2590,7 +2591,8 @@ class Minion(MinionBase):
             self.mod_opts = self._prep_mod_opts()
 #            self.matcher = Matcher(self.opts, self.functions)
             self.matchers = salt.loader.matchers(self.opts)
-            self.beacons = salt.beacons.Beacon(self.opts, self.functions)
+            if self.beacons_leader:
+                self.beacons = salt.beacons.Beacon(self.opts, self.functions)
             uid = salt.utils.user.get_uid(user=self.opts.get('user', None))
             self.proc_dir = get_proc_dir(self.opts['cachedir'], uid=uid)
             self.grains_cache = self.opts['grains']
@@ -2602,7 +2604,7 @@ class Minion(MinionBase):
         This is safe to call multiple times.
         '''
         # In multimaster configuration the only one minion shall execute beacons
-        if not self.opts.get('beacons_leader', False):
+        if not self.beacons_leader:
             return
 
         self._setup_core()
