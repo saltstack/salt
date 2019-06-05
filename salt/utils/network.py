@@ -35,6 +35,14 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.versions import LooseVersion
 
+try:
+    import salt.utils.win_network
+
+    WIN_NETWORK_LOADED = True
+except ImportError:
+    WIN_NETWORK_LOADED = False
+
+
 if salt.utils.platform.is_windows():
     # inet_pton does not exist in Windows, this is a workaround
     from salt.ext import win_inet_pton  # pylint: disable=unused-import
@@ -1053,6 +1061,9 @@ def win_interfaces():
     """
     Obtain interface information for Windows systems
     """
+    if WIN_NETWORK_LOADED is False:
+        # Let's throw the ImportException again
+        import salt.utils.win_network
     return salt.utils.win_network.get_interface_info()
 
 
