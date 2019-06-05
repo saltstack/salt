@@ -9,7 +9,6 @@ import shutil
 
 try:
     from dateutil.relativedelta import relativedelta
-
     HAS_DATEUTIL = True
 except ImportError:
     HAS_DATEUTIL = False
@@ -19,7 +18,6 @@ NO_DATEUTIL_REASON = 'python-dateutil is not installed'
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import destructiveTest
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -28,7 +26,6 @@ from tests.support.mock import (
     call,
     mock_open,
     patch)
-from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils.files
@@ -36,12 +33,10 @@ import salt.utils.json
 import salt.utils.platform
 import salt.utils.yaml
 import salt.states.file as filestate
-import salt.modules.file as filemod
 import salt.serializers.yaml as yamlserializer
 import salt.serializers.json as jsonserializer
 import salt.serializers.python as pythonserializer
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import range
 import salt.utils.win_functions
 
 
@@ -77,10 +72,10 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
     def test_serialize(self):
         def returner(contents, *args, **kwargs):
             returner.returned = contents
-
         returner.returned = None
 
         with patch.dict(filestate.__salt__, {'file.manage_file': returner}):
+
             dataset = {
                 "foo": True,
                 "bar": 42,
@@ -117,12 +112,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
     def test_contents_and_contents_pillar(self):
         def returner(contents, *args, **kwargs):
             returner.returned = contents
-
         returner.returned = None
 
         manage_mode_mock = MagicMock()
         with patch.dict(filestate.__salt__, {'file.manage_file': returner,
                                              'config.manage_mode': manage_mode_mock}):
+
             ret = filestate.managed('/tmp/foo', contents='hi', contents_pillar='foo:bar')
             self.assertEqual(False, ret['result'])
 
@@ -144,6 +139,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.source_list': MagicMock(return_value=[None, None]),
                                              'file.get_managed': MagicMock(return_value=[None, None, None]),
                                              'pillar.get': pillar_mock}):
+
             ret = filestate.managed(path, contents_pillar=pillar_path)
 
             # make sure no errors are returned
@@ -217,9 +213,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.group_to_gid': mock_gid,
                                              'file.is_link': mock_f,
                                              'user.info': mock_empty,
-                                             'user.current': mock_user}), \
-             patch.dict(filestate.__opts__, {'test': True}), \
-             patch.object(os.path, 'exists', mock_f):
+                                             'user.current': mock_user}),\
+                patch.dict(filestate.__opts__, {'test': True}),\
+                patch.object(os.path, 'exists', mock_f):
             if salt.utils.platform.is_windows():
                 comt = ('User {0} does not exist'.format(user))
                 ret = return_val({'comment': comt,
@@ -239,10 +235,10 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.group_to_gid': mock_gid,
                                              'file.is_link': mock_f,
                                              'user.info': mock_empty,
-                                             'user.current': mock_user}), \
-             patch.dict(filestate.__opts__, {'test': False}), \
-             patch.object(os.path, 'isdir', mock_f), \
-             patch.object(os.path, 'exists', mock_f):
+                                             'user.current': mock_user}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', mock_f),\
+                patch.object(os.path, 'exists', mock_f):
             if salt.utils.platform.is_windows():
                 comt = 'User {0} does not exist'.format(user)
                 ret = return_val({'comment': comt,
@@ -264,11 +260,11 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.is_link': mock_t,
                                              'file.readlink': mock_target,
                                              'user.info': mock_empty,
-                                             'user.current': mock_user}), \
-             patch.dict(filestate.__opts__, {'test': False}), \
-             patch.object(os.path, 'isdir', mock_t), \
-             patch.object(salt.states.file, '_check_symlink_ownership', mock_t), \
-             patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
+                                             'user.current': mock_user}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', mock_t),\
+                patch.object(salt.states.file, '_check_symlink_ownership', mock_t),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
             if salt.utils.platform.is_windows():
                 comt = 'Symlink {0} is present and owned by {1}'.format(name, user)
             else:
@@ -286,12 +282,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.is_link': mock_f,
                                              'file.readlink': mock_target,
                                              'user.info': mock_empty,
-                                             'user.current': mock_user}), \
-             patch.dict(filestate.__opts__, {'test': False}), \
-             patch.object(os.path, 'isdir', mock_t), \
-             patch.object(os.path, 'exists', mock_f), \
-             patch.object(os.path, 'lexists', mock_t), \
-             patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
+                                             'user.current': mock_user}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', mock_t),\
+                patch.object(os.path, 'exists', mock_f),\
+                patch.object(os.path, 'lexists', mock_t),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
             comt = 'Symlink & backup dest exists and Force not set. {0} -> ' \
                    '{1} - backup: {2}'.format(name, target, os.path.join(test_dir, 'SALT'))
             ret.update({'comment': comt,
@@ -308,11 +304,11 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.is_link': mock_f,
                                              'file.readlink': mock_target,
                                              'user.info': mock_empty,
-                                             'user.current': mock_user}), \
-             patch.dict(filestate.__opts__, {'test': False}), \
-             patch.object(os.path, 'isfile', mock_t), \
-             patch.object(os.path, 'isdir', mock_t), \
-             patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
+                                             'user.current': mock_user}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isfile', mock_t), \
+                patch.object(os.path, 'isdir', mock_t),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
             comt = 'Backupname must be an absolute path or a file name: {0}'.format('tmp/SALT')
             ret.update({'comment': comt,
                         'result': False,
@@ -327,12 +323,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.is_link': mock_f,
                                              'file.readlink': mock_target,
                                              'user.info': mock_empty,
-                                             'user.current': mock_user}), \
-             patch.dict(filestate.__opts__, {'test': False}), \
-             patch.object(os.path, 'isdir', mock_t), \
-             patch.object(os.path, 'exists', mock_f), \
-             patch.object(os.path, 'isfile', mock_t), \
-             patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
+                                             'user.current': mock_user}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', mock_t),\
+                patch.object(os.path, 'exists', mock_f),\
+                patch.object(os.path, 'isfile', mock_t),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
             comt = 'File exists where the symlink {0} should be'.format(name)
             ret = return_val({'comment': comt,
                               'changes': {},
@@ -348,12 +344,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.readlink': mock_target,
                                              'file.symlink': mock_t,
                                              'user.info': mock_t,
-                                             'file.lchown': mock_f}), \
-             patch.dict(filestate.__opts__, {'test': False}), \
-             patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])), \
-             patch.object(os.path, 'isfile', mock_t), \
-             patch.object(os.path, 'exists', mock_f), \
-             patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
+                                             'file.lchown': mock_f}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])),\
+                patch.object(os.path, 'isfile', mock_t),\
+                patch.object(os.path, 'exists', mock_f),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
             comt = 'File exists where the symlink {0} should be'.format(name)
             ret = return_val({'comment': comt,
                               'result': False,
@@ -369,12 +365,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.readlink': mock_target,
                                              'file.symlink': mock_t,
                                              'user.info': mock_t,
-                                             'file.lchown': mock_f}), \
-             patch.dict(filestate.__opts__, {'test': False}), \
-             patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])), \
-             patch.object(os.path, 'isdir', mock_t), \
-             patch.object(os.path, 'exists', mock_f), \
-             patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
+                                             'file.lchown': mock_f}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])),\
+                patch.object(os.path, 'isdir', mock_t),\
+                patch.object(os.path, 'exists', mock_f),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
             comt = 'Directory exists where the symlink {0} should be'.format(name)
             ret = return_val({'comment': comt,
                               'result': False,
@@ -390,11 +386,11 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.readlink': mock_target,
                                              'file.symlink': mock_os_error,
                                              'user.info': mock_t,
-                                             'file.lchown': mock_f}), \
-             patch.dict(filestate.__opts__, {'test': False}), \
-             patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])), \
-             patch.object(os.path, 'isfile', mock_f), \
-             patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
+                                             'file.lchown': mock_f}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])),\
+                patch.object(os.path, 'isfile', mock_f),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
             comt = 'Unable to create new symlink {0} -> {1}: '.format(name, target)
             ret = return_val({'comment': comt,
                               'result': False,
@@ -412,12 +408,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'user.info': mock_t,
                                              'file.lchown': mock_f,
                                              'file.get_user': mock_user,
-                                             'file.get_group': mock_grp}), \
-             patch.dict(filestate.__opts__, {'test': False}), \
-             patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])), \
-             patch.object(os.path, 'isfile', mock_f), \
-             patch('salt.states.file._check_symlink_ownership', return_value=True), \
-             patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
+                                             'file.get_group': mock_grp}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])),\
+                patch.object(os.path, 'isfile', mock_f),\
+                patch('salt.states.file._check_symlink_ownership', return_value=True),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
             comt = 'Created new symlink {0} -> {1}'.format(name, target)
             ret = return_val({'comment': comt,
                               'result': True,
@@ -435,13 +431,13 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'user.info': mock_t,
                                              'file.lchown': mock_f,
                                              'file.get_user': mock_empty,
-                                             'file.get_group': mock_empty}), \
-             patch.dict(filestate.__opts__, {'test': False}), \
-             patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])), \
-             patch.object(os.path, 'isfile', mock_f), \
-             patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'), \
-             patch('salt.states.file._set_symlink_ownership', return_value=False), \
-             patch('salt.states.file._check_symlink_ownership', return_value=False):
+                                             'file.get_group': mock_empty}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])),\
+                patch.object(os.path, 'isfile', mock_f),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'),\
+                patch('salt.states.file._set_symlink_ownership', return_value=False),\
+                patch('salt.states.file._check_symlink_ownership', return_value=False):
             comt = 'Created new symlink {0} -> {1}, but was unable to set ' \
                    'ownership to {2}:{3}'.format(name, target, user, group)
             ret = return_val({'comment': comt,
@@ -608,10 +604,10 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=([], []))):
             with patch.dict(filestate.__salt__,
                             {
-                                'file.get_managed': MagicMock(return_value=['', '', '']),
-                                'file.source_list': MagicMock(return_value=['', '']),
-                                'file.manage_file': mock_manage,
-                                'pillar.get': MagicMock(return_value=expected_contents),
+                             'file.get_managed': MagicMock(return_value=['', '', '']),
+                             'file.source_list': MagicMock(return_value=['', '']),
+                             'file.manage_file': mock_manage,
+                             'pillar.get': MagicMock(return_value=expected_contents),
                             }):
                 ret = filestate.managed(
                     filename,
@@ -853,8 +849,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         comt = ('Cannot specify both max_depth and clean')
         ret.update({'comment': comt, 'name': name})
         self.assertDictEqual(
-            filestate.directory(name, clean=True, max_depth=2),
-            ret)
+                filestate.directory(name, clean=True, max_depth=2),
+                ret)
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
@@ -1132,7 +1128,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(filestate.blockreplace(name), ret)
 
             with patch.object(os.path, 'isabs', mock_t), \
-                 patch.object(os.path, 'exists', mock_t):
+                    patch.object(os.path, 'exists', mock_t):
                 with patch.dict(filestate.__salt__, {'file.blockreplace': mock_t}):
                     with patch.dict(filestate.__opts__, {'test': True}):
                         comt = ('Changes would be made')
@@ -1607,8 +1603,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.states.file._load_accumulators',
                    MagicMock(return_value=({}, {}))), \
-             patch('salt.states.file._persist_accummulators',
-                   MagicMock(return_value=True)):
+                           patch('salt.states.file._persist_accummulators',
+                                 MagicMock(return_value=True)):
             name = 'animals_doing_things'
             filename = '/tmp/animal_file.txt'
             text = ' jumps over the lazy dog.'
@@ -1832,7 +1828,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             return {'st_atime': 0.0, 'st_ctime': 0.0, 'st_gid': 0,
                     'st_mode': 33188, 'st_mtime': ts,
                     'st_nlink': 1, 'st_size': 0, 'st_uid': 0,
-                    }
+                   }
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
@@ -1841,11 +1837,11 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
         def run_checks(isdir=mock_t, strptime_format=None, test=False):
             expected_ret = {
-                'name': fake_name,
-                'changes': {'retained': [], 'deleted': [], 'ignored': []},
-                'result': True,
-                'comment': 'Name provided to file.retention must be a directory',
-            }
+                    'name': fake_name,
+                    'changes': {'retained': [], 'deleted': [], 'ignored': []},
+                    'result': True,
+                    'comment': 'Name provided to file.retention must be a directory',
+                }
             if strptime_format:
                 fake_file_list = sorted(fake_matching_file_list + fake_no_match_file_list)
             else:
@@ -1888,8 +1884,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                 deleted_files = sorted(list(set(fake_file_list) - retained_files - set(ignored_files)), reverse=True)
                 retained_files = sorted(list(retained_files), reverse=True)
-                expected_ret['changes'] = {'retained': retained_files, 'deleted': deleted_files,
-                                           'ignored': ignored_files}
+                expected_ret['changes'] = {'retained': retained_files, 'deleted': deleted_files, 'ignored': ignored_files}
                 if test:
                     expected_ret['result'] = None
                     expected_ret['comment'] = ('{0} backups would have been removed from {1}.\n'
@@ -1898,9 +1893,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     expected_ret['comment'] = ('{0} backups were removed from {1}.\n'
                                                ''.format(len(deleted_files), fake_name))
                     mock_remove.assert_has_calls(
-                        [call(os.path.join(fake_name, x)) for x in deleted_files],
-                        any_order=True
-                    )
+                            [call(os.path.join(fake_name, x)) for x in deleted_files],
+                            any_order=True
+                        )
 
             self.assertDictEqual(actual_ret, expected_ret)
 
@@ -1970,12 +1965,12 @@ class TestFileTidied(TestCase):
         today_delta = datetime.today() - datetime.utcfromtimestamp(0)
         remove = MagicMock(name='file.remove')
         with patch('os.walk', return_value=walker), \
-             patch('os.path.islink', return_value=False), \
-             patch('os.path.getatime', return_value=today_delta.total_seconds()), \
-             patch('os.path.getsize', return_value=10), \
-             patch.dict(filestate.__opts__, {'test': False}), \
-             patch.dict(filestate.__salt__, {'file.remove': remove}), \
-             patch('os.path.isdir', return_value=True):
+                patch('os.path.islink', return_value=False), \
+                patch('os.path.getatime', return_value=today_delta.total_seconds()), \
+                patch('os.path.getsize', return_value=10), \
+                patch.dict(filestate.__opts__, {'test': False}), \
+                patch.dict(filestate.__salt__, {'file.remove': remove}), \
+                patch('os.path.isdir', return_value=True):
             ret = filestate.tidied(name=name)
         exp = {
             'name': name,
@@ -1993,12 +1988,12 @@ class TestFileTidied(TestCase):
 
         remove.reset_mock()
         with patch('os.walk', return_value=walker), \
-             patch('os.path.islink', return_value=False), \
-             patch('os.path.getatime', return_value=today_delta.total_seconds()), \
-             patch('os.path.getsize', return_value=10), \
-             patch.dict(filestate.__opts__, {'test': False}), \
-             patch.dict(filestate.__salt__, {'file.remove': remove}), \
-             patch('os.path.isdir', return_value=True):
+                patch('os.path.islink', return_value=False), \
+                patch('os.path.getatime', return_value=today_delta.total_seconds()), \
+                patch('os.path.getsize', return_value=10), \
+                patch.dict(filestate.__opts__, {'test': False}), \
+                patch.dict(filestate.__salt__, {'file.remove': remove}), \
+                patch('os.path.isdir', return_value=True):
             ret = filestate.tidied(name=name, rmdirs=True)
         exp = {
             'name': name,
@@ -2034,67 +2029,3 @@ class TestFileTidied(TestCase):
             'comment': '/bad-directory-name/ does not exist or is not a directory.',
         }
         assert filestate.tidied(name='/bad-directory-name/') == exp
-
-
-class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
-    def setup_loader_modules(self):
-        return {
-            filestate: {
-                '__salt__': {'file.stats': filemod.stats},
-            }
-        }
-
-    @destructiveTest
-    @skipIf(salt.utils.platform.is_windows(), 'File modes do not exist on windows')
-    def test__check_directory(self):
-        '''
-        Test the _check_directory function
-        Make sure that recursive file permission checks return correctly
-        '''
-        # set file permissions
-        # Run _check_directory function
-        # Verify that it returns correctly
-        # Delete tmp directory structure
-        root_tmp_dir = os.path.join(TMP, 'test__check_dir')
-        depth = 3
-        try:
-            def create_files(tmp_dir):
-                for f in range(depth):
-                    path = os.path.join(tmp_dir, 'file_{:03}.txt'.format(f))
-                    with salt.utils.files.fopen(path, 'w+'):
-                        os.chmod(path, 0o777)
-
-            # Create tmp directory structure
-            os.mkdir(root_tmp_dir)
-            os.chmod(root_tmp_dir, 0o777)
-            create_files(root_tmp_dir)
-
-            for d in range(depth):
-                dir_name = os.path.join(root_tmp_dir, 'dir{:03}'.format(d))
-                os.mkdir(dir_name)
-                os.chmod(dir_name, 0o777)
-                create_files(dir_name)
-                for s in range(depth):
-                    sub_dir_name = os.path.join(dir_name, 'dir{:03}'.format(s))
-                    os.mkdir(sub_dir_name)
-                    os.chmod(sub_dir_name, 0o777)
-                    create_files(sub_dir_name)
-
-            # Set some bad permissions
-            changed_files = {
-                os.path.join(root_tmp_dir, 'file_000.txt'),
-                os.path.join(root_tmp_dir, 'dir002', 'file_000.txt'),
-                os.path.join(root_tmp_dir, 'dir000', 'dir001', 'file_002.txt'),
-                os.path.join(root_tmp_dir, 'dir001', 'dir002'),
-                os.path.join(root_tmp_dir, 'dir002', 'dir000'),
-                os.path.join(root_tmp_dir, 'dir001'),
-            }
-            for c in changed_files:
-                os.chmod(c, 0o770)
-
-            ret = filestate._check_directory(root_tmp_dir, dir_mode=0o777, file_mode=0o777, recurse=['mode'])
-            self.assertSetEqual(changed_files, set(ret[-1].keys()))
-
-        finally:
-            # Cleanup
-            shutil.rmtree(root_tmp_dir)
