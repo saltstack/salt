@@ -18,6 +18,7 @@ import subprocess
 import time
 import tempfile
 import shutil
+import io
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
@@ -32,6 +33,7 @@ import salt.utils.stringutils
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
+
 def stdout_fileno_available():
     '''
         Tests if sys.stdout.fileno is available in this testing environment
@@ -39,8 +41,9 @@ def stdout_fileno_available():
     try:
         sys.stdout.fileno()
         return True
-    except:
+    except io.UnsupportedOperation:
         return False
+
 
 class VTTestCase(TestCase):
 
