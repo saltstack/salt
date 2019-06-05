@@ -31,7 +31,6 @@ import logging
 
 # Import salt libs
 import salt.utils.dictdiffer
-import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
