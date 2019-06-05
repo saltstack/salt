@@ -3,7 +3,6 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
-import pprint
 import shutil
 
 # Posix only
@@ -14,20 +13,14 @@ except ImportError:
 
 
 # Import Salt Testing libs
-from tests.support.helpers import (
-    destructiveTest,
-    skip_if_not_root,
-    requires_system_grains
-)
+from tests.support.helpers import destructiveTest
 from tests.support.unit import TestCase, skipIf
-from tests.support.paths import FILES, TMP
+from tests.support.paths import TMP
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
-    call,
-    mock_open,
     patch
 )
 
@@ -200,7 +193,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gpg_import_pub_key(self):
         config_user = MagicMock(return_value='salt')
-        user_info = MagicMock(return_value={'name': 'salt', 'home': self.gpghome, 'uid': 1000 })
+        user_info = MagicMock(return_value={'name': 'salt', 'home': self.gpghome, 'uid': 1000})
         with patch.dict(gpg.__salt__, {'config.option': config_user}):
             with patch.dict(gpg.__salt__, {'user.info': user_info}):
                 ret = gpg.import_key(None, self.gpgfile_pub, 'salt', self.gpghome)
@@ -208,7 +201,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gpg_import_priv_key(self):
         config_user = MagicMock(return_value='salt')
-        user_info = MagicMock(return_value={'name': 'salt', 'home': self.gpghome, 'uid': 1000 })
+        user_info = MagicMock(return_value={'name': 'salt', 'home': self.gpghome, 'uid': 1000})
         with patch.dict(gpg.__salt__, {'config.option': config_user}):
             with patch.dict(gpg.__salt__, {'user.info': user_info}):
                 ret = gpg.import_key(None, self.gpgfile_priv, 'salt', self.gpghome)
@@ -216,7 +209,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_gpg_sign(self):
         config_user = MagicMock(return_value='salt')
-        user_info = MagicMock(return_value={'name': 'salt', 'home': self.gpghome, 'uid': 1000 })
+        user_info = MagicMock(return_value={'name': 'salt', 'home': self.gpghome, 'uid': 1000})
         pillar_mock = MagicMock(return_value={'gpg_passphrase': GPG_TEST_KEY_PASSPHRASE})
         with patch.dict(gpg.__salt__, {'config.option': config_user}):
             with patch.dict(gpg.__salt__, {'user.info': user_info}):
