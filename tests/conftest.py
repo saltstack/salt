@@ -82,6 +82,9 @@ for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
 
+# Reset the root logger to it's default level(because salt changed it)
+logging.root.setLevel(logging.WARNING)
+
 log = logging.getLogger('salt.testsuite')
 
 
