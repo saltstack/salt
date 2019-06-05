@@ -293,7 +293,7 @@ class VTTestCase(TestCase):
                 'with open(\'' + file_path_stderr + '\', \'rb\') as ferr:',
                 '    sys.stderr.buffer.write(ferr.read())',))
             term = salt.utils.vt.Terminal(
-                args=['python',
+                args=[sys.executable,
                       '-c',
                       '"' + python_command + '"'],
                 shell=True,
@@ -355,7 +355,7 @@ class VTTestCase(TestCase):
                 'with open(\'' + file_path_stderr + '\', \'rb\') as ferr:',
                 '    sys.stderr.buffer.write(ferr.read())',))
             term = salt.utils.vt.Terminal(
-                args=['python',
+                args=[sys.executable,
                       '-c',
                       '"' + python_command + '"'],
                 shell=True,
