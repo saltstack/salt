@@ -14,6 +14,7 @@ import os
 import glob
 import pprint
 import shutil
+import site
 import sys
 
 try:
@@ -119,6 +120,42 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
             ret = self.run_state('pip.removed', name=name, bin_env=venv_dir)
             self.assertSaltTrueReturn(ret)
+
+    def test_pip_installed_user_install_true(self):
+        # TODO: Do we have a salt simple test package? If not, let's make one! -W. Werner, 2019-03-15
+        pkg = 'nose'
+        self.run_state('pip.removed', name=pkg)
+        self.run_state('pip.installed', user_install=True, name=pkg)
+
+        # Check if the path exists instead of adding to sys.paths
+        path = os.path.join(site.USER_SITE, pkg)
+        location = os.path.lexists(path)
+        if location:
+            location = os.path.dirname(path)
+
+        # Check the USER_SITE location outside of a virtualenv
+        # pip list --user has non-expected behavior inside a virtualenv
+        self.assertEqual(location, site.USER_SITE)
+
+    def test_pip_installed_user_install_false(self):
+        venv_dir = os.path.join(
+            RUNTIME_VARS.TMP, 'pip_installed_removed'
+        )
+        site_pkg = os.path.join(venv_dir, 'lib', 'site-packages')
+        with VirtualEnv(self, venv_dir):
+            pkg = 'nose'
+            self.run_state('pip.removed', name=pkg, bin_env=venv_dir)
+            self.run_state('pip.installed', user_install=False, name=pkg, bin_env=venv_dir)
+
+            # Check if the path exists instead of adding to sys.paths
+            path = os.path.join(site_pkg, pkg)
+            location = os.path.lexists(path)
+            if location:
+                location = os.path.dirname(path)
+
+            # Check the USER_SITE relative to the virtualenv location
+            # pip list without a user flag behaves as expected
+            self.assertEqual(location, site_pkg)
 
     def test_pip_installed_errors(self):
         venv_dir = os.path.join(

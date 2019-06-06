@@ -5,6 +5,7 @@ def testrun_timeout = 6
 def global_timeout = testrun_timeout + 1;
 
 properties([
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20')),
     [
         $class: 'ScannerJobProperty', doNotScan: false
     ],
