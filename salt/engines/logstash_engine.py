@@ -44,6 +44,22 @@ def __virtual__():
         else (False, 'python-logstash not installed')
 
 
+def event_bus_context(opts):
+    if opts.get('id').endswith('_master'):
+        event_bus = salt.utils.event.get_master_event(
+                opts,
+                opts['sock_dir'],
+                listen=True)
+    else:
+        event_bus = salt.utils.event.get_event(
+            'minion',
+            transport=opts['transport'],
+            opts=opts,
+            sock_dir=opts['sock_dir'],
+            listen=True)
+    return event_bus
+
+
 def start(host, port=5959, tag='salt/engine/logstash', proto='udp'):
     '''
     Listen to salt events and forward them to logstash
@@ -58,21 +74,9 @@ def start(host, port=5959, tag='salt/engine/logstash', proto='udp'):
     logstash_logger.setLevel(logging.INFO)
     logstash_logger.addHandler(logstashHandler(host, port, version=1))
 
-    if __opts__.get('id').endswith('_master'):
-        event_bus = salt.utils.event.get_master_event(
-                __opts__,
-                __opts__['sock_dir'],
-                listen=True)
-    else:
-        event_bus = salt.utils.event.get_event(
-            'minion',
-            transport=__opts__['transport'],
-            opts=__opts__,
-            sock_dir=__opts__['sock_dir'],
-            listen=True)
+    with event_bus_context(__opts__) as event_bus:
         log.debug('Logstash engine started')
-
-    while True:
-        event = event_bus.get_event()
-        if event:
-            logstash_logger.info(tag, extra=event)
+        while True:
+            event = event_bus.get_event()
+            if event:
+                logstash_logger.info(tag, extra=event)

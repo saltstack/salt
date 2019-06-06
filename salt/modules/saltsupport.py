@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 '''
-:codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
+:codeauthor: `Bo Maryniuk <bo@suse.de>`
 
 Module to run salt-support within Salt.
 '''
