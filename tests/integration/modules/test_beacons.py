@@ -42,7 +42,8 @@ class BeaconsAddDeleteTest(ModuleCase):
         _add = self.run_function(
             'beacons.add',
             ['ps', [{'processes': {'apache2': 'stopped'}}]],
-            f_timeout=300)
+            f_timeout=300
+        )
         self.assertTrue(_add['result'])
 
         # save added beacon
