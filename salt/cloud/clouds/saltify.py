@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-.. _`saltify-module`:
+.. _saltify-module:
 
 Saltify Module
 ==============

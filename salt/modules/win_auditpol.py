@@ -169,6 +169,7 @@ def set_setting(name, value):
     CLI Example:
 
     .. code-block:: bash
+
         # Set the state of the "Credential Validation" setting to Success and
         # Failure
         salt * auditpol.set_setting "Credential Validation" "Success and Failure"

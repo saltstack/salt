@@ -25,6 +25,7 @@ state modules
     augeas
     aws_sqs
     azurearm_compute
+    azurearm_dns
     azurearm_network
     azurearm_resource
     beacon
@@ -33,6 +34,7 @@ state modules
     boto3_elasticache
     boto3_elasticsearch
     boto3_route53
+    boto3_sns
     boto_apigateway
     boto_asg
     boto_cfn
@@ -57,12 +59,14 @@ state modules
     boto_lc
     boto_rds
     boto_route53
+    boto_s3
     boto_s3_bucket
     boto_secgroup
     boto_sns
     boto_sqs
     boto_vpc
     bower
+    btrfs
     cabal
     ceph
     chef
@@ -74,6 +78,7 @@ state modules
     cmd
     composer
     cron
+    cryptdev
     csf
     cyg
     ddns
@@ -85,6 +90,8 @@ state modules
     docker_network
     docker_volume
     drac
+    dracr
+    dvs
     elasticsearch
     elasticsearch_index
     elasticsearch_index_template
@@ -92,7 +99,10 @@ state modules
     eselect
     etcd_mod
     ethtool
+    esxcluster
+    esxdatacenter
     esxi
+    esxvm
     event
     file
     firewall
@@ -102,6 +112,7 @@ state modules
     github
     glance
     glance_image
+    glassfish
     glusterfs
     gnomedesktop
     gpg
@@ -116,6 +127,7 @@ state modules
     group
     heat
     hg
+    highstate_doc
     host
     http
     icinga2
@@ -167,6 +179,10 @@ state modules
     lvs_server
     lvs_service
     lxc
+    lxd
+    lxd_container
+    lxd_image
+    lxd_profile
     mac_assistive
     macdefaults
     mac_keychain
@@ -183,6 +199,10 @@ state modules
     mongodb_user
     monit
     mount
+    mssql_database
+    mssql_login
+    mssql_role
+    mssql_user
     msteams
     mysql_database
     mysql_grants
@@ -199,13 +219,18 @@ state modules
     neutron_secgroup
     neutron_secgroup_rule
     neutron_subnet
+    nexus
     nfs_export
     nftables
+    nova
     npm
     ntp
     nxos
+    nxos_upgrade
+    onyx
     openstack_config
     openvswitch_bridge
+    openvswitch_db
     openvswitch_port
     opsgenie
     pagerduty
@@ -214,6 +239,7 @@ state modules
     pagerduty_service
     pagerduty_user
     panos
+    pbm
     pcs
     pecl
     pdbedit
@@ -226,6 +252,7 @@ state modules
     ports
     postgres_cluster
     postgres_database
+    postgres_default_privileges
     postgres_extension
     postgres_group
     postgres_initdb
@@ -257,6 +284,7 @@ state modules
     rvm
     salt_proxy
     saltmod
+    saltsupport
     saltutil
     schedule
     selinux
@@ -313,9 +341,11 @@ state modules
     win_smtp_server
     win_snmp
     win_system
+    win_task
     win_wua
     win_wusa
     winrepo
+    wordpress
     x509
     xml
     xmpp
@@ -324,8 +354,10 @@ state modules
     zabbix_hostgroup
     zabbix_mediatype
     zabbix_template
+    zabbix_service
     zabbix_user
     zabbix_usergroup
+    zabbix_usermacro
     zabbix_valuemap
     zcbuildout
     zenoss

@@ -15,6 +15,7 @@ runner modules
     bgp
     cache
     cloud
+    config
     ddns
     digicertapi
     doc

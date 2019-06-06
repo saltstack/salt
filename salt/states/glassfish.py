@@ -7,6 +7,7 @@ Management of glassfish using it's RESTful API
 You can setup connection parameters like this
 
 .. code-block:: yaml
+
     - server:
       - ssl: true
       - url: localhost
