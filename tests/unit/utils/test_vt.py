@@ -292,10 +292,11 @@ class VTTestCase(TestCase):
                                                                 encoding)
             python_command = '\n'.join((
                 'import sys',
+                'import os',
                 'with open(\'' + file_path_stdout + '\', \'rb\') as fout:',
-                '    sys.stdout.buffer.write(fout.read())',
+                '    os.write(sys.stdout.fileno(), fout.read())',
                 'with open(\'' + file_path_stderr + '\', \'rb\') as ferr:',
-                '    sys.stderr.buffer.write(ferr.read())',))
+                '    os.write(sys.stderr.fileno(), ferr.read())',))
             term = salt.utils.vt.Terminal(
                 args=[sys.executable,
                       '-c',
@@ -354,10 +355,11 @@ class VTTestCase(TestCase):
                                                                 encoding)
             python_command = '\n'.join((
                 'import sys',
+                'import os',
                 'with open(\'' + file_path_stdout + '\', \'rb\') as fout:',
-                '    sys.stdout.buffer.write(fout.read())',
+                '    os.write(sys.stdout.fileno(), fout.read())',
                 'with open(\'' + file_path_stderr + '\', \'rb\') as ferr:',
-                '    sys.stderr.buffer.write(ferr.read())',))
+                '    os.write(sys.stderr.fileno(), ferr.read())',))
             term = salt.utils.vt.Terminal(
                 args=[sys.executable,
                       '-c',
