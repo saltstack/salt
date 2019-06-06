@@ -20,16 +20,19 @@ repos:
       - id: pip-tools-compile
         alias: compile-osx-py2.7-zmq-requirements
         name: OSX Py2.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/osx\.in))$
         args:
           - -v
           - --py-version=2.7
           - --platform=darwin
           - --out-prefix=zeromq
+          - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py2.7-zmq-requirements
         name: Windows Py2.7 ZeroMQ Requirements
@@ -62,16 +65,19 @@ repos:
       - id: pip-tools-compile
         alias: compile-osx-py2.7-raet-requirements
         name: OSX Py2.7 RAET Requirements
-        files: ^requirements/((base|raet|pytest)\.txt|static/osx\.in)$
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|raet|pytest)\.txt|static/osx\.in))$
         args:
           - -v
           - --py-version=2.7
           - --out-prefix=raet
           - --platform=darwin
+          - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py2.7-raet-requirements
         name: Windows Py2.7 RAET Requirements
@@ -161,16 +167,19 @@ repos:
       - id: pip-tools-compile
         alias: compile-osx-py3.5-zmq-requirements
         name: OSX Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/osx\.in))$
         args:
           - -v
           - --py-version=3.5
           - --platform=darwin
           - --out-prefix=zeromq
+          - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.5-zmq-requirements
         name: Windows Py3.5 ZeroMQ Requirements
@@ -204,17 +213,20 @@ repos:
       - id: pip-tools-compile
         alias: compile-osx-py3.5-raet-requirements
         name: OSX Py3.5 RAET Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|raet|pytest)\.txt|static/osx\.in))$
         args:
           - -v
           - --py-version=3.5
           - --platform=darwin
           - --out-prefix=raet
+          - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
           - --remove-line=^enum34==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.5-raet-requirements
         name: Windows Py3.5 RAET Requirements
@@ -266,16 +278,19 @@ repos:
       - id: pip-tools-compile
         alias: compile-osx-py3.6-zmq-requirements
         name: OSX Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/osx\.in))$
         args:
           - -v
           - --py-version=3.6
           - --platform=darwin
           - --out-prefix=zeromq
+          - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.6-zmq-requirements
         name: Windows Py3.6 ZeroMQ Requirements
@@ -309,17 +324,20 @@ repos:
       - id: pip-tools-compile
         alias: compile-osx-py3.6-raet-requirements
         name: OSX Py3.6 RAET Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|raet|pytest)\.txt|static/osx\.in))$
         args:
           - -v
           - --py-version=3.6
           - --platform=darwin
           - --out-prefix=raet
+          - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
           - --remove-line=^enum34==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.6-raet-requirements
         name: Windows Py3.6 RAET Requirements
@@ -371,16 +389,19 @@ repos:
       - id: pip-tools-compile
         alias: compile-osx-py3.7-zmq-requirements
         name: OSX Py3.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/osx\.in))$
         args:
           - -v
           - --py-version=3.7
           - --platform=darwin
           - --out-prefix=zeromq
+          - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.7-zmq-requirements
         name: Windows Py3.7 ZeroMQ Requirements
@@ -414,17 +435,20 @@ repos:
       - id: pip-tools-compile
         alias: compile-osx-py3.7-raet-requirements
         name: OSX Py3.7 RAET Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|raet|pytest)\.txt|static/osx\.in))$
         args:
           - -v
           - --py-version=3.7
           - --platform=darwin
           - --out-prefix=raet
+          - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
           - --remove-line=^enum34==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.7-raet-requirements
         name: Windows Py3.7 RAET Requirements
