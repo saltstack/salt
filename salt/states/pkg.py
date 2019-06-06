@@ -722,10 +722,7 @@ def _find_install_targets(name=None,
             targets[package_name] = version_string
             continue
         if sources:
-            if reinstall:
-                to_reinstall[package_name] = version_string
-                continue
-            elif 'lowpkg.bin_pkg_info' not in __salt__:
+            if 'lowpkg.bin_pkg_info' not in __salt__:
                 continue
             # Metadata parser is available, cache the file and derive the
             # package's name and version
@@ -747,31 +744,45 @@ def _find_install_targets(name=None,
                 continue
             else:
                 verstr = source_info['version']
+            if pkg_verify:
+                try:
+                    verify_result = __salt__['pkg.verify'](
+                        package_name,
+                        ignore_types=ignore_types,
+                        verify_options=verify_options,
+                        **kwargs
+                    )
+                except (CommandExecutionError, SaltInvocationError) as exc:
+                    failed_verify = exc.strerror
+                    continue
+                if verify_result:
+                    to_reinstall[package_name] = version_string
+                    altered_files[package_name] = verify_result
         else:
             verstr = version_string
-            if reinstall:
-                to_reinstall[package_name] = version_string
-                continue
-            if not __salt__['pkg_resource.check_extra_requirements'](package_name, version_string):
-                targets[package_name] = version_string
-                continue
-            # No version specified and pkg is installed
-            elif __salt__['pkg_resource.version_clean'](version_string) is None:
-                if (not reinstall) and pkg_verify:
-                    try:
-                        verify_result = __salt__['pkg.verify'](
-                            package_name,
-                            ignore_types=ignore_types,
-                            verify_options=verify_options,
-                            **kwargs
-                        )
-                    except (CommandExecutionError, SaltInvocationError) as exc:
-                        failed_verify = exc.strerror
-                        continue
-                    if verify_result:
-                        to_reinstall[package_name] = version_string
-                        altered_files[package_name] = verify_result
-                continue
+        if reinstall:
+            to_reinstall[package_name] = version_string
+            continue
+        if not __salt__['pkg_resource.check_extra_requirements'](package_name, version_string):
+            targets[package_name] = version_string
+            continue
+        # No version specified and pkg is installed
+        elif __salt__['pkg_resource.version_clean'](version_string) is None:
+            if (not reinstall) and pkg_verify:
+                try:
+                    verify_result = __salt__['pkg.verify'](
+                        package_name,
+                        ignore_types=ignore_types,
+                        verify_options=verify_options,
+                        **kwargs
+                    )
+                except (CommandExecutionError, SaltInvocationError) as exc:
+                    failed_verify = exc.strerror
+                    continue
+                if verify_result:
+                    to_reinstall[package_name] = version_string
+                    altered_files[package_name] = verify_result
+            continue
         version_fulfilled = False
         allow_updates = bool(not sources and kwargs.get('allow_updates'))
         try:
