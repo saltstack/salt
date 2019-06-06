@@ -1,4 +1,4 @@
-{% set jinja = 'test' %}
+{% set jinja = pillar.get('test_file_name', 'test') %}
 ssh-file-test:
   file.managed:
     - name: /tmp/{{ jinja }}

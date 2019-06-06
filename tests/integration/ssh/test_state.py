@@ -83,6 +83,19 @@ class SSHStateTest(SSHCase):
         ret = self.run_function('state.sls_id', ['doesnotexist', SSH_SLS])
         assert 'No matches for ID' in ret
 
+    def test_state_sls_id_with_pillar(self):
+        '''
+        test state.sls_id with pillar data
+        '''
+        self.run_function('state.sls_id', [
+            'ssh-file-test',
+            SSH_SLS,
+            'pillar=\'{"test_file_name": "test_pillar"}\'',
+        ])
+        check_file = self.run_function('file.file_exists', ['/tmp/test_pillar'])
+        self.assertTrue(check_file)
+        os.remove('/tmp/test_pillar')
+
     def test_state_show_sls(self):
         '''
         test state.show_sls with salt-ssh
