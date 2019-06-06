@@ -175,6 +175,36 @@ New output:
           Skipped:
               0
 
+Unless and onlyif Enhancements
+==============================
+
+The ``unless`` and ``onlyif`` requisites can now be operated with salt modules.
+The dictionary must contain an argument ``fun`` which is the module that is
+being run, and everything else must be passed in under the args key or will be
+passed as individual kwargs to the module function.
+
+.. code-block:: yaml
+
+  install apache on debian based distros:
+    cmd.run:
+      - name: make install
+      - cwd: /path/to/dir/whatever-2.1.5/
+      - unless:
+        - fun: file.file_exists
+          path: /usr/local/bin/whatever
+
+.. code-block:: yaml
+
+  set mysql root password:
+    debconf.set:
+      - name: mysql-server-5.7
+      - data:
+          'mysql-server/root_password': {'type': 'password', 'value': {{pillar['mysql.pass']}} }
+      - unless:
+        - fun: pkg.version
+          args:
+            - mysql-server-5.7
+
 
 Keystore State and Module
 =========================
@@ -373,6 +403,29 @@ Util Changes
     - :py:func:`versions_list <salt.utils.win_dotnet.versions_list>`
     - :py:func:`versions_details <salt.utils.win_dotnet.versions_details>`
     - :py:func:`version_at_least <salt.utils.win_dotnet.version_at_least>`
+
+Serializer Changes
+==================
+
+- The configparser serializer and deserializer functions can now be made to preserve
+  case of item names by passing 'preserve_case=True' in the options parameter of the function.
+
+  .. note::
+      This is a parameter consumed only by the salt.serializer.configparser serialize and
+      deserialize functions and not the low-level configparser python object.
+
+  For example, in a file.serialze state:
+
+  .. code-block:: yaml
+
+    some.ini:
+      - file.serialize:
+         - formatter: configparser
+         - merge_if_exists: True
+         - deserializer_opts:
+           - preserve_case: True
+         - serializer_opts:
+           - preserve_case: True
 
 Enhancements to Engines
 =======================
