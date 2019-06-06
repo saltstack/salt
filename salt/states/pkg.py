@@ -1593,7 +1593,7 @@ def installed(
 
         The above examples use two different methods to reasonably ensure
         that a package has already been installed. First, with checking for a
-        file that would be created with the pacakge. Second, by checking for
+        file that would be created with the package. Second, by checking for
         specific text within a file that would be created or managed by salt.
         With these requisists satisfied, unless will return ``True`` and the
         ``pkg.installed`` state will be skipped.
@@ -1626,7 +1626,7 @@ def installed(
                       Changes:
 
         The result is a reduction of almost 3 seconds. In larger environments,
-        small reductions in waiting time can and up.
+        small reductions in waiting time can add up.
 
         :ref:`Unless Requisite <unless-requisite>`
     '''
