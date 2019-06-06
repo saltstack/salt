@@ -152,6 +152,27 @@ This state creates a private key then requests a certificate signed by ca accord
             bits: 4096
             backup: True
 
+You could also specify multiple ca_server for redundancy purposes, ca_server key accept a string or a list.
+
+/srv/salt/www.sls
+
+.. code-block:: yaml
+
+    /etc/pki/www.crt:
+      x509.certificate_managed:
+        - ca_server:
+          - myfirst_ca_server
+          - mysecond_ca_server
+        - signing_policy: www
+        - public_key: /etc/pki/www.key
+        - CN: www.example.com
+        - days_remaining: 30
+        - backup: True
+        - managed_private_key:
+            name: /etc/pki/www.key
+            bits: 4096
+            backup: True
+
 '''
 
 # Import Python Libs

@@ -1138,8 +1138,9 @@ def create_certificate(
     ca_server:
         Request a remotely signed certificate from ca_server. For this to
         work, a ``signing_policy`` must be specified, and that same policy
-        must be configured on the ca_server. See ``signing_policy`` for
-        details. Also the salt master must permit peers to call the
+        must be configured on the ca_server (name or list of ca servers).
+        See ``signing_policy`` for details.
+        Also the salt master must permit peers to call the
         ``sign_remote_certificate`` function.
 
         Example:
@@ -1391,21 +1392,48 @@ def create_certificate(
         for ignore in list(_STATE_INTERNAL_KEYWORDS) + \
                 ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
-        # TODO: Make timeout configurable in Neon
-        certs = __salt__['publish.publish'](
-            tgt=ca_server,
-            fun='x509.sign_remote_certificate',
-            arg=salt.utils.data.decode_dict(kwargs, to_str=True),
-            timeout=30
-        )
+
+        # If the provided argument is not a list, we assume it only contain one server
+        if not isinstance(ca_server, list):
+            ca_server = [ca_server]
+        random.shuffle(ca_server)
+
+        # This variable will contains some errors logs collected during the loop
+        # over the CA servers provided, it will be return if no certificate got generated
+        error_log = []
+        for server in ca_server:
+            # TODO: Make timeout configurable in Neon
+            certs = __salt__['publish.publish'](
+                tgt=server,
+                fun='x509.sign_remote_certificate',
+                arg=salt.utils.data.decode_dict(kwargs, to_str=True),
+                timeout=30
+            )
+
+            if certs is None or not any(certs):
+                error_log.append("{0}: ca_server did not respond "
+                                 "or salt master must permit peers to "
+                                 "call the sign_remote_certificate function.".format(server))
+            else:
+                # Sometimes, an error is returned instead of the certificate.
+
+                # If we provide multiple CA servers, we want to make it HA, so
+                # we have to detect that's not a certificate and try an other server.
+
+                # Also, we don't want to break in case of the cert_txt is a dict
+                # as it could be the output of the "dry-run" first request.
+                cert_txt = certs[server]
+                if isinstance(cert_txt, six.string_types):
+                    if cert_txt.startswith('-----'):
+                        break
+                    else:
+                        error_log.append("{0}: {1}".format(server, cert_txt))
+                        certs = {}
+                        continue
+                break
 
         if not any(certs):
-            raise salt.exceptions.SaltInvocationError(
-                    'ca_server did not respond'
-                    ' salt master must permit peers to'
-                    ' call the sign_remote_certificate function.')
-
-        cert_txt = certs[ca_server]
+            raise salt.exceptions.SaltInvocationError("\n"+"\n".join(error_log))
 
         if path:
             return write_pem(
