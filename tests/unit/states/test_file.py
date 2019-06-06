@@ -2122,28 +2122,29 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
         # Verify that it returns correctly
         # Delete tmp directory structure
         root_tmp_dir = os.path.join(TMP, 'test__check_dir')
+        expected_dir_mode = 0o777
         depth = 3
         try:
             def create_files(tmp_dir):
                 for f in range(depth):
                     path = os.path.join(tmp_dir, 'file_{:03}.txt'.format(f))
                     with salt.utils.files.fopen(path, 'w+'):
-                        os.chmod(path, 0o777)
+                        os.chmod(path, expected_dir_mode)
 
             # Create tmp directory structure
             os.mkdir(root_tmp_dir)
-            os.chmod(root_tmp_dir, 0o777)
+            os.chmod(root_tmp_dir, expected_dir_mode)
             create_files(root_tmp_dir)
 
             for d in range(depth):
                 dir_name = os.path.join(root_tmp_dir, 'dir{:03}'.format(d))
                 os.mkdir(dir_name)
-                os.chmod(dir_name, 0o777)
+                os.chmod(dir_name, expected_dir_mode)
                 create_files(dir_name)
                 for s in range(depth):
                     sub_dir_name = os.path.join(dir_name, 'dir{:03}'.format(s))
                     os.mkdir(sub_dir_name)
-                    os.chmod(sub_dir_name, 0o777)
+                    os.chmod(sub_dir_name, expected_dir_mode)
                     create_files(sub_dir_name)
 
             # Set some bad permissions
@@ -2158,7 +2159,8 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
             for c in changed_files:
                 os.chmod(c, 0o770)
 
-            ret = filestate._check_directory(root_tmp_dir, dir_mode=0o777, file_mode=0o777, recurse=['mode'])
+            ret = filestate._check_directory(root_tmp_dir, dir_mode=oct(expected_dir_mode),
+                                             file_mode=oct(expected_dir_mode), recurse=['mode'])
             self.assertSetEqual(changed_files, set(ret[-1].keys()))
 
         finally:
