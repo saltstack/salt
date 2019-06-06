@@ -48,7 +48,6 @@ if salt.utils.platform.is_windows():
     else:
         import clr
         clr.AddReference('System.Net')
-        clr.AddReference('System.Net.Http')
         from System.Net import NetworkInformation
 else:
     USE_WMI = False
