@@ -649,7 +649,7 @@ def _get_properties(path="", method="GET", forced_params=None):
     for elem in path_levels[:-1]:
         search_path += '/' + elem
         # Lookup for a dictionary with path = "requested path" in list" and return its children
-        sub = (item for item in sub if item["path"] == search_path).next()['children']
+        sub = next((item for item in sub if item["path"] == search_path))['children']
     # Get leaf element in path
     search_path += '/' + path_levels[-1]
     sub = next((item for item in sub if item["path"] == search_path))
