@@ -25,6 +25,8 @@ if __name__ == '__main__':
 import nox
 from nox.command import CommandFailed
 
+IS_PY3 = sys.version_info > (2,)
+
 # Be verbose when runing under a CI context
 PIP_INSTALL_SILENT = (os.environ.get('JENKINS_URL') or os.environ.get('CI') or os.environ.get('DRONE')) is None
 
@@ -841,8 +843,12 @@ def _lint(session, rcfile, flags, paths):
         raise
     finally:
         stdout.seek(0)
-        contents = stdout.read().encode('utf-8')
+        contents = stdout.read()
         if contents:
+            if IS_PY3:
+                contents = contents.decode('utf-8')
+            else:
+                contents = contents.encode('utf-8')
             sys.stdout.write(contents)
             sys.stdout.flush()
             if pylint_report_path:
@@ -892,14 +898,20 @@ def lint_tests(session):
     _lint(session, '.testing.pylintrc', flags, paths)
 
 
-@nox.session(python='2.7')
+@nox.session(python='3')
 def docs(session):
     '''
     Build Salt's Documentation
     '''
-    session.install('--progress-bar=off', '-r', 'requirements/static/py2.7/docs.txt', silent=PIP_INSTALL_SILENT)
+    pydir = _get_pydir(session)
+    if pydir == 'py3.4':
+        session.error('Sphinx only runs on Python >= 3.5')
+    session.install(
+        '--progress-bar=off',
+        '-r', 'requirements/static/{}/docs.txt'.format(pydir),
+        silent=PIP_INSTALL_SILENT)
     os.chdir('doc/')
     session.run('make', 'clean', external=True)
-    session.run('make', 'html', external=True)
+    session.run('make', 'html', 'SPHINXOPTS=-W', external=True)
     session.run('tar', '-czvf', 'doc-archive.tar.gz', '_build/html')
     os.chdir('..')
