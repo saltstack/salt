@@ -652,11 +652,8 @@ class AsyncAuth(object):
                 self._authenticate_future.set_result(True)  # mark the sign-in as complete
                 # Notify the bus about creds change
                 if self.opts.get('auth_events') is True:
-                    event = salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False)
-                    event.fire_event(
-                        {'key': key, 'creds': creds},
-                        salt.utils.event.tagify(prefix='auth', suffix='creds')
-                    )
+                    with salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False) as event:
+                        event.fire_event({'key': key, 'creds': creds}, salt.utils.event.tagify(prefix='auth', suffix='creds'))
         finally:
             channel.close()
 
