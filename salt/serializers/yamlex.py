@@ -183,6 +183,7 @@ def serialize(obj, **options):
     '''
 
     options.setdefault('Dumper', Dumper)
+    options.setdefault('default_flow_style', None)
     try:
         response = yaml.dump(obj, **options)
         if response.endswith('\n...\n'):
