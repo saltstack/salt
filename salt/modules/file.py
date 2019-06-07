@@ -1738,7 +1738,7 @@ def _line_match(src, probe):
     if not src or not probe:
         return no_match
 
-    if probe == src.rstrip('\r\n'):
+    if probe.rstrip('\r\n') == src.rstrip('\r\n'):
         return equal
 
     return no_match
