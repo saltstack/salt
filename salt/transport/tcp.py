@@ -45,6 +45,7 @@ import tornado.gen
 import tornado.concurrent
 import tornado.tcpclient
 import tornado.netutil
+import tornado.iostream
 
 # pylint: disable=import-error,no-name-in-module
 if six.PY2:
