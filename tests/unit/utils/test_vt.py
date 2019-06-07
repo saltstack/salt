@@ -49,8 +49,21 @@ class VTTestCase(TestCase):
 
     def run_test_in_subprocess(self, test_name):
         '''
-            Runs a named test in a new instance of python to avoid broken
-            sys.stdout.fileno method
+            Runs a named test in a new instance of python.
+
+            The sys.stdout.fileno function is unavailable to the tests when run
+            in the Salt CI system. This method is used to run the tests in a
+            separate instance of python to avoid this problem.
+            This method asserts the exit code of the run test is 0 to cause a
+            failure in the run test to result in a failure of the calling test.
+
+            The TEST_VT_CHILD environmental variable is added to the
+            environment of the child process to allow tests to detect they are
+            in a child process and avoid calling this method again. Should they
+            do so then this method will fail the test to avoid recursively
+            spawning processes indefinitely.
+
+            @param test_name: The name of a test in the VTTestCase class
         '''
         test_root = os.path.abspath(
             os.path.join(
