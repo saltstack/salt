@@ -1,9 +1,16 @@
 version: "2"
 
+languages:
+   Ruby: false
+   JavaScript: false
+   Python: true
+   PHP: false
+
 exclude_patterns:
   - "*.js"
   - "*.rb"
   - "*.php"
+  - "tests/"
 
 plugins:
   radon:
@@ -15,8 +22,6 @@ plugins:
 
 checks:
   argument-count:
-    enabled: false
-  file-lines:
     enabled: false
   similar-code:
     config:

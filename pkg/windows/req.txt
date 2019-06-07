@@ -23,9 +23,9 @@ pyasn1==0.4.5
 pycparser==2.19
 pycrypto==2.6.1
 pycurl==7.43.0.2
+pymssql==2.1.4
 PyMySQL==0.9.3
 pyOpenSSL==18.0.0
-#python-certifi-win32==1.2
 python-dateutil==2.7.5
 python-gnupg==0.4.3
 pythonnet==2.3.0
