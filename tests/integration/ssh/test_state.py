@@ -19,7 +19,7 @@ from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 SSH_SLS = 'ssh_state_tests'
-SSH_SLS_FILE = '/tmp/test'
+SSH_SLS_FILE = '/tmp/salt_test_file'
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ class SSHStateTest(SSHCase):
         ret = self.run_function('state.apply', [SSH_SLS])
         self._check_dict_ret(ret=ret, val='__sls__', exp_ret=SSH_SLS)
 
-        check_file = self.run_function('file.file_exists', ['/tmp/test'])
+        check_file = self.run_function('file.file_exists', [SSH_SLS_FILE])
         self.assertTrue(check_file)
 
     def test_state_sls_id(self):
@@ -62,8 +62,13 @@ class SSHStateTest(SSHCase):
         # check state.sls_id with test=True
         ret = self.run_function('state.sls_id', ['ssh-file-test', SSH_SLS,
                                                  'test=True'])
-        self._check_dict_ret(ret=ret, val='comment',
-                             exp_ret='The file /tmp/test is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.')
+        self._check_dict_ret(
+            ret=ret, val='comment',
+            exp_ret=(
+                'The file {} is set to be changed\n'
+                'Note: No changes made, actual changes may\n'
+                'be different due to other states.'
+            ).format(SSH_SLS_FILE))
 
         # check state.sls_id without test=True
         ret = self.run_function('state.sls_id', ['ssh-file-test', SSH_SLS])
@@ -73,7 +78,7 @@ class SSHStateTest(SSHCase):
         self._check_dict_ret(ret=ret, val='__id__',
                              exp_ret='second_id', equal=False)
 
-        check_file = self.run_function('file.file_exists', ['/tmp/test'])
+        check_file = self.run_function('file.file_exists', [SSH_SLS_FILE])
         self.assertTrue(check_file)
 
     def test_state_sls_wrong_id(self):
@@ -93,7 +98,8 @@ class SSHStateTest(SSHCase):
             SSH_SLS,
             'pillar=\'{"test_file_suffix": "_pillar"}\'',
         ])
-        check_file = self.run_function('file.file_exists', ['/tmp/test_pillar'])
+        check_file = self.run_function('file.file_exists',
+                                       ['/tmp/salt_test_file_pillar'])
         self.assertTrue(check_file)
 
     def test_state_show_sls(self):

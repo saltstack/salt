@@ -1,4 +1,4 @@
-{% set file_name = 'test' + pillar.get('test_file_suffix', '') %}
+{% set file_name = 'salt_test_file' + pillar.get('test_file_suffix', '') %}
 ssh-file-test:
   file.managed:
     - name: /tmp/{{ file_name }}
