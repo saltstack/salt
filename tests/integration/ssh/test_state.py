@@ -2,6 +2,7 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import glob
 import os
 import shutil
 import threading
@@ -90,11 +91,10 @@ class SSHStateTest(SSHCase):
         self.run_function('state.sls_id', [
             'ssh-file-test',
             SSH_SLS,
-            'pillar=\'{"test_file_name": "test_pillar"}\'',
+            'pillar=\'{"test_file_suffix": "_pillar"}\'',
         ])
         check_file = self.run_function('file.file_exists', ['/tmp/test_pillar'])
         self.assertTrue(check_file)
-        os.remove('/tmp/test_pillar')
 
     def test_state_show_sls(self):
         '''
@@ -254,5 +254,5 @@ class SSHStateTest(SSHCase):
         if os.path.exists(salt_dir):
             shutil.rmtree(salt_dir)
 
-        if os.path.exists(SSH_SLS_FILE):
-            os.remove(SSH_SLS_FILE)
+        for test_file_path in glob.glob(SSH_SLS_FILE + '*'):
+            os.remove(test_file_path)
