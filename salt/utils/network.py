@@ -1405,7 +1405,7 @@ def ip_networks6(
     interface=None, include_loopback=False, verbose=False, interface_data=None
 ):
     """
-    Returns the IPv4 networks to which the minion belongs. Networks will be
+    Returns the IPv6 networks to which the minion belongs. Networks will be
     returned as a list of network/prefixlen. To get more information about a
     each network, use verbose=True and a dictionary with more information will
     be returned.
