@@ -206,10 +206,23 @@ def flaky(caller=None, condition=True, attempts=4):
     def wrap(cls):
         for attempt in range(0, attempts):
             try:
+                if attempt > 0:
+                    # Run through setUp again
+                    # We only run it after the first iteration(>0) because the regular
+                    # test runner will have already ran setUp the first time
+                    setup = getattr(cls, 'setUp', None)
+                    if callable(setup):
+                        setup()
                 return caller(cls)
             except Exception as exc:
                 if attempt >= attempts -1:
+                    # We won't try to run tearDown once the attempts are exhausted
+                    # because the regular test runner will do that for us
                     six.reraise(*sys.exc_info())
+                # Run through tearDown again
+                teardown = getattr(cls, 'tearDown', None)
+                if callable(teardown):
+                    teardown()
                 backoff_time = attempt ** 2
                 log.info(
                     'Found Exception. Waiting %s seconds to retry.',
