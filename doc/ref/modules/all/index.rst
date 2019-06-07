@@ -23,6 +23,8 @@ execution modules
 
     acme
     aix_group
+    aix_shadow
+    aixpkg
     aliases
     alternatives
     ansiblegate
@@ -31,6 +33,7 @@ execution modules
     apf
     apkpkg
     aptpkg
+    aptly
     archive
     arista_pyeapi
     artifactory
@@ -39,9 +42,11 @@ execution modules
     augeas_cfg
     aws_sqs
     azurearm_compute
+    azurearm_dns
     azurearm_network
     azurearm_resource
     bamboohr
+    baredoc
     bcache
     beacons
     bigip
@@ -50,6 +55,7 @@ execution modules
     boto3_efs
     boto3_elasticache
     boto3_route53
+    boto3_sns
     boto_apigateway
     boto_asg
     boto_cfn
@@ -73,10 +79,12 @@ execution modules
     boto_lambda
     boto_rds
     boto_route53
+    boto_s3
     boto_s3_bucket
     boto_secgroup
     boto_sns
     boto_sqs
+    boto_ssm
     boto_vpc
     bower
     bridge
@@ -92,6 +100,7 @@ execution modules
     chef
     chocolatey
     chronos
+    chroot
     cimc
     ciscoconfparse_mod
     cisconso
@@ -104,6 +113,7 @@ execution modules
     cp
     cpan
     cron
+    cryptdev
     csf
     cyg
     daemontools
@@ -136,7 +146,10 @@ execution modules
     elasticsearch
     environ
     eselect
+    esxcluster
+    esxdatacenter
     esxi
+    esxvm
     etcd_mod
     ethtool
     event
@@ -151,6 +164,8 @@ execution modules
     freebsdpkg
     freebsdports
     freebsdservice
+    freezer
+    gcp_addon
     gem
     genesis
     gentoo_service
@@ -159,6 +174,7 @@ execution modules
     github
     glance
     glanceng
+    glassfish
     glusterfs
     gnomedesktop
     google_chat
@@ -173,6 +189,7 @@ execution modules
     hashutil
     heat
     hg
+    highstate_doc
     hosts
     http
     ifttt
@@ -203,6 +220,7 @@ execution modules
     jenkinsmod
     jinja
     jira_mod
+    jsonnet
     junos
     k8s
     kapacitor
@@ -303,6 +321,8 @@ execution modules
     network
     neutron
     neutronng
+    nexus
+    nxos_upgrade
     nfs3
     nftables
     nginx
@@ -314,6 +334,7 @@ execution modules
     nxos
     nxos_api
     omapi
+    onyx
     openbsd_sysctl
     openbsdpkg
     openbsdrcctl_service
@@ -389,8 +410,10 @@ execution modules
     s3
     s6
     salt_proxy
+    salt_version
     saltcheck
     saltcloudmod
+    saltsupport
     saltutil
     schedule
     scp_mod
@@ -470,12 +493,14 @@ execution modules
     vault
     vbox_guest
     vboxmanage
+    vcenter
     victorops
     virt
     virtualenv_mod
     vmctl
     vsphere
     webutil
+    win_auditpol
     win_autoruns
     win_certutil
     win_dacl
@@ -509,6 +534,8 @@ execution modules
     win_timezone
     win_useradd
     win_wua
+    win_wusa
+    wordpress
     x509
     xapi_virt
     xbpspkg
