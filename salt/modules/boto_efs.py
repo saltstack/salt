@@ -169,6 +169,9 @@ def create_file_system(name,
     if 'Name' in response:
         response['Name'] = name
 
+    waiter = __utils__['boto_efs.create_waiter']('efs_available', client)
+    waiter.wait(CreationToken=creation_token)
+
     return response
 
 
@@ -225,14 +228,8 @@ def create_mount_target(filesystemid,
         return client.create_mount_target(FileSystemId=filesystemid,
                                           SubnetId=subnetid)
 
-    if ipaddress is None:
-        return client.create_mount_target(FileSystemId=filesystemid,
-                                          SubnetId=subnetid,
-                                          SecurityGroups=securitygroups)
-    if securitygroups is None:
-        return client.create_mount_target(FileSystemId=filesystemid,
-                                          SubnetId=subnetid,
-                                          IpAddress=ipaddress)
+    waiter = __utils__['boto_efs.create_waiter']('mount_target_available', client)
+    waiter.wait(MountTargetId=res['MountTargetId'])
 
     return client.create_mount_target(FileSystemId=filesystemid,
                                       SubnetId=subnetid,
@@ -299,8 +296,13 @@ def delete_file_system(filesystemid,
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
-
-    client.delete_file_system(FileSystemId=filesystemid)
+    res = client.delete_file_system(FileSystemId=filesystemid)
+    try:
+        waiter = __utils__['boto_efs.create_waiter']('efs_deleted', client)
+        waiter.wait(FileSystemId=filesystemid)
+    except boto3.exceptions.botocore.exceptions.WaiterError:
+        pass
+    return res
 
 
 def delete_mount_target(mounttargetid,
@@ -334,7 +336,14 @@ def delete_mount_target(mounttargetid,
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
-    client.delete_mount_target(MountTargetId=mounttargetid)
+    res = client.delete_mount_target(MountTargetId=mounttargetid)
+
+    try:
+        waiter = __utils__['boto_efs.create_waiter']('mount_target_deleted', client)
+        waiter.wait(MountTargetId=mounttargetid)
+    except boto3.exceptions.botocore.exceptions.WaiterError:
+        pass
+    return res['ResponseMetadata']['HTTPStatusCode'] == 204
 
 
 def delete_tags(filesystemid,
