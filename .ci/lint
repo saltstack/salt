@@ -4,6 +4,7 @@ pipeline {
         timestamps()
         ansiColor('xterm')
         timeout(time: 3, unit: 'HOURS')
+        buildDiscarder(logRotator(numToKeepStr: '20'))
     }
     environment {
         PYENV_ROOT = "/usr/local/pyenv"
