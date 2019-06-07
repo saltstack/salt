@@ -947,5 +947,6 @@ class Terminal(object):
             # Child is still running, keep us alive until we can wait on it.
             _ACTIVE.append(self)
     # pylint: enable=W1701
+    
     # <---- Cleanup!!! -------------------------------------------------------
 # <---- Platform Specific Methods --------------------------------------------
