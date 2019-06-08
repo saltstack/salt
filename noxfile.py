@@ -751,6 +751,8 @@ def _pytest(session, coverage, cmd_args):
         else:
             session.run('py.test', *cmd_args)
     except CommandFailed:
+        # Not rerunning failed tests for now
+        raise
         # Re-run failed tests
         session.log('Re-running failed tests')
 
