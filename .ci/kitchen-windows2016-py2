@@ -47,6 +47,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
                     try {
                         // Setup the kitchen required bundle
                         stage('setup-bundle') {
+                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}'
                             sh 'bundle install --with ec2 windows --without docker macos opennebula vagrant'
                         }
                         try {
