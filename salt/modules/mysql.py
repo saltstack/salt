@@ -35,6 +35,7 @@ Module to provide MySQL compatibility to salt.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import hashlib
 import time
 import logging
 import re
@@ -259,6 +260,12 @@ def __virtual__():
     Confirm that a python mysql client is installed.
     '''
     return bool(MySQLdb), 'No python mysql client installed.' if MySQLdb is None else ''
+
+
+def __mysql_hash_password(password):
+    _password = hashlib.sha1(password).digest()
+    _password = '*{0}'.format(hashlib.sha1(_password).hexdigest().upper())
+    return _password
 
 
 def __check_table(name, table, **connection_args):
@@ -874,6 +881,20 @@ def version(**connection_args):
         return ''
 
 
+def version_comment(**connection_args):
+    '''
+    Return the version_comment of a MySQL server using the values
+    available from show variables.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.version_comment
+    '''
+    return getvariable('version_comment', **connection_args).get('Value')
+
+
 def slave_lag(**connection_args):
     '''
     Return the number of seconds that a slave SQL server is lagging behind the
@@ -1237,7 +1258,95 @@ def user_list(**connection_args):
     return results
 
 
-def user_exists(user,
+def _get_user_auth_plugin(user, host='localhost', **connection_args):
+    '''
+    Return the authentication plugin that is being used
+    '''
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
+    cur = dbc.cursor(MySQLdb.cursors.DictCursor)
+    qry = ('SELECT PLUGIN FROM mysql.user WHERE User = %(user)s AND '
+           'Host = %(host)s')
+    args = {}
+    args['user'] = user
+    args['host'] = host
+
+    try:
+        _execute(cur, qry, args)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return None
+    results = cur.fetchall()
+    log.debug(results)
+    if results:
+        return results[0].get('PLUGIN')
+    return None
+
+
+def _user_exists_mariadb(user,
+                         host='localhost',
+                         password=None,
+                         password_hash=None,
+                         passwordless=False,
+                         unix_socket=False,
+                         password_column=None,
+                         **connection_args):
+    '''
+    Checks if a user exists on the MariaDB server.
+    '''
+    dbc = _connect(**connection_args)
+    # Did we fail to connect with the user we are checking
+    # Its password might have previously change with the same command/state
+    if dbc is None \
+            and __context__['mysql.error'] \
+                .startswith("MySQL Error 1045: Access denied for user '{0}'@".format(user)) \
+            and password:
+        # Clear the previous error
+        __context__['mysql.error'] = None
+        connection_args['connection_pass'] = password
+        dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
+
+    if not password_column:
+        password_column = __password_column(**connection_args)
+
+    cur = dbc.cursor()
+    qry = ('SELECT User,Host FROM mysql.user WHERE User = %(user)s AND '
+           'Host = %(host)s')
+    args = {}
+    args['user'] = user
+    args['host'] = host
+
+    if salt.utils.data.is_true(passwordless):
+        if salt.utils.data.is_true(unix_socket):
+            qry += ' AND plugin=%(unix_socket)s'
+            args['unix_socket'] = 'unix_socket'
+        else:
+            qry += ' AND ' + password_column + ' = \'\''
+    elif password:
+        _password = password
+        qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
+        args['password'] = six.text_type(_password)
+    elif password_hash:
+        qry += ' AND ' + password_column + ' = %(password)s'
+        args['password'] = password_hash
+
+    try:
+        _execute(cur, qry, args)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
+
+    return cur.rowcount == 1
+
+
+def _user_exists_mysql(user,
                 host='localhost',
                 password=None,
                 password_hash=None,
@@ -1246,30 +1355,15 @@ def user_exists(user,
                 password_column=None,
                 **connection_args):
     '''
-    Checks if a user exists on the MySQL server. A login can be checked to see
-    if passwordless login is permitted by omitting ``password`` and
-    ``password_hash``, and using ``passwordless=True``.
-
-    .. versionadded:: 0.16.2
-        The ``passwordless`` option was added.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' mysql.user_exists 'username' 'hostname' 'password'
-        salt '*' mysql.user_exists 'username' 'hostname' password_hash='hash'
-        salt '*' mysql.user_exists 'username' passwordless=True
-        salt '*' mysql.user_exists 'username' password_column='authentication_string'
+    Checks if a user exists on the MySQL server.
     '''
-    run_verify = False
     server_version = salt.utils.data.decode(version(**connection_args))
     if not server_version:
         last_err = __context__['mysql.error']
         err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
         log.error(err)
         return False
-    compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
+    compare_version = '8.0.11'
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
     # Its password might have previously change with the same command/state
@@ -1302,7 +1396,19 @@ def user_exists(user,
             qry += ' AND ' + password_column + ' = \'\''
     elif password:
         if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-            run_verify = True
+            auth_plugin = _get_user_auth_plugin(user, host, **connection_args)
+            if auth_plugin:
+                if 'mysql_native_password' in auth_plugin:
+                    _password = __mysql_hash_password(password)
+                    qry += ' AND ' + password_column + ' = %(password)s'
+                    args['password'] = six.text_type(_password)
+                else:
+                    msg = ('Currently Salt is unable to verify passwords in MySQL 8.0.11\n'
+                           'and later when using auth_plugin {0}.'.format(auth_plugin))
+                    warning = 'MySQL Warning: {0}'.format(msg)
+                    __context__['mysql.warning'] = warning
+            else:
+                return False
         else:
             _password = password
             qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
@@ -1311,9 +1417,6 @@ def user_exists(user,
         qry += ' AND ' + password_column + ' = %(password)s'
         args['password'] = password_hash
 
-    if run_verify:
-        if not verify_login(user, password, **connection_args):
-            return False
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
@@ -1323,6 +1426,51 @@ def user_exists(user,
         return False
 
     return cur.rowcount == 1
+
+
+def user_exists(user,
+                host='localhost',
+                password=None,
+                password_hash=None,
+                passwordless=False,
+                unix_socket=False,
+                password_column=None,
+                **connection_args):
+    '''
+    Checks if a user exists on the MySQL server. A login can be checked to see
+    if passwordless login is permitted by omitting ``password`` and
+    ``password_hash``, and using ``passwordless=True``.
+
+    .. versionadded:: 0.16.2
+        The ``passwordless`` option was added.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.user_exists 'username' 'hostname' 'password'
+        salt '*' mysql.user_exists 'username' 'hostname' password_hash='hash'
+        salt '*' mysql.user_exists 'username' passwordless=True
+        salt '*' mysql.user_exists 'username' password_column='authentication_string'
+    '''
+    _version_comment = version_comment(**connection_args)
+    if 'mariadb' in _version_comment:
+        return _user_exists_mariadb(user,
+                                    host,
+                                    password,
+                                    password_hash,
+                                    unix_socket,
+                                    password_column,
+                                    **connection_args)
+    if 'MySQL' or 'Percona' in _version_comment:
+        return _user_exists_mysql(user,
+                                  host,
+                                  password,
+                                  password_hash,
+                                  unix_socket,
+                                  password_column,
+                                  **connection_args)
+    return False
 
 
 def user_info(user, host='localhost', **connection_args):
@@ -2299,10 +2447,34 @@ def showvariables(**connection_args):
     rtnv = __do_query_into_hash(conn, "SHOW VARIABLES")
     conn.close()
     if len(rtnv) == 0:
-        rtnv.append([])
+        rtnv.append({})
 
     log.debug('%s-->%s', mod, len(rtnv[0]))
     return rtnv
+
+
+def getvariable(variable, **connection_args):
+    '''
+    Retrieves the show variables from the minion.
+
+    Returns::
+        show variables full dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.showvariables
+
+    '''
+    variables = showvariables(**connection_args)
+    if variables:
+        try:
+            value = next(item for item in variables if 'Variable_name' in item and item['Variable_name'] == variable)
+        except StopIteration:
+            return {}
+        return value
+    return {}
 
 
 def showglobal(**connection_args):
