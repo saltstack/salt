@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Carlos D. Álvaro <github@cdalvaro.io>`
+    :codeauthor: Carlos D. Alvaro <github@cdalvaro.io>
 
     tests.unit.returners.test_slack_webhook_return
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
