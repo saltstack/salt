@@ -881,6 +881,7 @@ def version(**connection_args):
     except IndexError:
         return ''
 
+
 def version_comment(**connection_args):
     '''
     Return the version_comment of a MySQL server using the values
@@ -893,6 +894,7 @@ def version_comment(**connection_args):
         salt '*' mysql.version_comment
     '''
     return getvariable('version_comment', **connection_args).get('Value')
+
 
 def slave_lag(**connection_args):
     '''
@@ -1511,6 +1513,7 @@ def user_info(user, host='localhost', **connection_args):
     log.debug(result)
     return result
 
+
 def _user_create_mysql(user,
                        host='localhost',
                        password=None,
@@ -1592,6 +1595,7 @@ def _user_create_mysql(user,
     log.info('User \'%s\'@\'%s\' was not created', user, host)
     return False
 
+
 def _user_create_mariadb(user,
                          host='localhost',
                          password=None,
@@ -1663,6 +1667,7 @@ def _user_create_mariadb(user,
 
     log.info('User \'%s\'@\'%s\' was not created', user, host)
     return False
+
 
 def user_create(user,
                 host='localhost',
@@ -1744,6 +1749,7 @@ def user_create(user,
                                   auth_plugin=auth_plugin,
                                   **connection_args)
     return False
+
 
 def _user_chpass_mysql(user,
                        host='localhost',
@@ -1847,6 +1853,7 @@ def _user_chpass_mysql(user,
     )
     return False
 
+
 def _user_chpass_mariadb(user,
                          host='localhost',
                          password=None,
@@ -1917,14 +1924,14 @@ def _user_chpass_mariadb(user,
         )
         return True
     else:
-	if result:
-	    _execute(cur, 'FLUSH PRIVILEGES;')
-	    log.info(
-		'Password for user \'%s\'@\'%s\' has been %s',
-		    user, host,
-		    'changed' if any((password, password_hash)) else 'cleared'
-	    )
-	    return True
+        if result:
+            _execute(cur, 'FLUSH PRIVILEGES;')
+            log.info(
+                'Password for user \'%s\'@\'%s\' has been %s',
+                    user, host,
+                    'changed' if any((password, password_hash)) else 'cleared'
+            )
+            return True
 
     log.info(
         'Password for user \'%s\'@\'%s\' was not %s',
@@ -1932,6 +1939,7 @@ def _user_chpass_mariadb(user,
             'changed' if any((password, password_hash)) else 'cleared'
     )
     return False
+
 
 def user_chpass(user,
                 host='localhost',
@@ -2013,6 +2021,7 @@ def user_chpass(user,
                                   auth_plugin=auth_plugin,
                                   **connection_args)
     return False
+
 
 def user_remove(user,
                 host='localhost',

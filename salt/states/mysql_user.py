@@ -68,6 +68,7 @@ def _get_mysql_error():
         __salt__['test.ping'].__module__
     ].__context__.pop('mysql.error', None)
 
+
 def _get_mysql_warning():
     '''
     Look in module context for a MySQL error. Eventually we should make a less
@@ -76,6 +77,7 @@ def _get_mysql_warning():
     return sys.modules[
         __salt__['test.ping'].__module__
     ].__context__.pop('mysql.warning', None)
+
 
 def present(name,
             host='localhost',
