@@ -43,10 +43,13 @@ This state is not able to grant permissions for the user. See
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
+import logging
 import sys
 
 # Import salt libs
 import salt.utils.data
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -65,7 +68,6 @@ def _get_mysql_error():
         __salt__['test.ping'].__module__
     ].__context__.pop('mysql.error', None)
 
-
 def _get_mysql_warning():
     '''
     Look in module context for a MySQL error. Eventually we should make a less
@@ -75,7 +77,6 @@ def _get_mysql_warning():
         __salt__['test.ping'].__module__
     ].__context__.pop('mysql.warning', None)
 
-
 def present(name,
             host='localhost',
             password=None,
@@ -83,6 +84,7 @@ def present(name,
             allow_passwordless=False,
             unix_socket=False,
             password_column=None,
+            auth_plugin=None,
             **connection_args):
     '''
     Ensure that the named user is present with the specified properties. A
@@ -185,9 +187,10 @@ def present(name,
                 ret['comment'] += 'changed'
             return ret
 
-        if __salt__['mysql.user_chpass'](name, host,
-                                         password, password_hash,
-                                         allow_passwordless, unix_socket,
+        if __salt__['mysql.user_chpass'](name, host=host,
+                                         password=password, password_hash=password_hash,
+                                         allow_passwordless=allow_passwordless, unix_socket=unix_socket,
+                                         auth_plugin=auth_plugin,
                                          **connection_args):
             ret['comment'] = \
                 'Password for user {0}@{1} has been ' \
@@ -231,7 +234,8 @@ def present(name,
 
         if __salt__['mysql.user_create'](name, host,
                                          password, password_hash,
-                                         allow_passwordless, unix_socket=unix_socket, password_column=password_column,
+                                         allow_passwordless, unix_socket=unix_socket,
+                                         password_column=password_column, auth_plugin=auth_plugin,
                                          **connection_args):
             ret['comment'] = \
                 'The user {0}@{1} has been added'.format(name, host)

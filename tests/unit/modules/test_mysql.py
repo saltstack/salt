@@ -195,37 +195,115 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         '''
         connect_mock = MagicMock()
         with patch.object(mysql, '_connect', connect_mock):
-            with patch.object(mysql, 'version', return_value='8.0.10'):
-                with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-                    mysql.user_chpass('testuser', password='BLUECOW')
-                    calls = (
-                        call().cursor().execute(
-                            'UPDATE mysql.user SET Password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
-                            {'password': 'BLUECOW',
-                             'user': 'testuser',
-                             'host': 'localhost',
-                            }
-                        ),
-                        call().cursor().execute('FLUSH PRIVILEGES;'),
-                    )
-                    connect_mock.assert_has_calls(calls, any_order=True)
+            with patch.object(mysql, 'version_comment', return_value='MySQL Community Server - GPL'):
+                with patch.object(mysql, 'version', return_value='8.0.10'):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        mysql.user_chpass('testuser', password='BLUECOW')
+                        calls = (
+                            call().cursor().execute(
+                                'UPDATE mysql.user SET Password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
+                                {'password': 'BLUECOW',
+                                 'user': 'testuser',
+                                 'host': 'localhost',
+                                }
+                            ),
+                            call().cursor().execute('FLUSH PRIVILEGES;'),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
 
         connect_mock = MagicMock()
         with patch.object(mysql, '_connect', connect_mock):
-            with patch.object(mysql, 'version', return_value='8.0.11'):
-                with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-                    mysql.user_chpass('testuser', password='BLUECOW')
-                    calls = (
-                        call().cursor().execute(
-                            "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;",
-                            {'password': 'BLUECOW',
-                             'user': 'testuser',
-                             'host': 'localhost',
-                            }
-                        ),
-                        call().cursor().execute('FLUSH PRIVILEGES;'),
-                    )
-                    connect_mock.assert_has_calls(calls, any_order=True)
+            with patch.object(mysql, 'version_comment', return_value='MySQL Community Server - GPL'):
+                with patch.object(mysql, 'version', return_value='8.0.10'):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        mysql.user_chpass('testuser',
+                                          password_hash='*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4')
+                        calls = (
+                            call().cursor().execute(
+                                'UPDATE mysql.user SET Password=%(password)s WHERE User=%(user)s AND Host = %(host)s;',
+                                {'password': '*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4',
+                                 'user': 'testuser',
+                                 'host': 'localhost',
+                                }
+                            ),
+                            call().cursor().execute('FLUSH PRIVILEGES;'),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
+
+        connect_mock = MagicMock()
+        with patch.object(mysql, '_connect', connect_mock):
+            with patch.object(mysql, 'version_comment', return_value='MySQL Community Server - GPL'):
+                with patch.object(mysql, 'version', return_value='8.0.11'):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        mysql.user_chpass('testuser', password='BLUECOW')
+                        calls = (
+                            call().cursor().execute(
+                                "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;",
+                                {'password': 'BLUECOW',
+                                 'user': 'testuser',
+                                 'host': 'localhost',
+                                }
+                            ),
+                            call().cursor().execute('FLUSH PRIVILEGES;'),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
+
+        connect_mock = MagicMock()
+        with patch.object(mysql, '_connect', connect_mock):
+            with patch.object(mysql, 'version_comment', return_value='MySQL Community Server - GPL'):
+                with patch.object(mysql, 'version', return_value='8.0.11'):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        mysql.user_chpass('testuser',
+                                          password_hash='*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4')
+                        calls = (
+                            call().cursor().execute(
+                                "ALTER USER %(user)s@%(host)s IDENTIFIED AS %(password)s;",
+                                {'password': '*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4',
+                                 'user': 'testuser',
+                                 'host': 'localhost',
+                                }
+                            ),
+                            call().cursor().execute('FLUSH PRIVILEGES;'),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
+
+        connect_mock = MagicMock()
+        with patch.object(mysql, '_connect', connect_mock):
+            with patch.object(mysql, 'version_comment', return_value='mariadb.org binary distribution'):
+                with patch.object(mysql, 'version', return_value='10.3.1-MariaDB-1'):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        mysql.user_chpass('testuser',
+                                          password_hash='*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4')
+                        calls = (
+                            call().cursor().execute(
+                                'UPDATE mysql.user SET Password=%(password)s WHERE User=%(user)s AND Host = %(host)s;',
+                                {'password': '*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4',
+                                 'user': 'testuser',
+                                 'host': 'localhost',
+                                }
+                            ),
+                            call().cursor().execute('FLUSH PRIVILEGES;'),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
+
+        connect_mock = MagicMock()
+        with patch.object(mysql, '_connect', connect_mock):
+            with patch.object(mysql, 'version_comment', return_value='mariadb.org binary distribution'):
+                with patch.object(mysql, 'version', return_value='10.4.5-MariaDB-1'):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        mysql.user_chpass('testuser',
+                                          password_hash='*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4')
+                        calls = (
+                            call().cursor().execute(
+                                'SET PASSWORD FOR %(user)s@%(host)s = %(password)s;',
+                                {'password': '*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4',
+                                 'user': 'testuser',
+                                 'host': 'localhost',
+                                }
+                            ),
+                            call().cursor().execute('FLUSH PRIVILEGES;'),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
 
     def test_user_remove(self):
         '''
