@@ -388,7 +388,7 @@ html_short_title = 'Salt'
 html_static_path = ['_static']
 html_logo = None # specified in the theme layout.html
 html_favicon = 'favicon.ico'
-html_use_smartypants = False
+smartquotes = False
 
 # Use Google customized search or use Sphinx built-in JavaScript search
 if on_saltstack:
