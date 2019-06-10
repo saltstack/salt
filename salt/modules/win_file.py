@@ -1154,7 +1154,7 @@ def symlink(src, link):
         win32security.TOKEN_ADJUST_PRIVILEGES
     )
     th = win32security.OpenProcessToken(win32api.GetCurrentProcess(),
-                                        win32security.TOKEN_ALL_ACCESS) # test
+                                        desired_access) # test
     salt.platform.win.elevate_token(th)
 
     try:
