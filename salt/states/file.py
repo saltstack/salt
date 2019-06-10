@@ -700,7 +700,7 @@ def _check_directory(name,
                      user=None,
                      group=None,
                      recurse=False,
-                     mode=None,
+                     dir_mode=None,
                      file_mode=None,
                      clean=False,
                      require=False,
@@ -730,14 +730,15 @@ def _check_directory(name,
         if 'group' not in recurse_set:
             group = None
         if 'mode' not in recurse_set:
-            mode = None
+            dir_mode = None
+            file_mode = None
+
         check_files = 'ignore_files' not in recurse_set
         check_dirs = 'ignore_dirs' not in recurse_set
         for root, dirs, files in walk_l:
             if check_files:
                 for fname in files:
                     fchange = {}
-                    mode = file_mode
                     path = os.path.join(root, fname)
                     stats = __salt__['file.stats'](
                         path, None, follow_symlinks
@@ -746,18 +747,18 @@ def _check_directory(name,
                         fchange['user'] = user
                     if group is not None and group != stats.get('group'):
                         fchange['group'] = group
-                    if mode is not None and mode != stats.get('mode'):
-                        fchange['mode'] = mode
+                    if file_mode is not None and salt.utils.files.normalize_mode(file_mode) != salt.utils.files.normalize_mode(stats.get('mode')):
+                        fchange['mode'] = file_mode
                     if fchange:
                         changes[path] = fchange
             if check_dirs:
                 for name_ in dirs:
                     path = os.path.join(root, name_)
-                    fchange = _check_dir_meta(path, user, group, mode, follow_symlinks)
+                    fchange = _check_dir_meta(path, user, group, dir_mode, follow_symlinks)
                     if fchange:
                         changes[path] = fchange
     # Recurse skips root (we always do dirs, not root), so always check root:
-    fchange = _check_dir_meta(name, user, group, mode, follow_symlinks)
+    fchange = _check_dir_meta(name, user, group, dir_mode, follow_symlinks)
     if fchange:
         changes[name] = fchange
     if clean:
