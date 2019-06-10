@@ -1565,12 +1565,13 @@ def installed(
 
     .. seealso:: unless and onlyif
 
-        You can use the :ref:`unless <unless-requisite>` or 
+        You can use the :ref:`unless <unless-requisite>` or
         :ref:`onlyif <onlyif-requisite>` syntax to skip a full package run.
         This can be helpful in large environments with multiple states that
         include requisites for packages to be installed.
 
         .. code-block:: yaml
+
             # Using file.file_exists for a single-factor check
             install_nginx:
               pkg.installed:
@@ -1581,12 +1582,13 @@ def installed(
                       - /etc/nginx/nginx.conf
 
         .. code-block:: yaml
-            # Using file.sed_contains for a two-factor check
+
+            # Using file.search for a two-factor check
             install_nginx:
               pkg.installed:
                 - name: nginx
                 - unless:
-                  - fun: file.sed_contains
+                  - fun: file.search
                     args:
                       - /etc/nginx/nginx.conf
                       - 'user www-data;'
@@ -1599,6 +1601,7 @@ def installed(
         ``pkg.installed`` state will be skipped.
 
         .. code-block:: bash
+
             # Example of state run without unless used
             salt 'saltdev' state.apply nginx
             saltdev:
