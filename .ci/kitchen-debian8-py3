@@ -5,15 +5,13 @@ def testrun_timeout = 6
 def global_timeout = testrun_timeout + 1;
 
 properties([
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
     [
         $class: 'ScannerJobProperty', doNotScan: false
     ],
     [
         $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
     ],
-    parameters([
-        booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
-    ])
 ])
 timeout(time: global_timeout, unit: 'HOURS') {
     node('kitchen-slave') {
@@ -33,7 +31,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
                     'TEST_SUITE=py3',
                     'TEST_PLATFORM=debian-8',
                     'PY_COLORS=1',
-                    "FORCE_FULL=${params.runFull}",
+                    'FORCE_FULL=true',
                 ]) {
                     // Set the GH status even before cloning the repo
                     stage('github-pending') {
@@ -50,6 +48,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
                     try {
                         // Setup the kitchen required bundle
                         stage('setup-bundle') {
+                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}'
                             sh 'bundle install --with ec2 windows --without docker macos opennebula vagrant'
                         }
                         try {
