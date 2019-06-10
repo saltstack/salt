@@ -178,10 +178,10 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             # left behind... Don't fail because of this!
             os.makedirs(self.gpghome)
         self.gpgfile_pub = os.path.join(TMP, 'gpgfile.pub')
-        with salt.utils.files.fopen(self.gpgfile_pub, 'w+') as fp:
+        with salt.utils.files.fopen(self.gpgfile_pub, 'wb') as fp:
             fp.write(salt.utils.stringutils.to_bytes(GPG_TEST_PUB_KEY))
         self.gpgfile_priv = os.path.join(TMP, 'gpgfile.priv')
-        with salt.utils.files.fopen(self.gpgfile_priv, 'w+') as fp:
+        with salt.utils.files.fopen(self.gpgfile_priv, 'wb') as fp:
             fp.write(salt.utils.stringutils.to_bytes(GPG_TEST_PRIV_KEY))
         self.user = 'salt'
 
@@ -218,9 +218,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(ret['res'], True)
                     gpg_text_input = 'The quick brown fox jumped over the lazy dog'
                     gpg_text_verify = """-----BEGIN PGP SIGNED MESSAGE-----
-Hash: SHA512
+Hash: SHA256
 
 The quick brown fox jumped over the lazy dog
-"""
+""".encode('ascii')
                     gpg_sign_output = gpg.sign(config_user, GPG_TEST_KEY_ID, gpg_text_input, None, None, True, self.gpghome)
                     self.assertEqual(gpg_text_verify, gpg_sign_output)
