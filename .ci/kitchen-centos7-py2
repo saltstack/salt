@@ -23,6 +23,7 @@ timeout(time: 8, unit: 'HOURS') {
                                 context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
                         }
                         stage('setup-bundle') {
+                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}'
                             sh 'bundle install --with ec2 windows --without opennebula docker'
                         }
                         try {
