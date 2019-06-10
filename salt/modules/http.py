@@ -12,6 +12,10 @@ import time
 
 # Import Salt libs
 import salt.utils.http
+from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 def query(url, **kwargs):
