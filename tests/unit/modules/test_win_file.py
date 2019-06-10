@@ -7,7 +7,6 @@ from __future__ import absolute_import, unicode_literals, print_function
 import os
 import tempfile
 import sys
-from collections import namedtuple
 
 # Import Salt Testing Libs
 from tests.support.helpers import destructiveTest
@@ -35,10 +34,6 @@ class DummyStat(object):
     st_atime = 1552661253
     st_mtime = 1552661253
     st_ctime = 1552661253
-
-
-WindowsVersion = namedtuple('WinowsVersion', 'major minor')
-winver = WindowsVersion(major=10, minor=0)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -118,7 +113,8 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         self.current_user = salt.utils.win_functions.get_current_user(False)
         return {
             win_file: {
-                '__utils__': {'dacl.check_perms': win_dacl.check_perms}
+                '__utils__': {'dacl.check_perms': win_dacl.check_perms,
+                              'dacl.set_perms': win_dacl.set_perms}
             },
             win_dacl: {
                 '__opts__': {'test': False},
@@ -324,6 +320,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             reset=True)
         self.assertDictEqual(expected, ret)
 
+    @skipIf(sys.getwindowsversion().major < 6, 'Symlinks not supported')
     def test_issue_52002_check_file_remove_symlink(self):
         '''
         Make sure that directories including symlinks or symlinks can be removed
@@ -348,9 +345,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                 win_file.remove(base)
 
     def test_stat(self):
-        sys.getwindowsversion = MagicMock(name='getwindowsversion')
         with patch('os.path.exists', MagicMock(return_value=True)), \
-                patch('sys.getwindowsversion', MagicMock(return_value=winver)), \
                 patch('salt.modules.win_file._resolve_symlink', MagicMock(side_effect=lambda path: path)), \
                 patch('salt.modules.win_file.get_uid', MagicMock(return_value=1)), \
                 patch('salt.modules.win_file.uid_to_user', MagicMock(return_value='dummy')), \
