@@ -946,7 +946,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         '''
         # Generate jid and find all minions before triggering a job to subscribe all returns from minions
         chunk['jid'] = salt.utils.jid.gen_jid(self.application.opts) if not chunk.get('jid', None) else chunk['jid']
-        minions = set(self.ckminions.check_minions(chunk['tgt'], chunk.get('tgt_type', 'glob')))
+        # Ignore mission minions
+        minions = self.ckminions.check_minions(chunk['tgt'], chunk.get('tgt_type', 'glob')).get('minions', list())
 
         def subscribe_minion(minion):
             salt_evt = self.application.event_listener.get_event(
