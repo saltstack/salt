@@ -11,11 +11,10 @@ Support for PowerShell
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
-import copy
 import logging
+import xml.etree.ElementTree
 
 # Import Salt libs
-import salt.utils.json
 import salt.utils.platform
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
@@ -50,14 +49,42 @@ def __virtual__():
     return __virtualname__
 
 
-def _pshell(cmd, cwd=None, json_depth=2):
+def _ps_xml_to_dict(parent, dic=None):
+    '''
+    Formats powershell Xml to a dict.
+    Note: This _ps_xml_to_dict is not perfect with powershell Xml.
+    '''
+
+    if dic is None:
+        dic = {}
+
+    for child in parent:
+        if list(child):
+            new_dic = _ps_xml_to_dict(child, {})
+            if "Name" in new_dic:
+                dic[new_dic["Name"]] = new_dic
+            else:
+                try:
+                    dic[[name for ps_type, name in child.items() if ps_type == "Type"][0]] = new_dic
+                except IndexError:
+                    dic[child.text] = new_dic
+        else:
+            for xml_type, name in child.items():
+                if xml_type == "Name":
+                    dic[name] = child.text
+
+    return dic
+
+
+def _pshell(cmd, cwd=None, depth=2):
     '''
     Execute the desired powershell command and ensure that it returns data
-    in json format and load that into python
+    in Xml format and load that into python
     '''
-    if 'convertto-json' not in cmd.lower():
-        cmd = '{0} | ConvertTo-Json -Depth {1}'.format(cmd, json_depth)
+
+    cmd = '{0} | ConvertTo-Xml -Depth {1} -As \"stream\"'.format(cmd, depth)
     log.debug('DSC: %s', cmd)
+
     results = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd, python_shell=True)
 
     if 'pid' in results:
@@ -68,9 +95,10 @@ def _pshell(cmd, cwd=None, json_depth=2):
         raise CommandExecutionError('Issue executing powershell {0}'.format(cmd), info=results)
 
     try:
-        ret = salt.utils.json.loads(results['stdout'], strict=False)
-    except ValueError:
-        raise CommandExecutionError('No JSON results from powershell', info=results)
+        ret = _ps_xml_to_dict(xml.etree.ElementTree.fromstring(results['stdout'].encode('utf-8')))
+    except xml.etree.ElementTree.ParseError:
+        results['stdout'] = results['stdout'][:1000] + ". . ."
+        raise CommandExecutionError('No XML results from powershell', info=results)
 
     return ret
 
@@ -86,8 +114,8 @@ def bootstrap():
 
         salt 'win01' psget.bootstrap
     '''
-    cmd = 'Get-PackageProvider -Name NuGet -ForceBootstrap'
-    ret = _pshell(cmd)
+    cmd = 'Get-PackageProvider -Name NuGet -ForceBootstrap | Select Name, Version, ProviderPath'
+    ret = _pshell(cmd, depth=1)
     return ret
 
 
@@ -105,12 +133,13 @@ def avail_modules(desc=False):
         salt 'win01' psget.avail_modules
         salt 'win01' psget.avail_modules desc=True
     '''
-    cmd = 'Find-Module'
-    modules = _pshell(cmd)
+    cmd = 'Find-Module | Select Name, Description'
+    modules = _pshell(cmd, depth=1)
     names = []
     if desc:
         names = {}
-    for module in modules:
+    for key in modules:
+        module = modules[key]
         if desc:
             names[module['Name']] = module['Description']
             continue
@@ -134,19 +163,11 @@ def list_modules(desc=False):
     '''
     cmd = 'Get-InstalledModule'
     modules = _pshell(cmd)
-    if isinstance(modules, dict):
-        ret = []
-        if desc:
-            modules_ret = {}
-            modules_ret[modules['Name']] = copy.deepcopy(modules)
-            modules = modules_ret
-            return modules
-        ret.append(modules['Name'])
-        return ret
     names = []
     if desc:
         names = {}
-    for module in modules:
+    for key in modules:
+        module = modules[key]
         if desc:
             names[module['Name']] = module
             continue

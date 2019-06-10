@@ -143,7 +143,7 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.renderers.gpg._get_gpg_exec', MagicMock(return_value=True)):
             with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
                 with patch('salt.renderers.gpg._decrypt_ciphertext', MagicMock(return_value=secret)):
-                    self.assertEqual(gpg.render(crypted), expected)
+                    self.assertEqual(gpg.render(crypted, encoding='utf-8'), expected)
 
     def test_render_with_translate_newlines_should_translate_newlines(self):
         key_dir = '/etc/salt/gpgkeys'
@@ -165,6 +165,6 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
                 with patch('salt.renderers.gpg._decrypt_ciphertext', MagicMock(return_value=secret)):
                     self.assertEqual(
-                        gpg.render(crypted, translate_newlines=True),
+                        gpg.render(crypted, translate_newlines=True, encoding='utf-8'),
                         expected,
                     )
