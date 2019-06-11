@@ -356,6 +356,9 @@ State Changes
 - Added new `onfail_all` requisite form to allow for AND logic when adding
   onfail states.
 
+- Added new :py:func:`drbd <salt.states.drbd>` state to monitor and
+  manage the DRBD resources.
+
 Module Changes
 ==============
 
@@ -384,6 +387,18 @@ Module Changes
 
 - The :py:func:`chocolatey.unbootstrap <salt.modules.chocolatey.unbootstrap>` function
   has been added to uninstall Chocolatey.
+
+- Add new functions to manage DRBD resources, including:
+
+    - :py:func:`drbd.createmd <salt.modules.drbd.createmd>`
+    - :py:func:`drbd.up <salt.modules.drbd.up>`
+    - :py:func:`drbd.down <salt.modules.drbd.down>`
+    - :py:func:`drbd.primary <salt.modules.drbd.primary>`
+    - :py:func:`drbd.secondary <salt.modules.drbd.secondary>`
+    - :py:func:`drbd.adjust <salt.modules.drbd.adjust>`
+    - :py:func:`drbd.setup_show <salt.modules.drbd.setup_show>`
+    - :py:func:`drbd.setup_status <salt.modules.drbd.setup_status>`
+    - :py:func:`drbd.check_sync_status <salt.modules.drbd.check_sync_status>`
 
 Runner Changes
 ==============
