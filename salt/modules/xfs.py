@@ -329,7 +329,7 @@ def _blkid_output(out):
         for items in flt(dev_meta.strip().split("\n")):
             key, val = items.split("=", 1)
             dev[key.lower()] = val
-        if dev.pop("type") == "xfs":
+        if dev.pop("type", None) == "xfs":
             dev['label'] = dev.get('label')
             data[dev.pop("devname")] = dev
 
