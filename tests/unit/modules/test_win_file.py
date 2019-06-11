@@ -320,6 +320,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             reset=True)
         self.assertDictEqual(expected, ret)
 
+    @destructiveTest
     @skipIf(sys.getwindowsversion().major < 6, 'Symlinks not supported')
     def test_issue_52002_check_file_remove_symlink(self):
         '''
