@@ -727,7 +727,7 @@ def _check_directory(name,
             walk_d[i[0]] = (i[1], i[2])
 
     # Preserve rootdir_mode before going into recurse
-    rootdir_mode = mode
+    rootdir_mode = dir_mode
     if recurse:
         try:
             recurse_set = _get_recurse_set(recurse)
