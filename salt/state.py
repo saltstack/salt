@@ -4190,5 +4190,7 @@ class RemoteHighState(object):
         self._closing = True
         self.channel.close()
 
+    # pylint: disable=no-dunder-del
     def __del__(self):
         self.destroy()
+    # pylint: enable=no-dunder-del

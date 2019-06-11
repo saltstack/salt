@@ -1021,8 +1021,10 @@ class RemoteClient(Client):
         self.channel = salt.transport.client.ReqChannel.factory(self.opts)
         return self.channel
 
+    # pylint: disable=no-dunder-del
     def __del__(self):
         self.destroy()
+    # pylint: enable=no-dunder-del
 
     def destroy(self):
         if self._closing:
