@@ -246,6 +246,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             if not loop_instance_map:
                 del self.__class__.instance_map[self._io_loop]
 
+    # pylint: disable=W1701
     def __del__(self):
         with self._refcount_lock:
             # Make sure we actually close no matter if something
@@ -257,6 +258,8 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
+            self.message_client.destroy()
+    # pylint: enable=W1701
 
     @property
     def master_uri(self):
@@ -497,8 +500,10 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         )
         self.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @tornado.gen.coroutine
@@ -1082,8 +1087,10 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
         )
         self.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
 
 # TODO: unit tests!
@@ -1160,8 +1167,10 @@ class AsyncReqMessageClient(object):
         )
         self.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
     def _init_socket(self):
         if hasattr(self, 'stream'):
