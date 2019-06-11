@@ -6,6 +6,7 @@
 from __future__ import absolute_import, unicode_literals, print_function
 import os
 import tempfile
+import sys
 from collections import namedtuple
 
 # Import Salt Testing Libs
@@ -323,6 +324,29 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             inheritance=False,
             reset=True)
         self.assertDictEqual(expected, ret)
+
+    def test_issue_52002_check_file_remove_symlink(self):
+        '''
+        Make sure that directories including symlinks or symlinks can be removed
+        '''
+        base = temp.dir(prefix='base-')
+        target = os.path.join(base, 'child 1', 'target\\')
+        symlink = os.path.join(base, 'child 2', 'link')
+        try:
+            # Create environment
+            self.assertFalse(win_file.directory_exists(target))
+            self.assertFalse(win_file.directory_exists(symlink))
+            self.assertTrue(win_file.makedirs_(target))
+            self.assertTrue(win_file.makedirs_(symlink))
+            self.assertTrue(win_file.symlink(target, symlink))
+            self.assertTrue(win_file.directory_exists(symlink))
+            self.assertTrue(win_file.is_link(symlink))
+            # Test removal of directory containing symlink
+            self.assertTrue(win_file.remove(base))
+            self.assertFalse(win_file.directory_exists(base))
+        finally:
+            if os.path.exists(base):
+                win_file.remove(base)
 
     def test_stat(self):
         with patch('os.path.exists', MagicMock(return_value=True)), \
