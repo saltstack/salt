@@ -2,7 +2,7 @@
 '''
 Module to provide DRBD functionality to Salt
 
-.. versionadded:: pending
+.. versionadded:: neon
 
 :maintainer:    Nick Wang <nwang@suse.com>
 :maturity:      alpha
@@ -24,7 +24,7 @@ from salt.ext import six
 import salt.utils.json
 import salt.utils.path
 
-LOGGER = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'drbd'
@@ -35,6 +35,8 @@ DRBD_COMMAND = 'drbdadm'
 def __virtual__():  # pragma: no cover
     '''
     Only load this module if drbdadm(drbd-utils) is installed
+
+    .. versionadded:: neon
     '''
     if bool(salt.utils.path.which(DRBD_COMMAND)):
         return __virtualname__
@@ -362,7 +364,7 @@ def status(name='all'):
 
     result = __salt__['cmd.run_all'](cmd)
     if result['retcode'] != 0:
-        LOGGER.info('No status due to %s (%s).', result['stderr'], result['retcode'])
+        log.info('No status due to %s (%s).', result['stderr'], result['retcode'])
         return None
 
     for line in result['stdout'].splitlines():
@@ -395,6 +397,8 @@ def createmd(name='all', force=True):
 
         salt '*' drbd.create
         salt '*' drbd.create name=<resource name>
+
+    .. versionadded:: neon
     '''
 
     cmd = 'drbdadm create-md {}'.format(name)
@@ -422,6 +426,8 @@ def up(name='all'):
 
         salt '*' drbd.up
         salt '*' drbd.up name=<resource name>
+
+    .. versionadded:: neon
     '''
 
     cmd = 'drbdadm up {}'.format(name)
@@ -446,6 +452,8 @@ def down(name='all'):
 
         salt '*' drbd.down
         salt '*' drbd.down name=<resource name>
+
+    .. versionadded:: neon
     '''
 
     cmd = 'drbdadm down {}'.format(name)
@@ -475,6 +483,8 @@ def primary(name='all', force=False):
 
         salt '*' drbd.primary
         salt '*' drbd.primary name=<resource name>
+
+    .. versionadded:: neon
     '''
 
     cmd = 'drbdadm primary {}'.format(name)
@@ -502,6 +512,8 @@ def secondary(name='all'):
 
         salt '*' drbd.secondary
         salt '*' drbd.secondary name=<resource name>
+
+    .. versionadded:: neon
     '''
 
     cmd = 'drbdadm secondary {}'.format(name)
@@ -526,6 +538,8 @@ def adjust(name='all'):
 
         salt '*' drbd.adjust
         salt '*' drbd.adjust name=<resource name>
+
+    .. versionadded:: neon
     '''
 
     cmd = 'drbdadm adjust {}'.format(name)
@@ -551,6 +565,8 @@ def setup_show(name='all'):
 
         salt '*' drbd.setup_show
         salt '*' drbd.setup_show name=<resource name>
+
+    .. versionadded:: neon
     '''
 
     ret = {'name': name,
@@ -594,6 +610,8 @@ def setup_status(name='all'):
 
         salt '*' drbd.setup_status
         salt '*' drbd.setup_status name=<resource name>
+
+    .. versionadded:: neon
     '''
 
     ret = {'name': name,
@@ -635,6 +653,8 @@ def check_sync_status(name, peernode='all'):
     .. code-block:: bash
 
         salt '*' drbd.check_sync_status <resource name> <peernode name>
+
+    .. versionadded:: neon
     '''
     if _is_local_all_uptodated(name) and _is_peers_uptodated(
             name, peernode=peernode):
