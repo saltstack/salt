@@ -547,6 +547,15 @@ class TestRunSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
 
+    def test_post_with_empty_body(self):
+        response = self.fetch('/run',
+                              method='POST',
+                              body="",
+                              headers={'Content-Type': self.content_type_map['json'],
+                                       saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              )
+        self.assertEqual(response.code, 400)
+
 
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 class TestEventsSaltAPIHandler(_SaltnadoIntegrationTestCase):

@@ -908,6 +908,11 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         '''
         Disbatch all lowstates to the appropriate clients
         '''
+        if not self.lowstate:
+            self.write('body is missing.')
+            self.set_status(400)
+            self.finish()
+
         ret = []
 
         # check clients before going, we want to throw 400 if one is bad
