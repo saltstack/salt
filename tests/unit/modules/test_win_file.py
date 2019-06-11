@@ -18,6 +18,7 @@ import salt.modules.temp as temp
 import salt.modules.win_file as win_file
 import salt.utils.platform
 import salt.utils.win_dacl as win_dacl
+import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -53,7 +54,8 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             win_file: {
-                '__utils__': {'dacl.set_perms': win_dacl.set_perms}
+                '__utils__': {'dacl.set_perms': win_dacl.set_perms},
+                '__salt__': {'cmd.run_stdout': cmdmod.run_stdout}
             }
         }
 
