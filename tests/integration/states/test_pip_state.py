@@ -509,7 +509,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 )
             )
 
-        false_cmd = '/bin/false'
+        false_cmd = salt.utils.path.which('false')
         if salt.utils.platform.is_windows():
             false_cmd = 'exit 1 >nul'
         try:
