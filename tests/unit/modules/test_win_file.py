@@ -22,6 +22,11 @@ import salt.modules.temp as temp
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
+try:
+    WIN_VER = sys.getwindowsversion().major
+except AttributeError:
+    WIN_VER = 0
+
 
 class DummyStat(object):
     st_mode = 33188
@@ -321,7 +326,8 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(expected, ret)
 
     @destructiveTest
-    @skipIf(sys.getwindowsversion().major < 6, 'Symlinks not supported')
+    @skipIf(WIN_VER == 0, 'Not a Windows system')
+    @skipIf(WIN_VER < 6, 'Symlinks not supported on Vista an lower')
     def test_issue_52002_check_file_remove_symlink(self):
         '''
         Make sure that directories including symlinks or symlinks can be removed
