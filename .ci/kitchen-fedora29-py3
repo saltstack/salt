@@ -28,11 +28,11 @@ timeout(time: global_timeout, unit: 'HOURS') {
                     'NOX_PASSTHROUGH_OPTS=--ssh-tests',
                     'NOX_ENABLE_FROM_FILENAMES=true',
                     'GOLDEN_IMAGES_CI_BRANCH=2018.3',
-                    'CODECOV_FLAGS=fedora28,py3',
+                    'CODECOV_FLAGS=fedora29,py3',
                     'PATH=/usr/local/rbenv/shims/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin:/root/bin',
                     'RBENV_VERSION=2.4.2',
                     'TEST_SUITE=py3',
-                    'TEST_PLATFORM=fedora-28',
+                    'TEST_PLATFORM=fedora-29',
                     'PY_COLORS=1',
                     "FORCE_FULL=${params.runFull}",
                 ]) {
