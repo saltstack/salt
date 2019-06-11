@@ -78,10 +78,36 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
             self.assertRaises(
                 CommandExecutionError, win_file.check_perms, self.FAKE_PATH)
 
+    @destructiveTest
+    @skipIf(not salt.utils.platform.is_windows(), 'Skip on Non-Windows systems')
+    @skipIf(WIN_VER < 6, 'Symlinks not supported on Vista an lower')
+    def test_issue_52002_check_file_remove_symlink(self):
+        '''
+        Make sure that directories including symlinks or symlinks can be removed
+        '''
+        base = temp.dir(prefix='base-')
+        target = os.path.join(base, 'child 1', 'target\\')
+        symlink = os.path.join(base, 'child 2', 'link')
+        try:
+            # Create environment
+            self.assertFalse(win_file.directory_exists(target))
+            self.assertFalse(win_file.directory_exists(symlink))
+            self.assertTrue(win_file.makedirs_(target))
+            self.assertTrue(win_file.makedirs_(symlink))
+            self.assertTrue(win_file.symlink(target, symlink))
+            self.assertTrue(win_file.directory_exists(symlink))
+            self.assertTrue(win_file.is_link(symlink))
+            # Test removal of directory containing symlink
+            self.assertTrue(win_file.remove(base))
+            self.assertFalse(win_file.directory_exists(base))
+        finally:
+            if os.path.exists(base):
+                win_file.remove(base)
+
 
 @destructiveTest
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(not salt.utils.platform.is_windows(), 'Requires Pywin32 libraries')
+@skipIf(not salt.utils.platform.is_windows(), 'Skip on Non-Windows systems')
 class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for the check_perms function in salt.modules.win_file
@@ -299,32 +325,6 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             inheritance=False,
             reset=True)
         self.assertDictEqual(expected, ret)
-
-    @destructiveTest
-    @skipIf(WIN_VER == 0, 'Not a Windows system')
-    @skipIf(WIN_VER < 6, 'Symlinks not supported on Vista an lower')
-    def test_issue_52002_check_file_remove_symlink(self):
-        '''
-        Make sure that directories including symlinks or symlinks can be removed
-        '''
-        base = temp.dir(prefix='base-')
-        target = os.path.join(base, 'child 1', 'target\\')
-        symlink = os.path.join(base, 'child 2', 'link')
-        try:
-            # Create environment
-            self.assertFalse(win_file.directory_exists(target))
-            self.assertFalse(win_file.directory_exists(symlink))
-            self.assertTrue(win_file.makedirs_(target))
-            self.assertTrue(win_file.makedirs_(symlink))
-            self.assertTrue(win_file.symlink(target, symlink))
-            self.assertTrue(win_file.directory_exists(symlink))
-            self.assertTrue(win_file.is_link(symlink))
-            # Test removal of directory containing symlink
-            self.assertTrue(win_file.remove(base))
-            self.assertFalse(win_file.directory_exists(base))
-        finally:
-            if os.path.exists(base):
-                win_file.remove(base)
 
     def test_stat(self):
         with patch('os.path.exists', MagicMock(return_value=True)), \
