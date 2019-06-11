@@ -25,9 +25,7 @@ grains modules
     metadata
     minion_process
     napalm
-    nvme
     nxos
-    onyx
     opts
     philips_hue
     smartos

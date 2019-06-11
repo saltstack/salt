@@ -10,7 +10,6 @@ renderer modules
     :toctree:
     :template: autosummary.rst.tmpl
 
-    aws_kms
     cheetah
     dson
     genshi

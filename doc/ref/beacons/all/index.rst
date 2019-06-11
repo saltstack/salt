@@ -18,7 +18,6 @@ beacon modules
     diskusage
     glxinfo
     haproxy
-    http_status
     inotify
     journald
     load
@@ -34,10 +33,7 @@ beacon modules
     sensehat
     service
     sh
-    smartos_imgadm
-    smartos_vmadm
     status
     telegram_bot_msg
     twilio_txt_msg
-    watchdog
     wtmp
