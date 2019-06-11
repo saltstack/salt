@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Manage RabbitMQ Upstreams
-=====================
+=========================
 
 Example:
 
@@ -80,15 +80,15 @@ def present(name,
         be in flight over a federation link at one time. Default: 1000
     :param int reconnect_delay: Time in seconds to wait after a network link
         goes down before attempting reconnection. Default: 5
-    :param str ack_mode:
+    :param str ack_mode: The following values are allowed:
         on-confirm: Messages are acknowledged to the upstream broker after they
-            have been confirmed downstream. Handles network errors and broker failures
-            without losing messages. The slowest option, and the default.
+        have been confirmed downstream. Handles network errors and broker failures
+        without losing messages. The slowest option, and the default.
         on-publish: Messages are acknowledged to the upstream broker after they
-            have been published downstream. Handles network errors without losing
-            messages, but may lose messages in the event of broker failures.
+        have been published downstream. Handles network errors without losing
+        messages, but may lose messages in the event of broker failures.
         no-ack: Message acknowledgements are not used. The fastest option, but
-            you may lose messages in the event of network or broker failures.
+        you may lose messages in the event of network or broker failures.
     :param bool trust_user_id: Set ``True`` to preserve the "user-id" field across
         a federation link, even if the user-id does not match that used to republish
         the message. Set to ``False`` to clear the "user-id" field when messages
@@ -107,10 +107,11 @@ def present(name,
     :param str ha_policy: Determines the "x-ha-policy"-argument for the upstream
         queue for a federated exchange. Default is "none" meaning the queue is
         not HA.
-    param str queue: The name of the upstream queue. Default is to use the same
+    :param str queue: The name of the upstream queue. Default is to use the same
         name as the federated queue.
 
     .. versionadded:: Neon
+
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
     action = None

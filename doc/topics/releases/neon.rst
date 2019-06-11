@@ -356,6 +356,9 @@ State Changes
 - Added new `onfail_all` requisite form to allow for AND logic when adding
   onfail states.
 
+- Added new :py:func:`present <salt.states.rabbitmq>` and :py:func:`absent <salt.states.rabbitmq>`
+  states to manage RabbitMQ upstream definitions.
+
 Module Changes
 ==============
 
@@ -384,6 +387,10 @@ Module Changes
 
 - The :py:func:`chocolatey.unbootstrap <salt.modules.chocolatey.unbootstrap>` function
   has been added to uninstall Chocolatey.
+
+- The functions :py:func:`list_upstreams <salt.modules.rabbitmq>`,
+  :py:func:`upstream_exists <salt.modules.rabbitmq>`, :py:func:`set_upstream <salt.modules.rabbitmq>`
+  and :py:func:`delete_upstream <salt.modules.rabbitmq>` have been added.
 
 Runner Changes
 ==============
