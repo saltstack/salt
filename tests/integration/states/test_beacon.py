@@ -2,13 +2,13 @@
 '''
 Integration tests for the beacon states
 '''
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.helpers import flaky
+from salt.ext.six.moves import range
 
 import logging
 log = logging.getLogger(__name__)
@@ -24,8 +24,9 @@ class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.run_function('beacons.reset', f_timeout=300)
 
     def tearDown(self):
-        self.run_function('beacons.reset', f_timeout=300)
+        self.run_function('beacons.reset', f_timeout=30)
 
+    @flaky
     def test_present_absent(self):
         kwargs = {'/': '38%', 'interval': 5}
         # TODO: Figure out why this will sometimes return 'Beacon "diskusage"
