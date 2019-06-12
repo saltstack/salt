@@ -469,8 +469,10 @@ def get_group(items, group_count, group_size, group_id):
     end = start + group_size
     total_items = len(items)
 
-    if start >= total_items or start < 0:
-        pytest.fail("Invalid test-group argument")
+    if start >= total_items:
+        pytest.fail("Invalid test-group argument. start({})>=total_items({})".format(start, total_items))
+    elif start < 0:
+        pytest.fail("Invalid test-group argument. Start({})<0".format(start))
 
     if group_count == group_id and end < total_items:
         # If this is the last group and there are still items to test
@@ -481,7 +483,7 @@ def get_group(items, group_count, group_size, group_id):
     return items[start:end]
 
 
-@pytest.hookimpl(hookwrapper=True)
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_collection_modifyitems(config, items):
     # Let PyTest or other plugins handle the initial collection
     yield
@@ -497,6 +499,7 @@ def pytest_collection_modifyitems(config, items):
 
     group_size = get_group_size(total_items, group_count)
     tests_in_group = get_group(items, group_count, group_size, group_id)
+    # Replace all items in the list
     items[:] = tests_in_group
 
     terminal_reporter = config.pluginmanager.get_plugin('terminalreporter')
