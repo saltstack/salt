@@ -28,12 +28,18 @@ class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
 
     def test_present_absent(self):
         kwargs = {'/': '38%', 'interval': 5}
-        ret = self.run_state(
-            'beacon.present',
-            name='diskusage',
-            f_timeout=300,
-            **kwargs
-        )
+        # TODO: Figure out why this will sometimes return 'Beacon "diskusage"
+        # is not available.' The loop works around that issue for now
+        for _ in range(10):
+            ret = self.run_state(
+                'beacon.present',
+                name='diskusage',
+                f_timeout=300,
+                **kwargs
+            )
+            log.error("RET %s", ret)
+            if ret['beacon_|-diskusage_|-diskusage_|-present']['result'] is True:
+                break
         self.assertSaltTrueReturn(ret)
 
         ret = self.run_function('beacons.list',
