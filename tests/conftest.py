@@ -38,13 +38,6 @@ try:
 except ImportError:
     sys.path.insert(0, CODE_DIR)
 
-# Coverage
-COVERAGERC_FILE = os.path.join(CODE_DIR, '.coveragerc')
-MAYBE_RUN_COVERAGE = sys.argv[0].endswith('pytest.py') or '_COVERAGE_RCFILE' in os.environ
-if MAYBE_RUN_COVERAGE:
-    # Flag coverage to track suprocesses by pointing it to the right .coveragerc file
-    os.environ['COVERAGE_PROCESS_START'] = COVERAGERC_FILE
-
 # Import test libs
 from tests.support.runtests import RUNTIME_VARS
 
@@ -69,6 +62,17 @@ from salt.utils.immutabletypes import freeze
 
 # Import Pytest Salt libs
 from pytestsalt.utils import cli_scripts
+
+# Coverage
+if 'COVERAGE_PROCESS_START' in os.environ:
+    MAYBE_RUN_COVERAGE = True
+    COVERAGERC_FILE = os.environ['COVERAGE_PROCESS_START']
+else:
+    COVERAGERC_FILE = os.path.join(CODE_DIR, '.coveragerc')
+    MAYBE_RUN_COVERAGE = sys.argv[0].endswith('pytest.py') or '_COVERAGE_RCFILE' in os.environ
+    if MAYBE_RUN_COVERAGE:
+        # Flag coverage to track suprocesses by pointing it to the right .coveragerc file
+        os.environ[str('COVERAGE_PROCESS_START')] = str(COVERAGERC_FILE)
 
 # Define the pytest plugins we rely on
 # pylint: disable=invalid-name
@@ -351,13 +355,13 @@ def pytest_runtest_setup(item):
     if destructive_tests_marker is not None or _has_unittest_attr(item, '__destructive_test__'):
         if item.config.getoption('--run-destructive') is False:
             pytest.skip('Destructive tests are disabled')
-    os.environ['DESTRUCTIVE_TESTS'] = six.text_type(item.config.getoption('--run-destructive'))
+    os.environ[str('DESTRUCTIVE_TESTS')] = str(item.config.getoption('--run-destructive'))
 
     expensive_tests_marker = item.get_closest_marker('expensive_test')
     if expensive_tests_marker is not None or _has_unittest_attr(item, '__expensive_test__'):
         if item.config.getoption('--run-expensive') is False:
             pytest.skip('Expensive tests are disabled')
-    os.environ['EXPENSIVE_TESTS'] = six.text_type(item.config.getoption('--run-expensive'))
+    os.environ[str('EXPENSIVE_TESTS')] = str(item.config.getoption('--run-expensive'))
 
     skip_if_not_root_marker = item.get_closest_marker('skip_if_not_root')
     if skip_if_not_root_marker is not None or _has_unittest_attr(item, '__skip_if_not_root__'):
