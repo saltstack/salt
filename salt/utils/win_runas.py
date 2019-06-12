@@ -67,6 +67,13 @@ def runas(cmdLine, username, password=None, cwd=None):
     Commands are run in with the highest level privileges possible for the
     account provided.
     '''
+    # Validate the domain and sid exist for the username
+    username, domain = split_username(username)
+    try:
+        _, domain, _ = win32security.LookupAccountName(domain, username)
+    except pywintypes.error as exc:
+        message = win32api.FormatMessage(exc.winerror).rstrip('\n')
+        raise CommandExecutionError(message)
 
     # Elevate the token from the current process
     access = (
@@ -94,14 +101,6 @@ def runas(cmdLine, username, password=None, cwd=None):
     if not impersonation_token:
         log.debug("No impersonation token, using unprivileged runas")
         return runas_unpriv(cmdLine, username, password, cwd)
-
-    username, domain = split_username(username)
-    # Validate the domain and sid exist for the username
-    try:
-        _, domain, _ = win32security.LookupAccountName(domain, username)
-    except pywintypes.error as exc:
-        message = win32api.FormatMessage(exc.winerror).rstrip('\n')
-        raise CommandExecutionError(message)
 
     if domain == 'NT AUTHORITY':
         # Logon as a system level account, SYSTEM, LOCAL SERVICE, or NETWORK
@@ -228,6 +227,14 @@ def runas_unpriv(cmd, username, password, cwd=None):
     '''
     Runas that works for non-priviledged users
     '''
+    # Validate the domain and sid exist for the username
+    username, domain = split_username(username)
+    try:
+        _, domain, _ = win32security.LookupAccountName(domain, username)
+    except pywintypes.error as exc:
+        message = win32api.FormatMessage(exc.winerror).rstrip('\n')
+        raise CommandExecutionError(message)
+
     # Create a pipe to set as stdout in the child. The write handle needs to be
     # inheritable.
     c2pread, c2pwrite = salt.platform.win.CreatePipe(
@@ -250,8 +257,6 @@ def runas_unpriv(cmd, username, password, cwd=None):
         hStdOutput=c2pwrite,
         hStdError=errwrite,
     )
-
-    username, domain = split_username(username)
 
     # Run command and return process info structure
     process_info = salt.platform.win.CreateProcessWithLogonW(
