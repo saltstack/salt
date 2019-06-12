@@ -16,7 +16,6 @@ import tempfile
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, Mock
 from tests.support.paths import BASE_FILES, TMP, TMP_CONF_DIR
 
@@ -1102,7 +1101,6 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, '16777216')
 
-    @flaky
     def test_http_query(self):
         '''
         Test the `http_query` Jinja filter.
