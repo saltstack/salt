@@ -572,7 +572,11 @@ def _run(cmd,
         run_env = env
 
     else:
-        run_env = os.environ.copy()
+        if salt.utils.platform.is_windows():
+            import nt
+            run_env = nt.environ.copy()
+        else:
+            run_env = os.environ.copy()
         run_env.update(env)
 
     if prepend_path:
@@ -3069,6 +3073,7 @@ def run_chroot(root,
                group=None,
                shell=DEFAULT_SHELL,
                python_shell=True,
+               binds=None,
                env=None,
                clean_env=False,
                template=None,
@@ -3096,19 +3101,17 @@ def run_chroot(root,
 
     :param str root: Path to the root of the jail to use.
 
-    stdin
-        A string of standard input can be specified for the command to be run using
-        the ``stdin`` parameter. This can be useful in cases where sensitive
-        information must be read from standard input.:
+    :param str stdin: A string of standard input can be specified for
+        the command to be run using the ``stdin`` parameter. This can
+        be useful in cases where sensitive information must be read
+        from standard input.:
 
-    runas
-        User to run script as.
+    :param str runas: User to run script as.
 
-    group
-        Group to run script as.
+    :param str group: Group to run script as.
 
-    shell
-        Shell to execute under. Defaults to the system default shell.
+    :param str shell: Shell to execute under. Defaults to the system
+        default shell.
 
     :param str cmd: The command to run. ex: ``ls -lart /home``
 
@@ -3132,6 +3135,9 @@ def run_chroot(root,
         arguments. Set to True to use shell features, such as pipes or
         redirection.
 
+    :param list binds: List of directories that will be exported inside
+        the chroot with the bind option.
+
     :param dict env: Environment variables to be set prior to execution.
 
         .. note::
@@ -3150,11 +3156,11 @@ def run_chroot(root,
         engine will be used to render the downloaded file. Currently jinja,
         mako, and wempy are supported.
 
-    :param bool rstrip:
-        Strip all whitespace off the end of output before it is returned.
+    :param bool rstrip: Strip all whitespace off the end of output
+        before it is returned.
 
-    :param str umask:
-         The umask (in octal) to use when running the command.
+    :param str umask: The umask (in octal) to use when running the
+         command.
 
     :param str output_encoding: Control the encoding used to decode the
         command's output.
@@ -3242,6 +3248,15 @@ def run_chroot(root,
         'sysfs',
         fstype='sysfs')
 
+    binds = binds if binds else []
+    for bind_exported in binds:
+        bind_exported_to = os.path.relpath(bind_exported, os.path.sep)
+        bind_exported_to = os.path.join(root, bind_exported_to)
+        __salt__['mount.mount'](
+            bind_exported_to,
+            bind_exported,
+            opts='default,bind')
+
     # Execute chroot routine
     sh_ = '/bin/sh'
     if os.path.isfile(os.path.join(root, 'bin/bash')):
@@ -3293,6 +3308,11 @@ def run_chroot(root,
     if _chroot_pids(root):
         log.error('Processes running in chroot could not be killed, '
                   'filesystem will remain mounted')
+
+    for bind_exported in binds:
+        bind_exported_to = os.path.relpath(bind_exported, os.path.sep)
+        bind_exported_to = os.path.join(root, bind_exported_to)
+        __salt__['mount.umount'](bind_exported_to)
 
     __salt__['mount.umount'](os.path.join(root, 'sys'))
     __salt__['mount.umount'](os.path.join(root, 'proc'))
@@ -3482,7 +3502,12 @@ def shell_info(shell, list_modules=False):
         # salt-call will general have home set, the salt-minion service may not
         # We need to assume ports of unix shells to windows will look after
         # themselves in setting HOME as they do it in many different ways
-        newenv = os.environ
+        if salt.utils.platform.is_windows():
+            import nt
+            newenv = nt.environ
+        else:
+            newenv = os.environ
+
         if ('HOME' not in newenv) and (not salt.utils.platform.is_windows()):
             newenv['HOME'] = os.path.expanduser('~')
             log.debug('HOME environment set to %s', newenv['HOME'])

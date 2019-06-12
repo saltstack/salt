@@ -324,57 +324,45 @@ def _parse_qemu_img_info(info):
 
 def _get_uuid(dom):
     '''
-    Return a uuid from the named vm
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.get_uuid <domain>
+    Get uuid from a libvirt domain object.
     '''
-    return ElementTree.fromstring(get_xml(dom)).find('uuid').text
+    uuid = ElementTree.fromstring(dom.XMLDesc(0)).find('uuid').text
+
+    return uuid
 
 
 def _get_on_poweroff(dom):
     '''
-    Return `on_poweroff` setting from the named vm
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.get_on_restart <domain>
+    Get on_poweroff from a libvirt domain object.
     '''
-    node = ElementTree.fromstring(get_xml(dom)).find('on_poweroff')
+    node = ElementTree.fromstring(dom.XMLDesc(0)).find('on_poweroff')
+
     return node.text if node is not None else ''
 
 
 def _get_on_reboot(dom):
     '''
-    Return `on_reboot` setting from the named vm
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.get_on_reboot <domain>
+    Get on_reboot from a libvirt domain object.
     '''
-    node = ElementTree.fromstring(get_xml(dom)).find('on_reboot')
+    node = ElementTree.fromstring(dom.XMLDesc(0)).find('on_reboot')
+
     return node.text if node is not None else ''
 
 
 def _get_on_crash(dom):
     '''
-    Return `on_crash` setting from the named vm
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.get_on_crash <domain>
+    Get on_crash from a libvirt domain object.
     '''
-    node = ElementTree.fromstring(get_xml(dom)).find('on_crash')
+    node = ElementTree.fromstring(dom.XMLDesc(0)).find('on_crash')
+
     return node.text if node is not None else ''
+
+
+def _get_macs(dom):
+    '''
+    Get mac addresses (macs) from a libvirt domain object.
+    '''
+    return [node.get('address') for node in dom.XMLDesc(0).findall('devices/interface/mac')]
 
 
 def _get_nics(dom):
@@ -477,7 +465,7 @@ def _get_disks(dom):
             if driver is not None and driver.get('type') == 'qcow2':
                 try:
                     stdout = subprocess.Popen(
-                                ['qemu-img', 'info', '--output', 'json', '--backing-chain', disk['file']],
+                                ['qemu-img', 'info', '--force-share', '--output', 'json', '--backing-chain', disk['file']],
                                 shell=False,
                                 stdout=subprocess.PIPE).communicate()[0]
                     qemu_output = salt.utils.stringutils.to_str(stdout)
@@ -862,14 +850,14 @@ def _qemu_image_create(disk, create_overlay=False, saltenv='base'):
 
         qcow2 = False
         if salt.utils.path.which('qemu-img'):
-            res = __salt__['cmd.run']('qemu-img info {}'.format(sfn))
+            res = __salt__['cmd.run']('qemu-img info "{}"'.format(sfn))
             imageinfo = salt.utils.yaml.safe_load(res)
             qcow2 = imageinfo['file format'] == 'qcow2'
         try:
             if create_overlay and qcow2:
                 log.info('Cloning qcow2 image %s using copy on write', sfn)
                 __salt__['cmd.run'](
-                    'qemu-img create -f qcow2 -o backing_file={0} {1}'
+                    'qemu-img create -f qcow2 -o backing_file="{0}" "{1}"'
                     .format(sfn, img_dest).split())
             else:
                 log.debug('Copying %s to %s', sfn, img_dest)
@@ -880,7 +868,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv='base'):
             if disk_size and qcow2:
                 log.debug('Resize qcow2 image to %sM', disk_size)
                 __salt__['cmd.run'](
-                    'qemu-img resize {0} {1}M'
+                    'qemu-img resize "{0}" {1}M'
                     .format(img_dest, disk_size)
                 )
 
@@ -902,7 +890,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv='base'):
             if disk_size:
                 log.debug('Create empty image with size %sM', disk_size)
                 __salt__['cmd.run'](
-                    'qemu-img create -f {0} {1} {2}M'
+                    'qemu-img create -f {0} "{1}" {2}M'
                     .format(disk.get('format', 'qcow2'), img_dest, disk_size)
                 )
             else:
@@ -2345,8 +2333,11 @@ def get_macs(vm_, **kwargs):
 
         salt '*' virt.get_macs <domain>
     '''
-    doc = ElementTree.fromstring(get_xml(vm_, **kwargs))
-    return [node.get('address') for node in doc.findall('devices/interface/mac')]
+    conn = __get_conn(**kwargs)
+    macs = _get_macs(_get_domain(conn, vm_))
+    conn.close()
+
+    return macs
 
 
 def get_graphics(vm_, **kwargs):
@@ -2626,6 +2617,115 @@ def full_info(**kwargs):
     return info
 
 
+def get_uuid(vm_, **kwargs):
+    '''
+    Return a uuid from the named vm
+
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_uuid <domain>
+    '''
+    conn = __get_conn(**kwargs)
+    uuid = _get_uuid(_get_domain(conn, vm_))
+
+    return uuid
+
+
+def get_on_poweroff(vm_, **kwargs):
+    '''
+    Return a on_poweroff from the named vm
+
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_on_poweroff <domain>
+    '''
+    conn = __get_conn(**kwargs)
+    on_poweroff = _get_on_poweroff(_get_domain(conn, vm_))
+
+    return on_poweroff
+
+
+def get_on_reboot(vm_, **kwargs):
+    '''
+    Return a on_reboot from the named vm
+
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_on_reboot <domain>
+    '''
+    conn = __get_conn(**kwargs)
+    on_reboot = _get_on_reboot(_get_domain(conn, vm_))
+
+    return on_reboot
+
+
+def get_on_crash(vm_, **kwargs):
+    '''
+    Return a on_crash from the named vm
+
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param username: username to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+    :param password: password to connect with, overriding defaults
+
+        .. versionadded:: 2019.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_on_crash <domain>
+    '''
+    conn = __get_conn(**kwargs)
+    on_crash = _get_on_crash(_get_domain(conn, vm_))
+
+    return on_crash
+
+
 def get_xml(vm_, **kwargs):
     '''
     Returns the XML for a given vm
@@ -2648,7 +2748,9 @@ def get_xml(vm_, **kwargs):
         salt '*' virt.get_xml <domain>
     '''
     conn = __get_conn(**kwargs)
-    xml_desc = _get_domain(conn, vm_).XMLDesc(0)
+    xml_desc = vm_.XMLDesc(0) if isinstance(
+        vm_, libvirt.virDomain
+    ) else _get_domain(conn, vm_).XMLDesc(0)
     conn.close()
     return xml_desc
 
@@ -3745,14 +3847,13 @@ def vm_diskstats(vm_=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' virt.vm_blockstats
+        salt '*' virt.vm_diskstats
     '''
-    def get_disk_devs(dom):
+    def _get_disk_devs(dom):
         '''
-        Extract the disk devices names from the domain XML definition
+        Get the disk devices names from a libvirt domain object.
         '''
-        doc = ElementTree.fromstring(get_xml(dom, **kwargs))
-        return [target.get('dev') for target in doc.findall('devices/disk/target')]
+        return [target.get('dev') for target in dom.XMLDesc(0).findall('devices/disk/target')]
 
     def _info(dom):
         '''
@@ -3760,7 +3861,7 @@ def vm_diskstats(vm_=None, **kwargs):
         '''
         # Do not use get_disks, since it uses qemu-img and is very slow
         # and unsuitable for any sort of real time statistics
-        disks = get_disk_devs(dom)
+        disks = _get_disk_devs(dom)
         ret = {'rd_req': 0,
                'rd_bytes': 0,
                'wr_req': 0,
@@ -5274,6 +5375,19 @@ def _get_storage_vol(conn, pool, vol):
     return pool_obj.storageVolLookupByName(vol)
 
 
+def _is_valid_volume(vol):
+    '''
+    Checks whether a volume is valid for further use since those may have disappeared since
+    the last pool refresh.
+    '''
+    try:
+        # Getting info on an invalid volume raises error
+        vol.info()
+        return True
+    except libvirt.libvirtError as err:
+        return False
+
+
 def _get_all_volumes_paths(conn):
     '''
     Extract the path and backing stores path of all volumes.
@@ -5282,17 +5396,17 @@ def _get_all_volumes_paths(conn):
     '''
     volumes = [vol for l in [obj.listAllVolumes() for obj in conn.listAllStoragePools()] for vol in l]
     return {vol.path(): [path.text for path in ElementTree.fromstring(vol.XMLDesc()).findall('.//backingStore/path')]
-            for vol in volumes}
+            for vol in volumes if _is_valid_volume(vol)}
 
 
-def volume_infos(pool, volume, **kwargs):
+def volume_infos(pool=None, volume=None, **kwargs):
     '''
     Provide details on a storage volume. If no volume name is provided, the infos
     all the volumes contained in the pool are provided. If no pool is provided,
     the infos of the volumes of all pools are output.
 
-    :param pool: libvirt storage pool name
-    :param volume: name of the volume to get infos from
+    :param pool: libvirt storage pool name (default: ``None``)
+    :param volume: name of the volume to get infos from (default: ``None``)
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
@@ -5309,10 +5423,12 @@ def volume_infos(pool, volume, **kwargs):
     conn = __get_conn(**kwargs)
     try:
         backing_stores = _get_all_volumes_paths(conn)
+        domains = _get_domain(conn)
+        domains_list = domains if isinstance(domains, list) else [domains]
         disks = {domain.name():
                  {node.get('file') for node
                   in ElementTree.fromstring(domain.XMLDesc(0)).findall('.//disk/source/[@file]')}
-                 for domain in _get_domain(conn)}
+                 for domain in domains_list}
 
         def _volume_extract_infos(vol):
             '''
@@ -5342,7 +5458,7 @@ def volume_infos(pool, volume, **kwargs):
         pools = [obj for obj in conn.listAllStoragePools() if pool is None or obj.name() == pool]
         vols = {pool_obj.name(): {vol.name(): _volume_extract_infos(vol)
                                   for vol in pool_obj.listAllVolumes()
-                                  if volume is None or vol.name() == volume}
+                                  if (volume is None or vol.name() == volume) and _is_valid_volume(vol)}
                 for pool_obj in pools}
         return {pool_name: volumes for (pool_name, volumes) in vols.items() if volumes}
     except libvirt.libvirtError as err:

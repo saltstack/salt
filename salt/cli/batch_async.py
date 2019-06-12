@@ -29,6 +29,7 @@ class BatchAsync(object):
     The control parameters are:
         - batch: number/percentage of concurrent running minions
         - batch_delay: minimum wait time between batches
+        - batch_presence_ping_timeout: time to wait for presence pings before starting the batch
         - gather_job_timeout: `find_job` timeout
         - timeout: time to wait before firing a `find_job`
 
@@ -55,6 +56,7 @@ class BatchAsync(object):
             clear_load['gather_job_timeout'] = clear_load['kwargs'].pop('gather_job_timeout')
         else:
             clear_load['gather_job_timeout'] = self.local.opts['gather_job_timeout']
+        self.batch_presence_ping_timeout = clear_load['kwargs'].get('batch_presence_ping_timeout', None)
         self.batch_delay = clear_load['kwargs'].get('batch_delay', 1)
         self.opts = batch_get_opts(
             clear_load.pop('tgt'),
@@ -167,7 +169,8 @@ class BatchAsync(object):
         self.__set_event_handler()
         #start batching even if not all minions respond to ping
         self.event.io_loop.call_later(
-            self.opts['gather_job_timeout'], self.start_batch)
+            self.batch_presence_ping_timeout or self.opts['gather_job_timeout'],
+            self.start_batch)
         ping_return = yield self.local.run_job_async(
             self.opts['tgt'],
             'test.ping',
@@ -219,6 +222,7 @@ class BatchAsync(object):
                 ret=self.opts.get('return', ''),
                 gather_job_timeout=self.opts['gather_job_timeout'],
                 jid=self.batch_jid,
-                metadata=self.metadata)
+                metadata=self.metadata,
+                **self.eauth)
             self.event.io_loop.call_later(self.opts['timeout'], self.find_job, set(next_batch))
             self.active = self.active.union(next_batch)

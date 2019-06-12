@@ -16,6 +16,7 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.files
 import salt.utils.user
+import salt.defaults.exitcodes
 from salt.client import mixins
 from salt.output import display_output
 from salt.utils.lazy import verify_fun
@@ -180,97 +181,106 @@ class Runner(RunnerClient):
         '''
         Execute the runner sequence
         '''
-        import salt.minion
-        ret = {}
+        # Print documentation only
         if self.opts.get('doc', False):
             self.print_docs()
         else:
-            low = {'fun': self.opts['fun']}
-            try:
-                # Allocate a jid
-                async_pub = self._gen_async_pub()
-                self.jid = async_pub['jid']
+            return self._run_runner()
 
-                fun_args = salt.utils.args.parse_input(
-                        self.opts['arg'],
-                        no_parse=self.opts.get('no_parse', []))
+    def _run_runner(self):
+        '''
+        Actually execute specific runner
+        :return:
+        '''
+        import salt.minion
+        ret = {}
+        low = {'fun': self.opts['fun']}
+        try:
+            # Allocate a jid
+            async_pub = self._gen_async_pub()
+            self.jid = async_pub['jid']
 
-                verify_fun(self.functions, low['fun'])
-                args, kwargs = salt.minion.load_args_and_kwargs(
-                    self.functions[low['fun']],
-                    fun_args)
-                low['arg'] = args
-                low['kwarg'] = kwargs
+            fun_args = salt.utils.args.parse_input(
+                    self.opts['arg'],
+                    no_parse=self.opts.get('no_parse', []))
 
+            verify_fun(self.functions, low['fun'])
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                self.functions[low['fun']],
+                fun_args)
+            low['arg'] = args
+            low['kwarg'] = kwargs
+
+            if self.opts.get('eauth'):
+                if 'token' in self.opts:
+                    try:
+                        with salt.utils.files.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
+                            low['key'] = salt.utils.stringutils.to_unicode(fp_.readline())
+                    except IOError:
+                        low['token'] = self.opts['token']
+
+                # If using eauth and a token hasn't already been loaded into
+                # low, prompt the user to enter auth credentials
+                if 'token' not in low and 'key' not in low and self.opts['eauth']:
+                    # This is expensive. Don't do it unless we need to.
+                    import salt.auth
+                    resolver = salt.auth.Resolver(self.opts)
+                    res = resolver.cli(self.opts['eauth'])
+                    if self.opts['mktoken'] and res:
+                        tok = resolver.token_cli(
+                                self.opts['eauth'],
+                                res
+                                )
+                        if tok:
+                            low['token'] = tok.get('token', '')
+                    if not res:
+                        log.error('Authentication failed')
+                        return ret
+                    low.update(res)
+                    low['eauth'] = self.opts['eauth']
+            else:
+                user = salt.utils.user.get_specific_user()
+
+            if low['fun'] in ['state.orchestrate', 'state.orch', 'state.sls']:
+                low['kwarg']['orchestration_jid'] = async_pub['jid']
+
+            # Run the runner!
+            if self.opts.get('async', False):
                 if self.opts.get('eauth'):
-                    if 'token' in self.opts:
-                        try:
-                            with salt.utils.files.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
-                                low['key'] = salt.utils.stringutils.to_unicode(fp_.readline())
-                        except IOError:
-                            low['token'] = self.opts['token']
-
-                    # If using eauth and a token hasn't already been loaded into
-                    # low, prompt the user to enter auth credentials
-                    if 'token' not in low and 'key' not in low and self.opts['eauth']:
-                        # This is expensive. Don't do it unless we need to.
-                        import salt.auth
-                        resolver = salt.auth.Resolver(self.opts)
-                        res = resolver.cli(self.opts['eauth'])
-                        if self.opts['mktoken'] and res:
-                            tok = resolver.token_cli(
-                                    self.opts['eauth'],
-                                    res
-                                    )
-                            if tok:
-                                low['token'] = tok.get('token', '')
-                        if not res:
-                            log.error('Authentication failed')
-                            return ret
-                        low.update(res)
-                        low['eauth'] = self.opts['eauth']
+                    async_pub = self.cmd_async(low)
                 else:
-                    user = salt.utils.user.get_specific_user()
+                    async_pub = self.asynchronous(self.opts['fun'],
+                                                  low,
+                                                  user=user,
+                                                  pub=async_pub)
 
-                if low['fun'] in ['state.orchestrate', 'state.orch', 'state.sls']:
-                    low['kwarg']['orchestration_jid'] = async_pub['jid']
+                # by default: info will be not enough to be printed out !
+                log.warning(
+                    'Running in asynchronous mode. Results of this execution may '
+                    'be collected by attaching to the master event bus or '
+                    'by examing the master job cache, if configured. '
+                    'This execution is running under tag %s', async_pub['tag']
+                )
+                return async_pub['jid']  # return the jid
 
-                # Run the runner!
-                if self.opts.get('async', False):
-                    if self.opts.get('eauth'):
-                        async_pub = self.cmd_async(low)
-                    else:
-                        async_pub = self.asynchronous(self.opts['fun'],
-                                                      low,
-                                                      user=user,
-                                                      pub=async_pub)
-                    # by default: info will be not enougth to be printed out !
-                    log.warning(
-                        'Running in asynchronous mode. Results of this execution may '
-                        'be collected by attaching to the master event bus or '
-                        'by examing the master job cache, if configured. '
-                        'This execution is running under tag %s', async_pub['tag']
-                    )
-                    return async_pub['jid']  # return the jid
-
-                # otherwise run it in the main process
-                if self.opts.get('eauth'):
-                    ret = self.cmd_sync(low)
-                    if isinstance(ret, dict) and set(ret) == {'data', 'outputter'}:
-                        outputter = ret['outputter']
-                        ret = ret['data']
-                    else:
-                        outputter = None
-                    display_output(ret, outputter, self.opts)
+            # otherwise run it in the main process
+            if self.opts.get('eauth'):
+                ret = self.cmd_sync(low)
+                if isinstance(ret, dict) and set(ret) == {'data', 'outputter'}:
+                    outputter = ret['outputter']
+                    ret = ret['data']
                 else:
-                    ret = self._proc_function(self.opts['fun'],
-                                              low,
-                                              user,
-                                              async_pub['tag'],
-                                              async_pub['jid'],
-                                              daemonize=False)
-            except salt.exceptions.SaltException as exc:
-                evt = salt.utils.event.get_event('master', opts=self.opts)
+                    outputter = None
+                display_output(ret, outputter, self.opts)
+            else:
+                ret = self._proc_function(self.opts['fun'],
+                                          low,
+                                          user,
+                                          async_pub['tag'],
+                                          async_pub['jid'],
+                                          daemonize=False)
+        except salt.exceptions.SaltException as exc:
+            with salt.utils.event.get_event('master', opts=self.opts) as evt:
                 evt.fire_event({'success': False,
                                 'return': '{0}'.format(exc),
                                 'retcode': 254,
@@ -278,19 +288,18 @@ class Runner(RunnerClient):
                                 'fun_args': fun_args,
                                 'jid': self.jid},
                                tag='salt/run/{0}/ret'.format(self.jid))
-                # Attempt to grab documentation
-                if 'fun' in low:
-                    ret = self.get_docs('{0}*'.format(low['fun']))
-                else:
-                    ret = None
-
-                # If we didn't get docs returned then
-                # return the `not availble` message.
-                if not ret:
-                    ret = '{0}'.format(exc)
-                if not self.opts.get('quiet', False):
-                    display_output(ret, 'nested', self.opts)
+            # Attempt to grab documentation
+            if 'fun' in low:
+                ret = self.get_docs('{0}*'.format(low['fun']))
             else:
-                log.debug('Runner return: %s', ret)
+                ret = None
 
-            return ret
+            # If we didn't get docs returned then
+            # return the `not availble` message.
+            if not ret:
+                ret = '{0}'.format(exc)
+            if not self.opts.get('quiet', False):
+                display_output(ret, 'nested', self.opts)
+        log.debug('Runner return: %s', ret)
+
+        return ret

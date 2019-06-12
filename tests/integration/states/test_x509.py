@@ -5,6 +5,7 @@ import logging
 
 import salt.utils.files
 from salt.ext import six
+import textwrap
 
 from tests.support.helpers import with_tempfile
 from tests.support.case import ModuleCase
@@ -30,6 +31,39 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         cert_path = os.path.join(RUNTIME_VARS.BASE_FILES, 'x509_test.crt')
         with salt.utils.files.fopen(cert_path) as fp:
             cls.x509_cert_text = fp.read()
+
+    def setUp(self):
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'signing_policies.sls'), 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                x509_signing_policies:
+                  ca_policy:
+                    - minions: '*'
+                    - signing_private_key: {0}/pki/ca.key
+                    - signing_cert: {0}/pki/ca.crt
+                    - O: Test Company
+                    - basicConstraints: "CA:false"
+                    - keyUsage: "critical digitalSignature, keyEncipherment"
+                    - extendedKeyUsage: "critical serverAuth, clientAuth"
+                    - subjectKeyIdentifier: hash
+                    - authorityKeyIdentifier: keyid
+                    - days_valid: 730
+                    - copypath: {0}/pki
+                     '''.format(RUNTIME_VARS.TMP)))
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     base:
+                       '*':
+                         - signing_policies
+                     '''))
+        self.run_function('saltutil.refresh_pillar')
+
+    def tearDown(self):
+        os.remove(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'signing_policies.sls'))
+        os.remove(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls'))
+        certs_path = os.path.join(RUNTIME_VARS.TMP, 'pki')
+        if os.path.exists(certs_path):
+            salt.utils.files.rm_rf(certs_path)
+        self.run_function('saltutil.refresh_pillar')
 
     def run_function(self, *args, **kwargs):
         ret = super(x509Test, self).run_function(*args, **kwargs)
@@ -61,3 +95,11 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
             assert state_result['result'] is True, state_result
         assert os.path.exists(keyfile)
         assert os.path.exists(crtfile)
+
+    def test_cert_signing(self):
+        ret = self.run_function('state.apply', ['test_cert'], pillar={'tmp_dir': RUNTIME_VARS.TMP})
+        key = 'x509_|-test_crt_|-{}/pki/test.crt_|-certificate_managed'.format(RUNTIME_VARS.TMP)
+        assert key in ret
+        assert 'changes' in ret[key]
+        assert 'Certificate' in ret[key]['changes']
+        assert 'New' in ret[key]['changes']['Certificate']
