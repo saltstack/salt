@@ -389,7 +389,11 @@ def get(path, objectType, user=None):
         tdacl = _get_dacl(path, objectTypeBit)
         if tdacl:
             for counter in range(0, tdacl.GetAceCount()):
-                tAce = tdacl.GetAce(counter)
+                try:
+                    tAce = tdacl.GetAce(counter)
+                except NotImplementedError:
+                    # ACE 9 "AccessAllowedCallback" is not supported
+                    continue
                 if not sidRet['sid'] or (tAce[2] == sidRet['sid']):
                     ret['ACLs'].append(_ace_to_text(tAce, objectTypeBit))
     return ret
@@ -513,7 +517,11 @@ def rm_ace(path, objectType, user, permission=None, acetype=None, propagation=No
             counter = 0
             acesRemoved = []
             while counter < dacl.GetAceCount():
-                tAce = dacl.GetAce(counter)
+                try:
+                    tAce = dacl.GetAce(counter)
+                except NotImplementedError:
+                    # ACE 9 "AccessAllowedCallback" is not supported
+                    continue
                 if (tAce[0][1] & win32security.INHERITED_ACE) != win32security.INHERITED_ACE:
                     if tAce[2] == sidRet['sid']:
                         if not acetypebit or tAce[0][0] == acetypebit:
@@ -607,7 +615,11 @@ def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=F
                     counter = 0
                     removedAces = []
                     while counter < tdacl.GetAceCount():
-                        tAce = tdacl.GetAce(counter)
+                        try:
+                            tAce = tdacl.GetAce(counter)
+                        except NotImplementedError:
+                            # ACE 9 "AccessAllowedCallback" is not supported
+                            continue
                         if (tAce[0][1] & win32security.INHERITED_ACE) != win32security.INHERITED_ACE:
                             tdacl.DeleteAce(counter)
                             removedAces.append(_ace_to_text(tAce, objectType))
@@ -627,7 +639,11 @@ def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=F
                     counter = 0
                     inheritedAcesRemoved = []
                     while counter < tdacl.GetAceCount():
-                        tAce = tdacl.GetAce(counter)
+                        try:
+                            tAce = tdacl.GetAce(counter)
+                        except NotImplementedError:
+                            # ACE 9 "AccessAllowedCallback" is not supported
+                            continue
                         if (tAce[0][1] & win32security.INHERITED_ACE) == win32security.INHERITED_ACE:
                             tdacl.DeleteAce(counter)
                             inheritedAcesRemoved.append(_ace_to_text(tAce, objectType))
@@ -735,7 +751,11 @@ def check_inheritance(path, objectType, user=None):
         return ret
 
     for counter in range(0, dacls.GetAceCount()):
-        ace = dacls.GetAce(counter)
+        try:
+            ace = dacls.GetAce(counter)
+        except NotImplementedError:
+            # ACE 9 "AccessAllowedCallback" is not supported
+            continue
         if (ace[0][1] & win32security.INHERITED_ACE) == win32security.INHERITED_ACE:
             if not sidRet['sid'] or ace[2] == sidRet['sid']:
                 ret['Inheritance'] = True
@@ -790,7 +810,11 @@ def check_ace(path, objectType, user, permission=None, acetype=None, propagation
     ret['result'] = True
     if dacls:
         for counter in range(0, dacls.GetAceCount()):
-            ace = dacls.GetAce(counter)
+            try:
+                ace = dacls.GetAce(counter)
+            except NotImplementedError:
+                # ACE 9 "AccessAllowedCallback" is not supported
+                continue
             if ace[2] == sidRet['sid']:
                 if not acetypebit or ace[0][0] == acetypebit:
                     if not propagationbit or (ace[0][1] & propagationbit) == propagationbit:
