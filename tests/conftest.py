@@ -700,18 +700,6 @@ def cli_bin_dir(tempdir,
     tmp_cli_scripts_dir.ensure(dir=True)
     cli_bin_dir_path = tmp_cli_scripts_dir.strpath
 
-    extra_code = textwrap.dedent(
-        r'''
-        # During test runs, squash the msgpack deprecation warnings
-        import os
-        import warnings
-        warnings.filterwarnings(
-            'ignore', r'.*encoding is deprecated, Use raw=False instead.*', DeprecationWarning,
-        )
-        os.environ['PYTHONWARNINGS'] = r'ignore:.*encoding is deprecated.*Use raw=False instead.*:DeprecationWarning'
-        '''
-    )
-
     # Now that we have the CLI directory created, lets generate the required CLI scripts to run salt's test suite
     for script_name in (cli_master_script_name,
                         cli_minion_script_name,
@@ -728,7 +716,6 @@ def cli_bin_dir(tempdir,
             script_name=original_script_name,
             executable=sys.executable,
             code_dir=CODE_DIR,
-            extra_code=extra_code,
             inject_sitecustomize=MAYBE_RUN_COVERAGE
         )
 
