@@ -18,7 +18,6 @@ import pprint
 import shutil
 import socket
 import logging
-import textwrap
 TESTS_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
@@ -57,7 +56,6 @@ import salt.utils.path
 import salt.log.setup
 import salt.log.mixins
 import salt.utils.platform
-from salt.utils.odict import OrderedDict
 from salt.utils.immutabletypes import freeze
 
 # Import Pytest Salt libs
