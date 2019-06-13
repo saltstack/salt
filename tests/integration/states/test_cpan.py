@@ -29,6 +29,8 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         if 'cpan' not in __testcontext__:
             self.run_state('pkg.installed', name='cpan')
             self.run_state('pkg.installed', name='perl')
+            # CentOS based distros
+            self.run_state('pkg.installed', name='perl-cpan')
             self.run_state('pkg.installed', name='perl-doc')
             __testcontext__['cpan'] = True
 
