@@ -20,7 +20,7 @@ class EnabledTest(ModuleCase):
     validate the use of shell processing for cmd.run on the salt command line
     and in templating
     '''
-    cmd = ("printf '%s\n' first second third | wc -l ; "
+    cmd = ("echo -e 'first\\nsecond\\nthird' | wc -l ; "
            "export SALTY_VARIABLE='saltines' && echo $SALTY_VARIABLE ; "
            "echo duh &> /dev/null")
 
@@ -38,8 +38,7 @@ class EnabledTest(ModuleCase):
         '''
         test shell disabled output for cmd.run
         '''
-        disabled_ret = ('first\nsecond\nthird\n|\nwc\n-l\n;\nexport\nSALTY_VARIABLE=saltines'
-                        '\n&&\necho\n$SALTY_VARIABLE\n;\necho\nduh\n&>\n/dev/null')
+        disabled_ret = ('first\nsecond\nthird | wc -l ; export SALTY_VARIABLE=saltines && echo $SALTY_VARIABLE ; echo duh &> /dev/null')
         ret = self.run_function('cmd.run', [self.cmd], python_shell=False)
         self.assertEqual(ret, disabled_ret)
 
