@@ -1161,11 +1161,13 @@ def symlink(src, link):
         win32file.CreateSymbolicLink(link, src, int(is_dir))
         return True
     except win32file.error as exc:
+        privs = __salt__['cmd.run_stdout']('whoami /priv')
         raise CommandExecutionError(
-            'Could not create \'{0}\' - [{1}] {2}'.format(
+            'Could not create \'{0}\' - [{1}] {2}\n{3}'.format(
                 link,
                 exc.winerror,
-                exc.strerror
+                exc.strerror,
+                privs
             )
         )
 
