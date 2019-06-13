@@ -311,7 +311,7 @@ def banner(
         text = (
             "The contents of this file are managed by Salt. "
             "Any changes to this file may be overwritten "
-            "automatically and without warning"
+            "automatically and without warning."
         )
 
     # Set up some typesetting variables
