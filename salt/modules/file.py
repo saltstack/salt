@@ -2776,11 +2776,37 @@ def blockreplace(path,
                     if insert_before_match:
                         match_idx += 1
                 block_found = True
+        else:
+            raise CommandExecutionError(
+                'Cannot edit marked block. Markers were not found in file.'
+            )
 
-    if not block_found:
-        raise CommandExecutionError(
-            'Cannot edit marked block. Markers were not found in file.'
-        )
+    if block_found:
+        diff = __utils__['stringutils.get_diff'](orig_file, new_file)
+        has_changes = diff is not ''
+        if has_changes and not dry_run:
+            # changes detected
+            # backup file attrs
+            perms = {}
+            perms['user'] = get_user(path)
+            perms['group'] = get_group(path)
+            perms['mode'] = salt.utils.files.normalize_mode(get_mode(path))
+
+            # backup old content
+            if backup is not False:
+                backup_path = '{0}{1}'.format(path, backup)
+                shutil.copy2(path, backup_path)
+                # copy2 does not preserve ownership
+                if salt.utils.platform.is_windows():
+                    check_perms(path=backup_path,
+                                ret=None,
+                                owner=perms['user'])
+                else:
+                    check_perms(name=backup_path,
+                                ret=None,
+                                user=perms['user'],
+                                group=perms['group'],
+                                mode=perms['mode'])
 
     diff = __utils__['stringutils.get_diff'](orig_file, new_file)
     has_changes = diff is not ''
@@ -2797,11 +2823,16 @@ def blockreplace(path,
             backup_path = '{0}{1}'.format(path, backup)
             shutil.copy2(path, backup_path)
             # copy2 does not preserve ownership
-            check_perms(backup_path,
-                    None,
-                    perms['user'],
-                    perms['group'],
-                    perms['mode'])
+            if salt.utils.platform.is_windows():
+                check_perms(path=path,
+                            ret=None,
+                            owner=perms['user'])
+            else:
+                check_perms(path,
+                            ret=None,
+                            user=perms['user'],
+                            group=perms['group'],
+                            mode=perms['mode'])
 
         # write new content in the file while avoiding partial reads
         try:
