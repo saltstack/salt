@@ -654,7 +654,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                     'arch': 'x86_64',
                     'install_date_time_t': 1503572639,
                 }],
-                'perseus-dummy.i586': [{
+                'perseus-dummy': [{
                     'version': '1.1',
                     'release': '1.1',
                     'arch': 'i586',
