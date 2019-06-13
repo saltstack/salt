@@ -2798,9 +2798,13 @@ def blockreplace(path,
                 shutil.copy2(path, backup_path)
                 # copy2 does not preserve ownership
                 if salt.utils.platform.is_windows():
+                    # This function resides in win_file.py and will be available
+                    # on Windows. The local function will be overridden
+                    # pylint: disable=E1120,E1123
                     check_perms(path=backup_path,
                                 ret=None,
                                 owner=perms['user'])
+                    # pylint: enable=E1120,E1123
                 else:
                     check_perms(name=backup_path,
                                 ret=None,
@@ -2824,9 +2828,13 @@ def blockreplace(path,
             shutil.copy2(path, backup_path)
             # copy2 does not preserve ownership
             if salt.utils.platform.is_windows():
+                # This function resides in win_file.py and will be available
+                # on Windows. The local function will be overridden
+                # pylint: disable=E1120,E1123
                 check_perms(path=path,
                             ret=None,
                             owner=perms['user'])
+                # pylint: enable=E1120,E1123
             else:
                 check_perms(path,
                             ret=None,
