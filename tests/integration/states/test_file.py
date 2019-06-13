@@ -2346,7 +2346,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(template_path, 'w') as fp_:
             fp_.write(os.linesep.join(sls_template).format(testcase_filedest))
 
-        ret = self.run_function('state.sls', mods='issue-11003')
+        ret = self.run_function('state.sls', mods='issue-11003', timeout=600)
         for name, step in six.iteritems(ret):
             self.assertSaltTrueReturn({name: step})
         with salt.utils.files.fopen(testcase_filedest) as fp_:

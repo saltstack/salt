@@ -514,7 +514,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             false_cmd = 'exit 1 >nul'
         try:
             ret = self.run_state(
-                'pip.installed', name='pep8', bin_env=venv_dir, unless=false_cmd
+                'pip.installed', name='pep8', bin_env=venv_dir, unless=false_cmd, timeout=600
             )
             self.assertSaltTrueReturn(ret)
             self.assertNotIn('warnings', next(six.itervalues(ret)))
