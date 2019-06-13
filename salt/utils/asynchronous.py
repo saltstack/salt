@@ -129,6 +129,8 @@ class IOLoop(object):
             loop._salt_started_called = False
             loop._salt_pid = os.getpid()
             loop._salt_close_called = False
+        if loop._callbacks is None:
+            loop._callbacks = []
         return loop
 
     @classmethod
