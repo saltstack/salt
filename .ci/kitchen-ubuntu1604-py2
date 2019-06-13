@@ -12,6 +12,9 @@ properties([
     [
         $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
     ],
+    parameters([
+        booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
+    ])
 ])
 timeout(time: global_timeout, unit: 'HOURS') {
     node('kitchen-slave') {
@@ -31,7 +34,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
                     'TEST_SUITE=py2',
                     'TEST_PLATFORM=ubuntu-1604',
                     'PY_COLORS=1',
-                    'FORCE_FULL=true',
+                    "FORCE_FULL=${params.runFull}",
                 ]) {
                     // Set the GH status even before cloning the repo
                     stage('github-pending') {
