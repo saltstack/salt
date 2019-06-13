@@ -915,10 +915,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             tmp_dir = os.path.join(TMP, 'pgdata')
             sym_dir = os.path.join(TMP, 'pg_data')
 
-            if IS_WINDOWS:
-                self.run_function('file.mkdir', [tmp_dir, 'Administrators'])
-            else:
-                os.mkdir(tmp_dir, 0o700)
+            os.mkdir(tmp_dir, 0o700)
 
             self.run_function('file.symlink', [tmp_dir, sym_dir])
 
@@ -1254,10 +1251,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             null_file = '{0}/null'.format(tmp_dir)
             broken_link = '{0}/broken'.format(tmp_dir)
 
-            if IS_WINDOWS:
-                self.run_function('file.mkdir', [tmp_dir, 'Administrators'])
-            else:
-                os.mkdir(tmp_dir, 0o700)
+            os.mkdir(tmp_dir, 0o700)
 
             self.run_function('file.symlink', [null_file, broken_link])
 

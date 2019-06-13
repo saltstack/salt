@@ -95,6 +95,7 @@ def runas(cmdLine, username, password=None, cwd=None):
     except WindowsError:  # pylint: disable=undefined-variable
         log.debug("Unable to impersonate SYSTEM user")
         impersonation_token = None
+        win32api.CloseHandle(th)
 
     # Impersonation of the SYSTEM user failed. Fallback to an un-privileged
     # runas.
@@ -105,7 +106,6 @@ def runas(cmdLine, username, password=None, cwd=None):
     if domain == 'NT AUTHORITY':
         # Logon as a system level account, SYSTEM, LOCAL SERVICE, or NETWORK
         # SERVICE.
-        logonType = win32con.LOGON32_LOGON_SERVICE
         user_token = win32security.LogonUser(
             username,
             domain,
@@ -172,53 +172,56 @@ def runas(cmdLine, username, password=None, cwd=None):
     # Create the environment for the user
     env = win32profile.CreateEnvironmentBlock(user_token, False)
 
-    # Start the process in a suspended state.
-    process_info = salt.platform.win.CreateProcessWithTokenW(
-        int(user_token),
-        logonflags=1,
-        applicationname=None,
-        commandline=cmdLine,
-        currentdirectory=cwd,
-        creationflags=creationflags,
-        startupinfo=startup_info,
-        environment=env,
-    )
+    try:
+        # Start the process in a suspended state.
+        process_info = salt.platform.win.CreateProcessWithTokenW(
+            int(user_token),
+            logonflags=1,
+            applicationname=None,
+            commandline=cmdLine,
+            currentdirectory=cwd,
+            creationflags=creationflags,
+            startupinfo=startup_info,
+            environment=env,
+        )
 
-    hProcess = process_info.hProcess
-    hThread = process_info.hThread
-    dwProcessId = process_info.dwProcessId
-    dwThreadId = process_info.dwThreadId
+        hProcess = process_info.hProcess
+        hThread = process_info.hThread
+        dwProcessId = process_info.dwProcessId
+        dwThreadId = process_info.dwThreadId
 
-    salt.platform.win.kernel32.CloseHandle(stdin_write.handle)
-    salt.platform.win.kernel32.CloseHandle(stdout_write.handle)
-    salt.platform.win.kernel32.CloseHandle(stderr_write.handle)
+        # We don't use these so let's close the handle
+        salt.platform.win.kernel32.CloseHandle(stdin_write.handle)
+        salt.platform.win.kernel32.CloseHandle(stdout_write.handle)
+        salt.platform.win.kernel32.CloseHandle(stderr_write.handle)
 
-    ret = {'pid': dwProcessId}
-    # Resume the process
-    psutil.Process(dwProcessId).resume()
+        ret = {'pid': dwProcessId}
+        # Resume the process
+        psutil.Process(dwProcessId).resume()
 
-    # Wait for the process to exit and get it's return code.
-    if win32event.WaitForSingleObject(hProcess, win32event.INFINITE) == win32con.WAIT_OBJECT_0:
-        exitcode = win32process.GetExitCodeProcess(hProcess)
-        ret['retcode'] = exitcode
+        # Wait for the process to exit and get it's return code.
+        if win32event.WaitForSingleObject(hProcess, win32event.INFINITE) == win32con.WAIT_OBJECT_0:
+            exitcode = win32process.GetExitCodeProcess(hProcess)
+            ret['retcode'] = exitcode
 
-    # Read standard out
-    fd_out = msvcrt.open_osfhandle(stdout_read.handle, os.O_RDONLY | os.O_TEXT)
-    with os.fdopen(fd_out, 'r') as f_out:
-        stdout = f_out.read()
-        ret['stdout'] = stdout
+        # Read standard out
+        fd_out = msvcrt.open_osfhandle(stdout_read.handle, os.O_RDONLY | os.O_TEXT)
+        with os.fdopen(fd_out, 'r') as f_out:
+            stdout = f_out.read()
+            ret['stdout'] = stdout
 
-    # Read standard error
-    fd_err = msvcrt.open_osfhandle(stderr_read.handle, os.O_RDONLY | os.O_TEXT)
-    with os.fdopen(fd_err, 'r') as f_err:
-        stderr = f_err.read()
-        ret['stderr'] = stderr
-
-    salt.platform.win.kernel32.CloseHandle(hProcess)
-    win32api.CloseHandle(user_token)
-    if impersonation_token:
-        win32security.RevertToSelf()
-    win32api.CloseHandle(impersonation_token)
+        # Read standard error
+        fd_err = msvcrt.open_osfhandle(stderr_read.handle, os.O_RDONLY | os.O_TEXT)
+        with os.fdopen(fd_err, 'r') as f_err:
+            stderr = f_err.read()
+            ret['stderr'] = stderr
+    finally:
+        salt.platform.win.kernel32.CloseHandle(hProcess)
+        win32api.CloseHandle(th)
+        win32api.CloseHandle(user_token)
+        if impersonation_token:
+            win32security.RevertToSelf()
+        win32api.CloseHandle(impersonation_token)
 
     return ret
 
@@ -258,20 +261,21 @@ def runas_unpriv(cmd, username, password, cwd=None):
         hStdError=errwrite,
     )
 
-    # Run command and return process info structure
-    process_info = salt.platform.win.CreateProcessWithLogonW(
-            username=username,
-            domain=domain,
-            password=password,
-            logonflags=salt.platform.win.LOGON_WITH_PROFILE,
-            commandline=cmd,
-            startupinfo=startup_info,
-            currentdirectory=cwd)
-
-    salt.platform.win.kernel32.CloseHandle(dupin)
-    salt.platform.win.kernel32.CloseHandle(c2pwrite)
-    salt.platform.win.kernel32.CloseHandle(errwrite)
-    salt.platform.win.kernel32.CloseHandle(process_info.hThread)
+    try:
+        # Run command and return process info structure
+        process_info = salt.platform.win.CreateProcessWithLogonW(
+                username=username,
+                domain=domain,
+                password=password,
+                logonflags=salt.platform.win.LOGON_WITH_PROFILE,
+                commandline=cmd,
+                startupinfo=startup_info,
+                currentdirectory=cwd)
+        salt.platform.win.kernel32.CloseHandle(process_info.hThread)
+    finally:
+        salt.platform.win.kernel32.CloseHandle(dupin)
+        salt.platform.win.kernel32.CloseHandle(c2pwrite)
+        salt.platform.win.kernel32.CloseHandle(errwrite)
 
     # Initialize ret and set first element
     ret = {'pid': process_info.dwProcessId}
