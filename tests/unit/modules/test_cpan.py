@@ -32,7 +32,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         return {cpan: {'_get_cpan_bin': MagicMock()}}
 
     def test_get_get_binary(self):
-        mock = MagicMock()
+        mock = MagicMock(return_value='/mock/bin/cpan')
         with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
             # Verify that the name of the default cpan executable starts with 'cpan'
             self.assertTrue(

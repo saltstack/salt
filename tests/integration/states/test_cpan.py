@@ -13,7 +13,11 @@ import logging
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
+
+# Import salt libs
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -32,8 +36,10 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
             # CentOS based distros
             self.run_state('pkg.installed', name='perl-cpan')
             self.run_state('pkg.installed', name='perl-doc')
+            self.assertTrue(salt.utils.path.which('cpan').endswith('cpan'), "cpan not installed")
             __testcontext__['cpan'] = True
 
+    @destructiveTest
     def test_cpan_installed_removed(self):
         '''
         Tests installed and removed states
