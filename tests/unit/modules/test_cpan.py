@@ -29,19 +29,39 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
     # 'install' function tests: 2
 
     def setup_loader_modules(self):
-        return {cpan: {'_get_cpan_bin': MagicMock()}}
+        return {cpan: {}}
 
-    def test_get_get_binary(self):
-        mock = MagicMock(return_value='/mock/bin/cpan')
-        with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
-            # Verify that the name of the default cpan executable starts with 'cpan'
-            self.assertTrue(
-                os.path.split(cpan._get_cpan_bin())[-1].startswith('cpan'))
+    @staticmethod
+    def _patch_binary(func, *args, **kwargs):
+        with patch.object(salt.utils.path, 'which', MagicMock(return_value='/usr/bin/cpan')):
+            with patch.object(cpan, '_configure', MagicMock(return_value=True)):
+                return func(*args, **kwargs)
+
+    def test__get_binary_no_env(self):
+        # Verify that the name of the default cpan executable starts with 'cpan'
+        bin_path = self._patch_binary(cpan._get_cpan_bin)
+        self.assertEqual('cpan', os.path.split(bin_path)[-1])
+
+    def test__get_binary(self):
+        # Verify that the name of the default cpan executable starts with 'cpan'
+        bin_path = self._patch_binary(cpan._get_cpan_bin, 'cpan')
+        self.assertEqual('cpan', os.path.split(bin_path)[-1])
+
+    def test__configure(self):
+        with patch.dict(cpan.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode':0})}):
+            self.assertTrue(cpan._configure("/usr/bin/cpan"))
+
+    def test__configure_fail(self):
+        with patch.dict(cpan.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode':1})}):
+            self.assertFalse(cpan._configure("/usr/bin/cpan"))
 
     def test_get_version(self):
-        mock = MagicMock(return_value={'installed version': '2.26',
-                                       'installed file': "",
-                                       'cpan build dirs': []})
+        mock = MagicMock(return_value={
+                'installed version': '2.26',
+                'installed file': "",
+                'cpan build dirs': []
+            }
+        )
         with patch.object(cpan, 'show', mock):
             self.assertEqual(cpan.version(), "2.26")
 
