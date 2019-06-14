@@ -175,6 +175,36 @@ New output:
           Skipped:
               0
 
+Unless and onlyif Enhancements
+==============================
+
+The ``unless`` and ``onlyif`` requisites can now be operated with salt modules.
+The dictionary must contain an argument ``fun`` which is the module that is
+being run, and everything else must be passed in under the args key or will be
+passed as individual kwargs to the module function.
+
+.. code-block:: yaml
+
+  install apache on debian based distros:
+    cmd.run:
+      - name: make install
+      - cwd: /path/to/dir/whatever-2.1.5/
+      - unless:
+        - fun: file.file_exists
+          path: /usr/local/bin/whatever
+
+.. code-block:: yaml
+
+  set mysql root password:
+    debconf.set:
+      - name: mysql-server-5.7
+      - data:
+          'mysql-server/root_password': {'type': 'password', 'value': {{pillar['mysql.pass']}} }
+      - unless:
+        - fun: pkg.version
+          args:
+            - mysql-server-5.7
+
 
 Keystore State and Module
 =========================
@@ -349,12 +379,53 @@ Module Changes
 - The :py:func:`yumpkg <salt.modules.yumpkg>` module has been updated to support
   VMWare's Photon OS, which uses tdnf (a C implementation of dnf).
 
+- The :py:func:`chocolatey.bootstrap <salt.modules.chocolatey.bootstrap>` function
+  has been updated to support offline installation.
+
+- The :py:func:`chocolatey.unbootstrap <salt.modules.chocolatey.unbootstrap>` function
+  has been added to uninstall Chocolatey.
+
 Runner Changes
 ==============
 
 - The :py:func:`saltutil.sync_auth <salt.runners.saltutil.sync_auth>` function
   has been added to sync loadable auth modules. :py:func:`saltutil.sync_all <salt.runners.saltutil.sync_all>`
   will also include these modules.
+
+Util Changes
+============
+
+- The :py:func:`win_dotnet <salt.utils.win_dotnet>` Salt util has been added to
+  make it easier to detect the versions of .NET installed on the system. It includes
+  the following functions:
+
+    - :py:func:`versions <salt.utils.win_dotnet.versions>`
+    - :py:func:`versions_list <salt.utils.win_dotnet.versions_list>`
+    - :py:func:`versions_details <salt.utils.win_dotnet.versions_details>`
+    - :py:func:`version_at_least <salt.utils.win_dotnet.version_at_least>`
+
+Serializer Changes
+==================
+
+- The configparser serializer and deserializer functions can now be made to preserve
+  case of item names by passing 'preserve_case=True' in the options parameter of the function.
+
+  .. note::
+      This is a parameter consumed only by the salt.serializer.configparser serialize and
+      deserialize functions and not the low-level configparser python object.
+
+  For example, in a file.serialze state:
+
+  .. code-block:: yaml
+
+    some.ini:
+      - file.serialize:
+         - formatter: configparser
+         - merge_if_exists: True
+         - deserializer_opts:
+           - preserve_case: True
+         - serializer_opts:
+           - preserve_case: True
 
 Enhancements to Engines
 =======================
@@ -396,12 +467,28 @@ the ``beacon_module`` parameter in the beacon configuration.
 Salt Cloud Features
 ===================
 
+General
+-------
+
+The salt-cloud WinRM util has been extended to allow for an Administrator
+account rename during deployment (for example, the Administator account
+being renamed by an Active Directory group policy).
+
 GCE Driver
 ----------
 
 The GCE salt cloud driver can now be used with GCE instance credentials by
 setting the configuration paramaters ``service_account_private_key`` and
 ``service_account_private_email`` to an empty string.
+
+VMWware Driver
+--------------
+
+The VMWare driver has been updated to:
+    Allow specifying a Windows domain to join during customization.
+    Allow specifying timezone for the system during customization.
+    Allow disabling the Windows autologon after deployment.
+    Allow specifying the source template/VM's datacenter (to allow cloning between datacenters).
 
 Salt Api
 ========

@@ -345,6 +345,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             raise RuntimeError
 
     @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
+    @skipIf(salt.utils.platform.is_darwin(), 'Do not run on MacOS')
     def test_run_cwd_in_combination_with_runas(self):
         '''
         cmd.run executes command in the cwd directory
