@@ -819,7 +819,7 @@ def extracted(name,
         ret['comment'] = (
             'Invalid archive_format \'{0}\'. Either set it to a supported '
             'value ({1}) or remove this argument and the archive format will '
-            'be guesseed based on file extension.'.format(
+            'be guessed based on file extension.'.format(
                 archive_format,
                 ', '.join(valid_archive_formats),
             )
