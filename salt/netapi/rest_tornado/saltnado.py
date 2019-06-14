@@ -32,6 +32,7 @@ add the following to the Salt master config file.
         disable_ssl: False
         webhook_disable_auth: False
         cors_origin: null
+        xheaders: False
 
 .. _rest_tornado-auth:
 

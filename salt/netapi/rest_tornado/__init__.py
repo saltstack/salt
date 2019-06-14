@@ -101,6 +101,9 @@ def start():
 
     # the kwargs for the HTTPServer
     kwargs = {}
+    if mod_opts.get('xheaders', None):
+        kwargs['xheaders'] = mod_opts.get('xheaders')
+
     if not mod_opts.get('disable_ssl', False):
         if 'ssl_crt' not in mod_opts:
             log.error("Not starting '%s'. Options 'ssl_crt' and "
