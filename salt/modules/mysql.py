@@ -893,7 +893,7 @@ def version_comment(**connection_args):
 
         salt '*' mysql.version_comment
     '''
-    return getvariable('version_comment', **connection_args).get('Value')
+    return salt.utils.stringutils.to_str(getvariable('version_comment', **connection_args).get('Value'))
 
 
 def slave_lag(**connection_args):
