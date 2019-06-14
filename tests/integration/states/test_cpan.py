@@ -44,7 +44,7 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Tests installed and removed states
         '''
-        name = 'DateTime'
+        name = 'File::Temp'
         ret = self.run_function('cpan.show', (name,))
         version = ret.get('installed version', None)
         if version and ("not installed" not in version):
