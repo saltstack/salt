@@ -63,7 +63,6 @@ Functions to interact with Hashicorp Vault.
         And then export the VAULT_TOKEN variable in your OS:
 
         .. code-block:: bash
-        
            export VAULT_TOKEN=11111111-1111-1111-1111-1111111111111
 
     policies
