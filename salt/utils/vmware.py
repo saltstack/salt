@@ -76,11 +76,14 @@ You should see output related to the ESXi host's syslog configuration.
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 import atexit
+import json
 import errno
 import logging
 import time
 import sys
 import ssl
+import yaml
+
 
 # Import Salt Libs
 import salt.exceptions
@@ -97,6 +100,7 @@ try:
     from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub, \
             SoapStubAdapter
     from pyVmomi import vim, vmodl, VmomiSupport
+    from pyVmomi.VmomiSupport import VmomiJSONEncoder
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -3224,7 +3228,9 @@ def get_vm_by_property(service_instance, name, datacenter=None, vm_properties=No
     elif len(vm_formatted) > 1:
         raise salt.exceptions.VMwareMultipleObjectsError('Multiple virtual machines were found with the '
                                                   'same name, please specify a container.')
-    return vm_formatted[0]
+    log.debug(vm_formatted[0])
+    data = yaml.load(json.dumps(vm_formatted[0], cls=VmomiJSONEncoder))
+    return data
 
 
 def get_folder(service_instance, datacenter, placement, base_vm_name=None):

@@ -277,7 +277,7 @@ def init(opts):
         log.info('Retrieving credentials and testing vCenter connection for '
                  'mehchanism \'userpass\'')
         try:
-            username, password = find_credentials()
+            username, password = find_credentials(proxy_conf)
             DETAILS['password'] = password
         except salt.exceptions.SaltSystemExit as err:
             log.critical('Error: %s', err)
@@ -306,7 +306,7 @@ def shutdown():
     log.debug('VCenter proxy shutdown() called...')
 
 
-def find_credentials():
+def find_credentials(proxy_conf):
     '''
     Cycle through all the possible credentials and return the first one that
     works.
@@ -317,7 +317,7 @@ def find_credentials():
     if 'username' in DETAILS and 'password' in DETAILS:
         return DETAILS['username'], DETAILS['password']
 
-    passwords = __pillar__['proxy']['passwords']
+    passwords = proxy_conf['passwords']
     for password in passwords:
         DETAILS['password'] = password
         if not __salt__['vsphere.test_vcenter_connection']():

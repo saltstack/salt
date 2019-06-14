@@ -2011,7 +2011,8 @@ def system_info(host, username, password, protocol=None, port=None):
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs('credstore')
-def list_datacenters(host, username, password, protocol=None, port=None):
+@gets_service_instance_via_proxy
+def list_datacenters(host=None, username=None, password=None, protocol=None, port=None, service_instance=None):
     '''
     Returns a list of datacenters for the the specified host.
 
@@ -2039,17 +2040,19 @@ def list_datacenters(host, username, password, protocol=None, port=None):
         salt '*' vsphere.list_datacenters 1.2.3.4 root bad-password
 
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    if any([host, username, password, protocol, port]):
+        service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                                  username=username,
+                                                                  password=password,
+                                                                  protocol=protocol,
+                                                                  port=port)
     return salt.utils.vmware.list_datacenters(service_instance)
 
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs('credstore')
-def list_clusters(host, username, password, protocol=None, port=None):
+@gets_service_instance_via_proxy
+def list_clusters(host=None, username=None, password=None, protocol=None, port=None, service_instance=None):
     '''
     Returns a list of clusters for the the specified host.
 
@@ -2077,17 +2080,19 @@ def list_clusters(host, username, password, protocol=None, port=None):
         salt '*' vsphere.list_clusters 1.2.3.4 root bad-password
 
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    if any([host, username, password, protocol, port]):
+        service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                                  username=username,
+                                                                  password=password,
+                                                                  protocol=protocol,
+                                                                  port=port)
     return salt.utils.vmware.list_clusters(service_instance)
 
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs('credstore')
-def list_datastore_clusters(host, username, password, protocol=None, port=None):
+@gets_service_instance_via_proxy
+def list_datastore_clusters(host=None, username=None, password=None, protocol=None, port=None, service_instance=None):
     '''
     Returns a list of datastore clusters for the the specified host.
 
@@ -2114,17 +2119,19 @@ def list_datastore_clusters(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_datastore_clusters 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    if any([host, username, password, protocol, port]):
+        service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                                  username=username,
+                                                                  password=password,
+                                                                  protocol=protocol,
+                                                                  port=port)
     return salt.utils.vmware.list_datastore_clusters(service_instance)
 
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs('credstore')
-def list_datastores(host, username, password, protocol=None, port=None):
+@gets_service_instance_via_proxy
+def list_datastores(host=None, username=None, password=None, protocol=None, port=None, service_instance=None):
     '''
     Returns a list of datastores for the the specified host.
 
@@ -2151,17 +2158,19 @@ def list_datastores(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_datastores 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    if any([host, username, password, protocol, port]):
+        service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                                  username=username,
+                                                                  password=password,
+                                                                  protocol=protocol,
+                                                                  port=port)
     return salt.utils.vmware.list_datastores(service_instance)
 
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs('credstore')
-def list_hosts(host, username, password, protocol=None, port=None):
+@gets_service_instance_via_proxy
+def list_hosts(host=None, username=None, password=None, protocol=None, port=None, service_instance=None):
     '''
     Returns a list of hosts for the the specified VMware environment.
 
@@ -2188,17 +2197,19 @@ def list_hosts(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_hosts 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    if any([host, username, password, protocol, port]):
+        service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                                  username=username,
+                                                                  password=password,
+                                                                  protocol=protocol,
+                                                                  port=port)
     return salt.utils.vmware.list_hosts(service_instance)
 
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs('credstore')
-def list_resourcepools(host, username, password, protocol=None, port=None):
+@gets_service_instance_via_proxy
+def list_resourcepools(host=None, username=None, password=None, protocol=None, port=None, service_instance=None):
     '''
     Returns a list of resource pools for the the specified host.
 
@@ -2225,17 +2236,19 @@ def list_resourcepools(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_resourcepools 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    if any([host, username, password, protocol, port]):
+        service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                                  username=username,
+                                                                  password=password,
+                                                                  protocol=protocol,
+                                                                  port=port)
     return salt.utils.vmware.list_resourcepools(service_instance)
 
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs('credstore')
-def list_networks(host, username, password, protocol=None, port=None):
+@gets_service_instance_via_proxy
+def list_networks(host=None, username=None, password=None, protocol=None, port=None, service_instance=None):
     '''
     Returns a list of networks for the the specified host.
 
@@ -2262,17 +2275,19 @@ def list_networks(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_networks 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    if any([host, username, password, protocol, port]):
+        service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                                  username=username,
+                                                                  password=password,
+                                                                  protocol=protocol,
+                                                                  port=port)
     return salt.utils.vmware.list_networks(service_instance)
 
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs('credstore')
-def list_vms(host, username, password, protocol=None, port=None):
+@gets_service_instance_via_proxy
+def list_vms(host=None, username=None, password=None, protocol=None, port=None, service_instance=None):
     '''
     Returns a list of VMs for the the specified host.
 
@@ -2299,17 +2314,19 @@ def list_vms(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_vms 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    if any([host, username, password, protocol, port]):
+        service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                                  username=username,
+                                                                  password=password,
+                                                                  protocol=protocol,
+                                                                  port=port)
     return salt.utils.vmware.list_vms(service_instance)
 
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs('credstore')
-def list_folders(host, username, password, protocol=None, port=None):
+@gets_service_instance_via_proxy
+def list_folders(host, username, password, protocol=None, port=None, service_instance=None):
     '''
     Returns a list of folders for the the specified host.
 
@@ -2336,17 +2353,19 @@ def list_folders(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_folders 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    if any([host, username, password, protocol, port]):
+        service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                                  username=username,
+                                                                  password=password,
+                                                                  protocol=protocol,
+                                                                  port=port)
     return salt.utils.vmware.list_folders(service_instance)
 
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs('credstore')
-def list_dvs(host, username, password, protocol=None, port=None):
+@gets_service_instance_via_proxy
+def list_dvs(host, username, password, protocol=None, port=None, service_instance=None):
     '''
     Returns a list of distributed virtual switches for the the specified host.
 
@@ -2383,7 +2402,8 @@ def list_dvs(host, username, password, protocol=None, port=None):
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs('credstore')
-def list_vapps(host, username, password, protocol=None, port=None):
+@gets_service_instance_via_proxy
+def list_vapps(host=None, username=None, password=None, protocol=None, port=None, service_instance=None):
     '''
     Returns a list of vApps for the the specified host.
 
@@ -2411,17 +2431,19 @@ def list_vapps(host, username, password, protocol=None, port=None):
         # List vapps from all minions
         salt '*' vsphere.list_vapps 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    if any([host, username, password, protocol, port]):
+        service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                                  username=username,
+                                                                  password=password,
+                                                                  protocol=protocol,
+                                                                  port=port)
     return salt.utils.vmware.list_vapps(service_instance)
 
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs('credstore')
-def list_ssds(host, username, password, protocol=None, port=None, host_names=None):
+@gets_service_instance_via_proxy
+def list_ssds(host, username=None, password=None, protocol=None, port=None, host_names=None, service_instance=None):
     '''
     Returns a list of SSDs for the given host or list of host_names.
 
@@ -2462,11 +2484,12 @@ def list_ssds(host, username, password, protocol=None, port=None, host_names=Non
         salt '*' vsphere.list_ssds my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    if any([username, password, protocol, port]):
+        service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                                  username=username,
+                                                                  password=password,
+                                                                  protocol=protocol,
+                                                                  port=port)
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
     names = []
@@ -2482,7 +2505,8 @@ def list_ssds(host, username, password, protocol=None, port=None, host_names=Non
 
 @depends(HAS_PYVMOMI)
 @ignores_kwargs('credstore')
-def list_non_ssds(host, username, password, protocol=None, port=None, host_names=None):
+@gets_service_instance_via_proxy
+def list_non_ssds(host, username=None, password=None, protocol=None, port=None, host_names=None, service_instance=None):
     '''
     Returns a list of Non-SSD disks for the given host or list of host_names.
 
@@ -2530,11 +2554,12 @@ def list_non_ssds(host, username, password, protocol=None, port=None, host_names
         salt '*' vsphere.list_non_ssds my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    if any([username, password, protocol, port]):
+        service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                                  username=username,
+                                                                  password=password,
+                                                                  protocol=protocol,
+                                                                  port=port)
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
     names = []
