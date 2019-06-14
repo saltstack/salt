@@ -4,8 +4,8 @@ Manage DACLs on Windows
 
 :depends:   - winreg Python module
 
-NOTE: pywin32 does not support some ace types like ac9.
-If a non implemented ace type is give to this module it will just be skipped.
+Note: If the object contains a non-implemented ace type it will just be skipped.
+You see similar behavior in the Windows GUI when you view the permissions of an object with some ace objects.
 
 pywin32 support documentation
 http://timgolden.me.uk/pywin32-docs/PyACL__GetAce_meth.html
