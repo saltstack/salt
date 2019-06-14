@@ -10,7 +10,7 @@ For example, the following matches all CentOS minions:
 
 .. code-block:: bash
 
-    salt -G 'os:CentOS' test.ping
+    salt -G 'os:CentOS' test.version
 
 Match all minions with 64-bit CPUs, and return number of CPU cores for each
 matching minion:

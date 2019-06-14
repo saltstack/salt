@@ -596,6 +596,27 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'managed' function tests: 1
 
+    def test_file_managed_should_fall_back_to_binary(self):
+        expected_contents = b'\x8b'
+        filename = '/tmp/blarg'
+        mock_manage = MagicMock(return_value={'fnord': 'fnords'})
+        with patch('salt.states.file._load_accumulators',
+                   MagicMock(return_value=([], []))):
+            with patch.dict(filestate.__salt__,
+                            {
+                             'file.get_managed': MagicMock(return_value=['', '', '']),
+                             'file.source_list': MagicMock(return_value=['', '']),
+                             'file.manage_file': mock_manage,
+                             'pillar.get': MagicMock(return_value=expected_contents),
+                            }):
+                ret = filestate.managed(
+                    filename,
+                    contents_pillar='fnord',
+                    encoding='utf-8'
+                )
+                actual_contents = mock_manage.call_args[0][14]
+                self.assertEqual(actual_contents, expected_contents)
+
     def test_managed(self):
         '''
         Test to manage a given file, this function allows for a file to be
