@@ -559,13 +559,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     '''.format(**managed_files)))
 
             ret = self.run_function('state.sls', [state_name])
+            self.assertSaltTrueReturn(ret)
             for typ in state_keys:
                 self.assertTrue(ret[state_keys[typ]]['result'])
                 self.assertIn('diff', ret[state_keys[typ]]['changes'])
         finally:
-            os.remove(state_file)
+            if os.path.exists(state_file):
+                os.remove(state_file)
             for typ in managed_files:
-                os.remove(managed_files[typ])
+                if os.path.exists(managed_files[typ]):
+                    os.remove(managed_files[typ])
 
     @skip_if_not_root
     @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
