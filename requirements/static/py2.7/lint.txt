@@ -14,6 +14,6 @@ mccabe==0.6.1             # via pylint
 modernize==0.5            # via saltpylint
 pycodestyle==2.5.0        # via saltpylint
 pylint==1.6.5
-saltpylint==2019.1.11
+saltpylint==2019.6.7
 six==1.12.0               # via astroid, pylint
 wrapt==1.11.1             # via astroid
