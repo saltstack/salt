@@ -81,7 +81,7 @@ simple `salt-call` command:
 
 .. code-block:: bash
 
-    salt-call --local dockerng.call test test.ping
+    salt-call --local dockerng.call test test.version
     salt-call --local dockerng.call test network.interfaces
     salt-call --local dockerng.call test disk.usage
     salt-call --local dockerng.call test pkg.list_pkgs
