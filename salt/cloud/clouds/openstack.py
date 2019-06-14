@@ -3,7 +3,7 @@
 Openstack Cloud Driver
 ======================
 
-:depends: `shade <https://pypi.python.org/pypi/shade>`_
+:depends: `shade>=1.19.0 <https://pypi.python.org/pypi/shade>`_
 
 OpenStack is an open source project that is in use by a number a cloud
 providers, each of which have their own ways of using it.
@@ -218,7 +218,7 @@ import pprint
 import socket
 
 # Import Salt Libs
-import salt.utils.json
+import salt.utils.versions
 import salt.config as config
 from salt.ext import six
 from salt.exceptions import (
@@ -230,12 +230,16 @@ from salt.exceptions import (
 
 # Import 3rd-Party Libs
 try:
+    import shade
     import shade.openstackcloud
     import shade.exc
     import os_client_config
-    HAS_SHADE = True
+    HAS_SHADE = (
+        salt.utils.versions._LooseVersion(shade.__version__) >= salt.utils.versions._LooseVersion('1.19.0'),
+        'Please install newer version of shade: >= 1.19.0'
+    )
 except ImportError:
-    HAS_SHADE = False
+    HAS_SHADE = (False, 'Install pypi module shade >= 1.19.0')
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'openstack'
@@ -248,7 +252,7 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
     if get_dependencies() is False:
-        return False
+        return HAS_SHADE
     return __virtualname__
 
 
@@ -270,8 +274,8 @@ def get_dependencies():
     Warn if dependencies aren't met.
     '''
     deps = {
-        'shade': HAS_SHADE,
-        'os_client_config': HAS_SHADE,
+        'shade': shade[0],
+        'os_client_config': shade[0],
     }
     return config.check_driver_dependencies(
         __virtualname__,
@@ -844,7 +848,7 @@ def call(conn=None, call=None, kwargs=None):
     func = kwargs.pop('func')
     for key, value in kwargs.items():
         try:
-            kwargs[key] = salt.utils.json.loads(value)
+            kwargs[key] = __utils__['json.loads'](value)
         except ValueError:
             continue
     try:

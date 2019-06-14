@@ -368,9 +368,9 @@ from salt.pillar import Pillar
 # Import third party libs
 from salt.ext import six
 
-PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify', 'refspecs')
+PER_REMOTE_OVERRIDES = ('base', 'env', 'root', 'ssl_verify', 'refspecs')
 PER_REMOTE_ONLY = ('name', 'mountpoint', 'all_saltenvs')
-GLOBAL_ONLY = ('base', 'branch')
+GLOBAL_ONLY = ('branch',)
 
 # Set up logging
 log = logging.getLogger(__name__)

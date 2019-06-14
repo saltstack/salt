@@ -14,7 +14,6 @@ import datetime
 
 # Import salt libs
 import salt.log
-import salt.crypt
 import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.stringutils
@@ -146,23 +145,30 @@ class Serial(object):
                 return data
 
             gc.disable()  # performance optimization for msgpack
+            loads_kwargs = {'use_list': True,
+                            'ext_hook': ext_type_decoder,
+                            '_msgpack_module': msgpack}
             if msgpack.version >= (0, 4, 0):
                 # msgpack only supports 'encoding' starting in 0.4.0.
                 # Due to this, if we don't need it, don't pass it at all so
                 # that under Python 2 we can still work with older versions
                 # of msgpack.
+                if msgpack.version >= (0, 5, 2):
+                    if encoding is None:
+                        loads_kwargs['raw'] = True
+                    else:
+                        loads_kwargs['raw'] = False
+                else:
+                    loads_kwargs['encoding'] = encoding
                 try:
-                    ret = salt.utils.msgpack.loads(msg, use_list=True,
-                                                   ext_hook=ext_type_decoder,
-                                                   encoding=encoding,
-                                                   _msgpack_module=msgpack)
+                    ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
                 except UnicodeDecodeError:
                     # msg contains binary data
-                    ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder)
+                    loads_kwargs.pop('raw', None)
+                    loads_kwargs.pop('encoding', None)
+                    ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
             else:
-                ret = salt.utils.msgpack.loads(msg, use_list=True,
-                                               ext_hook=ext_type_decoder,
-                                               _msgpack_module=msgpack)
+                ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
             if six.PY3 and encoding is None and not raw:
                 ret = salt.transport.frame.decode_embedded_strs(ret)
         except Exception as exc:

@@ -54,7 +54,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         Test to Returns the system path
         '''
         mock = MagicMock(return_value={'vdata': 'C:\\Salt'})
-        with patch.dict(win_path.__salt__, {'reg.read_value': mock}):
+        with patch.dict(win_path.__utils__, {'reg.read_value': mock}):
             self.assertListEqual(win_path.get_path(), ['C:\\Salt'])
 
     def test_exists(self):
@@ -90,7 +90,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(win_path, 'PATHSEP', self.pathsep), \
                     patch.object(win_path, 'get_path', mock_get), \
                     patch.object(os, 'environ', env), \
-                    patch.dict(win_path.__salt__, {'reg.set_value': mock_set}), \
+                    patch.dict(win_path.__utils__, {'reg.set_value': mock_set}), \
                     patch.object(win_path, 'rehash', MagicMock(return_value=True)):
                 return win_path.add(name, index), env, mock_set
 
@@ -210,7 +210,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(win_path, 'PATHSEP', self.pathsep), \
                     patch.object(win_path, 'get_path', mock_get), \
                     patch.object(os, 'environ', env), \
-                    patch.dict(win_path.__salt__, {'reg.set_value': mock_set}), \
+                    patch.dict(win_path.__utils__, {'reg.set_value': mock_set}), \
                     patch.object(win_path, 'rehash', MagicMock(return_value=True)):
                 return win_path.remove(name), env, mock_set
 

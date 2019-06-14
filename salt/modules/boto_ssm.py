@@ -2,40 +2,14 @@
 '''
 Connection module for Amazon SSM
 
-:configuration: This module accepts explicit ssm credentials but can also
-    utilize IAM roles assigned to the instance through Instance Profiles. Dynamic
-    credentials are then automatically obtained from AWS API and no further
-    configuration is necessary. More Information available at:
+:configuration: This module uses IAM roles assigned to the instance through
+    Instance Profiles. Dynamic credentials are then automatically obtained
+    from AWS API and no further configuration is necessary. More Information
+    available at:
 
     .. code-block:: text
 
         http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
-
-    If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file:
-
-    .. code-block:: yaml
-
-        ssm.keyid: GKTADJGHEIQSXMKKRBJ08H
-        ssm.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-
-    A region may also be specified in the configuration:
-
-    .. code-block:: yaml
-
-        ssm.region: us-east-1
-
-    If a region is not specified, the default is us-east-1.
-
-    It's also possible to specify key, keyid and region via a profile, either
-    as a passed in dict, or as a string to pull from pillars or minion config:
-
-    .. code-block:: yaml
-
-        myprofile:
-            keyid: GKTADJGHEIQSXMKKRBJ08H
-            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
 
 :depends: boto3
 '''
@@ -133,6 +107,7 @@ def delete_parameter(Name, region=None, key=None, keyid=None, profile=None):
     .. versionadded:: Neon
 
     .. code-block:: text
+
         salt-call boto_ssm.delete_parameter test-param
     '''
     conn = __utils__['boto3.get_connection']('ssm', region=region, key=key, keyid=keyid, profile=profile)
