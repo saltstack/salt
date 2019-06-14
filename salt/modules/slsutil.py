@@ -296,6 +296,24 @@ def banner(width=72, commentchar='#', borderchar='#', blockstart=None, blockend=
         # The contents of this file are managed by Salt. Any changes to this   #
         # file may be overwritten automatically and without warning.           #
         ########################################################################
+
+    For a Javadoc-style banner:
+
+    .. code-block:: jinja
+        {{ salt['slsutil.banner'](commentchar=' *',borderchar='*',blockstart='/**',blockend=' */') }}
+
+    .. code-block:: none
+
+        /**
+         ***********************************************************************
+         *                                                                     *
+         *              THIS FILE IS MANAGED BY SALT - DO NOT EDIT             *
+         *                                                                     *
+         * The contents of this file are managed by Salt. Any changes to this  *
+         * file may be overwritten automatically and without warning.          *
+         ***********************************************************************
+         */
+
     '''
 
     if title is None:
@@ -307,15 +325,19 @@ def banner(width=72, commentchar='#', borderchar='#', blockstart=None, blockend=
                 'automatically and without warning.')
 
     # Set up some typesetting variables
-    lgutter = commentchar.strip() + ' '
-    rgutter = ' ' + commentchar.strip()
+    ledge = commentchar.rstrip()
+    redge = commentchar.strip()
+    lgutter = ledge + ' '
+    rgutter = ' ' + redge
     textwidth = width - len(lgutter) - len(rgutter)
-    border_line = commentchar + borderchar[:1] * (width - len(commentchar) * 2) + commentchar
+
+    # Define the static elements
+    border_line = commentchar + borderchar[:1] * (width - len(ledge) - len(redge)) + redge
     spacer_line = commentchar + ' ' * (width - len(commentchar) * 2) + commentchar
-    wrapper = textwrap.TextWrapper(width=(width - len(lgutter) - len(rgutter)))
-    block = list()
 
     # Create the banner
+    wrapper = textwrap.TextWrapper(width=(width - len(lgutter) - len(rgutter)))
+    block = list()
     if blockstart is not None:
         block.append(blockstart)
     block.append(border_line)
