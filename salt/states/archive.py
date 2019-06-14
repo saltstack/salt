@@ -412,6 +412,10 @@ def extracted(name,
         Set this to ``True`` if archive should be extracted if source_hash has
         changed. This would extract regardless of the ``if_missing`` parameter.
 
+        Note that this is only checked if the ``source`` value has not changed.
+        If it has (e.g. to increment a version number in the path) then the
+        archive will not be extracted even if the hash has changed.
+
         .. versionadded:: 2016.3.0
 
     skip_verify : False
@@ -775,6 +779,11 @@ def extracted(name,
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = exc.strerror
+        return ret
+
+    if not source_match:
+        ret['result'] = False
+        ret['comment'] = 'Invalid source "{0}"'.format(source)
         return ret
 
     urlparsed_source = _urlparse(source_match)
@@ -1345,10 +1354,13 @@ def extracted(name,
                         )
                         return ret
 
-                    tar_opts = shlex.split(options)
+                    # Ignore verbose file list options as we are already using
+                    # "v" below in tar_shortopts
+                    tar_opts = [x for x in shlex.split(options)
+                                if x not in ('v', '-v', '--verbose')]
 
                     tar_cmd = ['tar']
-                    tar_shortopts = 'x'
+                    tar_shortopts = 'xv'
                     tar_longopts = []
 
                     for position, opt in enumerate(tar_opts):
@@ -1378,9 +1390,9 @@ def extracted(name,
                         ret['changes'] = results
                         return ret
                     if _is_bsdtar():
-                        files = results['stderr']
+                        files = results['stderr'].splitlines()
                     else:
-                        files = results['stdout']
+                        files = results['stdout'].splitlines()
                     if not files:
                         files = 'no tar output so far'
         except CommandExecutionError as exc:

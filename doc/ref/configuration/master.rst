@@ -5101,6 +5101,33 @@ This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
 
+.. conf_master:: log_rotate_max_bytes
+
+``log_rotate_max_bytes``
+------------------------
+
+Default:  ``0``
+
+The maximum number of bytes a single log file may contain before it is rotated.
+A value of 0 disables this feature. Currently only supported on Windows. On
+other platforms, use an external tool such as 'logrotate' to manage log files.
+:conf_log:`log_rotate_max_bytes`
+
+
+.. conf_master:: log_rotate_backup_count
+
+``log_rotate_backup_count``
+---------------------------
+
+Default:  ``0``
+
+The number of backup files to keep when rotating log files. Only used if
+:conf_master:`log_rotate_max_bytes` is greater than 0. Currently only supported
+on Windows. On other platforms, use an external tool such as 'logrotate' to
+manage log files.
+:conf_log:`log_rotate_backup_count`
+
+
 .. _node-groups:
 
 Node Groups

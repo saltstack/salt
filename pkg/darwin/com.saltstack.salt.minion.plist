@@ -3,7 +3,7 @@
 <plist version="1.0">
   <dict>
     <key>Label</key>
-    <string>salt-minion</string>
+    <string>com.saltstack.salt.minion</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
