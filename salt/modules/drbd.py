@@ -2,8 +2,6 @@
 '''
 Module to provide DRBD functionality to Salt
 
-.. versionadded:: neon
-
 :maintainer:    Nick Wang <nwang@suse.com>
 :maturity:      alpha
 :depends:       ``drbdadm`` drbd utils
