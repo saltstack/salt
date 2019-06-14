@@ -50,11 +50,11 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual('cpan', os.path.split(bin_path)[-1])
 
     def test__configure(self):
-        with patch.dict(cpan.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode':0})}):
+        with patch.dict(cpan.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode': 0})}):
             self.assertTrue(cpan._configure("/usr/bin/cpan"))
 
     def test__configure_fail(self):
-        with patch.dict(cpan.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode':1})}):
+        with patch.dict(cpan.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode': 1})}):
             self.assertFalse(cpan._configure("/usr/bin/cpan"))
 
     def test_get_version(self):
