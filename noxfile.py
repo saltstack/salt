@@ -25,6 +25,8 @@ if __name__ == '__main__':
 import nox
 from nox.command import CommandFailed
 
+IS_PY3 = sys.version_info > (2,)
+
 # Be verbose when runing under a CI context
 PIP_INSTALL_SILENT = (os.environ.get('JENKINS_URL') or os.environ.get('CI') or os.environ.get('DRONE')) is None
 
@@ -154,6 +156,10 @@ def _install_system_packages(session):
 def _install_requirements(session, transport, *extra_requirements):
     # Install requirements
     distro_requirements = None
+
+    if transport == 'tcp':
+        # The TCP requirements are the exact same requirements as the ZeroMQ ones
+        transport = 'zeromq'
 
     pydir = _get_pydir(session)
 
@@ -757,8 +763,12 @@ def _lint(session, rcfile, flags, paths):
         raise
     finally:
         stdout.seek(0)
-        contents = stdout.read().encode('utf-8')
+        contents = stdout.read()
         if contents:
+            if IS_PY3:
+                contents = contents.decode('utf-8')
+            else:
+                contents = contents.encode('utf-8')
             sys.stdout.write(contents)
             sys.stdout.flush()
             if pylint_report_path:
