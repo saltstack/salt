@@ -123,6 +123,8 @@ class IOLoop(object):
             loop._salt_close_called = False
         if loop._salt_pid != os.getpid() or cls._is_closed(loop):  # or loop._pid != loop._salt_pid:
             tornado.ioloop.IOLoop.clear_current()
+#            if not cls._is_closed(loop):
+#                loop.close()
             if hasattr(loop, '_impl'):
                 del loop._impl
             loop = tornado.ioloop.IOLoop()
@@ -136,7 +138,15 @@ class IOLoop(object):
     @classmethod
     def _is_closed(cls, loop):
         if hasattr(loop, '_salt_close_called'):
-            return loop._salt_close_called
+            if loop._salt_close_called is True:
+                return True
+        if hasattr(loop, '_closing'):
+            if loop._closing is True:
+                return True
+        if hasattr(loop, 'asyncio_loop'):
+            if loop.async_ioloop.is_closed() is True:
+                return True
+        return False
 
     def __init__(self, *args, **kwargs):
         self._ioloop = kwargs.get(
