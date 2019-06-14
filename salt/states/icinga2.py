@@ -14,7 +14,7 @@ Its output may be stored in a file or in a grain.
 .. code-block:: yaml
 
     command_id:
-      icinga2.generate_ticket
+      icinga2.generate_ticket:
         - name: domain.tld
         - output:  "/tmp/query_id.txt"
 '''

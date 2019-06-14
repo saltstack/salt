@@ -596,6 +596,27 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'managed' function tests: 1
 
+    def test_file_managed_should_fall_back_to_binary(self):
+        expected_contents = b'\x8b'
+        filename = '/tmp/blarg'
+        mock_manage = MagicMock(return_value={'fnord': 'fnords'})
+        with patch('salt.states.file._load_accumulators',
+                   MagicMock(return_value=([], []))):
+            with patch.dict(filestate.__salt__,
+                            {
+                             'file.get_managed': MagicMock(return_value=['', '', '']),
+                             'file.source_list': MagicMock(return_value=['', '']),
+                             'file.manage_file': mock_manage,
+                             'pillar.get': MagicMock(return_value=expected_contents),
+                            }):
+                ret = filestate.managed(
+                    filename,
+                    contents_pillar='fnord',
+                    encoding='utf-8'
+                )
+                actual_contents = mock_manage.call_args[0][14]
+                self.assertEqual(actual_contents, expected_contents)
+
     def test_managed(self):
         '''
         Test to manage a given file, this function allows for a file to be
@@ -1930,18 +1951,23 @@ class TestFindKeepFiles(TestCase):
 
     @skipIf(not salt.utils.platform.is_windows(), 'Only run on Windows')
     def test__find_keep_files_win32(self):
+        '''
+        Test _find_keep_files. The `_find_keep_files` function is only called by
+        _clean_dir, so case doesn't matter. Should return all lower case.
+        '''
         keep = filestate._find_keep_files(
             'c:\\test\\parent_folder',
-            ['C:\\test\\parent_folder\\meh-2.txt']
+            ['C:\\test\\parent_folder\\meh-1.txt',
+             'C:\\Test\\Parent_folder\\Meh-2.txt']
         )
         expected = [
             'c:\\',
             'c:\\test',
             'c:\\test\\parent_folder',
-            'c:\\test\\parent_folder\\meh-2.txt'
-        ]
+            'c:\\test\\parent_folder\\meh-1.txt',
+            'c:\\test\\parent_folder\\meh-2.txt']
         actual = sorted(list(keep))
-        assert actual == expected, actual
+        self.assertListEqual(actual, expected)
 
 
 class TestFileTidied(TestCase):
