@@ -757,13 +757,6 @@ class TestDaemon(object):
         }
         master_opts['ext_pillar'].append({'file_tree': file_tree})
 
-        # This is the syndic for master
-        # Let's start with a copy of the syndic master configuration
-        syndic_opts = copy.deepcopy(master_opts)
-        # Let's update with the syndic configuration
-        syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
-        syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
-        syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
 
         # Under windows we can't seem to properly create a virtualenv off of another
         # virtualenv, we can on linux but we will still point to the virtualenv binary
@@ -853,6 +846,14 @@ class TestDaemon(object):
             sub_minion_opts['transport'] = 'tcp'
             syndic_master_opts['transport'] = 'tcp'
             proxy_opts['transport'] = 'tcp'
+
+        # This is the syndic for master
+        # Let's start with a copy of the syndic master configuration
+        syndic_opts = copy.deepcopy(master_opts)
+        # Let's update with the syndic configuration
+        syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
+        syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
 
         # Set up config options that require internal data
         master_opts['pillar_roots'] = syndic_master_opts['pillar_roots'] = {
