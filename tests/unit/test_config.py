@@ -10,7 +10,7 @@ import os
 import textwrap
 
 # Import Salt Testing libs
-from tests.support.helpers import with_tempdir, with_tempfile
+from tests.support.helpers import with_tempdir, with_tempfile, patched_environ
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.runtests import RUNTIME_VARS
@@ -40,8 +40,7 @@ from salt.exceptions import (
 
 log = logging.getLogger(__name__)
 
-SAMPLE_CONF_DIR = os.path.dirname(os.path.realpath(__file__)).split('tests')[0] + 'conf/'
-
+SAMPLE_CONF_DIR = os.path.join(RUNTIME_VARS.CODE_DIR, 'conf') + os.sep
 
 # mock hostname should be more complex than the systems FQDN
 MOCK_HOSTNAME = 'very.long.complex.fqdn.that.is.crazy.extra.long.example.com'
@@ -65,19 +64,19 @@ MOCK_ETC_HOSTNAME = '{}\n'.format(MOCK_HOSTNAME)
 PATH = 'path/to/some/cloud/conf/file'
 DEFAULT = {'default_include': PATH}
 
-MOCK_MASTER_DEFAULT_OPTS = {
-    'log_file': '{}/var/log/salt/master'.format(RUNTIME_VARS.TMP_ROOT_DIR),
-    'pidfile': '{}/var/run/salt-master.pid'.format(RUNTIME_VARS.TMP_ROOT_DIR),
-    'root_dir': RUNTIME_VARS.TMP_ROOT_DIR
-}
-if salt.utils.platform.is_windows():
-    MOCK_MASTER_DEFAULT_OPTS = {
-        'log_file': '{}\\var\\log\\salt\\master'.format(RUNTIME_VARS.TMP_ROOT_DIR),
-        'pidfile': '{}\\var\\run\\salt-master.pid'.format(RUNTIME_VARS.TMP_ROOT_DIR),
-    }
+
+class DefaultConfigsBase(object):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mock_master_default_opts = dict(
+            root_dir=RUNTIME_VARS.TMP_ROOT_DIR,
+            log_file=os.path.join(RUNTIME_VARS.TMP_ROOT_DIR, 'var', 'log', 'salt', 'master'),
+            pid_file=os.path.join(RUNTIME_VARS.TMP_ROOT_DIR, 'var', 'run', 'salt-master.pid')
+        )
 
 
-class SampleConfTest(TestCase):
+class SampleConfTest(DefaultConfigsBase, TestCase):
     '''
     Validate files in the salt/conf directory.
     '''
@@ -193,9 +192,12 @@ class SampleConfTest(TestCase):
         commented out. This test loops through all of the files in that directory to check
         for any lines that are not commented or blank.
         '''
-        cloud_sample_files = os.listdir(SAMPLE_CONF_DIR + 'cloud.profiles.d/')
+        cloud_sample_dir = SAMPLE_CONF_DIR + 'cloud.profiles.d/'
+        if not os.path.exists(cloud_sample_dir):
+            self.skipTest("Sample config directory '{}' is missing.".format(cloud_sample_dir))
+        cloud_sample_files = os.listdir(cloud_sample_dir)
         for conf_file in cloud_sample_files:
-            profile_conf = SAMPLE_CONF_DIR + 'cloud.profiles.d/' + conf_file
+            profile_conf = cloud_sample_dir + conf_file
             ret = salt.config._read_conf_file(profile_conf)
             self.assertEqual(
                 ret,
@@ -211,9 +213,12 @@ class SampleConfTest(TestCase):
         commented out. This test loops through all of the files in that directory to check
         for any lines that are not commented or blank.
         '''
-        cloud_sample_files = os.listdir(SAMPLE_CONF_DIR + 'cloud.providers.d/')
+        cloud_sample_dir = SAMPLE_CONF_DIR + 'cloud.providers.d/'
+        if not os.path.exists(cloud_sample_dir):
+            self.skipTest("Sample config directory '{}' is missing.".format(cloud_sample_dir))
+        cloud_sample_files = os.listdir(cloud_sample_dir)
         for conf_file in cloud_sample_files:
-            provider_conf = SAMPLE_CONF_DIR + 'cloud.providers.d/' + conf_file
+            provider_conf = cloud_sample_dir + conf_file
             ret = salt.config._read_conf_file(provider_conf)
             self.assertEqual(
                 ret,
@@ -229,9 +234,12 @@ class SampleConfTest(TestCase):
         commented out. This test loops through all of the files in that directory to check
         for any lines that are not commented or blank.
         '''
-        cloud_sample_files = os.listdir(SAMPLE_CONF_DIR + 'cloud.maps.d/')
+        cloud_sample_dir = SAMPLE_CONF_DIR + 'cloud.maps.d/'
+        if not os.path.exists(cloud_sample_dir):
+            self.skipTest("Sample config directory '{}' is missing.".format(cloud_sample_dir))
+        cloud_sample_files = os.listdir(cloud_sample_dir)
         for conf_file in cloud_sample_files:
-            map_conf = SAMPLE_CONF_DIR + 'cloud.maps.d/' + conf_file
+            map_conf = cloud_sample_dir + conf_file
             ret = salt.config._read_conf_file(map_conf)
             self.assertEqual(
                 ret,
@@ -332,7 +340,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         'You can\'t set an environment dynamically in Windows')
     @with_tempdir()
     def test_load_master_config_from_environ_var(self, tempdir):
-        original_environ = os.environ.copy()
         env_root_dir = os.path.join(tempdir, 'foo', 'env')
         os.makedirs(env_root_dir)
         env_fpath = os.path.join(env_root_dir, 'config-env')
@@ -342,13 +349,10 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'root_dir: {}\n'
                 'log_file: {}\n'.format(env_root_dir, env_fpath)
             )
-
-        os.environ['SALT_MASTER_CONFIG'] = env_fpath
-        # Should load from env variable, not the default configuration file.
-        config = salt.config.master_config('{}/master'.format(CONFIG_DIR))
-        self.assertEqual(config['log_file'], env_fpath)
-        os.environ.clear()
-        os.environ.update(original_environ)
+        with patched_environ(SALT_MASTER_CONFIG=env_fpath):
+            # Should load from env variable, not the default configuration file.
+            config = salt.config.master_config('{}/master'.format(CONFIG_DIR))
+            self.assertEqual(config['log_file'], env_fpath)
 
         root_dir = os.path.join(tempdir, 'foo', 'bar')
         os.makedirs(root_dir)
@@ -362,18 +366,15 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # file path is not the default one, i.e., the user has passed an
         # alternative configuration file form the CLI parser, the
         # environment variable will be ignored.
-        os.environ['SALT_MASTER_CONFIG'] = env_fpath
-        config = salt.config.master_config(fpath)
-        self.assertEqual(config['log_file'], fpath)
-        os.environ.clear()
-        os.environ.update(original_environ)
+        with patched_environ(SALT_MASTER_CONFIG=env_fpath):
+            config = salt.config.master_config(fpath)
+            self.assertEqual(config['log_file'], fpath)
 
     @skipIf(
         salt.utils.platform.is_windows(),
         'You can\'t set an environment dynamically in Windows')
     @with_tempdir()
     def test_load_minion_config_from_environ_var(self, tempdir):
-        original_environ = os.environ.copy()
         env_root_dir = os.path.join(tempdir, 'foo', 'env')
         os.makedirs(env_root_dir)
         env_fpath = os.path.join(env_root_dir, 'config-env')
@@ -384,12 +385,10 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'log_file: {}\n'.format(env_root_dir, env_fpath)
             )
 
-        os.environ['SALT_MINION_CONFIG'] = env_fpath
-        # Should load from env variable, not the default configuration file
-        config = salt.config.minion_config('{}/minion'.format(CONFIG_DIR))
-        self.assertEqual(config['log_file'], env_fpath)
-        os.environ.clear()
-        os.environ.update(original_environ)
+        with patched_environ(SALT_MINION_CONFIG=env_fpath):
+            # Should load from env variable, not the default configuration file
+            config = salt.config.minion_config('{}/minion'.format(CONFIG_DIR))
+            self.assertEqual(config['log_file'], env_fpath)
 
         root_dir = os.path.join(tempdir, 'foo', 'bar')
         os.makedirs(root_dir)
@@ -403,15 +402,12 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # file path is not the default one, i.e., the user has passed an
         # alternative configuration file form the CLI parser, the
         # environment variable will be ignored.
-        os.environ['SALT_MINION_CONFIG'] = env_fpath
-        config = salt.config.minion_config(fpath)
-        self.assertEqual(config['log_file'], fpath)
-        os.environ.clear()
-        os.environ.update(original_environ)
+        with patched_environ(SALT_MINION_CONFIG=env_fpath):
+            config = salt.config.minion_config(fpath)
+            self.assertEqual(config['log_file'], fpath)
 
     @with_tempdir()
     def test_load_client_config_from_environ_var(self, tempdir):
-        original_environ = os.environ.copy()
         env_root_dir = os.path.join(tempdir, 'foo', 'env')
         os.makedirs(env_root_dir)
 
@@ -426,7 +422,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'root_dir: {}\n'
                 'log_file: {}\n'.format(env_root_dir, master_config)
             )
-        os.environ['SALT_MASTER_CONFIG'] = master_config
 
         # Now the client configuration file
         env_fpath = os.path.join(env_root_dir, 'config-env')
@@ -436,13 +431,12 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'log_file: {}\n'.format(env_root_dir, env_fpath)
             )
 
-        os.environ['SALT_CLIENT_CONFIG'] = env_fpath
-        # Should load from env variable, not the default configuration file
-        config = salt.config.client_config(os.path.expanduser('~/.salt'))
-        self.assertEqual(config['log_file'], env_fpath)
-        self.assertTrue('blah' not in config)
-        os.environ.clear()
-        os.environ.update(original_environ)
+        with patched_environ(SALT_MASTER_CONFIG=master_config,
+                             SALT_CLIENT_CONFIG=env_fpath):
+            # Should load from env variable, not the default configuration file
+            config = salt.config.client_config(os.path.expanduser('~/.salt'))
+            self.assertEqual(config['log_file'], env_fpath)
+            self.assertTrue('blah' not in config)
 
         root_dir = os.path.join(tempdir, 'foo', 'bar')
         os.makedirs(root_dir)
@@ -456,11 +450,10 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # file path is not the default one, i.e., the user has passed an
         # alternative configuration file form the CLI parser, the
         # environment variable will be ignored.
-        os.environ['SALT_MASTER_CONFIG'] = env_fpath
-        config = salt.config.master_config(fpath)
-        self.assertEqual(config['log_file'], fpath)
-        os.environ.clear()
-        os.environ.update(original_environ)
+        with patched_environ(SALT_MASTER_CONFIG=env_fpath,
+                             SALT_CLIENT_CONFIG=env_fpath):
+            config = salt.config.master_config(fpath)
+            self.assertEqual(config['log_file'], fpath)
 
     @with_tempdir()
     def test_issue_5970_minion_confd_inclusion(self, tempdir):
@@ -547,6 +540,15 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             os.path.join(tempdir, 'c')
         ]))
 
+    def test_validate_bad_file_roots(self):
+        expected = salt.config._expand_glob_path(
+            [salt.syspaths.BASE_FILE_ROOTS_DIR]
+        )
+        with patch('salt.config._normalize_roots') as mk:
+            ret = salt.config._validate_file_roots(None)
+            assert not mk.called
+        assert ret == {'base': expected}
+
     @with_tempfile()
     @with_tempdir()
     def test_master_pillar_roots_glob(self, tempdir, fpath):
@@ -569,6 +571,15 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             os.path.join(tempdir, 'b'),
             os.path.join(tempdir, 'c')
         ]))
+
+    def test_validate_bad_pillar_roots(self):
+        expected = salt.config._expand_glob_path(
+            [salt.syspaths.BASE_PILLAR_ROOTS_DIR]
+        )
+        with patch('salt.config._normalize_roots') as mk:
+            ret = salt.config._validate_pillar_roots(None)
+            assert not mk.called
+        assert ret == {'base': expected}
 
     @with_tempdir()
     def test_master_id_function(self, tempdir):
@@ -1374,44 +1385,36 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         'You can\'t set an environment dynamically in Windows')
     @with_tempdir()
     def test_load_cloud_config_from_environ_var(self, tempdir):
-        original_environ = os.environ.copy()
-        try:
-            env_root_dir = os.path.join(tempdir, 'foo', 'env')
-            os.makedirs(env_root_dir)
-            env_fpath = os.path.join(env_root_dir, 'config-env')
+        env_root_dir = os.path.join(tempdir, 'foo', 'env')
+        os.makedirs(env_root_dir)
+        env_fpath = os.path.join(env_root_dir, 'config-env')
 
-            with salt.utils.files.fopen(env_fpath, 'w') as fp_:
-                fp_.write(
-                    'root_dir: {}\n'
-                    'log_file: {}\n'.format(env_root_dir, env_fpath)
-                )
+        with salt.utils.files.fopen(env_fpath, 'w') as fp_:
+            fp_.write(
+                'root_dir: {}\n'
+                'log_file: {}\n'.format(env_root_dir, env_fpath)
+            )
 
-            os.environ['SALT_CLOUD_CONFIG'] = env_fpath
+        with patched_environ(SALT_CLOUD_CONFIG=env_fpath):
             # Should load from env variable, not the default configuration file
             config = salt.config.cloud_config('/etc/salt/cloud')
             self.assertEqual(config['log_file'], env_fpath)
-            os.environ.clear()
-            os.environ.update(original_environ)
 
-            root_dir = os.path.join(tempdir, 'foo', 'bar')
-            os.makedirs(root_dir)
-            fpath = os.path.join(root_dir, 'config')
-            with salt.utils.files.fopen(fpath, 'w') as fp_:
-                fp_.write(
-                    'root_dir: {}\n'
-                    'log_file: {}\n'.format(root_dir, fpath)
-                )
-            # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, i.e., the user has passed an
-            # alternative configuration file form the CLI parser, the
-            # environment variable will be ignored.
-            os.environ['SALT_CLOUD_CONFIG'] = env_fpath
+        root_dir = os.path.join(tempdir, 'foo', 'bar')
+        os.makedirs(root_dir)
+        fpath = os.path.join(root_dir, 'config')
+        with salt.utils.files.fopen(fpath, 'w') as fp_:
+            fp_.write(
+                'root_dir: {}\n'
+                'log_file: {}\n'.format(root_dir, fpath)
+            )
+        # Let's set the environment variable, yet, since the configuration
+        # file path is not the default one, i.e., the user has passed an
+        # alternative configuration file form the CLI parser, the
+        # environment variable will be ignored.
+        with patched_environ(SALT_CLOUD_CONFIG=env_fpath):
             config = salt.config.cloud_config(fpath)
             self.assertEqual(config['log_file'], fpath)
-        finally:
-            # Reset the environ
-            os.environ.clear()
-            os.environ.update(original_environ)
 
     @with_tempdir()
     def test_deploy_search_path_as_string(self, temp_conf_dir):
@@ -1589,7 +1592,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class APIConfigTestCase(TestCase):
+class APIConfigTestCase(DefaultConfigsBase, TestCase):
     '''
     TestCase for the api_config function in salt.config.__init__.py
     '''
@@ -1607,7 +1610,7 @@ class APIConfigTestCase(TestCase):
         various default dict updates. 'log_file' should be updated to match
         the DEFAULT_API_OPTS 'api_logfile' value.
         '''
-        with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
+        with patch('salt.config.client_config', MagicMock(return_value=self.mock_master_default_opts)):
 
             expected = '{}/var/log/salt/api'.format(
                 RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != '/' else '')
@@ -1624,7 +1627,7 @@ class APIConfigTestCase(TestCase):
         various default dict updates. 'pidfile' should be updated to match
         the DEFAULT_API_OPTS 'api_pidfile' value.
         '''
-        with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
+        with patch('salt.config.client_config', MagicMock(return_value=self.mock_master_default_opts)):
 
             expected = '{}/var/run/salt-api.pid'.format(
                 RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != '/' else '')
@@ -1652,7 +1655,7 @@ class APIConfigTestCase(TestCase):
             'api_logfile': hello_dir,
             'rest_timeout': 5
         }
-        mock_master_config.update(MOCK_MASTER_DEFAULT_OPTS.copy())
+        mock_master_config.update(self.mock_master_default_opts.copy())
 
         with patch('salt.config.client_config',
                    MagicMock(return_value=mock_master_config)):
@@ -1673,7 +1676,7 @@ class APIConfigTestCase(TestCase):
         mock_log = '/mock/root/var/log/salt/api'
         mock_pid = '/mock/root/var/run/salt-api.pid'
 
-        mock_master_config = MOCK_MASTER_DEFAULT_OPTS.copy()
+        mock_master_config = self.mock_master_default_opts.copy()
         mock_master_config['root_dir'] = '/mock/root/'
 
         if salt.utils.platform.is_windows():

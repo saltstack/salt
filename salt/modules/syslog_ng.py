@@ -990,7 +990,7 @@ def stop(name=None):
     '''
     pids = __salt__['ps.pgrep'](pattern='syslog-ng')
 
-    if pids is None or len(pids) == 0:
+    if not pids:
         return _format_state_result(name,
                                     result=False,
                                     comment='Syslog-ng is not running')

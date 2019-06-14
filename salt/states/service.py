@@ -425,9 +425,16 @@ def running(name,
     else:
         before_toggle_enable_status = True
 
+    unmask_ret = {'comment': ''}
+    if unmask:
+        unmask_ret = unmasked(name, unmask_runtime)
+
     # See if the service is already running
     if before_toggle_status:
-        ret['comment'] = 'The service {0} is already running'.format(name)
+        ret['comment'] = '\n'.join(
+            [_f for _f in ['The service {0} is already running'.format(name),
+                           unmask_ret['comment']] if _f]
+        )
         if enable is True and not before_toggle_enable_status:
             ret.update(_enable(name, None, skip_verify=False, **kwargs))
         elif enable is False and before_toggle_enable_status:
@@ -437,7 +444,9 @@ def running(name,
     # Run the tests
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Service {0} is set to start'.format(name)
+        ret['comment'] = '\n'.join(
+            [_f for _f in ['Service {0} is set to start'.format(name),
+                           unmask_ret['comment']] if _f])
         return ret
 
     # Conditionally add systemd-specific args to call to service.start
@@ -446,8 +455,10 @@ def running(name,
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
 
-    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
-        start_kwargs.update({'timeout': kwargs.get('timeout')})
+    if salt.utils.platform.is_windows():
+        for arg in ['timeout', 'with_deps', 'with_parents']:
+            if kwargs.get(arg, False):
+                start_kwargs.update({arg: kwargs.get(arg)})
 
     try:
         func_ret = __salt__['service.start'](name, **start_kwargs)
@@ -496,6 +507,9 @@ def running(name,
             '{0}\nDelayed return for {1} seconds'
             .format(ret['comment'], init_delay)
         )
+
+    if unmask:
+        ret['comment'] = '\n'.join([ret['comment'], unmask_ret['comment']])
 
     return ret
 
@@ -592,8 +606,10 @@ def dead(name,
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
 
-    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
-        stop_kwargs.update({'timeout': kwargs.get('timeout')})
+    if salt.utils.platform.is_windows():
+        for arg in ['timeout', 'with_deps', 'with_parents']:
+            if kwargs.get(arg, False):
+                stop_kwargs.update({arg: kwargs.get(arg)})
 
     func_ret = __salt__['service.stop'](name, **stop_kwargs)
     if not func_ret:

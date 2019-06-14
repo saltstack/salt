@@ -20,11 +20,11 @@ import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minions
+import salt.utils.msgpack
 import salt.utils.stringutils
 import salt.exceptions
 
 # Import 3rd-party libs
-import msgpack
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
@@ -76,6 +76,9 @@ def _walk_through(job_dir):
                     job = serial.load(rfh)
                 except Exception:
                     log.exception('Failed to deserialize %s', load_path)
+                    continue
+                if not job:
+                    log.error('Deserialization of job succeded but there is no data in %s', load_path)
                     continue
                 jid = job['jid']
                 yield jid, job, t_path, final
@@ -517,7 +520,7 @@ def save_reg(data):
             raise
     try:
         with salt.utils.files.fopen(regfile, 'a') as fh_:
-            msgpack.dump(data, fh_)
+            salt.utils.msgpack.dump(data, fh_)
     except Exception:
         log.error('Could not write to msgpack file %s', __opts__['outdir'])
         raise
@@ -531,7 +534,7 @@ def load_reg():
     regfile = os.path.join(reg_dir, 'register')
     try:
         with salt.utils.files.fopen(regfile, 'r') as fh_:
-            return msgpack.load(fh_)
+            return salt.utils.msgpack.load(fh_)
     except Exception:
         log.error('Could not write to msgpack file %s', __opts__['outdir'])
         raise

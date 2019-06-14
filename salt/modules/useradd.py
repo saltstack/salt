@@ -230,10 +230,8 @@ def add(name,
                         # We found what we wanted, let's break out of the loop
                         break
             except OSError:
-                log.debug(
-                    'Error reading ' + defs_file,
-                    exc_info_on_loglevel=logging.DEBUG
-                )
+                log.debug('Error reading %s', defs_file,
+                          exc_info_on_loglevel=logging.DEBUG)
         else:
             usermgmt_file = '/etc/usermgmt.conf'
             try:
@@ -927,3 +925,111 @@ def _getpwall(root=None):
             # Generate a getpwall compatible output
             comps[2], comps[3] = int(comps[2]), int(comps[3])
             yield pwd.struct_passwd(comps)
+
+
+def add_subuids(name, first=100000, last=110000):
+    '''
+    Add a range of subordinate uids to the user
+
+    name
+        User to modify
+
+    first
+        Begin of the range
+
+    last
+        End of the range
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' user.add_subuids foo
+        salt '*' user.add_subuids foo first=105000
+        salt '*' user.add_subuids foo first=600000000 last=600100000
+    '''
+    if __grains__['kernel'] != 'Linux':
+        log.warning("'subuids' are only supported on GNU/Linux hosts.")
+
+    return __salt__['cmd.run'](['usermod', '-v', '-'.join(str(x) for x in (first, last)), name])
+
+
+def del_subuids(name, first=100000, last=110000):
+    '''
+    Remove a range of subordinate uids to the user
+
+    name
+        User to modify
+
+    first
+        Begin of the range
+
+    last
+        End of the range
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' user.del_subuids foo
+        salt '*' user.del_subuids foo first=105000
+        salt '*' user.del_subuids foo first=600000000 last=600100000
+    '''
+    if __grains__['kernel'] != 'Linux':
+        log.warning("'subuids' are only supported on GNU/Linux hosts.")
+
+    return __salt__['cmd.run'](['usermod', '-V', '-'.join(str(x) for x in (first, last)), name])
+
+
+def add_subgids(name, first=100000, last=110000):
+    '''
+    Add a range of subordinate gids to the user
+
+    name
+        User to modify
+
+    first
+        Begin of the range
+
+    last
+        End of the range
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' user.add_subgids foo
+        salt '*' user.add_subgids foo first=105000
+        salt '*' user.add_subgids foo first=600000000 last=600100000
+    '''
+    if __grains__['kernel'] != 'Linux':
+        log.warning("'subgids' are only supported on GNU/Linux hosts.")
+
+    return __salt__['cmd.run'](['usermod', '-w', '-'.join(str(x) for x in (first, last)), name])
+
+
+def del_subgids(name, first=100000, last=110000):
+    '''
+    Remove a range of subordinate gids to the user
+
+    name
+        User to modify
+
+    first
+        Begin of the range
+
+    last
+        End of the range
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' user.del_subgids foo
+        salt '*' user.del_subgids foo first=105000
+        salt '*' user.del_subgids foo first=600000000 last=600100000
+    '''
+    if __grains__['kernel'] != 'Linux':
+        log.warning("'subgids' are only supported on GNU/Linux hosts.")
+
+    return __salt__['cmd.run'](['usermod', '-W', '-'.join(str(x) for x in (first, last)), name])

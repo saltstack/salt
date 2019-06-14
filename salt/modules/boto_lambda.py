@@ -971,7 +971,7 @@ def describe_event_source_mapping(UUID=None, EventSourceArn=None,
 
     ids = _get_ids(UUID, EventSourceArn=EventSourceArn,
                    FunctionName=FunctionName)
-    if len(ids) < 1:
+    if not ids:
         return {'event_source_mapping': None}
 
     UUID = ids[0]

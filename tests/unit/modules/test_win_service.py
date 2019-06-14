@@ -322,3 +322,76 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         # test single quoted, double quoted, single quotes
         bin_path = "\'\"\'C:\\Program Files\\salt\\test.exe\'\"\'"
         self.assertEqual(win_service._cmd_quote(bin_path), expected)
+
+    def test_service_dependencies(self):
+        def _all():
+            return ['Spongebob', 'Sandy', 'Patrick', 'Garry', 'Rocko', 'Heffer', 'Beverly']
+
+        def _info(name):
+            data = {}
+            data['Spongebob'] = {'Dependencies': ['GaRrY']}
+            data['Sandy'] = {'Dependencies': ['Spongebob']}
+            data['Patrick'] = {'Dependencies': ['Sandy', 'gARRY']}
+            data['Garry'] = {'Dependencies': []}
+
+            data['Rocko'] = {'Dependencies': []}
+            data['Heffer'] = {'Dependencies': ['Rocko']}
+            data['Beverly'] = {'Dependencies': []}
+            return data[name]
+
+        spongebob = win_service.ServiceDependencies('spongebob', _all, _info)
+        self.assertListEqual(['Garry'], spongebob.dependencies(with_indirect=False))
+        self.assertListEqual(['Garry'], spongebob.dependencies(with_indirect=True))
+        self.assertListEqual(['Sandy'], spongebob.parents(with_indirect=False))
+        self.assertListEqual(['Sandy', 'Patrick'], spongebob.parents(with_indirect=True))
+        self.assertListEqual(['Garry', 'Spongebob', 'Sandy', 'Patrick'], spongebob.start_order(with_deps=True, with_parents=True))
+        self.assertListEqual(['Patrick', 'Sandy', 'Spongebob', 'Garry'], spongebob.stop_order(with_deps=True, with_parents=True))
+
+        sandy = win_service.ServiceDependencies('SANDY', _all, _info)
+        self.assertListEqual(sandy.dependencies(with_indirect=False), ['Spongebob'])
+        self.assertListEqual(sandy.dependencies(with_indirect=True), ['Garry', 'Spongebob'])
+        self.assertListEqual(sandy.parents(with_indirect=False), ['Patrick'])
+        self.assertListEqual(sandy.parents(with_indirect=True), ['Patrick'])
+        self.assertListEqual(['Garry', 'Spongebob', 'Sandy', 'Patrick'], spongebob.start_order(with_deps=True, with_parents=True))
+        self.assertListEqual(['Patrick', 'Sandy', 'Spongebob', 'Garry'], spongebob.stop_order(with_deps=True, with_parents=True))
+        self.assertListEqual(['Spongebob'], spongebob.start_order(with_deps=False, with_parents=False))
+        self.assertListEqual(['Spongebob'], spongebob.stop_order(with_deps=False, with_parents=False))
+
+        patrick = win_service.ServiceDependencies('Patrick', _all, _info)
+        self.assertListEqual(['Garry', 'Sandy'], patrick.dependencies(with_indirect=False))
+        self.assertListEqual(['Garry', 'Spongebob', 'Sandy'], patrick.dependencies(with_indirect=True))
+        self.assertListEqual([], patrick.parents(with_indirect=False))
+        self.assertListEqual([], patrick.parents(with_indirect=True))
+        self.assertListEqual(['Garry', 'Spongebob', 'Sandy', 'Patrick'], spongebob.start_order(with_deps=True, with_parents=True))
+        self.assertListEqual(['Patrick', 'Sandy', 'Spongebob', 'Garry'], spongebob.stop_order(with_deps=True, with_parents=True))
+
+        garry = win_service.ServiceDependencies('gARRy', _all, _info)
+        self.assertListEqual([], garry.dependencies(with_indirect=False))
+        self.assertListEqual([], garry.dependencies(with_indirect=True))
+        self.assertListEqual(['Patrick', 'Spongebob'], garry.parents(with_indirect=False))
+        self.assertListEqual(['Spongebob', 'Sandy', 'Patrick'], garry.parents(with_indirect=True))
+        self.assertListEqual(['Garry', 'Spongebob', 'Sandy', 'Patrick'], spongebob.start_order(with_deps=True, with_parents=True))
+        self.assertListEqual(['Patrick', 'Sandy', 'Spongebob', 'Garry'], spongebob.stop_order(with_deps=True, with_parents=True))
+
+        rocko = win_service.ServiceDependencies('Rocko', _all, _info)
+        self.assertListEqual([], rocko.dependencies(with_indirect=False))
+        self.assertListEqual([], rocko.dependencies(with_indirect=True))
+        self.assertListEqual(['Heffer'], rocko.parents(with_indirect=False))
+        self.assertListEqual(['Heffer'], rocko.parents(with_indirect=True))
+
+        heffer = win_service.ServiceDependencies('Heffer', _all, _info)
+        self.assertListEqual(['Rocko'], heffer.dependencies(with_indirect=False))
+        self.assertListEqual(['Rocko'], heffer.dependencies(with_indirect=True))
+        self.assertListEqual([], heffer.parents(with_indirect=False))
+        self.assertListEqual([], heffer.parents(with_indirect=True))
+
+        beverly = win_service.ServiceDependencies('beverly', _all, _info)
+        self.assertListEqual([], beverly.dependencies(with_indirect=False))
+        self.assertListEqual([], beverly.dependencies(with_indirect=True))
+        self.assertListEqual([], beverly.parents(with_indirect=False))
+        self.assertListEqual([], beverly.parents(with_indirect=True))
+
+        with self.assertRaises(ValueError):
+            spunky = win_service.ServiceDependencies('Spunky', _all, _info)
+            spunky.dependencies()
+            spunky.parents()

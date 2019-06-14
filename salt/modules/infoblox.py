@@ -345,9 +345,7 @@ def get_host_domainname(name, domains=None, **api_opts):
         d = d.lower().rstrip('.')
         if name.endswith(d) and len(d) > len(match):
             match = d
-    if len(match) > 0:
-        return match
-    return None
+    return match if match else None
 
 
 def get_host_hostname(name, domains=None, **api_opts):
@@ -648,8 +646,6 @@ def delete_a(name=None, ipv4addr=None, allow_array=False, **api_opts):
     '''
     r = get_a(name, ipv4addr, allow_array=False, **api_opts)
     if not r:
-        return True
-    if len(r) == 0:
         return True
     if len(r) > 1 and not allow_array:
         raise Exception('More than one result, use allow_array to override')

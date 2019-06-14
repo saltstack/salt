@@ -178,7 +178,8 @@ Supported assertions
 * assertGreaterEqual
 * assertLess
 * assertLessEqual
-* assertEmptyassertNotEmpty
+* assertEmpty
+* assertNotEmpty
 
 .. warning::
 
@@ -194,7 +195,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 import time
-from json import loads, dumps
+from salt.utils.json import loads, dumps
 
 # Import Salt libs
 import salt.utils.files

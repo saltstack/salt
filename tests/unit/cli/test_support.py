@@ -60,7 +60,7 @@ class SaltSupportIndentOutputTestCase(TestCase):
         self.iout.put(self.message)
         assert self.device.write.called
         assert self.device.write.call_count == 5
-        for idx, data in enumerate(['', str(self.colors['CYAN']), self.message, str(self.colors['ENDC']), '\n']):
+        for idx, data in enumerate(['', str(self.colors['CYAN']), self.message, str(self.colors['ENDC']), os.linesep]):
             assert self.device.write.call_args_list[idx][0][0] == data
 
     def test_indent_output(self):
@@ -69,7 +69,7 @@ class SaltSupportIndentOutputTestCase(TestCase):
         :return:
         '''
         self.iout.put(self.message, indent=10)
-        for idx, data in enumerate([' ' * 10, str(self.colors['CYAN']), self.message, str(self.colors['ENDC']), '\n']):
+        for idx, data in enumerate([' ' * 10, str(self.colors['CYAN']), self.message, str(self.colors['ENDC']), os.linesep]):
             assert self.device.write.call_args_list[idx][0][0] == data
 
     def test_color_config(self):

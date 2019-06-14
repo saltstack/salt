@@ -23,6 +23,7 @@ import uuid
 import zlib
 from errno import EACCES, EPERM
 import datetime
+import warnings
 
 # pylint: disable=import-error
 try:
@@ -41,16 +42,15 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
                      'slamd64', 'ovs', 'system', 'mint', 'oracle', 'void')
 
 # linux_distribution deprecated in py3.7
-LINUX_DIST_AVAIL = True
-if sys.version_info[:2] >= (3, 7):
-    USE_DISTRO_LINUX_DIST = True
-    try:
-        from distro import linux_distribution
-    except ImportError:
-        LINUX_DIST_AVAIL = False
-else:
-    USE_DISTRO_LINUX_DIST = False
-    from platform import linux_distribution
+try:
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
+except ImportError:
+    from distro import linux_distribution
 
 # Import salt libs
 import salt.exceptions
@@ -794,7 +794,10 @@ def _virtual(osdata):
                 grains['virtual'] = 'LXC'
                 break
         elif command == 'virt-what':
-            output = output.splitlines()[-1]
+            try:
+                output = output.splitlines()[-1]
+            except IndexError:
+                pass
             if output in ('kvm', 'qemu', 'uml', 'xen', 'lxc'):
                 grains['virtual'] = output
                 break
@@ -945,6 +948,7 @@ def _virtual(osdata):
                 with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
                     fhr_contents = fhr.read()
                 if ':/lxc/' in fhr_contents:
+                    grains['virtual'] = 'container'
                     grains['virtual_subtype'] = 'LXC'
                 elif ':/kubepods/' in fhr_contents:
                     grains['virtual_subtype'] = 'kubernetes'
@@ -954,6 +958,7 @@ def _virtual(osdata):
                     if any(x in fhr_contents
                            for x in (':/system.slice/docker', ':/docker/',
                                      ':/docker-ce/')):
+                        grains['virtual'] = 'container'
                         grains['virtual_subtype'] = 'Docker'
             except IOError:
                 pass
@@ -1014,10 +1019,11 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in model:
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'OpenBSD':
-        if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
-            grains['virtual'] = 'kvm'
-        if osdata['manufacturer'] == 'OpenBSD':
-            grains['virtual'] = 'vmm'
+        if 'manufacturer' in osdata:
+            if osdata['manufacturer'] in ['QEMU', 'Red Hat', 'Joyent']:
+                grains['virtual'] = 'kvm'
+            if osdata['manufacturer'] == 'OpenBSD':
+                grains['virtual'] = 'vmm'
     elif osdata['kernel'] == 'SunOS':
         if grains['virtual'] == 'LDOM':
             roles = []
@@ -1054,6 +1060,11 @@ def _virtual(osdata):
                     '{0} -n machdep.idle-mechanism'.format(sysctl)) == 'xen':
                 if os.path.isfile('/var/run/xenconsoled.pid'):
                     grains['virtual_subtype'] = 'Xen Dom0'
+
+    # If we have a virtual_subtype, we're virtual, but maybe we couldn't
+    # figure out what specific virtual type we were?
+    if grains.get('virtual_subtype') and grains['virtual'] == 'physical':
+        grains['virtual'] = 'virtual'
 
     for command in failed_commands:
         log.info(
@@ -1157,8 +1168,7 @@ def _clean_value(key, val):
     NOTE: This logic also exists in the smbios module. This function is
           for use when not using smbios to retrieve the value.
     '''
-    if (val is None or
-            not len(val) or
+    if (val is None or not val or
             re.match('none', val, flags=re.IGNORECASE)):
         return None
     elif 'uuid' in key:
@@ -1192,6 +1202,57 @@ def _clean_value(key, val):
                     val, flags=re.IGNORECASE)):
             return None
     return val
+
+
+def _windows_os_release_grain(caption, product_type):
+    '''
+    helper function for getting the osrelease grain
+    :return:
+    '''
+    # This creates the osrelease grain based on the Windows Operating
+    # System Product Name. As long as Microsoft maintains a similar format
+    # this should be future proof
+    version = 'Unknown'
+    release = ''
+    if 'Server' in caption:
+        for item in caption.split(' '):
+            # If it's all digits, then it's version
+            if re.match(r'\d+', item):
+                version = item
+            # If it starts with R and then numbers, it's the release
+            # ie: R2
+            if re.match(r'^R\d+$', item):
+                release = item
+        os_release = '{0}Server{1}'.format(version, release)
+    else:
+        for item in caption.split(' '):
+            # If it's a number, decimal number, Thin or Vista, then it's the
+            # version
+            if re.match(r'^(\d+(\.\d+)?)|Thin|Vista|XP$', item):
+                version = item
+        os_release = version
+
+    # If the version is still Unknown, revert back to the old way of getting
+    # the os_release
+    # https://github.com/saltstack/salt/issues/52339
+    if os_release in ['Unknown']:
+        os_release = platform.release()
+        server = {'Vista': '2008Server',
+                  '7': '2008ServerR2',
+                  '8': '2012Server',
+                  '8.1': '2012ServerR2',
+                  '10': '2016Server'}
+
+        # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()`
+        # function started reporting the Desktop version instead of the
+        # Server version on # Server versions of Windows, so we need to look
+        # those up. So, if you find a Server Platform that's a key in the
+        # server dictionary, then lookup the actual Server Release.
+        # (Product Type 1 is Desktop, Everything else is Server)
+        if product_type > 1 and os_release in server:
+            os_release = server[os_release]
+
+    return os_release
 
 
 def _windows_platform_data():
@@ -1241,28 +1302,16 @@ def _windows_platform_data():
         except IndexError:
             log.debug('Motherboard info not available on this system')
 
-        os_release = platform.release()
         kernel_version = platform.version()
         info = salt.utils.win_osinfo.get_os_version_info()
         net_info = salt.utils.win_osinfo.get_join_info()
-        server = {'Vista': '2008Server',
-                  '7': '2008ServerR2',
-                  '8': '2012Server',
-                  '8.1': '2012ServerR2',
-                  '10': '2016Server'}
-
-        # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
-        # started reporting the Desktop version instead of the Server version on
-        # Server versions of Windows, so we need to look those up
-        # So, if you find a Server Platform that's a key in the server
-        # dictionary, then lookup the actual Server Release.
-        # (Product Type 1 is Desktop, Everything else is Server)
-        if info['ProductType'] > 1 and os_release in server:
-            os_release = server[os_release]
 
         service_pack = None
         if info['ServicePackMajor'] > 0:
             service_pack = ''.join(['SP', six.text_type(info['ServicePackMajor'])])
+
+        os_release = _windows_os_release_grain(caption=osinfo.Caption,
+                                               product_type=osinfo.ProductType)
 
         grains = {
             'kernelrelease': _clean_value('kernelrelease', osinfo.Version),
@@ -1303,6 +1352,8 @@ def _windows_platform_data():
                 grains['virtual_subtype'] = 'HVM domU'
         elif 'OpenStack' in systeminfo.Model:
             grains['virtual'] = 'OpenStack'
+        elif 'AMAZON' in biosinfo.Version:
+            grains['virtual'] = 'EC2'
 
     return grains
 
@@ -1452,6 +1503,7 @@ _OS_FAMILY_MAP = {
     'IDMS': 'Debian',
     'Funtoo': 'Gentoo',
     'AIX': 'AIX',
+    'TurnKey': 'Debian',
 }
 
 # Matches any possible format:
@@ -1549,6 +1601,10 @@ def _parse_cpe_name(cpe):
 
     Info: https://csrc.nist.gov/projects/security-content-automation-protocol/scap-specifications/cpe
 
+    Note: cpe:2.3:part:vendor:product:version:update:edition:lang:sw_edition:target_sw:target_hw:other
+          however some OS's do not have the full 13 elements, for example:
+                CPE_NAME="cpe:2.3:o:amazon:amazon_linux:2"
+
     :param cpe:
     :return:
     '''
@@ -1564,7 +1620,11 @@ def _parse_cpe_name(cpe):
             ret['vendor'], ret['product'], ret['version'] = cpe[2:5]
             ret['phase'] = cpe[5] if len(cpe) > 5 else None
             ret['part'] = part.get(cpe[1][1:])
-        elif len(cpe) == 13 and cpe[1] == '2.3':  # WFN to a string
+        elif len(cpe) == 6 and cpe[1] == '2.3':  # WFN to a string
+            ret['vendor'], ret['product'], ret['version'] = [x if x != '*' else None for x in cpe[3:6]]
+            ret['phase'] = None
+            ret['part'] = part.get(cpe[2])
+        elif len(cpe) > 7 and len(cpe) <= 13 and cpe[1] == '2.3':  # WFN to a string
             ret['vendor'], ret['product'], ret['version'], ret['phase'] = [x if x != '*' else None for x in cpe[3:7]]
             ret['part'] = part.get(cpe[2])
 
@@ -1872,29 +1932,13 @@ def os_data():
 
         # Use the already intelligent platform module to get distro info
         # (though apparently it's not intelligent enough to strip quotes)
-        if USE_DISTRO_LINUX_DIST:
-            if LINUX_DIST_AVAIL:
-                log.trace(
-                    'Getting OS name, release, and codename from '
-                    'distro.linux_distribution()'
-                )
-                (osname, osrelease, oscodename) = \
-                    [x.strip('"').strip("'") for x in
-                     linux_distribution()]
-            else:
-                log.warning('distro library unavailable.')
-                (osname, osrelease, oscodename) = \
-                    ('Unknown OS Name',
-                     'Unknown OS Release',
-                     'Unknown OS Codename')
-        else:
-            log.trace(
-                'Getting OS name, release, and codename from '
-                'platform.linux_distribution()'
-            )
-            (osname, osrelease, oscodename) = \
-                [x.strip('"').strip("'") for x in
-                 linux_distribution(supported_dists=_supported_dists)]
+        log.trace(
+            'Getting OS name, release, and codename from '
+            'distro.linux_distribution()'
+        )
+        (osname, osrelease, oscodename) = \
+            [x.strip('"').strip("'") for x in
+             linux_distribution(supported_dists=_supported_dists)]
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
@@ -2118,6 +2162,12 @@ def locale_info():
 def hostname():
     '''
     Return fqdn, hostname, domainname
+
+    .. note::
+        On Windows the ``domain`` grain may refer to the dns entry for the host
+        instead of the Windows domain to which the host is joined. It may also
+        be empty if not a part of any domain. Refer to the ``windowsdomain``
+        grain instead
     '''
     # This is going to need some work
     # Provides:
@@ -2175,14 +2225,13 @@ def fqdns():
     grains = {}
     fqdns = set()
 
-    addresses = salt.utils.network.ip_addrs(include_loopback=False,
-                                            interface_data=_INTERFACES)
-    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False,
-                                                  interface_data=_INTERFACES))
+    addresses = salt.utils.network.ip_addrs(include_loopback=False, interface_data=_get_interfaces())
+    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False, interface_data=_get_interfaces()))
     err_message = 'Exception during resolving address: %s'
     for ip in addresses:
         try:
-            fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
+            name, aliaslist, addresslist = socket.gethostbyaddr(ip)
+            fqdns.update([socket.getfqdn(name)] + [als for als in aliaslist if salt.utils.network.is_fqdn(als)])
         except socket.herror as err:
             if err.errno == 0:
                 # No FQDN for this IP address, so we don't need to know this all the time.
@@ -2192,8 +2241,7 @@ def fqdns():
         except (socket.error, socket.gaierror, socket.timeout) as err:
             log.error(err_message, err)
 
-    grains['fqdns'] = sorted(list(fqdns))
-    return grains
+    return {"fqdns": sorted(list(fqdns))}
 
 
 def ip_fqdn():
@@ -2360,6 +2408,13 @@ def get_machine_id():
     else:
         with salt.utils.files.fopen(existing_locations[0]) as machineid:
             return {'machine_id': machineid.read().strip()}
+
+
+def cwd():
+    '''
+    Current working directory
+    '''
+    return {'cwd': os.getcwd()}
 
 
 def path():

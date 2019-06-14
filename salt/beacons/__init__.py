@@ -178,7 +178,7 @@ class Beacon(object):
         '''
 
         indexes = [index for index, item in enumerate(beacon_config) if label in item]
-        if len(indexes) < 1:
+        if not indexes:
             return -1
         else:
             return indexes[0]
@@ -240,9 +240,9 @@ class Beacon(object):
         beacons = self._get_beacons(include_pillar, include_opts)
 
         # Fire the complete event back along with the list of beacons
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': True, 'beacons': beacons},
-                       tag='/salt/minion/minion_beacons_list_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts) as evt:
+            evt.fire_event({'complete': True, 'beacons': beacons},
+                           tag='/salt/minion/minion_beacons_list_complete')
 
         return True
 
@@ -254,9 +254,9 @@ class Beacon(object):
                     for _beacon in self.beacons if '.beacon' in _beacon]
 
         # Fire the complete event back along with the list of beacons
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': True, 'beacons': _beacons},
-                       tag='/salt/minion/minion_beacons_list_available_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts) as evt:
+            evt.fire_event({'complete': True, 'beacons': _beacons},
+                           tag='/salt/minion/minion_beacons_list_available_complete')
 
         return True
 
@@ -277,11 +277,11 @@ class Beacon(object):
             valid = True
 
         # Fire the complete event back along with the list of beacons
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': True,
-                        'vcomment': vcomment,
-                        'valid': valid},
-                       tag='/salt/minion/minion_beacon_validation_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts) as evt:
+            evt.fire_event({'complete': True,
+                            'vcomment': vcomment,
+                            'valid': valid},
+                           tag='/salt/minion/minion_beacon_validation_complete')
 
         return True
 
@@ -307,10 +307,10 @@ class Beacon(object):
             self.opts['beacons'].update(data)
 
         # Fire the complete event back along with updated list of beacons
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': complete, 'comment': comment,
-                        'beacons': self.opts['beacons']},
-                       tag='/salt/minion/minion_beacon_add_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts) as evt:
+            evt.fire_event({'complete': complete, 'comment': comment,
+                            'beacons': self.opts['beacons']},
+                           tag='/salt/minion/minion_beacon_add_complete')
 
         return True
 
@@ -333,10 +333,10 @@ class Beacon(object):
             self.opts['beacons'].update(data)
 
         # Fire the complete event back along with updated list of beacons
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': complete, 'comment': comment,
-                        'beacons': self.opts['beacons']},
-                       tag='/salt/minion/minion_beacon_modify_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts) as evt:
+            evt.fire_event({'complete': complete, 'comment': comment,
+                            'beacons': self.opts['beacons']},
+                           tag='/salt/minion/minion_beacon_modify_complete')
         return True
 
     def delete_beacon(self, name):
@@ -357,10 +357,10 @@ class Beacon(object):
             complete = True
 
         # Fire the complete event back along with updated list of beacons
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': complete, 'comment': comment,
-                        'beacons': self.opts['beacons']},
-                       tag='/salt/minion/minion_beacon_delete_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts) as evt:
+            evt.fire_event({'complete': complete, 'comment': comment,
+                            'beacons': self.opts['beacons']},
+                           tag='/salt/minion/minion_beacon_delete_complete')
 
         return True
 
@@ -372,9 +372,9 @@ class Beacon(object):
         self.opts['beacons']['enabled'] = True
 
         # Fire the complete event back along with updated list of beacons
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
-                       tag='/salt/minion/minion_beacons_enabled_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts) as evt:
+            evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+                           tag='/salt/minion/minion_beacons_enabled_complete')
 
         return True
 
@@ -386,9 +386,9 @@ class Beacon(object):
         self.opts['beacons']['enabled'] = False
 
         # Fire the complete event back along with updated list of beacons
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
-                       tag='/salt/minion/minion_beacons_disabled_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts) as evt:
+            evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+                           tag='/salt/minion/minion_beacons_disabled_complete')
 
         return True
 
@@ -407,10 +407,10 @@ class Beacon(object):
             complete = True
 
         # Fire the complete event back along with updated list of beacons
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': complete, 'comment': comment,
-                        'beacons': self.opts['beacons']},
-                       tag='/salt/minion/minion_beacon_enabled_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts) as evt:
+            evt.fire_event({'complete': complete, 'comment': comment,
+                            'beacons': self.opts['beacons']},
+                           tag='/salt/minion/minion_beacon_enabled_complete')
 
         return True
 
@@ -429,10 +429,10 @@ class Beacon(object):
             complete = True
 
         # Fire the complete event back along with updated list of beacons
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
-        evt.fire_event({'complete': complete, 'comment': comment,
-                        'beacons': self.opts['beacons']},
-                       tag='/salt/minion/minion_beacon_disabled_complete')
+        with salt.utils.event.get_event('minion', opts=self.opts) as evt:
+            evt.fire_event({'complete': complete, 'comment': comment,
+                            'beacons': self.opts['beacons']},
+                           tag='/salt/minion/minion_beacon_disabled_complete')
 
         return True
 
@@ -441,3 +441,14 @@ class Beacon(object):
         Reset the beacons to defaults
         '''
         self.opts['beacons'] = {}
+
+        comment = 'Beacon Reset'
+        complete = True
+
+        # Fire the complete event back along with updated list of beacons
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': complete, 'comment': comment,
+                        'beacons': self.opts['beacons']},
+                       tag='/salt/minion/minion_beacon_reset_complete')
+
+        return True

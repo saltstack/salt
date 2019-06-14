@@ -29,7 +29,7 @@ import time
 import glob
 import hashlib
 import mmap
-from collections import Iterable, Mapping
+from collections import Iterable, Mapping, namedtuple
 from functools import reduce  # pylint: disable=redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -61,6 +61,7 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.user
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
 from salt.utils.files import HASHES, HASHES_REVMAP
 
@@ -69,6 +70,9 @@ log = logging.getLogger(__name__)
 __func_alias__ = {
     'makedirs_': 'makedirs'
 }
+
+
+AttrChanges = namedtuple('AttrChanges', 'added,removed')
 
 
 def __virtual__():
@@ -157,6 +161,51 @@ def _splitlines_preserving_trailing_newline(str):
     if str.endswith('\n') or str.endswith('\r'):
         lines.append('')
     return lines
+
+
+def _chattr_version():
+    '''
+    Return the version of chattr installed
+    '''
+    # There's no really *good* way to get the version of chattr installed.
+    # It's part of the e2fsprogs package - we could try to parse the version
+    # from the package manager, but there's no guarantee that it was
+    # installed that way.
+    #
+    # The most reliable approach is to just check tune2fs, since that should
+    # be installed with chattr, at least if it was installed in a conventional
+    # manner.
+    #
+    # See https://unix.stackexchange.com/a/520399/5788 for discussion.
+    tune2fs = salt.utils.path.which('tune2fs')
+    if not tune2fs or salt.utils.platform.is_aix():
+        return None
+    cmd = [tune2fs]
+    result = __salt__['cmd.run'](cmd, ignore_retcode=True, python_shell=False)
+    match = re.search(
+        r'tune2fs (?P<version>[0-9\.]+)',
+        salt.utils.stringutils.to_str(result),
+    )
+    if match is None:
+        version = None
+    else:
+        version = match.group('version')
+
+    return version
+
+
+def _chattr_has_extended_attrs():
+    '''
+    Return ``True`` if chattr supports extended attributes, that is,
+    the version is >1.41.22. Otherwise, ``False``
+    '''
+    ver = _chattr_version()
+    if ver is None:
+        return False
+
+    needed_version = salt.utils.versions.LooseVersion('1.41.12')
+    chattr_version = salt.utils.versions.LooseVersion(ver)
+    return chattr_version > needed_version
 
 
 def gid_to_group(gid):
@@ -520,7 +569,9 @@ def _cmp_attrs(path, attrs):
     attrs
         string of attributes to compare against a given file
     '''
-    diff = [None, None]
+    # lsattr for AIX is not the same thing as lsattr for linux.
+    if salt.utils.platform.is_aix():
+        return None
 
     try:
         lattrs = lsattr(path).get(path, '')
@@ -528,15 +579,13 @@ def _cmp_attrs(path, attrs):
         # lsattr not installed
         return None
 
-    old = [chr for chr in lattrs if chr not in attrs]
-    if len(old) > 0:
-        diff[1] = ''.join(old)
+    new = set(attrs)
+    old = set(lattrs)
 
-    new = [chr for chr in attrs if chr not in lattrs]
-    if len(new) > 0:
-        diff[0] = ''.join(new)
-
-    return diff
+    return AttrChanges(
+        added=''.join(new-old) or None,
+        removed=''.join(old-new) or None,
+    )
 
 
 def lsattr(path):
@@ -544,6 +593,9 @@ def lsattr(path):
     .. versionadded:: 2018.3.0
     .. versionchanged:: 2018.3.1
         If ``lsattr`` is not installed on the system, ``None`` is returned.
+    .. versionchanged:: 2018.3.4
+        If on ``AIX``, ``None`` is returned even if in filesystem as lsattr on ``AIX``
+        is not the same thing as the linux version.
 
     Obtain the modifiable attributes of the given file. If path
     is to a directory, an empty list is returned.
@@ -557,7 +609,7 @@ def lsattr(path):
 
         salt '*' file.lsattr foo1.txt
     '''
-    if not salt.utils.path.which('lsattr'):
+    if not salt.utils.path.which('lsattr') or salt.utils.platform.is_aix():
         return None
 
     if not os.path.exists(path):
@@ -569,8 +621,12 @@ def lsattr(path):
     results = {}
     for line in result.splitlines():
         if not line.startswith('lsattr: '):
-            vals = line.split(None, 1)
-            results[vals[1]] = re.findall(r"[aAcCdDeijPsStTu]", vals[0])
+            attrs, file = line.split(None, 1)
+            if _chattr_has_extended_attrs():
+                pattern = r"[aAcCdDeijPsStTu]"
+            else:
+                pattern = r"[acdijstuADST]"
+            results[file] = re.findall(pattern, attrs)
 
     return results
 
@@ -635,8 +691,7 @@ def chattr(*files, **kwargs):
     result = __salt__['cmd.run'](cmd, python_shell=False)
 
     if bool(result):
-        raise CommandExecutionError(
-            "chattr failed to run, possibly due to bad parameters.")
+        return False
 
     return True
 
@@ -793,6 +848,7 @@ def get_source_sum(file_name='',
         ret = extract_hash(hash_fn, '', file_name, source, source_hash_name)
         if ret is None:
             _invalid_source_hash_format()
+        ret['hsum'] = ret['hsum'].lower()
         return ret
     else:
         # The source_hash is a hash expression
@@ -836,6 +892,7 @@ def get_source_sum(file_name='',
                     )
                 )
 
+        ret['hsum'] = ret['hsum'].lower()
         return ret
 
 
@@ -1933,7 +1990,7 @@ def line(path, content=None, match=None, mode=None, location=None,
     match = _regex_to_static(body, match)
 
     if os.stat(path).st_size == 0 and mode in ('delete', 'replace'):
-        log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
+        log.warning('Cannot find text to %s. File \'%s\' is empty.', mode, path)
         body = []
     elif mode == 'delete' and match:
         body = [line for line in body if line != match[0]]
@@ -2366,7 +2423,7 @@ def replace(path,
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
-            if 0 != len(new_file):
+            if new_file:
                 if not new_file[-1].endswith(salt.utils.stringutils.to_bytes(os.linesep)):
                     new_file[-1] += salt.utils.stringutils.to_bytes(os.linesep)
             new_file.append(not_found_content + salt.utils.stringutils.to_bytes(os.linesep))
@@ -2530,7 +2587,7 @@ def blockreplace(path,
         .. versionadded:: 2016.3.4
         .. versionchanged:: 2017.7.5,2018.3.1
             New behavior added when value is ``None``.
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
             The default value of this argument will change to ``None`` to match
             the behavior of the :py:func:`file.blockreplace state
             <salt.states.file.blockreplace>`
@@ -3215,6 +3272,69 @@ def touch(name, atime=None, mtime=None):
     return os.path.exists(name)
 
 
+def tail(path, lines):
+    '''
+    .. versionadded:: Neon
+
+    Read the last n lines from a file
+
+    path
+        path to file
+
+    lines
+        number of lines to read
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.tail /path/to/file 10
+    '''
+    path = os.path.expanduser(path)
+    lines_found = []
+    buffer_size = 4098
+
+    if not os.path.isfile(path):
+        raise SaltInvocationError('File not found: {0}'.format(path))
+
+    if not __utils__['files.is_text'](path):
+        raise SaltInvocationError(
+            'Cannot tail a binary file: {0}'.format(path))
+
+    try:
+        lines = int(lines)
+    except ValueError:
+        raise SaltInvocationError('file.tail: \'lines\' value must be an integer')
+
+    try:
+        with salt.utils.fopen(path) as tail_fh:
+            blk_cnt = 1
+            size = os.stat(path).st_size
+
+            if size > buffer_size:
+                tail_fh.seek(-buffer_size * blk_cnt, os.SEEK_END)
+            data = string.split(tail_fh.read(buffer_size), os.linesep)
+
+            for i in range(lines):
+                while len(data) == 1 and ((blk_cnt * buffer_size) < size):
+                    blk_cnt += 1
+                    line = data[0]
+                    try:
+                        tail_fh.seek(-buffer_size * blk_cnt, os.SEEK_END)
+                        data = string.split(tail_fh.read(buffer_size) + line, os.linesep)
+                    except IOError:
+                        tail_fh.seek(0)
+                        data = string.split(tail_fh.read(size - (buffer_size * (blk_cnt - 1))) + line, os.linesep)
+
+                line = data[-1]
+                data.pop()
+                lines_found.append(line)
+
+        return lines_found[-lines:]
+    except (OSError, IOError):
+        raise CommandExecutionError('Could not tail \'{0}\''.format(path))
+
+
 def seek_read(path, size, offset):
     '''
     .. versionadded:: 2014.1.0
@@ -3666,7 +3786,7 @@ def stats(path, hash_type=None, follow_symlinks=True):
     ret['mtime'] = pstat.st_mtime
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
-    ret['mode'] = six.text_type(oct(stat.S_IMODE(pstat.st_mode)))
+    ret['mode'] = salt.utils.files.normalize_mode(oct(stat.S_IMODE(pstat.st_mode)))
     if hash_type:
         ret['sum'] = get_hash(path, hash_type)
     ret['type'] = 'file'
@@ -3715,7 +3835,7 @@ def rmdir(path):
         return exc.strerror
 
 
-def remove(path):
+def remove(path, **kwargs):
     '''
     Remove the named file. If a directory is supplied, it will be recursively
     deleted.
@@ -4531,17 +4651,6 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
 
     is_dir = os.path.isdir(name)
     is_link = os.path.islink(name)
-    if not salt.utils.platform.is_windows() and not is_dir and not is_link:
-        try:
-            lattrs = lsattr(name)
-        except SaltInvocationError:
-            lattrs = None
-        if lattrs is not None:
-            # List attributes on file
-            perms['lattrs'] = ''.join(lattrs.get(name, ''))
-            # Remove attributes on file so changes can be enforced.
-            if perms['lattrs']:
-                chattr(name, operator='remove', attributes=perms['lattrs'])
 
     # user/group changes if needed, then check if it worked
     if user:
@@ -4623,11 +4732,6 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
         elif 'cgroup' in perms and user != '':
             ret['changes']['group'] = group
 
-    if not salt.utils.platform.is_windows() and not is_dir:
-        # Replace attributes on file if it had been removed
-        if perms.get('lattrs', ''):
-            chattr(name, operator='add', attributes=perms['lattrs'])
-
     # Mode changes if needed
     if mode is not None:
         # File is a symlink, ignore the mode setting
@@ -4657,31 +4761,47 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
             pass
         else:
             diff_attrs = _cmp_attrs(name, attrs)
-            if diff_attrs is not None:
-                if diff_attrs[0] is not None or diff_attrs[1] is not None:
-                    if __opts__['test'] is True:
-                        ret['changes']['attrs'] = attrs
+            if diff_attrs and any(attr for attr in diff_attrs):
+                changes = {
+                    'old': ''.join(lsattr(name)[name]),
+                    'new': None,
+                }
+                if __opts__['test'] is True:
+                    changes['new'] = attrs
+                else:
+                    if diff_attrs.added:
+                        chattr(
+                            name,
+                            operator="add",
+                            attributes=diff_attrs.added,
+                        )
+                    if diff_attrs.removed:
+                        chattr(
+                            name,
+                            operator="remove",
+                            attributes=diff_attrs.removed,
+                        )
+                    cmp_attrs = _cmp_attrs(name, attrs)
+                    if any(attr for attr in cmp_attrs):
+                        ret['result'] = False
+                        ret['comment'].append(
+                            'Failed to change attributes to {0}'.format(attrs)
+                        )
+                        changes['new'] = ''.join(lsattr(name)[name])
                     else:
-                        if diff_attrs[0] is not None:
-                            chattr(name, operator="add", attributes=diff_attrs[0])
-                        if diff_attrs[1] is not None:
-                            chattr(name, operator="remove", attributes=diff_attrs[1])
-                        cmp_attrs = _cmp_attrs(name, attrs)
-                        if cmp_attrs[0] is not None or cmp_attrs[1] is not None:
-                            ret['result'] = False
-                            ret['comment'].append(
-                                'Failed to change attributes to {0}'.format(attrs)
-                            )
-                        else:
-                            ret['changes']['attrs'] = attrs
+                        changes['new'] = attrs
+                if changes['old'] != changes['new']:
+                    ret['changes']['attrs'] = changes
 
     # Set selinux attributes if needed
     if salt.utils.platform.is_linux() and (seuser or serole or setype or serange):
         selinux_error = False
         try:
             current_seuser, current_serole, current_setype, current_serange = get_selinux_context(name).split(':')
-            log.debug('Current selinux context user:{0} role:{1} type:{2} range:{3}'.format(
-                current_seuser, current_serole, current_setype, current_serange))
+            log.debug(
+                'Current selinux context user:%s role:%s type:%s range:%s',
+                current_seuser, current_serole, current_setype, current_serange
+            )
         except ValueError:
             log.error('Unable to get current selinux attributes')
             ret['result'] = False
@@ -4734,7 +4854,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
                             requested_setype = current_setype
                         result = set_selinux_context(name, user=requested_seuser, role=requested_serole,
                                                      type=requested_setype, range=requested_serange, persist=True)
-                        log.debug("selinux set result: {0}".format(result))
+                        log.debug('selinux set result: %s', result)
                         current_seuser, current_serole, current_setype, current_serange = result.split(':')
                     except ValueError:
                         log.error('Unable to set current selinux attributes')
@@ -4923,7 +5043,7 @@ def check_managed_changes(
 
         if comments:
             __clean_tmp(sfn)
-            return False, comments
+            raise CommandExecutionError(comments)
         if sfn and source and keep_mode:
             if _urlparse(source).scheme in ('salt', 'file') \
                     or source.startswith('/'):
@@ -5066,7 +5186,7 @@ def check_file_meta(
         try:
             differences = get_diff(name, tmp, show_filenames=False)
         except CommandExecutionError as exc:
-            log.error('Failed to diff files: {0}'.format(exc))
+            log.error('Failed to diff files: %s', exc)
             differences = exc.strerror
         __clean_tmp(tmp)
         if differences:
@@ -5106,10 +5226,10 @@ def check_file_meta(
         if seuser or serole or setype or serange:
             try:
                 current_seuser, current_serole, current_setype, current_serange = get_selinux_context(name).split(':')
-                log.debug('Current selinux context user:{0} role:{1} type:{2} range:{3}'.format(current_seuser,
-                                                                                                current_serole,
-                                                                                                current_setype,
-                                                                                                current_serange))
+                log.debug(
+                    'Current selinux context user:%s role:%s type:%s range:%s',
+                    current_seuser, current_serole, current_setype, current_serange
+                )
             except ValueError as exc:
                 log.error('Unable to get current selinux attributes')
                 changes['selinux'] = exc.strerror
@@ -5968,8 +6088,8 @@ def mknod_chrdev(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug('Creating character device name:{0} major:{1} minor:{2} mode:{3}'
-              .format(name, major, minor, mode))
+    log.debug('Creating character device name:%s major:%s minor:%s mode:%s',
+              name, major, minor, mode)
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Character device {0} created.'.format(name)}
@@ -6043,8 +6163,8 @@ def mknod_blkdev(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug('Creating block device name:{0} major:{1} minor:{2} mode:{3}'
-              .format(name, major, minor, mode))
+    log.debug('Creating block device name:%s major:%s minor:%s mode:%s',
+              name, major, minor, mode)
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Block device {0} created.'.format(name)}
@@ -6116,7 +6236,7 @@ def mknod_fifo(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug('Creating FIFO name: {0}'.format(name))
+    log.debug('Creating FIFO name: %s', name)
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}

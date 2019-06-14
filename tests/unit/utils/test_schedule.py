@@ -19,6 +19,11 @@ import tests.integration as integration
 import salt.config
 from salt.utils.schedule import Schedule
 
+from salt.modules.test import ping as test_ping
+from salt.modules.test import true_ as test_true
+from salt.modules.status import time as status_time
+from salt.modules.cmdmod import run as cmd_run
+
 # pylint: disable=import-error,unused-import
 try:
     import croniter
@@ -29,17 +34,6 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
-SOCK_DIR = os.path.join(ROOT_DIR, 'test-socks')
-
-DEFAULT_CONFIG = salt.config.minion_config(None)
-DEFAULT_CONFIG['conf_dir'] = ROOT_DIR
-DEFAULT_CONFIG['root_dir'] = ROOT_DIR
-DEFAULT_CONFIG['sock_dir'] = SOCK_DIR
-DEFAULT_CONFIG['pki_dir'] = os.path.join(ROOT_DIR, 'pki')
-DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
-
-
 # pylint: disable=too-many-public-methods,invalid-name
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ScheduleTestCase(TestCase):
@@ -47,9 +41,30 @@ class ScheduleTestCase(TestCase):
     Unit tests for salt.utils.schedule module
     '''
 
+    @classmethod
+    def setUpClass(cls):
+        root_dir = os.path.join(integration.TMP, 'schedule-unit-tests')
+        default_config = salt.config.minion_config(None)
+        default_config['conf_dir'] = default_config['root_dir'] = root_dir
+        default_config['sock_dir'] = os.path.join(root_dir, 'test-socks')
+        default_config['pki_dir'] = os.path.join(root_dir, 'pki')
+        default_config['cachedir'] = os.path.join(root_dir, 'cache')
+        cls.default_config = default_config
+
+    @classmethod
+    def tearDownClass(cls):
+        delattr(cls, 'default_config')
+
     def setUp(self):
         with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
-            self.schedule = Schedule(copy.deepcopy(DEFAULT_CONFIG), {}, returners={})
+            functions = {'test.ping': test_ping,
+                         'test.true': test_true,
+                         'status.time': status_time,
+                         'cmd.run': cmd_run}
+            self.schedule = Schedule(copy.deepcopy(self.default_config),
+                                     functions,
+                                     returners={})
+        self.addCleanup(delattr, self, 'schedule')
 
     # delete_job tests
 
@@ -372,3 +387,34 @@ class ScheduleTestCase(TestCase):
                 patch('sys.platform', 'linux2'):
                 self.schedule.handle_func(False, 'test.ping', data)
                 self.assertTrue(log_mock.exception.called)
+
+    def test_eval_schedule_compound_function(self):
+        '''
+        Tests eval if the schedule setting time is in the future
+        '''
+        self.schedule.opts.update({'pillar': {'schedule': {}}})
+        self.schedule.opts.update({'schedule': {'testjob': {'function': ['cmd.run', 'status.time'],
+                                                            'args': [["data"], []],
+                                                            'seconds': 60}}})
+        now = datetime.datetime.now()
+        self.schedule.eval()
+        self.assertTrue(self.schedule.opts['schedule']['testjob']['_next_fire_time'] > now)
+
+    def test_eval_schedule_invalid_arguments(self):
+        '''
+        Tests eval if the schedule if data contains error
+        '''
+        self.schedule.opts.update({'pillar': {'schedule': {}}})
+        self.schedule.opts.update({'schedule': {'testjob': {'function': ['cmd.run', 'status.time'],
+                                                            'args': [["data"]],
+                                                            'seconds': 60}}})
+        now = datetime.datetime.now()
+
+        # Run eval one to prime the scheduler
+        self.schedule.eval()
+
+        # Run in "60 seconds" and we should receive the error
+        self.schedule.eval(now + datetime.timedelta(seconds=60))
+        self.assertIn('_error', self.schedule.opts['schedule']['testjob'])
+        _expected = 'Number of arguments is less than the number of functions. Ignoring job.'
+        self.assertEqual(self.schedule.opts['schedule']['testjob']['_error'], _expected)

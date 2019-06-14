@@ -218,14 +218,14 @@ def _format_url(handler, host=None, core_name=None, extra=None):
     port = __salt__['config.option']('solr.port')
     baseurl = __salt__['config.option']('solr.baseurl')
     if _get_none_or_value(core_name) is None:
-        if extra is None or len(extra) == 0:
+        if not extra:
             return "http://{0}:{1}{2}/{3}?wt=json".format(
                     host, port, baseurl, handler)
         else:
             return "http://{0}:{1}{2}/{3}?wt=json&{4}".format(
                     host, port, baseurl, handler, "&".join(extra))
     else:
-        if extra is None or len(extra) == 0:
+        if not extra:
             return "http://{0}:{1}{2}/{3}/{4}?wt=json".format(
                     host, port, baseurl, core_name, handler)
         else:

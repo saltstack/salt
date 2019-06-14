@@ -56,18 +56,19 @@ class EngineLibvirtEventTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.engines.libvirt_events.libvirt',
            VIR_PREFIX_FOO=0,
-           VIR_PREFIX_FOO_BAR=1,
-           VIR_PREFIX_BAR_FOO=2)
+           VIR_PREFIX_BAR_FOO=1)
     def test_get_libvirt_enum_string_underscores(self, libvirt_mock):
         '''
         Make sure the libvirt enum value to string works reliably and items
         with an underscore aren't confused with sub prefixes.
         '''
-        assert libvirt_events._get_libvirt_enum_string('VIR_PREFIX_', 1) == 'foo bar'
+        assert libvirt_events._get_libvirt_enum_string('VIR_PREFIX_', 1) == 'bar foo'
 
     @patch('salt.engines.libvirt_events.libvirt',
+           VIR_DOMAIN_EVENT_CRASHED_PANICKED=0,
            VIR_DOMAIN_EVENT_DEFINED=0,
            VIR_DOMAIN_EVENT_UNDEFINED=1,
+           VIR_DOMAIN_EVENT_CRASHED=2,
            VIR_DOMAIN_EVENT_DEFINED_ADDED=0,
            VIR_DOMAIN_EVENT_DEFINED_UPDATED=1)
     def test_get_domain_event_detail(self, mock_libvirt):

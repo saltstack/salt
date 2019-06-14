@@ -32,9 +32,9 @@ import functools
 import logging
 import os.path
 import tempfile
-import traceback
 
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -119,8 +119,8 @@ def __mount_device(action):
             kwargs['__dest'] = dest
             ret = action(*args, **kwargs)
         except Exception as e:
-            log.error('''Traceback: {}'''.format(traceback.format_exc()))
-            ret['comment'].append(e)
+            log.exception('Encountered error mounting %s', device)
+            ret['comment'].append(six.text_type(e))
         finally:
             _umount(dest)
         return ret

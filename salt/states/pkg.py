@@ -135,10 +135,6 @@ if salt.utils.platform.is_windows():
     # The following imports are used by the namespaced win_pkg funcs
     # and need to be included in their globals.
     # pylint: disable=import-error,unused-import
-    try:
-        import msgpack
-    except ImportError:
-        import msgpack_pure as msgpack
     from salt.utils.versions import LooseVersion
     # pylint: enable=import-error,unused-import
 # pylint: enable=invalid-name
@@ -965,6 +961,8 @@ def installed(
         ignore_epoch=False,
         reinstall=False,
         update_holds=False,
+        bypass_file=None,
+        bypass_file_contains=None,
         **kwargs):
     '''
     Ensure that the package is installed, and that it is the correct version
@@ -1497,6 +1495,54 @@ def installed(
                - version: 10.0.40219
                - report_reboot_exit_codes: False
 
+    :param str bypass_file:
+       If you wish to bypass the full package validation process, you can
+       specify a file related to the installed pacakge as a way to
+       validate the pacakge has already been installed. A good example
+       would be a config file that is deployed with the package. Another
+       bypass_file could be ``/run/salt-minon.pid``.
+
+       .. code-block:: yaml
+
+           install_ntp:
+             pkg.installed:
+               - name: ntp
+               - bypass_file: /etc/ntp.conf
+
+       The use case for this feature is when running salt at significant scale.
+       Each state that has a requisite for a ``pkg.installed`` will have salt
+       querying the package manager of the system. Compared to simple diff
+       checks, querying the pacakge manager is a lengthy process. This feature
+       is an attempt to reduce the run time of states. If only a config change
+       is being made but you wish to keep all of the self resolving requisites
+       this bypasses the lenghty cost of the package manager. The assumption is
+       that if this file is present, the package should already be installed.
+
+    :param str bypass_file_contains:
+       This option can only be used in conjunction with the ``bypass_file``
+       option. It is to provide a second layer of validation before bypassing
+       the ``pkg.installed`` process.
+
+       .. code-block:: yaml
+
+           install_ntp:
+             pkg.installed:
+               - name: ntp
+               - bypass_file: /etc/ntp.conf
+               - bypass_file_contains: version-20181218
+
+       The will have salt check to see if the file contains the specified
+       string. If the value is found, the ``pkg.installed`` process will be
+       bypassed under the assumption that two pieces of validation have passed
+       and the package is already installed.
+
+       .. warning::
+
+           Do not try and use ``{{ salt['pkg.version']('ntp') }}`` in a jinja
+           template as part of your bypass_file_contains match. This will
+           trigger a ``pkg.version`` lookup with the pacakge manager and negate
+           any time saved by trying to use the bypass feature.
+
     :return:
         A dictionary containing the state of the software installation
     :rtype dict:
@@ -1518,7 +1564,7 @@ def installed(
         information.
 
     '''
-    if isinstance(pkgs, list) and len(pkgs) == 0:
+    if not pkgs and isinstance(pkgs, list):
         return {'name': name,
                 'changes': {},
                 'result': True,
@@ -1535,6 +1581,21 @@ def installed(
 
     kwargs['saltenv'] = __env__
     refresh = salt.utils.pkg.check_refresh(__opts__, refresh)
+
+    if bypass_file is not None and bypass_file_contains is not None:
+        if os.path.isfile(bypass_file):
+            with salt.utils.fopen(bypass_file) as bypass_file_open:
+                if bypass_file_contains in bypass_file_open.read():
+                    return {'name': name,
+                            'changes': {},
+                            'result': True,
+                            'comment': 'pkg.installed was bypassed as {} was present in {}'.format(bypass_file_contains, bypass_file)}
+    if bypass_file is not None and bypass_file_contains is None:
+        if os.path.isfile(bypass_file):
+            return {'name': name,
+                    'changes': {},
+                    'result': True,
+                    'comment': 'pkg.installed was bypassed as bypass_file {} was present'.format(bypass_file)}
 
     # check if capabilities should be checked and modify the requested packages
     # accordingly.
@@ -1824,10 +1885,10 @@ def installed(
             change_name = i['name']
             if change_name in changes:
                 comment.append(i['comment'])
-                if len(changes[change_name]['new']) > 0:
+                if changes[change_name]['new']:
                     changes[change_name]['new'] += '\n'
                 changes[change_name]['new'] += '{0}'.format(i['changes']['new'])
-                if len(changes[change_name]['old']) > 0:
+                if changes[change_name]['old']:
                     changes[change_name]['old'] += '\n'
                 changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
             else:
@@ -2038,7 +2099,7 @@ def downloaded(name,
                          'this platform'
         return ret
 
-    if isinstance(pkgs, list) and len(pkgs) == 0:
+    if not pkgs and isinstance(pkgs, list):
         ret['result'] = True
         ret['comment'] = 'No packages to download provided'
         return ret
@@ -2151,7 +2212,7 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
                          'this platform'
         return ret
 
-    if isinstance(advisory_ids, list) and len(advisory_ids) == 0:
+    if not advisory_ids and isinstance(advisory_ids, list):
         ret['result'] = True
         ret['comment'] = 'No advisory ids provided'
         return ret
@@ -2394,7 +2455,7 @@ def latest(
                     'comment': 'Invalidly formatted "pkgs" parameter. See '
                                'minion log.'}
     else:
-        if isinstance(pkgs, list) and len(pkgs) == 0:
+        if not pkgs and isinstance(pkgs, list):
             return {
                 'name': name,
                 'changes': {},

@@ -3,7 +3,6 @@
 '''
 Sphinx documentation for Salt
 '''
-import functools
 import sys
 import os
 import re
@@ -13,7 +12,6 @@ import time
 from sphinx.directives import TocTree
 
 
-# pylint: disable=R0903
 class Mock(object):
     '''
     Mock out specified imports.
@@ -25,7 +23,7 @@ class Mock(object):
 
     http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
     '''
-    def __init__(self, mapping=None, *args, **kwargs):
+    def __init__(self, mapping=None, *args, **kwargs):  # pylint: disable=unused-argument
         """
         Mapping allows autodoc to bypass the Mock object, but actually assign
         a specific value, expected by a specific attribute returned.
@@ -41,14 +39,12 @@ class Mock(object):
         return Mock(mapping=self.__mapping)
 
     def __getattr__(self, name):
-        #__mapping = {'total': 0}
-        data = None
         if name in self.__mapping:
             data = self.__mapping.get(name)
         elif name in ('__file__', '__path__'):
             data = '/dev/null'
-        elif name == '__qualname__':
-            raise AttributeError("'Mock' object has no attribute '__qualname__'")
+        elif name in ('__mro_entries__', '__qualname__'):
+            raise AttributeError("'Mock' object has no attribute '%s'" % (name))
         else:
             data = Mock(mapping=self.__mapping)
         return data
@@ -56,10 +52,30 @@ class Mock(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    @staticmethod
+    def __next__():
         raise StopIteration
 
-# pylint: enable=R0903
+    # For Python 2
+    next = __next__
+
+
+def mock_decorator_with_params(*oargs, **okwargs):  # pylint: disable=unused-argument
+    '''
+    Optionally mock a decorator that takes parameters
+
+    E.g.:
+
+    @blah(stuff=True)
+    def things():
+        pass
+    '''
+    def inner(fn, *iargs, **ikwargs):  # pylint: disable=unused-argument
+        if hasattr(fn, '__call__'):
+            return fn
+        return Mock()
+    return inner
+
 
 MOCK_MODULES = [
     # Python stdlib
@@ -147,7 +163,6 @@ MOCK_MODULES = [
     'jnpr.junos.utils',
     'jnpr.junos.utils.config',
     'jnpr.junos.utils.sw',
-    'json',
     'keyring',
     'libvirt',
     'lxml',
@@ -182,40 +197,23 @@ MOCK_MODULES = [
     'zfs',
 ]
 
+MOCK_MODULES_MAPPING = {
+    'cherrypy': {'config': mock_decorator_with_params},
+    'ntsecuritycon': {
+        'STANDARD_RIGHTS_REQUIRED': 0,
+        'SYNCHRONIZE': 0,
+    },
+    'psutil': {'total': 0},  # Otherwise it will crash Sphinx
+}
+
 for mod_name in MOCK_MODULES:
-    if mod_name == 'psutil':
-        mock = Mock(mapping={'total': 0})  # Otherwise it will crash Sphinx
-    else:
-        mock = Mock()
-    sys.modules[mod_name] = mock
-
-def mock_decorator_with_params(*oargs, **okwargs):
-    '''
-    Optionally mock a decorator that takes parameters
-
-    E.g.:
-
-    @blah(stuff=True)
-    def things():
-        pass
-    '''
-    def inner(fn, *iargs, **ikwargs):
-        if hasattr(fn, '__call__'):
-            return fn
-        else:
-            return Mock()
-    return inner
+    sys.modules[mod_name] = Mock(mapping=MOCK_MODULES_MAPPING.get(mod_name))
 
 # Define a fake version attribute for the following libs.
 sys.modules['libcloud'].__version__ = '0.0.0'
 sys.modules['msgpack'].version = (1, 0, 0)
 sys.modules['psutil'].version_info = (3, 0, 0)
 sys.modules['pymongo'].version = '0.0.0'
-sys.modules['ntsecuritycon'].STANDARD_RIGHTS_REQUIRED = 0
-sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
-
-# Define a fake version attribute for the following libs.
-sys.modules['cherrypy'].config = mock_decorator_with_params
 sys.modules['tornado'].version_info = (0, 0, 0)
 sys.modules['boto.regioninfo']._load_json_file = {'endpoints': None}
 
@@ -229,12 +227,12 @@ except NameError:
     docs_basepath = os.path.abspath(os.path.dirname('.'))
 
 addtl_paths = (
-        os.pardir,  # salt itself (for autodoc)
-        '_ext',  # custom Sphinx extensions
+    os.pardir,  # salt itself (for autodoc)
+    '_ext',  # custom Sphinx extensions
 )
 
-for path in addtl_paths:
-    sys.path.insert(0, os.path.abspath(os.path.join(docs_basepath, path)))
+for addtl_path in addtl_paths:
+    sys.path.insert(0, os.path.abspath(os.path.join(docs_basepath, addtl_path)))
 
 
 # We're now able to import salt
@@ -257,9 +255,9 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2018.3.3'  # latest release
-previous_release = '2017.7.8'  # latest release from previous branch
-previous_release_dir = '2017.7'  # path on web server for previous branch
+latest_release = '2019.2.0'  # latest release
+previous_release = '2018.3.4'  # latest release from previous branch
+previous_release_dir = '2018.3'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
@@ -314,7 +312,7 @@ extensions = [
 ]
 
 try:
-    import sphinxcontrib.spelling
+    import sphinxcontrib.spelling  # false positive, pylint: disable=unused-import
 except ImportError:
     pass
 else:
@@ -381,7 +379,8 @@ gettext_compact = False
 
 
 ### HTML options
-html_theme = os.environ.get('HTML_THEME', 'saltstack2') # set 'HTML_THEME=saltstack' to use previous theme
+# set 'HTML_THEME=saltstack' to use previous theme
+html_theme = os.environ.get('HTML_THEME', 'saltstack2')
 html_theme_path = ['_themes']
 html_title = u''
 html_short_title = 'Salt'
@@ -389,7 +388,7 @@ html_short_title = 'Salt'
 html_static_path = ['_static']
 html_logo = None # specified in the theme layout.html
 html_favicon = 'favicon.ico'
-html_use_smartypants = False
+smartquotes = False
 
 # Use Google customized search or use Sphinx built-in JavaScript search
 if on_saltstack:
@@ -449,7 +448,7 @@ html_show_copyright = True
 ### Latex options
 
 latex_documents = [
-  ('contents', 'Salt.tex', 'Salt Documentation', 'SaltStack, Inc.', 'manual'),
+    ('contents', 'Salt.tex', 'Salt Documentation', 'SaltStack, Inc.', 'manual'),
 ]
 
 latex_logo = '_static/salt-logo.png'
@@ -457,7 +456,7 @@ latex_logo = '_static/salt-logo.png'
 latex_elements = {
     'inputenc': '',     # use XeTeX instead of the inputenc LaTeX package.
     'utf8extra': '',
-    'preamble': '''
+    'preamble': r'''
     \usepackage{fontspec}
     \setsansfont{Linux Biolinum O}
     \setromanfont{Linux Libertine O}
@@ -469,35 +468,36 @@ latex_elements = {
 
 
 ### Linkcheck options
-linkcheck_ignore = [r'http://127.0.0.1',
-                    r'http://salt:\d+',
-                    r'http://local:\d+',
-                    r'https://console.aws.amazon.com',
-                    r'http://192.168.33.10',
-                    r'http://domain:\d+',
-                    r'http://123.456.789.012:\d+',
-                    r'http://localhost',
-                    r'https://groups.google.com/forum/#!forum/salt-users',
-                    r'http://logstash.net/docs/latest/inputs/udp',
-                    r'http://logstash.net/docs/latest/inputs/zeromq',
-                    r'http://www.youtube.com/saltstack',
-                    r'https://raven.readthedocs.io',
-                    r'https://getsentry.com',
-                    r'https://salt-cloud.readthedocs.io',
-                    r'https://salt.readthedocs.io',
-                    r'http://www.pip-installer.org/',
-                    r'http://www.windowsazure.com/',
-                    r'https://github.com/watching',
-                    r'dash-feed://',
-                    r'https://github.com/saltstack/salt/',
-                    r'http://bootstrap.saltstack.org',
-                    r'https://bootstrap.saltstack.com',
-                    r'https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh',
-                    r'media.readthedocs.org/dash/salt/latest/salt.xml',
-                    r'https://portal.aws.amazon.com/gp/aws/securityCredentials',
-                    r'https://help.github.com/articles/fork-a-repo',
-                    r'dash-feed://https%3A//media.readthedocs.org/dash/salt/latest/salt.xml'
-                    ]
+linkcheck_ignore = [
+    r'http://127.0.0.1',
+    r'http://salt:\d+',
+    r'http://local:\d+',
+    r'https://console.aws.amazon.com',
+    r'http://192.168.33.10',
+    r'http://domain:\d+',
+    r'http://123.456.789.012:\d+',
+    r'http://localhost',
+    r'https://groups.google.com/forum/#!forum/salt-users',
+    r'http://logstash.net/docs/latest/inputs/udp',
+    r'http://logstash.net/docs/latest/inputs/zeromq',
+    r'http://www.youtube.com/saltstack',
+    r'https://raven.readthedocs.io',
+    r'https://getsentry.com',
+    r'https://salt-cloud.readthedocs.io',
+    r'https://salt.readthedocs.io',
+    r'http://www.pip-installer.org/',
+    r'http://www.windowsazure.com/',
+    r'https://github.com/watching',
+    r'dash-feed://',
+    r'https://github.com/saltstack/salt/',
+    r'http://bootstrap.saltstack.org',
+    r'https://bootstrap.saltstack.com',
+    r'https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh',
+    r'media.readthedocs.org/dash/salt/latest/salt.xml',
+    r'https://portal.aws.amazon.com/gp/aws/securityCredentials',
+    r'https://help.github.com/articles/fork-a-repo',
+    r'dash-feed://https%3A//media.readthedocs.org/dash/salt/latest/salt.xml',
+]
 
 linkcheck_anchors = False
 
@@ -541,6 +541,7 @@ epub_tocdup = False
 
 
 def skip_mod_init_member(app, what, name, obj, skip, options):
+    # pylint: disable=too-many-arguments,unused-argument
     if name.startswith('_'):
         return True
     if isinstance(obj, types.FunctionType) and obj.__name__ == 'mod_init':

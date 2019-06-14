@@ -38,7 +38,7 @@ _PKG_TARGETS = {
     'Debian': ['python-plist', 'apg'],
     'RedHat': ['units', 'zsh-html'],
     'FreeBSD': ['aalib', 'pth'],
-    'Suse': ['aalib', 'rpm-python'],
+    'Suse': ['aalib', 'htop'],
     'MacOS': ['libpng', 'jpeg'],
     'Windows': ['putty', '7zip'],
 }
@@ -109,7 +109,7 @@ def pkgmgr_avail(run_function, grains):
         # Try lsof if it's available
         if salt.utils.path.which('lsof'):
             lock = run_function('cmd.run', ['lsof {0}'.format(path)])
-            return True if len(lock) else False
+            return True if lock else False
 
         # Try to find any locks on path from /proc/locks
         elif grains.get('kernel') == 'Linux':
@@ -807,7 +807,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         os_family = grains.get('os_family', '')
         pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
-        if not len(pkg_cap_targets) > 0:
+        if not pkg_cap_targets:
             self.skipTest('Capability not provided')
 
         target, realpkg = pkg_cap_targets[0]
@@ -841,7 +841,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         os_family = grains.get('os_family', '')
         pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
-        if not len(pkg_cap_targets) > 0:
+        if not pkg_cap_targets:
             self.skipTest('Capability not provided')
 
         target, realpkg = pkg_cap_targets[0]
@@ -883,7 +883,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         os_family = grains.get('os_family', '')
         pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
-        if not len(pkg_cap_targets) > 0:
+        if not pkg_cap_targets:
             self.skipTest('Capability not provided')
         pkg_targets = _PKG_TARGETS.get(os_family, [])
 
@@ -958,7 +958,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         os_family = grains.get('os_family', '')
         pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
-        if not len(pkg_cap_targets) > 0:
+        if not pkg_cap_targets:
             self.skipTest('Capability not provided')
 
         target, realpkg = pkg_cap_targets[0]
@@ -996,7 +996,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         os_family = grains.get('os_family', '')
         pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
-        if not len(pkg_cap_targets) > 0:
+        if not pkg_cap_targets:
             self.skipTest('Capability not provided')
 
         target, realpkg = pkg_cap_targets[0]
@@ -1030,7 +1030,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         os_family = grains.get('os_family', '')
         pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
-        if not len(pkg_cap_targets) > 0:
+        if not pkg_cap_targets:
             self.skipTest('Capability not provided')
 
         target, realpkg = pkg_cap_targets[0]

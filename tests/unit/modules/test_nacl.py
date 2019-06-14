@@ -14,6 +14,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.unit import skipIf
 
+
 try:
     import libnacl.secret  # pylint: disable=unused-import
     import libnacl.sealed  # pylint: disable=unused-import
@@ -29,7 +30,7 @@ class NaclTest(TestCase, LoaderModuleMockMixin):
     '''
     def setup_loader_modules(self):
         self.unencrypted_data = salt.utils.stringutils.to_bytes('hello')
-        self.opts = salt.config.DEFAULT_MINION_OPTS
+        self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         utils = salt.loader.utils(self.opts)
         funcs = salt.loader.minion_mods(self.opts, utils=utils, whitelist=['nacl'])
 

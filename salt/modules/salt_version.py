@@ -75,12 +75,11 @@ def get_release_number(name):
     version_map = salt.version.SaltStackVersion.LNAMES
     version = version_map.get(name)
     if version is None:
-        log.info('Version {} not found.'.format(name))
+        log.info('Version %s not found.', name)
         return None
 
     if version[1] == 0:
-        log.info('Version {} found, but no release number has been assigned '
-                 'yet.'.format(name))
+        log.info('Version %s found, but no release number has been assigned yet.', name)
         return 'No version assigned.'
 
     return '.'.join(str(item) for item in version)
@@ -101,8 +100,7 @@ def is_equal(name):
         salt '*' salt_version.is_equal 'Oxygen'
     '''
     if _check_release_cmp(name) == 0:
-        log.info('Release codename \'{}\' equals the minion\'s '
-                 'version.'.format(name))
+        log.info('Release codename \'%s\' equals the minion\'s version.', name)
         return True
 
     return False
@@ -123,8 +121,7 @@ def is_newer(name):
         salt '*' salt_version.is_newer 'Sodium'
     '''
     if _check_release_cmp(name) == 1:
-        log.info('Release codename \'{}\' is newer than the minion\'s '
-                 'version.'.format(name))
+        log.info('Release codename \'%s\' is newer than the minion\'s version.', name)
         return True
 
     return False
@@ -145,8 +142,7 @@ def is_older(name):
         salt '*' salt_version.is_newer 'Sodium'
     '''
     if _check_release_cmp(name) == -1:
-        log.info('Release codename \'{}\' is older than the minion\'s '
-                 'version.'.format(name))
+        log.info('Release codename \'%s\' is older than the minion\'s version.', name)
         return True
 
     return False
@@ -163,7 +159,7 @@ def _check_release_cmp(name):
     '''
     map_version = get_release_number(name)
     if map_version is None:
-        log.info('Release codename {} was not found.'.format(name))
+        log.info('Release codename %s was not found.', name)
         return None
 
     current_version = six.text_type(salt.version.SaltStackVersion(

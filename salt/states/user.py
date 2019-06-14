@@ -94,7 +94,9 @@ def _changes(name,
     '''
 
     if 'shadow.info' in __salt__:
-        lshad = __salt__['shadow.info'](name)
+        # We pass the password to the shadow.info function on Windows
+        # 'password' is ignored by other OSs
+        lshad = __salt__['shadow.info'](name, password=password)
 
     lusr = __salt__['user.info'](name)
     if not lusr:
@@ -141,19 +143,22 @@ def _changes(name,
             change['empty_password'] = True
         if date is not None and lshad['lstchg'] != date:
             change['date'] = date
-        if mindays and mindays is not 0 and lshad['min'] != mindays:
+        if mindays is not None and lshad['min'] != mindays:
             change['mindays'] = mindays
-        if maxdays and maxdays is not 999999 and lshad['max'] != maxdays:
+        if maxdays is not None and lshad['max'] != maxdays:
             change['maxdays'] = maxdays
-        if inactdays and inactdays is not 0 and lshad['inact'] != inactdays:
+        if inactdays is not None and lshad['inact'] != inactdays:
             change['inactdays'] = inactdays
-        if warndays and warndays is not 7 and lshad['warn'] != warndays:
+        if warndays is not None and lshad['warn'] != warndays:
             change['warndays'] = warndays
         if expire and lshad['expire'] != expire:
             change['expire'] = expire
     elif 'shadow.info' in __salt__ and salt.utils.platform.is_windows():
         if expire and expire is not -1 and salt.utils.dateutils.strftime(lshad['expire']) != salt.utils.dateutils.strftime(expire):
             change['expire'] = expire
+        if password:
+            if lshad['passwd'] != password and enforce_password:
+                change['passwd'] = password
 
     # GECOS fields
     fullname = salt.utils.data.decode(fullname)
@@ -161,13 +166,13 @@ def _changes(name,
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
     if win_homedrive and lusr['homedrive'] != win_homedrive:
-        change['homedrive'] = win_homedrive
+        change['win_homedrive'] = win_homedrive
     if win_profile and lusr['profile'] != win_profile:
-        change['profile'] = win_profile
+        change['win_profile'] = win_profile
     if win_logonscript and lusr['logonscript'] != win_logonscript:
-        change['logonscript'] = win_logonscript
+        change['win_logonscript'] = win_logonscript
     if win_description and lusr['description'] != win_description:
-        change['description'] = win_description
+        change['win_description'] = win_description
 
     # MacOS doesn't have full GECOS support, so check for the "ch" functions
     # and ignore these parameters if these functions do not exist.
@@ -469,7 +474,7 @@ def present(name,
             _, algo, shadow_salt, shadow_hash = __salt__['shadow.info'](name)['passwd'].split('$', 4)
             if algo == '1':
                 log.warning('Using MD5 for hashing passwords is considered insecure!')
-            log.debug('Re-using existing shadow salt for hashing password using {}'.format(algorithms.get(algo)))
+            log.debug('Re-using existing shadow salt for hashing password using %s', algorithms.get(algo))
             password = __salt__['shadow.gen_password'](password, crypt_salt=shadow_salt, algorithm=algorithms.get(algo))
         except ValueError:
             log.info('No existing shadow salt found, defaulting to a randomly generated new one')
@@ -590,7 +595,9 @@ def present(name,
             return ret
         # The user is present
         if 'shadow.info' in __salt__:
-            lshad = __salt__['shadow.info'](name)
+            # We pass the password to the shadow.info function on Windows
+            # 'password' is ignored by other OSs
+            lshad = __salt__['shadow.info'](name, password=password)
         if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
             lcpre = __salt__['user.get_loginclass'](name)
         pre = __salt__['user.info'](name)
@@ -659,7 +666,9 @@ def present(name,
         post = __salt__['user.info'](name)
         spost = {}
         if 'shadow.info' in __salt__ and lshad['passwd'] != password:
-            spost = __salt__['shadow.info'](name)
+            # We pass the password to the shadow.info function on Windows
+            # 'password' is ignored by other OSs
+            spost = __salt__['shadow.info'](name, password=password)
         if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
             lcpost = __salt__['user.get_loginclass'](name)
         # See if anything changed

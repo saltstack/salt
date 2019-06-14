@@ -19,8 +19,7 @@ import inspect
 import salt.loader
 import salt.fileclient
 import salt.minion
-import salt.crypt
-import salt.transport
+import salt.transport.client
 import salt.utils.args
 import salt.utils.cache
 import salt.utils.crypt
@@ -57,7 +56,6 @@ def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
     # If local pillar and we're caching, run through the cache system first
     log.debug('Determining pillar cache')
     if opts['pillar_cache']:
-        log.info('Compiling pillar from cache')
         log.debug('get_pillar using pillar cache with ext: %s', ext)
         return PillarCache(opts, grains, minion_id, saltenv, ext=ext, functions=funcs,
                 pillar_override=pillar_override, pillarenv=pillarenv)
@@ -157,6 +155,7 @@ class AsyncRemotePillar(RemotePillarMixin):
                                      self.get_ext_pillar_extra_minion_data(opts),
                                      recursive_update=True,
                                      merge_lists=True)
+        self._closing = False
 
     @tornado.gen.coroutine
     def compile_pillar(self):
@@ -190,6 +189,16 @@ class AsyncRemotePillar(RemotePillarMixin):
             raise SaltClientError(msg)
         raise tornado.gen.Return(ret_pillar)
 
+    def destroy(self):
+        if self._closing:
+            return
+
+        self._closing = True
+        self.channel.close()
+
+    def __del__(self):
+        self.destroy()
+
 
 class RemotePillar(RemotePillarMixin):
     '''
@@ -202,7 +211,7 @@ class RemotePillar(RemotePillarMixin):
         self.ext = ext
         self.grains = grains
         self.minion_id = minion_id
-        self.channel = salt.transport.Channel.factory(opts)
+        self.channel = salt.transport.client.ReqChannel.factory(opts)
         if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
         self.pillar_override = pillar_override or {}
@@ -217,6 +226,7 @@ class RemotePillar(RemotePillarMixin):
                                      self.get_ext_pillar_extra_minion_data(opts),
                                      recursive_update=True,
                                      merge_lists=True)
+        self._closing = False
 
     def compile_pillar(self):
         '''
@@ -243,6 +253,16 @@ class RemotePillar(RemotePillarMixin):
             )
             return {}
         return ret_pillar
+
+    def destroy(self):
+        if hasattr(self, '_closing') and self._closing:
+            return
+
+        self._closing = True
+        self.channel.close()
+
+    def __del__(self):
+        self.destroy()
 
 
 class PillarCache(object):
@@ -382,6 +402,7 @@ class Pillar(object):
         else:
             self.functions = functions
 
+        self.opts['minion_id'] = minion_id
         self.matchers = salt.loader.matchers(self.opts)
         self.rend = salt.loader.render(self.opts, self.functions)
         ext_pillar_opts = copy.deepcopy(self.opts)
@@ -402,6 +423,7 @@ class Pillar(object):
         if not isinstance(self.extra_minion_data, dict):
             self.extra_minion_data = {}
             log.error('Extra minion data must be a dictionary')
+        self._closing = False
 
     def __valid_on_demand_ext_pillar(self, opts):
         '''
@@ -653,15 +675,20 @@ class Pillar(object):
             errors.append('Error encountered while rendering pillar top file.')
         return merged_tops, errors
 
-    def top_matches(self, top):
+    def top_matches(self, top, reload=False):
         '''
         Search through the top high data for matches and return the states
         that this minion needs to execute.
 
         Returns:
         {'saltenv': ['state1', 'state2', ...]}
+
+        reload
+            Reload the matcher loader
         '''
         matches = {}
+        if reload:
+            self.matchers = salt.loader.matchers(self.opts)
         for saltenv, body in six.iteritems(top):
             if self.opts['pillarenv']:
                 if saltenv != self.opts['pillarenv']:
@@ -689,7 +716,8 @@ class Pillar(object):
             defaults = {}
         err = ''
         errors = []
-        fn_ = self.client.get_state(sls, saltenv).get('dest', False)
+        state_data = self.client.get_state(sls, saltenv)
+        fn_ = state_data.get('dest', False)
         if not fn_:
             if sls in self.ignored_pillars.get(saltenv, []):
                 log.debug('Skipping ignored and missing SLS \'%s\' in '
@@ -761,8 +789,6 @@ class Pillar(object):
                     else:
                         # render included state(s)
                         include_states = []
-
-                        matched_pstates = []
                         for sub_sls in state.pop('include'):
                             if isinstance(sub_sls, dict):
                                 sub_sls, v = next(six.iteritems(sub_sls))
@@ -770,42 +796,49 @@ class Pillar(object):
                                 key = v.get('key', None)
                             else:
                                 key = None
-
                             try:
-                                matched_pstates += fnmatch.filter(self.avail[saltenv], sub_sls)
+                                if sub_sls.startswith('.'):
+                                    if state_data.get('source', '').endswith('/init.sls'):
+                                        include_parts = sls.split('.')
+                                    else:
+                                        include_parts = sls.split('.')[:-1]
+                                    sub_sls = '.'.join(include_parts+[sub_sls[1:]])
+                                matched_pstates = fnmatch.filter(
+                                    self.avail[saltenv],
+                                    sub_sls.lstrip('.').replace('/', '.'),
+                                )
                             except KeyError:
                                 errors.extend(
                                     ['No matching pillar environment for environment '
                                      '\'{0}\' found'.format(saltenv)]
                                 )
-
-                        for sub_sls in matched_pstates:
-                            if sub_sls not in mods:
-                                nstate, mods, err = self.render_pstate(
-                                        sub_sls,
-                                        saltenv,
-                                        mods,
-                                        defaults
-                                        )
-                                if nstate:
-                                    if key:
-                                        # If key is x:y, convert it to {x: {y: nstate}}
-                                        for key_fragment in reversed(key.split(":")):
-                                            nstate = {
-                                                key_fragment: nstate
-                                            }
-                                    if not self.opts.get('pillar_includes_override_sls', False):
-                                        include_states.append(nstate)
-                                    else:
-                                        state = merge(
-                                            state,
-                                            nstate,
-                                            self.merge_strategy,
-                                            self.opts.get('renderer', 'yaml'),
-                                            self.opts.get('pillar_merge_lists', False))
-                                if err:
-                                    errors += err
-
+                                matched_pstates = [sub_sls]
+                            for m_sub_sls in matched_pstates:
+                                if m_sub_sls not in mods:
+                                    nstate, mods, err = self.render_pstate(
+                                            m_sub_sls,
+                                            saltenv,
+                                            mods,
+                                            defaults
+                                            )
+                                    if nstate:
+                                        if key:
+                                            # If key is x:y, convert it to {x: {y: nstate}}
+                                            for key_fragment in reversed(key.split(":")):
+                                                nstate = {
+                                                    key_fragment: nstate
+                                                }
+                                        if not self.opts.get('pillar_includes_override_sls', False):
+                                            include_states.append(nstate)
+                                        else:
+                                            state = merge(
+                                                state,
+                                                nstate,
+                                                self.merge_strategy,
+                                                self.opts.get('renderer', 'yaml'),
+                                                self.opts.get('pillar_merge_lists', False))
+                                    if err:
+                                        errors += err
                         if not self.opts.get('pillar_includes_override_sls', False):
                             # merge included state(s) with the current state
                             # merged last to ensure that its values are
@@ -1000,7 +1033,7 @@ class Pillar(object):
             if self.opts.get('ext_pillar_first', False):
                 self.opts['pillar'], errors = self.ext_pillar(self.pillar_override)
                 self.rend = salt.loader.render(self.opts, self.functions)
-                matches = self.top_matches(top)
+                matches = self.top_matches(top, reload=True)
                 pillar, errors = self.render_pillar(matches, errors=errors)
                 pillar = merge(
                     self.opts['pillar'],
@@ -1107,6 +1140,17 @@ class Pillar(object):
                     errors.append(msg)
                     log.error(msg, exc_info=True)
         return errors
+
+    def destroy(self):
+        '''
+        This method exist in order to be API compatible with RemotePillar
+        '''
+        if self._closing:
+            return
+        self._closing = True
+
+    def __del__(self):
+        self.destroy()
 
 
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in

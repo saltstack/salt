@@ -381,7 +381,7 @@ def modify_site(name, sourcepath=None, apppool=None, preload=None):
     current_sites = list_sites()
 
     if name not in current_sites:
-        log.debug("Site '{0}' not defined.".format(name))
+        log.debug("Site '%s' not defined.", name)
         return False
 
     ps_cmd = list()
@@ -395,10 +395,9 @@ def modify_site(name, sourcepath=None, apppool=None, preload=None):
     if apppool:
 
         if apppool in list_apppools():
-            log.debug('Utilizing pre-existing application pool: {0}'
-                      ''.format(apppool))
+            log.debug('Utilizing pre-existing application pool: %s', apppool)
         else:
-            log.debug('Application pool will be created: {0}'.format(apppool))
+            log.debug('Application pool will be created: %s', apppool)
             create_apppool(apppool)
 
         # If ps_cmd isn't empty, we need to add a semi-colon to run two commands
@@ -2039,17 +2038,18 @@ def set_webapp_settings(name, site, settings):
         log.error('Failed to change settings: %s', failed_settings)
         return False
 
-    log.debug('Settings configured successfully: {0}'.format(settings.keys()))
+    log.debug('Settings configured successfully: %s', list(settings))
     return True
 
 
-def get_webconfiguration_settings(name, settings):
+def get_webconfiguration_settings(name, settings, location=''):
     r'''
     Get the webconfiguration settings for the IIS PSPath.
 
     Args:
         name (str): The PSPath of the IIS webconfiguration settings.
         settings (list): A list of dictionaries containing setting name and filter.
+        location (str): The location of the settings (optional)
 
     Returns:
         dict: A list of dictionaries containing setting name, filter and value.
@@ -2079,6 +2079,7 @@ def get_webconfiguration_settings(name, settings):
                                 '-PSPath', "'{0}'".format(name),
                                 '-Filter', "'{0}'".format(setting['filter']),
                                 '-Name', "'{0}'".format(setting['name']),
+                                '-Location', "'{0}'".format(location),
                                 '-ErrorAction', 'Stop',
                                 '|', 'Out-Null;'])
 
@@ -2086,20 +2087,20 @@ def get_webconfiguration_settings(name, settings):
         # Since the former doesn't have a Value property, we need to account
         # for this.
         ps_cmd.append("$Property = Get-WebConfigurationProperty -PSPath '{0}'".format(name))
-        ps_cmd.append("-Name '{0}' -Filter '{1}' -ErrorAction Stop;".format(setting['name'], setting['filter']))
+        ps_cmd.append("-Name '{0}' -Filter '{1}' -Location '{2}' -ErrorAction Stop;".format(setting['name'], setting['filter'], location))
         if setting['name'].split('.')[-1] == 'Collection':
             if 'value' in setting:
                 ps_cmd.append("$Property = $Property | select -Property {0} ;"
                               .format(",".join(list(setting['value'][0].keys()))))
-            ps_cmd.append("$Settings.add(@{{filter='{0}';name='{1}';value=[System.Collections.ArrayList] @($Property)}})| Out-Null;"
-                          .format(setting['filter'], setting['name']))
+            ps_cmd.append("$Settings.add(@{{filter='{0}';name='{1}';location='{2}';value=[System.Collections.ArrayList] @($Property)}})| Out-Null;"
+                          .format(setting['filter'], setting['name'], location))
         else:
             ps_cmd.append(r'if (([String]::IsNullOrEmpty($Property) -eq $False) -and')
             ps_cmd.append(r"($Property.GetType()).Name -eq 'ConfigurationAttribute') {")
             ps_cmd.append(r'$Property = $Property | Select-Object')
             ps_cmd.append(r'-ExpandProperty Value };')
-            ps_cmd.append("$Settings.add(@{{filter='{0}';name='{1}';value=[String] $Property}})| Out-Null;"
-                          .format(setting['filter'], setting['name']))
+            ps_cmd.append("$Settings.add(@{{filter='{0}';name='{1}';location='{2}';value=[String] $Property}})| Out-Null;"
+                          .format(setting['filter'], setting['name'], location))
         ps_cmd.append(r'$Property = $Null;')
 
     # Validate the setting names that were passed in.
@@ -2121,13 +2122,14 @@ def get_webconfiguration_settings(name, settings):
     return ret
 
 
-def set_webconfiguration_settings(name, settings):
+def set_webconfiguration_settings(name, settings, location=''):
     r'''
     Set the value of the setting for an IIS container.
 
     Args:
         name (str): The PSPath of the IIS webconfiguration settings.
         settings (list): A list of dictionaries containing setting name, filter and value.
+        location (str): The location of the settings (optional)
 
     Returns:
         bool: True if successful, otherwise False
@@ -2153,7 +2155,7 @@ def set_webconfiguration_settings(name, settings):
             settings[idx]['value'] = six.text_type(setting['value'])
 
     current_settings = get_webconfiguration_settings(
-        name=name, settings=settings)
+        name=name, settings=settings, location=location)
 
     if settings == current_settings:
         log.debug('Settings already contain the provided values.')
@@ -2180,6 +2182,7 @@ def set_webconfiguration_settings(name, settings):
                        '-PSPath', "'{0}'".format(name),
                        '-Filter', "'{0}'".format(setting['filter']),
                        '-Name', "'{0}'".format(setting['name']),
+                       '-Location', "'{0}'".format(location),
                        '-Value', '{0};'.format(value)])
 
     cmd_ret = _srvmgr(ps_cmd)
@@ -2191,7 +2194,7 @@ def set_webconfiguration_settings(name, settings):
     # Get the fields post-change so that we can verify tht all values
     # were modified successfully. Track the ones that weren't.
     new_settings = get_webconfiguration_settings(
-        name=name, settings=settings)
+        name=name, settings=settings, location=location)
 
     failed_settings = []
 

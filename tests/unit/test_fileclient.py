@@ -73,30 +73,30 @@ class FileclientTestCase(TestCase):
 
 
 SALTENVS = ('base', 'dev')
-FS_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_fs_root')
-CACHE_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_cache_root')
 SUBDIR = 'subdir'
 SUBDIR_FILES = ('foo.txt', 'bar.txt', 'baz.txt')
 
 
-def _get_file_roots():
+def _get_file_roots(fs_root):
     return dict(
-        [(x, [os.path.join(FS_ROOT, x)]) for x in SALTENVS]
+        [(x, [os.path.join(fs_root, x)]) for x in SALTENVS]
     )
-
-
-MOCKED_OPTS = {
-    'file_roots': _get_file_roots(),
-    'fileserver_backend': ['roots'],
-    'cachedir': CACHE_ROOT,
-    'file_client': 'local',
-}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class FileClientTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
+        FS_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_fs_root')
+        CACHE_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_cache_root')
+        MOCKED_OPTS = {
+            'file_roots': _get_file_roots(FS_ROOT),
+            'fileserver_backend': ['roots'],
+            'cachedir': CACHE_ROOT,
+            'file_client': 'local',
+        }
+        self.addCleanup(shutil.rmtree, FS_ROOT, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, CACHE_ROOT, ignore_errors=True)
         return {fileclient: {'__opts__': MOCKED_OPTS}}
 
     def setUp(self):
@@ -136,7 +136,17 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
     '''
 
     def setup_loader_modules(self):
-        return {fileclient: {'__opts__': MOCKED_OPTS}}
+        self.FS_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_fs_root')
+        self.CACHE_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_cache_root')
+        self.MOCKED_OPTS = {
+            'file_roots': _get_file_roots(self.FS_ROOT),
+            'fileserver_backend': ['roots'],
+            'cachedir': self.CACHE_ROOT,
+            'file_client': 'local',
+        }
+        self.addCleanup(shutil.rmtree, self.FS_ROOT, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, self.CACHE_ROOT, ignore_errors=True)
+        return {fileclient: {'__opts__': self.MOCKED_OPTS}}
 
     def setUp(self):
         '''
@@ -162,7 +172,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
 
         # Crete the FS_ROOT
         for saltenv in SALTENVS:
-            saltenv_root = os.path.join(FS_ROOT, saltenv)
+            saltenv_root = os.path.join(self.FS_ROOT, saltenv)
             # Make sure we have a fresh root dir for this saltenv
             _new_dir(saltenv_root)
 
@@ -184,21 +194,14 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                     )
 
         # Create the CACHE_ROOT
-        _new_dir(CACHE_ROOT)
-
-    def tearDown(self):
-        '''
-        Remove the directories created for these tests
-        '''
-        shutil.rmtree(FS_ROOT)
-        shutil.rmtree(CACHE_ROOT)
+        _new_dir(self.CACHE_ROOT)
 
     def test_cache_dir(self):
         '''
         Ensure entire directory is cached to correct location
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
-        patched_opts.update(MOCKED_OPTS)
+        patched_opts.update(self.MOCKED_OPTS)
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
@@ -237,7 +240,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         cachedir is specified and that cachedir is an absolute path
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
-        patched_opts.update(MOCKED_OPTS)
+        patched_opts.update(self.MOCKED_OPTS)
         alt_cachedir = os.path.join(RUNTIME_VARS.TMP, 'abs_cachedir')
 
         with patch.dict(fileclient.__opts__, patched_opts):
@@ -277,7 +280,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         cachedir is specified and that cachedir is a relative path
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
-        patched_opts.update(MOCKED_OPTS)
+        patched_opts.update(self.MOCKED_OPTS)
         alt_cachedir = 'foo'
 
         with patch.dict(fileclient.__opts__, patched_opts):
@@ -317,7 +320,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         Ensure file is cached to correct location
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
-        patched_opts.update(MOCKED_OPTS)
+        patched_opts.update(self.MOCKED_OPTS)
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
@@ -346,7 +349,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         specified and that cachedir is an absolute path
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
-        patched_opts.update(MOCKED_OPTS)
+        patched_opts.update(self.MOCKED_OPTS)
         alt_cachedir = os.path.join(RUNTIME_VARS.TMP, 'abs_cachedir')
 
         with patch.dict(fileclient.__opts__, patched_opts):
@@ -380,7 +383,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         specified and that cachedir is a relative path
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
-        patched_opts.update(MOCKED_OPTS)
+        patched_opts.update(self.MOCKED_OPTS)
         alt_cachedir = 'foo'
 
         with patch.dict(fileclient.__opts__, patched_opts):
@@ -408,3 +411,51 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                 log.debug('cache_loc = %s', cache_loc)
                 log.debug('content = %s', content)
                 self.assertTrue(saltenv in content)
+
+    def test_cache_dest(self):
+        '''
+        Tests functionality for cache_dest
+        '''
+        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts.update(self.MOCKED_OPTS)
+
+        relpath = 'foo.com/bar.txt'
+        cachedir = self.minion_opts['cachedir']
+
+        def _external(saltenv='base'):
+            return salt.utils.path.join(
+                patched_opts['cachedir'],
+                'extrn_files',
+                saltenv,
+                relpath)
+
+        def _salt(saltenv='base'):
+            return salt.utils.path.join(
+                patched_opts['cachedir'],
+                'files',
+                saltenv,
+                relpath)
+
+        def _check(ret, expected):
+            assert ret == expected, '{0} != {1}'.format(ret, expected)
+
+        with patch.dict(fileclient.__opts__, patched_opts):
+            client = fileclient.get_file_client(
+                fileclient.__opts__, pillar=False)
+
+            _check(client.cache_dest('https://' + relpath),
+                   _external())
+
+            _check(client.cache_dest('https://' + relpath, 'dev'),
+                   _external('dev'))
+
+            _check(client.cache_dest('salt://' + relpath),
+                   _salt())
+
+            _check(client.cache_dest('salt://' + relpath, 'dev'),
+                   _salt('dev'))
+
+            _check(client.cache_dest('salt://' + relpath + '?saltenv=dev'),
+                   _salt('dev'))
+
+            _check('/foo/bar', '/foo/bar')

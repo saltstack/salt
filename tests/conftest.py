@@ -61,7 +61,7 @@ from salt.utils.immutabletypes import freeze
 
 # Define the pytest plugins we rely on
 # pylint: disable=invalid-name
-pytest_plugins = ['tempdir', 'helpers_namespace']
+pytest_plugins = ['tempdir', 'helpers_namespace', 'salt-from-filenames']
 
 # Define where not to collect tests from
 collect_ignore = ['setup.py']
@@ -231,24 +231,24 @@ def pytest_runtest_setup(item):
     '''
     Fixtures injection based on markers or test skips based on CLI arguments
     '''
-    destructive_tests_marker = item.get_marker('destructive_test')
+    destructive_tests_marker = item.get_closest_marker('destructive_test')
     if destructive_tests_marker is not None:
         if item.config.getoption('--run-destructive') is False:
             pytest.skip('Destructive tests are disabled')
     os.environ['DESTRUCTIVE_TESTS'] = six.text_type(item.config.getoption('--run-destructive'))
 
-    expensive_tests_marker = item.get_marker('expensive_test')
+    expensive_tests_marker = item.get_closest_marker('expensive_test')
     if expensive_tests_marker is not None:
         if item.config.getoption('--run-expensive') is False:
             pytest.skip('Expensive tests are disabled')
     os.environ['EXPENSIVE_TESTS'] = six.text_type(item.config.getoption('--run-expensive'))
 
-    skip_if_not_root_marker = item.get_marker('skip_if_not_root')
+    skip_if_not_root_marker = item.get_closest_marker('skip_if_not_root')
     if skip_if_not_root_marker is not None:
         if os.getuid() != 0:
             pytest.skip('You must be logged in as root to run this test')
 
-    skip_if_binaries_missing_marker = item.get_marker('skip_if_binaries_missing')
+    skip_if_binaries_missing_marker = item.get_closest_marker('skip_if_binaries_missing')
     if skip_if_binaries_missing_marker is not None:
         binaries = skip_if_binaries_missing_marker.args
         if len(binaries) == 1:
@@ -273,7 +273,7 @@ def pytest_runtest_setup(item):
                 )
             )
 
-    requires_network_marker = item.get_marker('requires_network')
+    requires_network_marker = item.get_closest_marker('requires_network')
     if requires_network_marker is not None:
         only_local_network = requires_network_marker.kwargs.get('only_local_network', False)
         has_local_network = False
@@ -677,7 +677,7 @@ def session_master_config_overrides(session_root_dir):
     if not os.path.exists(extension_modules_path):
         shutil.copytree(
             os.path.join(
-                paths.INTEGRATION_TEST_DIR, 'files', 'extension_modules'
+                RUNTIME_VARS.FILES, 'extension_modules'
             ),
             extension_modules_path
         )
@@ -685,7 +685,7 @@ def session_master_config_overrides(session_root_dir):
     # Copy the autosign_file to the new  master root_dir
     autosign_file_path = session_root_dir.join('autosign_file').strpath
     shutil.copyfile(
-        os.path.join(paths.INTEGRATION_TEST_DIR, 'files', 'autosign_file'),
+        os.path.join(RUNTIME_VARS.FILES, 'autosign_file'),
         autosign_file_path
     )
     # all read, only owner write
@@ -788,7 +788,7 @@ def session_master_of_masters_config_overrides(session_master_of_masters_root_di
     if not os.path.exists(extension_modules_path):
         shutil.copytree(
             os.path.join(
-                paths.INTEGRATION_TEST_DIR, 'files', 'extension_modules'
+                RUNTIME_VARS.FILES, 'extension_modules'
             ),
             extension_modules_path
         )
@@ -796,7 +796,7 @@ def session_master_of_masters_config_overrides(session_master_of_masters_root_di
     # Copy the autosign_file to the new  master root_dir
     autosign_file_path = session_master_of_masters_root_dir.join('autosign_file').strpath
     shutil.copyfile(
-        os.path.join(paths.INTEGRATION_TEST_DIR, 'files', 'autosign_file'),
+        os.path.join(RUNTIME_VARS.FILES, 'autosign_file'),
         autosign_file_path
     )
     # all read, only owner write

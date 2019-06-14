@@ -4,21 +4,22 @@ Integration tests for the docker_container states
 '''
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import errno
 import functools
 import logging
 import os
 import subprocess
+import sys
 import tempfile
 
 # Import Salt Testing Libs
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
 from tests.support.docker import with_network, random_name
-from tests.support.paths import FILES
 from tests.support.helpers import destructiveTest, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 # Import Salt Libs
 import salt.utils.files
@@ -68,8 +69,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # Generate image name
         cls.image = random_name(prefix='salt_busybox_')
 
-        script_path = \
-            os.path.join(FILES, 'file/base/mkimage-busybox-static')
+        script_path = os.path.join(RUNTIME_VARS.BASE_FILES, 'mkimage-busybox-static')
         cmd = [script_path, cls.image_build_rootdir, cls.image]
         log.debug('Running \'%s\' to build busybox image', ' '.join(cmd))
         process = subprocess.Popen(
@@ -78,10 +78,12 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         output = process.communicate()[0]
-        log.debug('Output from mkimge-busybox-static:\n%s', output)
 
+        log.debug('Output from mkimge-busybox-static:\n%s', output)
         if process.returncode != 0:
-            raise Exception('Failed to build image')
+            raise Exception(
+                'Failed to build image. Output from mkimge-busybox-static:\n{}'.format(output)
+            )
 
         try:
             salt.utils.files.rm_rf(cls.image_build_rootdir)
@@ -230,6 +232,33 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # Check to make sure that the state is not the changes dict, since
         # it should not have changed
         self.assertTrue('state' not in ret['changes'])
+
+    @with_network(subnet='10.247.197.96/27', create=True)
+    @container_name
+    def test_running_no_changes_hostname_network(self, container_name, net):
+        '''
+        Test that changes are not detected when a hostname is specified for a container
+        on a custom network
+        '''
+        # Create a container
+        kwargs = {
+            'name': container_name,
+            'image': self.image,
+            'shutdown_timeout': 1,
+            'network_mode': net.name,
+            'networks': [net.name],
+            'hostname': 'foo'
+        }
+        ret = self.run_state('docker_container.running', **kwargs)
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('docker_container.running', **kwargs)
+        self.assertSaltTrueReturn(ret)
+        # Discard the outer dict with the state compiler data to make below
+        # asserts easier to read/write
+        ret = ret[next(iter(ret))]
+        # Should be no changes
+        self.assertFalse(ret['changes'])
 
     @container_name
     def test_running_start_false_with_replace(self, name):
@@ -596,6 +625,33 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue('VAR2=value2' in ret['Config']['Env'])
         self.assertTrue('VAR3=value3' not in ret['Config']['Env'])
 
+    @with_network(subnet='10.247.197.96/27', create=True)
+    @container_name
+    def test_static_ip_one_network(self, container_name, net):
+        '''
+        Ensure that if a network is created and specified as network_mode, that is the only network, and
+        the static IP is applied.
+        '''
+        requested_ip = '10.247.197.100'
+        kwargs = {
+            'name': container_name,
+            'image': self.image,
+            'network_mode': net.name,
+            'networks': [{net.name: [{'ipv4_address': requested_ip}]}],
+            'shutdown_timeout': 1,
+        }
+        # Create a container
+        ret = self.run_state('docker_container.running', **kwargs)
+        self.assertSaltTrueReturn(ret)
+
+        inspect_result = self.run_function('docker.inspect_container',
+                                           [container_name])
+        connected_networks = inspect_result['NetworkSettings']['Networks']
+
+        self.assertEqual(list(connected_networks.keys()), [net.name])
+        self.assertEqual(inspect_result['HostConfig']['NetworkMode'], net.name)
+        self.assertEqual(connected_networks[net.name]['IPAMConfig']['IPv4Address'], requested_ip)
+
     def _test_running(self, container_name, *nets):
         '''
         DRY function for testing static IPs
@@ -942,7 +998,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 os.close(fd)
             except OSError as exc:
                 if exc.errno != errno.EBADF:
-                    raise exc
+                    six.reraise(*sys.exc_info())
             else:
                 self.addCleanup(os.remove, ret)
                 return ret
@@ -1099,7 +1155,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             'docker_container.run',
             name=name,
             image=self.image,
-            command='/bin/false',
+            command=RUNTIME_VARS.SHELL_FALSE_PATH,
             failhard=True)
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
@@ -1115,7 +1171,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             'docker_container.run',
             name=name,
             image=self.image,
-            command='/bin/false',
+            command=RUNTIME_VARS.SHELL_FALSE_PATH,
             failhard=False)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]

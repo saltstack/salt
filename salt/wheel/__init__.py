@@ -11,9 +11,9 @@ import collections
 import salt.client.mixins
 import salt.config
 import salt.loader
-import salt.transport
 import salt.utils.error
 import salt.utils.zeromq
+import salt.transport.client
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -67,13 +67,18 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
         interface = self.opts['interface']
         if interface == '0.0.0.0':
             interface = '127.0.0.1'
-        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(interface) + \
-                                                      ':' + six.text_type(self.opts['ret_port'])
-        channel = salt.transport.Channel.factory(self.opts,
-                                                 crypt='clear',
-                                                 master_uri=master_uri,
-                                                 usage='master_call')
-        ret = channel.send(load)
+        master_uri = 'tcp://{}:{}'.format(
+            salt.utils.zeromq.ip_bracket(interface),
+            six.text_type(self.opts['ret_port'])
+        )
+        channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           master_uri=master_uri,
+                                                           usage='master_call')
+        try:
+            ret = channel.send(load)
+        finally:
+            channel.close()
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:
                 salt.utils.error.raise_error(**ret['error'])

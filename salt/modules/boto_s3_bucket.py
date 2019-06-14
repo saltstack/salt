@@ -243,7 +243,7 @@ def delete_objects(Bucket, Delete, MFA=None, RequestPayer=None,
         except ClientError as e:
             return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
 
-    if len(failed):
+    if failed:
         return {'deleted': False, 'failed': failed}
     else:
         return {'deleted': True}
@@ -336,11 +336,11 @@ def empty(Bucket, MFA=None, RequestPayer=None, region=None, key=None,
     Delete = {}
     Delete['Objects'] = [{'Key': v['Key'], 'VersionId': v['VersionId']} for v in stuff.get('Versions', [])]
     Delete['Objects'] += [{'Key': v['Key'], 'VersionId': v['VersionId']} for v in stuff.get('DeleteMarkers', [])]
-    if len(Delete['Objects']):
+    if Delete['Objects']:
         ret = delete_objects(Bucket, Delete, MFA=MFA, RequestPayer=RequestPayer,
                              region=region, key=key, keyid=keyid, profile=profile)
         failed = ret.get('failed', [])
-        if len(failed):
+        if failed:
             return {'deleted': False, 'failed': ret[failed]}
     return {'deleted': True}
 

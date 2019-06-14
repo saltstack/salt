@@ -2,7 +2,7 @@
 '''
 Azure (ARM) Compute Execution Module
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 :maintainer: <devops@decisionlab.io>
 :maturity: new
@@ -20,7 +20,7 @@ Azure (ARM) Compute Execution Module
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as keyword arguments
-to every function in order to work properly.
+    to every function in order to work properly.
 
     Required provider parameters:
 
@@ -37,7 +37,7 @@ to every function in order to work properly.
 
     Optional provider parameters:
 
-    **cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
+**cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
     Possible values:
       * ``AZURE_PUBLIC_CLOUD`` (default)
       * ``AZURE_CHINA_CLOUD``
@@ -79,7 +79,7 @@ def __virtual__():
 
 def availability_set_create_or_update(name, resource_group, **kwargs):  # pylint: disable=invalid-name
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update an availability set.
 
@@ -125,7 +125,7 @@ def availability_set_create_or_update(name, resource_group, **kwargs):  # pylint
     try:
         setmodel = __utils__['azurearm.create_object_model']('compute', 'AvailabilitySet', **kwargs)
     except TypeError as exc:
-        result = {'error': 'The object model could not be built. ({1})'.format(str(exc))}
+        result = {'error': 'The object model could not be built. ({0})'.format(str(exc))}
         return result
 
     try:
@@ -147,7 +147,7 @@ def availability_set_create_or_update(name, resource_group, **kwargs):  # pylint
 
 def availability_set_delete(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete an availability set.
 
@@ -180,7 +180,7 @@ def availability_set_delete(name, resource_group, **kwargs):
 
 def availability_set_get(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get a dictionary representing an availability set's properties.
 
@@ -213,7 +213,7 @@ def availability_set_get(name, resource_group, **kwargs):
 
 def availability_sets_list(resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all availability sets within a resource group.
 
@@ -247,7 +247,7 @@ def availability_sets_list(resource_group, **kwargs):
 
 def availability_sets_list_available_sizes(name, resource_group, **kwargs):  # pylint: disable=invalid-name
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all available virtual machine sizes that can be used to
     to create a new virtual machine in an existing availability set.
@@ -286,7 +286,7 @@ def availability_sets_list_available_sizes(name, resource_group, **kwargs):  # p
 
 def virtual_machine_capture(name, destination_name, resource_group, prefix='capture-', overwrite=False, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Captures the VM by copying virtual hard disks of the VM and outputs
     a template that can be used to create similar VMs.
@@ -338,7 +338,7 @@ def virtual_machine_capture(name, destination_name, resource_group, prefix='capt
 
 def virtual_machine_get(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Retrieves information about the model view or the instance view of a
     virtual machine.
@@ -375,7 +375,7 @@ def virtual_machine_get(name, resource_group, **kwargs):
 
 def virtual_machine_convert_to_managed_disks(name, resource_group, **kwargs):  # pylint: disable=invalid-name
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Converts virtual machine disks from blob-based to managed disks. Virtual
     machine must be stop-deallocated before invoking this operation.
@@ -411,7 +411,7 @@ def virtual_machine_convert_to_managed_disks(name, resource_group, **kwargs):  #
 
 def virtual_machine_deallocate(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Power off a virtual machine and deallocate compute resources.
 
@@ -446,7 +446,7 @@ def virtual_machine_deallocate(name, resource_group, **kwargs):
 
 def virtual_machine_generalize(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Set the state of a virtual machine to 'generalized'.
 
@@ -478,7 +478,7 @@ def virtual_machine_generalize(name, resource_group, **kwargs):
 
 def virtual_machines_list(resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all virtual machines within a resource group.
 
@@ -511,7 +511,7 @@ def virtual_machines_list(resource_group, **kwargs):
 
 def virtual_machines_list_all(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     List all virtual machines within a subscription.
 
@@ -539,7 +539,7 @@ def virtual_machines_list_all(**kwargs):
 
 def virtual_machines_list_available_sizes(name, resource_group, **kwargs):  # pylint: disable=invalid-name
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Lists all available virtual machine sizes to which the specified virtual
     machine can be resized.
@@ -576,7 +576,7 @@ def virtual_machines_list_available_sizes(name, resource_group, **kwargs):  # py
 
 def virtual_machine_power_off(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Power off (stop) a virtual machine.
 
@@ -611,7 +611,7 @@ def virtual_machine_power_off(name, resource_group, **kwargs):
 
 def virtual_machine_restart(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Restart a virtual machine.
 
@@ -646,7 +646,7 @@ def virtual_machine_restart(name, resource_group, **kwargs):
 
 def virtual_machine_start(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Power on (start) a virtual machine.
 
@@ -681,7 +681,7 @@ def virtual_machine_start(name, resource_group, **kwargs):
 
 def virtual_machine_redeploy(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Redeploy a virtual machine.
 

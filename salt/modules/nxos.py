@@ -222,7 +222,7 @@ def cmd(command, *args, **kwargs):
         if k.startswith('__pub_'):
             kwargs.pop(k)
     local_command = '.'.join(['nxos', command])
-    log.info('local command: {}'.format(local_command))
+    log.info('local command: %s', local_command)
     if local_command not in __salt__:
         return False
     return __salt__[local_command](*args, **kwargs)
@@ -292,7 +292,6 @@ def grains(**kwargs):
 
         salt '*' nxos.cmd grains
     '''
-    import __main__ as main
     if not DEVICE_DETAILS['grains_cache']:
         ret = salt.utils.nxos.system_info(show_ver(**kwargs))
         log.debug(ret)
@@ -331,6 +330,15 @@ def sendline(command, method='cli_show_ascii', **kwargs):
 
         salt '*' nxos.cmd sendline 'show run | include "^username admin password"'
     '''
+    smethods = ['cli_show_ascii', 'cli_show', 'cli_conf']
+    if method not in smethods:
+        msg = """
+        INPUT ERROR: Second argument 'method' must be one of {0}
+        Value passed: {1}
+        Hint: White space separated commands should be wrapped by double quotes
+        """.format(smethods, method)
+        return msg
+
     if salt.utils.platform.is_proxy():
         return __proxy__['nxos.sendline'](command, method, **kwargs)
     else:
@@ -357,6 +365,14 @@ def show(commands, raw_text=True, **kwargs):
         salt '*' nxos.show 'show bgp sessions ; show processes' raw_text=False
         salt 'regular-minion' nxos.show 'show interfaces' host=sw01.example.com username=test password=test
     '''
+    if not isinstance(raw_text, bool):
+        msg = """
+        INPUT ERROR: Second argument 'raw_text' must be either True or False
+        Value passed: {0}
+        Hint: White space separated show commands should be wrapped by double quotes
+        """.format(raw_text)
+        return msg
+
     if raw_text:
         method = 'cli_show_ascii'
     else:

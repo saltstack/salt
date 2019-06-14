@@ -3,7 +3,6 @@
 Module for managing windows systems.
 
 :depends:
-    - pythoncom
     - pywintypes
     - win32api
     - win32con
@@ -25,12 +24,12 @@ from datetime import datetime
 import salt.utils.functools
 import salt.utils.locales
 import salt.utils.platform
+import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party Libs
 from salt.ext import six
 try:
-    import pythoncom
     import wmi
     import win32net
     import win32api
@@ -426,7 +425,7 @@ def get_pending_computer_name():
         salt 'minion-id' system.get_pending_computer_name
     '''
     current = get_computer_name()
-    pending = __salt__['reg.read_value'](
+    pending = __utils__['reg.read_value'](
                 'HKLM',
                 r'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters',
                 'NV Hostname')['vdata']
@@ -527,32 +526,10 @@ def get_system_info():
         else:
             return '{0:.3f}TB'.format(val / 2**40)
 
-    # Connect to WMI
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
-
     # Lookup dicts for Win32_OperatingSystem
     os_type = {1: 'Work Station',
                2: 'Domain Controller',
                3: 'Server'}
-
-    system = conn.Win32_OperatingSystem()[0]
-    ret = {'name': get_computer_name(),
-           'description': system.Description,
-           'install_date': system.InstallDate,
-           'last_boot': system.LastBootUpTime,
-           'os_manufacturer': system.Manufacturer,
-           'os_name': system.Caption,
-           'users': system.NumberOfUsers,
-           'organization': system.Organization,
-           'os_architecture': system.OSArchitecture,
-           'primary': system.Primary,
-           'os_type': os_type[system.ProductType],
-           'registered_user': system.RegisteredUser,
-           'system_directory': system.SystemDirectory,
-           'system_drive': system.SystemDrive,
-           'os_version': system.Version,
-           'windows_directory': system.WindowsDirectory}
 
     # lookup dicts for Win32_ComputerSystem
     domain_role = {0: 'Standalone Workstation',
@@ -576,59 +553,82 @@ def get_system_info():
                        6: 'Appliance PC',
                        7: 'Performance Server',
                        8: 'Maximum'}
-    system = conn.Win32_ComputerSystem()[0]
-    # Get pc_system_type depending on Windows version
-    if platform.release() in ['Vista', '7', '8']:
-        # Types for Vista, 7, and 8
-        pc_system_type = pc_system_types[system.PCSystemType]
-    else:
-        # New types were added with 8.1 and newer
-        pc_system_types.update({8: 'Slate', 9: 'Maximum'})
-        pc_system_type = pc_system_types[system.PCSystemType]
-    ret.update({
-        'bootup_state': system.BootupState,
-        'caption': system.Caption,
-        'chassis_bootup_state': warning_states[system.ChassisBootupState],
-        'chassis_sku_number': system.ChassisSKUNumber,
-        'dns_hostname': system.DNSHostname,
-        'domain': system.Domain,
-        'domain_role': domain_role[system.DomainRole],
-        'hardware_manufacturer': system.Manufacturer,
-        'hardware_model': system.Model,
-        'network_server_mode_enabled': system.NetworkServerModeEnabled,
-        'part_of_domain': system.PartOfDomain,
-        'pc_system_type': pc_system_type,
-        'power_state': system.PowerState,
-        'status': system.Status,
-        'system_type': system.SystemType,
-        'total_physical_memory': byte_calc(system.TotalPhysicalMemory),
-        'total_physical_memory_raw': system.TotalPhysicalMemory,
-        'thermal_state': warning_states[system.ThermalState],
-        'workgroup': system.Workgroup
-    })
-    # Get processor information
-    processors = conn.Win32_Processor()
-    ret['processors'] = 0
-    ret['processors_logical'] = 0
-    ret['processor_cores'] = 0
-    ret['processor_cores_enabled'] = 0
-    ret['processor_manufacturer'] = processors[0].Manufacturer
-    ret['processor_max_clock_speed'] = six.text_type(processors[0].MaxClockSpeed) + 'MHz'
-    for system in processors:
-        ret['processors'] += 1
-        ret['processors_logical'] += system.NumberOfLogicalProcessors
-        ret['processor_cores'] += system.NumberOfCores
-        ret['processor_cores_enabled'] += system.NumberOfEnabledCore
 
-    system = conn.Win32_BIOS()[0]
-    ret.update({'hardware_serial': system.SerialNumber,
-                'bios_manufacturer': system.Manufacturer,
-                'bios_version': system.Version,
-                'bios_details': system.BIOSVersion,
-                'bios_caption': system.Caption,
-                'bios_description': system.Description})
-    ret['install_date'] = _convert_date_time_string(ret['install_date'])
-    ret['last_boot'] = _convert_date_time_string(ret['last_boot'])
+    # Connect to WMI
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
+
+        system = conn.Win32_OperatingSystem()[0]
+        ret = {'name': get_computer_name(),
+               'description': system.Description,
+               'install_date': system.InstallDate,
+               'last_boot': system.LastBootUpTime,
+               'os_manufacturer': system.Manufacturer,
+               'os_name': system.Caption,
+               'users': system.NumberOfUsers,
+               'organization': system.Organization,
+               'os_architecture': system.OSArchitecture,
+               'primary': system.Primary,
+               'os_type': os_type[system.ProductType],
+               'registered_user': system.RegisteredUser,
+               'system_directory': system.SystemDirectory,
+               'system_drive': system.SystemDrive,
+               'os_version': system.Version,
+               'windows_directory': system.WindowsDirectory}
+
+        system = conn.Win32_ComputerSystem()[0]
+        # Get pc_system_type depending on Windows version
+        if platform.release() in ['Vista', '7', '8']:
+            # Types for Vista, 7, and 8
+            pc_system_type = pc_system_types[system.PCSystemType]
+        else:
+            # New types were added with 8.1 and newer
+            pc_system_types.update({8: 'Slate', 9: 'Maximum'})
+            pc_system_type = pc_system_types[system.PCSystemType]
+        ret.update({
+            'bootup_state': system.BootupState,
+            'caption': system.Caption,
+            'chassis_bootup_state': warning_states[system.ChassisBootupState],
+            'chassis_sku_number': system.ChassisSKUNumber,
+            'dns_hostname': system.DNSHostname,
+            'domain': system.Domain,
+            'domain_role': domain_role[system.DomainRole],
+            'hardware_manufacturer': system.Manufacturer,
+            'hardware_model': system.Model,
+            'network_server_mode_enabled': system.NetworkServerModeEnabled,
+            'part_of_domain': system.PartOfDomain,
+            'pc_system_type': pc_system_type,
+            'power_state': system.PowerState,
+            'status': system.Status,
+            'system_type': system.SystemType,
+            'total_physical_memory': byte_calc(system.TotalPhysicalMemory),
+            'total_physical_memory_raw': system.TotalPhysicalMemory,
+            'thermal_state': warning_states[system.ThermalState],
+            'workgroup': system.Workgroup
+        })
+        # Get processor information
+        processors = conn.Win32_Processor()
+        ret['processors'] = 0
+        ret['processors_logical'] = 0
+        ret['processor_cores'] = 0
+        ret['processor_cores_enabled'] = 0
+        ret['processor_manufacturer'] = processors[0].Manufacturer
+        ret['processor_max_clock_speed'] = six.text_type(processors[0].MaxClockSpeed) + 'MHz'
+        for processor in processors:
+            ret['processors'] += 1
+            ret['processors_logical'] += processor.NumberOfLogicalProcessors
+            ret['processor_cores'] += processor.NumberOfCores
+            ret['processor_cores_enabled'] += processor.NumberOfEnabledCore
+
+        bios = conn.Win32_BIOS()[0]
+        ret.update({'hardware_serial': bios.SerialNumber,
+                    'bios_manufacturer': bios.Manufacturer,
+                    'bios_version': bios.Version,
+                    'bios_details': bios.BIOSVersion,
+                    'bios_caption': bios.Caption,
+                    'bios_description': bios.Description})
+        ret['install_date'] = _convert_date_time_string(ret['install_date'])
+        ret['last_boot'] = _convert_date_time_string(ret['last_boot'])
     return ret
 
 
@@ -692,11 +692,10 @@ def set_hostname(hostname):
 
         salt 'minion-id' system.set_hostname newhostname
     '''
-    curr_hostname = get_hostname()
-    cmd = "wmic computersystem where name='{0}' call rename name='{1}'".format(curr_hostname, hostname)
-    ret = __salt__['cmd.run'](cmd=cmd)
-
-    return "successful" in ret
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
+        comp = conn.Win32_ComputerSystem()[0]
+    return comp.Rename(Name=hostname)
 
 
 def join_domain(domain,
@@ -835,8 +834,8 @@ def _join_domain(domain,
     if not account_exists:
         join_options |= NETSETUP_ACCOUNT_CREATE
 
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
     comp = conn.Win32_ComputerSystem()[0]
 
     # Return the results of the command as an error
@@ -927,8 +926,8 @@ def unjoin_domain(username=None,
     if disable:
         unjoin_options |= NETSETUP_ACCT_DELETE
 
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
     comp = conn.Win32_ComputerSystem()[0]
     err = comp.UnjoinDomainOrWorkgroup(Password=password,
                                        UserName=username,
@@ -971,13 +970,43 @@ def get_domain_workgroup():
 
         salt 'minion-id' system.get_domain_workgroup
     '''
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
-    for computer in conn.Win32_ComputerSystem():
-        if computer.PartOfDomain:
-            return {'Domain': computer.Domain}
-        else:
-            return {'Workgroup': computer.Domain}
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
+        for computer in conn.Win32_ComputerSystem():
+            if computer.PartOfDomain:
+                return {'Domain': computer.Domain}
+            else:
+                return {'Workgroup': computer.Workgroup}
+
+
+def set_domain_workgroup(workgroup):
+    '''
+    Set the domain or workgroup the computer belongs to.
+
+    .. versionadded:: 2019.2.0
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.set_domain_workgroup LOCAL
+    '''
+    if six.PY2:
+        workgroup = _to_unicode(workgroup)
+
+    # Initialize COM
+    with salt.utils.winapi.Com():
+        # Grab the first Win32_ComputerSystem object from wmi
+        conn = wmi.WMI()
+        comp = conn.Win32_ComputerSystem()[0]
+
+        # Now we can join the new workgroup
+        res = comp.JoinDomainOrWorkgroup(Name=workgroup.upper())
+
+    return True if not res[0] else False
 
 
 def _try_parse_datetime(time_str, fmts):
@@ -1327,7 +1356,7 @@ def get_pending_file_rename():
     # then a reboot is pending.
 
     for vname in vnames:
-        reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
+        reg_ret = __utils__['reg.read_value']('HKLM', key, vname)
 
         if reg_ret['success']:
             log.debug('Found key: %s', key)
@@ -1363,7 +1392,7 @@ def get_pending_servermanager():
     # the value data, and since an actual reboot won't be pending in that
     # instance, just catch instances where we try unsuccessfully to cast as int.
 
-    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
+    reg_ret = __utils__['reg.read_value']('HKLM', key, vname)
 
     if reg_ret['success']:
         log.debug('Found key: %s', key)
@@ -1438,12 +1467,13 @@ def set_reboot_required_witnessed():
 
         salt '*' system.set_reboot_required_witnessed
     '''
-    return __salt__['reg.set_value'](hive='HKLM',
-                                     key=MINION_VOLATILE_KEY,
-                                     volatile=True,
-                                     vname=REBOOT_REQUIRED_NAME,
-                                     vdata=1,
-                                     vtype='REG_DWORD')
+    return __utils__['reg.set_value'](
+        hive='HKLM',
+        key=MINION_VOLATILE_KEY,
+        volatile=True,
+        vname=REBOOT_REQUIRED_NAME,
+        vdata=1,
+        vtype='REG_DWORD')
 
 
 def get_reboot_required_witnessed():
@@ -1468,9 +1498,10 @@ def get_reboot_required_witnessed():
         salt '*' system.get_reboot_required_witnessed
 
     '''
-    value_dict = __salt__['reg.read_value'](hive='HKLM',
-                                            key=MINION_VOLATILE_KEY,
-                                            vname=REBOOT_REQUIRED_NAME)
+    value_dict = __utils__['reg.read_value'](
+        hive='HKLM',
+        key=MINION_VOLATILE_KEY,
+        vname=REBOOT_REQUIRED_NAME)
     return value_dict['vdata'] == 1
 
 

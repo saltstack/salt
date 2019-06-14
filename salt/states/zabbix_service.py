@@ -32,6 +32,7 @@ def present(host, service_root, trigger_desc, service_name=None, **kwargs):
         If services on path does not exists they are created.
 
     .. code-block:: yaml
+
         create_service_icmp:
             zabbix_service.present:
                 - host: server-1
@@ -114,7 +115,7 @@ def present(host, service_root, trigger_desc, service_name=None, **kwargs):
         service = __salt__['zabbix.service_add'](
             service_rootid=root_id, service_name=service_name, triggerid=trigger_id, **kwargs)
         if service:
-            ret['comment'] = "Service {0} added {1} {2} {3}".format(service_name, root_id, service_name, trigger_id)
+            ret['comment'] = "Service {0} added {1} {0} {2}".format(service_name, root_id, trigger_id)
             ret['changes'] = changes_service_added
             ret['result'] = True
         else:
@@ -131,6 +132,7 @@ def present(host, service_root, trigger_desc, service_name=None, **kwargs):
 def absent(host, service_root, service_name=None, **kwargs):
     '''
     .. versionadded:: Fluorine
+
     Ensure service does not exists under service root.
 
     :param host: Technical name of the host
@@ -140,8 +142,8 @@ def absent(host, service_root, service_name=None, **kwargs):
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-
     .. code-block:: yaml
+
         delete_service_icmp:
             zabbix_service.absent:
                 - host: server-1

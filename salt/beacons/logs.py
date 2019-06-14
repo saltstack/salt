@@ -129,7 +129,7 @@ def beacon(config):
         for tag in _config.get('tags', {}):
             if 'regex' not in _config['tags'][tag]:
                 continue
-            if len(_config['tags'][tag]['regex']) < 1:
+            if not _config['tags'][tag]['regex']:
                 continue
             try:
                 d[tag] = re.compile(r'{0}'.format(_config['tags'][tag]['regex']))

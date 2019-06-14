@@ -225,8 +225,7 @@ def returner(ret):
             'functions', job_id, job_fun
         )
         return
-
-    if ret.get('data', None) is None:
+    if ret.get('data', None) is None and ret.get('return') is None:
         log.info(
             'Won\'t push new data to Elasticsearch, job with jid=%s was '
             'not successful', job_id

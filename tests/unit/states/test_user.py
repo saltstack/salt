@@ -5,6 +5,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -19,6 +20,8 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.states.user as user
+
+log = logging.getLogger(__name__)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -209,3 +212,48 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'comment': 'User salt is not present',
                         'result': True})
             self.assertDictEqual(user.absent('salt'), ret)
+
+    def test_changes(self):
+        '''
+        Test salt.states.user._changes
+        '''
+        mock_info = MagicMock(
+            return_value={
+                'uid': 5000,
+                 'gid': 5000,
+                 'groups': ['foo'],
+                 'home': '/home/foo',
+                 'fullname': 'Foo Bar',
+            }
+        )
+        shadow_info = MagicMock(
+            return_value={
+                'min': 2,
+                'max': 88888,
+                'inact': 77,
+                'warn': 14,
+            }
+        )
+        shadow_hash = MagicMock(return_value='abcd')
+        dunder_salt = {'user.info': mock_info,
+                       'shadow.info': shadow_info,
+                       'shadow.default_hash': shadow_hash,
+                       'file.group_to_gid': MagicMock(side_effect=['foo']),
+                       'file.gid_to_group': MagicMock(side_effect=[5000])}
+
+        def mock_exists(*args):
+            return True
+
+        # side_effect used because these mocks should only be called once
+        with patch.dict(user.__grains__, {'kernel': 'Linux'}), \
+                patch.dict(user.__salt__, dunder_salt), \
+                patch.dict(user.__opts__, {"test": False}), \
+                patch('os.path.isdir', mock_exists):
+            ret = user._changes('foo', maxdays=999999, inactdays=0, warndays=7)
+            assert ret == {
+                'maxdays': 999999,
+                'mindays': 0,
+                'fullname': '',
+                'warndays': 7,
+                'inactdays': 0
+            }

@@ -18,6 +18,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import logging
 import re
+import sys
 
 # Import salt libs
 import salt.utils.json
@@ -83,7 +84,7 @@ def _to_dict(objects):
             objects = salt.utils.json.loads(objects)
     except ValueError as err:
         log.error("Could not parse objects: %s", err)
-        raise err
+        six.reraise(*sys.exc_info())
 
     return objects
 
@@ -513,7 +514,7 @@ def update_one(objects, collection, user=None, password=None, host=None, port=No
                   authdb)
     if not isinstance(test_f, list):
         return 'The find result is not well formatted. An error appears; cannot update.'
-    elif len(test_f) < 1:
+    elif not test_f:
         return 'Did not find any result. You should try an insert before.'
     elif len(test_f) > 1:
         return 'Too many results. Please try to be more specific.'

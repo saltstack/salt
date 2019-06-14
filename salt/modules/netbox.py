@@ -103,7 +103,7 @@ def _add(app, endpoint, payload):
     try:
         return getattr(getattr(nb, app), endpoint).create(**payload)
     except RequestError as e:
-        log.error("{}, {}, {}".format(e.req.request.headers, e.request_body, e.error))
+        log.error('%s, %s, %s', e.req.request.headers, e.request_body, e.error)
         return False
 
 
@@ -196,7 +196,7 @@ def get_(app, endpoint, id=None, **kwargs):
 
 def create_manufacturer(name):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create a device manufacturer.
 
@@ -223,7 +223,7 @@ def create_manufacturer(name):
 
 def create_device_type(model, manufacturer):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create a device type. If the manufacturer doesn't exist, create a new manufacturer.
 
@@ -258,7 +258,7 @@ def create_device_type(model, manufacturer):
 
 def create_device_role(role, color):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create a device role
 
@@ -285,7 +285,7 @@ def create_device_role(role, color):
 
 def create_platform(platform):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create a new device platform
 
@@ -312,7 +312,7 @@ def create_platform(platform):
 
 def create_site(site):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create a new device site
 
@@ -343,7 +343,7 @@ def create_device(name,
                   manufacturer,
                   site):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create a new device with a name, role, model, manufacturer and site.
     All these components need to be already in Netbox.
@@ -379,7 +379,7 @@ def create_device(name,
 
         status = {'label': "Active", 'value': 1}
     except RequestError as e:
-        log.error("{}, {}, {}".format(e.req.request.headers, e.request_body, e.error))
+        log.error('%s, %s, %s', e.req.request.headers, e.request_body, e.error)
         return False
 
     payload = {'name': name, 'display_name': name, 'slug': slugify(name), 'device_type': nb_type['id'],
@@ -393,7 +393,7 @@ def create_device(name,
 
 def update_device(name, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Add attributes to an existing device, identified by name.
 
@@ -416,7 +416,7 @@ def update_device(name, **kwargs):
         nb_device.save()
         return {'dcim': {'devices': kwargs}}
     except RequestError as e:
-        log.error("{}, {}, {}".format(e.req.request.headers, e.request_body, e.error))
+        log.error('%s, %s, %s', e.req.request.headers, e.request_body, e.error)
         return False
 
 
@@ -427,7 +427,7 @@ def create_inventory_item(device_name,
                           part_id='',
                           description=''):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Add an inventory item to an existing device.
 
@@ -475,7 +475,7 @@ def create_inventory_item(device_name,
 
 def delete_inventory_item(item_id):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Remove an item from a devices inventory. Identified by the netbox id
 
@@ -495,7 +495,7 @@ def delete_inventory_item(item_id):
 
 def create_interface_connection(interface_a, interface_b):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create an interface connection between 2 interfaces
 
@@ -521,7 +521,7 @@ def create_interface_connection(interface_a, interface_b):
 
 def get_interfaces(device_name=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Returns interfaces for a specific device using arbitrary netbox filters
 
@@ -548,7 +548,7 @@ def get_interfaces(device_name=None, **kwargs):
 
 def openconfig_interfaces(device_name=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Return a dictionary structured as standardised in the
     `openconfig-interfaces <http://ops.openconfig.net/branches/master/openconfig-interfaces.html>`_
@@ -643,7 +643,7 @@ def openconfig_interfaces(device_name=None):
 
 def openconfig_lacp(device_name=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Return a dictionary structured as standardised in the
     `openconfig-lacp <http://ops.openconfig.net/branches/master/openconfig-lacp.html>`_
@@ -706,7 +706,7 @@ def create_interface(device_name,
                      lag_parent=None,
                      form_factor=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Attach an interface to a device. If not all arguments are provided,
     they will default to Netbox defaults.
@@ -768,7 +768,7 @@ def create_interface(device_name,
 
 def update_interface(device_name, interface_name, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Update an existing interface with new attributes.
 
@@ -798,13 +798,13 @@ def update_interface(device_name, interface_name, **kwargs):
             nb_interface.save()
             return {'dcim': {'interfaces': {nb_interface.id: dict(nb_interface)}}}
         except RequestError as e:
-            log.error("{}, {}, {}".format(e.req.request.headers, e.request_body, e.error))
+            log.error('%s, %s, %s', e.req.request.headers, e.request_body, e.error)
             return False
 
 
 def delete_interface(device_name, interface_name):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete an interface from a device.
 
@@ -830,7 +830,7 @@ def delete_interface(device_name, interface_name):
 
 def make_interface_lag(device_name, interface_name):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Update an interface to be a LAG.
 
@@ -851,7 +851,7 @@ def make_interface_lag(device_name, interface_name):
 
 def make_interface_child(device_name, interface_name, parent_name):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Set an interface as part of a LAG.
 
@@ -880,7 +880,7 @@ def make_interface_child(device_name, interface_name, parent_name):
 
 def get_ipaddresses(device_name=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Filters for an IP address using specified filters
 
@@ -906,7 +906,7 @@ def get_ipaddresses(device_name=None, **kwargs):
 
 def create_ipaddress(ip_address, family, device=None, interface=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Add an IP address, and optionally attach it to an interface.
 
@@ -949,7 +949,7 @@ def create_ipaddress(ip_address, family, device=None, interface=None):
 
 def delete_ipaddress(ipaddr_id):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Delete an IP address. IP addresses in Netbox are a combination of address
     and the interface it is assigned to.
@@ -973,7 +973,7 @@ def delete_ipaddress(ipaddr_id):
 
 def create_circuit_provider(name, asn=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create a new Netbox circuit provider
 
@@ -1015,7 +1015,7 @@ def create_circuit_provider(name, asn=None):
 
 def get_circuit_provider(name, asn=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get a circuit provider with a given name and optional ASN.
 
@@ -1039,7 +1039,7 @@ def get_circuit_provider(name, asn=None):
 
 def create_circuit_type(name):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create a new Netbox circuit type.
 
@@ -1069,7 +1069,7 @@ def create_circuit_type(name):
 
 def create_circuit(name, provider_id, circuit_type, description=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create a new Netbox circuit
 
@@ -1115,7 +1115,7 @@ def create_circuit(name, provider_id, circuit_type, description=None):
 
 def create_circuit_termination(circuit, interface, device, speed, xconnect_id=None, term_side='A'):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Terminate a circuit on an interface
 

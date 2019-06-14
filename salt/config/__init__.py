@@ -36,6 +36,7 @@ import salt.utils.zeromq
 import salt.syspaths
 import salt.exceptions
 import salt.defaults.exitcodes
+import salt.utils.immutabletypes as immutabletypes
 
 try:
     import psutil
@@ -89,7 +90,7 @@ def _gather_buffer_space():
         # We need to load up ``mem_total`` grain. Let's mimic required OS data.
         os_data = {'kernel': platform.system()}
         grains = salt.grains.core._memdata(os_data)
-        total_mem = grains['mem_total']
+        total_mem = grains['mem_total'] * 1024 * 1024
     # Return the higher number between 5% of the system memory and 10MiB
     return max([total_mem * 0.05, 10 << 20])
 
@@ -100,11 +101,7 @@ _DFLT_IPC_WBUFFER = _gather_buffer_space() * .5
 # TODO: Reserved for future use
 _DFLT_IPC_RBUFFER = _gather_buffer_space() * .5
 
-FLO_DIR = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        'daemons', 'flo')
-
-VALID_OPTS = {
+VALID_OPTS = immutabletypes.freeze({
     # The address of the salt master. May be specified as IP address or hostname
     'master': (six.string_types, list),
 
@@ -136,7 +133,7 @@ VALID_OPTS = {
     # a master fingerprint with `salt-key -F master`
     'master_finger': six.string_types,
 
-    # Deprecated in Fluorine. Use 'random_master' instead.
+    # Deprecated in 2019.2.0. Use 'random_master' instead.
     # Do not remove! Keep as an alias for usability.
     'master_shuffle': bool,
 
@@ -362,6 +359,10 @@ VALID_OPTS = {
     # Maximum number of concurrently active processes at any given point in time
     'process_count_max': int,
 
+    # If the minion reaches process_count_max, how long should it sleep
+    # before trying to generate a new process.
+    'process_count_max_sleep_secs': int,
+
     # Whether or not the salt minion should run scheduled mine updates
     'mine_enabled': bool,
 
@@ -458,6 +459,9 @@ VALID_OPTS = {
 
     # Tell the client to display the jid when a job is published
     'show_jid': bool,
+
+    # Generate jids based on UTC time instead of local time
+    'utc_jid': bool,
 
     # Ensure that a generated jid is always unique. If this is set, the jid
     # format is different due to an underscore and process id being appended
@@ -1211,10 +1215,10 @@ VALID_OPTS = {
 
     # Disable requisites during State runs
     'disabled_requisites': (six.string_types, list),
-}
+})
 
 # default configurations
-DEFAULT_MINION_OPTS = {
+DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'interface': '0.0.0.0',
     'master': 'salt',
     'master_type': 'str',
@@ -1374,6 +1378,7 @@ DEFAULT_MINION_OPTS = {
     'autosign_timeout': 120,
     'multiprocessing': True,
     'process_count_max': -1,
+    'process_count_max_sleep_secs': 10,
     'mine_enabled': True,
     'mine_return_job': False,
     'mine_interval': 60,
@@ -1513,9 +1518,9 @@ DEFAULT_MINION_OPTS = {
     'ssh_merge_pillar': True,
     'server_id_use_crc': False,
     'disabled_requisites': [],
-}
+})
 
-DEFAULT_MASTER_OPTS = {
+DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'interface': '0.0.0.0',
     'publish_port': 4505,
     'zmq_backlog': 1000,
@@ -1843,12 +1848,12 @@ DEFAULT_MASTER_OPTS = {
     'auth_events': True,
     'minion_data_cache_events': True,
     'enable_ssh_minions': False,
-}
+})
 
 
 # ----- Salt Proxy Minion Configuration Defaults ----------------------------------->
 # These are merged with DEFAULT_MINION_OPTS since many of them also apply here.
-DEFAULT_PROXY_MINION_OPTS = {
+DEFAULT_PROXY_MINION_OPTS = immutabletypes.freeze({
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
@@ -1874,9 +1879,10 @@ DEFAULT_PROXY_MINION_OPTS = {
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'proxy'),
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'proxy'),
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'proxy'),
-}
+})
+
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
-DEFAULT_CLOUD_OPTS = {
+DEFAULT_CLOUD_OPTS = immutabletypes.freeze({
     'verify_env': True,
     'default_include': 'cloud.conf.d/*.conf',
     # Global defaults
@@ -1904,17 +1910,17 @@ DEFAULT_CLOUD_OPTS = {
     'log_rotate_backup_count': 0,
     'bootstrap_delay': None,
     'cache': 'localfs',
-}
+})
 
-DEFAULT_API_OPTS = {
+DEFAULT_API_OPTS = immutabletypes.freeze({
     # ----- Salt master settings overridden by Salt-API --------------------->
     'api_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-api.pid'),
     'api_logfile': os.path.join(salt.syspaths.LOGS_DIR, 'api'),
     'rest_timeout': 300,
     # <---- Salt master settings overridden by Salt-API ----------------------
-}
+})
 
-DEFAULT_SPM_OPTS = {
+DEFAULT_SPM_OPTS = immutabletypes.freeze({
     # ----- Salt master settings overridden by SPM --------------------->
     'spm_conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'spm'),
     'formula_path': salt.syspaths.SPM_FORMULA_PATH,
@@ -1935,16 +1941,43 @@ DEFAULT_SPM_OPTS = {
     'spm_node_type': '',
     'spm_share_dir': os.path.join(salt.syspaths.SHARE_DIR, 'spm'),
     # <---- Salt master settings overridden by SPM ----------------------
-}
+})
 
-VM_CONFIG_DEFAULTS = {
+VM_CONFIG_DEFAULTS = immutabletypes.freeze({
     'default_include': 'cloud.profiles.d/*.conf',
-}
+})
 
-PROVIDER_CONFIG_DEFAULTS = {
+PROVIDER_CONFIG_DEFAULTS = immutabletypes.freeze({
     'default_include': 'cloud.providers.d/*.conf',
-}
+})
 # <---- Salt Cloud Configuration Defaults ------------------------------------
+
+
+def _normalize_roots(file_roots):
+    '''
+    Normalize file or pillar roots.
+    '''
+    for saltenv, dirs in six.iteritems(file_roots):
+        normalized_saltenv = six.text_type(saltenv)
+        if normalized_saltenv != saltenv:
+            file_roots[normalized_saltenv] = file_roots.pop(saltenv)
+        if not isinstance(dirs, (list, tuple)):
+            file_roots[normalized_saltenv] = []
+        file_roots[normalized_saltenv] = \
+                _expand_glob_path(file_roots[normalized_saltenv])
+    return file_roots
+
+
+def _validate_pillar_roots(pillar_roots):
+    '''
+    If the pillar_roots option has a key that is None then we will error out,
+    just replace it with an empty list
+    '''
+    if not isinstance(pillar_roots, dict):
+        log.warning('The pillar_roots parameter is not properly formatted,'
+                    ' using defaults')
+        return {'base': _expand_glob_path([salt.syspaths.BASE_PILLAR_ROOTS_DIR])}
+    return _normalize_roots(pillar_roots)
 
 
 def _validate_file_roots(file_roots):
@@ -1956,15 +1989,7 @@ def _validate_file_roots(file_roots):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
         return {'base': _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
-    for saltenv, dirs in six.iteritems(file_roots):
-        normalized_saltenv = six.text_type(saltenv)
-        if normalized_saltenv != saltenv:
-            file_roots[normalized_saltenv] = file_roots.pop(saltenv)
-        if not isinstance(dirs, (list, tuple)):
-            file_roots[normalized_saltenv] = []
-        file_roots[normalized_saltenv] = \
-                _expand_glob_path(file_roots[normalized_saltenv])
-    return file_roots
+    return _normalize_roots(file_roots)
 
 
 def _expand_glob_path(file_roots):
@@ -2262,14 +2287,15 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
 
         # Catch situation where user typos path in configuration; also warns
         # for empty include directory (which might be by design)
-        if len(glob.glob(path)) == 0:
+        glob_matches = glob.glob(path)
+        if not glob_matches:
             if verbose:
                 log.warning(
                     'Warning parsing configuration file: "include" path/glob '
                     "'%s' matches no files", path
                 )
 
-        for fn_ in sorted(glob.glob(path)):
+        for fn_ in sorted(glob_matches):
             log.debug('Including configuration from \'%s\'', fn_)
             try:
                 opts = _read_conf_file(fn_)
@@ -2467,10 +2493,10 @@ def syndic_config(master_config_path,
                   master_defaults=None):
 
     if minion_defaults is None:
-        minion_defaults = DEFAULT_MINION_OPTS
+        minion_defaults = DEFAULT_MINION_OPTS.copy()
 
     if master_defaults is None:
-        master_defaults = DEFAULT_MASTER_OPTS
+        master_defaults = DEFAULT_MASTER_OPTS.copy()
 
     opts = {}
     master_opts = master_config(
@@ -2789,7 +2815,7 @@ def apply_cloud_config(overrides, defaults=None):
     Return a cloud config
     '''
     if defaults is None:
-        defaults = DEFAULT_CLOUD_OPTS
+        defaults = DEFAULT_CLOUD_OPTS.copy()
 
     config = defaults.copy()
     if overrides:
@@ -3714,7 +3740,7 @@ def apply_minion_config(overrides=None,
     Returns minion configurations dict.
     '''
     if defaults is None:
-        defaults = DEFAULT_MINION_OPTS
+        defaults = DEFAULT_MINION_OPTS.copy()
     if overrides is None:
         overrides = {}
 
@@ -3793,7 +3819,7 @@ def apply_minion_config(overrides=None,
     # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
-    opts['pillar_roots'] = _validate_file_roots(opts['pillar_roots'])
+    opts['pillar_roots'] = _validate_pillar_roots(opts['pillar_roots'])
     # Make sure ext_mods gets set if it is an untrue value
     # (here to catch older bad configs)
     opts['extension_modules'] = (
@@ -3867,7 +3893,7 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
     :py:func:`salt.client.client_config`.
     '''
     if defaults is None:
-        defaults = DEFAULT_MASTER_OPTS
+        defaults = DEFAULT_MASTER_OPTS.copy()
 
     if not os.environ.get(env_var, None):
         # No valid setting was given using the configuration variable.
@@ -3909,7 +3935,7 @@ def apply_master_config(overrides=None, defaults=None):
     Returns master configurations dict.
     '''
     if defaults is None:
-        defaults = DEFAULT_MASTER_OPTS
+        defaults = DEFAULT_MASTER_OPTS.copy()
     if overrides is None:
         overrides = {}
 
@@ -4083,7 +4109,7 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     :py:class:`~salt.client.LocalClient`.
     '''
     if defaults is None:
-        defaults = DEFAULT_MASTER_OPTS
+        defaults = DEFAULT_MASTER_OPTS.copy()
 
     xdg_dir = salt.utils.xdg.xdg_config_dir()
     if os.path.isdir(xdg_dir):
@@ -4151,10 +4177,10 @@ def api_config(path):
     need to be stubbed out for salt-api
     '''
     # Let's grab a copy of salt-api's required defaults
-    opts = DEFAULT_API_OPTS
+    opts = DEFAULT_API_OPTS.copy()
 
     # Let's override them with salt's master opts
-    opts.update(client_config(path, defaults=DEFAULT_MASTER_OPTS))
+    opts.update(client_config(path, defaults=DEFAULT_MASTER_OPTS.copy()))
 
     # Let's set the pidfile and log_file values in opts to api settings
     opts.update({

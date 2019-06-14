@@ -83,7 +83,7 @@ def __virtual__():
     except Exception:
         return (False, "Module yumpkg: no yum based system detected")
 
-    enabled = ('amazon', 'xcp', 'xenserver', 'virtuozzolinux', 'virtuozzo')
+    enabled = ('amazon', 'xcp', 'xenserver', 'virtuozzolinux', 'virtuozzo', 'vmware photon')
 
     if os_family == 'redhat' or os_grain in enabled:
         return __virtualname__
@@ -146,6 +146,8 @@ def _yum():
         if ('fedora' in __grains__['os'].lower()
            and int(__grains__['osrelease']) >= 22):
             __context__[contextkey] = 'dnf'
+        elif 'photon' in __grains__['os'].lower():
+            __context__[contextkey] = 'tdnf'
         else:
             __context__[contextkey] = 'yum'
     return __context__[contextkey]
@@ -343,7 +345,7 @@ def _get_yum_config():
         # fall back to parsing the config ourselves
         # Look for the config the same order yum does
         fn = None
-        paths = ('/etc/yum/yum.conf', '/etc/yum.conf', '/etc/dnf/dnf.conf')
+        paths = ('/etc/yum/yum.conf', '/etc/yum.conf', '/etc/dnf/dnf.conf', '/etc/tdnf/tdnf.conf')
         for path in paths:
             if os.path.exists(path):
                 fn = path
@@ -466,7 +468,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
     refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
-    if len(names) == 0:
+    if not names:
         return ''
 
     options = _get_options(**kwargs)
@@ -560,6 +562,7 @@ def latest_version(*names, **kwargs):
         return ret[names[0]]
     return ret
 
+
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
@@ -593,7 +596,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def version_cmp(pkg1, pkg2, ignore_epoch=False):
+def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     '''
     .. versionadded:: 2015.5.4
 
@@ -812,7 +815,7 @@ def list_repo_pkgs(*args, **kwargs):
         be expanded and ``--setopt`` prepended to each in the yum/dnf command
         that is run.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Examples:
 
@@ -980,11 +983,12 @@ def list_upgrades(refresh=True, **kwargs):
 
     return dict([(x.name, x.version) for x in _yum_pkginfo(out['stdout'])])
 
+
 # Preserve expected CLI usage (yum list updates)
 list_updates = salt.utils.functools.alias_function(list_upgrades, 'list_updates')
 
 
-def list_downloaded():
+def list_downloaded(**kwargs):
     '''
     .. versionadded:: 2017.7.0
 
@@ -1083,7 +1087,7 @@ def refresh_db(**kwargs):
         be expanded and ``--setopt`` prepended to each in the yum/dnf command
         that is run.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -1248,7 +1252,7 @@ def install(name=None,
 
             salt '*' pkg.install foo setopt='obsoletes=0,plugins=0'
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     Repository Options:
 
@@ -1367,7 +1371,7 @@ def install(name=None,
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     version_num = kwargs.get('version')
@@ -1744,7 +1748,7 @@ def upgrade(name=None,
     .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
     .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         Added ``obsoletes`` and ``minimal`` arguments
 
     Returns a dictionary containing the changes:
@@ -1837,7 +1841,7 @@ def upgrade(name=None,
 
             salt '*' pkg.upgrade minimal=True
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     obsoletes : True
         Controls wether yum/dnf should take obsoletes into account and remove them.
@@ -1848,14 +1852,14 @@ def upgrade(name=None,
 
             salt '*' pkg.upgrade obsoletes=False
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     setopt
         A comma-separated or Python list of key=value options. This list will
         be expanded and ``--setopt`` prepended to each in the yum/dnf command
         that is run.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. note::
         To add extra arguments to the ``yum upgrade`` command, pass them as key
@@ -1920,15 +1924,15 @@ def upgrade(name=None,
 
 
 def update(name=None,
-            pkgs=None,
-            refresh=True,
-            skip_verify=False,
-            normalize=True,
-            minimal=False,
-            obsoletes=False,
-            **kwargs):
+           pkgs=None,
+           refresh=True,
+           skip_verify=False,
+           normalize=True,
+           minimal=False,
+           obsoletes=False,
+           **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Calls :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` with
     ``obsoletes=False``. Mirrors the CLI behavior of ``yum update``.
@@ -2305,6 +2309,7 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
             ret.append(match)
     return ret
 
+
 get_locked_packages = salt.utils.functools.alias_function(list_holds, 'get_locked_packages')
 
 
@@ -2611,10 +2616,11 @@ def group_install(name,
 
     return install(pkgs=pkgs, **kwargs)
 
+
 groupinstall = salt.utils.functools.alias_function(group_install, 'groupinstall')
 
 
-def list_repos(basedir=None):
+def list_repos(basedir=None, **kwargs):
     '''
     Lists all repos in <basedir> (default: all dirs in `reposdir` yum option).
 
@@ -2946,7 +2952,7 @@ def _parse_repo_file(filename):
     return (headers, salt.utils.data.decode(config))
 
 
-def file_list(*packages):
+def file_list(*packages, **kwargs):
     '''
     .. versionadded:: 2014.1.0
 
@@ -2965,7 +2971,7 @@ def file_list(*packages):
     return __salt__['lowpkg.file_list'](*packages)
 
 
-def file_dict(*packages):
+def file_dict(*packages, **kwargs):
     '''
     .. versionadded:: 2014.1.0
 
@@ -2984,7 +2990,7 @@ def file_dict(*packages):
     return __salt__['lowpkg.file_dict'](*packages)
 
 
-def owner(*paths):
+def owner(*paths, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -3072,7 +3078,7 @@ def modified(*packages, **flags):
 
 
 @salt.utils.decorators.path.which('yumdownloader')
-def download(*packages):
+def download(*packages, **kwargs):
     '''
     .. versionadded:: 2015.5.0
 
@@ -3144,7 +3150,7 @@ def download(*packages):
     return ret
 
 
-def diff(*paths):
+def diff(*paths, **kwargs):
     '''
     Return a formatted diff between current files and original in a package.
     NOTE: this function includes all files (configuration and not), but does
@@ -3204,7 +3210,7 @@ def _get_patches(installed_only=False):
     return patches
 
 
-def list_patches(refresh=False):
+def list_patches(refresh=False, **kwargs):
     '''
     .. versionadded:: 2017.7.0
 
@@ -3227,7 +3233,7 @@ def list_patches(refresh=False):
     return _get_patches()
 
 
-def list_installed_patches():
+def list_installed_patches(**kwargs):
     '''
     .. versionadded:: 2017.7.0
 

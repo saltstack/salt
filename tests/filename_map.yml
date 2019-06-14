@@ -1,9 +1,10 @@
 '*':
   - unit.test_module_names
   - unit.test_doc
+  - unit.test_virtualname
   - integration.modules.test_sysmod
 
-salt/modules/(apk|aptpkg|ebuild|dpkg|freebsdpkg|mac_brew|mac_ports|openbsdpkg|opkg|pacman|pkgin|pkgng|pkg_resource|rpm|solarisips|solarispkg|win_pkg|xbpspkg|yumpkg|zypper)\.py:
+salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_ports_pkg|openbsdpkg|opkg|pacmanpkg|pkgin|pkgng|pkg_resource|rpm_lowpkg|solarisipspkg|solarispkg|win_pkg|xbpspkg|yumpkg|zypperpkg)\.py:
   - unit.states.test_pkg
   - integration.modules.test_pkg
   - integration.states.test_pkg
@@ -16,7 +17,7 @@ salt/modules/(mac_user|useradd|pw_user|solaris_user|win_useradd)\.py:
 salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\.py:
   - unit.states.test_group
 
-salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl|mac_service|netbsdservice|openbsdrcctl|openbsdservice|rh_service|runit|service|smf|systemd|upstart|win_service)\.py:
+salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|service|smf_service|systemd_service|upstart_service|win_service)\.py:
   - unit.states.test_service
   - integration.states.test_service
 
@@ -42,7 +43,10 @@ salt/modules/dockermod.py:
   - integration.states.test_docker_container
   - integration.states.test_docker_network
 
-salt/modules/influx08.py:
+salt/modules/file.py:
+  - integration.states.test_cron
+
+salt/modules/influxdb08mod.py:
   - unit.states.test_influxdb08_database
   - unit.states.test_influxdb08_user
 
@@ -63,6 +67,7 @@ salt/(states|modules)/.*postgres.py:
   - unit.states.test_postgres_initdb
   - unit.states.test_postgres_language
   - unit.states.test_postgres_privileges
+  - unit.states.test_postgres_default_privileges
   - unit.states.test_postgres_schema
   - unit.states.test_postgres_user
 
@@ -191,6 +196,7 @@ salt/output/*:
 
 salt/pillar/__init__.py:
   - integration.minion.test_pillar
+  - integration.pillar.test_pillar_include
 
 salt/(cli/run\.py|runner\.py):
   - integration.shell.test_runner
@@ -224,6 +230,7 @@ salt/utils/schedule.py:
   - integration.scheduler.test_postpone
   - integration.scheduler.test_skip
   - integration.scheduler.test_maxrunning
+  - integration.scheduler.test_helpers
 
 salt/utils/vt.py:
   - integration.cli.test_custom_module

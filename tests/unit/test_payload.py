@@ -153,6 +153,17 @@ class PayloadTestCase(TestCase):
         odata = payload.loads(sdata)
         self.assertEqual(edata, odata)
 
+    def test_recursive_dump_load(self):
+        '''
+        Test recursive payloads are (mostly) serialized
+        '''
+        payload = salt.payload.Serial('msgpack')
+        data = {'name': 'roscivs'}
+        data['data'] = data  # Data all the things!
+        sdata = payload.dumps(data)
+        odata = payload.loads(sdata)
+        self.assertTrue('recursion' in odata['data'].lower())
+
 
 class SREQTestCase(TestCase):
     port = 8845  # TODO: dynamically assign a port?
@@ -264,3 +275,27 @@ class SREQTestCase(TestCase):
         # ensure no exceptions when we go to destroy the sreq, since __del__
         # swallows exceptions, we have to call destroy directly
         sreq.destroy()
+
+    def test_raw_vs_encoding_none(self):
+        '''
+        Test that we handle the new raw parameter in 5.0.2 correctly based on
+        encoding. When encoding is None loads should return bytes
+        '''
+        payload = salt.payload.Serial('msgpack')
+        dtvalue = datetime.datetime(2001, 2, 3, 4, 5, 6, 7)
+        idata = {dtvalue: 'strval'}
+        sdata = payload.dumps(idata.copy())
+        odata = payload.loads(sdata, encoding=None)
+        assert isinstance(odata[dtvalue], six.string_types)
+
+    def test_raw_vs_encoding_utf8(self):
+        '''
+        Test that we handle the new raw parameter in 5.0.2 correctly based on
+        encoding. When encoding is utf-8 loads should return unicode
+        '''
+        payload = salt.payload.Serial('msgpack')
+        dtvalue = datetime.datetime(2001, 2, 3, 4, 5, 6, 7)
+        idata = {dtvalue: 'strval'}
+        sdata = payload.dumps(idata.copy())
+        odata = payload.loads(sdata, encoding='utf-8')
+        assert isinstance(odata[dtvalue], six.text_type)

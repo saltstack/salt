@@ -125,7 +125,7 @@ def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
     arbiter
         use every third brick as arbiter (metadata only)
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     start
         ensure that the volume is also started
@@ -325,7 +325,7 @@ def add_volume_bricks(name, bricks):
 
 def op_version(name, version):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Add brick(s) to an existing volume
 
@@ -377,7 +377,7 @@ def op_version(name, version):
 
 def max_op_version(name):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Add brick(s) to an existing volume
 

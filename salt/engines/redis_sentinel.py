@@ -37,18 +37,20 @@ from salt.ext.six.moves import zip
 # Import third party libs
 try:
     import redis
-    HAS_REDIS = True
 except ImportError:
-    HAS_REDIS = False
+    redis = None
+
+log = logging.getLogger(__name__)
+
+__virtualname__ = 'redis'
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if not HAS_REDIS:
-        return False
-    else:
-        return True
-
-log = logging.getLogger(__name__)
+    return __virtualname__ \
+        if redis is not None \
+        else (False, 'redis python module is not installed')
 
 
 class Listener(object):

@@ -138,7 +138,7 @@ def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid
     '''
-    log.debug('sdstack_etcd returner <save_load> called jid: {0}'.format(jid))
+    log.debug('sdstack_etcd returner <save_load> called jid: %s', jid)
     write_profile = __opts__.get('etcd.returner_write_profile')
     client, path = _get_conn(__opts__, write_profile)
     if write_profile:
@@ -170,7 +170,7 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    log.debug('sdstack_etcd returner <get_load> called jid: {0}'.format(jid))
+    log.debug('sdstack_etcd returner <get_load> called jid: %s', jid)
     read_profile = __opts__.get('etcd.returner_read_profile')
     client, path = _get_conn(__opts__, read_profile)
     return salt.utils.json.loads(client.get('/'.join((path, 'jobs', jid, '.load.p'))).value)
@@ -180,7 +180,7 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    log.debug('sdstack_etcd returner <get_jid> called jid: {0}'.format(jid))
+    log.debug('sdstack_etcd returner <get_jid> called jid: %s', jid)
     ret = {}
     client, path = _get_conn(__opts__)
     items = client.get('/'.join((path, 'jobs', jid)))
@@ -197,7 +197,7 @@ def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
     '''
-    log.debug('sdstack_etcd returner <get_fun> called fun: {0}'.format(fun))
+    log.debug('sdstack_etcd returner <get_fun> called fun: %s', fun)
     ret = {}
     client, path = _get_conn(__opts__)
     items = client.get('/'.join((path, 'minions')))

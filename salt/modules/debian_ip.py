@@ -158,7 +158,7 @@ def _error_msg_iface(iface, option, expected):
     a list of expected values.
     '''
     msg = 'Invalid option -- Interface: {0}, Option: {1}, Expected: [{2}]'
-    return msg.format(iface, option, '|'.join(expected))
+    return msg.format(iface, option, '|'.join(str(e) for e in expected))
 
 
 def _error_msg_routes(iface, option, expected):
@@ -171,8 +171,10 @@ def _error_msg_routes(iface, option, expected):
 
 
 def _log_default_iface(iface, opt, value):
-    msg = 'Using default option -- Interface: {0} Option: {1} Value: {2}'
-    log.info(msg.format(iface, opt, value))
+    log.info(
+        'Using default option -- Interface: %s Option: %s Value: %s',
+        iface, opt, value
+    )
 
 
 def _error_msg_network(option, expected):
@@ -181,12 +183,11 @@ def _error_msg_network(option, expected):
     a list of expected values.
     '''
     msg = 'Invalid network setting -- Setting: {0}, Expected: [{1}]'
-    return msg.format(option, '|'.join(expected))
+    return msg.format(option, '|'.join(str(e) for e in expected))
 
 
 def _log_default_network(opt, value):
-    msg = 'Using existing setting -- Setting: {0} Value: {1}'
-    log.info(msg.format(opt, value))
+    log.info('Using existing setting -- Setting: %s Value: %s', opt, value)
 
 
 def _raise_error_iface(iface, option, expected):
@@ -804,46 +805,26 @@ def _parse_settings_bond(opts, iface):
     }
 
     if opts['mode'] in ['balance-rr', '0']:
-        log.info(
-            'Device: {0} Bonding Mode: load balancing (round-robin)'.format(
-                iface
-            )
-        )
+        log.info('Device: %s Bonding Mode: load balancing (round-robin)', iface)
         return _parse_settings_bond_0(opts, iface, bond_def)
     elif opts['mode'] in ['active-backup', '1']:
-        log.info(
-            'Device: {0} Bonding Mode: fault-tolerance (active-backup)'.format(
-                iface
-            )
-        )
+        log.info('Device: %s Bonding Mode: fault-tolerance (active-backup)', iface)
         return _parse_settings_bond_1(opts, iface, bond_def)
     elif opts['mode'] in ['balance-xor', '2']:
-        log.info(
-            'Device: {0} Bonding Mode: load balancing (xor)'.format(iface)
-        )
+        log.info('Device: %s Bonding Mode: load balancing (xor)', iface)
         return _parse_settings_bond_2(opts, iface, bond_def)
     elif opts['mode'] in ['broadcast', '3']:
-        log.info(
-            'Device: {0} Bonding Mode: fault-tolerance (broadcast)'.format(
-                iface
-            )
-        )
+        log.info('Device: %s Bonding Mode: fault-tolerance (broadcast)', iface)
         return _parse_settings_bond_3(opts, iface, bond_def)
     elif opts['mode'] in ['802.3ad', '4']:
-        log.info(
-            'Device: {0} Bonding Mode: IEEE 802.3ad Dynamic link '
-            'aggregation'.format(iface)
-        )
+        log.info('Device: %s Bonding Mode: IEEE 802.3ad Dynamic link '
+                 'aggregation', iface)
         return _parse_settings_bond_4(opts, iface, bond_def)
     elif opts['mode'] in ['balance-tlb', '5']:
-        log.info(
-            'Device: {0} Bonding Mode: transmit load balancing'.format(iface)
-        )
+        log.info('Device: %s Bonding Mode: transmit load balancing', iface)
         return _parse_settings_bond_5(opts, iface, bond_def)
     elif opts['mode'] in ['balance-alb', '6']:
-        log.info(
-            'Device: {0} Bonding Mode: adaptive load balancing'.format(iface)
-        )
+        log.info('Device: %s Bonding Mode: adaptive load balancing', iface)
         return _parse_settings_bond_6(opts, iface, bond_def)
     else:
         valid = [
@@ -870,7 +851,7 @@ def _parse_settings_bond_0(opts, iface, bond_def):
             if 1 <= len(opts['arp_ip_target']) <= 16:
                 bond.update({'arp_ip_target': ''})
                 for ip in opts['arp_ip_target']:  # pylint: disable=C0103
-                    if len(bond['arp_ip_target']) > 0:
+                    if bond['arp_ip_target']:
                         bond['arp_ip_target'] = bond['arp_ip_target'] + ',' + ip
                     else:
                         bond['arp_ip_target'] = ip
@@ -950,7 +931,7 @@ def _parse_settings_bond_2(opts, iface, bond_def):
             if 1 <= len(opts['arp_ip_target']) <= 16:
                 bond.update({'arp_ip_target': ''})
                 for ip in opts['arp_ip_target']:  # pylint: disable=C0103
-                    if len(bond['arp_ip_target']) > 0:
+                    if bond['arp_ip_target']:
                         bond['arp_ip_target'] = bond['arp_ip_target'] + ',' + ip
                     else:
                         bond['arp_ip_target'] = ip
@@ -1746,7 +1727,8 @@ def down(iface, iface_type):
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought down.
     if iface_type not in ['slave', 'source']:
-        return __salt__['cmd.run'](['ifdown', iface])
+        cmd = ['ip', 'link', 'set', '{0}'.format(iface), 'down']
+        return __salt__['cmd.run'](cmd, python_shell=False)
     return None
 
 
@@ -1807,7 +1789,8 @@ def up(iface, iface_type):  # pylint: disable=C0103
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought up.
     if iface_type not in ('slave', 'source'):
-        return __salt__['cmd.run'](['ifup', iface])
+        cmd = ['ip', 'link', 'set', '{0}'.format(iface), 'up']
+        return __salt__['cmd.run'](cmd, python_shell=False)
     return None
 
 
@@ -1837,9 +1820,11 @@ def get_network_settings():
 
         hostname = _parse_hostname()
         domainname = _parse_domainname()
+        searchdomain = _parse_searchdomain()
 
         settings['hostname'] = hostname
         settings['domainname'] = domainname
+        settings['searchdomain'] = searchdomain
 
     else:
         settings = _parse_current_network_settings()

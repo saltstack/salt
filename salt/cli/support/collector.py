@@ -291,7 +291,10 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         def stub(*args, **kwargs):
             message = 'Function {} is not available'.format(call_conf['fun'])
             self.out.error(message)
-            log.debug('Attempt to run "{fun}" with {arg} arguments and {kwargs} parameters.'.format(**call_conf))
+            log.debug(
+                'Attempt to run "%s" with %s arguments and %s parameters.',
+                call_conf['fun'], call_conf['arg'], call_conf['kwargs']
+            )
             return message
 
         return getattr(salt.cli.support.intfunc,
@@ -354,7 +357,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
 
         return data
 
-    def collect_local_data(self):
+    def collect_local_data(self, profile=None, profile_source=None):
         '''
         Collects master system data.
         :return:
@@ -375,7 +378,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             '''
             return self._extract_return(self._local_run({'fun': func, 'arg': args, 'kwarg': kwargs}))
 
-        scenario = salt.cli.support.get_profile(self.config['support_profile'], call, run)
+        scenario = profile_source or salt.cli.support.get_profile(profile or self.config['support_profile'], call, run)
         for category_name in scenario:
             self.out.put(category_name)
             self.collector.add(category_name)
@@ -414,13 +417,6 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             action_name = '{}:{}'.format(self.CALL_TYPE, action_name)
 
         return action_name.split(':')[0] or None
-
-    def collect_targets_data(self):
-        '''
-        Collects minion targets data
-        :return:
-        '''
-        # TODO: remote collector?
 
     def _cleanup(self):
         '''
@@ -511,7 +507,6 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
                             self.collector.open()
                             self.collect_local_data()
                             self.collect_internal_data()
-                            self.collect_targets_data()
                             self.collector.close()
 
                             archive_path = self.collector.archive_path

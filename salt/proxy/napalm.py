@@ -7,7 +7,7 @@ NAPALM: Network Automation and Programmability Abstraction Layer with Multivendo
 
 Proxy minion for managing network devices via NAPALM_ library.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -135,7 +135,7 @@ Example using a user-specific library, extending NAPALM's capabilities, e.g. ``c
     - :mod:`Users configuration management <salt.modules.napalm_users>`
 
 .. note::
-    Beginning with release codename Fluorine, any NAPALM command executed when
+    Beginning with release codename 2019.2.0, any NAPALM command executed when
     running under a NAPALM Proxy Minion supports the ``force_reconnect``
     magic argument.
 

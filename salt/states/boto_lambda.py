@@ -347,19 +347,18 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
     func = __salt__['boto_lambda.describe_function'](
         FunctionName, region=region,
         key=key, keyid=keyid, profile=profile)['function']
-    role_arn = _get_role_arn(Role, region, key, keyid, profile)
     need_update = False
-    options = {'Role': 'role_arn',
-               'Handler': 'Handler',
-               'Description': 'Description',
-               'Timeout': 'Timeout',
-               'MemorySize': 'MemorySize'}
+    options = {'Role': _get_role_arn(Role, region, key, keyid, profile),
+               'Handler': Handler,
+               'Description': Description,
+               'Timeout': Timeout,
+               'MemorySize': MemorySize}
 
-    for val, var in six.iteritems(options):
-        if func[val] != locals()[var]:
+    for key, val in six.iteritems(options):
+        if func[key] != val:
             need_update = True
-            ret['changes'].setdefault('new', {})[var] = locals()[var]
-            ret['changes'].setdefault('old', {})[var] = func[val]
+            ret['changes'].setdefault('old', {})[key] = func[key]
+            ret['changes'].setdefault('new', {})[key] = val
     # VpcConfig returns the extra value 'VpcId' so do a special compare
     oldval = func.get('VpcConfig')
     if oldval is not None:
@@ -649,14 +648,14 @@ def alias_present(name, FunctionName, Name, FunctionVersion, Description='',
         profile=profile)['alias']
 
     need_update = False
-    options = {'FunctionVersion': 'FunctionVersion',
-               'Description': 'Description'}
+    options = {'FunctionVersion': FunctionVersion,
+               'Description': Description}
 
-    for val, var in six.iteritems(options):
-        if _describe[val] != locals()[var]:
+    for key, val in six.iteritems(options):
+        if _describe[key] != val:
             need_update = True
-            ret['changes'].setdefault('new', {})[var] = locals()[var]
-            ret['changes'].setdefault('old', {})[var] = _describe[val]
+            ret['changes'].setdefault('old', {})[key] = _describe[key]
+            ret['changes'].setdefault('new', {})[key] = val
     if need_update:
         ret['comment'] = os.linesep.join(
             [ret['comment'], 'Alias config to be modified'])
@@ -858,13 +857,13 @@ def event_source_mapping_present(name, EventSourceArn, FunctionName,
         profile=profile)['event_source_mapping']
 
     need_update = False
-    options = {'BatchSize': 'BatchSize'}
+    options = {'BatchSize': BatchSize}
 
-    for val, var in six.iteritems(options):
-        if _describe[val] != locals()[var]:
+    for key, val in six.iteritems(options):
+        if _describe[key] != val:
             need_update = True
-            ret['changes'].setdefault('new', {})[var] = locals()[var]
-            ret['changes'].setdefault('old', {})[var] = _describe[val]
+            ret['changes'].setdefault('old', {})[key] = _describe[key]
+            ret['changes'].setdefault('new', {})[key] = val
     # verify FunctionName against FunctionArn
     function_arn = _get_function_arn(FunctionName, region=region,
                                      key=key, keyid=keyid, profile=profile)

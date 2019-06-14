@@ -531,11 +531,23 @@ class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
 
     def process_config_dir(self):
         self.options.config_dir = os.path.expanduser(self.options.config_dir)
+        config_filename = self.get_config_file_path()
         if not os.path.isdir(self.options.config_dir):
             # No logging is configured yet
             sys.stderr.write(
                 "WARNING: CONFIG '{0}' directory does not exist.\n".format(
                     self.options.config_dir
+                )
+            )
+        elif not os.path.isfile(config_filename):
+            default_config_filename = os.path.join(
+                self._default_config_dir_,
+                os.path.split(config_filename)[-1],
+            )
+            sys.stderr.write(
+                "WARNING: CONFIG '{0}' file does not exist. Falling back to default '{1}'.\n".format(
+                    config_filename,
+                    default_config_filename,
                 )
             )
 
@@ -2903,7 +2915,7 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
         if self.options.doc and len(self.args) > 1:
             self.error('You can only get documentation for one method at one time')
 
-        if len(self.args) > 0:
+        if self.args:
             self.config['fun'] = self.args[0]
         else:
             self.config['fun'] = ''

@@ -67,7 +67,7 @@ class LDAPAuthTestCase(TestCase):
         '''
         self.opts['auth.ldap.freeipa'] = True
         with patch.dict(salt.auth.ldap.__opts__, self.opts):
-            with patch('salt.auth.ldap.auth', return_value=Bind):
+            with patch('salt.auth.ldap._bind', return_value=Bind):
                 self.assertIn('saltusers', salt.auth.ldap.groups('saltuser', password='password'))
 
     def test_groups(self):
@@ -75,7 +75,7 @@ class LDAPAuthTestCase(TestCase):
         test groups in ldap
         '''
         with patch.dict(salt.auth.ldap.__opts__, self.opts):
-            with patch('salt.auth.ldap.auth', return_value=Bind):
+            with patch('salt.auth.ldap._bind', return_value=Bind):
                 self.assertIn('saltusers', salt.auth.ldap.groups('saltuser', password='password'))
 
     def test_groups_activedirectory(self):
@@ -84,7 +84,7 @@ class LDAPAuthTestCase(TestCase):
         '''
         self.opts['auth.ldap.activedirectory'] = True
         with patch.dict(salt.auth.ldap.__opts__, self.opts):
-            with patch('salt.auth.ldap.auth', return_value=Bind):
+            with patch('salt.auth.ldap._bind', return_value=Bind):
                 self.assertIn('saltusers', salt.auth.ldap.groups('saltuser', password='password'))
 
     def test_auth_nopass(self):

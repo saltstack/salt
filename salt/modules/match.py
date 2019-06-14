@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import inspect
 import logging
 import sys
+import collections
 import copy
 
 # Import salt libs
@@ -15,6 +16,7 @@ import salt.minion
 import salt.loader
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.ext import six
+from salt.exceptions import SaltException
 
 __func_alias__ = {
     'list_': 'list'
@@ -317,6 +319,8 @@ def glob(tgt, minion_id=None):
 def filter_by(lookup,
               tgt_type='compound',
               minion_id=None,
+              merge=None,
+              merge_lists=False,
               default='default'):
     '''
     Return the first match in a dictionary of target patterns
@@ -343,11 +347,21 @@ def filter_by(lookup,
         roles: {{ roles | yaml() }}
     '''
     expr_funcs = dict(inspect.getmembers(sys.modules[__name__],
-        predicate=inspect.isfunction))
+                                         predicate=inspect.isfunction))
 
     for key in lookup:
         params = (key, minion_id) if minion_id else (key, )
         if expr_funcs[tgt_type](*params):
+            if merge:
+                if not isinstance(merge, collections.Mapping):
+                    raise SaltException(
+                        'filter_by merge argument must be a dictionary.')
+
+                if lookup[key] is None:
+                    return merge
+                else:
+                    salt.utils.dictupdate.update(lookup[key], copy.deepcopy(merge), merge_lists=merge_lists)
+
             return lookup[key]
 
     return lookup.get(default, None)

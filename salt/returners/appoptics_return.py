@@ -18,6 +18,7 @@ and failures for your salt highstate runs (the default) would look
 like this:
 
 .. code-block:: yaml
+
     return: appoptics
     appoptics.api_token: <token string here>
 
@@ -35,6 +36,7 @@ You can add a tags section to specify which tags should be attached to
 all metrics created by the returner.
 
 .. code-block:: yaml
+
     appoptics.tags:
       host_hostname_alias: <the minion ID - matches @host>
       tier: <the tier/etc. of this node>
@@ -51,6 +53,7 @@ In order to return metrics for ``state.sls`` runs (distinct from highstates), yo
 specify a list of state names to the key ``appoptics.sls_states`` like so:
 
 .. code-block:: yaml
+
     appoptics.sls_states:
       - role_salt_master.netapi
       - role_redis.config
@@ -119,7 +122,7 @@ def _get_options(ret=None):
         'host_hostname_alias': __salt__['grains.get']('id')
     })
 
-    log.debug('Retrieved appoptics options: {}'.format(_options))
+    log.debug('Retrieved appoptics options: %s', _options)
     return _options
 
 
@@ -153,31 +156,30 @@ def _calculate_runtimes(states):
             # Count durations
             results['runtime'] += resultset['duration']
 
-    log.debug('Parsed state metrics: {}'.format(results))
+    log.debug('Parsed state metrics: %s', results)
     return results
 
 
 def _state_metrics(ret, options, tags):
     # Calculate the runtimes and number of failed states.
     stats = _calculate_runtimes(ret['return'])
-    log.debug('Batching Metric retcode with {}'.format(ret['retcode']))
+    log.debug('Batching Metric retcode with %s', ret['retcode'])
     appoptics_conn = _get_appoptics(options)
     q = appoptics_conn.new_queue(tags=tags)
 
     q.add('saltstack.retcode', ret['retcode'])
-    log.debug('Batching Metric num_failed_jobs with {}'.format(
-        stats['num_failed_states']))
+    log.debug('Batching Metric num_failed_jobs with %s', stats['num_failed_states'])
     q.add('saltstack.failed', stats['num_failed_states'])
 
-    log.debug('Batching Metric num_passed_states with {}'.format(
-        stats['num_passed_states']))
+    log.debug('Batching Metric num_passed_states with %s',
+              stats['num_passed_states'])
     q.add('saltstack.passed', stats['num_passed_states'])
 
-    log.debug('Batching Metric runtime with {}'.format(stats['runtime']))
+    log.debug('Batching Metric runtime with %s', stats['runtime'])
     q.add('saltstack.runtime', stats['runtime'])
 
-    log.debug('Batching with  Metric total states {}'.format(
-              (stats['num_failed_states'] + stats['num_passed_states'])))
+    log.debug('Batching with  Metric total states %s',
+              (stats['num_failed_states'] + stats['num_passed_states']))
     q.add('saltstack.highstate.total_states',
           (stats['num_failed_states'] + stats['num_passed_states']))
     log.info('Sending metrics to appoptics.')
@@ -199,12 +201,12 @@ def returner(ret):
     if ret['fun'] in states_to_report:
         tags = options.get('tags', {}).copy()
         tags['state_type'] = ret['fun']
-        log.info("Tags for this run are {}".format(str(tags)))
+        log.info("Tags for this run are %s", tags)
         matched_states = set(ret['fun_args']).intersection(
             set(options.get('sls_states', [])))
         # What can I do if a run has multiple states that match?
         # In the mean time, find one matching state name and use it.
         if matched_states:
             tags['state_name'] = sorted(matched_states)[0]
-            log.debug('Found returned data from {}.'.format(tags['state_name']))
+            log.debug('Found returned data from %s.', tags['state_name'])
         _state_metrics(ret, options, tags)

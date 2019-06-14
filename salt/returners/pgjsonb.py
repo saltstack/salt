@@ -73,7 +73,7 @@ set ``archive_jobs`` to True.  Salt will create 3 archive tables;
 and move the contents of ``jids``, ``salt_returns``, and ``salt_events`` that are
 more than ``keep_jobs`` hours old to these tables.
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Use the following Pg database schema:
 
@@ -275,7 +275,7 @@ def _get_serv(ret=None, commit=False):
         error = err.args
         sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
-        raise err
+        six.reraise(*sys.exc_info())
     else:
         if commit:
             cursor.execute("COMMIT")

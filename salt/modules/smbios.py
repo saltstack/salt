@@ -190,7 +190,7 @@ def _dmi_parse(data, clean=True, fields=None):
             'type':        int(htype)
         }
 
-        if not len(dmi_raw):
+        if not dmi_raw:
             # empty record
             if not clean:
                 dmi.append(record)
@@ -198,7 +198,7 @@ def _dmi_parse(data, clean=True, fields=None):
 
         # log.debug('%s record contains %s', record, dmi_raw)
         dmi_data = _dmi_data(dmi_raw, clean, fields)
-        if len(dmi_data):
+        if dmi_data:
             record['data'] = dmi_data
             dmi.append(record)
         elif not clean:
@@ -222,7 +222,7 @@ def _dmi_data(dmi_raw, clean, fields):
             if key is not None:
                 # log.debug('Evaluating DMI key {0}: {1}'.format(key, key_data))
                 value, vlist = key_data
-                if len(vlist):
+                if vlist:
                     if value is not None:
                         # On the rare occasion
                         # (I counted 1 on all systems we have)
@@ -281,7 +281,7 @@ def _dmi_isclean(key, val):
     '''
     Clean out well-known bogus values
     '''
-    if val is None or not len(val) or re.match('none', val, flags=re.IGNORECASE):
+    if not val or re.match('none', val, flags=re.IGNORECASE):
         # log.debug('DMI {0} value {1} seems invalid or empty'.format(key, val))
         return False
     elif 'uuid' in key:

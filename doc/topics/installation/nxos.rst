@@ -307,7 +307,7 @@ Example:
 
 Start the Minon in the Guestshell and accept the key on the SaltStack Master.
 
-  ``[root@guestshell ~]# salt-minion -d``
+  ``[root@guestshell ~]# systemctl start salt-minion``
 
 .. code:: bash
 

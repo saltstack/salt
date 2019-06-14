@@ -26,6 +26,7 @@ import sys
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
+import salt.utils.data
 import salt.utils.platform
 import salt.exceptions
 from salt.ext import six
@@ -361,7 +362,6 @@ def _get_certificate_obj(cert):
     '''
     if isinstance(cert, M2Crypto.X509.X509):
         return cert
-
     text = _text_or_file(cert)
     text = get_pem_entry(text, pem_type='CERTIFICATE')
     return M2Crypto.X509.load_cert_string(text)
@@ -424,7 +424,7 @@ def _make_regex(pem_type):
         r"(?:(?P<proc_type>Proc-Type: 4,ENCRYPTED)\s*)?"
         r"(?:(?P<dek_info>DEK-Info: (?:DES-[3A-Z\-]+,[0-9A-F]{{16}}|[0-9A-Z\-]+,[0-9A-F]{{32}}))\s*)?"
         r"(?P<pem_body>.+?)\s+(?P<pem_footer>"
-        r"-----END {1}-----)\s*".format(pem_type, pem_type),
+        r"-----END {0}-----)\s*".format(pem_type),
         re.DOTALL
     )
 
@@ -459,7 +459,7 @@ def get_pem_entry(text, pem_type=None):
         # mine.get returns the PEM on a single line, we fix this
         pem_fixed = []
         pem_temp = text
-        while len(pem_temp) > 0:
+        while pem_temp:
             if pem_temp.startswith('-----'):
                 # Grab ----(.*)---- blocks
                 pem_fixed.append(pem_temp[:pem_temp.index('-----', 5) + 5])
@@ -954,7 +954,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
 
         serial_number = rev_item['serial_number'].replace(':', '')
         # OpenSSL bindings requires this to be a non-unicode string
-        serial_number = salt.utils.stringutils.to_str(serial_number)
+        serial_number = salt.utils.stringutils.to_bytes(serial_number)
 
         if 'not_after' in rev_item and not include_expired:
             not_after = datetime.datetime.strptime(
@@ -968,6 +968,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         rev_date = datetime.datetime.strptime(
             rev_item['revocation_date'], '%Y-%m-%d %H:%M:%S')
         rev_date = rev_date.strftime('%Y%m%d%H%M%SZ')
+        rev_date = salt.utils.stringutils.to_bytes(rev_date)
 
         rev = OpenSSL.crypto.Revoked()
         rev.set_serial(salt.utils.stringutils.to_bytes(serial_number))
@@ -1392,10 +1393,13 @@ def create_certificate(
             ca_server = [ca_server]
         random.shuffle(ca_server)
         for server in ca_server:
+            # TODO: Make timeout configurable in Neon
             certs = __salt__['publish.publish'](
                 tgt=server,
                 fun='x509.sign_remote_certificate',
-                arg=six.text_type(kwargs))
+                arg=salt.utils.data.decode_dict(kwargs, to_str=True),
+                timeout=30
+            )
             if certs is None or not any(certs):
                 continue
             else:
@@ -1528,8 +1532,7 @@ def create_certificate(
         ext = _new_extension(
             name=extname, value=extval, critical=critical, issuer=issuer)
         if not ext.x509_ext:
-            log.info(
-                'Invalid X509v3 Extension. {0}: {1}'.format(extname, extval))
+            log.info('Invalid X509v3 Extension. %s: %s', extname, extval)
             continue
 
         cert.add_ext(ext)
@@ -1582,7 +1585,7 @@ def create_certificate(
             pem_type='CERTIFICATE'
         )
     else:
-        return cert.as_pem()
+        return salt.utils.stringutils.to_str(cert.as_pem())
 # pylint: enable=too-many-locals
 
 
@@ -1692,8 +1695,7 @@ def create_csr(path=None, text=False, **kwargs):
         ext = _new_extension(
             name=extname, value=extval, critical=critical, issuer=issuer)
         if not ext.x509_ext:
-            log.info(
-                'Invalid X509v3 Extension. {0}: {1}'.format(extname, extval))
+            log.info('Invalid X509v3 Extension. %s: %s', extname, extval)
             continue
 
         extstack.push(ext)

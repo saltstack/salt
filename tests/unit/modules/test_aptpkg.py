@@ -90,7 +90,26 @@ LOWPKG_INFO = {
         'name': 'wget',
         'section': 'web',
         'source': 'wget',
-        'version': '1.15-1ubuntu1.14.04.2'
+        'version': '1.15-1ubuntu1.14.04.2',
+        'status': 'ii'
+    },
+    'apache2': {
+        'architecture': 'amd64',
+        'description': """Apache HTTP Server
+ The Apache HTTP Server Project's goal is to build a secure, efficient and
+ extensible HTTP server as standards-compliant open source software. The
+ result has long been the number one web server on the Internet.
+ .
+ Installing this package results in a full installation, including the
+ configuration files, init scripts and support scripts.""",
+        'homepage': 'http://httpd.apache.org/',
+        'install_date': '2016-08-30T22:20:15Z',
+        'maintainer': 'Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>',
+        'name': 'apache2',
+        'section': 'httpd',
+        'source': 'apache2',
+        'version': '2.4.18-2ubuntu3.9',
+        'status': 'rc'
     }
 }
 
@@ -228,12 +247,13 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             'url': 'homepage'
         }
 
-        installed = copy.deepcopy(LOWPKG_INFO)
+        installed = copy.deepcopy({'wget': LOWPKG_INFO['wget']})
         for name in names:
             if installed['wget'].get(names[name], False):
                 installed['wget'][name] = installed['wget'].pop(names[name])
-
+        del installed['wget']['status']
         assert aptpkg.info_installed('wget') == installed
+        assert len(aptpkg.info_installed()) == 1
 
     @patch('salt.modules.aptpkg.__salt__', {'lowpkg.info': MagicMock(return_value=LOWPKG_INFO)})
     def test_info_installed_attr(self):
