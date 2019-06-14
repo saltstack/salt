@@ -2744,13 +2744,13 @@ def getvariable(variable, **connection_args):
 
     '''
     variables = showvariables(**connection_args)
-    _to_bytes = lambda x: salt.utils.stringutils.to_bytes(x)
     if variables:
         try:
             value = next(item for item
                          in variables
                          if 'Variable_name' in item
-                            and _to_bytes(item['Variable_name']) == _to_bytes(variable))
+                            and salt.utils.stringutils.to_bytes(item['Variable_name']) ==
+                            salt.utils.stringutils.to_bytes(variable))
         except StopIteration:
             return {}
         return value
