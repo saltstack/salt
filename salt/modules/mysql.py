@@ -1455,14 +1455,15 @@ def user_exists(user,
         salt '*' mysql.user_exists 'username' password_column='authentication_string'
     '''
     _version_comment = version_comment(**connection_args)
-    if not _version_comment:
+    _version = version(**connection_args)
+    if not _version_comment or not _version:
         err = ('MySQL Error: Unable to determine MySQL '
-               ' version_comment, check connection arguments.')
+               ' version_comment or versoin, check connection arguments.')
         __context__['mysql.error'] = err
         log.error(err)
         return False
 
-    if 'mariadb' in _version_comment:
+    if 'mariadb' in _version_comment.lower() or 'mariadb' in _version.lower():
         return _user_exists_mariadb(user,
                                     host,
                                     password,
@@ -1723,14 +1724,15 @@ def user_create(user,
         salt '*' mysql.user_create 'username' 'hostname' allow_passwordless=True
     '''
     _version_comment = version_comment(**connection_args)
-    if not _version_comment:
+    _version = version(**connection_args)
+    if not _version_comment or not _version:
         err = ('MySQL Error: Unable to determine MySQL '
-               ' version_comment, check connection arguments.')
+               ' version_comment or version, check connection arguments.')
         __context__['mysql.error'] = err
         log.error(err)
         return False
 
-    if 'mariadb' in _version_comment:
+    if 'mariadb' in _version_comment.lower() or 'mariadb' in _version.lower():
         return _user_create_mariadb(user,
                                     host=host,
                                     password=password,
@@ -1995,14 +1997,15 @@ def user_chpass(user,
         salt '*' mysql.user_chpass frank localhost allow_passwordless=True
     '''
     _version_comment = version_comment(**connection_args)
-    if not _version_comment:
+    _version = version(**connection_args)
+    if not _version_comment or not _version:
         err = ('MySQL Error: Unable to determine MySQL '
-               ' version_comment, check connection arguments.')
+               ' version_comment or version, check connection arguments.')
         __context__['mysql.error'] = err
         log.error(err)
         return False
 
-    if 'mariadb' in _version_comment:
+    if 'mariadb' in _version_comment.lower() or 'mariadb' in _version.lower():
         return _user_chpass_mariadb(user=user,
                                     host=host,
                                     password=password,
@@ -2741,9 +2744,13 @@ def getvariable(variable, **connection_args):
 
     '''
     variables = showvariables(**connection_args)
+    _to_bytes = lambda x: salt.utils.stringutils.to_bytes(x)
     if variables:
         try:
-            value = next(item for item in variables if 'Variable_name' in item and item['Variable_name'] == variable)
+            value = next(item for item
+                         in variables
+                         if 'Variable_name' in item
+                            and _to_bytes(item['Variable_name']) == _to_bytes(variable))
         except StopIteration:
             return {}
         return value
