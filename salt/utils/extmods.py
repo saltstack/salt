@@ -8,6 +8,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 import shutil
+import sys
 
 # Import salt libs
 import salt.fileclient
@@ -130,6 +131,12 @@ def sync(opts,
                             os.makedirs(dest_dir)
                         shutil.copyfile(fn_, dest)
                         ret.append('{0}.{1}'.format(form, relname))
+
+                    # If the synchronized module is an utils
+                    # directory, we add it to sys.path
+                    for util_dir in opts['utils_dirs']:
+                        if mod_dir.endswith(util_dir) and mod_dir not in sys.path:
+                            sys.path.append(mod_dir)
 
             touched = bool(ret)
             if opts['clean_dynamic_modules'] is True:

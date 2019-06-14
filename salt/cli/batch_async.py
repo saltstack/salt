@@ -222,6 +222,7 @@ class BatchAsync(object):
                 ret=self.opts.get('return', ''),
                 gather_job_timeout=self.opts['gather_job_timeout'],
                 jid=self.batch_jid,
-                metadata=self.metadata)
+                metadata=self.metadata,
+                **self.eauth)
             self.event.io_loop.call_later(self.opts['timeout'], self.find_job, set(next_batch))
             self.active = self.active.union(next_batch)

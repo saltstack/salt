@@ -45,6 +45,7 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.versions
+import salt.utils.master
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.pillar import git_pillar
 
@@ -172,6 +173,42 @@ def clean_old_jobs(opts):
     fstr = '{0}.clean_old_jobs'.format(opts['master_job_cache'])
     if fstr in mminion.returners:
         mminion.returners[fstr]()
+
+
+def clean_proc_dir(opts):
+    '''
+    Clean out old tracked jobs running on the master
+
+    Generally, anything tracking a job should remove the job
+    once the job has finished. However, this will remove any
+    jobs that for some reason were not properly removed
+    when finished or errored.
+    '''
+    serial = salt.payload.Serial(opts)
+    proc_dir = os.path.join(opts['cachedir'], 'proc')
+    for fn_ in os.listdir(proc_dir):
+        proc_file = os.path.join(*[proc_dir, fn_])
+        data = salt.utils.master.read_proc_file(proc_file, opts)
+        if not data:
+            try:
+                log.warning(
+                    "Found proc file %s without proper data. Removing from tracked proc files.",
+                    proc_file
+                )
+                os.remove(proc_file)
+            except (OSError, IOError) as err:
+                log.error('Unable to remove proc file: %s.', err)
+            continue
+        if not salt.utils.master.is_pid_healthy(data['pid']):
+            try:
+                log.warning(
+                    "PID %s not owned by salt or no longer running. Removing tracked proc file %s",
+                    data['pid'],
+                    proc_file
+                )
+                os.remove(proc_file)
+            except (OSError, IOError) as err:
+                log.error('Unable to remove proc file: %s.', err)
 
 
 def mk_key(opts, user):

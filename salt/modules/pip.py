@@ -79,6 +79,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import logging
 import os
+
 try:
     import pkg_resources
 except ImportError:
@@ -441,8 +442,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             no_cache_dir=False,
             cache_dir=None,
             no_binary=None,
+            user_install=False,
+            extra_args=None,
             **kwargs):
-    '''
+    r'''
     Install packages with pip
 
     Install packages individually or from a pip requirements file. Install
@@ -611,6 +614,28 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     no_cache_dir
         Disable the cache.
+
+    user_install
+        Enable install to occur inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
+
+    extra_args
+        pip keyword and positional arguments not yet implemented in salt
+
+        .. code-block:: yaml
+
+            salt '*' pip.install pandas extra_args="[{'--latest-pip-kwarg':'param'}, '--latest-pip-arg']"
+
+        .. warning::
+
+            If unsupported options are passed here that are not supported in a
+            minion's version of pip, a `No such option error` will be thrown.
+
+    Will be translated into the following pip command:
+
+    .. code-block:: bash
+
+        pip install pandas --latest-pip-kwarg param --latest-pip-arg
 
     CLI Example:
 
@@ -781,6 +806,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if source:
         cmd.extend(['--source', source])
 
+    if user_install:
+        cmd.append('--user')
+
     if upgrade:
         cmd.append('--upgrade')
 
@@ -894,6 +922,24 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if trusted_host:
         cmd.extend(['--trusted-host', trusted_host])
+
+    if extra_args:
+        # These are arguments from the latest version of pip that
+        # have not yet been implemented in salt
+        for arg in extra_args:
+            # It is a keyword argument
+            if isinstance(arg, dict):
+                # There will only ever be one item in this dictionary
+                key, val = arg.popitem()
+                # Don't allow any recursion into keyword arg definitions
+                # Don't allow multiple definitions of a keyword
+                if isinstance(val, (dict, list)):
+                    raise TypeError("Too many levels in: {}".format(key))
+                # This is a a normal one-to-one keyword argument
+                cmd.extend([key, val])
+            # It is a positional argument, append it to the list
+            else:
+                cmd.append(arg)
 
     cmd_kwargs = dict(saltenv=saltenv, use_vt=use_vt, runas=user)
 
@@ -1053,8 +1099,9 @@ def freeze(bin_env=None,
            cwd=None,
            use_vt=False,
            env_vars=None,
+           user_install=False,
            **kwargs):
-    '''
+    r'''
     Return a list of installed packages either globally or in the specified
     virtualenv
 
@@ -1069,6 +1116,10 @@ def freeze(bin_env=None,
 
     cwd
         Directory from which to run pip
+
+    user_install
+        Enable output to show inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
 
     .. note::
         If the version of pip available is older than 8.0.3, the list will not
@@ -1096,6 +1147,9 @@ def freeze(bin_env=None,
     else:
         cmd.append('--all')
 
+    if user_install:
+        cmd.append('--user')
+
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if kwargs:
         cmd_kwargs.update(**kwargs)
@@ -1116,8 +1170,9 @@ def list_(prefix=None,
           user=None,
           cwd=None,
           env_vars=None,
+          user_install=False,
           **kwargs):
-    '''
+    r'''
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
 
@@ -1128,6 +1183,11 @@ def list_(prefix=None,
         this function even if they are installed. Unlike :py:func:`pip.freeze
         <salt.modules.pip.freeze>`, this function always reports the version of
         pip which is installed.
+
+
+    user_install
+        Enable output to show inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
 
     CLI Example:
 
@@ -1144,6 +1204,7 @@ def list_(prefix=None,
                        user=user,
                        cwd=cwd,
                        env_vars=env_vars,
+                       user_install=user_install,
                        **kwargs):
         if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory
