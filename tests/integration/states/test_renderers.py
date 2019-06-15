@@ -8,7 +8,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky, skipIf
+from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 # Import Salt libs
