@@ -347,12 +347,16 @@ def banner(width=72, commentchar='#', borderchar='#', blockstart=None, blockend=
     rgutter = ' ' + redge
     textwidth = width - len(lgutter) - len(rgutter)
 
+    # Check the width
+    if textwidth <= 0:
+        raise salt.exceptions.ArgumentValueError('Width is too small to render banner')
+
     # Define the static elements
     border_line = commentchar + borderchar[:1] * (width - len(ledge) - len(redge)) + redge
     spacer_line = commentchar + ' ' * (width - len(commentchar) * 2) + commentchar
 
     # Create the banner
-    wrapper = textwrap.TextWrapper(width=(width - len(lgutter) - len(rgutter)))
+    wrapper = textwrap.TextWrapper(width=textwidth)
     block = list()
     if blockstart is not None:
         block.append(blockstart)
