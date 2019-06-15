@@ -14,7 +14,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-@skipIf(salt.utils.platform.is_darwin(), 'minion is OS X, skipping for now')
 class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test beacon states

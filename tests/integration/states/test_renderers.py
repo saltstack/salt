@@ -8,7 +8,11 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
+from tests.support.helpers import flaky, skipIf
+from tests.support.unit import skipIf
+
+# Import Salt libs
+import salt.utils.platform
 
 
 class TestJinjaRenderer(ModuleCase):
@@ -24,6 +28,7 @@ class TestJinjaRenderer(ModuleCase):
             self.assertTrue(state_ret['result'])
 
     @flaky
+    @skipIf(salt.utils.platform.is_darwin(), 'minion is OS X, skipping for now')
     def test_salt_contains_function(self):
         '''
         Test if we are able to check if a function exists inside the "salt"
