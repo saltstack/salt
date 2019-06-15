@@ -285,13 +285,11 @@ def banner(
     :param newline: Boolean value to indicate whether the comment block should
         end with a newline. Default is ``False``.
 
-    This banner can be injected into any templated file, for example:
+    **Example 1 - the default banner:**
 
     .. code-block:: jinja
 
-        {{ salt['slsutil.banner'](width=120, commentchar='//') }}
-
-    The default banner:
+        {{ salt['slsutil.banner']() }}
 
     .. code-block:: none
 
@@ -303,10 +301,11 @@ def banner(
         # file may be overwritten automatically and without warning.           #
         ########################################################################
 
-    For a Javadoc-style banner:
+    **Example 2 - a Javadoc-style banner:**
 
     .. code-block:: jinja
-        {{ salt['slsutil.banner'](commentchar=' *',borderchar='*',blockstart='/**',blockend=' */') }}
+
+        {{ salt['slsutil.banner'](commentchar=' *', borderchar='*', blockstart='/**', blockend=' */') }}
 
     .. code-block:: none
 
@@ -319,6 +318,23 @@ def banner(
          * file may be overwritten automatically and without warning.          *
          ***********************************************************************
          */
+
+    **Example 3 - custom text:**
+
+    .. code-block:: jinja
+
+        {{ set copyright='This file may not be copied or distributed without the express permission of ACME Corp.' }}
+        {{ salt['slsutil.banner'](title='Copyright 2019 ACME Corp', text=copyright) }}
+
+    .. code-block:: none
+
+        ########################################################################
+        #                                                                      #
+        #                       Copyright 2019 ACME Corp                       #
+        #                                                                      #
+        # This file may not be copied or distributed without the express       #
+        # permission of ACME Corp.                                             #
+        ########################################################################
 
     """
 
