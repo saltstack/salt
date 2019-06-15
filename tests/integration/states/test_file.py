@@ -2303,6 +2303,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual([salt.utils.stringutils.to_str(line) for line in expected], contents)
 
     @with_tempdir()
+    @skipIf(salt.utils.platform.is_darwin(), 'minion is OS X, skipping for now')
     def test_issue_11003_immutable_lazy_proxy_sum(self, base_dir):
         # causes the Import-Module ServerManager error on Windows
         template_path = os.path.join(TMP_STATE_TREE, 'issue-11003.sls')

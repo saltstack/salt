@@ -497,6 +497,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.isfile(requirements_file):
                 os.unlink(requirements_file)
 
+    @skipIf(salt.utils.platform.is_darwin(), 'minion is OS X, skipping for now')
     def test_22359_pip_installed_unless_does_not_trigger_warnings(self):
         # This test case should be moved to a format_call unit test specific to
         # the state internal keywords
