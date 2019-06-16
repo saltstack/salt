@@ -4,10 +4,8 @@ Test the saltcheck module
 '''
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
 
 # Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 
 class SaltcheckModuleTest(ModuleCase):
@@ -21,7 +19,7 @@ class SaltcheckModuleTest(ModuleCase):
         saltcheck_test = {"module_and_function": "test.echo",
                         "assertion": "assertEqual",
                         "expected-return": "This works!",
-                        "args":["This works!"] }
+                        "args": ["This works!"]}
         ret = self.run_function('saltcheck.run_test', test=saltcheck_test)
         self.assertDictContainsSubset({'status': 'Pass'}, ret)
 
@@ -31,5 +29,13 @@ class SaltcheckModuleTest(ModuleCase):
         '''
         saltcheck_test = 'validate-saltcheck'
         ret = self.run_function('saltcheck.run_state_tests', [saltcheck_test])
-        #self.assertEqual(ret[0], "stuff")
         self.assertDictContainsSubset({'status': 'Pass'}, ret[0]['validate-saltcheck']['echo_test_hello'])
+
+    def test_topfile_validation(self):
+        '''
+        saltcheck.run_highstate_tests
+        '''
+        expected_top_states = ['master_tops_test', 'core', 'TEST RESULTS']
+        ret = self.run_function('saltcheck.run_highstate_tests')
+        for top_state_dict in ret:
+            self.assertIn(top_state_dict.keys()[0], expected_top_states)

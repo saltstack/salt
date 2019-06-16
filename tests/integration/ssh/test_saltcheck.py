@@ -23,7 +23,7 @@ class SSHSaltcheckTest(SSHCase):
         saltcheck_test = {"module_and_function": "test.echo",
                         "assertion": "assertEqual",
                         "expected-return": "Test Works",
-                        "args":["Test Works"] }
+                        "args": ["Test Works"]}
         ret = self.run_function('saltcheck.run_test', test="saltcheck_test")
         #self.assertDictContainsSubset({'status': 'Pass'}, ret)
         self.assertEqual(ret, "run_test")
