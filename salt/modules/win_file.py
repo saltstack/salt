@@ -854,7 +854,7 @@ def stats(path, hash_type='sha256', follow_symlinks=True):
     ret['mtime'] = pstat.st_mtime
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
-    ret['mode'] = six.text_type(oct(stat.S_IMODE(pstat.st_mode)))
+    ret['mode'] = salt.utils.files.normalize_mode(oct(stat.S_IMODE(pstat.st_mode)))
     if hash_type:
         ret['sum'] = get_sum(path, hash_type)
     ret['type'] = 'file'
@@ -1161,11 +1161,13 @@ def symlink(src, link):
         win32file.CreateSymbolicLink(link, src, int(is_dir))
         return True
     except win32file.error as exc:
+        privs = __salt__['cmd.run_stdout']('whoami /priv')
         raise CommandExecutionError(
-            'Could not create \'{0}\' - [{1}] {2}'.format(
+            'Could not create \'{0}\' - [{1}] {2}\n{3}'.format(
                 link,
                 exc.winerror,
-                exc.strerror
+                exc.strerror,
+                privs
             )
         )
 
