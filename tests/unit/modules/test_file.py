@@ -342,16 +342,6 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
 
 
 class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
-    @classmethod
-    def setUpClass(self):
-        if salt.utils.platform.is_windows():
-            self.original_check_perms = filemod.check_perms
-            filemod.check_perms = win_file.check_perms
-
-    @classmethod
-    def tearDownClass(self):
-        if salt.utils.platform.is_windows():
-            filemod.check_perms = self.original_check_perms
 
     def setup_loader_modules(self):
         if salt.utils.platform.is_windows():
@@ -437,12 +427,17 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             "We found them. I'm not a witch.",
             "We shall say 'Ni' again to you, if you do not appease us."
         ])
-        filemod.blockreplace(self.tfile.name,
-                             marker_start='#-- START BLOCK 1',
-                             marker_end='#-- END BLOCK 1',
-                             content=new_multiline_content,
-                             backup=False,
-                             append_newline=None)
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, 'check_perms', check_perms_patch):
+            filemod.blockreplace(self.tfile.name,
+                                 marker_start='#-- START BLOCK 1',
+                                 marker_end='#-- END BLOCK 1',
+                                 content=new_multiline_content,
+                                 backup=False,
+                                 append_newline=None)
 
         with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
             filecontent = fp.read()
@@ -472,12 +467,17 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 salt.utils.stringutils.to_unicode(fp.read())
             )
 
-        filemod.blockreplace(self.tfile.name,
-                             marker_start='#-- START BLOCK 2',
-                             marker_end='#-- END BLOCK 2',
-                             content=new_content,
-                             backup=False,
-                             append_if_not_found=True)
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, 'check_perms', check_perms_patch):
+            filemod.blockreplace(self.tfile.name,
+                                 marker_start='#-- START BLOCK 2',
+                                 marker_end='#-- END BLOCK 2',
+                                 content=new_content,
+                                 backup=False,
+                                 append_if_not_found=True)
 
         with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
             self.assertIn(salt.utils.stringutils.to_bytes(
@@ -536,7 +536,12 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
             tfile.write(salt.utils.stringutils.to_bytes(base + os.linesep))
             tfile.flush()
-        filemod.blockreplace(tfile.name, **args)
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, 'check_perms', check_perms_patch):
+            filemod.blockreplace(tfile.name, **args)
         expected = os.linesep.join([base, block])
         with salt.utils.files.fopen(tfile.name) as tfile2:
             self.assertEqual(
@@ -547,7 +552,12 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
             tfile.write(salt.utils.stringutils.to_bytes(base))
             tfile.flush()
-        filemod.blockreplace(tfile.name, **args)
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, 'check_perms', check_perms_patch):
+            filemod.blockreplace(tfile.name, **args)
         with salt.utils.files.fopen(tfile.name) as tfile2:
             self.assertEqual(
                 salt.utils.stringutils.to_unicode(tfile2.read()), expected)
@@ -556,7 +566,12 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         # A newline should not be added in empty files
         with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
             pass
-        filemod.blockreplace(tfile.name, **args)
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, 'check_perms', check_perms_patch):
+            filemod.blockreplace(tfile.name, **args)
         with salt.utils.files.fopen(tfile.name) as tfile2:
             self.assertEqual(
                 salt.utils.stringutils.to_unicode(tfile2.read()), block)
@@ -582,12 +597,17 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     '{0}#-- END BLOCK 2'.format(new_content)])),
                 fp.read())
 
-        filemod.blockreplace(self.tfile.name,
-                             marker_start='#-- START BLOCK 2',
-                             marker_end='#-- END BLOCK 2',
-                             content=new_content,
-                             backup=False,
-                             prepend_if_not_found=True)
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, 'check_perms', check_perms_patch):
+            filemod.blockreplace(self.tfile.name,
+                                 marker_start='#-- START BLOCK 2',
+                                 marker_end='#-- END BLOCK 2',
+                                 content=new_content,
+                                 backup=False,
+                                 prepend_if_not_found=True)
 
         with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
             self.assertTrue(
@@ -630,11 +650,16 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 fp.read())
 
     def test_replace_partial_marked_lines(self):
-        filemod.blockreplace(self.tfile.name,
-                             marker_start='// START BLOCK',
-                             marker_end='// END BLOCK',
-                             content='new content 1',
-                             backup=False)
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, 'check_perms', check_perms_patch):
+            filemod.blockreplace(self.tfile.name,
+                                 marker_start='// START BLOCK',
+                                 marker_end='// END BLOCK',
+                                 content='new content 1',
+                                 backup=False)
 
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             filecontent = salt.utils.stringutils.to_unicode(fp.read())
@@ -649,12 +674,17 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         fext = '.bak'
         bak_file = '{0}{1}'.format(self.tfile.name, fext)
 
-        filemod.blockreplace(
-            self.tfile.name,
-            marker_start='// START BLOCK',
-            marker_end='// END BLOCK',
-            content='new content 2',
-            backup=fext)
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, 'check_perms', check_perms_patch):
+            filemod.blockreplace(
+                self.tfile.name,
+                marker_start='// START BLOCK',
+                marker_end='// END BLOCK',
+                content='new content 2',
+                backup=fext)
 
         self.assertTrue(os.path.exists(bak_file))
         os.unlink(bak_file)
@@ -663,28 +693,43 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         fext = '.bak'
         bak_file = '{0}{1}'.format(self.tfile.name, fext)
 
-        filemod.blockreplace(self.tfile.name,
-                             marker_start='// START BLOCK',
-                             marker_end='// END BLOCK',
-                             content='new content 3',
-                             backup=False)
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, 'check_perms', check_perms_patch):
+            filemod.blockreplace(self.tfile.name,
+                                 marker_start='// START BLOCK',
+                                 marker_end='// END BLOCK',
+                                 content='new content 3',
+                                 backup=False)
 
         self.assertFalse(os.path.exists(bak_file))
 
     def test_no_modifications(self):
-        filemod.blockreplace(self.tfile.name,
-                             marker_start='#-- START BLOCK 1',
-                             marker_end='#-- END BLOCK 1',
-                             content='new content 4',
-                             backup=False,
-                             append_newline=None)
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, 'check_perms', check_perms_patch):
+            filemod.blockreplace(self.tfile.name,
+                                 marker_start='#-- START BLOCK 1',
+                                 marker_end='#-- END BLOCK 1',
+                                 content='new content 4',
+                                 backup=False,
+                                 append_newline=None)
         before_ctime = os.stat(self.tfile.name).st_mtime
-        filemod.blockreplace(self.tfile.name,
-                             marker_start='#-- START BLOCK 1',
-                             marker_end='#-- END BLOCK 1',
-                             content='new content 4',
-                             backup=False,
-                             append_newline=None)
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, 'check_perms', check_perms_patch):
+            filemod.blockreplace(self.tfile.name,
+                                 marker_start='#-- START BLOCK 1',
+                                 marker_end='#-- END BLOCK 1',
+                                 content='new content 4',
+                                 backup=False,
+                                 append_newline=None)
         after_ctime = os.stat(self.tfile.name).st_mtime
 
         self.assertEqual(before_ctime, after_ctime)
@@ -701,23 +746,28 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(before_ctime, after_ctime)
 
     def test_show_changes(self):
-        ret = filemod.blockreplace(self.tfile.name,
-                                   marker_start='// START BLOCK',
-                                   marker_end='// END BLOCK',
-                                   content='new content 6',
-                                   backup=False,
-                                   show_changes=True)
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, 'check_perms', check_perms_patch):
+            ret = filemod.blockreplace(self.tfile.name,
+                                       marker_start='// START BLOCK',
+                                       marker_end='// END BLOCK',
+                                       content='new content 6',
+                                       backup=False,
+                                       show_changes=True)
 
-        self.assertTrue(ret.startswith('---'))  # looks like a diff
+            self.assertTrue(ret.startswith('---'))  # looks like a diff
 
-        ret = filemod.blockreplace(self.tfile.name,
-                                   marker_start='// START BLOCK',
-                                   marker_end='// END BLOCK',
-                                   content='new content 7',
-                                   backup=False,
-                                   show_changes=False)
+            ret = filemod.blockreplace(self.tfile.name,
+                                       marker_start='// START BLOCK',
+                                       marker_end='// END BLOCK',
+                                       content='new content 7',
+                                       backup=False,
+                                       show_changes=False)
 
-        self.assertIsInstance(ret, bool)
+            self.assertIsInstance(ret, bool)
 
     def test_unfinished_block_exception(self):
         self.assertRaises(
@@ -2416,7 +2466,10 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
             actual = filemod._chattr_has_extended_attrs()
             assert actual, actual
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    # We're skipping this on Windows as it tests the check_perms function in
+    # file.py which is specifically for Linux. The Windows version resides in
+    # win_file.py
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_check_perms_should_report_no_attr_changes_if_there_are_none(self):
         filename = '/path/to/fnord'
         attrs = 'aAcCdDeijPsStTu'
@@ -2454,7 +2507,10 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
             )
             assert actual_ret.get('changes', {}).get('attrs')is None, actual_ret
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    # We're skipping this on Windows as it tests the check_perms function in
+    # file.py which is specifically for Linux. The Windows version resides in
+    # win_file.py
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_check_perms_should_report_attrs_new_and_old_if_they_changed(self):
         filename = '/path/to/fnord'
         attrs = 'aAcCdDeijPsStTu'
