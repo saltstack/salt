@@ -68,6 +68,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import uuid
+import six
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
@@ -83,6 +84,11 @@ def __virtual__():
     '''
     return 'boto3_route53' if 'boto3_route53.find_hosted_zone' in __salt__ else False
 
+def _ensure_unicode(obj):
+    if issubclass(type(obj), six.binary_type):
+        return six.text_type(obj)
+
+    return obj
 
 def hosted_zone_present(name, Name=None, PrivateZone=False,
                         CallerReference=None, Comment=None, VPCs=None,
@@ -353,7 +359,7 @@ def hosted_zone_absent(name, Name=None, PrivateZone=False,
 def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name=None, Type=None,
                SetIdentifier=None, Weight=None, Region=None, GeoLocation=None, Failover=None,
                TTL=None, ResourceRecords=None, AliasTarget=None, HealthCheckId=None,
-               TrafficPolicyInstanceId=None,
+               HealthCheckName=None, TrafficPolicyInstanceId=None,
                region=None, key=None, keyid=None, profile=None):
     '''
     Ensure the Route53 record is present.
@@ -516,6 +522,13 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         .. __: http://boto3.readthedocs.io/en/latest/reference/services/route53.html#Route53.Client.change_resource_record_sets
         .. __: http://docs.aws.amazon.com/Route53/latest/APIReference/API_AliasTarget.html
 
+    HealthCheckId
+        The Id of the health check to assign to this recordset.
+
+    HealthCheckName
+        The name of the health check to assign to this recordset. Which will be used in order to
+        obtain HealthCheckId by looking up a Tag with key 'Name' on existing health checks.
+
     region
         The region to connect to.
 
@@ -533,6 +546,10 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
     if Type is None:
         raise SaltInvocationError("'Type' is a required parameter when adding or updating"
                                   "resource records.")
+    if HealthCheckId is not None and HealthCheckName is not None:
+        raise SaltInvocationError("Exactly one of either HealthCheckId or HealthCheckName"
+                                  "is required.")
+
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     args = {'Id': HostedZoneId, 'Name': DomainName, 'PrivateZone': PrivateZone,
@@ -603,6 +620,15 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                 fixed_rrs += [rr]
         ResourceRecords = [{'Value': rr} for rr in sorted(fixed_rrs)]
 
+    # If HostedZoneId is missing from AliasTarget, provide it on our own.
+    if AliasTarget:
+        if not 'HostedZoneId' in AliasTarget:
+            cleanid = HostedZoneId[12:] if HostedZoneId.startswith('/hostedzone/') else HostedZoneId
+            AliasTarget.update({'HostedZoneId': cleanid})
+
+    if HealthCheckName is not None:
+        HealthCheckId = __salt__['boto3_route53.get_health_check_id_by_name'](HealthCheckName, region, key, keyid, profile)
+
     recordsets = __salt__['boto3_route53.get_resource_records'](HostedZoneId=HostedZoneId,
             StartRecordName=Name, StartRecordType=Type, region=region, key=key, keyid=keyid,
             profile=profile)
@@ -615,7 +641,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
     create = False
     update = False
     updatable = ['SetIdentifier', 'Weight', 'Region', 'GeoLocation', 'Failover', 'TTL',
-                 'AliasTarget', 'HealthCheckId', 'TrafficPolicyInstanceId']
+                 'HealthCheckId', 'TrafficPolicyInstanceId']
     if not recordsets:
         create = True
         if __opts__['test']:
@@ -658,6 +684,8 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         }
         if ResourceRecords:
             ResourceRecordSet['ResourceRecords'] = ResourceRecords
+        if AliasTarget:
+            ResourceRecordSet['AliasTarget'] = AliasTarget
         for u in updatable:
             if locals().get(u) or (locals().get(u) == 0):
                 ResourceRecordSet.update({u: locals().get(u)})
@@ -798,3 +826,204 @@ def rr_absent(name, HostedZoneId=None, DomainName=None, PrivateZone=False,
         ret['result'] = False
 
     return ret
+
+def health_check_present(name, Name=None, CallerReference=None, IPAddress=None,
+                         Port=None, Type=None, ResourcePath=None, FullyQualifiedDomainName=None, SearchString=None,
+                         RequestInterval=None, FailureThreshold=None, MeasureLatency=None, Inverted=None, Disabled=None,
+                         HealthThreshold=None, ChildHealthChecks=None, EnableSNI=None, Regions=None, AlarmIdentifier=None,
+                         InsufficientDataHealthStatus=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure the Route53 health check is present.
+
+    name
+        The name of the state definition.  This will be used for Name if the latter is
+        not provided.
+
+    Name
+        Name of the health check.
+
+    region
+        The region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    '''
+
+    Name = Name if Name else name
+
+    if Type is None:
+        raise SaltInvocationError("'Type' is a required parameter when adding or updating resource records.")
+
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    params = locals()
+    create = False
+    update = False
+    reset_elements = []
+    updatables = [
+        'HealthCheckVersion', 'IPAddress', 'Port', 'Type', 'ResourcePath', 'FullyQualifiedDomainName', 'SearchString',
+        'RequestInterval', 'FailureThreshold', 'MeasureLatency', 'Inverted', 'Disabled', 'HealthThreshold',
+        'EnableSNI', 'InsufficientDataHealthStatus'
+    ]
+    resettables = [ 'FullyQualifiedDomainName', 'Regions', 'ResourcePath', 'ChildHealthChecks' ]
+
+    checks = __salt__['boto3_route53.find_health_checks'](Name=Name, region=region, key=key, keyid=keyid, profile=profile)
+
+    if len(checks) > 1:
+        ret['comment'] = 'Given criteria matched more than one health check.'
+        log.error(ret['comment'])
+        ret['result'] = False
+        return ret
+    elif len(checks) == 0:
+        create = True
+        CallerReference = CallerReference if CallerReference else str(uuid.uuid4())  # future lint: disable=blacklisted-function
+    else:
+        check = checks[0].get('HealthCheckConfig')
+        for u in updatables:
+            if u in [ 'HealthCheckVersion' ]:
+                continue
+            if _ensure_unicode(params.get(u)) != _ensure_unicode(check.get(u)):
+                update = True
+                break
+            if ((ChildHealthChecks is not None) and (check.get('ChildHealthChecks') is not None)):
+                if sorted(ChildHealthChecks) != sorted(check.get('ChildHealthChecks')):
+                    update = True
+            if ((Regions is not None) and (check.get('Regions') is not None)):
+                if sorted(Regions) != sorted(check.get('Regions')):
+                    update = True
+            if ((AlarmIdentifier is not None) and (check.get('AlarmIdentifier') is not None)):
+                if AlarmIdentifier.get('Name') != check.get('AlarmIdentifier', {}).get('Name'):
+                    update = True
+                if AlarmIdentifier.get('Region') != check.get('AlarmIdentifier', {}).get('Region'):
+                    update = True
+        for key in resettables:
+            if params.get(key) is None and check.get(key) is not None:
+                update = True
+                reset_elements.append(key)
+
+    if not create and not update:
+        ret['comment'] = 'Route 53 health check {} is already in the desired state.'.format(Name)
+        log.info(ret['comment'])
+        return ret
+    elif create:
+        keys = [
+            'IPAddress', 'Port', 'Type', 'ResourcePath', 'FullyQualifiedDomainName', 'SearchString',
+            'RequestInterval', 'FailureThreshold', 'MeasureLatency', 'Inverted', 'Disabled', 'HealthThreshold',
+            'EnableSNI', 'InsufficientDataHealthStatus', 'Regions', 'AlarmIdentifier', 'ChildHealthChecks', 'CallerReference'
+        ]
+
+        items = {key: params.get(key) for key in keys if params.get(key) is not None}
+        args = {'Name': Name, 'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
+        args.update(items)
+        log.debug(' ==> {}'.format(items))
+
+        if __opts__['test']:
+            ret['comment'] = 'Route 53 health check {} would be created.'.format(Name)
+            ret['changes'] = items
+            ret['result'] = None
+            return ret
+
+        check = __salt__['boto3_route53.create_health_check'](**args)
+        if check:
+            ret['comment'] = 'Route 53 health check {} successfully created.'.format(Name)
+            log.info(ret['comment'])
+            ret['changes']['new'] = check
+        else:
+            ret['comment'] = 'Creation of Route 53 health check {} failed.'.format(Name)
+            log.error(ret['comment'])
+            ret['result'] = False
+            return ret
+    elif update:
+        keys = [
+            'HealthCheckVersion', 'IPAddress', 'Port', 'Type', 'ResourcePath', 'FullyQualifiedDomainName', 'SearchString',
+            'RequestInterval', 'FailureThreshold', 'MeasureLatency', 'Inverted', 'Disabled', 'HealthThreshold',
+            'EnableSNI', 'InsufficientDataHealthStatus', 'Regions', 'AlarmIdentifier', 'ChildHealthChecks', 'CallerReference'
+        ]
+
+        check = checks[0].get('HealthCheckConfig')
+        args = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
+        changes = {key: params.get(key) for key in keys if params.get(key) is not None}
+
+        if len(reset_elements) > 0:
+            changes.update({'ResetElements': reset_elements})
+
+        if __opts__['test']:
+            ret['comment'] = 'Route 53 health check {} would be updated.'.format(Name)
+            keys = [key for key in keys if changes.get(key) is not None]
+            ret['changes'] = {key: changes.get(key) for key in keys if _ensure_unicode(changes.get(key)) != _ensure_unicode(check.get(key))}
+            ret['result'] = None
+            return ret
+
+        check = __salt__['boto3_route53.update_health_check'](check['Id'], changes, **args)
+        if check:
+            ret['comment'] = 'Route 53 health check {} successfully updated.'.format(Name)
+            log.info(ret['comment'])
+            ret['changes']['new'] = check
+            return ret
+
+    return ret
+
+def health_check_absent(name, Name=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure the Route53 Health Check described is absent
+
+    name
+        The name of the state definition.
+    Name
+        The name of the health check.
+
+    region
+        The region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    '''
+    Name = Name if Name else name
+
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    args = {'Name': Name, 'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
+
+    checks = __salt__['boto3_route53.find_health_checks'](Name=Name, region=region, key=key, keyid=keyid, profile=profile)
+
+    if len(checks) > 1:
+        ret['comment'] = 'Given criteria matched more than one health check.'
+        log.error(ret['comment'])
+        ret['result'] = False
+        return ret
+    elif len(checks) == 0:
+        ret['comment'] = 'Route 53 health check {} already absent'.format(Name)
+        log.info(ret['comment'])
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'Route 53 health check {} would be deleted.'.format(Name)
+        ret['result'] = None
+        return ret
+
+    check = checks[0].get('HealthCheckConfig')
+    Id = check['Id']
+
+    if __salt__['boto3_route53.delete_health_check'](Id=Id, region=region, key=key, keyid=keyid, profile=profile):
+        ret['comment'] = 'Route 53 health check {} deleted.'.format(Name)
+        log.info(ret['comment'])
+        ret['changes']['old'] = check
+        ret['changes']['new'] = None
+    else:
+        ret['comment'] = 'Failed to delete Route 53 health check {}.'.format(Name)
+        log.info(ret['comment'])
+        ret['result'] = False
+
+    return ret
+
+

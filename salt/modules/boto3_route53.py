@@ -53,6 +53,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 import re
+import uuid
 
 # Import Salt libs
 import salt.utils.compat
@@ -86,6 +87,8 @@ def __init__(opts):
     if HAS_BOTO3:
         __utils__['boto3.assign_funcs'](__name__, 'route53')
 
+def _has_name_tag(tags, name):
+    return any(item.get('Value', None) == name for item in tags if item.get('Key', None) == 'Name')
 
 def _collect_results(func, item, args, marker='Marker', nextmarker='NextMarker'):
     ret = []
@@ -1000,3 +1003,448 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
                     (Name or HostedZoneId), six.text_type(e))
             raise e
     return False
+
+def get_health_check_ids_by_name(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Find Ids of all health checks with the given name tag.
+    Note that this can return multiple health checks, since the same name can be used
+    in multiple health checks.
+
+    name
+        The name associated with the health check.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    CLI Example:
+    .. code-block:: bash
+        salt myminion boto3_route53.get_health_check_ids_by_name ANAME  \
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    ids = [z['Id'] for z in _collect_results(conn.list_health_checks, 'HealthChecks', {})]
+    args = {'ResourceType': 'healthcheck', 'ResourceIds': ids}
+    return [z['ResourceId'] for z in _collect_results(conn.list_tags_for_resources, 'ResourceTagSets', args) if _has_name_tag(z['Tags'], name)]
+
+def get_health_check_id_by_name(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Find Id of a health check with the given name (as tag).
+
+    name
+        The name associated with the health check.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    CLI Example:
+    .. code-block:: bash
+        salt myminion boto3_route53.get_health_check_id_by_name ANAME \
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
+    '''
+    ids = get_health_check_ids_by_name(name, region=region, key=key, keyid=keyid, profile=profile)
+
+    if len(ids) > 1:
+        log.error(
+            'Request matched more than one HealthCheck (%s). Refine your '
+            'criteria and try again.', [z['Id'] for z in ret]
+        )
+
+    return ids[0] if len(ids) > 0 else None
+
+def list_tags_for_resource(Type, Id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Lists all tags attadhed to given resource.
+
+    Type
+        Type of resource to lookup.
+    Id
+        The Id of resource to lookup.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    CLI Example:
+    .. code-block:: bash
+        salt myminion boto3_route53.list_tags_for_resource TYPE ID \
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    args = {'ResourceType': Type, 'ResourceId': Id}
+    return _collect_results(conn.list_tags_for_resource, None, args)
+
+def list_health_checks(DelegationSetId=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    List all available health checks.
+
+    DelegationSetId
+        DelegationSetId to filter by.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    CLI Example:
+    .. code-block:: bash
+        salt myminion boto3_route53.list_health_checks \
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    args = {'DelegationSetId': DelegationSetId} if DelegationSetId else {}
+    return _collect_results(conn.list_health_checks, 'HealthChecks', args)
+
+def get_health_check(Id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Return detailed info about the given healthcheck.
+
+    Id
+        The unique HealthCheck Identifier.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    CLI Example:
+    .. code-block:: bash
+        salt myminion boto3_route53.get_health_check Id\
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    args = {'HealthCheckId': Id}
+    ret = _collect_results(conn.get_health_check, None, args)
+    return ret[0]['HealthCheck'] if len(ret) > 0 else None
+
+def get_health_check_by_name(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Return detailed info about the given healthcheck (by name).
+
+    name
+        The name of the health check to lookup.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    CLI Example:
+    .. code-block:: bash
+        salt myminion boto3_route53.get_health_check_by_name ANAME \
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
+    '''
+    id = get_health_check_id_by_name(name, region, key, keyid, profile)
+    return get_health_check(id, region, key, keyid, profile) if id != None else None
+
+def get_health_checks_by_name(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Return detailed info about all the healthchecks with given name.
+
+    name
+        The name of the health check to lookup.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    CLI Example:
+    .. code-block:: bash
+        salt myminion boto3_route53.get_health_checks_by_name ANAME \
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
+    '''
+    ids = get_health_check_ids_by_name(name, region, key, keyid, profile) or []
+    return [get_health_check(x, region, key, keyid, profile) for x in ids]
+
+def find_health_checks(Id=None, Name=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Return detailed info about healthchecks with given Id or name.
+
+    name
+        The name of the health check to lookup.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    CLI Example:
+    .. code-block:: bash
+        salt myminion boto3_route53.find_health_checks ANAME \
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
+    '''
+    if not _exactly_one((Id, Name)):
+        raise SaltInvocationError('Exactly one of either Id or Name is required.')
+
+    if Id:
+        ret = [get_health_check(Id, region=region, key=key, keyid=keyid, profile=profile)]
+    else:
+        ret = get_health_checks_by_name(Name, region=region, key=key, keyid=keyid, profile=profile)
+
+    return ret
+
+def find_health_check(Id=None, Name=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Return detailed info about healthcheck with given Id or name.
+
+    name
+        The name of the health check to lookup.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    CLI Example:
+    .. code-block:: bash
+        salt myminion boto3_route53.find_health_checks ANAME \
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
+    '''
+    ret = find_health_checks(Id=Id, Name=Name, region=region, key=key, keyid=keyid, profile=profile)
+
+    if len(ret) > 1:
+        ids = [z['Id'] for z in ret]
+        raise SaltInvocationError(
+            'Request matched more than one HealthCheck (%s). Refine your '
+            'criteria and try again.'.format(ids)
+        )
+
+    return ret[0] if len(ret) > 0 else None
+
+def get_health_check_version(Id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Return current version of the given healthcheck.
+
+    Id
+        The unique HealthCheck Identifier.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    CLI Example:
+    .. code-block:: bash
+        salt myminion boto3_route53.get_health_check_version 8fb2c95f-e5de-4378-8f60-10844dcd33d7 \
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
+    '''
+    data = get_health_check(Id, region=region, key=key, keyid=keyid, profile=profile)
+    return data['HealthCheckVersion'] if data else None
+
+def get_health_check_version_by_name(Name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Return current version of the given healthcheck (by name).
+
+    Id
+        The unique HealthCheck Identifier.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    CLI Example:
+    .. code-block:: bash
+        salt myminion boto3_route53.get_health_check_version_by_name ANAME \
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
+    '''
+    data = find_health_check(None, Name, region=region, key=key, keyid=keyid, profile=profile)
+    return data['HealthCheckVersion'] if data else None
+
+def create_health_check(Name, CallerReference=None, IPAddress=None,
+                        Port=None, Type=None, ResourcePath=None, FullyQualifiedDomainName=None, SearchString=None,
+                        RequestInterval=None, FailureThreshold=None, MeasureLatency=None, Inverted=None, Disabled=None,
+                        HealthThreshold=None, ChildHealthChecks=None, EnableSNI=None, Regions=None, AlarmIdentifier=None,
+                        InsufficientDataHealthStatus=None, region=None, key=None, keyid=None, profile=None, tries=20):
+    '''
+    Creates a new health check with given properties.
+
+    Name
+        The name to assign to newly created health check.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    CLI Example:
+    .. code-block:: bash
+        salt myminion boto3_route53.create_health_check ANAME ... \
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
+    '''
+    if not Name:
+        raise SaltInvocationError('Name of healthcheck to update missing.')
+
+    keys = [
+        'IPAddress', 'Port', 'Type', 'ResourcePath', 'FullyQualifiedDomainName', 'SearchString',
+        'RequestInterval', 'FailureThreshold', 'MeasureLatency', 'Inverted', 'Disabled', 'HealthThreshold',
+        'EnableSNI', 'InsufficientDataHealthStatus', 'Regions', 'AlarmIdentifier', 'ChildHealthChecks'
+    ]
+    params = locals()
+    result = None
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    CallerReference = CallerReference if CallerReference else str(uuid.uuid4())  # future lint: disable=blacklisted-function
+    HealthCheckConfig = {}
+
+    for key in [x for x in keys if params.get(x) is not None]:
+        HealthCheckConfig[key] = params.get(key)
+
+    args = {'CallerReference': CallerReference, 'HealthCheckConfig': HealthCheckConfig}
+
+    while tries:
+        try:
+            result = conn.create_health_check(**args).get('HealthCheck')
+            conn.change_tags_for_resource(
+                ResourceType='healthcheck',
+                ResourceId=result['Id'],
+                AddTags=[{ 'Key': 'Name', 'Value': Name }],
+                )
+            return {'result': result }
+        except ClientError as e:
+            if tries and e.response.get('Error', {}).get('Code') == 'Throttling':
+                log.debug('Throttled by AWS API.')
+                time.sleep(3)
+                tries -= 1
+                continue
+            log.error('Failed to create healthcheck %s: %s', Name, six.text_type(e))
+            raise e
+
+    return result
+
+def update_health_check(Id, changes, region=None, key=None, keyid=None, profile=None, tries=20):
+    '''
+    Updates a health check with with passed changes request.
+
+    Name
+        The name to assign to newly created health check.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    CLI Example:
+    .. code-block:: bash
+        salt myminion boto3_route53.update_health_check Id ... \
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
+    '''
+    if not Id:
+        raise SaltInvocationError('Id of healthcheck to update missing.')
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    args = changes or {}
+    args.update({'HealthCheckId': Id})
+
+    while tries:
+        try:
+            return {'result': conn.update_health_check(**args)}
+        except ClientError as e:
+            if tries and e.response.get('Error', {}).get('Code') == 'Throttling':
+                log.debug('Throttled by AWS API.')
+                time.sleep(3)
+                tries -= 1
+                continue
+            log.error('Failed to update healthcheck %s: %s', Id, six.text_type(e))
+            raise e
+
+    return False
+
+def update_health_check_by_name(Name, changes, region=None, key=None, keyid=None, profile=None, tries=20):
+    '''
+    Updates a health check with with passed changes request (by name).
+
+    Name
+        The name to assign to newly created health check.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+    CLI Example:
+    .. code-block:: bash
+        salt myminion boto3_route53.update_health_check Id ... \
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
+    '''
+    ids = get_health_check_ids_by_name(Name, region=region, key=key, keyid=keyid, profile=profile) or []
+
+    if len(ids) == 0:
+        raise SaltInvocationError('HealthCheck with name {0} not found.'.format(Name))
+    elif len(ids) > 1:
+        raise SaltInvocationError(
+            'Request matched more than one HealthCheck (%s). Refine your '
+            'criteria and try again.'.format(ids)
+        )
+
+    return update_health_check(ids[0], changes, region=region, key=key, keyid=keyid, profile=profile, tries=tries)
+
+def delete_health_check(Id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete a Route53 health check.
+
+    CLI Example::
+
+        salt myminion boto3_route53.health_check 2405309f-2aa1-4add-9e8c-c47546a199d7
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        r = conn.delete_health_check(HealthCheckId=Id)
+        return {'result': True}
+    except ClientError as e:
+        log.error('Failed to delete health check %s: %s', Id, e)
+    return False
+
+def delete_health_check_by_name(Name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete a Route53 health check (by name).
+
+    CLI Example::
+
+        salt myminion boto3_route53.health_check_by_name A-HEALTH-CHECK
+    '''
+    ids = get_health_check_ids_by_name(Name, region=region, key=key, keyid=keyid, profile=profile) or []
+
+    if len(ids) == 0:
+        raise SaltInvocationError('HealthCheck with name {0} not found.'.format(Name))
+    elif len(ids) > 1:
+        raise SaltInvocationError(
+            'Request matched more than one HealthCheck (%s). Refine your '
+            'criteria and try again.'.format(ids)
+        )
+
+    return delete_health_check(ids[0], region=region, key=key, keyid=keyid, profile=profile)
+
