@@ -120,6 +120,12 @@ USER     COMMAND    PID   FD PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
 salt-master python2.781106 35 tcp4  127.0.0.1:61115  127.0.0.1:4506
 '''
 
+NETLINK_SS = '''
+State      Recv-Q Send-Q               Local Address:Port                 Peer Address:Port
+ESTAB      0      0                    127.0.0.1:56726                    127.0.0.1:4505
+ESTAB      0      0                    ::ffff:1.2.3.4:5678                ::ffff:1.2.3.4:4505
+'''
+
 IPV4_SUBNETS = {True: ('10.10.0.0/24',),
                 False: ('10.10.0.0', '10.10.0.0/33', 'FOO', 9, '0.9.800.1000/24')}
 IPV6_SUBNETS = {True: ('::1/128',),
@@ -185,11 +191,17 @@ class NetworkTestCase(TestCase):
     def test_is_ip(self):
         self.assertTrue(network.is_ip('10.10.0.3'))
         self.assertFalse(network.is_ip('0.9.800.1000'))
+        # Check 16-char-long unicode string
+        # https://github.com/saltstack/salt/issues/51258
+        self.assertFalse(network.is_ipv6('sixteen-char-str'))
 
     def test_is_ipv4(self):
         self.assertTrue(network.is_ipv4('10.10.0.3'))
         self.assertFalse(network.is_ipv4('10.100.1'))
         self.assertFalse(network.is_ipv4('2001:db8:0:1:1:1:1:1'))
+        # Check 16-char-long unicode string
+        # https://github.com/saltstack/salt/issues/51258
+        self.assertFalse(network.is_ipv4('sixteen-char-str'))
 
     def test_is_ipv6(self):
         self.assertTrue(network.is_ipv6('2001:db8:0:1:1:1:1:1'))
@@ -202,6 +214,9 @@ class NetworkTestCase(TestCase):
         self.assertFalse(network.is_ipv6('2001:0db8:::0370:7334'))
         self.assertFalse(network.is_ipv6('10.0.1.2'))
         self.assertFalse(network.is_ipv6('2001.0db8.85a3.0000.0000.8a2e.0370.7334'))
+        # Check 16-char-long unicode string
+        # https://github.com/saltstack/salt/issues/51258
+        self.assertFalse(network.is_ipv6('sixteen-char-str'))
 
     def test_parse_host_port(self):
         _ip = ipaddress.ip_address
@@ -624,3 +639,8 @@ class NetworkTestCase(TestCase):
             # An exception is raised if unicode is passed to socket.getfqdn
             minion_id = network.generate_minion_id()
         assert minion_id != '', minion_id
+
+    def test_netlink_tool_remote_on(self):
+        with patch('subprocess.check_output', return_value=NETLINK_SS):
+            remotes = network._netlink_tool_remote_on('4505', 'remote')
+            self.assertEqual(remotes, set(['127.0.0.1', '::ffff:1.2.3.4']))

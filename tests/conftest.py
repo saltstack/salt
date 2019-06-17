@@ -141,12 +141,6 @@ def pytest_addoption(parser):
         action='store_true',
         help='Disable colour printing.'
     )
-    output_options_group.addoption(
-        '--sys-stats',
-        default=False,
-        action='store_true',
-        help='Print System CPU and MEM statistics after each test execution.'
-    )
 # <---- CLI Options Setup --------------------------------------------------------------------------------------------
 
 

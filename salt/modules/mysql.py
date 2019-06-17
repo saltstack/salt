@@ -584,7 +584,7 @@ def quote_identifier(identifier, for_grants=False):
     '''
     if for_grants:
         return '`' + identifier.replace('`', '``').replace('_', r'\_') \
-            .replace('%', r'\%%') + '`'
+            .replace('%', r'%%') + '`'
     else:
         return '`' + identifier.replace('`', '``').replace('%', '%%') + '`'
 
@@ -1265,7 +1265,13 @@ def user_exists(user,
         salt '*' mysql.user_exists 'username' password_column='authentication_string'
     '''
     run_verify = False
-    server_version = version(**connection_args)
+    server_version = salt.utils.data.decode(version(**connection_args))
+    if not server_version:
+        last_err = __context__['mysql.error']
+        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
+        log.error(err)
+        return False
+    compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
     # Its password might have previously change with the same command/state
@@ -1297,7 +1303,7 @@ def user_exists(user,
         else:
             qry += ' AND ' + password_column + ' = \'\''
     elif password:
-        if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
             run_verify = True
         else:
             _password = password
@@ -1403,7 +1409,13 @@ def user_create(user,
         salt '*' mysql.user_create 'username' 'hostname' password_hash='hash'
         salt '*' mysql.user_create 'username' 'hostname' allow_passwordless=True
     '''
-    server_version = version(**connection_args)
+    server_version = salt.utils.data.decode(version(**connection_args))
+    if not server_version:
+        last_err = __context__['mysql.error']
+        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
+        log.error(err)
+        return False
+    compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
     if user_exists(user, host, **connection_args):
         log.info('User \'%s\'@\'%s\' already exists', user, host)
         return False
@@ -1424,7 +1436,7 @@ def user_create(user,
         qry += ' IDENTIFIED BY %(password)s'
         args['password'] = six.text_type(password)
     elif password_hash is not None:
-        if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
             qry += ' IDENTIFIED BY %(password)s'
         else:
             qry += ' IDENTIFIED BY PASSWORD %(password)s'
@@ -1507,10 +1519,16 @@ def user_chpass(user,
         salt '*' mysql.user_chpass frank localhost password_hash='hash'
         salt '*' mysql.user_chpass frank localhost allow_passwordless=True
     '''
-    server_version = version(**connection_args)
+    server_version = salt.utils.data.decode(version(**connection_args))
+    if not server_version:
+        last_err = __context__['mysql.error']
+        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
+        log.error(err)
+        return False
+    compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
     args = {}
     if password is not None:
-        if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
             password_sql = '%(password)s'
         else:
             password_sql = 'PASSWORD(%(password)s)'
@@ -1533,28 +1551,23 @@ def user_chpass(user,
         password_column = __password_column(**connection_args)
 
     cur = dbc.cursor()
-    if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
-        qry = ("ALTER USER '" + user + "'@'" + host + "'"
-               " IDENTIFIED BY '" + password + "';")
-        args = {}
+    args['user'] = user
+    args['host'] = host
+    if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
+        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
     else:
-        qry = ('UPDATE mysql.user SET ' + password_column + '='
-               + password_sql +
+        qry = ('UPDATE mysql.user SET ' + password_column + '=' + password_sql +
                ' WHERE User=%(user)s AND Host = %(host)s;')
-        args['user'] = user
-        args['host'] = host
     if salt.utils.data.is_true(allow_passwordless) and \
             salt.utils.data.is_true(unix_socket):
         if host == 'localhost':
-            if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
-                qry = ("ALTER USER '" + user + "'@'" + host + "'"
-                       " IDENTIFIED BY '" + password + "';")
-                args = {}
+            args['unix_socket'] = 'auth_socket'
+            if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
+                qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(unix_socket)s AS %(user)s;"
             else:
                 qry = ('UPDATE mysql.user SET ' + password_column + '='
                        + password_sql + ', plugin=%(unix_socket)s' +
                        ' WHERE User=%(user)s AND Host = %(host)s;')
-                args['unix_socket'] = 'unix_socket'
         else:
             log.error('Auth via unix_socket can be set only for host=localhost')
     try:
@@ -1565,7 +1578,7 @@ def user_chpass(user,
         log.error(err)
         return False
 
-    if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+    if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
         _execute(cur, 'FLUSH PRIVILEGES;')
         log.info(
             'Password for user \'%s\'@\'%s\' has been %s',
@@ -1867,9 +1880,15 @@ def grant_exists(grant,
              'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
 
-    server_version = version(**connection_args)
+    server_version = salt.utils.data.decode(version(**connection_args))
+    if not server_version:
+        last_err = __context__['mysql.error']
+        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
+        log.error(err)
+        return False
     if 'ALL' in grant:
-        if salt.utils.versions.version_cmp(server_version, '8.0') >= 0:
+        if salt.utils.versions.version_cmp(server_version, '8.0') >= 0 and \
+           'MariaDB' not in server_version:
             grant = ','.join([i for i in __all_privileges__])
         else:
             grant = 'ALL PRIVILEGES'

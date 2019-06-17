@@ -29,12 +29,15 @@ Ensure a Linux ACL does not exist
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import os
 
 # Import salt libs
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
 import salt.utils.path
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = 'acl'
 
@@ -56,10 +59,10 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
     ret = {'name': name,
            'result': True,
            'changes': {},
-           'pchanges': {},
            'comment': ''}
 
     _octal = {'r': 4, 'w': 2, 'x': 1, '-': 0}
+    _octal_lookup = {0: '-', 1: 'r', 2: 'w', 4: 'x'}
 
     if not os.path.exists(name):
         ret['comment'] = '{0} does not exist'.format(name)
@@ -111,20 +114,24 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
             if not need_refresh:
                 ret['comment'] = 'Permissions are in the desired state'
             else:
+                _num = user[_search_name]['octal']
+                new_perms = '{}{}{}'.format(_octal_lookup[_num & 1],
+                                            _octal_lookup[_num & 2],
+                                            _octal_lookup[_num & 4])
                 changes = {'new': {'acl_name': acl_name,
                                    'acl_type': acl_type,
                                    'perms': perms},
                            'old': {'acl_name': acl_name,
                                    'acl_type': acl_type,
-                                   'perms': six.text_type(user[_search_name]['octal'])}}
+                                   'perms': new_perms}}
 
                 if __opts__['test']:
                     ret.update({'comment': 'Updated permissions will be applied for '
                                 '{0}: {1} -> {2}'.format(
                                     acl_name,
-                                    six.text_type(user[_search_name]['octal']),
+                                    new_perms,
                                     perms),
-                                'result': None, 'pchanges': changes})
+                                'result': None, 'changes': changes})
                     return ret
                 try:
                     __salt__['acl.modfacl'](acl_type, acl_name, perms, name,
@@ -143,8 +150,8 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
 
             if __opts__['test']:
                 ret.update({'comment': 'New permissions will be applied for '
-                            '{0}: {1}'.format(acl_name, perms),
-                            'result': None, 'pchanges': changes})
+                                       '{0}: {1}'.format(acl_name, perms),
+                            'result': None, 'changes': changes})
                 ret['result'] = None
                 return ret
 

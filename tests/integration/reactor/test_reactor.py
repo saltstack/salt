@@ -35,4 +35,4 @@ class ReactorTest(ModuleCase, SaltMinionEventAssertsMixin):
 
         e.fire_event({'a': 'b'}, '/test_event')
 
-        self.assertMinionEventReceived({'a': 'b'})
+        self.assertMinionEventReceived({'a': 'b'}, timeout=30)

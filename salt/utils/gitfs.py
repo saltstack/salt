@@ -5,8 +5,8 @@ Classes which provide the shared base for GitFS, git_pillar, and winrepo
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import copy
 import contextlib
+import copy
 import errno
 import fnmatch
 import glob
@@ -17,6 +17,7 @@ import shlex
 import shutil
 import stat
 import subprocess
+import sys
 import time
 import tornado.ioloop
 import weakref
@@ -823,7 +824,7 @@ class GitProvider(object):
                                     'by another master.')
                     log.warning(msg)
                     if failhard:
-                        raise exc
+                        six.reraise(*sys.exc_info())
                     return
                 elif pid and pid_exists(pid):
                     log.warning('Process %d has a %s %s lock (%s)',
@@ -1611,11 +1612,19 @@ class Pygit2(GitProvider):
         '''
         Clean stale local refs so they don't appear as fileserver environments
         '''
+        try:
+            if pygit2.GIT_FETCH_PRUNE:
+                # Don't need to clean anything, pygit2 can do it by itself
+                return []
+        except AttributeError:
+            # However, only in 0.26.2 and newer
+            pass
         if self.credentials is not None:
             log.debug(
-                'pygit2 does not support detecting stale refs for '
-                'authenticated remotes, saltenvs will not reflect '
-                'branches/tags removed from remote \'%s\'', self.id
+                'The installed version of pygit2 (%s) does not support '
+                'detecting stale refs for authenticated remotes, saltenvs '
+                'will not reflect branches/tags removed from remote \'%s\'',
+                PYGIT2_VERSION, self.id
             )
             return []
         return super(Pygit2, self).clean_stale_refs()
@@ -1645,6 +1654,9 @@ class Pygit2(GitProvider):
 
         self.gitdir = salt.utils.path.join(self.repo.workdir, '.git')
         self.enforce_git_config()
+        git_config = os.path.join(self.gitdir, 'config')
+        if os.path.exists(git_config) and PYGIT2_VERSION >= _LooseVersion('0.28.0'):
+            self.repo.config.add_file(git_config)
 
         return new
 
@@ -1721,6 +1733,11 @@ class Pygit2(GitProvider):
         else:
             if self.credentials is not None:
                 origin.credentials = self.credentials
+        try:
+            fetch_kwargs['prune'] = pygit2.GIT_FETCH_PRUNE
+        except AttributeError:
+            # pruning only available in pygit2 >= 0.26.2
+            pass
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
         except GitError as exc:
@@ -2573,7 +2590,8 @@ class GitBase(object):
                     LIBGIT2_VERSION
                 )
             )
-        if not salt.utils.path.which('git'):
+        if not getattr(pygit2, 'GIT_FETCH_PRUNE', False) \
+                and not salt.utils.path.which('git'):
             errors.append(
                 'The git command line utility is required when using the '
                 '\'pygit2\' {0}_provider.'.format(self.role)
@@ -2802,7 +2820,7 @@ class GitFS(GitBase):
                         return _add_file_stat(fnd, blob_mode)
             except IOError as exc:
                 if exc.errno != errno.ENOENT:
-                    raise exc
+                    six.reraise(*sys.exc_info())
 
             with salt.utils.files.fopen(lk_fn, 'w'):
                 pass
@@ -2884,13 +2902,13 @@ class GitFS(GitBase):
             return ret
         except IOError as exc:
             if exc.errno != errno.ENOENT:
-                raise exc
+                six.reraise(*sys.exc_info())
 
         try:
             os.makedirs(os.path.dirname(hashdest))
         except OSError as exc:
             if exc.errno != errno.EEXIST:
-                raise exc
+                six.reraise(*sys.exc_info())
 
         ret['hsum'] = salt.utils.hashutils.get_hash(path, self.opts['hash_type'])
         with salt.utils.files.fopen(hashdest, 'w+') as fp_:
@@ -3002,11 +3020,15 @@ class GitPillar(GitBase):
                 if repo.branch == '__env__' and hasattr(repo, 'all_saltenvs'):
                     env = self.opts.get('pillarenv') \
                         or self.opts.get('saltenv') \
-                        or self.opts.get('git_pillar_base')
+                        or 'base'
                 elif repo.env:
                     env = repo.env
                 else:
-                    env = 'base' if repo.branch == repo.base else repo.get_checkout_target()
+                    if repo.branch == repo.base:
+                        env = 'base'
+                    else:
+                        tgt = repo.get_checkout_target()
+                        env = 'base' if tgt == repo.base else tgt
                 if repo._mountpoint:
                     if self.link_mountpoint(repo):
                         self.pillar_dirs[repo.linkdir] = env

@@ -669,6 +669,7 @@ def _deploy_salt_minion(name, session, vm_):
     vm_['ssh_host'] = get_vm_ip(name, session)
     vm_['user'] = vm_.get('user', 'root')
     vm_['password'] = vm_.get('password', 'p@ssw0rd!')
+    vm_['provider'] = vm_.get('provider', 'xen')
     log.debug('%s has IP of %s', name, vm_['ssh_host'])
     # Bootstrap Salt minion!
     if vm_['ssh_host'] is not None:

@@ -130,9 +130,19 @@ class NestDisplay(object):
         elif isinstance(ret, six.string_types):
             first_line = True
             for line in ret.splitlines():
+                line_prefix = ' ' * len(prefix) if not first_line else prefix
+                if isinstance(line, bytes):
+                    out.append(
+                        self.ustring(
+                            indent,
+                            self.YELLOW,
+                            'Not string data',
+                            prefix=line_prefix
+                        )
+                    )
+                    break
                 if self.strip_colors:
                     line = salt.output.strip_esc_sequence(line)
-                line_prefix = ' ' * len(prefix) if not first_line else prefix
                 out.append(
                     self.ustring(
                         indent,

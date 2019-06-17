@@ -156,3 +156,43 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(len(ret), 1)
         self.assertEqual(ret[0]['path'], fp)
         self.assertEqual(ret[0]['change'], 'IN_DELETE')
+
+    def test_multi_files_exclude(self):
+        dp1 = os.path.join(self.tmpdir, 'subdir1')
+        dp2 = os.path.join(self.tmpdir, 'subdir2')
+        os.mkdir(dp1)
+        os.mkdir(dp2)
+        _exclude1 = '{0}/subdir1/*tmpfile*$'.format(self.tmpdir)
+        _exclude2 = '{0}/subdir2/*filetmp*$'.format(self.tmpdir)
+        config = [{'files': {dp1: {'mask': ['create', 'delete'],
+                                   'recurse': True,
+                                   'exclude': [{_exclude1: {'regex': True}}],
+                                   'auto_add': True}}},
+                  {'files': {dp2: {'mask': ['create', 'delete'],
+                                   'recurse': True,
+                                   'exclude': [{_exclude2: {'regex': True}}],
+                                   'auto_add': True}}}]
+        ret = inotify.validate(config)
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+
+        fp = os.path.join(dp1, 'tmpfile')
+        with salt.utils.files.fopen(fp, 'w') as f:
+            pass
+        ret = inotify.beacon(config)
+        self.assertEqual(len(ret), 0)
+        os.remove(fp)
+        ret = inotify.beacon(config)
+        self.assertEqual(len(ret), 0)
+
+        fp = os.path.join(dp2, 'tmpfile')
+        with salt.utils.files.fopen(fp, 'w') as f:
+            pass
+        ret = inotify.beacon(config)
+        self.assertEqual(len(ret), 1)
+        self.assertEqual(ret[0]['path'], fp)
+        self.assertEqual(ret[0]['change'], 'IN_CREATE')
+        os.remove(fp)
+        ret = inotify.beacon(config)
+        self.assertEqual(len(ret), 1)
+        self.assertEqual(ret[0]['path'], fp)
+        self.assertEqual(ret[0]['change'], 'IN_DELETE')

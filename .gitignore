@@ -4,6 +4,7 @@
 pkg/arch/*.tar.xz
 *.sw[pon]
 doc/_build
+doc/doc-archive.tar.gz
 dist
 MANIFEST
 *~
@@ -38,6 +39,7 @@ Pipfile.lock
 
 # code coverage outputs genereated by coverage.py
 .coverage
+.coverage.*
 coverage.xml
 htmlcov/
 
@@ -94,6 +96,9 @@ tests/integration/cloud/providers/pki/minions
 
 # Ignore tox virtualenvs
 /.tox/
+
+# Ignore nox virtualenvs
+/.nox/
 
 # Kitchen tests files
 .kitchen.local.yml

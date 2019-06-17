@@ -1394,8 +1394,12 @@ def _remotes_on(port, which_end):
     Return a set of ip addrs active tcp connections
     '''
     port = int(port)
-    ret = set()
 
+    ret = _netlink_tool_remote_on(port, which_end)
+    if ret is not None:
+        return ret
+
+    ret = set()
     proc_available = False
     for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
         if os.path.isfile(statf):
@@ -1444,6 +1448,51 @@ def _parse_tcp_line(line):
     ret[sl]['remote_addr'] = hex2ip(r_addr, True)
     ret[sl]['remote_port'] = int(r_port, 16)
     return ret
+
+
+def _netlink_tool_remote_on(port, which_end):
+    '''
+    Returns set of ipv4 host addresses of remote established connections
+    on local or remote tcp port.
+
+    Parses output of shell 'ss' to get connections
+
+    [root@salt-master ~]# ss -ant
+    State      Recv-Q Send-Q               Local Address:Port                 Peer Address:Port
+    LISTEN     0      511                              *:80                              *:*
+    LISTEN     0      128                              *:22                              *:*
+    ESTAB      0      0                      127.0.0.1:56726                  127.0.0.1:4505
+    '''
+    remotes = set()
+    valid = False
+    try:
+        data = subprocess.check_output(['ss', '-ant'])  # pylint: disable=minimum-python-version
+    except subprocess.CalledProcessError:
+        log.error('Failed ss')
+        raise
+    except OSError:     # not command "No such file or directory"
+        return None
+
+    lines = salt.utils.stringutils.to_str(data).split('\n')
+    for line in lines:
+        if 'Address:Port' in line:    # ss tools may not be valid
+            valid = True
+            continue
+        elif 'ESTAB' not in line:
+            continue
+        chunks = line.split()
+        local_host, local_port = chunks[3].rsplit(':', 1)
+        remote_host, remote_port = chunks[4].rsplit(':', 1)
+
+        if which_end == 'remote_port' and int(remote_port) != port:
+            continue
+        if which_end == 'local_port' and int(local_port) != port:
+            continue
+        remotes.add(remote_host)
+
+    if valid is False:
+        remotes = None
+    return remotes
 
 
 def _sunos_remotes_on(port, which_end):

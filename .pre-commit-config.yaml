@@ -1,0 +1,570 @@
+exclude: ^(doc/_static/.*|doc/_themes/.*)$
+repos:
+  - repo: https://github.com/saltstack/pip-tools-compile-impersonate
+    rev: master
+    hooks:
+      - id: pip-tools-compile
+        alias: compile-linux-py2.7-tcp-requirements
+        name: Linux Py2.7 TCP Requirements
+        files: ^requirements/((base|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(lint|cloud|docs|osx|windows|)\.in$
+        args:
+          - -v
+          - --py-version=2.7
+          - --platform=linux
+          - --out-prefix=tcp
+          - --include=requirements/base.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-osx-py2.7-tcp-requirements
+        name: OSX Py2.7 TCP Requirements
+        files: ^requirements/((base|pytest)\.txt|static/osx\.in)$
+        args:
+          - -v
+          - --py-version=2.7
+          - --platform=darwin
+          - --out-prefix=tcp
+          - --include=requirements/base.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-windows-py2.7-tcp-requirements
+        name: Windows Py2.7 TCP Requirements
+        files: ^requirements/((base|pytest)\.txt|static/windows\.in)$
+        args:
+          - -v
+          - --py-version=2.7
+          - --platform=windows
+          - --out-prefix=tcp
+          - --include=requirements/base.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-linux-py2.7-zmq-requirements
+        name: Linux Py2.7 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(lint|cloud|docs|osx|windows)\.in$
+        args:
+          - -v
+          - --py-version=2.7
+          - --platform=linux
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-osx-py2.7-zmq-requirements
+        name: OSX Py2.7 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        args:
+          - -v
+          - --py-version=2.7
+          - --platform=darwin
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-windows-py2.7-zmq-requirements
+        name: Windows Py2.7 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        args:
+          - -v
+          - --py-version=2.7
+          - --platform=windows
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-linux-py2.7-raet-requirements
+        name: Linux Py2.7 RAET Requirements
+        files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(lint|cloud|docs|osx|windows)\.in$
+        args:
+          - -v
+          - --py-version=2.7
+          - --platform=linux
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-osx-py2.7-raet-requirements
+        name: OSX Py2.7 RAET Requirements
+        files: ^requirements/((base|raet|pytest)\.txt|static/osx\.in)$
+        args:
+          - -v
+          - --py-version=2.7
+          - --out-prefix=raet
+          - --platform=darwin
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-windows-py2.7-raet-requirements
+        name: Windows Py2.7 RAET Requirements
+        files: ^requirements/((base|raet|pytest)\.txt|static/windows\.in)$
+        args:
+          - -v
+          - --py-version=2.7
+          - --out-prefix=raet
+          - --platform=windows
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+
+      - id: pip-tools-compile
+        alias: compile-lint-py2.7-requirements
+        name: Lint Py2.7 Requirements
+        files: ^requirements/static/lint\.in$
+        args:
+          - -v
+          - --py-version=2.7
+          - --platform=linux
+
+      - id: pip-tools-compile
+        alias: compile-cloud-py2.7-requirements
+        name: Cloud Py2.7 Requirements
+        files: ^requirements/(static/cloud\.in)$
+        args:
+          - -v
+          - --py-version=2.7
+
+
+      - id: pip-tools-compile
+        alias: compile-linux-py3.4-tcp-requirements
+        name: Linux Py3.4 TCP Requirements
+        files: ^requirements/((base|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
+        args:
+          - -v
+          - --py-version=3.4
+          - --platform=linux
+          - --out-prefix=tcp
+          - --include=requirements/base.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-linux-py3.4-zmq-requirements
+        name: Linux Py3.4 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
+        args:
+          - -v
+          - --py-version=3.4
+          - --platform=linux
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-linux-py3.4-raet-requirements
+        name: Linux Py3.4 RAET Requirements
+        files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
+        args:
+          - -v
+          - --py-version=3.4
+          - --platform=linux
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+          - --remove-line=^enum34==(.*)$
+
+      - id: pip-tools-compile
+        alias: compile-cloud-py3.4-requirements
+        name: Cloud Py3.4 Requirements
+        files: ^requirements/(static/cloud\.in)$
+        args:
+          - -v
+          - --py-version=3.4
+
+      - id: pip-tools-compile
+        alias: compile-linux-py3.5-tcp-requirements
+        name: Linux Py3.5 TCP Requirements
+        files: ^requirements/((base|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=linux
+          - --out-prefix=tcp
+          - --include=requirements/base.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-osx-py3.5-tcp-requirements
+        name: OSX Py3.5 TCP Requirements
+        files: ^requirements/((base|pytest)\.txt|static/osx\.in)$
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=darwin
+          - --out-prefix=tcp
+          - --include=requirements/base.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-windows-py3.5-tcp-requirements
+        name: Windows Py3.5 TCP Requirements
+        files: ^requirements/((base|pytest)\.txt|static/windows\.in)$
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=windows
+          - --out-prefix=tcp
+          - --include=requirements/base.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-linux-py3.5-zmq-requirements
+        name: Linux Py3.5 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=linux
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-osx-py3.5-zmq-requirements
+        name: OSX Py3.5 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=darwin
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-windows-py3.5-zmq-requirements
+        name: Windows Py3.5 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=windows
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-linux-py3.5-raet-requirements
+        name: Linux Py3.5 RAET Requirements
+        files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=linux
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+          - --remove-line=^enum34==(.*)$
+      - id: pip-tools-compile
+        alias: compile-osx-py3.5-raet-requirements
+        name: OSX Py3.5 RAET Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=darwin
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+          - --remove-line=^enum34==(.*)$
+      - id: pip-tools-compile
+        alias: compile-windows-py3.5-raet-requirements
+        name: Windows Py3.5 RAET Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=windows
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+          - --remove-line=^enum34==(.*)$
+
+      - id: pip-tools-compile
+        alias: compile-cloud-py3.5-requirements
+        name: Cloud Py3.5 Requirements
+        files: ^requirements/(static/cloud\.in)$
+        args:
+          - -v
+          - --py-version=3.5
+
+      - id: pip-tools-compile
+        alias: compile-doc-requirements
+        name: Docs Py3.5 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/docs\.in)$
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=linux
+
+      - id: pip-tools-compile
+        alias: compile-linux-py3.6-tcp-requirements
+        name: Linux Py3.6 TCP Requirements
+        files: ^requirements/((base|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+          - --out-prefix=tcp
+          - --include=requirements/base.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-osx-py3.6-tcp-requirements
+        name: OSX Py3.6 TCP Requirements
+        files: ^requirements/((base|pytest)\.txt|static/osx\.in)$
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=darwin
+          - --out-prefix=tcp
+          - --include=requirements/base.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-linux-py3.6-zmq-requirements
+        name: Linux Py3.6 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-osx-py3.6-zmq-requirements
+        name: OSX Py3.6 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=darwin
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-windows-py3.6-zmq-requirements
+        name: Windows Py3.6 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=windows
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-linux-py3.6-raet-requirements
+        name: Linux Py3.6 RAET Requirements
+        files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+          - --remove-line=^enum34==(.*)$
+      - id: pip-tools-compile
+        alias: compile-osx-py3.6-raet-requirements
+        name: OSX Py3.6 RAET Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=darwin
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+          - --remove-line=^enum34==(.*)$
+      - id: pip-tools-compile
+        alias: compile-windows-py3.6-raet-requirements
+        name: Windows Py3.6 RAET Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=windows
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+          - --remove-line=^enum34==(.*)$
+
+      - id: pip-tools-compile
+        alias: compile-cloud-py3.6-requirements
+        name: Cloud Py3.6 Requirements
+        files: ^requirements/(static/cloud\.in)$
+        args:
+          - -v
+          - --py-version=3.6
+
+      - id: pip-tools-compile
+        alias: compile-doc-requirements
+        name: Docs Py3.6 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/docs\.in)$
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+
+      - id: pip-tools-compile
+        alias: compile-linux-py3.7-tcp-requirements
+        name: Linux Py3.7 TCP Requirements
+        files: ^requirements/((base|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux
+          - --out-prefix=tcp
+          - --include=requirements/base.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-osx-py3.7-tcp-requirements
+        name: OSX Py3.7 TCP Requirements
+        files: ^requirements/((base|pytest)\.txt|static/osx\.in)$
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=darwin
+          - --out-prefix=tcp
+          - --include=requirements/base.txt
+          - --include=requirements/pytest.txt
+      - id: pip-tools-compile
+        alias: compile-linux-py3.7-zmq-requirements
+        name: Linux Py3.7 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-osx-py3.7-zmq-requirements
+        name: OSX Py3.7 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=darwin
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-windows-py3.7-zmq-requirements
+        name: Windows Py3.7 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=windows
+          - --out-prefix=zeromq
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+      - id: pip-tools-compile
+        alias: compile-linux-py3.7-raet-requirements
+        name: Linux Py3.7 RAET Requirements
+        files: ^requirements/((base|raet|pytest)\.txt|static/(.*)\.in)$
+        exclude: ^requirements/static/(centos-6|ubuntu-14.04|lint|cloud|docs|osx|windows)\.in$
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+          - --remove-line=^enum34==(.*)$
+      - id: pip-tools-compile
+        alias: compile-osx-py3.7-raet-requirements
+        name: OSX Py3.7 RAET Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=darwin
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+          - --remove-line=^enum34==(.*)$
+      - id: pip-tools-compile
+        alias: compile-windows-py3.7-raet-requirements
+        name: Windows Py3.7 RAET Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=windows
+          - --out-prefix=raet
+          - --include=requirements/base.txt
+          - --include=requirements/raet.txt
+          - --include=requirements/pytest.txt
+          - --remove-line=^pycrypto==(.*)$
+          - --remove-line=^enum34==(.*)$
+
+      - id: pip-tools-compile
+        alias: compile-cloud-py3.7-requirements
+        name: Cloud Py3.7 Requirements
+        files: ^requirements/(static/cloud\.in)$
+        args:
+          - -v
+          - --py-version=3.7
+
+      - id: pip-tools-compile
+        alias: compile-doc-requirements
+        name: Docs Py3.7 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/docs\.in)$
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux

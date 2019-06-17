@@ -181,7 +181,7 @@ def _create_gpg(user=None, gnupghome=None):
         gnupghome = _get_user_gnupghome(user)
 
     if GPG_1_3_1:
-        gpg = gnupg.GPG(homedir=gnupghome)
+        gpg = gnupg.GPG(homedir=gnupghome)  # pylint: disable=unexpected-keyword-arg
     else:
         gpg = gnupg.GPG(gnupghome=gnupghome)
 
@@ -924,7 +924,7 @@ def trust_key(keyid=None,
 
     if user == 'salt':
         homeDir = os.path.join(__salt__['config.get']('config_dir'), 'gpgkeys')
-        cmd.extend([' --homedir', homeDir])
+        cmd.extend(['--homedir', homeDir])
         _user = 'root'
     res = __salt__['cmd.run_all'](cmd,
                                   stdin=stdin,

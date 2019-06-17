@@ -17,7 +17,7 @@ class BatchTest(ShellCase):
     Integration tests for the salt.cli.batch module
     '''
     if salt.utils.platform.is_windows():
-        run_timeout = 90
+        run_timeout = 180
     else:
         run_timeout = 30
 

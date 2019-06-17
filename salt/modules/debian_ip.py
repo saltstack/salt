@@ -1822,7 +1822,8 @@ def down(iface, iface_type):
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought down.
     if iface_type not in ['slave', 'source']:
-        return __salt__['cmd.run'](['ifdown', iface])
+        cmd = ['ip', 'link', 'set', '{0}'.format(iface), 'down']
+        return __salt__['cmd.run'](cmd, python_shell=False)
     return None
 
 
@@ -1883,7 +1884,8 @@ def up(iface, iface_type):  # pylint: disable=C0103
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought up.
     if iface_type not in ('slave', 'source'):
-        return __salt__['cmd.run'](['ifup', iface])
+        cmd = ['ip', 'link', 'set', '{0}'.format(iface), 'up']
+        return __salt__['cmd.run'](cmd, python_shell=False)
     return None
 
 

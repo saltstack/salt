@@ -1294,16 +1294,16 @@ class Cloud(object):
                 start = int(time.time())
                 while int(time.time()) < start + 60:
                     # We'll try every <timeout> seconds, up to a minute
-                    mopts_ = salt.config.DEFAULT_MINION_OPTS
+                    mopts_ = salt.config.DEFAULT_MASTER_OPTS
                     conf_path = '/'.join(self.opts['conf_file'].split('/')[:-1])
                     mopts_.update(
-                        salt.config.minion_config(
+                        salt.config.master_config(
                             os.path.join(conf_path,
-                                         'minion')
+                                         'master')
                         )
                     )
 
-                    client = salt.client.get_local_client(mopts=self.opts)
+                    client = salt.client.get_local_client(mopts=mopts_)
 
                     ret = client.cmd(
                         vm_['name'],
