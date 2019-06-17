@@ -28,7 +28,7 @@ class TestJinjaRenderer(ModuleCase):
             self.assertTrue(state_ret['result'])
 
     @flaky
-    @skipIf(salt.utils.platform.is_darwin(), 'minion is OS X, skipping for now')
+    @skipIf(salt.utils.platform.is_darwin() and six.PY2, 'This test hangs on OS X on Py2')
     def test_salt_contains_function(self):
         '''
         Test if we are able to check if a function exists inside the "salt"
