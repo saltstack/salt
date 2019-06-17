@@ -33,6 +33,15 @@ import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.jinja import SaltCacheLoader
 
+if salt.utils.platform.is_windows():
+    import salt.modules.win_file as win_file
+    import salt.utils.win_dacl as win_dacl
+    # We have to monkey patch this here because many of the functions from
+    # `filemod` module are "namespaced" into the `win_file` module. The
+    # `win_file` module has its own `check_perms` function which would be
+    # used under a Windows system
+    filemod.check_perms = win_file.check_perms
+
 SED_CONTENT = '''test
 some
 content
@@ -339,20 +348,21 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
 
 class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        return {
+        opts = {
+            'test': False,
+            'file_roots': {'base': 'tmp'},
+            'pillar_roots': {'base': 'tmp'},
+            'cachedir': 'tmp',
+            'grains': {},
+        }
+        ret = {
             filemod: {
                 '__salt__': {
                     'config.manage_mode': MagicMock(),
                     'cmd.run': cmdmod.run,
                     'cmd.run_all': cmdmod.run_all
                 },
-                '__opts__': {
-                    'test': False,
-                    'file_roots': {'base': 'tmp'},
-                    'pillar_roots': {'base': 'tmp'},
-                    'cachedir': 'tmp',
-                    'grains': {},
-                },
+                '__opts__': opts,
                 '__grains__': {'kernel': 'Linux'},
                 '__utils__': {
                     'files.is_binary': MagicMock(return_value=False),
@@ -361,6 +371,19 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 },
             }
         }
+        if salt.utils.platform.is_windows():
+            ret.update({
+                win_file: {
+                    '__utils__': {
+                        'dacl.check_perms': win_dacl.check_perms
+                    },
+                },
+                win_dacl: {
+                    '__opts__': opts
+                },
+            })
+
+        return ret
 
     MULTILINE_STRING = textwrap.dedent('''\
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam rhoncus
