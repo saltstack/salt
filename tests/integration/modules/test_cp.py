@@ -286,7 +286,7 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn('bacon', data)
 
     @skipIf(not SSL3_SUPPORT, 'Requires python with SSL3 support')
-    @skipIf(salt.utils.platform.is_darwin(), 'minion is OS X, skipping for now')
+    @skipIf(salt.utils.platform.is_darwin() and six.PY2, 'This test hangs on OS X on Py2')
     @with_tempfile()
     def test_get_url_https(self, tgt):
         '''
