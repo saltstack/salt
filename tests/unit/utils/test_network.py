@@ -120,6 +120,12 @@ USER     COMMAND    PID   FD PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
 salt-master python2.781106 35 tcp4  127.0.0.1:61115  127.0.0.1:4506
 '''
 
+NETLINK_SS = '''
+State      Recv-Q Send-Q               Local Address:Port                 Peer Address:Port
+ESTAB      0      0                    127.0.0.1:56726                    127.0.0.1:4505
+ESTAB      0      0                    ::ffff:1.2.3.4:5678                ::ffff:1.2.3.4:4505
+'''
+
 IPV4_SUBNETS = {True: ('10.10.0.0/24',),
                 False: ('10.10.0.0', '10.10.0.0/33', 'FOO', 9, '0.9.800.1000/24')}
 IPV6_SUBNETS = {True: ('::1/128',),
@@ -637,3 +643,8 @@ class NetworkTestCase(TestCase):
             # An exception is raised if unicode is passed to socket.getfqdn
             minion_id = network.generate_minion_id()
         assert minion_id != '', minion_id
+
+    def test_netlink_tool_remote_on(self):
+        with patch('subprocess.check_output', return_value=NETLINK_SS):
+            remotes = network._netlink_tool_remote_on('4505', 'remote')
+            self.assertEqual(remotes, set(['127.0.0.1', '::ffff:1.2.3.4']))

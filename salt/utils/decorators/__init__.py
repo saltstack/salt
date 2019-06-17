@@ -413,6 +413,7 @@ class _IsDeprecated(_DeprecationDecorator):
         '''
         _DeprecationDecorator.__call__(self, function)
 
+        @wraps(function)
         def _decorate(*args, **kwargs):
             '''
             Decorator function.
@@ -587,6 +588,7 @@ class _WithDeprecated(_DeprecationDecorator):
         '''
         _DeprecationDecorator.__call__(self, function)
 
+        @wraps(function)
         def _decorate(*args, **kwargs):
             '''
             Decorator function.
@@ -627,6 +629,7 @@ class _WithDeprecated(_DeprecationDecorator):
             return self._call_function(kwargs)
 
         _decorate.__doc__ = self._function.__doc__
+        _decorate.__wrapped__ = self._function
         return _decorate
 
 
@@ -641,6 +644,7 @@ def ignores_kwargs(*kwarg_names):
         List of argument names to ignore
     '''
     def _ignores_kwargs(fn):
+        @wraps(fn)
         def __ignores_kwargs(*args, **kwargs):
             kwargs_filtered = kwargs.copy()
             for name in kwarg_names:

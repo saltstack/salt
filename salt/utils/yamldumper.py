@@ -115,6 +115,7 @@ def dump(data, stream=None, **kwargs):
     '''
     if 'allow_unicode' not in kwargs:
         kwargs['allow_unicode'] = True
+    kwargs.setdefault('default_flow_style', None)
     return yaml.dump(data, stream, **kwargs)
 
 
@@ -126,4 +127,5 @@ def safe_dump(data, stream=None, **kwargs):
     '''
     if 'allow_unicode' not in kwargs:
         kwargs['allow_unicode'] = True
+    kwargs.setdefault('default_flow_style', None)
     return yaml.dump(data, stream, Dumper=SafeOrderedDumper, **kwargs)

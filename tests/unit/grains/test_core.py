@@ -141,7 +141,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         grains = core._windows_platform_data()
         keys = ['biosversion',
                 'osrelease',
-                'domain',
                 'kernelrelease',
                 'motherboard',
                 'serialnumber',

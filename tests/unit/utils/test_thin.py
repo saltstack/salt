@@ -7,6 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import TestsLoggingHandler
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -17,8 +18,10 @@ import salt.exceptions
 from salt.utils import thin
 from salt.utils import json
 import salt.utils.stringutils
+import salt.utils.platform
 from salt.utils.stringutils import to_bytes as bts
 from salt.ext.six.moves import range
+import salt.ext.six
 
 try:
     import pytest
@@ -423,6 +426,55 @@ class SSHThinTestCase(TestCase):
         self.assertIn('The minimum required python version to run salt-ssh is '
                       '"2.6"', str(err.value))
 
+    @skipIf(salt.utils.platform.is_windows() and thin._six.PY2,
+            'Dies on Python2 on Windows')
+    @patch('salt.exceptions.SaltSystemExit', Exception)
+    @patch('salt.utils.thin.os.makedirs', MagicMock())
+    @patch('salt.utils.files.fopen', MagicMock())
+    @patch('salt.utils.thin._get_salt_call', MagicMock())
+    @patch('salt.utils.thin._get_ext_namespaces', MagicMock())
+    @patch('salt.utils.thin.get_tops', MagicMock(return_value=['/foo3', '/bar3']))
+    @patch('salt.utils.thin.get_ext_tops', MagicMock(return_value={}))
+    @patch('salt.utils.thin.os.path.isfile', MagicMock())
+    @patch('salt.utils.thin.os.path.isdir', MagicMock(return_value=True))
+    @patch('salt.utils.thin.os.remove', MagicMock())
+    @patch('salt.utils.thin.os.path.exists', MagicMock())
+    @patch('salt.utils.path.os_walk', MagicMock(return_value=[]))
+    @patch('salt.utils.thin.subprocess.Popen',
+           _popen(None, side_effect=[(bts('2.7'), bts('')), (bts('["/foo27", "/bar27"]'), bts(''))]))
+    @patch('salt.utils.thin.tarfile', MagicMock())
+    @patch('salt.utils.thin.zipfile', MagicMock())
+    @patch('salt.utils.thin.os.getcwd', MagicMock())
+    @patch('salt.utils.thin.os.chdir', MagicMock())
+    @patch('salt.utils.thin.tempfile.mkdtemp', MagicMock())
+    @patch('salt.utils.thin.tempfile.mkstemp', MagicMock(return_value=(3, ".temporary")))
+    @patch('salt.utils.thin.shutil', MagicMock())
+    @patch('salt.utils.path.which', MagicMock(return_value=''))
+    @patch('salt.utils.thin._get_thintar_prefix', MagicMock())
+    def test_gen_thin_python_exist_or_not(self):
+        '''
+        Test thin.gen_thin function if the opposite python
+        binary does not exist
+        '''
+        with TestsLoggingHandler() as handler:
+            thin.gen_thin('')
+            salt.utils.thin.subprocess.Popen.assert_not_called()
+
+            if salt.ext.six.PY2:
+                self.assertIn('DEBUG:python3 binary does not exist. Will not attempt to generate '
+                              'tops for Python 3',
+                              handler.messages)
+
+            if salt.ext.six.PY3:
+                self.assertIn('DEBUG:python2 binary does not exist. Will not '
+                              'detect Python 2 version',
+                              handler.messages)
+                self.assertIn('DEBUG:python2 binary does not exist. Will not attempt to generate '
+                              'tops for Python 2',
+                              handler.messages)
+
+    @skipIf(salt.utils.platform.is_windows() and thin._six.PY2,
+            'Dies on Python2 on Windows')
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
     @patch('salt.utils.thin.os.makedirs', MagicMock())
@@ -449,6 +501,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin._six.PY3', True)
     @patch('salt.utils.thin._six.PY2', False)
     @patch('salt.utils.thin.sys.version_info', _version_info(None, 3, 6))
+    @patch('salt.utils.path.which', MagicMock(return_value='/usr/bin/python'))
     def test_gen_thin_compression_fallback_py3(self):
         '''
         Test thin.gen_thin function if fallbacks to the gzip compression, once setup wrong.
@@ -490,6 +543,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin._six.PY3', True)
     @patch('salt.utils.thin._six.PY2', False)
     @patch('salt.utils.thin.sys.version_info', _version_info(None, 3, 6))
+    @patch('salt.utils.path.which', MagicMock(return_value='/usr/bin/python'))
     def test_gen_thin_control_files_written_py3(self):
         '''
         Test thin.gen_thin function if control files are written (version, salt-call etc).
@@ -535,6 +589,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin._six.PY2', False)
     @patch('salt.utils.thin.sys.version_info', _version_info(None, 3, 6))
     @patch('salt.utils.hashutils.DigestCollector', MagicMock())
+    @patch('salt.utils.path.which', MagicMock(return_value='/usr/bin/python'))
     def test_gen_thin_main_content_files_written_py3(self):
         '''
         Test thin.gen_thin function if main content files are written.
@@ -587,6 +642,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin._six.PY2', False)
     @patch('salt.utils.thin.sys.version_info', _version_info(None, 3, 6))
     @patch('salt.utils.hashutils.DigestCollector', MagicMock())
+    @patch('salt.utils.path.which', MagicMock(return_value='/usr/bin/python'))
     def test_gen_thin_ext_alternative_content_files_written_py3(self):
         '''
         Test thin.gen_thin function if external alternative content files are written.
