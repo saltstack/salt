@@ -282,7 +282,7 @@ def index_template_present(name, definition, check_definition=False):
                 current_template = __salt__['elasticsearch.index_template_get'](name=name)[name]
                 # Prune empty keys (avoid false positive diff)
                 for key in ("mappings", "aliases", "settings"):
-                    if current_template[key] == {}:
+                    if current_template[key] == {} and key not in definition_parsed:
                         del current_template[key]
                 diff = __utils__['dictdiffer.deep_diff'](current_template, definition_parsed)
                 if len(diff) != 0:

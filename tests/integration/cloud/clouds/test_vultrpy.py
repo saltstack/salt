@@ -18,6 +18,7 @@ from tests.support.unit import skipIf
 from salt.config import cloud_providers_config
 from salt.ext import six
 
+
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'vultr'
@@ -95,7 +96,7 @@ class VultrTest(ShellCase):
         '''
         size_list = self.run_cloud('--list-sizes {0}'.format(PROVIDER_NAME))
         self.assertIn(
-            '32768 MB RAM,110 GB SSD,40.00 TB BW',
+            '32768 MB RAM,4x110 GB SSD,40.00 TB BW',
             [i.strip() for i in size_list]
         )
 
