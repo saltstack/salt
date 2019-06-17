@@ -36,11 +36,6 @@ from salt.utils.jinja import SaltCacheLoader
 if salt.utils.platform.is_windows():
     import salt.modules.win_file as win_file
     import salt.utils.win_dacl as win_dacl
-    # We have to monkey patch this here because many of the functions from
-    # `filemod` module are "namespaced" into the `win_file` module. The
-    # `win_file` module has its own `check_perms` function which would be
-    # used under a Windows system
-    filemod.check_perms = win_file.check_perms
 
 SED_CONTENT = '''test
 some
@@ -347,14 +342,28 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
 
 
 class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
+    @classmethod
+    def setUpClass(self):
+        if salt.utils.platform.is_windows():
+            self.original_check_perms = filemod.check_perms
+            filemod.check_perms = win_file.check_perms
+
+    @classmethod
+    def tearDownClass(self):
+        if salt.utils.platform.is_windows():
+            filemod.check_perms = self.original_check_perms
+
     def setup_loader_modules(self):
-        opts = {
-            'test': False,
-            'file_roots': {'base': 'tmp'},
-            'pillar_roots': {'base': 'tmp'},
-            'cachedir': 'tmp',
-            'grains': {},
-        }
+        if salt.utils.platform.is_windows():
+            grains = {'kernel': 'Windows'}
+        else:
+            grains = {'kernel': 'Linux'}
+        opts = {'test': False,
+                'file_roots': {'base': 'tmp'},
+                'pillar_roots': {'base': 'tmp'},
+                'cachedir': 'tmp',
+                'grains': grains}
+
         ret = {
             filemod: {
                 '__salt__': {
@@ -363,7 +372,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     'cmd.run_all': cmdmod.run_all
                 },
                 '__opts__': opts,
-                '__grains__': {'kernel': 'Linux'},
+                '__grains__': grains,
                 '__utils__': {
                     'files.is_binary': MagicMock(return_value=False),
                     'files.get_encoding': MagicMock(return_value='utf-8'),
@@ -373,15 +382,11 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         }
         if salt.utils.platform.is_windows():
             ret.update({
+                win_dacl: {'__opts__': opts},
                 win_file: {
                     '__utils__': {
                         'dacl.check_perms': win_dacl.check_perms
-                    },
-                },
-                win_dacl: {
-                    '__opts__': opts
-                },
-            })
+                    }}})
 
         return ret
 
