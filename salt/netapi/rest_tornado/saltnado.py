@@ -1114,7 +1114,10 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         # fire a job off
         pub_data = yield self.saltclients['local_async'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
-        raise tornado.gen.Return(pub_data)
+        if 'jid' not in pub_data:
+            raise tornado.gen.Return('No minions matched the target. No command was sent, no jid was assigned.')
+        else:
+            raise tornado.gen.Return(pub_data)
 
     @tornado.gen.coroutine
     def _disbatch_runner(self, chunk):
