@@ -26,6 +26,7 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
+from salt.modules.config import DEFAULTS as _config_defaults
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -772,7 +773,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         container_netinfo = self.run_function(
             'docker.inspect_container',
             [container_name]).get('NetworkSettings', {}).get('Networks', {})[nets[-1].name]
-        autoip_keys = self.minion_opts['docker.compare_container_networks']['automatic']
+        autoip_keys = _config_defaults['docker.compare_container_networks']['automatic']
         autoip_config = {
             x: y for x, y in six.iteritems(container_netinfo)
             if x in autoip_keys and y
