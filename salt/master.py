@@ -186,7 +186,12 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         # Load Runners
         ropts = dict(self.opts)
         ropts['quiet'] = True
-        runner_client = salt.runner.RunnerClient(ropts)
+        self.utils = salt.loader.utils(self.opts)
+        self.minion_mods = salt.loader.minion_mods(self.opts, utils=self.utils)
+        runner_client = salt.runner.RunnerClient(ropts,
+                                                 utils=self.utils,
+                                                 minion_mods=self.minion_mods)
+
         # Load Returners
         self.returners = salt.loader.returners(self.opts, {})
 
@@ -1936,7 +1941,10 @@ class ClearFuncs(object):
         # Authorized. Do the job!
         try:
             fun = clear_load.pop('fun')
-            runner_client = salt.runner.RunnerClient(self.opts)
+            runner_client = salt.runner.RunnerClient(self.opts,
+                                         utils=self.mminion.utils,
+                                         minion_mods=self.mminion.functions)
+
             return runner_client.asynchronous(fun,
                                               clear_load.get('kwarg', {}),
                                               username)
