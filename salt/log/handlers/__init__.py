@@ -11,6 +11,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import sys
+import copy
 import logging
 import threading
 import collections
@@ -190,32 +191,33 @@ if sys.version_info < (3, 2):
                 self.queue.put_nowait(record)
             except queue.Full:
                 sys.stderr.write('[WARNING ] Message queue is full, '
-                                 'unable to write "{0}" to log'.format(record)
-                                 )
+                                 'unable to write "{0}" to log'.format(record))
 
         def prepare(self, record):
             '''
             Prepares a record for queuing. The object returned by this method is
             enqueued.
-
             The base implementation formats the record to merge the message
             and arguments, and removes unpickleable items from the record
             in-place.
-
             You might want to override this method if you want to convert
             the record to a dict or JSON string, or send a modified copy
             of the record while leaving the original intact.
             '''
             # The format operation gets traceback text into record.exc_text
-            # (if there's exception data), and also puts the message into
-            # record.message. We can then use this to replace the original
+            # (if there's exception data), and also returns the formatted
+            # message. We can then use this to replace the original
             # msg + args, as these might be unpickleable. We also zap the
-            # exc_info attribute, as it's no longer needed and, if not None,
-            # will typically not be pickleable.
-            self.format(record)
-            record.msg = record.getMessage()
+            # exc_info and exc_text attributes, as they are no longer
+            # needed and, if not None, will typically not be pickleable.
+            msg = self.format(record)
+            # bpo-35726: make copy of record to avoid affecting other handlers in the chain.
+            record = copy.copy(record)
+            record.message = msg
+            record.msg = msg
             record.args = None
             record.exc_info = None
+            record.exc_text = None
             return record
 
         def emit(self, record):
@@ -228,6 +230,64 @@ if sys.version_info < (3, 2):
                 self.enqueue(self.prepare(record))
             except Exception:
                 self.handleError(record)
+elif sys.version_info < (3, 7):
+    # On python versions lower than 3.7, we sill subclass and overwrite prepare to include the fix for:
+    #  https://bugs.python.org/issue35726
+    class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.QueueHandler):  # pylint: disable=no-member,E0240
+
+        def enqueue(self, record):
+            '''
+            Enqueue a record.
+
+            The base implementation uses put_nowait. You may want to override
+            this method if you want to use blocking, timeouts or custom queue
+            implementations.
+            '''
+            try:
+                self.queue.put_nowait(record)
+            except queue.Full:
+                sys.stderr.write('[WARNING ] Message queue is full, '
+                                 'unable to write "{0}" to log'.format(record))
+
+        def prepare(self, record):
+            '''
+            Prepares a record for queuing. The object returned by this method is
+            enqueued.
+            The base implementation formats the record to merge the message
+            and arguments, and removes unpickleable items from the record
+            in-place.
+            You might want to override this method if you want to convert
+            the record to a dict or JSON string, or send a modified copy
+            of the record while leaving the original intact.
+            '''
+            # The format operation gets traceback text into record.exc_text
+            # (if there's exception data), and also returns the formatted
+            # message. We can then use this to replace the original
+            # msg + args, as these might be unpickleable. We also zap the
+            # exc_info and exc_text attributes, as they are no longer
+            # needed and, if not None, will typically not be pickleable.
+            msg = self.format(record)
+            # bpo-35726: make copy of record to avoid affecting other handlers in the chain.
+            record = copy.copy(record)
+            record.message = msg
+            record.msg = msg
+            record.args = None
+            record.exc_info = None
+            record.exc_text = None
+            return record
 else:
     class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.QueueHandler):  # pylint: disable=no-member,E0240
-        pass
+
+        def enqueue(self, record):
+            '''
+            Enqueue a record.
+
+            The base implementation uses put_nowait. You may want to override
+            this method if you want to use blocking, timeouts or custom queue
+            implementations.
+            '''
+            try:
+                self.queue.put_nowait(record)
+            except queue.Full:
+                sys.stderr.write('[WARNING ] Message queue is full, '
+                                 'unable to write "{0}" to log'.format(record))
