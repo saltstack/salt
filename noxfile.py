@@ -57,15 +57,22 @@ def _get_session_python_version_info(session):
     try:
         version_info = session._runner._real_python_version_info
     except AttributeError:
-        session_py_version = session.run(
-            'python', '-c'
-            'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
-            silent=True,
-            log=False,
-            bypass_install_only=True
-        )
-        version_info = tuple(int(part) for part in session_py_version.split('.') if part.isdigit())
-        session._runner._real_python_version_info = version_info
+        old_install_only_value = session._runner.global_config.install_only
+        try:
+            # Force install only to be false for the following chunk of code
+            # For additional information as to why see:
+            #   https://github.com/theacodes/nox/pull/181
+            session._runner.global_config.install_only = False
+            session_py_version = session.run(
+                'python', '-c'
+                'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
+                silent=True,
+                log=False,
+            )
+            version_info = tuple(int(part) for part in session_py_version.split('.') if part.isdigit())
+            session._runner._real_python_version_info = version_info
+        finally:
+            session._runner.global_config.install_only = old_install_only_value
     return version_info
 
 
@@ -73,14 +80,21 @@ def _get_session_python_site_packages_dir(session):
     try:
         site_packages_dir = session._runner._site_packages_dir
     except AttributeError:
-        site_packages_dir = session.run(
-            'python', '-c'
-            'import sys; from distutils.sysconfig import get_python_lib; sys.stdout.write(get_python_lib())',
-            silent=True,
-            log=False,
-            bypass_install_only=True
-        )
-        session._runner._site_packages_dir = site_packages_dir
+        old_install_only_value = session._runner.global_config.install_only
+        try:
+            # Force install only to be false for the following chunk of code
+            # For additional information as to why see:
+            #   https://github.com/theacodes/nox/pull/181
+            session._runner.global_config.install_only = False
+            site_packages_dir = session.run(
+                'python', '-c'
+                'import sys; from distutils.sysconfig import get_python_lib; sys.stdout.write(get_python_lib())',
+                silent=True,
+                log=False,
+            )
+            session._runner._site_packages_dir = site_packages_dir
+        finally:
+            session._runner.global_config.install_only = old_install_only_value
     return site_packages_dir
 
 
@@ -96,11 +110,19 @@ def _get_distro_info(session):
         distro = session._runner._distro
     except AttributeError:
         # The distro package doesn't output anything for Windows
-        session.install('--progress-bar=off', 'distro', silent=PIP_INSTALL_SILENT)
-        output = session.run('distro', '-j', silent=True, bypass_install_only=True)
-        distro = json.loads(output.strip())
-        session.log('Distro information:\n%s', pprint.pformat(distro))
-        session._runner._distro = distro
+        old_install_only_value = session._runner.global_config.install_only
+        try:
+            # Force install only to be false for the following chunk of code
+            # For additional information as to why see:
+            #   https://github.com/theacodes/nox/pull/181
+            session._runner.global_config.install_only = False
+            session.install('--progress-bar=off', 'distro', silent=PIP_INSTALL_SILENT)
+            output = session.run('distro', '-j', silent=True)
+            distro = json.loads(output.strip())
+            session.log('Distro information:\n%s', pprint.pformat(distro))
+            session._runner._distro = distro
+        finally:
+            session._runner.global_config.install_only = old_install_only_value
     return distro
 
 
