@@ -27,8 +27,6 @@ def absent(name):
     '''
     Remove the directory from the SYSTEM path
 
-    index: where the directory should be placed in the PATH (default: 0)
-
     Example:
 
     .. code-block:: yaml
