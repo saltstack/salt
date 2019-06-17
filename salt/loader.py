@@ -963,7 +963,6 @@ def _runner(opts, utils=None, context=None, whitelist=None):
     Directly call a function inside a loader directory
     '''
 
-    log.error("there")
     if utils is None:
         utils = {}
     if context is None:
