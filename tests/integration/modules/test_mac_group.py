@@ -28,6 +28,7 @@ def __random_string(size=6):
         for x in range(size)
     )
 
+
 # Create group name strings for tests
 ADD_GROUP = __random_string()
 DEL_GROUP = __random_string()

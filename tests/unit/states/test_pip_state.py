@@ -9,6 +9,7 @@
 
 # Import python libs
 from __future__ import absolute_import
+import logging
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
@@ -17,7 +18,6 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.states.pip_state as pip_state
-import salt.utils
 
 # Import 3rd-party libs
 try:
@@ -25,6 +25,9 @@ try:
     HAS_PIP = True
 except ImportError:
     HAS_PIP = False
+
+
+log = logging.getLogger(__name__)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -42,6 +45,7 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
         }
 
     def test_install_requirements_parsing(self):
+        log.debug("Real pip version is %s", pip.__version__)
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.3'})
         pip_version = pip.__version__
@@ -50,19 +54,12 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
             with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
                                                  'pip.list': pip_list}):
                 with patch.dict(pip_state.__opts__, {'test': True}):
-                    if salt.utils.compare_versions(ver1=pip_version,
-                                                   oper='<',
-                                                   ver2='10.0'):
-                        ret = pip_state.installed('pep8=1.3.2')
-                        self.assertSaltFalseReturn({'test': ret})
-                        self.assertInSaltComment(
-                            'Invalid version specification in package pep8=1.3.2. '
-                            '\'=\' is not supported, use \'==\' instead.',
-                            {'test': ret})
-                    else:
-                        self.assertRaises(
-                            pip._internal.exceptions.InstallationError,
-                            pip_state.installed, 'pep=1.3.2')
+                    ret = pip_state.installed('pep8=1.3.2')
+                    self.assertSaltFalseReturn({'test': ret})
+                    self.assertInSaltComment(
+                        'Invalid version specification in package pep8=1.3.2. '
+                        '\'=\' is not supported, use \'==\' instead.',
+                        {'test': ret})
 
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             pip_list = MagicMock(return_value={'pep8': '1.3.3'})

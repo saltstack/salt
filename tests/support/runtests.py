@@ -185,6 +185,7 @@ class RuntimeVars(object):
         self._vars[name] = value
 # <---- Helper Methods -----------------------------------------------------------------------------------------------
 
+
 # ----- Global Variables -------------------------------------------------------------------------------------------->
 XML_OUTPUT_DIR = os.environ.get('SALT_XML_TEST_REPORTS_DIR', os.path.join(paths.TMP, 'xml-test-reports'))
 # <---- Global Variables ---------------------------------------------------------------------------------------------

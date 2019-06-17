@@ -6,6 +6,7 @@ Helpers for testing man pages
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
+import logging
 
 # Import Salt libs
 import salt.utils
@@ -14,15 +15,20 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Tesing libs
 from tests.support.paths import CODE_DIR
 
+log = logging.getLogger(__name__)
+
 
 def install(rootdir):
     if not os.path.exists(rootdir):
         os.makedirs(rootdir)
-        return __salt__['cmd.retcode'](
-            [sys.executable,
-             os.path.join(CODE_DIR, 'setup.py'),
-             'install', '--root={0}'.format(rootdir)]) == 0
-    return True
+    return __salt__['cmd.run_all'](
+        [
+            sys.executable,
+            os.path.join(CODE_DIR, 'setup.py'),
+            'install', '--root={0}'.format(rootdir)
+        ],
+        redirect_stderr=True
+    )
 
 
 def search(manpages, rootdir):

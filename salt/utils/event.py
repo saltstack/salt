@@ -73,7 +73,7 @@ import tornado.iostream
 import salt.config
 import salt.payload
 import salt.utils
-import salt.utils.async
+import salt.utils.async  # pylint: disable=W8606
 import salt.utils.cache
 import salt.utils.dicttrim
 import salt.utils.files
@@ -357,7 +357,7 @@ class SaltEvent(object):
             return True
 
         if self._run_io_loop_sync:
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.async.current_ioloop(self.io_loop):  # pylint: disable=W8606
                 if self.subscriber is None:
                     self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
                     self.puburi,
@@ -402,7 +402,7 @@ class SaltEvent(object):
             return True
 
         if self._run_io_loop_sync:
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.async.current_ioloop(self.io_loop):  # pylint: disable=W8606
                 if self.pusher is None:
                     self.pusher = salt.transport.ipc.IPCMessageClient(
                         self.pulluri,
@@ -624,7 +624,7 @@ class SaltEvent(object):
 
         ret = self._check_pending(tag, match_func)
         if ret is None:
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.async.current_ioloop(self.io_loop):  # pylint: disable=W8606
                 if auto_reconnect:
                     raise_errors = self.raise_errors
                     self.raise_errors = True
@@ -733,7 +733,7 @@ class SaltEvent(object):
             serialized_data])
         msg = salt.utils.to_bytes(event, 'utf-8')
         if self._run_io_loop_sync:
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.async.current_ioloop(self.io_loop):  # pylint: disable=W8606
                 try:
                     self.io_loop.run_sync(lambda: self.pusher.send(msg))
                 except Exception as ex:
@@ -1073,7 +1073,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
         self.io_loop = tornado.ioloop.IOLoop()
-        with salt.utils.async.current_ioloop(self.io_loop):
+        with salt.utils.async.current_ioloop(self.io_loop):  # pylint: disable=W8606
             if self.opts['ipc_mode'] == 'tcp':
                 epub_uri = int(self.opts['tcp_master_pub_port'])
                 epull_uri = int(self.opts['tcp_master_pull_port'])

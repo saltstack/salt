@@ -62,9 +62,9 @@ class DocTestCase(TestCase):
             # the page that documents to not use ":doc:", the doc/conf.py file
             # or the artifacts directory on nox CI test runs
             if 'man' in key \
-                    or '.tox/' in key \
-                    or '.nox/' in key \
-                    or 'artifacts/' in key \
+                    or '.tox{}'.format(os.sep) in key \
+                    or '.nox{}'.format(os.sep) in key \
+                    or 'artifacts{}'.format(os.sep) in key \
                     or key.endswith('test_doc.py') \
                     or key.endswith(os.sep.join(['doc', 'conf.py'])) \
                     or key.endswith(os.sep.join(['conventions', 'documentation.rst'])) \

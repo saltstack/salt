@@ -12,6 +12,7 @@ from __future__ import absolute_import
 import fnmatch
 import os
 import re
+import sys
 import fnmatch
 import tempfile
 
@@ -124,3 +125,23 @@ def modules_available(*names):
         if not fnmatch.filter(list(__salt__), name):
             not_found.append(name)
     return not_found
+
+
+def get_python_executable():
+    '''
+    Return the path to the python executable.
+
+    This is particularly important when running the test suite within a virtualenv, while trying
+    to create virtualenvs on windows.
+    '''
+    try:
+        if salt.utils.is_windows():
+            python_binary = os.path.join(sys.real_prefix, os.path.basename(sys.executable))
+        else:
+            python_binary = os.path.join(sys.real_prefix, 'bin', os.path.basename(sys.executable))
+        if not os.path.exists(python_binary):
+            python_binary = None
+    except AttributeError:
+        # We're not running inside a virtualenv
+        python_binary = None
+    return python_binary

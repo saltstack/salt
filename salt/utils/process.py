@@ -388,7 +388,7 @@ class ProcessManager(object):
                 del self._process_map[pid]
 
     @gen.coroutine
-    def run(self, async=False):
+    def run(self, async=False):  # pylint: disable=W8606
         '''
         Load and start all available api modules
         '''
@@ -411,7 +411,7 @@ class ProcessManager(object):
                 # The event-based subprocesses management code was removed from here
                 # because os.wait() conflicts with the subprocesses management logic
                 # implemented in `multiprocessing` package. See #35480 for details.
-                if async:
+                if async:  # pylint: disable=W8606
                     yield gen.sleep(10)
                 else:
                     time.sleep(10)

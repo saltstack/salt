@@ -195,6 +195,13 @@ class SaltTestingParser(optparse.OptionParser):
             help=('The location of a newline delimited file of test names to '
                   'run')
         )
+        self.test_selection_group.add_option(
+            '--from-filenames',
+            dest='from_filenames',
+            action='append',
+            default=None,
+            help='This option is only important on Salt >= 2018.3. Currently does not do anything.'
+        )
         self.add_option_group(self.test_selection_group)
 
         if self.support_docker_execution is True:
@@ -302,6 +309,10 @@ class SaltTestingParser(optparse.OptionParser):
 
     def parse_args(self, args=None, values=None):
         self.options, self.args = optparse.OptionParser.parse_args(self, args, values)
+
+        if self.options.from_filenames is not None:
+            print('The --from-filenames flag is ignored on 2017.7.x and only respected after salt 2018.3.x')
+
         if self.options.names_file:
             with open(self.options.names_file, 'rb') as fp_:  # pylint: disable=resource-leakage
                 lines = []
@@ -428,6 +439,9 @@ class SaltTestingParser(optparse.OptionParser):
         # Default logging level: ERROR
         logging.root.setLevel(logging.NOTSET)
 
+        log_levels_to_evaluate = [
+            logging.ERROR,  # Default log level
+        ]
         if self.options.tests_logfile:
             filehandler = logging.FileHandler(
                 mode='w',           # Not preserved between re-runs
@@ -438,6 +452,7 @@ class SaltTestingParser(optparse.OptionParser):
             filehandler.setLevel(logging.DEBUG)
             filehandler.setFormatter(formatter)
             logging.root.addHandler(filehandler)
+            log_levels_to_evaluate.append(logging.DEBUG)
 
             print(' * Logging tests on {0}'.format(self.options.tests_logfile))
 
@@ -451,16 +466,17 @@ class SaltTestingParser(optparse.OptionParser):
                 logging_level = logging.TRACE
             elif self.options.verbosity == 4:   # -vvv
                 logging_level = logging.DEBUG
-                print('DEBUG')
             elif self.options.verbosity == 3:   # -vv
-                print('INFO')
                 logging_level = logging.INFO
             else:
                 logging_level = logging.ERROR
+            log_levels_to_evaluate.append(logging_level)
             os.environ['TESTS_LOG_LEVEL'] = str(self.options.verbosity)  # future lint: disable=blacklisted-function
             consolehandler.setLevel(logging_level)
             logging.root.addHandler(consolehandler)
             log.info('Runtests logging has been setup')
+
+        os.environ['TESTS_MIN_LOG_LEVEL_NAME'] = logging.getLevelName(min(log_levels_to_evaluate))
 
     def pre_execution_cleanup(self):
         '''

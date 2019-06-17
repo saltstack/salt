@@ -116,7 +116,7 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
             {'jid': '20131219224744416681', 'tag': 'salt/wheel/20131219224744416681'}
         '''
         fun = low.pop('fun')
-        return self.async(fun, low)
+        return self.async(fun, low)  # pylint: disable=W8606
 
     def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):
         '''

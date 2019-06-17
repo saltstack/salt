@@ -337,7 +337,7 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
     return ret
 
 
-def cql_query_with_prepare(query, statement_name, statement_arguments, async=False,
+def cql_query_with_prepare(query, statement_name, statement_arguments, async=False,  # pylint: disable=W8606
                            callback_errors=None,
                            contact_points=None, port=None, cql_user=None, cql_pass=None):
     '''
@@ -407,7 +407,7 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, async=Fal
     ret = []
 
     try:
-        if async:
+        if async:  # pylint: disable=W8606
             future_results = session.execute_async(bound_statement.bind(statement_arguments))
             # future_results.add_callbacks(_async_log_errors)
         else:
@@ -417,7 +417,7 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, async=Fal
         msg = "ERROR: Cassandra query failed: {0} reason: {1}".format(query, str(e))
         raise CommandExecutionError(msg)
 
-    if not async and results:
+    if not async and results:  # pylint: disable=W8606
         for result in results:
             values = {}
             for key, value in six.iteritems(result):

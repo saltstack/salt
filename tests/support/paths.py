@@ -18,6 +18,7 @@ import sys
 import stat
 import logging
 import tempfile
+import textwrap
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +68,6 @@ TMP_SCRIPT_DIR = os.path.join(TMP, 'scripts')
 ENGINES_DIR = os.path.join(FILES, 'engines')
 LOG_HANDLERS_DIR = os.path.join(FILES, 'log_handlers')
 
-
 SCRIPT_TEMPLATES = {
     'salt': [
         'from salt.scripts import salt_main\n',
@@ -93,7 +93,26 @@ SCRIPT_TEMPLATES = {
         '        if not os.path.exists(cfile):\n',
         '            py_compile.compile(__file__, cfile)\n',
         '    salt_{0}()'
-    ]
+    ],
+    'coverage': textwrap.dedent(
+        '''
+        SITECUSTOMIZE_DIR = os.path.join(CODE_DIR, 'tests', 'support', 'coverage')
+        COVERAGE_FILE = os.path.join(CODE_DIR, '.coverage')
+        COVERAGE_PROCESS_START = os.path.join(CODE_DIR, '.coveragerc')
+        PYTHONPATH = os.environ.get('PYTHONPATH') or None
+        if PYTHONPATH is None:
+            PYTHONPATH_ENV_VAR = SITECUSTOMIZE_DIR
+        else:
+            PYTHON_PATH_ENTRIES = PYTHONPATH.split(os.pathsep)
+            if SITECUSTOMIZE_DIR in PYTHON_PATH_ENTRIES:
+                PYTHON_PATH_ENTRIES.remove(SITECUSTOMIZE_DIR)
+            PYTHON_PATH_ENTRIES.insert(0, SITECUSTOMIZE_DIR)
+            PYTHONPATH_ENV_VAR = os.pathsep.join(PYTHON_PATH_ENTRIES)
+        os.environ['PYTHONPATH'] = PYTHONPATH_ENV_VAR
+        os.environ['COVERAGE_FILE'] = COVERAGE_FILE
+        os.environ['COVERAGE_PROCESS_START'] = COVERAGE_PROCESS_START
+        '''
+    )
 }
 
 
@@ -110,7 +129,7 @@ class ScriptPathMixin(object):
                                    'cli_{0}.py'.format(script_name.replace('-', '_')))
 
         if not os.path.isfile(script_path):
-            log.info('Generating {0}'.format(script_path))
+            log.info('Generating %s', script_path)
 
             # Late import
             import salt.utils
@@ -126,12 +145,27 @@ class ScriptPathMixin(object):
                             script_name
                         )
                     )
+
+                shebang = sys.executable
+                if len(shebang) > 128:
+                    # Too long for a shebang, let's use /usr/bin/env and hope
+                    # the right python is picked up
+                    shebang = '/usr/bin/env python'
+
+                if 'COVERAGE_PROCESS_START' in os.environ:
+                    coverage_snippet = SCRIPT_TEMPLATES['coverage']
+                else:
+                    coverage_snippet = ''
+
                 sfh.write(
-                    '#!{0}\n\n'.format(sys.executable) +
+                    '#!{0}\n\n'.format(shebang) +
+                    'from __future__ import absolute_import\n'
+                    'import os\n'
                     'import sys\n' +
                     'CODE_DIR = r"{0}"\n'.format(CODE_DIR) +
                     'if CODE_DIR not in sys.path:\n' +
-                    '    sys.path.insert(0, CODE_DIR)\n\n' +
+                    '    sys.path.insert(0, CODE_DIR)\n' +
+                    coverage_snippet + '\n' +
                     '\n'.join(script_template).format(script_name.replace('salt-', ''))
                 )
             fst = os.stat(script_path)

@@ -156,5 +156,6 @@ def main(argv=None):
     else:
         print(count_results(data, counts))
 
+
 if __name__ == "__main__":
     sys.exit(main())

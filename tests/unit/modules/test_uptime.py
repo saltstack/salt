@@ -44,6 +44,7 @@ class RequestPutResponseMock(Mock):
     def json(self):
         return {'_id': 4321}
 
+
 REQUEST_MOCK = RequestMock()
 
 

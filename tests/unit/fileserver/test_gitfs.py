@@ -206,6 +206,13 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
             repo = git.Repo.init(self.tmp_repo_dir)
 
         if 'USERNAME' not in os.environ:
+
+            def cleanup_environ(environ):
+                os.environ.clear()
+                os.environ.update(environ)
+
+            self.addCleanup(cleanup_environ, os.environ.copy())
+
             try:
                 import salt.utils
                 os.environ['USERNAME'] = this_user()
