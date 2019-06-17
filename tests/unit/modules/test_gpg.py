@@ -217,6 +217,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     ret = gpg.import_key(None, self.gpgfile_priv, 'salt', self.gpghome)
                     self.assertEqual(ret['res'], True)
                     gpg_text_input = 'The quick brown fox jumped over the lazy dog'
+                    gpg_text_empty = ''.encode('ascii')
                     gpg_sign_output = gpg.sign(config_user, GPG_TEST_KEY_ID, gpg_text_input, None, None, True, self.gpghome)
-                    self.assertNotEqual(gpg_sign_output, b'')
+                    self.assertNotEqual(gpg_sign_output, gpg_text_empty)
                     self.assertIsNotNone(gpg_sign_output)
