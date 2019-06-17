@@ -12,7 +12,7 @@ import subprocess
 import sys
 import time
 from functools import wraps
-from collections import defaultdict
+from collections import defaultdict, Iterable
 
 # Import salt libs
 import salt.utils.args
@@ -292,19 +292,24 @@ class _DeprecationDecorator(object):
         self._function = None
         self._orig_f_name = None
 
-    def _get_args(self, kwargs):
+    def _get_args(self, args=None, kwargs=None):
         '''
         Discard all keywords which aren't function-specific from the kwargs.
 
         :param kwargs:
         :return:
         '''
-        _args = list()
+        if not args:
+            _args = list()
+
+        if not kwargs:
+            kwargs = {}
+
         _kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
-        return _args, _kwargs
+        return args, _kwargs
 
-    def _call_function(self, kwargs):
+    def _call_function(self, args, kwargs):
         '''
         Call target function that has been decorated.
 
@@ -314,8 +319,9 @@ class _DeprecationDecorator(object):
             raise self._raise_later  # pylint: disable=E0702
 
         if self._function:
-            args, kwargs = self._get_args(kwargs)
+            args, kwargs = self._get_args(args, kwargs)
             try:
+                log.error(kwargs)
                 return self._function(*args, **kwargs)
             except TypeError as error:
                 error = six.text_type(error).replace(self._function, self._orig_f_name)  # Hide hidden functions
@@ -435,7 +441,7 @@ class _IsDeprecated(_DeprecationDecorator):
                     msg.append('Please use its successor "{successor}" instead.'.format(successor=self._successor))
                 log.warning(' '.join(msg))
                 raise CommandExecutionError(' '.join(msg))
-            return self._call_function(kwargs)
+            return self._call_function(args, kwargs)
         return _decorate
 
 
@@ -529,7 +535,7 @@ class _WithDeprecated(_DeprecationDecorator):
         self._with_name = with_name
         self._policy = policy
 
-    def _set_function(self, function):
+    def _set_function(self, function, args, kwargs):
         '''
         Based on the configuration, set to execute an old or a new function.
         :return:
@@ -541,8 +547,18 @@ class _WithDeprecated(_DeprecationDecorator):
             self._raise_later = CommandExecutionError('Module not found for function "{f_name}"'.format(
                 f_name=function.__name__))
 
-        opts = self._globals.get('__opts__', '{}')
-        pillar = self._globals.get('__pillar__', '{}')
+        opts = self._globals.get('__opts__', {})
+        pillar = self._globals.get('__pillar__', {})
+
+        # check if arg 0 is opts if its not a global for things like loader.runner
+        if not opts:
+            if (
+                isinstance(args, Iterable)
+                and len(args)
+                and isinstance(args[0], dict)
+                and ("use_deprecated" in args[0] or "use_superseded" in args[0])
+            ):
+                opts = args[0]
 
         use_deprecated = (full_name in opts.get(self.CFG_USE_DEPRECATED, list()) or
                           full_name in pillar.get(self.CFG_USE_DEPRECATED, list()))
@@ -570,8 +586,8 @@ class _WithDeprecated(_DeprecationDecorator):
             m_name=self._globals.get(self.MODULE_NAME, '') or self._globals['__name__'].split('.')[-1],
             f_name=self._orig_f_name)
 
-        return func_path in self._globals.get('__opts__').get(
-            self.CFG_USE_DEPRECATED, list()) or func_path in self._globals.get('__pillar__').get(
+        return func_path in self._globals.get('__opts__', {}).get(
+            self.CFG_USE_DEPRECATED, list()) or func_path in self._globals.get('__pillar__', {}).get(
             self.CFG_USE_DEPRECATED, list()) or (self._policy == self.OPT_IN
                                                  and not (func_path in self._globals.get('__opts__', {}).get(
                                                           self.CFG_USE_SUPERSEDED, list()))
@@ -597,7 +613,7 @@ class _WithDeprecated(_DeprecationDecorator):
             :param kwargs:
             :return:
             '''
-            self._set_function(function)
+            self._set_function(function, args, kwargs)
             is_deprecated, func_path = self._is_used_deprecated()
             if is_deprecated:
                 if self._curr_version < self._exp_version:
@@ -626,7 +642,7 @@ class _WithDeprecated(_DeprecationDecorator):
                                'Please use its successor "{successor}" instead.'.format(successor=self._orig_f_name)]
                     log.error(' '.join(msg))
                     raise CommandExecutionError(' '.join(msg))
-            return self._call_function(kwargs)
+            return self._call_function(args, kwargs)
 
         _decorate.__doc__ = self._function.__doc__
         _decorate.__wrapped__ = self._function

@@ -39,7 +39,7 @@ import salt.utils.versions
 import salt.utils.stringutils
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
-from salt.utils.decorators import Depends
+from salt.utils.decorators import Depends, with_deprecated
 from salt.utils.thread_local_proxy import ThreadLocalProxy
 
 # Import 3rd-party libs
@@ -926,7 +926,8 @@ def call(fun, **kwargs):
     return funcs[fun](*args)
 
 
-def runner(opts, utils=None, context=None, whitelist=None):
+@with_deprecated(globals(), "Neon", policy=with_deprecated.OPT_IN)
+def runner(opts, functions=None, utils=None, context=None, whitelist=None, proxy=None):
     '''
     Directly call a function inside a loader directory
     '''
@@ -934,14 +935,50 @@ def runner(opts, utils=None, context=None, whitelist=None):
         utils = {}
     if context is None:
         context = {}
+
+    if functions is None:
+        functions = minion_mods(opts,
+                                utils=utils,
+                                context=context,
+                                whitelist=whitelist,
+                                proxy=proxy)
     ret = LazyLoader(
         _module_dirs(opts, 'runners', 'runner', ext_type_dirs='runner_dirs'),
         opts,
         tag='runners',
-        pack={'__utils__': utils, '__context__': context},
+        pack={
+            '__utils__': utils,
+            '__context__': context,
+            '__salt__': functions,
+            '__proxy__': proxy,
+        },
         whitelist=whitelist,
     )
-    # TODO: change from __salt__ to something else, we overload __salt__ too much
+    ret.pack['__runner__'] = ret
+    return ret
+
+
+def _runner(opts, utils=None, context=None, whitelist=None):
+    '''
+    Directly call a function inside a loader directory
+    '''
+
+    log.error("there")
+    if utils is None:
+        utils = {}
+    if context is None:
+        context = {}
+
+    ret = LazyLoader(
+        _module_dirs(opts, 'runners', 'runner', ext_type_dirs='runner_dirs'),
+        opts,
+        tag='runners',
+        pack={
+            '__utils__': utils,
+            '__context__': context
+        },
+        whitelist=whitelist,
+    )
     ret.pack['__salt__'] = ret
     return ret
 
