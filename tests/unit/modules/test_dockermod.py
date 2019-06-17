@@ -78,7 +78,12 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(docker_mod.__pillar__, {'docker-registries': {'portus.example.com:5000':
                 {'username': 'admin', 'password': 'linux12345', 'email': 'tux@example.com'}}}):
             with patch.object(docker_mod, '_get_client', get_client_mock):
-                with patch.dict(docker_mod.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
+                dunder_salt = {
+                    'cmd.run_all': MagicMock(return_value=ref_out),
+                    'config.get': MagicMock(return_value={}),
+                    'config.option': MagicMock(return_value={}),
+                }
+                with patch.dict(docker_mod.__salt__, dunder_salt):
                     ret = docker_mod.login('portus.example.com:5000')
                     self.assertIn('retcode', ret)
                     self.assertNotEqual(ret['retcode'], 0)
@@ -168,13 +173,20 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                                 {'mine.send': mine_send,
                                  'container_resource.run': MagicMock(),
                                  'config.get': MagicMock(return_value=True),
+                                 'config.option': MagicMock(return_value=True),
                                  'cp.cache_file': MagicMock(return_value=False)}):
                     with patch.dict(docker_mod.__utils__,
                                     {'docker.get_client_args': client_args_mock}):
                         with patch.object(docker_mod, '_get_client', client):
                             command('container', *args)
-                mine_send.assert_called_with('docker.ps', verbose=True, all=True,
-                                             host=True)
+                try:
+                    mine_send.assert_called_with(
+                        'docker.ps', verbose=True, all=True, host=True)
+                except AssertionError as exc:
+                    raise Exception(
+                        'command \'{0}\' did not call docker.ps with expected '
+                        'arguments: {1}'.format(command_name, exc)
+                    )
 
     def test_update_mine(self):
         '''
@@ -199,6 +211,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         mine_mock = Mock()
         dunder_salt = {
             'config.get': MagicMock(side_effect=config_get_disabled),
+            'config.option': MagicMock(return_value=False),
             'mine.send': mine_mock,
         }
         with patch.dict(docker_mod.__salt__, dunder_salt), \
@@ -211,6 +224,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(docker_mod.__context__, {'docker.client': Mock()}), \
                 patch.object(docker_mod, 'state', MagicMock(return_value='stopped')):
             dunder_salt['config.get'].side_effect = config_get_enabled
+            dunder_salt['config.option'].return_value = True
             docker_mod.stop('foo', timeout=1)
             self.assert_called_once(mine_mock)
 
