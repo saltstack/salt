@@ -405,8 +405,4 @@ def get_load(jid):
     data = __salt__['elasticsearch.document_get'](index=index,
                                                   id=jid,
                                                   doc_type=doc_type)
-    if isinstance(data, dict):
-        return data
-    if data:
-        return salt.utils.json.loads(data)
-    return {}
+    return data or {}
