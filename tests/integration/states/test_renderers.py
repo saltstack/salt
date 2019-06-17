@@ -14,6 +14,9 @@ from tests.support.unit import skipIf
 # Import Salt libs
 import salt.utils.platform
 
+# Import 3rd-party libs
+from salt.ext import six
+
 
 class TestJinjaRenderer(ModuleCase):
     '''
