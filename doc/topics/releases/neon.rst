@@ -373,8 +373,9 @@ Module Changes
   secrets in AWS SSM parameters.
 
 - The :py:func:`file.set_selinux_context
-  <salt.modules.file.set_selinux_context>` module now supports perstant changes
-  with ``persist=True`` by calling the :py:func:`selinux.fcontext_add_policy
+  <salt.modules.file.set_selinux_context>` module now supports persistant
+  changes with ``persist=True`` by calling the
+  :py:func:`selinux.fcontext_add_policy
   <salt.modules.selinux.fcontext_add_policy>` module.
 
 - The :py:func:`config.option <salt.modules.config.option>` now also returns
