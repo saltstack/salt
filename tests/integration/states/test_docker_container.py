@@ -1151,6 +1151,12 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         Test to make sure that we fail a state when the container exits with
         nonzero status if failhard is set to True, and that we don't when it is
         set to False.
+
+        NOTE: We can't use RUNTIME_VARS.SHELL_FALSE_PATH here because the image
+        we build on-the-fly here is based on busybox and does not include
+        /usr/bin/false. Therefore, when the host machine running the tests
+        has /usr/bin/false, it will not exist in the container and the Docker
+        Engine API will cause an exception to be raised.
         '''
         ret = self.run_state(
             'docker_container.run',
@@ -1160,7 +1166,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             failhard=True)
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        log.critical('ret = %s', ret)
         self.assertEqual(ret['changes']['Logs'], '')
         self.assertTrue(
             ret['comment'].startswith(
