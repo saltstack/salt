@@ -949,7 +949,7 @@ def health_check_present(name, Name=None, CallerReference=None, IPAddress=None,
         args = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
         changes = {key: params.get(key) for key in keys if params.get(key) is not None}
 
-        if len(reset_elements) > 0:
+        if reset_elements):
             changes.update({'ResetElements': reset_elements})
 
         if __opts__['test']:
@@ -1001,7 +1001,7 @@ def health_check_absent(name, Name=None, region=None, key=None, keyid=None, prof
         log.error(ret['comment'])
         ret['result'] = False
         return ret
-    elif len(checks) == 0:
+    elif checks:
         ret['comment'] = 'Route 53 health check {} already absent'.format(Name)
         log.info(ret['comment'])
         return ret

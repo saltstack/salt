@@ -1006,7 +1006,7 @@ def change_resource_record_sets(HostedZoneId=None, Name=None,
 
 def get_health_check_ids_by_name(name, region=None, key=None, keyid=None, profile=None):
     '''
-    Find Ids of all health checks with the given name tag.
+    Find IDs of all health checks with the given name tag.
     Note that this can return multiple health checks, since the same name can be used
     in multiple health checks.
 
@@ -1061,7 +1061,7 @@ def get_health_check_id_by_name(name, region=None, key=None, keyid=None, profile
 
 def list_tags_for_resource(Type, Id, region=None, key=None, keyid=None, profile=None):
     '''
-    Lists all tags attadhed to given resource.
+    Lists all tags attached to given resource.
 
     Type
         Type of resource to lookup.
