@@ -23,6 +23,7 @@ from multiprocessing import Queue
 import msgpack
 
 # Import Salt libs
+from salt.ext import six
 from salt.utils.platform import is_darwin
 import salt.log.setup
 
