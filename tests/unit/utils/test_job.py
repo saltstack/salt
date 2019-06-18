@@ -7,7 +7,6 @@ unit tests for salt.utils.job
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -39,6 +38,7 @@ class MockMasterMinion(object):
     def __init__(self, *args, **kwargs):
         pass
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class JobTest(TestCase):
     '''
@@ -54,8 +54,8 @@ class JobTest(TestCase):
                 raise Exception('expected')
 
             with patch.object(salt.minion, 'MasterMinion', MockMasterMinion), \
-                 patch.dict(MockMasterMinion.returners, {func: raise_exception}), \
-                 patch('salt.utils.verify.valid_id', return_value=True):
-                 with self.assertLogs('salt.utils.job', level='CRITICAL') as logged:
+                patch.dict(MockMasterMinion.returners, {func: raise_exception}), \
+                patch('salt.utils.verify.valid_id', return_value=True):
+                with self.assertLogs('salt.utils.job', level='CRITICAL') as logged:
                     job.store_job(MockMasterMinion.opts, {'jid': '20190618090114890985', 'return': {'success': True}, 'id': 'a'})
                     self.assertIn("The specified 'foo' returner threw a stack trace", logged.output[0])
