@@ -79,6 +79,7 @@ DEFAULTS = {'mongo.db': 'salt',
             'virt': {'tunnel': False,
                      'images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images')},
 
+            'docker.exec_driver': 'docker-exec',
             'docker.compare_container_networks': {
                 'static': ['Aliases', 'Links', 'IPAMConfig'],
                 'automatic': ['IPAddress', 'Gateway',
