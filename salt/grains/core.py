@@ -2737,7 +2737,7 @@ def _hw_data(osdata):
             res = regex.search(data)
             if res and len(res.groups()) >= 1:
                 grains['manufacturer'] = res.group(1).strip().replace("'", "")
-                grains['manufacture'] = grains['manufacturer'] # Remove in Magnesium
+                grains['manufacture'] = grains['manufacturer']  # Remove in Magnesium
                 salt.utils.versions.warn_until('Magnesium',
                                                'manufacture has been replaced by manufacturer '
                                                'and will be removed in verion {version}')
