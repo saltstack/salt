@@ -25,6 +25,8 @@ if __name__ == '__main__':
 import nox
 from nox.command import CommandFailed
 
+IS_PY3 = sys.version_info > (2,)
+
 # Be verbose when runing under a CI context
 PIP_INSTALL_SILENT = (os.environ.get('JENKINS_URL') or os.environ.get('CI') or os.environ.get('DRONE')) is None
 
@@ -55,15 +57,22 @@ def _get_session_python_version_info(session):
     try:
         version_info = session._runner._real_python_version_info
     except AttributeError:
-        session_py_version = session.run(
-            'python', '-c'
-            'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
-            silent=True,
-            log=False,
-            bypass_install_only=True
-        )
-        version_info = tuple(int(part) for part in session_py_version.split('.') if part.isdigit())
-        session._runner._real_python_version_info = version_info
+        old_install_only_value = session._runner.global_config.install_only
+        try:
+            # Force install only to be false for the following chunk of code
+            # For additional information as to why see:
+            #   https://github.com/theacodes/nox/pull/181
+            session._runner.global_config.install_only = False
+            session_py_version = session.run(
+                'python', '-c'
+                'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
+                silent=True,
+                log=False,
+            )
+            version_info = tuple(int(part) for part in session_py_version.split('.') if part.isdigit())
+            session._runner._real_python_version_info = version_info
+        finally:
+            session._runner.global_config.install_only = old_install_only_value
     return version_info
 
 
@@ -71,14 +80,21 @@ def _get_session_python_site_packages_dir(session):
     try:
         site_packages_dir = session._runner._site_packages_dir
     except AttributeError:
-        site_packages_dir = session.run(
-            'python', '-c'
-            'import sys; from distutils.sysconfig import get_python_lib; sys.stdout.write(get_python_lib())',
-            silent=True,
-            log=False,
-            bypass_install_only=True
-        )
-        session._runner._site_packages_dir = site_packages_dir
+        old_install_only_value = session._runner.global_config.install_only
+        try:
+            # Force install only to be false for the following chunk of code
+            # For additional information as to why see:
+            #   https://github.com/theacodes/nox/pull/181
+            session._runner.global_config.install_only = False
+            site_packages_dir = session.run(
+                'python', '-c'
+                'import sys; from distutils.sysconfig import get_python_lib; sys.stdout.write(get_python_lib())',
+                silent=True,
+                log=False,
+            )
+            session._runner._site_packages_dir = site_packages_dir
+        finally:
+            session._runner.global_config.install_only = old_install_only_value
     return site_packages_dir
 
 
@@ -94,11 +110,19 @@ def _get_distro_info(session):
         distro = session._runner._distro
     except AttributeError:
         # The distro package doesn't output anything for Windows
-        session.install('--progress-bar=off', 'distro', silent=PIP_INSTALL_SILENT)
-        output = session.run('distro', '-j', silent=True, bypass_install_only=True)
-        distro = json.loads(output.strip())
-        session.log('Distro information:\n%s', pprint.pformat(distro))
-        session._runner._distro = distro
+        old_install_only_value = session._runner.global_config.install_only
+        try:
+            # Force install only to be false for the following chunk of code
+            # For additional information as to why see:
+            #   https://github.com/theacodes/nox/pull/181
+            session._runner.global_config.install_only = False
+            session.install('--progress-bar=off', 'distro', silent=PIP_INSTALL_SILENT)
+            output = session.run('distro', '-j', silent=True)
+            distro = json.loads(output.strip())
+            session.log('Distro information:\n%s', pprint.pformat(distro))
+            session._runner._distro = distro
+        finally:
+            session._runner.global_config.install_only = old_install_only_value
     return distro
 
 
@@ -837,8 +861,12 @@ def _lint(session, rcfile, flags, paths):
         raise
     finally:
         stdout.seek(0)
-        contents = stdout.read().encode('utf-8')
+        contents = stdout.read()
         if contents:
+            if IS_PY3:
+                contents = contents.decode('utf-8')
+            else:
+                contents = contents.encode('utf-8')
             sys.stdout.write(contents)
             sys.stdout.flush()
             if pylint_report_path:
@@ -888,14 +916,20 @@ def lint_tests(session):
     _lint(session, '.testing.pylintrc', flags, paths)
 
 
-@nox.session(python='2.7')
+@nox.session(python='3')
 def docs(session):
     '''
     Build Salt's Documentation
     '''
-    session.install('--progress-bar=off', '-r', 'requirements/static/py2.7/docs.txt', silent=PIP_INSTALL_SILENT)
+    pydir = _get_pydir(session)
+    if pydir == 'py3.4':
+        session.error('Sphinx only runs on Python >= 3.5')
+    session.install(
+        '--progress-bar=off',
+        '-r', 'requirements/static/{}/docs.txt'.format(pydir),
+        silent=PIP_INSTALL_SILENT)
     os.chdir('doc/')
     session.run('make', 'clean', external=True)
-    session.run('make', 'html', external=True)
+    session.run('make', 'html', 'SPHINXOPTS=-W', external=True)
     session.run('tar', '-czvf', 'doc-archive.tar.gz', '_build/html')
     os.chdir('..')

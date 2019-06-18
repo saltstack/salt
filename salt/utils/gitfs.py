@@ -5,8 +5,8 @@ Classes which provide the shared base for GitFS, git_pillar, and winrepo
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import copy
 import contextlib
+import copy
 import errno
 import fnmatch
 import glob
@@ -17,6 +17,7 @@ import shlex
 import shutil
 import stat
 import subprocess
+import sys
 import time
 import tornado.ioloop
 import weakref
@@ -823,7 +824,7 @@ class GitProvider(object):
                                     'by another master.')
                     log.warning(msg)
                     if failhard:
-                        raise exc
+                        six.reraise(*sys.exc_info())
                     return
                 elif pid and pid_exists(pid):
                     log.warning('Process %d has a %s %s lock (%s)',
@@ -2819,7 +2820,7 @@ class GitFS(GitBase):
                         return _add_file_stat(fnd, blob_mode)
             except IOError as exc:
                 if exc.errno != errno.ENOENT:
-                    raise exc
+                    six.reraise(*sys.exc_info())
 
             with salt.utils.files.fopen(lk_fn, 'w'):
                 pass
@@ -2901,13 +2902,13 @@ class GitFS(GitBase):
             return ret
         except IOError as exc:
             if exc.errno != errno.ENOENT:
-                raise exc
+                six.reraise(*sys.exc_info())
 
         try:
             os.makedirs(os.path.dirname(hashdest))
         except OSError as exc:
             if exc.errno != errno.EEXIST:
-                raise exc
+                six.reraise(*sys.exc_info())
 
         ret['hsum'] = salt.utils.hashutils.get_hash(path, self.opts['hash_type'])
         with salt.utils.files.fopen(hashdest, 'w+') as fp_:

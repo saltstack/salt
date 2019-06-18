@@ -46,7 +46,8 @@ optional. The following ssl options are simply for illustration purposes:
 
 Should you wish the returner data to be cleaned out every so often, set
 `keep_jobs` to the number of hours for the jobs to live in the tables.
-Setting it to `0` or leaving it unset will cause the data to stay in the tables.
+Setting it to `0` will cause the data to stay in the tables. The default
+setting for `keep_jobs` is set to `24`.
 
 Should you wish to archive jobs in a different table for later processing,
 set `archive_jobs` to True.  Salt will create 3 archive tables
@@ -265,7 +266,7 @@ def _get_serv(ret=None, commit=False):
         error = err.args
         sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
-        raise err
+        six.reraise(*sys.exc_info())
     else:
         if commit:
             cursor.execute("COMMIT")
