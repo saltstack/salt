@@ -958,7 +958,7 @@ def runner(opts, functions=None, utils=None, context=None, whitelist=None, proxy
     return ret
 
 
-def _runner(opts, utils=None, context=None, whitelist=None):
+def _runner(opts, utils=None, context=None, whitelist=None, functions=None):
     '''
     Directly call a function inside a loader directory
     '''

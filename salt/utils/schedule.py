@@ -655,11 +655,15 @@ class Schedule(object):
             # This also needed for ZeroMQ transport to reset all functions
             # context data that could keep paretns connections. ZeroMQ will
             # hang on polling parents connections from the child process.
+            minion_mods = salt.loader.minion_mods(self.opts, proxy=self.proxy, utils=self.utils)
+
             if self.opts['__role'] == 'master':
-                self.functions = salt.loader.runner(self.opts, utils=self.utils)
+                self.functions = salt.loader.runner(self.opts, utils=self.utils, functions=minion_mods)
             else:
-                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy, utils=self.utils)
+                self.functions = minion_mods
+
             self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
+
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
                'fun_args': [],
