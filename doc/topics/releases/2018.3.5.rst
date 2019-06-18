@@ -12,3 +12,6 @@ To fix `#53411`_ a new configuration parameter `event_listen_queue_max_seconds` 
 When this is set to a value greater than 0 and `event_listen_queue` is not 0, if the oldest event
 in the listen queue is older than `event_listen_queue_max_seconds`, the queue will be flushed to
 returners regardless of how many events are in the queue.
+
+.. _`#53411`: https://github.com/saltstack/salt/issues/53411
+
