@@ -6,18 +6,26 @@ Manage Kerberos KDC
     In order to manage your KDC you will need to generate a keytab
     that can authenticate without requiring a password.
 
+    For MIT Kerberos:
 .. code-block:: bash
 
     # ktadd -k /root/secure.keytab kadmin/admin kadmin/changepw
 
+For Heimdal Kerberos:
+.. code-block:: bash
+
+    # ext_keytab -k /root/secure.keytab kadmin/admin 
+
 On the KDC minion you will need to add the following to the minion
 configuration file so Salt knows what keytab to use and what principal to
-authenticate as.
+authenticate as. Optionally you can specify which kerberos flavor to use,
+the default is MIT Kerberos if left unspecified.
 
 .. code-block:: yaml
 
     auth_keytab: /root/auth.keytab
     auth_principal: kadmin/admin
+    krb_flavor: heimdal
 '''
 
 # Import Python libs
@@ -47,11 +55,20 @@ def __execute_kadmin(cmd):
     auth_principal = __opts__.get('auth_principal', None)
 
     if __salt__['file.file_exists'](auth_keytab) and auth_principal:
-        return __salt__['cmd.run_all'](
-            'kadmin -k -t {0} -p {1} -q "{2}"'.format(
-                auth_keytab, auth_principal, cmd
+        krb_flavor = __opts__.get('krb_flavor', None)
+        if krb_flavor == "heimdal":
+            return __salt__['cmd.run_all'](
+                'kadmin -K {0} -p {1} "{2}"'.format(
+                    auth_keytab, auth_principal, cmd
+                )
             )
-        )
+
+        else:
+            return __salt__['cmd.run_all'](
+                'kadmin -k -t {0} -p {1} -q "{2}"'.format(
+                    auth_keytab, auth_principal, cmd
+                )
+            )
     else:
         log.error('Unable to find kerberos keytab/principal')
         ret['retcode'] = 1
@@ -71,8 +88,13 @@ def list_principals():
         salt 'kde.example.com' kerberos.list_principals
     '''
     ret = {}
+    krb_flavor = __opts__.get('krb_flavor', None)
+    if krb_flavor == "heimdal":
+        krb_cmd = 'get -t *'
+    else:
+        krb_cmd = 'list_principals'
 
-    cmd = __execute_kadmin('list_principals')
+    cmd = __execute_kadmin(krb_cmd)
 
     if cmd['retcode'] != 0 or cmd['stderr']:
         ret['comment'] = cmd['stderr'].splitlines()[-1]
@@ -99,8 +121,13 @@ def get_principal(name):
         salt 'kdc.example.com' kerberos.get_principal root/admin
     '''
     ret = {}
+    krb_flavor = __opts__.get('krb_flavor', None)
+    if krb_flavor == "heimdal":
+        krb_cmd = 'get'
+    else:
+        krb_cmd = 'get_principals'
 
-    cmd = __execute_kadmin('get_principal {0}'.format(name))
+    cmd = __execute_kadmin(krb_cmd + ' {0}'.format(name))
 
     if cmd['retcode'] != 0 or cmd['stderr']:
         ret['comment'] = cmd['stderr'].splitlines()[-1]
@@ -118,7 +145,7 @@ def get_principal(name):
 
 def list_policies():
     '''
-    List policies
+    List policies. Not supported by Heimdal backend.
 
     CLI Example:
 
@@ -146,7 +173,7 @@ def list_policies():
 
 def get_policy(name):
     '''
-    Get policy details
+    Get policy details. Not supported by Heimdal backend.
 
     CLI Example:
 
@@ -183,8 +210,13 @@ def get_privs():
         salt 'kdc.example.com' kerberos.get_privs
     '''
     ret = {}
+    krb_flavor = __opts__.get('krb_flavor', None)
+    if krb_flavor == "heimdal":
+        krb_cmd = 'privileges'
+    else:
+        krb_cmd = 'get_privs'
 
-    cmd = __execute_kadmin('get_privs')
+    cmd = __execute_kadmin(krb_cmd)
 
     if cmd['retcode'] != 0 or cmd['stderr']:
         ret['comment'] = cmd['stderr'].splitlines()[-1]
@@ -211,11 +243,13 @@ def create_principal(name, enctypes=None):
         salt 'kdc.example.com' kerberos.create_principal host/example.com
     '''
     ret = {}
-
-    krb_cmd = 'addprinc -randkey'
-
-    if enctypes:
-        krb_cmd += ' -e {0}'.format(enctypes)
+    krb_flavor = __opts__.get('krb_flavor', None)
+    if krb_flavor == "heimdal":
+        krb_cmd = 'add --use-defaults --random-key'
+    else:
+        krb_cmd = 'addprinc -randkey'
+        if enctypes:
+            krb_cmd += ' -e {0}'.format(enctypes)
 
     krb_cmd += ' {0}'.format(name)
 
@@ -242,8 +276,13 @@ def delete_principal(name):
         salt 'kdc.example.com' kerberos.delete_principal host/example.com@EXAMPLE.COM
     '''
     ret = {}
+    krb_flavor = __opts__.get('krb_flavor', None)
+    if krb_flavor == "heimdal":
+        krb_cmd = 'delete'
+    else:
+        krb_cmd = 'delprinc -force'
 
-    cmd = __execute_kadmin('delprinc -force {0}'.format(name))
+    cmd = __execute_kadmin(krb_cmd + ' {0}'.format(name))
 
     if cmd['retcode'] != 0 or cmd['stderr']:
         ret['comment'] = cmd['stderr'].splitlines()[-1]
@@ -266,10 +305,13 @@ def create_keytab(name, keytab, enctypes=None):
     '''
     ret = {}
 
-    krb_cmd = 'ktadd -k {0}'.format(keytab)
-
-    if enctypes:
-        krb_cmd += ' -e {0}'.format(enctypes)
+    krb_flavor = __opts__.get('krb_flavor', None)
+    if krb_flavor == "heimdal":
+        krb_cmd = 'ext_keytab -k {0}'.format(keytab)
+    else:
+        krb_cmd = 'ktadd -k {0}'.format(keytab)
+        if enctypes:
+            krb_cmd += ' -e {0}'.format(enctypes)
 
     krb_cmd += ' {0}'.format(name)
 
