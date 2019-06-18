@@ -1008,7 +1008,7 @@ def win_interfaces():
     '''
     if WIN_NETWORK_LOADED is False:
         # Let's throw the ImportException again
-        import salt.utils.win_network
+        import salt.utils.win_network as _
     return salt.utils.win_network.get_interface_info()
 
 
