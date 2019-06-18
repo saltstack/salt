@@ -17,6 +17,7 @@ import salt.exceptions
 from salt.utils import thin
 from salt.utils import json
 import salt.utils.stringutils
+import salt.utils.platform
 from salt.utils.stringutils import to_bytes as bts
 from salt.ext.six.moves import range
 
@@ -423,6 +424,8 @@ class SSHThinTestCase(TestCase):
         self.assertIn('The minimum required python version to run salt-ssh is '
                       '"2.6"', str(err.value))
 
+    @skipIf(salt.utils.platform.is_windows() and thin._six.PY2,
+            'Dies on Python2 on Windows')
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
     @patch('salt.utils.thin.os.makedirs', MagicMock())

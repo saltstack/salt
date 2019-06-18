@@ -327,8 +327,10 @@ def _get_thintar_prefix(tarname):
     :param tarname: name of the chosen tarball
     :return: prefixed tarname
     '''
-    tfd, tmp_tarname = tempfile.mkstemp(dir=os.path.dirname(tarname), prefix=".thin-",
-                                        suffix="." + os.path.basename(tarname).split(".", 1)[-1])
+    tfd, tmp_tarname = tempfile.mkstemp(
+        dir=os.path.dirname(tarname),
+        prefix=".thin-",
+        suffix=os.path.splitext(tarname)[1])
     os.close(tfd)
 
     return tmp_tarname
@@ -458,7 +460,6 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     elif compress == 'zip':
         tfp = zipfile.ZipFile(tmp_thintar, 'w', compression=zlib and zipfile.ZIP_DEFLATED or zipfile.ZIP_STORED)
         tfp.add = tfp.write
-
     try:  # cwd may not exist if it was removed but salt was run from it
         start_dir = os.getcwd()
     except OSError:
