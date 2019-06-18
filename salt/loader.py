@@ -978,6 +978,7 @@ def _runner(opts, utils=None, context=None, whitelist=None):
         },
         whitelist=whitelist,
     )
+    ret.pack['__runner__'] = ret
     ret.pack['__salt__'] = ret
     return ret
 
