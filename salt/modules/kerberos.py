@@ -14,7 +14,7 @@ Manage Kerberos KDC
 For Heimdal Kerberos:
 .. code-block:: bash
 
-    # ext_keytab -k /root/secure.keytab kadmin/admin 
+    # ext_keytab -k /root/secure.keytab kadmin/admin
 
 On the KDC minion you will need to add the following to the minion
 configuration file so Salt knows what keytab to use and what principal to
