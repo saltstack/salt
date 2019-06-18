@@ -58,7 +58,7 @@ def __execute_kadmin(cmd):
         krb_flavor = __opts__.get('krb_flavor', None)
         if krb_flavor == "heimdal":
             return __salt__['cmd.run_all'](
-                'kadmin -K {0} -p {1} "{2}"'.format(
+                'kadmin -K {0} -p {1} {2}'.format(
                     auth_keytab, auth_principal, cmd
                 )
             )
@@ -90,7 +90,7 @@ def list_principals():
     ret = {}
     krb_flavor = __opts__.get('krb_flavor', None)
     if krb_flavor == "heimdal":
-        krb_cmd = 'get -t *'
+        krb_cmd = 'get -t "*"'
     else:
         krb_cmd = 'list_principals'
 
@@ -224,10 +224,14 @@ def get_privs():
 
         return ret
 
-    for i in cmd['stdout'].splitlines()[1:]:
-        (prop, val) = i.split(':', 1)
+    if krb_flavor == "heimdal":
+        ret["privileges"] = [i.strip() for i in cmd['stdout'].split(',')]
 
-        ret[prop] = [j for j in val.split()]
+    else:
+        for i in cmd['stdout'].splitlines()[1:]:
+            (prop, val) = i.split(':', 1)
+
+            ret[prop] = [j for j in val.split()]
 
     return ret
 
