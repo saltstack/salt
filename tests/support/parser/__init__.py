@@ -574,12 +574,12 @@ class SaltTestingParser(optparse.OptionParser):
 
         self.validate_options()
 
-        if self.support_destructive_tests_selection:
+        if self.support_destructive_tests_selection and not os.environ.get('DESTRUCTIVE_TESTS', None):
             # Set the required environment variable in order to know if
             # destructive tests should be executed or not.
             os.environ['DESTRUCTIVE_TESTS'] = str(self.options.run_destructive)
 
-        if self.support_expensive_tests_selection:
+        if self.support_expensive_tests_selection and not os.environ.get('EXPENSIVE_TESTS', None):
             # Set the required environment variable in order to know if
             # expensive tests should be executed or not.
             os.environ['EXPENSIVE_TESTS'] = str(self.options.run_expensive)
@@ -610,6 +610,9 @@ class SaltTestingParser(optparse.OptionParser):
         # Default logging level: ERROR
         logging.root.setLevel(logging.NOTSET)
 
+        log_levels_to_evaluate = [
+            logging.ERROR,  # Default log level
+        ]
         if self.options.tests_logfile:
             filehandler = logging.FileHandler(
                 mode='w',           # Not preserved between re-runs
@@ -620,6 +623,7 @@ class SaltTestingParser(optparse.OptionParser):
             filehandler.setLevel(logging.DEBUG)
             filehandler.setFormatter(formatter)
             logging.root.addHandler(filehandler)
+            log_levels_to_evaluate.append(logging.DEBUG)
 
             print(' * Logging tests on {0}'.format(self.options.tests_logfile))
 
@@ -633,16 +637,17 @@ class SaltTestingParser(optparse.OptionParser):
                 logging_level = logging.TRACE
             elif self.options.verbosity == 4:   # -vvv
                 logging_level = logging.DEBUG
-                print('DEBUG')
             elif self.options.verbosity == 3:   # -vv
-                print('INFO')
                 logging_level = logging.INFO
             else:
                 logging_level = logging.ERROR
+            log_levels_to_evaluate.append(logging_level)
             os.environ['TESTS_LOG_LEVEL'] = str(self.options.verbosity)  # future lint: disable=blacklisted-function
             consolehandler.setLevel(logging_level)
             logging.root.addHandler(consolehandler)
             log.info('Runtests logging has been setup')
+
+        os.environ['TESTS_MIN_LOG_LEVEL_NAME'] = logging.getLevelName(min(log_levels_to_evaluate))
 
     def pre_execution_cleanup(self):
         '''

@@ -29,6 +29,9 @@ class CronTest(ModuleCase):
         '''
         self.run_state('user.present', name='test_cron_user')
 
+        self.user_primary_group = self.run_function('user.primary_group',
+                                                    name='test_cron_user')
+
     def tearDown(self):
         '''
         Teardown
@@ -45,7 +48,7 @@ class CronTest(ModuleCase):
         _expected = {
             'changes': {
                 'diff': '--- \n+++ \n@@ -1 +1,2 @@\n-\n+# Lines below here are managed by Salt, do not edit\n+@hourly touch /tmp/test-file\n',
-                'group': user_id,
+                'group': self.user_primary_group,
                 'user': user_id,
             },
         }
