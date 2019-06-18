@@ -87,10 +87,6 @@ def _has_required_moto():
     "The moto module must be >= to {0} for "
     "PY2 or {1} for PY3.".format(required_moto, required_moto_py3),
 )
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-)
 class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     """
     TestCase for salt.modules.boto_route53 module
