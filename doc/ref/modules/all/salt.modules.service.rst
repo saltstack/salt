@@ -17,7 +17,7 @@ Execution Module                          Used for
 :py:mod:`~salt.modules.freebsdservice`    FreeBSD-based OSes using ``service(8)``
 :py:mod:`~salt.modules.gentoo_service`    Gentoo Linux using ``sysvinit`` and
                                           ``rc-update(8)``
-:py:mod:`~salt.modules.launchctl_service` Mac OS hosts using ``launchctl(1)``
+:py:mod:`~salt.modules.mac_service`       Mac OS hosts using ``launchctl(1)``
 :py:mod:`~salt.modules.netbsdservice`     NetBSD-based OSes
 :py:mod:`~salt.modules.openbsdservice`    OpenBSD-based OSes
 :py:mod:`~salt.modules.rh_service`        RedHat-based distros and derivatives
