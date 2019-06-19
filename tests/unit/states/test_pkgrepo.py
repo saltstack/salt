@@ -32,8 +32,6 @@ class PkgrepoTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
-    # 'update_packaging_site' function tests: 1
-
     def test_update_key_url(self):
         '''
         Test when only the key_url is changed that a change is triggered
@@ -54,7 +52,6 @@ class PkgrepoTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(pkgrepo.__salt__, {'pkg.get_repo': MagicMock(return_value=previous_state)}):
             ret = pkgrepo.managed(**kwargs)
-            # pprint(ret)
             self.assertDictEqual({
                 'old': previous_state['key_url'],
                 'new': kwargs['key_url'],

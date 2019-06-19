@@ -430,10 +430,7 @@ def managed(name, ppa=None, **kwargs):
                         break
                 else:
                     break
-            elif kwarg == 'comps':
-                if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
-                    break
-            elif kwarg == 'key_url':
+            elif kwarg in ['comps', 'key_url']:
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
             elif kwarg == 'line' and __grains__['os_family'] == 'Debian':
