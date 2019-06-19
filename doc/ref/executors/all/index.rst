@@ -11,5 +11,6 @@ executors modules
     :template: autosummary.rst.tmpl
 
     direct_call
+    docker
     splay
     sudo

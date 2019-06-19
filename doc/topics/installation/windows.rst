@@ -64,7 +64,7 @@ populated with values from the existing config, but they will be grayed out.
 There will also be a checkbox to use the existing config. If you continue, the
 existing config will be used. If the checkbox is unchecked, default values are
 displayed and can be changed. If you continue, the existing config file in
-``c:\salt\conf`` will be removed along with the ``c:\salt\conf\minion.d`
+``c:\salt\conf`` will be removed along with the ``c:\salt\conf\minion.d``
 directory. The values entered will be used with the default config.
 
 The final page allows you to start the minion service and optionally change its
@@ -127,7 +127,7 @@ Option                     Description
                            ``/minion-name`` is passed, those values will be used
                            to update the new default config.
 ``/custom-config=``        A string value specifying the name of a custom config
-                           file in the same path as the installer of the full
+                           file in the same path as the installer or the full
                            path to a custom config file. If ``/master`` and/or
                            ``/minion-name`` is passed, those values will be used
                            to update the new custom config.
@@ -516,7 +516,7 @@ Testing the Salt minion
 
     .. code-block:: bash
 
-        sudo salt '*' test.ping
+        sudo salt '*' test.version
 
 You should get the following response: ``{'your minion hostname': True}``
 

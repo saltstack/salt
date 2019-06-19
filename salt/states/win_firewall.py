@@ -2,7 +2,7 @@
 '''
 State for configuring Windows Firewall
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -180,6 +180,68 @@ def add_rule(name,
             name, localport, protocol, action, dir, remoteip)
     except CommandExecutionError:
         ret['comment'] = 'Could not add rule'
+
+    return ret
+
+
+def delete_rule(name,
+             localport=None,
+             protocol=None,
+             dir=None,
+             remoteip=None):
+    '''
+    Delete an existing firewall rule identified by name and optionally by ports,
+    protocols, direction, and remote IP.
+
+    .. versionadded:: Neon
+
+    Args:
+
+        name (str): The name of the rule to delete. If the name ``all`` is used
+            you must specify additional parameters.
+
+        localport (Optional[str]): The port of the rule. If protocol is not
+            specified, protocol will be set to ``tcp``
+
+        protocol (Optional[str]): The protocol of the rule. Default is ``tcp``
+            when ``localport`` is specified
+
+        dir (Optional[str]): The direction of the rule.
+
+        remoteip (Optional[str]): The remote IP of the rule.
+
+    Example:
+
+    .. code-block:: yaml
+
+        delete_smb_port_rule:
+          win_firewall.delete_rule:
+            - name: SMB (445)
+    '''
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
+
+    # Check if rule exists
+    if __salt__['firewall.rule_exists'](name):
+        ret['changes'] = {'delete rule': name}
+    else:
+        ret['comment'] = 'A rule with that name does not exist'
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = not ret['changes'] or None
+        ret['comment'] = ret['changes']
+        ret['changes'] = {}
+        return ret
+
+    # Delete rule
+    try:
+        __salt__['firewall.delete_rule'](
+            name, localport, protocol, dir, remoteip)
+    except CommandExecutionError:
+        ret['comment'] = 'Could not delete rule'
 
     return ret
 

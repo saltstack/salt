@@ -2,11 +2,13 @@
 '''
 Module used to access the esx proxy connection methods
 '''
-from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import salt.utils
+
+# Import Salt libs
+import salt.utils.platform
 
 
 log = logging.getLogger(__name__)

@@ -55,12 +55,12 @@ def returner(ret):
     '''
     Write the return data to a file on the minion.
     '''
-    opts = _get_options({})  # Pass in empty ret, since this is a list of events
+    opts = _get_options(ret)
     try:
         with salt.utils.files.flopen(opts['filename'], 'a') as logfile:
             salt.utils.json.dump(ret, logfile)
             logfile.write(str('\n'))  # future lint: disable=blacklisted-function
-    except:
+    except Exception:
         log.error('Could not write to rawdata_json file %s', opts['filename'])
         raise
 
@@ -69,7 +69,7 @@ def event_return(events):
     '''
     Write event data (return data and non-return data) to file on the master.
     '''
-    if len(events) == 0:
+    if not events:
         # events is an empty list.
         # Don't open the logfile in vain.
         return
@@ -79,6 +79,6 @@ def event_return(events):
             for event in events:
                 salt.utils.json.dump(event, logfile)
                 logfile.write(str('\n'))  # future lint: disable=blacklisted-function
-    except:
+    except Exception:
         log.error('Could not write to rawdata_json file %s', opts['filename'])
         raise

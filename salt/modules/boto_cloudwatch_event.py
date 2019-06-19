@@ -44,12 +44,15 @@ Connection module for Amazon CloudWatch Events
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
-import salt.utils.json
+
+# Import Salt libs
 import salt.utils.compat
+import salt.utils.json
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -74,9 +77,7 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The boto_cloudwatch_event module cannot be loaded: boto libraries are unavailable.')
-    return True
+    return salt.utils.versions.check_boto_reqs()
 
 
 def __init__(opts):
@@ -100,7 +101,7 @@ def exists(Name, region=None, key=None, keyid=None, profile=None):
 
     try:
         events = conn.list_rules(NamePrefix=Name)
-        if len(events) == 0:
+        if not events:
             return {'exists': False}
         for rule in events.get('Rules', []):
             if rule.get('Name', None) == Name:
@@ -142,7 +143,7 @@ def create_or_update(Name,
         rule = conn.put_rule(Name=Name,
                               **kwargs)
         if rule:
-            log.info('The newly created event rule is {0}'.format(rule.get('RuleArn')))
+            log.info('The newly created event rule is %s', rule.get('RuleArn'))
 
             return {'created': True, 'arn': rule.get('RuleArn')}
         else:

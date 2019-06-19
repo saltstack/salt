@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
@@ -44,6 +44,13 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         superopts2 = ['uid=510', 'gid=100', 'username=cifsuser',
                       'domain=cifsdomain']
 
+        name3 = os.path.realpath('/mnt/jfs2')
+        device3 = '/dev/hd1'
+        fstype3 = 'jfs2'
+        opts3 = ['']
+        superopts3 = ['uid=510', 'gid=100', 'username=jfs2user',
+                      'domain=jfs2sdomain']
+
         ret = {'name': name,
                'result': False,
                'comment': '',
@@ -57,7 +64,11 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         mock_mnt = MagicMock(return_value={name: {'device': device, 'opts': [],
                                                   'superopts': []},
                                            name2: {'device': device2, 'opts': opts2,
-                                                   'superopts': superopts2}})
+                                                   'superopts': superopts2},
+                                           name3: {'device': device3, 'opts': opts3,
+                                                   'superopts': superopts3}})
+        mock_aixfs_retn = MagicMock(return_value='present')
+
         mock_emt = MagicMock(return_value={})
         mock_str = MagicMock(return_value='salt')
         mock_user = MagicMock(return_value={'uid': 510})
@@ -91,7 +102,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                          ret)
 
                     umount1 = ("Forced unmount because devices don't match. "
-                               "Wanted: {0}, current: {1}, {1}".format(os.path.realpath('/dev/sdb6'), device))
+                               "Wanted: {0}, current: {1}, {1}"
+                               .format(os.path.realpath('/dev/sdb6'), device))
                     comt = ('Unable to unmount')
                     ret.update({'comment': comt, 'result': None,
                                 'changes': {'umount': umount1}})
@@ -124,7 +136,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(mount.__opts__, {'test': True}), \
                             patch('os.path.exists', MagicMock(return_value=False)):
                         comt = ('{0} does not exist and would neither be created nor mounted. '
-                                '{0} needs to be written to the fstab in order to be made persistent.'.format(name))
+                                '{0} needs to be written to the fstab in order to be made persistent.'
+                                .format(name))
                         ret.update({'comment': comt, 'result': None})
                         self.assertDictEqual(mount.mounted(name, device, fstype,
                                                            mount=False), ret)
@@ -176,12 +189,31 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                              'group.info': mock_group}):
                 with patch.dict(mount.__opts__, {'test': True}):
                     with patch.object(os.path, 'exists', mock_t):
-                        comt = 'Target was already mounted. ' + \
-                               'Entry already exists in the fstab.'
+                        comt = 'Target was already mounted. Entry already exists in the fstab.'
                         ret.update({'name': name2, 'result': True})
                         ret.update({'comment': comt, 'changes': {}})
                         self.assertDictEqual(mount.mounted(name2, device2,
                                                            fstype2,
+                                                           opts=['uid=user1',
+                                                                 'gid=group1']),
+                                             ret)
+
+        with patch.dict(mount.__grains__, {'os': 'AIX'}):
+            with patch.dict(mount.__salt__, {'mount.active': mock_mnt,
+                                             'mount.mount': mock_str,
+                                             'mount.umount': mock_f,
+                                             'mount.read_mount_cache': mock_read_cache,
+                                             'mount.write_mount_cache': mock_write_cache,
+                                             'mount.set_filesystems': mock_aixfs_retn,
+                                             'user.info': mock_user,
+                                             'group.info': mock_group}):
+                with patch.dict(mount.__opts__, {'test': True}):
+                    with patch.object(os.path, 'exists', mock_t):
+                        comt = 'Target was already mounted. Entry already exists in the fstab.'
+                        ret.update({'name': name3, 'result': True})
+                        ret.update({'comment': comt, 'changes': {}})
+                        self.assertDictEqual(mount.mounted(name3, device3,
+                                                           fstype3,
                                                            opts=['uid=user1',
                                                                  'gid=group1']),
                                              ret)
@@ -204,44 +236,116 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         mock_swp = MagicMock(return_value=[name])
         mock_fs = MagicMock(return_value={'none': {'device': name,
                                                    'fstype': 'xfs'}})
+        mock_fs_diff = MagicMock(return_value={'none': {'device': 'something_else',
+                                               'fstype': 'xfs'}})
+        mock_aixfs = MagicMock(return_value={name: {'dev': name,
+                                                   'fstype': 'jfs2'}})
         mock_emt = MagicMock(return_value={})
-        with patch.dict(mount.__salt__, {'mount.swaps': mock_swp,
-                                         'mount.fstab': mock_fs,
-                                         'file.is_link': mock_f}):
-            with patch.dict(mount.__opts__, {'test': True}):
-                comt = ('Swap {0} is set to be added to the '
-                        'fstab and to be activated'.format(name))
-                ret.update({'comment': comt})
-                self.assertDictEqual(mount.swap(name), ret)
+        with patch.dict(mount.__grains__, {'os': 'test'}):
+            with patch.dict(mount.__salt__, {'mount.swaps': mock_swp,
+                                             'mount.fstab': mock_fs_diff,
+                                             'file.is_link': mock_f}):
+                with patch.dict(mount.__opts__, {'test': True}):
+                    comt = ('Swap {0} is set to be added to the '
+                            'fstab and to be activated'.format(name))
+                    ret.update({'comment': comt})
+                    self.assertDictEqual(mount.swap(name), ret)
 
-            with patch.dict(mount.__opts__, {'test': False}):
-                comt = ('Swap {0} already active'.format(name))
-                ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(mount.swap(name), ret)
+                with patch.dict(mount.__opts__, {'test': False}):
+                    comt = ('Swap {0} already active'.format(name))
+                    ret.update({'comment': comt, 'result': True})
+                    self.assertDictEqual(mount.swap(name, persist=False), ret)
 
-                with patch.dict(mount.__salt__, {'mount.fstab': mock_emt,
-                                                 'mount.set_fstab': mock}):
+                    with patch.dict(mount.__salt__, {'mount.fstab': mock_emt,
+                                                     'mount.set_fstab': mock}):
+                        comt = ('Swap {0} already active'.format(name))
+                        ret.update({'comment': comt, 'result': True})
+                        self.assertDictEqual(mount.swap(name), ret)
+
+                        comt = ('Swap /mnt/sdb already active. '
+                                'Added new entry to the fstab.')
+                        ret.update({'comment': comt, 'result': True,
+                                    'changes': {'persist': 'new'}})
+                        self.assertDictEqual(mount.swap(name), ret)
+
+                        comt = ('Swap /mnt/sdb already active. '
+                                'Updated the entry in the fstab.')
+                        ret.update({'comment': comt, 'result': True,
+                                    'changes': {'persist': 'update'}})
+                        self.assertDictEqual(mount.swap(name), ret)
+
+                        comt = ('Swap /mnt/sdb already active. '
+                                'However, the fstab was not found.')
+                        ret.update({'comment': comt, 'result': False,
+                                    'changes': {}})
+                        self.assertDictEqual(mount.swap(name), ret)
+
+        ret = {'name': name,
+               'result': None,
+               'comment': '',
+               'changes': {}}
+
+        mock = MagicMock(side_effect=['present', 'new', 'change', 'bad config'])
+        mock_emt = MagicMock(return_value={})
+        with patch.dict(mount.__grains__, {'os': 'test'}):
+            with patch.dict(mount.__salt__, {'mount.swaps': mock_swp,
+                                             'mount.fstab': mock_fs,
+                                             'file.is_link': mock_f}):
+                with patch.dict(mount.__opts__, {'test': True}):
                     comt = ('Swap {0} already active'.format(name))
                     ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(mount.swap(name), ret)
 
-                    comt = ('Swap /mnt/sdb already active. '
-                            'Added new entry to the fstab.')
-                    ret.update({'comment': comt, 'result': True,
-                                'changes': {'persist': 'new'}})
+                with patch.dict(mount.__opts__, {'test': False}):
+                    comt = ('Swap {0} already active'.format(name))
+                    ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(mount.swap(name), ret)
 
-                    comt = ('Swap /mnt/sdb already active. '
-                            'Updated the entry in the fstab.')
-                    ret.update({'comment': comt, 'result': True,
-                                'changes': {'persist': 'update'}})
+                    with patch.dict(mount.__salt__, {'mount.fstab': mock_emt,
+                                                     'mount.set_fstab': mock}):
+                        comt = ('Swap {0} already active'.format(name))
+                        ret.update({'comment': comt, 'result': True})
+                        self.assertDictEqual(mount.swap(name), ret)
+
+                        comt = ('Swap /mnt/sdb already active. '
+                                'Added new entry to the fstab.')
+                        ret.update({'comment': comt, 'result': True,
+                                    'changes': {'persist': 'new'}})
+                        self.assertDictEqual(mount.swap(name), ret)
+
+                        comt = ('Swap /mnt/sdb already active. '
+                                'Updated the entry in the fstab.')
+                        ret.update({'comment': comt, 'result': True,
+                                    'changes': {'persist': 'update'}})
+                        self.assertDictEqual(mount.swap(name), ret)
+
+                        comt = ('Swap /mnt/sdb already active. '
+                                'However, the fstab was not found.')
+                        ret.update({'comment': comt, 'result': False,
+                                    'changes': {}})
+                        self.assertDictEqual(mount.swap(name), ret)
+
+        with patch.dict(mount.__grains__, {'os': 'AIX'}):
+            with patch.dict(mount.__salt__, {'mount.swaps': mock_swp,
+                                             'mount.filesystems': mock_aixfs,
+                                             'file.is_link': mock_f}):
+                with patch.dict(mount.__opts__, {'test': True}):
+                    comt = ('Swap {0} already active'.format(name))
+                    ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(mount.swap(name), ret)
 
-                    comt = ('Swap /mnt/sdb already active. '
-                            'However, the fstab was not found.')
-                    ret.update({'comment': comt, 'result': False,
-                                'changes': {}})
+                with patch.dict(mount.__opts__, {'test': False}):
+                    comt = ('Swap {0} already active. swap not present'
+                            ' in /etc/filesystems on AIX.'.format(name))
+                    ret.update({'comment': comt, 'result': False})
                     self.assertDictEqual(mount.swap(name), ret)
+
+                    with patch.dict(mount.__salt__, {'mount.filesystems': mock_emt,
+                                                     'mount.set_filesystems': mock}):
+                        comt = ('Swap {0} already active. swap not present'
+                                ' in /etc/filesystems on AIX.'.format(name))
+                        ret.update({'comment': comt, 'result': False})
+                        self.assertDictEqual(mount.swap(name), ret)
 
     # 'unmounted' function tests: 1
 
@@ -258,11 +362,22 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {}}
 
         mock_f = MagicMock(return_value=False)
+        mock_t = MagicMock(return_value=True)
         mock_dev = MagicMock(return_value={name: {'device': device}})
         mock_fs = MagicMock(return_value={name: {'device': name}})
         mock_mnt = MagicMock(side_effect=[{name: {}}, {}, {}, {}])
+
+        name3 = os.path.realpath('/mnt/jfs2')
+        device3 = '/dev/hd1'
+        fstype3 = 'jfs2'
+        opts3 = ['']
+        mock_mnta = MagicMock(return_value={name3: {'device': device3, 'opts': opts3}})
+        mock_aixfs = MagicMock(return_value={name: {'dev': name3, 'fstype': fstype3}})
+        mock_delete_cache = MagicMock(return_value=True)
+
         comt3 = ('Mount point /mnt/sdb is unmounted but needs to be purged '
                  'from /etc/auto_salt to be made persistent')
+
         with patch.dict(mount.__grains__, {'os': 'Darwin'}):
             with patch.dict(mount.__salt__, {'mount.active': mock_mnt,
                                              'mount.automaster': mock_fs,
@@ -274,7 +389,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(mount.unmounted(name, device), ret)
 
                     comt = ('Target was already unmounted. '
-                            'fstab entry for device /dev/sdb5 not found')
+                            'fstab entry for device {0} not found'.format(device))
                     ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(mount.unmounted(name, device,
                                                          persist=True), ret)
@@ -289,6 +404,37 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(mount.unmounted(name, device), ret)
 
+        with patch.dict(mount.__grains__, {'os': 'AIX'}):
+            with patch.dict(mount.__salt__, {'mount.active': mock_mnta,
+                                             'mount.filesystems': mock_aixfs,
+                                             'file.is_link': mock_f}):
+                with patch.dict(mount.__opts__, {'test': True}):
+                    comt = ('Target was already unmounted')
+                    ret.update({'comment': comt, 'result': True})
+                    self.assertDictEqual(mount.unmounted(name, device), ret)
+
+                    comt = ('Target was already unmounted. '
+                            'fstab entry for device /dev/sdb5 not found')
+                    ret.update({'comment': comt, 'result': True})
+                    self.assertDictEqual(mount.unmounted(name, device,
+                                                         persist=True), ret)
+
+                    with patch.dict(mount.__salt__,
+                                    {'mount.filesystems': mock_dev}):
+                        comt = ('Mount point {0} is mounted but should not '
+                                'be'.format(name3))
+                        ret.update({'comment': comt, 'result': None, 'name': name3})
+                        self.assertDictEqual(mount.unmounted(name3, device3,
+                                                             persist=True), ret)
+
+                        with patch.dict(mount.__opts__, {'test': False}), \
+                                patch.dict(mount.__salt__, {'mount.umount': mock_t,
+                                'mount.delete_mount_cache': mock_delete_cache}):
+                            comt = ('Target was successfully unmounted')
+                            ret.update({'comment': comt, 'result': True,
+                                        'name': name3, 'changes': {'umount': True}})
+                            self.assertDictEqual(mount.unmounted(name3, device3), ret)
+
     # 'mod_watch' function tests: 1
 
     def test_mod_watch(self):
@@ -299,9 +445,612 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = {'name': name,
                'result': True,
-               'comment': '',
+               'comment': 'Watch not supported in unmount at this time',
                'changes': {}}
 
-        comt = ('Watch not supported in unmount at this time')
-        ret.update({'comment': comt})
         self.assertDictEqual(mount.mod_watch(name, sfun='unmount'), ret)
+
+    def test__convert_to_fast_none(self):
+        '''
+        Test the device name conversor
+        '''
+        assert mount._convert_to('/dev/sda1', None) == '/dev/sda1'
+
+    def test__convert_to_fast_device(self):
+        '''
+        Test the device name conversor
+        '''
+        assert mount._convert_to('/dev/sda1', 'device') == '/dev/sda1'
+
+    def test__convert_to_fast_token(self):
+        '''
+        Test the device name conversor
+        '''
+        assert mount._convert_to('LABEL=home', 'label') == 'LABEL=home'
+
+    def test__convert_to_device_none(self):
+        '''
+        Test the device name conversor
+        '''
+        salt_mock = {
+            'disk.blkid': MagicMock(return_value={}),
+        }
+        with patch.dict(mount.__salt__, salt_mock):
+            assert mount._convert_to('/dev/sda1', 'uuid') is None
+            salt_mock['disk.blkid'].assert_called_with('/dev/sda1')
+
+    def test__convert_to_device_token(self):
+        '''
+        Test the device name conversor
+        '''
+        uuid = '988c663d-74a2-432b-ba52-3eea34015f22'
+        salt_mock = {
+            'disk.blkid': MagicMock(return_value={
+                '/dev/sda1': {'UUID': uuid}
+            }),
+        }
+        with patch.dict(mount.__salt__, salt_mock):
+            uuid = 'UUID={}'.format(uuid)
+            assert mount._convert_to('/dev/sda1', 'uuid') == uuid
+            salt_mock['disk.blkid'].assert_called_with('/dev/sda1')
+
+    def test__convert_to_token_device(self):
+        '''
+        Test the device name conversor
+        '''
+        uuid = '988c663d-74a2-432b-ba52-3eea34015f22'
+        salt_mock = {
+            'disk.blkid': MagicMock(return_value={
+                '/dev/sda1': {'UUID': uuid}
+            }),
+        }
+        with patch.dict(mount.__salt__, salt_mock):
+            uuid = 'UUID={}'.format(uuid)
+            assert mount._convert_to(uuid, 'device') == '/dev/sda1'
+            salt_mock['disk.blkid'].assert_called_with(token=uuid)
+
+    def test_fstab_present_macos_test_present(self):
+        '''
+        Test fstab_present
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': None,
+            'changes': {},
+            'comment': ['/home entry is already in /etc/auto_salt.'],
+        }
+
+        grains_mock = {'os': 'MacOS'}
+        opts_mock = {'test': True}
+        salt_mock = {
+            'mount.set_automaster': MagicMock(return_value='present')
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_present('/dev/sda1', '/home', 'ext2') == ret
+            salt_mock['mount.set_automaster'].assert_called_with(name='/home',
+                                                                 device='/dev/sda1',
+                                                                 fstype='ext2',
+                                                                 opts='noowners',
+                                                                 config='/etc/auto_salt',
+                                                                 test=True,
+                                                                 not_change=False)
+
+    def test_fstab_present_aix_test_present(self):
+        '''
+        Test fstab_present
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': None,
+            'changes': {},
+            'comment': ['/home entry is already in /etc/filesystems.'],
+        }
+
+        grains_mock = {'os': 'AIX'}
+        opts_mock = {'test': True}
+        salt_mock = {
+            'mount.set_filesystems': MagicMock(return_value='present')
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_present('/dev/sda1', '/home', 'ext2') == ret
+            salt_mock['mount.set_filesystems'].assert_called_with(name='/home',
+                                                                  device='/dev/sda1',
+                                                                  fstype='ext2',
+                                                                  mount=True,
+                                                                  opts='',
+                                                                  config='/etc/filesystems',
+                                                                  test=True,
+                                                                  match_on='auto',
+                                                                  not_change=False)
+
+    def test_fstab_present_test_present(self):
+        '''
+        Test fstab_present
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': None,
+            'changes': {},
+            'comment': ['/home entry is already in /etc/fstab.'],
+        }
+
+        grains_mock = {'os': 'Linux'}
+        opts_mock = {'test': True}
+        salt_mock = {
+            'mount.set_fstab': MagicMock(return_value='present')
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_present('/dev/sda1', '/home', 'ext2') == ret
+            salt_mock['mount.set_fstab'].assert_called_with(name='/home',
+                                                            device='/dev/sda1',
+                                                            fstype='ext2',
+                                                            opts='defaults',
+                                                            dump=0,
+                                                            pass_num=0,
+                                                            config='/etc/fstab',
+                                                            test=True,
+                                                            match_on='auto',
+                                                            not_change=False)
+
+    def test_fstab_present_test_new(self):
+        '''
+        Test fstab_present
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': None,
+            'changes': {},
+            'comment': ['/home entry will be written in /etc/fstab.'],
+        }
+
+        grains_mock = {'os': 'Linux'}
+        opts_mock = {'test': True}
+        salt_mock = {
+            'mount.set_fstab': MagicMock(return_value='new')
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_present('/dev/sda1', '/home', 'ext2') == ret
+            salt_mock['mount.set_fstab'].assert_called_with(name='/home',
+                                                            device='/dev/sda1',
+                                                            fstype='ext2',
+                                                            opts='defaults',
+                                                            dump=0,
+                                                            pass_num=0,
+                                                            config='/etc/fstab',
+                                                            test=True,
+                                                            match_on='auto',
+                                                            not_change=False)
+
+    def test_fstab_present_test_change(self):
+        '''
+        Test fstab_present
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': None,
+            'changes': {},
+            'comment': ['/home entry will be updated in /etc/fstab.'],
+        }
+
+        grains_mock = {'os': 'Linux'}
+        opts_mock = {'test': True}
+        salt_mock = {
+            'mount.set_fstab': MagicMock(return_value='change')
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_present('/dev/sda1', '/home', 'ext2') == ret
+            salt_mock['mount.set_fstab'].assert_called_with(name='/home',
+                                                            device='/dev/sda1',
+                                                            fstype='ext2',
+                                                            opts='defaults',
+                                                            dump=0,
+                                                            pass_num=0,
+                                                            config='/etc/fstab',
+                                                            test=True,
+                                                            match_on='auto',
+                                                            not_change=False)
+
+    def test_fstab_present_test_error(self):
+        '''
+        Test fstab_present
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': False,
+            'changes': {},
+            'comment': ['/home entry cannot be created in /etc/fstab: error.'],
+        }
+
+        grains_mock = {'os': 'Linux'}
+        opts_mock = {'test': True}
+        salt_mock = {
+            'mount.set_fstab': MagicMock(return_value='error')
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_present('/dev/sda1', '/home', 'ext2') == ret
+            salt_mock['mount.set_fstab'].assert_called_with(name='/home',
+                                                            device='/dev/sda1',
+                                                            fstype='ext2',
+                                                            opts='defaults',
+                                                            dump=0,
+                                                            pass_num=0,
+                                                            config='/etc/fstab',
+                                                            test=True,
+                                                            match_on='auto',
+                                                            not_change=False)
+
+    def test_fstab_present_macos_present(self):
+        '''
+        Test fstab_present
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': True,
+            'changes': {},
+            'comment': ['/home entry was already in /etc/auto_salt.'],
+        }
+
+        grains_mock = {'os': 'MacOS'}
+        opts_mock = {'test': False}
+        salt_mock = {
+            'mount.set_automaster': MagicMock(return_value='present')
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_present('/dev/sda1', '/home', 'ext2') == ret
+            salt_mock['mount.set_automaster'].assert_called_with(name='/home',
+                                                                 device='/dev/sda1',
+                                                                 fstype='ext2',
+                                                                 opts='noowners',
+                                                                 config='/etc/auto_salt',
+                                                                 not_change=False)
+
+    def test_fstab_present_aix_present(self):
+        '''
+        Test fstab_present
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': True,
+            'changes': {},
+            'comment': ['/home entry was already in /etc/filesystems.'],
+        }
+
+        grains_mock = {'os': 'AIX'}
+        opts_mock = {'test': False}
+        salt_mock = {
+            'mount.set_filesystems': MagicMock(return_value='present')
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_present('/dev/sda1', '/home', 'ext2') == ret
+            salt_mock['mount.set_filesystems'].assert_called_with(name='/home',
+                                                                  device='/dev/sda1',
+                                                                  fstype='ext2',
+                                                                  mount=True,
+                                                                  opts='',
+                                                                  config='/etc/filesystems',
+                                                                  match_on='auto',
+                                                                  not_change=False)
+
+    def test_fstab_present_present(self):
+        '''
+        Test fstab_present
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': True,
+            'changes': {},
+            'comment': ['/home entry was already in /etc/fstab.'],
+        }
+
+        grains_mock = {'os': 'Linux'}
+        opts_mock = {'test': False}
+        salt_mock = {
+            'mount.set_fstab': MagicMock(return_value='present')
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_present('/dev/sda1', '/home', 'ext2') == ret
+            salt_mock['mount.set_fstab'].assert_called_with(name='/home',
+                                                            device='/dev/sda1',
+                                                            fstype='ext2',
+                                                            opts='defaults',
+                                                            dump=0,
+                                                            pass_num=0,
+                                                            config='/etc/fstab',
+                                                            match_on='auto',
+                                                            not_change=False)
+
+    def test_fstab_present_new(self):
+        '''
+        Test fstab_present
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': True,
+            'changes': {'persist': 'new'},
+            'comment': ['/home entry added in /etc/fstab.'],
+        }
+
+        grains_mock = {'os': 'Linux'}
+        opts_mock = {'test': False}
+        salt_mock = {
+            'mount.set_fstab': MagicMock(return_value='new')
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_present('/dev/sda1', '/home', 'ext2') == ret
+            salt_mock['mount.set_fstab'].assert_called_with(name='/home',
+                                                            device='/dev/sda1',
+                                                            fstype='ext2',
+                                                            opts='defaults',
+                                                            dump=0,
+                                                            pass_num=0,
+                                                            config='/etc/fstab',
+                                                            match_on='auto',
+                                                            not_change=False)
+
+    def test_fstab_present_change(self):
+        '''
+        Test fstab_present
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': True,
+            'changes': {'persist': 'change'},
+            'comment': ['/home entry updated in /etc/fstab.'],
+        }
+
+        grains_mock = {'os': 'Linux'}
+        opts_mock = {'test': False}
+        salt_mock = {
+            'mount.set_fstab': MagicMock(return_value='change')
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_present('/dev/sda1', '/home', 'ext2') == ret
+            salt_mock['mount.set_fstab'].assert_called_with(name='/home',
+                                                            device='/dev/sda1',
+                                                            fstype='ext2',
+                                                            opts='defaults',
+                                                            dump=0,
+                                                            pass_num=0,
+                                                            config='/etc/fstab',
+                                                            match_on='auto',
+                                                            not_change=False)
+
+    def test_fstab_present_fail(self):
+        '''
+        Test fstab_present
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': False,
+            'changes': {},
+            'comment': ['/home entry cannot be changed in /etc/fstab: error.'],
+        }
+
+        grains_mock = {'os': 'Linux'}
+        opts_mock = {'test': False}
+        salt_mock = {
+            'mount.set_fstab': MagicMock(return_value='error')
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_present('/dev/sda1', '/home', 'ext2') == ret
+            salt_mock['mount.set_fstab'].assert_called_with(name='/home',
+                                                            device='/dev/sda1',
+                                                            fstype='ext2',
+                                                            opts='defaults',
+                                                            dump=0,
+                                                            pass_num=0,
+                                                            config='/etc/fstab',
+                                                            match_on='auto',
+                                                            not_change=False)
+
+    def test_fstab_absent_macos_test_absent(self):
+        '''
+        Test fstab_absent
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': None,
+            'changes': {},
+            'comment': ['/home entry is already missing in /etc/auto_salt.'],
+        }
+
+        grains_mock = {'os': 'MacOS'}
+        opts_mock = {'test': True}
+        salt_mock = {
+            'mount.automaster': MagicMock(return_value={})
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_absent('/dev/sda1', '/home') == ret
+            salt_mock['mount.automaster'].assert_called_with('/etc/auto_salt')
+
+    def test_fstab_absent_aix_test_absent(self):
+        '''
+        Test fstab_absent
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': None,
+            'changes': {},
+            'comment': ['/home entry is already missing in /etc/filesystems.'],
+        }
+
+        grains_mock = {'os': 'AIX'}
+        opts_mock = {'test': True}
+        salt_mock = {
+            'mount.filesystems': MagicMock(return_value={})
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_absent('/dev/sda1', '/home') == ret
+            salt_mock['mount.filesystems'].assert_called_with('/etc/filesystems')
+
+    def test_fstab_absent_test_absent(self):
+        '''
+        Test fstab_absent
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': None,
+            'changes': {},
+            'comment': ['/home entry is already missing in /etc/fstab.'],
+        }
+
+        grains_mock = {'os': 'Linux'}
+        opts_mock = {'test': True}
+        salt_mock = {
+            'mount.fstab': MagicMock(return_value={})
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_absent('/dev/sda1', '/home') == ret
+            salt_mock['mount.fstab'].assert_called_with('/etc/fstab')
+
+    def test_fstab_absent_test_present(self):
+        '''
+        Test fstab_absent
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': None,
+            'changes': {},
+            'comment': ['/home entry will be removed from /etc/fstab.'],
+        }
+
+        grains_mock = {'os': 'Linux'}
+        opts_mock = {'test': True}
+        salt_mock = {
+            'mount.fstab': MagicMock(return_value={'/home': {}})
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_absent('/dev/sda1', '/home') == ret
+            salt_mock['mount.fstab'].assert_called_with('/etc/fstab')
+
+    def test_fstab_absent_macos_present(self):
+        '''
+        Test fstab_absent
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': True,
+            'changes': {'persist': 'removed'},
+            'comment': ['/home entry removed from /etc/auto_salt.'],
+        }
+
+        grains_mock = {'os': 'MacOS'}
+        opts_mock = {'test': False}
+        salt_mock = {
+            'mount.automaster': MagicMock(return_value={'/home': {}}),
+            'mount.rm_automaster': MagicMock(return_value=True)
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_absent('/dev/sda1', '/home') == ret
+            salt_mock['mount.automaster'].assert_called_with('/etc/auto_salt')
+            salt_mock['mount.rm_automaster'].assert_called_with(name='/home',
+                                                                device='/dev/sda1',
+                                                                config='/etc/auto_salt')
+
+    def test_fstab_absent_aix_present(self):
+        '''
+        Test fstab_absent
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': True,
+            'changes': {'persist': 'removed'},
+            'comment': ['/home entry removed from /etc/filesystems.'],
+        }
+
+        grains_mock = {'os': 'AIX'}
+        opts_mock = {'test': False}
+        salt_mock = {
+            'mount.filesystems': MagicMock(return_value={'/home': {}}),
+            'mount.rm_filesystems': MagicMock(return_value=True)
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_absent('/dev/sda1', '/home') == ret
+            salt_mock['mount.filesystems'].assert_called_with('/etc/filesystems')
+            salt_mock['mount.rm_filesystems'].assert_called_with(name='/home',
+                                                                 device='/dev/sda1',
+                                                                 config='/etc/filesystems')
+
+    def test_fstab_absent_present(self):
+        '''
+        Test fstab_absent
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': True,
+            'changes': {'persist': 'removed'},
+            'comment': ['/home entry removed from /etc/fstab.'],
+        }
+
+        grains_mock = {'os': 'Linux'}
+        opts_mock = {'test': False}
+        salt_mock = {
+            'mount.fstab': MagicMock(return_value={'/home': {}}),
+            'mount.rm_fstab': MagicMock(return_value=True)
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_absent('/dev/sda1', '/home') == ret
+            salt_mock['mount.fstab'].assert_called_with('/etc/fstab')
+            salt_mock['mount.rm_fstab'].assert_called_with(name='/home',
+                                                           device='/dev/sda1',
+                                                           config='/etc/fstab')
+
+    def test_fstab_absent_absent(self):
+        '''
+        Test fstab_absent
+        '''
+        ret = {
+            'name': '/dev/sda1',
+            'result': True,
+            'changes': {},
+            'comment': ['/home entry is already missing in /etc/fstab.'],
+        }
+
+        grains_mock = {'os': 'Linux'}
+        opts_mock = {'test': False}
+        salt_mock = {
+            'mount.fstab': MagicMock(return_value={})
+        }
+        with patch.dict(mount.__grains__, grains_mock), \
+                patch.dict(mount.__opts__, opts_mock), \
+                patch.dict(mount.__salt__, salt_mock):
+            assert mount.fstab_absent('/dev/sda1', '/home') == ret
+            salt_mock['mount.fstab'].assert_called_with('/etc/fstab')

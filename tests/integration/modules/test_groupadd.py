@@ -1,19 +1,24 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
-import grp
-import os
+from __future__ import absolute_import, print_function, unicode_literals
 import random
 import string
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.unit import skipIf
 
 # Import Salt libs
+from salt.ext import six
 from salt.ext.six.moves import range
 import salt.utils.files
+import salt.utils.platform
+import salt.utils.stringutils
+
+if not salt.utils.platform.is_windows():
+    import grp
 
 
 @skip_if_not_root
@@ -33,13 +38,13 @@ class GroupModuleTest(ModuleCase):
         self._no_user = self.__random_string()
         self._group = self.__random_string()
         self._no_group = self.__random_string()
-        self._gid = 64989
-        self._new_gid = 64998
-        os_grain = self.run_function('grains.item', ['kernel'])
-        if os_grain['kernel'] not in 'Linux':
+        self.os_grain = self.run_function('grains.item', ['kernel'])
+        self._gid = 64989 if 'Windows' not in self.os_grain['kernel'] else None
+        self._new_gid = 64998 if 'Windows' not in self.os_grain['kernel'] else None
+        if self.os_grain['kernel'] not in ('Linux', 'Windows'):
             self.skipTest(
                 'Test not applicable to \'{kernel}\' kernel'.format(
-                    **os_grain
+                    **self.os_grain
                 )
             )
 
@@ -64,14 +69,20 @@ class GroupModuleTest(ModuleCase):
         '''
         Returns (SYS_GID_MIN, SYS_GID_MAX)
         '''
-        defs_file = '/etc/login.defs'
-        if os.path.exists(defs_file):
-            with salt.utils.files.fopen(defs_file) as defs_fd:
-                login_defs = dict([x.split()
-                                   for x in defs_fd.readlines()
-                                   if x.strip()
-                                   and not x.strip().startswith('#')])
-        else:
+        try:
+            login_defs = {}
+            with salt.utils.files.fopen('/etc/login.defs') as defs_fd:
+                for line in defs_fd:
+                    line = salt.utils.stringutils.to_unicode(line).strip()
+                    if line.startswith('#'):
+                        continue
+                    try:
+                        key, val = line.split()
+                    except ValueError:
+                        pass
+                    else:
+                        login_defs[key] = val
+        except OSError:
             login_defs = {'SYS_GID_MIN': 101,
                           'SYS_GID_MAX': 999}
 
@@ -103,14 +114,15 @@ class GroupModuleTest(ModuleCase):
         Test the add group function
         '''
         # add a new group
-        self.assertTrue(self.run_function('group.add', [self._group, self._gid]))
+        self.assertTrue(self.run_function('group.add', [self._group], gid=self._gid))
         group_info = self.run_function('group.info', [self._group])
-        self.assertEqual(group_info['name'], self._group)
         self.assertEqual(group_info['gid'], self._gid)
+        self.assertEqual(group_info['name'], self._group)
         # try adding the group again
-        self.assertFalse(self.run_function('group.add', [self._group, self._gid]))
+        self.assertFalse(self.run_function('group.add', [self._group], gid=self._gid))
 
     @destructiveTest
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_add_system_group(self):
         '''
         Test the add group function with system=True
@@ -129,6 +141,7 @@ class GroupModuleTest(ModuleCase):
                                            [self._group]))
 
     @destructiveTest
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_add_system_group_gid(self):
         '''
         Test the add group function with system=True and a specific gid
@@ -163,20 +176,21 @@ class GroupModuleTest(ModuleCase):
         '''
         Test the info group function
         '''
-        self.run_function('group.add', [self._group, self._gid])
+        self.run_function('group.add', [self._group], gid=self._gid)
         self.run_function('user.add', [self._user])
         self.run_function('group.adduser', [self._group, self._user])
         group_info = self.run_function('group.info', [self._group])
 
         self.assertEqual(group_info['name'], self._group)
         self.assertEqual(group_info['gid'], self._gid)
-        self.assertIn(self._user, group_info['members'])
+        self.assertIn(self._user, str(group_info['members']))
 
+    @skipIf(salt.utils.platform.is_windows(), 'gid test skipped on windows')
     def test_chgid(self):
         '''
         Test the change gid function
         '''
-        self.run_function('group.add', [self._group, self._gid])
+        self.run_function('group.add', [self._group], gid=self._gid)
         self.assertTrue(self.run_function('group.chgid', [self._group, self._new_gid]))
         group_info = self.run_function('group.info', [self._group])
         self.assertEqual(group_info['gid'], self._new_gid)
@@ -185,51 +199,52 @@ class GroupModuleTest(ModuleCase):
         '''
         Test the add user to group function
         '''
-        self.run_function('group.add', [self._group, self._gid])
+        self.run_function('group.add', [self._group], gid=self._gid)
         self.run_function('user.add', [self._user])
         self.assertTrue(self.run_function('group.adduser', [self._group, self._user]))
         group_info = self.run_function('group.info', [self._group])
-        self.assertIn(self._user, group_info['members'])
-        # try to add a non existing user
+        self.assertIn(self._user, str(group_info['members']))
+        # try add a non existing user
         self.assertFalse(self.run_function('group.adduser', [self._group, self._no_user]))
-        # try to add a user to non existing group
+        # try add a user to non existing group
         self.assertFalse(self.run_function('group.adduser', [self._no_group, self._user]))
-        # try to add a non existing user to a non existing group
+        # try add a non existing user to a non existing group
         self.assertFalse(self.run_function('group.adduser', [self._no_group, self._no_user]))
 
     def test_deluser(self):
         '''
         Test the delete user from group function
         '''
-        self.run_function('group.add', [self._group, self._gid])
+        self.run_function('group.add', [self._group], gid=self._gid)
         self.run_function('user.add', [self._user])
         self.run_function('group.adduser', [self._group, self._user])
         self.assertTrue(self.run_function('group.deluser', [self._group, self._user]))
         group_info = self.run_function('group.info', [self._group])
-        self.assertNotIn(self._user, group_info['members'])
+        self.assertNotIn(self._user, str(group_info['members']))
 
     def test_members(self):
         '''
         Test the members function
         '''
-        self.run_function('group.add', [self._group, self._gid])
+        self.run_function('group.add', [self._group], gid=self._gid)
         self.run_function('user.add', [self._user])
         self.run_function('user.add', [self._user1])
         m = '{0},{1}'.format(self._user, self._user1)
-        self.assertTrue(self.run_function('group.members', [self._group, m]))
+        ret = self.run_function('group.members', [self._group, m])
+        self.assertTrue(ret)
         group_info = self.run_function('group.info', [self._group])
-        self.assertIn(self._user, group_info['members'])
-        self.assertIn(self._user1, group_info['members'])
+        self.assertIn(self._user, str(group_info['members']))
+        self.assertIn(self._user1, str(group_info['members']))
 
     def test_getent(self):
         '''
         Test the getent function
         '''
-        self.run_function('group.add', [self._group, self._gid])
+        self.run_function('group.add', [self._group], gid=self._gid)
         self.run_function('user.add', [self._user])
         self.run_function('group.adduser', [self._group, self._user])
         ginfo = self.run_function('user.getent')
-        self.assertIn(self._group, str(ginfo))
-        self.assertIn(self._user, str(ginfo))
-        self.assertNotIn(self._no_group, str(ginfo))
-        self.assertNotIn(self._no_user, str(ginfo))
+        self.assertIn(self._group, six.text_type(ginfo))
+        self.assertIn(self._user, six.text_type(ginfo))
+        self.assertNotIn(self._no_group, six.text_type(ginfo))
+        self.assertNotIn(self._no_user, six.text_type(ginfo))

@@ -1,17 +1,2 @@
--r base.txt
-
-mock
-apache-libcloud>=0.14.0
-boto>=2.32.1
-boto3>=1.2.1
-moto>=0.3.6
-# httpretty Needs to be here for now even though it's a dependency of boto.
-# A pip install on a fresh system will decide to target httpretty 0.8.10 to
-# satisfy other requirements, and httpretty 0.8.10 has bugs in setup.py that
-# prevent it from being successfully installed (at least on Python 3.4).
-httpretty
-SaltPyLint>=v2017.2.29
-pytest
-git+https://github.com/saltstack/pytest-salt.git@master#egg=pytest-salt
-git+https://github.com/eisensheng/pytest-catchlog.git@develop#egg=Pytest-catchlog
-testinfra>=1.7.0
+# This is a legacy file, use dev.txt
+-r dev.txt

@@ -12,7 +12,7 @@ Interaction with the Supervisor daemon
         - watch:
           - file: /etc/nginx/sites-enabled/wsgi_server.conf
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
@@ -267,7 +267,7 @@ def running(name,
         ret.update(_check_error(result, comment))
         log.debug(six.text_type(result))
 
-    if ret['result'] and len(changes):
+    if ret['result'] and changes:
         ret['changes'][name] = ' '.join(changes)
     return ret
 
@@ -338,6 +338,7 @@ def dead(name,
         else:
             # process name doesn't exist
             ret['comment'] = "Service {0} doesn't exist".format(name)
+            return ret
 
         if is_stopped is True:
             ret['comment'] = "Service {0} is not running".format(name)
@@ -361,7 +362,16 @@ def mod_watch(name,
               conf_file=None,
               bin_env=None,
               **kwargs):
-    # Always restart on watch
+    '''
+    The supervisord watcher, called to invoke the watch command.
+    Always restart on watch
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
+    '''
     return running(
         name,
         restart=restart,

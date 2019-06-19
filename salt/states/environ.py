@@ -5,7 +5,7 @@ of the current salt process.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt libs
@@ -20,6 +20,15 @@ def __virtual__():
     No dependency checks, and not renaming, just return True
     '''
     return True
+
+
+def _norm_key(key):
+    '''
+    Normalize windows environment keys
+    '''
+    if salt.utils.platform.is_windows():
+        return key.upper()
+    return key
 
 
 def setenv(name,
@@ -126,12 +135,11 @@ def setenv(name,
                         permanent_hive = 'HKLM'
                         permanent_key = r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
 
-                    out = __salt__['reg.read_value'](permanent_hive, permanent_key, key)
+                    out = __utils__['reg.read_value'](permanent_hive, permanent_key, _norm_key(key))
                     return out['success'] is True
                 else:
                     return False
-
-            if current_environ.get(key, None) is None and not key_exists():
+            if current_environ.get(_norm_key(key), None) is None and not key_exists():
                 # The key does not exist in environment
                 if false_unsets is not True:
                     # This key will be added with value ''
@@ -140,13 +148,13 @@ def setenv(name,
                 # The key exists.
                 if false_unsets is not True:
                     # Check to see if the value will change
-                    if current_environ.get(key, None) != '':
+                    if current_environ.get(_norm_key(key), None) != '':
                         # This key value will change to ''
                         ret['changes'].update({key: ''})
                 else:
                     # We're going to delete the key
                     ret['changes'].update({key: None})
-        elif current_environ.get(key, '') == val:
+        elif current_environ.get(_norm_key(key), '') == val:
             already_set.append(key)
         else:
             ret['changes'].update({key: val})

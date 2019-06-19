@@ -45,7 +45,7 @@ Connection module for Amazon Route53
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -55,13 +55,12 @@ import time
 import salt.utils.compat
 import salt.utils.versions
 import salt.utils.odict as odict
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
-REQUIRED_BOTO_VERSION = '2.35.0'
 try:
     #pylint: disable=unused-import
     import boto
@@ -69,9 +68,6 @@ try:
     import boto.route53.healthcheck
     from boto.route53.exception import DNSServerError
     #pylint: enable=unused-import
-    # create_zone params were changed in boto 2.35+
-    if _LooseVersion(boto.__version__) < _LooseVersion(REQUIRED_BOTO_VERSION):
-        raise ImportError()
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -82,11 +78,11 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        msg = ('A boto library with version at least {0} was not '
-               'found').format(REQUIRED_BOTO_VERSION)
-        return (False, msg)
-    return True
+    # create_zone params were changed in boto 2.35+
+    return salt.utils.versions.check_boto_reqs(
+        boto_ver='2.35.0',
+        check_boto3=False
+    )
 
 
 def __init__(opts):
@@ -179,7 +175,7 @@ def describe_hosted_zones(zone_id=None, domain_name=None, region=None,
                 time.sleep(3)
                 retries -= 1
                 continue
-            log.error('Could not list zones: {0}'.format(e.message))
+            log.error('Could not list zones: %s', e.message)
             return []
 
 
@@ -283,7 +279,7 @@ def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
 
 def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
@@ -347,7 +343,7 @@ def create_healthcheck(ip_addr=None, fqdn=None, region=None, key=None, keyid=Non
     '''
     Create a Route53 healthcheck
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     ip_addr
 
@@ -532,7 +528,7 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
     if _record:
         ret['name'] = _decode_name(_record.name)
@@ -607,7 +603,7 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
     _value = _munge_value(value, _type)
     while error_retries > 0:
@@ -628,7 +624,7 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
 
 def update_record(name, value, zone, record_type, identifier=None, ttl=None,
@@ -690,7 +686,7 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
 
 def delete_record(name, zone, record_type, identifier=None, all_records=False,
@@ -751,7 +747,7 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
 
 def _try_func(conn, func, **args):
@@ -761,8 +757,8 @@ def _try_func(conn, func, **args):
             return getattr(conn, func)(**args)
         except AttributeError as e:
             # Don't include **args in log messages - security concern.
-            log.error('Function `{0}()` not found for AWS connection object '
-                      '{1}'.format(func, conn))
+            log.error('Function `%s()` not found for AWS connection object %s',
+                      func, conn)
             return None
         except DNSServerError as e:
             if tries and e.code == 'Throttling':
@@ -770,7 +766,7 @@ def _try_func(conn, func, **args):
                 time.sleep(5)
                 tries -= 1
                 continue
-            log.error('Failed calling {0}(): {1}'.format(func, str(e)))
+            log.error('Failed calling %s(): %s', func, e)
             return None
 
 
@@ -781,19 +777,21 @@ def _wait_for_sync(status, conn, wait=True):
     if not wait:
         return True
     orig_wait = wait
-    log.info('Waiting up to {0} seconds for Route53 changes to synchronize'.format(orig_wait))
+    log.info('Waiting up to %s seconds for Route53 changes to synchronize', orig_wait)
     while wait > 0:
         change = conn.get_change(status)
         current = change.GetChangeResponse.ChangeInfo.Status
         if current == 'INSYNC':
             return True
         sleep = wait if wait % 60 == wait else 60
-        log.info('Sleeping {0} seconds waiting for changes to synch (current status {1})'.format(
-                 sleep, current))
+        log.info(
+            'Sleeping %s seconds waiting for changes to synch (current status %s)',
+            sleep, current
+        )
         time.sleep(sleep)
         wait -= sleep
         continue
-    log.error('Route53 changes not synced after {0} seconds.'.format(orig_wait))
+    log.error('Route53 changes not synced after %s seconds.', orig_wait)
     return False
 
 
@@ -867,7 +865,7 @@ def create_hosted_zone(domain_name, caller_ref=None, comment='', private_zone=Fa
 
     deets = conn.get_hosted_zone_by_name(domain_name)
     if deets:
-        log.info('Route53 hosted zone {0} already exists'.format(domain_name))
+        log.info('Route53 hosted zone %s already exists', domain_name)
         return None
 
     args = {'domain_name': domain_name,
@@ -890,7 +888,7 @@ def create_hosted_zone(domain_name, caller_ref=None, comment='', private_zone=Fa
             return None
         if len(vpcs) > 1:
             log.error('Private zone requested but multiple VPCs matching given '
-                      'criteria found: {0}.'.format([v['id'] for v in vpcs]))
+                      'criteria found: %s.', [v['id'] for v in vpcs])
             return None
         vpc = vpcs[0]
         if vpc_name:
@@ -905,13 +903,13 @@ def create_hosted_zone(domain_name, caller_ref=None, comment='', private_zone=Fa
 
     r = _try_func(conn, 'create_hosted_zone', **args)
     if r is None:
-        log.error('Failed to create hosted zone {0}'.format(domain_name))
+        log.error('Failed to create hosted zone %s', domain_name)
         return None
     r = r.get('CreateHostedZoneResponse', {})
     # Pop it since it'll be irrelevant by the time we return
     status = r.pop('ChangeInfo', {}).get('Id', '').replace('/change/', '')
     synced = _wait_for_sync(status, conn, wait=600)
     if not synced:
-        log.error('Hosted zone {0} not synced after 600 seconds.'.format(domain_name))
+        log.error('Hosted zone %s not synced after 600 seconds.', domain_name)
         return None
     return r

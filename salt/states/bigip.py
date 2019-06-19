@@ -6,7 +6,7 @@ A state module designed to enforce load-balancing configurations for F5 Big-IP e
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.json
@@ -2491,7 +2491,7 @@ def delete_virtual(hostname, username, password, name):
 
 def list_monitor(hostname, username, password, monitor_type, name):
     '''
-    A function to list an exsiting monitor.
+    A function to list an existing monitor.
 
     hostname
         The host/address of the bigip device

@@ -3,7 +3,7 @@
 Management of OpenStack Keystone Domains
 ========================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.keystoneng` for setup instructions
@@ -27,7 +27,7 @@ Example States
         - name: domain1
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 __virtualname__ = 'keystone_domain'
 
@@ -56,15 +56,16 @@ def present(name, auth=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+
     __salt__['keystoneng.setup_clouds'](auth)
 
     domain = __salt__['keystoneng.domain_get'](name=name)
 
     if not domain:
-        if __opts__['test'] is True:
+        if __opts__['test']:
             ret['result'] = None
             ret['changes'] = kwargs
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Domain {} will be created.'.format(name)
             return ret
 
@@ -76,10 +77,9 @@ def present(name, auth=None, **kwargs):
 
     changes = __salt__['keystoneng.compare_changes'](domain, **kwargs)
     if changes:
-        if __opts__['test'] is True:
+        if __opts__['test']:
             ret['result'] = None
             ret['changes'] = changes
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Domain {} will be updated.'.format(name)
             return ret
 
@@ -111,7 +111,6 @@ def absent(name, auth=None):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = {'name': name}
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Domain {} will be deleted.'.format(name)
             return ret
 

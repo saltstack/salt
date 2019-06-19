@@ -236,14 +236,15 @@ Tags can also be set:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs
 import hashlib
 import re
-import salt.utils.dictupdate as dictupdate
-from salt.utils import exactly_one
+import salt.utils.data
+import salt.utils.dictupdate
+import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
 from salt.ext import six
 
@@ -376,7 +377,7 @@ def present(name, listeners, availability_zones=None, subnets=None,
 
     # load data from attributes_from_pillar and merge with attributes
     tmp = __salt__['config.option'](attributes_from_pillar, {})
-    attributes = dictupdate.update(tmp, attributes) if attributes else tmp
+    attributes = salt.utils.dictupdate.update(tmp, attributes) if attributes else tmp
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -402,7 +403,7 @@ def present(name, listeners, availability_zones=None, subnets=None,
 
     if attributes:
         _ret = _attributes_present(name, attributes, region, key, keyid, profile)
-        ret.update({'changes': dictupdate.update(ret['changes'], _ret['changes']),
+        ret.update({'changes': salt.utils.dictupdate.update(ret['changes'], _ret['changes']),
                     'comment': '  '.join([ret['comment'], _ret['comment']])})
         ret['result'] = ret['result'] if _ret['result'] else _ret['result']
         if ret['result'] is False:
@@ -410,7 +411,7 @@ def present(name, listeners, availability_zones=None, subnets=None,
 
     _ret = _health_check_present(name, health_check, region, key, keyid,
                                  profile)
-    ret.update({'changes': dictupdate.update(ret['changes'], _ret['changes']),
+    ret.update({'changes': salt.utils.dictupdate.update(ret['changes'], _ret['changes']),
                 'comment': '  '.join([ret['comment'], _ret['comment']])})
     ret['result'] = ret['result'] if _ret['result'] else _ret['result']
     if ret['result'] is False:
@@ -430,14 +431,14 @@ def present(name, listeners, availability_zones=None, subnets=None,
                     for p in ('profile', 'key', 'keyid', 'region', 'wait_for_sync'):
                         cname[p] = locals().get(p) if p not in cname else cname[p]
                 _ret = __states__['boto_route53.present'](**cname)
-                ret.update({'changes': dictupdate.update(ret['changes'], _ret['changes']),
+                ret.update({'changes': salt.utils.dictupdate.update(ret['changes'], _ret['changes']),
                             'comment': '  '.join([ret['comment'], _ret['comment']])})
                 ret['result'] = ret['result'] if _ret['result'] else _ret['result']
                 if ret['result'] is False:
                     return ret
 
     _ret = _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile)
-    ret.update({'changes': dictupdate.update(ret['changes'], _ret['changes']),
+    ret.update({'changes': salt.utils.dictupdate.update(ret['changes'], _ret['changes']),
                 'comment': '  '.join([ret['comment'], _ret['comment']])})
     ret['result'] = ret['result'] if _ret['result'] else _ret['result']
     if ret['result'] is False:
@@ -445,14 +446,14 @@ def present(name, listeners, availability_zones=None, subnets=None,
 
     _ret = _policies_present(name, policies, policies_from_pillar, listeners,
                              backends, region, key, keyid, profile)
-    ret.update({'changes': dictupdate.update(ret['changes'], _ret['changes']),
+    ret.update({'changes': salt.utils.dictupdate.update(ret['changes'], _ret['changes']),
                 'comment': '  '.join([ret['comment'], _ret['comment']])})
     ret['result'] = ret['result'] if _ret['result'] else _ret['result']
     if ret['result'] is False:
         return ret
 
     _ret = _tags_present(name, tags, region, key, keyid, profile)
-    ret.update({'changes': dictupdate.update(ret['changes'], _ret['changes']),
+    ret.update({'changes': salt.utils.dictupdate.update(ret['changes'], _ret['changes']),
                 'comment': '  '.join([ret['comment'], _ret['comment']])})
     ret['result'] = ret['result'] if _ret['result'] else _ret['result']
     if ret['result'] is False:
@@ -523,8 +524,8 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     nodes = [value['instance_id'] for value in health
              if value['description'] != 'Instance deregistration currently in progress.']
     new = [value for value in instances if value not in nodes]
-    if not len(new):
-        msg = 'Instance/s {0} already exist.'.format(str(instances).strip('[]'))
+    if not new:
+        msg = 'Instance/s {0} already exist.'.format(six.text_type(instances).strip('[]'))
         log.debug(msg)
         ret.update({'comment': msg})
         return ret
@@ -555,7 +556,7 @@ DEFAULT_PILLAR_LISTENER_POLICY_KEY = 'boto_elb_listener_policies'
 def _elb_present(name, availability_zones, listeners, subnets, subnet_names,
                  security_groups, scheme, region, key, keyid, profile):
     ret = {'result': True, 'comment': '', 'changes': {}}
-    if not exactly_one((availability_zones, subnets, subnet_names)):
+    if not salt.utils.data.exactly_one((availability_zones, subnets, subnet_names)):
         raise SaltInvocationError('Exactly one of availability_zones, subnets, '
                                   'subnet_names must be provided as arguments.')
     if not listeners:
@@ -619,8 +620,7 @@ def _elb_present(name, availability_zones, listeners, subnets, subnet_names,
             keyid=keyid, profile=profile
         )
         if not _security_groups:
-            msg = 'Security groups {0} do not map to valid security group ids.'
-            ret['comment'] = msg.format(security_groups)
+            ret['comment'] = 'Security groups {0} do not map to valid security group ids.'.format(security_groups)
             ret['result'] = False
             return ret
     exists = __salt__['boto_elb.exists'](name, region, key, keyid, profile)
@@ -645,14 +645,14 @@ def _elb_present(name, availability_zones, listeners, subnets, subnet_names,
     else:
         ret['comment'] = 'ELB {0} present.'.format(name)
         _ret = _security_groups_present(name, _security_groups, region, key, keyid, profile)
-        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['changes'] = salt.utils.dictupdate.update(ret['changes'], _ret['changes'])
         ret['comment'] = '  '.join([ret['comment'], _ret['comment']])
         if not _ret['result']:
             ret['result'] = _ret['result']
             if ret['result'] is False:
                 return ret
         _ret = _listeners_present(name, listeners, region, key, keyid, profile)
-        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['changes'] = salt.utils.dictupdate.update(ret['changes'], _ret['changes'])
         ret['comment'] = '  '.join([ret['comment'], _ret['comment']])
         if not _ret['result']:
             ret['result'] = _ret['result']
@@ -660,7 +660,7 @@ def _elb_present(name, availability_zones, listeners, subnets, subnet_names,
                 return ret
         if availability_zones:
             _ret = _zones_present(name, availability_zones, region, key, keyid, profile)
-            ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+            ret['changes'] = salt.utils.dictupdate.update(ret['changes'], _ret['changes'])
             ret['comment'] = '  '.join([ret['comment'], _ret['comment']])
             if not _ret['result']:
                 ret['result'] = _ret['result']
@@ -668,7 +668,7 @@ def _elb_present(name, availability_zones, listeners, subnets, subnet_names,
                     return ret
         elif subnets:
             _ret = _subnets_present(name, subnets, region, key, keyid, profile)
-            ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+            ret['changes'] = salt.utils.dictupdate.update(ret['changes'], _ret['changes'])
             ret['comment'] = '  '.join([ret['comment'], _ret['comment']])
             if not _ret['result']:
                 ret['result'] = _ret['result']
@@ -679,8 +679,7 @@ def _listeners_present(name, listeners, region, key, keyid, profile):
     ret = {'result': True, 'comment': '', 'changes': {}}
     lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
     if not lb:
-        msg = '{0} ELB configuration could not be retrieved.'.format(name)
-        ret['comment'] = msg
+        ret['comment'] = '{0} ELB configuration could not be retrieved.'.format(name)
         ret['result'] = False
         return ret
     if not listeners:
@@ -729,8 +728,7 @@ def _listeners_present(name, listeners, region, key, keyid, profile):
         if deleted:
             ret['comment'] = 'Deleted listeners on {0} ELB.'.format(name)
         else:
-            msg = 'Failed to delete listeners on {0} ELB.'.format(name)
-            ret['comment'] = msg
+            ret['comment'] = 'Failed to delete listeners on {0} ELB.'.format(name)
             ret['result'] = False
 
     if to_create:
@@ -739,10 +737,10 @@ def _listeners_present(name, listeners, region, key, keyid, profile):
                                                         profile)
         if created:
             msg = 'Created listeners on {0} ELB.'
-            ret['comment'] = '  '.join([ret['comment'], msg.format(name)])
+            ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
         else:
             msg = 'Failed to create listeners on {0} ELB.'
-            ret['comment'] = '  '.join([ret['comment'], msg.format(name)])
+            ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
             ret['result'] = False
 
     if to_create or to_delete:
@@ -761,8 +759,7 @@ def _security_groups_present(name, security_groups, region, key, keyid, profile)
     ret = {'result': True, 'comment': '', 'changes': {}}
     lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
     if not lb:
-        msg = '{0} ELB configuration could not be retrieved.'.format(name)
-        ret['comment'] = msg
+        ret['comment'] = '{0} ELB configuration could not be retrieved.'.format(name)
         ret['result'] = False
         return ret
     if not security_groups:
@@ -772,19 +769,16 @@ def _security_groups_present(name, security_groups, region, key, keyid, profile)
         change_needed = True
     if change_needed:
         if __opts__['test']:
-            msg = 'ELB {0} set to have security groups modified.'.format(name)
-            ret['comment'] = msg
+            ret['comment'] = 'ELB {0} set to have security groups modified.'.format(name)
             ret['result'] = None
             return ret
         changed = __salt__['boto_elb.apply_security_groups'](
             name, security_groups, region, key, keyid, profile
         )
         if changed:
-            msg = 'Modified security_groups on {0} ELB.'.format(name)
-            ret['comment'] = msg
+            ret['comment'] = 'Modified security_groups on {0} ELB.'.format(name)
         else:
-            msg = 'Failed to modify security_groups on {0} ELB.'.format(name)
-            ret['comment'] = msg
+            ret['comment'] = 'Failed to modify security_groups on {0} ELB.'.format(name)
             ret['result'] = False
         ret['changes']['old'] = {'security_groups': lb['security_groups']}
         ret['changes']['new'] = {'security_groups': security_groups}
@@ -799,8 +793,7 @@ def _attributes_present(name, attributes, region, key, keyid, profile):
                                                       profile)
     if not _attributes:
         ret['result'] = False
-        msg = 'Failed to retrieve attributes for ELB {0}.'.format(name)
-        ret['comment'] = msg
+        ret['comment'] = 'Failed to retrieve attributes for ELB {0}.'.format(name)
         return ret
     attrs_to_set = []
     if 'cross_zone_load_balancing' in attributes:
@@ -821,7 +814,7 @@ def _attributes_present(name, attributes, region, key, keyid, profile):
             attrs_to_set.append('connecting_settings')
     if 'access_log' in attributes:
         for attr, val in six.iteritems(attributes['access_log']):
-            if str(_attributes['access_log'][attr]) != str(val):
+            if six.text_type(_attributes['access_log'][attr]) != six.text_type(val):
                 attrs_to_set.append('access_log')
         if 's3_bucket_prefix' in attributes['access_log']:
             sbp = attributes['access_log']['s3_bucket_prefix']
@@ -842,8 +835,7 @@ def _attributes_present(name, attributes, region, key, keyid, profile):
             ret['comment'] = 'Set attributes on ELB {0}.'.format(name)
         else:
             ret['result'] = False
-            msg = 'Failed to set attributes on ELB {0}.'.format(name)
-            ret['comment'] = msg
+            ret['comment'] = 'Failed to set attributes on ELB {0}.'.format(name)
     else:
         ret['comment'] = 'Attributes already set on ELB {0}.'.format(name)
     return ret
@@ -857,17 +849,15 @@ def _health_check_present(name, health_check, region, key, keyid, profile):
                                                           keyid, profile)
     if not _health_check:
         ret['result'] = False
-        msg = 'Failed to retrieve health_check for ELB {0}.'.format(name)
-        ret['comment'] = msg
+        ret['comment'] = 'Failed to retrieve health_check for ELB {0}.'.format(name)
         return ret
     need_to_set = False
     for attr, val in six.iteritems(health_check):
-        if str(_health_check[attr]) != str(val):
+        if six.text_type(_health_check[attr]) != six.text_type(val):
             need_to_set = True
     if need_to_set:
         if __opts__['test']:
-            msg = 'ELB {0} set to have health check set.'.format(name)
-            ret['comment'] = msg
+            ret['comment'] = 'ELB {0} set to have health check set.'.format(name)
             ret['result'] = None
             return ret
         was_set = __salt__['boto_elb.set_health_check'](name, health_check,
@@ -882,8 +872,7 @@ def _health_check_present(name, health_check, region, key, keyid, profile):
             ret['comment'] = 'Set health check on ELB {0}.'.format(name)
         else:
             ret['result'] = False
-            msg = 'Failed to set health check on ELB {0}.'.format(name)
-            ret['comment'] = msg
+            ret['comment'] = 'Failed to set health check on ELB {0}.'.format(name)
     else:
         ret['comment'] = 'Health check already set on ELB {0}.'.format(name)
     return ret
@@ -894,8 +883,7 @@ def _zones_present(name, availability_zones, region, key, keyid, profile):
     lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
     if not lb:
         ret['result'] = False
-        msg = 'Failed to retrieve ELB {0}.'.format(name)
-        ret['comment'] = msg
+        ret['comment'] = 'Failed to retrieve ELB {0}.'.format(name)
         return ret
     to_enable = []
     to_disable = []
@@ -908,19 +896,16 @@ def _zones_present(name, availability_zones, region, key, keyid, profile):
             to_disable.append(zone)
     if to_enable or to_disable:
         if __opts__['test']:
-            msg = 'ELB {0} to have availability zones set.'.format(name)
-            ret['comment'] = msg
+            ret['comment'] = 'ELB {0} to have availability zones set.'.format(name)
             ret['result'] = None
             return ret
         if to_enable:
             enabled = __salt__['boto_elb.enable_availability_zones'](
                     name, to_enable, region, key, keyid, profile)
             if enabled:
-                msg = 'Enabled availability zones on {0} ELB.'.format(name)
-                ret['comment'] = msg
+                ret['comment'] = 'Enabled availability zones on {0} ELB.'.format(name)
             else:
-                msg = 'Failed to enable availability zones on {0} ELB.'
-                ret['comment'] = msg.format(name)
+                ret['comment'] = 'Failed to enable availability zones on {0} ELB.'.format(name)
                 ret['result'] = False
         if to_disable:
             disabled = __salt__['boto_elb.disable_availability_zones'](
@@ -939,8 +924,7 @@ def _zones_present(name, availability_zones, region, key, keyid, profile):
         ret['changes']['new'] = {'availability_zones':
                                  lb['availability_zones']}
     else:
-        msg = 'Availability zones already set on ELB {0}.'.format(name)
-        ret['comment'] = msg
+        ret['comment'] = 'Availability zones already set on ELB {0}.'.format(name)
     return ret
 
 
@@ -951,8 +935,7 @@ def _subnets_present(name, subnets, region, key, keyid, profile):
     lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
     if not lb:
         ret['result'] = False
-        msg = 'Failed to retrieve ELB {0}.'.format(name)
-        ret['comment'] = msg
+        ret['comment'] = 'Failed to retrieve ELB {0}.'.format(name)
         return ret
     to_enable = []
     to_disable = []
@@ -965,8 +948,7 @@ def _subnets_present(name, subnets, region, key, keyid, profile):
             to_disable.append(subnet)
     if to_enable or to_disable:
         if __opts__['test']:
-            msg = 'ELB {0} to have subnets set.'.format(name)
-            ret['comment'] = msg
+            ret['comment'] = 'ELB {0} to have subnets set.'.format(name)
             ret['result'] = None
             return ret
         if to_enable:
@@ -974,30 +956,31 @@ def _subnets_present(name, subnets, region, key, keyid, profile):
                                                            region, key, keyid,
                                                            profile)
             if attached:
-                msg = 'Attached subnets on {0} ELB.'.format(name)
-                ret['comment'] = msg
+                ret['comment'] = 'Attached subnets on {0} ELB.'.format(name)
             else:
-                msg = 'Failed to attach subnets on {0} ELB.'
-                ret['comment'] = msg.format(name)
+                ret['comment'] = 'Failed to attach subnets on {0} ELB.'.format(name)
                 ret['result'] = False
         if to_disable:
             detached = __salt__['boto_elb.detach_subnets'](name, to_disable,
                                                            region, key, keyid,
                                                            profile)
             if detached:
-                msg = 'Detached subnets on {0} ELB.'
-                ret['comment'] = '  '.join([ret['comment'], msg.format(name)])
+                ret['comment'] = ' '.join([
+                    ret['comment'],
+                    'Detached subnets on {0} ELB.'.format(name)
+                ])
             else:
-                msg = 'Failed to detach subnets on {0} ELB.'
-                ret['comment'] = '  '.join([ret['comment'], msg.format(name)])
+                ret['comment'] = ' '.join([
+                    ret['comment'],
+                    'Failed to detach subnets on {0} ELB.'.format(name)
+                ])
                 ret['result'] = False
         ret['changes']['old'] = {'subnets': lb['subnets']}
         lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid,
                                                  profile)
         ret['changes']['new'] = {'subnets': lb['subnets']}
     else:
-        msg = 'Subnets already set on ELB {0}.'.format(name)
-        ret['comment'] = msg
+        ret['comment'] = 'Subnets already set on ELB {0}.'.format(name)
     return ret
 
 
@@ -1005,7 +988,7 @@ def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profil
     '''helper method for present.  ensure that cloudwatch_alarms are set'''
     current = __salt__['config.option'](alarms_from_pillar, {})
     if alarms:
-        current = dictupdate.update(current, alarms)
+        current = salt.utils.dictupdate.update(current, alarms)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     for _, info in six.iteritems(current):
         info["name"] = name + " " + info["name"]
@@ -1077,8 +1060,7 @@ def _policies_present(name, policies, policies_from_pillar, listeners, backends,
 
     lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
     if not lb:
-        msg = '{0} ELB configuration could not be retrieved.'.format(name)
-        ret['comment'] = msg
+        ret['comment'] = '{0} ELB configuration could not be retrieved.'.format(name)
         ret['result'] = False
         return ret
 
@@ -1269,8 +1251,9 @@ def _policy_cname(policy_dict):
     policy_name = policy_dict['policy_name']
     policy_type = policy_dict['policy_type']
     policy = policy_dict['policy']
-    canonical_policy_repr = str(sorted(list(six.iteritems(policy)), key=lambda x: str(x[0])))
-    policy_hash = hashlib.md5(str(canonical_policy_repr)).hexdigest()
+    canonical_policy_repr = six.text_type(sorted(list(six.iteritems(policy)), key=lambda x: six.text_type(x[0])))
+    policy_hash = hashlib.md5(
+        salt.utils.stringutils.to_bytes(str(canonical_policy_repr))).hexdigest()  # future lint: disable=blacklisted-function
     if policy_type.endswith('Type'):
         policy_type = policy_type[:-4]
     return "{0}-{1}-{2}".format(policy_type, policy_name, policy_hash)
@@ -1340,7 +1323,7 @@ def _tags_present(name, tags, region, key, keyid, profile):
                     ret['comment'] = '  '.join([ret['comment'], msg])
                     return ret
                 if 'old' not in ret['changes']:
-                    ret['changes'] = dictupdate.update(ret['changes'], {'old': {'tags': {}}})
+                    ret['changes'] = salt.utils.dictupdate.update(ret['changes'], {'old': {'tags': {}}})
                 for _tag in tags_to_remove:
                     ret['changes']['old']['tags'][_tag] = lb['tags'][_tag]
         if tags_to_add or tags_to_update:
@@ -1357,7 +1340,7 @@ def _tags_present(name, tags, region, key, keyid, profile):
                             ', '.join(tags_to_update.keys()))
                     ret['comment'] = '  '.join([ret['comment'], msg])
             else:
-                all_tag_changes = dictupdate.update(tags_to_add, tags_to_update)
+                all_tag_changes = salt.utils.dictupdate.update(tags_to_add, tags_to_update)
                 _ret = __salt__['boto_elb.set_tags'](
                         name, all_tag_changes, region, key, keyid, profile)
                 if not _ret:
@@ -1366,9 +1349,9 @@ def _tags_present(name, tags, region, key, keyid, profile):
                     ret['comment'] = '  '.join([ret['comment'], msg])
                     return ret
                 if 'old' not in ret['changes']:
-                    ret['changes'] = dictupdate.update(ret['changes'], {'old': {'tags': {}}})
+                    ret['changes'] = salt.utils.dictupdate.update(ret['changes'], {'old': {'tags': {}}})
                 if 'new' not in ret['changes']:
-                    ret['changes'] = dictupdate.update(ret['changes'], {'new': {'tags': {}}})
+                    ret['changes'] = salt.utils.dictupdate.update(ret['changes'], {'new': {'tags': {}}})
                 for tag in all_tag_changes:
                     ret['changes']['new']['tags'][tag] = tags[tag]
                     if 'tags' in lb:

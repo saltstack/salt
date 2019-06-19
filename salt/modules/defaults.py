@@ -4,7 +4,7 @@ Module to work with salt formula defaults files
 
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 import os
@@ -156,34 +156,38 @@ def update(dest, defaults, merge_lists=True, in_place=True):
         and defaults.deepcopy to avoid redundant in jinja.
 
         Example:
+
         .. code-block:: yaml
 
-        group01:
-          defaults:
-            enabled: True
-            extra:
-              - test
-              - stage
-          nodes:
-            host01:
-              index: foo
-              upstream: bar
-            host02:
-              index: foo2
-              upstream: bar2
+            group01:
+              defaults:
+                enabled: True
+                extra:
+                  - test
+                  - stage
+              nodes:
+                host01:
+                  index: foo
+                  upstream: bar
+                host02:
+                  index: foo2
+                  upstream: bar2
 
-        .. code-block::
-        {% do salt['defaults.update'](group01.nodes, group01.defaults) %}
+        .. code-block:: jinja
+
+            {% do salt['defaults.update'](group01.nodes, group01.defaults) %}
 
         Each node will look like the following:
+
         .. code-block:: yaml
-        host01:
-          enabled: True
-          index: foo
-          upstream: bar
-          extra:
-            - test
-            - stage
+
+            host01:
+              enabled: True
+              index: foo
+              upstream: bar
+              extra:
+                - test
+                - stage
 
     merge_lists : True
         If True, it will also merge lists instead of replace their items.

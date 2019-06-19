@@ -16,7 +16,7 @@ This state is used to ensure presence of users in the Organization.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import time
 import datetime
 import logging
@@ -238,7 +238,7 @@ def team_present(
         if privacy is not None and target['privacy'] != privacy:
             parameters['privacy'] = privacy
 
-        if len(parameters) > 0:
+        if parameters:
             if __opts__['test']:
                 test_comments.append('Team properties are set to be edited: {0}'
                                      .format(parameters))
@@ -341,7 +341,7 @@ def team_present(
     current_members = __salt__['github.list_team_members'](name, profile=profile)
 
     for member, member_info in six.iteritems(members or {}):
-        log.info('Checking member {0} in team {1}'.format(member, name))
+        log.info('Checking member %s in team %s', member, name)
 
         if member.lower() not in current_members:
             if (enforce_mfa and _member_violates_mfa(member, member_info,
@@ -408,7 +408,7 @@ def team_present(
         __salt__['github.list_team_members'](name, profile=profile,
                                              ignore_cache=False, **kwargs)
 
-    if len(test_comments) > 0:
+    if test_comments:
         ret['comment'] = '\n'.join(test_comments)
     return ret
 
@@ -582,7 +582,7 @@ def repo_present(
                 parameters[param_name] = param_value
                 old_parameters[param_name] = target[param_name]
 
-        if len(parameters) > 0:
+        if parameters:
             repo_change = {
                 'old': 'Repo properties were {0}'.format(old_parameters),
                 'new': 'Repo properties (that changed) are {0}'.format(parameters)
@@ -631,8 +631,9 @@ def repo_present(
                         name, profile=profile, **kwargs)
                     break
                 except CommandExecutionError as e:
-                    log.info("Attempt {0} to fetch new repo {1} failed".format(
-                        attempt, name))
+                    log.info("Attempt %s to fetch new repo %s failed",
+                             attempt,
+                             name)
 
             if current_teams is None:
                 ret['result'] = False
@@ -714,8 +715,8 @@ def repo_present(
                         ret['result'] = None
                     else:
                         result = __salt__['github.add_team_repo'](name, team_name,
-                                                                  permission,
-                                                                  profile=profile)
+                                                                  profile=profile,
+                                                                  permission=permission)
                         if result:
                             ret['changes'][team_name] = team_change
                         else:

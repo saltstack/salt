@@ -4,22 +4,26 @@ Salt module to manage Unix mounts and the fstab file
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import logging
 
 # Import salt libs
 import salt.utils.args
+import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.mount
+import salt.utils.stringutils
+from salt.utils.odict import OrderedDict
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import filter, zip  # pylint: disable=import-error,redefined-builtin
+
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -59,11 +63,13 @@ def _active_mountinfo(ret):
         msg = 'File not readable {0}'
         raise CommandExecutionError(msg.format(filename))
 
-    blkid_info = __salt__['disk.blkid']()
+    if 'disk.blkid' not in __context__:
+        __context__['disk.blkid'] = __salt__['disk.blkid']()
+    blkid_info = __context__['disk.blkid']
 
     with salt.utils.files.fopen(filename) as ifile:
         for line in ifile:
-            comps = line.split()
+            comps = salt.utils.stringutils.to_unicode(line).split()
             device = comps[2].split(':')
             # each line can have any number of
             # optional parameters, we use the
@@ -105,7 +111,7 @@ def _active_mounts(ret):
 
     with salt.utils.files.fopen(filename) as ifile:
         for line in ifile:
-            comps = line.split()
+            comps = salt.utils.stringutils.to_unicode(line).split()
             ret[comps[1]] = {'device': comps[0],
                              'alt_device': _list.get(comps[1], None),
                              'fstype': comps[2],
@@ -119,18 +125,30 @@ def _active_mounts_aix(ret):
     '''
     for line in __salt__['cmd.run_stdout']('mount -p').split('\n'):
         comps = re.sub(r"\s+", " ", line).split()
-        if comps and comps[0] == 'node' or comps[0] == '--------':
-            continue
-        if len(comps) < 8:
-            ret[comps[1]] = {'device': comps[0],
-                             'fstype': comps[2],
-                             'opts': _resolve_user_group_names(comps[6].split(','))}
-        else:
-            ret[comps[2]] = {'node': comps[0],
-                             'device': comps[1],
-                             'fstype': comps[3],
-                             'opts': _resolve_user_group_names(comps[7].split(','))}
-
+        if comps:
+            if comps[0] == 'node' or comps[0] == '--------':
+                continue
+            comps_len = len(comps)
+            if line.startswith((' ', '\t')):
+                curr_opts = _resolve_user_group_names(comps[6].split(',')) if 7 == comps_len else []
+                if curr_opts:
+                    ret[comps[1]] = {'device': comps[0],
+                                    'fstype': comps[2],
+                                    'opts': curr_opts}
+                else:
+                    ret[comps[1]] = {'device': comps[0],
+                                    'fstype': comps[2]}
+            else:
+                curr_opts = _resolve_user_group_names(comps[7].split(',')) if 8 == comps_len else []
+                if curr_opts:
+                    ret[comps[2]] = {'node': comps[0],
+                                    'device': comps[1],
+                                    'fstype': comps[3],
+                                    'opts': curr_opts}
+                else:
+                    ret[comps[2]] = {'node': comps[0],
+                                    'device': comps[1],
+                                    'fstype': comps[3]}
     return ret
 
 
@@ -171,8 +189,8 @@ def _active_mounts_openbsd(ret):
             ret[comps[3]] = {'device': comps[0],
                          'fstype': comps[5],
                          'opts': _resolve_user_group_names(parens[1].split(", ")),
-                         'major': str(nod[4].strip(",")),
-                         'minor': str(nod[5]),
+                         'major': six.text_type(nod[4].strip(",")),
+                         'minor': six.text_type(nod[5]),
                          'device_uuid': parens[0]}
         else:
             ret[comps[2]] = {'device': comps[0],
@@ -209,7 +227,8 @@ def _resolve_user_group_names(opts):
                 _info = __salt__[name_id_opts[_param]](_givenid)
                 if _info and _param in _info:
                     _id = _info[_param]
-            opts[ind] = _param + '=' + str(_id)
+            opts[ind] = _param + '=' + six.text_type(_id)
+        opts[ind] = opts[ind].replace('\\040', '\\ ')
     return opts
 
 
@@ -226,7 +245,7 @@ def active(extended=False):
     ret = {}
     if __grains__['os'] == 'FreeBSD':
         _active_mounts_freebsd(ret)
-    elif __grains__['kernel'] == 'AIX':
+    elif 'AIX' in __grains__['kernel']:
         _active_mounts_aix(ret)
     elif __grains__['kernel'] == 'SunOS':
         _active_mounts_solaris(ret)
@@ -255,7 +274,9 @@ class _fstab_entry(object):
     '''
 
     class ParseError(ValueError):
-        '''Error raised when a line isn't parsible as an fstab entry'''
+        '''
+        Error raised when a line isn't parsible as an fstab entry
+        '''
 
     fstab_keys = ('device', 'name', 'fstype', 'opts', 'dump', 'pass_num')
 
@@ -272,8 +293,10 @@ class _fstab_entry(object):
             raise cls.ParseError("Comment!")
 
         comps = line.split()
-        if len(comps) != 6:
+        if len(comps) < 4 or len(comps) > 6:
             raise cls.ParseError("Invalid Entry!")
+
+        comps.extend(['0'] * (len(keys) - len(comps)))
 
         return dict(zip(keys, comps))
 
@@ -286,31 +309,43 @@ class _fstab_entry(object):
         return cls.fstab_format.format(**entry)
 
     def __str__(self):
-        '''string value, only works for full repr'''
+        '''
+        String value, only works for full repr
+        '''
         return self.dict_to_line(self.criteria)
 
     def __repr__(self):
-        '''always works'''
-        return str(self.criteria)
+        '''
+        Always works
+        '''
+        return repr(self.criteria)
 
     def pick(self, keys):
-        '''returns an instance with just those keys'''
+        '''
+        Returns an instance with just those keys
+        '''
         subset = dict([(key, self.criteria[key]) for key in keys])
         return self.__class__(**subset)
 
     def __init__(self, **criteria):
-        '''Store non-empty, non-null values to use as filter'''
+        '''
+        Store non-empty, non-null values to use as filter
+        '''
         items = [key_value for key_value in six.iteritems(criteria) if key_value[1] is not None]
-        items = [(key_value1[0], str(key_value1[1])) for key_value1 in items]
+        items = [(key_value1[0], six.text_type(key_value1[1])) for key_value1 in items]
         self.criteria = dict(items)
 
     @staticmethod
     def norm_path(path):
-        '''Resolve equivalent paths equivalently'''
+        '''
+        Resolve equivalent paths equivalently
+        '''
         return os.path.normcase(os.path.normpath(path))
 
     def match(self, line):
-        '''compare potentially partial criteria against line'''
+        '''
+        Compare potentially partial criteria against line
+        '''
         entry = self.dict_from_line(line)
         for key, value in six.iteritems(self.criteria):
             if entry[key] != value:
@@ -337,7 +372,7 @@ class _vfstab_entry(object):
         '''Error raised when a line isn't parsible as an fstab entry'''
 
     vfstab_keys = ('device', 'device_fsck', 'name', 'fstype', 'pass_fsck', 'mount_at_boot', 'opts')
-    ## NOTE: weird formatting to match default spacing on Solaris
+    # NOTE: weird formatting to match default spacing on Solaris
     vfstab_format = '{device:<11} {device_fsck:<3} {name:<19} {fstype:<8} {pass_fsck:<3} {mount_at_boot:<6} {opts}\n'
 
     @classmethod
@@ -360,31 +395,43 @@ class _vfstab_entry(object):
         return cls.vfstab_format.format(**entry)
 
     def __str__(self):
-        '''string value, only works for full repr'''
+        '''
+        String value, only works for full repr
+        '''
         return self.dict_to_line(self.criteria)
 
     def __repr__(self):
-        '''always works'''
-        return str(self.criteria)
+        '''
+        Always works
+        '''
+        return repr(self.criteria)
 
     def pick(self, keys):
-        '''returns an instance with just those keys'''
+        '''
+        Returns an instance with just those keys
+        '''
         subset = dict([(key, self.criteria[key]) for key in keys])
         return self.__class__(**subset)
 
     def __init__(self, **criteria):
-        '''Store non-empty, non-null values to use as filter'''
+        '''
+        Store non-empty, non-null values to use as filter
+        '''
         items = [key_value for key_value in six.iteritems(criteria) if key_value[1] is not None]
-        items = [(key_value1[0], str(key_value1[1])) for key_value1 in items]
+        items = [(key_value1[0], six.text_type(key_value1[1])) for key_value1 in items]
         self.criteria = dict(items)
 
     @staticmethod
     def norm_path(path):
-        '''Resolve equivalent paths equivalently'''
+        '''
+        Resolve equivalent paths equivalently
+        '''
         return os.path.normcase(os.path.normpath(path))
 
     def match(self, line):
-        '''compare potentially partial criteria against line'''
+        '''
+        Compare potentially partial criteria against line
+        '''
         entry = self.dict_from_line(line)
         for key, value in six.iteritems(self.criteria):
             if entry[key] != value:
@@ -392,9 +439,145 @@ class _vfstab_entry(object):
         return True
 
 
+class _FileSystemsEntry(object):
+    '''
+    Utility class for manipulating filesystem entries. Primarily we're parsing,
+    formatting, and comparing lines. Parsing emits dicts expected from
+    fstab() or raises a ValueError.
+
+    Note: We'll probably want to use os.normpath and os.normcase on 'name'
+    '''
+
+    class ParseError(ValueError):
+        '''
+        Error raised when a line isn't parsible as an fstab entry
+        '''
+
+    filesystems_keys = ('device', 'name', 'fstype', 'vfstype', 'opts', 'mount')
+
+    # preserve data format of filesystems
+    compatibility_keys = ('dev', 'dev', 'name', 'fstype', 'vfstype', 'opts', 'mount', 'type', 'vfs', 'account', 'boot', 'check', 'free', 'nodename', 'quota', 'size', 'vol', 'log')
+
+    @classmethod
+    def dict_from_lines(cls, lines, keys=filesystems_keys):
+        if len(lines) < 2:
+            raise ValueError('Invalid number of lines: {0}'.format(lines))
+        if not keys:
+            # if empty force default filesystems_keys
+            keys = _FileSystemsEntry.filesystems_keys
+        elif len(keys) < 6:
+            raise ValueError('Invalid key name array: {0}'.format(keys))
+
+        blk_lines = lines
+        orddict = OrderedDict()
+        orddict['name'] = blk_lines[0].split(':')[0].strip()
+        blk_lines.pop(0)
+        for line in blk_lines:
+            if line.startswith('#'):
+                raise cls.ParseError("Comment!")
+
+            comps = line.split('= ')
+            if len(comps) != 2:
+                raise cls.ParseError("Invalid Entry!")
+
+            key_name = comps[0].strip()
+            if key_name in keys:
+                orddict[key_name] = comps[1].strip()
+            else:
+                raise ValueError('Invalid name for use in filesystems: {0}'.format(key_name))
+
+        return orddict
+
+    @classmethod
+    def dict_from_cmd_line(cls, ipargs, keys):
+        cmdln_dict = ipargs
+        if keys:
+            for key, value in keys:
+                # ignore unknown or local scope keys
+                if key.startswith('__'):
+                    continue
+                if key in _FileSystemsEntry.compatibility_keys:
+                    cmdln_dict[key] = value
+
+        return cmdln_dict
+
+    @classmethod
+    def from_line(cls, *args, **kwargs):
+        return cls(** cls.dict_from_cmd_line(*args, **kwargs))
+
+    @classmethod
+    def dict_to_lines(cls, fsys_dict_entry):
+        entry = fsys_dict_entry
+        strg_out = entry['name'] + ':' + os.linesep
+        for k, v in six.viewitems(entry):
+            if 'name' not in k:
+                strg_out += '\t{0}\t\t= {1}'.format(k, v) + os.linesep
+        strg_out += os.linesep
+        return six.text_type(strg_out)
+
+    def dict_from_entry(self):
+        ret = OrderedDict()
+        ret[self.criteria['name']] = self.criteria
+        return ret
+
+    def __str__(self):
+        '''
+        String value, only works for full repr
+        '''
+        return self.dict_to_lines(self.criteria)
+
+    def __repr__(self):
+        '''
+        Always works
+        '''
+        return repr(self.criteria)
+
+    def pick(self, keys):
+        '''
+        Returns an instance with just those keys
+        '''
+        subset = dict([(key, self.criteria[key]) for key in keys])
+        return self.__class__(**subset)
+
+    def __init__(self, **criteria):
+        '''
+        Store non-empty, non-null values to use as filter
+        '''
+        items = [key_value for key_value in six.iteritems(criteria) if key_value[1] is not None]
+        items = [(key_value1[0], six.text_type(key_value1[1])) for key_value1 in items]
+        self.criteria = OrderedDict(items)
+
+    @staticmethod
+    def norm_path(path):
+        '''
+        Resolve equivalent paths equivalently
+        '''
+        return os.path.normcase(os.path.normpath(path))
+
+    def match(self, fsys_view):
+        '''
+        Compare potentially partial criteria against built filesystems entry dictionary
+        '''
+        evalue_dict = fsys_view[1]
+        for key, value in six.viewitems(self.criteria):
+            if key in evalue_dict:
+                if evalue_dict[key] != value:
+                    return False
+            else:
+                return False
+        return True
+
+    def __getitem__(self, key):
+        '''
+        Return value for input key
+        '''
+        return self.criteria[key]
+
+
 def fstab(config='/etc/fstab'):
     '''
     .. versionchanged:: 2016.3.2
+
     List the contents of the fstab
 
     CLI Example:
@@ -408,9 +591,10 @@ def fstab(config='/etc/fstab'):
         return ret
     with salt.utils.files.fopen(config) as ifile:
         for line in ifile:
+            line = salt.utils.stringutils.to_unicode(line)
             try:
                 if __grains__['kernel'] == 'SunOS':
-                    ## Note: comments use in default vfstab file!
+                    # Note: comments use in default vfstab file!
                     if line[0] == '#':
                         continue
                     entry = _vfstab_entry.dict_from_line(
@@ -436,6 +620,7 @@ def fstab(config='/etc/fstab'):
 def vfstab(config='/etc/vfstab'):
     '''
     .. versionadded:: 2016.3.2
+
     List the contents of the vfstab
 
     CLI Example:
@@ -444,13 +629,14 @@ def vfstab(config='/etc/vfstab'):
 
         salt '*' mount.vfstab
     '''
-    ## NOTE: vfstab is a wrapper for fstab
+    # NOTE: vfstab is a wrapper for fstab
     return fstab(config)
 
 
 def rm_fstab(name, device, config='/etc/fstab'):
     '''
     .. versionchanged:: 2016.3.2
+
     Remove the mount point from the fstab
 
     CLI Example:
@@ -470,6 +656,7 @@ def rm_fstab(name, device, config='/etc/fstab'):
     try:
         with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
+                line = salt.utils.stringutils.to_unicode(line)
                 try:
                     if criteria.match(line):
                         modified = True
@@ -483,15 +670,15 @@ def rm_fstab(name, device, config='/etc/fstab'):
 
     except (IOError, OSError) as exc:
         msg = "Couldn't read from {0}: {1}"
-        raise CommandExecutionError(msg.format(config, str(exc)))
+        raise CommandExecutionError(msg.format(config, exc))
 
     if modified:
         try:
-            with salt.utils.files.fopen(config, 'w+') as ofile:
-                ofile.writelines(lines)
+            with salt.utils.files.fopen(config, 'wb') as ofile:
+                ofile.writelines(salt.utils.data.encode(lines))
         except (IOError, OSError) as exc:
             msg = "Couldn't write to {0}: {1}"
-            raise CommandExecutionError(msg.format(config, str(exc)))
+            raise CommandExecutionError(msg.format(config, exc))
 
     # Note: not clear why we always return 'True'
     # --just copying previous behavior at this point...
@@ -501,6 +688,7 @@ def rm_fstab(name, device, config='/etc/fstab'):
 def rm_vfstab(name, device, config='/etc/vfstab'):
     '''
     .. versionadded:: 2016.3.2
+
     Remove the mount point from the vfstab
 
     CLI Example:
@@ -523,10 +711,14 @@ def set_fstab(
         config='/etc/fstab',
         test=False,
         match_on='auto',
+        not_change=False,
         **kwargs):
     '''
     Verify that this mount is represented in the fstab, change the mount
     to match the data passed, or add the mount if it is not present.
+
+    If the entry is found via `match_on` and `not_change` is True, the
+    current line will be preserved.
 
     CLI Example:
 
@@ -544,7 +736,7 @@ def set_fstab(
         'name': name,
         'device': device.replace('\\ ', '\\040'),
         'fstype': fstype,
-        'opts': opts,
+        'opts': opts.replace('\\ ', '\\040'),
         'dump': dump,
         'pass_num': pass_num,
     }
@@ -599,16 +791,17 @@ def set_fstab(
     try:
         with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
+                line = salt.utils.stringutils.to_unicode(line)
                 try:
                     if criteria.match(line):
                         # Note: If ret isn't None here,
                         # we've matched multiple lines
                         ret = 'present'
-                        if entry.match(line):
+                        if entry.match(line) or not_change:
                             lines.append(line)
                         else:
                             ret = 'change'
-                            lines.append(str(entry))
+                            lines.append(six.text_type(entry))
                     else:
                         lines.append(line)
 
@@ -617,19 +810,19 @@ def set_fstab(
 
     except (IOError, OSError) as exc:
         msg = 'Couldn\'t read from {0}: {1}'
-        raise CommandExecutionError(msg.format(config, str(exc)))
+        raise CommandExecutionError(msg.format(config, exc))
 
     # add line if not present or changed
     if ret is None:
-        lines.append(str(entry))
+        lines.append(six.text_type(entry))
         ret = 'new'
 
     if ret != 'present':  # ret in ['new', 'change']:
         if not salt.utils.args.test_mode(test=test, **kwargs):
             try:
-                with salt.utils.files.fopen(config, 'w+') as ofile:
+                with salt.utils.files.fopen(config, 'wb') as ofile:
                     # The line was changed, commit it!
-                    ofile.writelines(lines)
+                    ofile.writelines(salt.utils.data.encode(lines))
             except (IOError, OSError):
                 msg = 'File not writable {0}'
                 raise CommandExecutionError(msg.format(config))
@@ -648,11 +841,15 @@ def set_vfstab(
         config='/etc/vfstab',
         test=False,
         match_on='auto',
+        not_change=False,
         **kwargs):
     '''
     ..verionadded:: 2016.3.2
     Verify that this mount is represented in the fstab, change the mount
     to match the data passed, or add the mount if it is not present.
+
+    If the entry is found via `match_on` and `not_change` is True, the
+    current line will be preserved.
 
     CLI Example:
 
@@ -727,16 +924,17 @@ def set_vfstab(
     try:
         with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
+                line = salt.utils.stringutils.to_unicode(line)
                 try:
                     if criteria.match(line):
                         # Note: If ret isn't None here,
                         # we've matched multiple lines
                         ret = 'present'
-                        if entry.match(line):
+                        if entry.match(line) or not_change:
                             lines.append(line)
                         else:
                             ret = 'change'
-                            lines.append(str(entry))
+                            lines.append(six.text_type(entry))
                     else:
                         lines.append(line)
 
@@ -745,19 +943,19 @@ def set_vfstab(
 
     except (IOError, OSError) as exc:
         msg = 'Couldn\'t read from {0}: {1}'
-        raise CommandExecutionError(msg.format(config, str(exc)))
+        raise CommandExecutionError(msg.format(config, exc))
 
     # add line if not present or changed
     if ret is None:
-        lines.append(str(entry))
+        lines.append(six.text_type(entry))
         ret = 'new'
 
     if ret != 'present':  # ret in ['new', 'change']:
         if not salt.utils.args.test_mode(test=test, **kwargs):
             try:
-                with salt.utils.files.fopen(config, 'w+') as ofile:
+                with salt.utils.files.fopen(config, 'wb') as ofile:
                     # The line was changed, commit it!
-                    ofile.writelines(lines)
+                    ofile.writelines(salt.utils.data.encode(lines))
             except (IOError, OSError):
                 msg = 'File not writable {0}'
                 raise CommandExecutionError(msg.format(config))
@@ -783,6 +981,7 @@ def rm_automaster(name, device, config='/etc/auto_salt'):
     try:
         with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
+                line = salt.utils.stringutils.to_unicode(line)
                 if line.startswith('#'):
                     # Commented
                     lines.append(line)
@@ -811,14 +1010,14 @@ def rm_automaster(name, device, config='/etc/auto_salt'):
                 lines.append(line)
     except (IOError, OSError) as exc:
         msg = "Couldn't read from {0}: {1}"
-        raise CommandExecutionError(msg.format(config, str(exc)))
+        raise CommandExecutionError(msg.format(config, exc))
 
     try:
-        with salt.utils.files.fopen(config, 'w+') as ofile:
-            ofile.writelines(lines)
+        with salt.utils.files.fopen(config, 'wb') as ofile:
+            ofile.writelines(salt.utils.data.encode(lines))
     except (IOError, OSError) as exc:
         msg = "Couldn't write to {0}: {1}"
-        raise CommandExecutionError(msg.format(config, str(exc)))
+        raise CommandExecutionError(msg.format(config, exc))
 
     # Update automount
     __salt__['cmd.run']('automount -cv')
@@ -832,6 +1031,7 @@ def set_automaster(
         opts='',
         config='/etc/auto_salt',
         test=False,
+        not_change=False,
         **kwargs):
     '''
     Verify that this mount is represented in the auto_salt, change the mount
@@ -865,6 +1065,7 @@ def set_automaster(
     try:
         with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
+                line = salt.utils.stringutils.to_unicode(line)
                 if line.startswith('#'):
                     # Commented
                     lines.append(line)
@@ -879,9 +1080,11 @@ def set_automaster(
                     lines.append(line)
                     continue
                 if comps[0] == name or comps[2] == device_fmt:
+                    present = True
+                    if not_change:
+                        continue
                     # check to see if there are changes
                     # and fix them if there are any
-                    present = True
                     if comps[0] != name:
                         change = True
                         comps[0] = name
@@ -893,26 +1096,26 @@ def set_automaster(
                         comps[2] = device_fmt
                     if change:
                         log.debug(
-                            'auto_master entry for mount point {0} needs to be '
-                            'updated'.format(name)
-                       )
+                            'auto_master entry for mount point %s needs to be '
+                            'updated', name
+                        )
                         newline = (
                             '{0}\t{1}\t{2}\n'.format(
                                 name, type_opts, device_fmt)
-                       )
+                        )
                         lines.append(newline)
                 else:
                     lines.append(line)
     except (IOError, OSError) as exc:
         msg = 'Couldn\'t read from {0}: {1}'
-        raise CommandExecutionError(msg.format(config, str(exc)))
+        raise CommandExecutionError(msg.format(config, exc))
 
     if change:
         if not salt.utils.args.test_mode(test=test, **kwargs):
             try:
-                with salt.utils.files.fopen(config, 'w+') as ofile:
+                with salt.utils.files.fopen(config, 'wb') as ofile:
                     # The line was changed, commit it!
-                    ofile.writelines(lines)
+                    ofile.writelines(salt.utils.data.encode(lines))
             except (IOError, OSError):
                 msg = 'File not writable {0}'
                 raise CommandExecutionError(msg.format(config))
@@ -932,9 +1135,9 @@ def set_automaster(
                )
                 lines.append(newline)
                 try:
-                    with salt.utils.files.fopen(config, 'w+') as ofile:
+                    with salt.utils.files.fopen(config, 'wb') as ofile:
                         # The line was changed, commit it!
-                        ofile.writelines(lines)
+                        ofile.writelines(salt.utils.data.encode(lines))
                 except (IOError, OSError):
                     raise CommandExecutionError(
                         'File not writable {0}'.format(
@@ -959,6 +1162,7 @@ def automaster(config='/etc/auto_salt'):
         return ret
     with salt.utils.files.fopen(config) as ifile:
         for line in ifile:
+            line = salt.utils.stringutils.to_unicode(line)
             if line.startswith('#'):
                 # Commented
                 continue
@@ -1005,7 +1209,7 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util
         return False
 
     # Darwin doesn't expect defaults when mounting without other options
-    if 'defaults' in opts and __grains__['os'] in ['MacOS', 'Darwin']:
+    if 'defaults' in opts and __grains__['os'] in ['MacOS', 'Darwin', 'AIX']:
         opts = None
 
     if isinstance(opts, six.string_types):
@@ -1018,8 +1222,18 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util
     if opts is not None:
         lopts = ','.join(opts)
         args = '-o {0}'.format(lopts)
+
     if fstype:
-        args += ' -t {0}'.format(fstype)
+        # use of fstype on AIX differs from typical Linux use of -t
+        # functionality AIX uses -v vfsname, -t fstype mounts all with
+        # fstype in /etc/filesystems
+        if 'AIX' in __grains__['os']:
+            args += ' -v {0}'.format(fstype)
+        elif 'solaris' in __grains__['os'].lower():
+            args += ' -F {0}'.format(fstype)
+        else:
+            args += ' -t {0}'.format(fstype)
+
     cmd = 'mount {0} {1} {2} '.format(args, device, name)
     out = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
     if out['retcode']:
@@ -1045,6 +1259,10 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
         if fstype == 'smbfs':
             force_mount = True
 
+    if 'AIX' in __grains__['os']:
+        if opts == 'defaults':
+            opts = []
+
     if isinstance(opts, six.string_types):
         opts = opts.split(',')
     mnts = active()
@@ -1057,8 +1275,18 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
             umount(name, device, user=user)
         lopts = ','.join(opts)
         args = '-o {0}'.format(lopts)
+
         if fstype:
-            args += ' -t {0}'.format(fstype)
+            # use of fstype on AIX differs from typical Linux use of
+            # -t functionality AIX uses -v vfsname, -t fstype mounts
+            # all with fstype in /etc/filesystems
+            if 'AIX' in __grains__['os']:
+                args += ' -v {0}'.format(fstype)
+            elif 'solaris' in __grains__['os'].lower():
+                args += ' -F {0}'.format(fstype)
+            else:
+                args += ' -t {0}'.format(fstype)
+
         if __grains__['os'] not in ['OpenBSD', 'MacOS', 'Darwin'] or force_mount:
             cmd = 'mount {0} {1} {2} '.format(args, device, name)
         else:
@@ -1151,9 +1379,21 @@ def swaps():
                              'size': int(comps[3]),
                              'used': (int(comps[3]) - int(comps[4])),
                              'priority': '-'}
+    elif 'AIX' in __grains__['kernel']:
+        for line in __salt__['cmd.run_stdout']('swap -l').splitlines():
+            if line.startswith('device'):
+                continue
+            comps = line.split()
+
+            # AIX uses MB for units
+            ret[comps[0]] = {'type': 'device',
+                             'size': int(comps[3][:-2]) * 1024,
+                             'used': (int(comps[3][:-2]) - int(comps[4][:-2])) * 1024,
+                             'priority': '-'}
     elif __grains__['os'] != 'OpenBSD':
         with salt.utils.files.fopen('/proc/swaps') as fp_:
             for line in fp_:
+                line = salt.utils.stringutils.to_unicode(line)
                 if line.startswith('Filename'):
                     continue
                 comps = line.split()
@@ -1202,7 +1442,7 @@ def swapon(name, priority=None):
             return False
     else:
         cmd = 'swapon {0}'.format(name)
-        if priority:
+        if priority and 'AIX' not in __grains__['kernel']:
             cmd += ' -p {0}'.format(priority)
         __salt__['cmd.run'](cmd, python_shell=False)
 
@@ -1267,7 +1507,7 @@ def is_mounted(name):
 
 def read_mount_cache(name):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Provide information if the path is mounted
 
@@ -1291,7 +1531,7 @@ def write_mount_cache(real_name,
                       fstype,
                       mount_opts):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Provide information if the path is mounted
 
@@ -1331,7 +1571,7 @@ def write_mount_cache(real_name,
 
 def delete_mount_cache(real_name):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Provide information if the path is mounted
 
@@ -1351,3 +1591,282 @@ def delete_mount_cache(real_name):
                 if not cache_write:
                     raise CommandExecutionError('Unable to write mount cache.')
     return True
+
+
+def _filesystems(config='/etc/filesystems', leading_key=True):
+    '''
+    Return the contents of the filesystems in an OrderedDict
+
+    config
+        File containing filesystem infomation
+
+    leading_key
+        True    return dictionary keyed by 'name' and value as dictionary with other keys, values (name excluded)
+                OrderedDict({ '/dir' : OrderedDict({'dev': '/dev/hd8', .... }}))
+
+        False   return dictionary  keyed by 'name' and value as dictionary with all keys, values (name included)
+                OrderedDict({ '/dir' : OrderedDict({'name': '/dir', 'dev': '/dev/hd8', ... })})
+    '''
+    ret = OrderedDict()
+    lines = []
+    parsing_block = False
+    if not os.path.isfile(config) or 'AIX' not in __grains__['kernel']:
+        return ret
+
+    # read in block of filesystems, block starts with '/' till empty line
+    with salt.utils.files.fopen(config) as ifile:
+        for line in ifile:
+            line = salt.utils.stringutils.to_unicode(line)
+
+            # skip till first entry
+            if not line.startswith('/') and not parsing_block:
+                continue
+
+            if line.startswith('/'):
+                parsing_block = True
+                lines.append(line)
+            elif not line.split():
+                parsing_block = False
+                try:
+                    entry = _FileSystemsEntry.dict_from_lines(
+                        lines,
+                        _FileSystemsEntry.compatibility_keys)
+                    lines = []
+                    if 'opts' in entry:
+                        entry['opts'] = entry['opts'].split(',')
+                    while entry['name'] in ret:
+                        entry['name'] += '_'
+
+                    if leading_key:
+                        ret[entry.pop('name')] = entry
+                    else:
+                        ret[entry['name']] = entry
+
+                except _FileSystemsEntry.ParseError:
+                    pass
+            else:
+                lines.append(line)
+
+    return ret
+
+
+def filesystems(config='/etc/filesystems'):
+    '''
+    .. versionadded:: 2018.3.3
+
+    List the contents of the filesystems
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.filesystems
+    '''
+    ret = {}
+    if 'AIX' not in __grains__['kernel']:
+        return ret
+
+    ret_dict = _filesystems(config)
+    if ret_dict:
+        ret_key = next(iter(ret_dict.keys()))
+        ret = {ret_key: dict(ret_dict[ret_key])}
+
+    return ret
+
+
+def set_filesystems(
+        name,
+        device,
+        vfstype,
+        opts='-',
+        mount='true',
+        config='/etc/filesystems',
+        test=False,
+        match_on='auto',
+        not_change=False,
+        **kwargs):
+    '''
+    .. versionadded:: 2018.3.3
+
+    Verify that this mount is represented in the filesystems, change the mount
+    to match the data passed, or add the mount if it is not present on AIX
+
+    If the entry is found via `match_on` and `not_change` is True, the
+    current line will be preserved.
+
+        Provide information if the path is mounted
+
+    :param name:          The name of the mount point where the device is mounted.
+    :param device:        The device that is being mounted.
+    :param vfstype:       The file system that is used (AIX has two fstypes, fstype and vfstype - similar to Linux fstype)
+    :param opts:          Additional options used when mounting the device.
+    :param mount:         Mount if not mounted, default True.
+    :param config:        Configuration file, default /etc/filesystems.
+    :param match:         File systems type to match on, default auto
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.set_filesystems /mnt/foo /dev/sdz1 jfs2
+    '''
+    # Fix the opts type if it is a list
+    if isinstance(opts, list):
+        opts = ','.join(opts)
+
+    # preserve arguments for updating
+    entry_args = {
+        'name': name,
+        'dev': device.replace('\\ ', '\\040'),
+        'vfstype': vfstype,
+        'opts': opts,
+        'mount': mount,
+    }
+
+    view_lines = []
+    ret = None
+
+    if 'AIX' not in __grains__['kernel']:
+        return ret
+
+    # Transform match_on into list--items will be checked later
+    if isinstance(match_on, list):
+        pass
+    elif not isinstance(match_on, six.string_types):
+        raise CommandExecutionError('match_on must be a string or list of strings')
+    elif match_on == 'auto':
+        # Try to guess right criteria for auto....
+        # added IBM types from sys/vmount.h after btrfs
+        # NOTE: missing some special fstypes here
+        specialFSes = frozenset([
+            'none',
+            'tmpfs',
+            'sysfs',
+            'proc',
+            'fusectl',
+            'debugfs',
+            'securityfs',
+            'devtmpfs',
+            'cgroup',
+            'btrfs',
+            'cdrfs',
+            'procfs',
+            'jfs',
+            'jfs2',
+            'nfs',
+            'sfs',
+            'nfs3',
+            'cachefs',
+            'udfs',
+            'cifs',
+            'namefs',
+            'pmemfs',
+            'ahafs',
+            'nfs4',
+            'autofs',
+            'stnfs'])
+
+        if vfstype in specialFSes:
+            match_on = ['name']
+        else:
+            match_on = ['dev']
+    else:
+        match_on = [match_on]
+
+    # generate entry and criteria objects, handle invalid keys in match_on
+    entry_ip = _FileSystemsEntry.from_line(entry_args, kwargs)
+    try:
+        criteria = entry_ip.pick(match_on)
+
+    except KeyError:
+        filterFn = lambda key: key not in _FileSystemsEntry.compatibility_keys
+        invalid_keys = filter(filterFn, match_on)
+        raise CommandExecutionError('Unrecognized keys in match_on: "{0}"'.format(invalid_keys))
+
+    # parse file, use ret to cache status
+    if not os.path.isfile(config):
+        raise CommandExecutionError('Bad config file "{0}"'.format(config))
+
+    # read in block of filesystem, block starts with '/' till empty line
+    try:
+        fsys_filedict = _filesystems(config, False)
+        for fsys_view in six.viewitems(fsys_filedict):
+            if criteria.match(fsys_view):
+                ret = 'present'
+                if entry_ip.match(fsys_view) or not_change:
+                    view_lines.append(fsys_view)
+                else:
+                    ret = 'change'
+                    kv = entry_ip['name']
+                    view_lines.append((kv, entry_ip))
+            else:
+                view_lines.append(fsys_view)
+
+    except (IOError, OSError) as exc:
+        raise CommandExecutionError('Couldn\'t read from {0}: {1}'.format(config, exc))
+
+    # add line if not present or changed
+    if ret is None:
+        for dict_view in six.viewitems(entry_ip.dict_from_entry()):
+            view_lines.append(dict_view)
+        ret = 'new'
+
+    if ret != 'present':  # ret in ['new', 'change']:
+        try:
+            with salt.utils.files.fopen(config, 'wb') as ofile:
+                # The line was changed, commit it!
+                for fsys_view in view_lines:
+                    entry = fsys_view[1]
+                    mystrg = _FileSystemsEntry.dict_to_lines(entry)
+                    ofile.writelines(salt.utils.data.encode(mystrg))
+        except (IOError, OSError):
+            raise CommandExecutionError('File not writable {0}'.format(config))
+
+    return ret
+
+
+def rm_filesystems(name, device, config='/etc/filesystems'):
+    '''
+    .. versionadded:: 2018.3.3
+
+    Remove the mount point from the filesystems
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.rm_filesystems /mnt/foo /dev/sdg
+    '''
+    modified = False
+    view_lines = []
+
+    if 'AIX' not in __grains__['kernel']:
+        return modified
+
+    criteria = _FileSystemsEntry(name=name, dev=device)
+    try:
+        fsys_filedict = _filesystems(config, False)
+        for fsys_view in six.viewitems(fsys_filedict):
+            try:
+                if criteria.match(fsys_view):
+                    modified = True
+                else:
+                    view_lines.append(fsys_view)
+
+            except _FileSystemsEntry.ParseError:
+                view_lines.append(fsys_view)
+
+    except (IOError, OSError) as exc:
+        raise CommandExecutionError("Couldn't read from {0}: {1}".format(config, exc))
+
+    if modified:
+        try:
+            with salt.utils.files.fopen(config, 'wb') as ofile:
+                for fsys_view in view_lines:
+                    entry = fsys_view[1]
+                    mystrg = _FileSystemsEntry.dict_to_lines(entry)
+                    ofile.writelines(salt.utils.data.encode(mystrg))
+        except (IOError, OSError) as exc:
+            raise CommandExecutionError("Couldn't write to {0}: {1}".format(config, exc))
+
+    return modified

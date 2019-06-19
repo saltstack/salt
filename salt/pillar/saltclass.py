@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 '''
 SaltClass Pillar Module
+=======================
 
 .. code-block:: yaml
 
-  ext_pillar:
-    - saltclass:
-      - path: /srv/saltclass
+    ext_pillar:
+      - saltclass:
+        - path: /srv/saltclass
 
+For additional configuration instructions, see the :mod:`saltclass <salt.tops.saltclass>` module
 '''
 
 # import python libs
@@ -27,19 +29,20 @@ def __virtual__():
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
     '''
-    Node definitions path will be retrieved from args - or set to default -
-    then added to 'salt_data' dict that is passed to the 'get_pillars' function.
-    'salt_data' dict is a convenient way to pass all the required datas to the function
-    It contains:
-        - __opts__
-        - __salt__
-        - __grains__
-        - __pillar__
-        - minion_id
-        - path
-
-    If successfull the function will return a pillar dict for minion_id
+    Compile pillar data
     '''
+    # Node definitions path will be retrieved from args (or set to default),
+    # then added to 'salt_data' dict that is passed to the 'get_pillars'
+    # function. The dictionary contains:
+    #     - __opts__
+    #     - __salt__
+    #     - __grains__
+    #     - __pillar__
+    #     - minion_id
+    #     - path
+    #
+    # If successful, the function will return a pillar dict for minion_id.
+
     # If path has not been set, make a default
     for i in args:
         if 'path' not in i:

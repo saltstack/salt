@@ -39,6 +39,7 @@ import salt.client
 import salt.loader
 import salt.pillar
 import salt.utils.args
+import salt.utils.minions
 from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -46,7 +47,7 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def cmd(fun, *args, **kwargs):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added ``with_pillar`` argument
 
     Execute ``fun`` with the given ``args`` and ``kwargs``.  Parameter ``fun``
@@ -85,7 +86,13 @@ def cmd(fun, *args, **kwargs):
     with_pillar = kwargs.pop('with_pillar', False)
 
     opts = copy.deepcopy(__opts__)
-    opts['grains'] = salt.loader.grains(opts)
+    # try to only load grains if we need to, it may already exist from other contexts (e.g., pillar)
+    if 'grains' not in opts:
+        _, grains, _ = salt.utils.minions.get_minion_data(__opts__['id'], __opts__)
+        if grains:
+            opts['grains'] = grains
+        else:
+            opts['grains'] = salt.loader.grains(opts)
 
     if with_pillar:
         opts['pillar'] = salt.pillar.get_pillar(

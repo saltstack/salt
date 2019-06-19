@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`jmoney <justin@saltstack.com>`
+    :codeauthor: jmoney <justin@saltstack.com>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.modules.linux_sysctl as linux_sysctl
-import salt.modules.systemd as systemd
+import salt.modules.systemd_service as systemd
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
@@ -101,6 +101,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests successful add of config file when previously not one
         '''
+        config = '/etc/sysctl.conf'
         with patch('os.path.isfile', MagicMock(return_value=False)), \
                 patch('os.path.exists', MagicMock(return_value=True)):
             asn_cmd = {'pid': 1337, 'retcode': 0, 'stderr': '',
@@ -110,18 +111,20 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
             sys_cmd = 'systemd 208\n+PAM +LIBWRAP'
             mock_sys_cmd = MagicMock(return_value=sys_cmd)
 
-            with patch('salt.utils.files.fopen', mock_open()) as m_open:
-                with patch.dict(linux_sysctl.__context__, {'salt.utils.systemd.version': 232}):
-                    with patch.dict(linux_sysctl.__salt__,
-                                    {'cmd.run_stdout': mock_sys_cmd,
-                                     'cmd.run_all': mock_asn_cmd}):
-                        with patch.dict(systemd.__context__,
-                                        {'salt.utils.systemd.booted': True,
-                                         'salt.utils.systemd.version': 232}):
-                            linux_sysctl.persist('net.ipv4.ip_forward', 1)
-                            helper_open = m_open()
-                            helper_open.write.assert_called_once_with(
-                                '#\n# Kernel sysctl configuration\n#\n')
+            with patch('salt.utils.files.fopen', mock_open()) as m_open, \
+                    patch.dict(linux_sysctl.__context__,
+                               {'salt.utils.systemd.version': 232}), \
+                    patch.dict(linux_sysctl.__salt__,
+                               {'cmd.run_stdout': mock_sys_cmd,
+                                'cmd.run_all': mock_asn_cmd}), \
+                    patch.dict(systemd.__context__,
+                               {'salt.utils.systemd.booted': True,
+                                'salt.utils.systemd.version': 232}):
+                linux_sysctl.persist('net.ipv4.ip_forward', 1, config=config)
+                writes = m_open.write_calls()
+                assert writes == [
+                    '#\n# Kernel sysctl configuration\n#\n'
+                ], writes
 
     def test_persist_read_conf_success(self):
         '''

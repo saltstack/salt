@@ -7,8 +7,7 @@ Salt-cp can be used to distribute configuration files
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import errno
 import logging
@@ -272,7 +271,7 @@ class SaltCP(object):
             log.debug(
                 'Creating empty dir %s on %starget \'%s\'',
                 dirname,
-                '{0} '.format(selected_target_option)
+                '{0} '.format(selected_target_option)  # pylint: disable=str-format-in-logging
                     if selected_target_option
                     else '',
                 tgt,

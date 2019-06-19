@@ -7,7 +7,7 @@ https://www.consul.io
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import logging
 
@@ -16,11 +16,8 @@ import salt.utils.http
 import salt.utils.json
 
 # Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
-import salt.ext.six
-import salt.ext.six.moves.http_client
-# pylint: enable=import-error,no-name-in-module
+from salt.ext import six
+from salt.ext.six.moves import http_client, urllib
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +61,7 @@ def _query(function,
     :param api_version  The Consul api version
     :param function:    The Consul api function to perform.
     :param method:      The HTTP method, e.g. GET or POST.
-    :param data:        The data to be sent for POST method.
+    :param data:        The data to be sent for POST method. This param is ignored for GET requests.
     :return:            The json response from the API call or False.
     '''
 
@@ -78,12 +75,15 @@ def _query(function,
         token = _get_token()
 
     headers = {"X-Consul-Token": token, "Content-Type": "application/json"}
-    base_url = _urljoin(consul_url, '{0}/'.format(api_version))
-    url = _urljoin(base_url, function, False)
+    base_url = urllib.parse.urljoin(consul_url, '{0}/'.format(api_version))
+    url = urllib.parse.urljoin(base_url, function, False)
 
-    if data is None:
-        data = {}
-    data = salt.utils.json.dumps(data)
+    if method == 'GET':
+        data = None
+    else:
+        if data is None:
+            data = {}
+        data = salt.utils.json.dumps(data)
 
     result = salt.utils.http.query(
         url,
@@ -96,12 +96,12 @@ def _query(function,
         opts=__opts__,
     )
 
-    if result.get('status', None) == salt.ext.six.moves.http_client.OK:
+    if result.get('status', None) == http_client.OK:
         ret['data'] = result.get('dict', result)
         ret['res'] = True
-    elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT:
+    elif result.get('status', None) == http_client.NO_CONTENT:
         ret['res'] = False
-    elif result.get('status', None) == salt.ext.six.moves.http_client.NOT_FOUND:
+    elif result.get('status', None) == http_client.NOT_FOUND:
         ret['data'] = 'Key not found.'
         ret['res'] = False
     else:
@@ -126,7 +126,6 @@ def list_(consul_url=None, token=None, key=None, **kwargs):
     .. code-block:: bash
 
         salt '*' consul.list
-
         salt '*' consul.list key='web'
 
     '''
@@ -178,17 +177,15 @@ def get(consul_url=None, key=None, token=None, recurse=False, decode=False, raw=
     .. code-block:: bash
 
         salt '*' consul.get key='web/key1'
-
-        salt '*' consul.list key='web' recurse='True
-
-        salt '*' consul.list key='web' recurse='True' decode='True'
+        salt '*' consul.get key='web' recurse=True
+        salt '*' consul.get key='web' recurse=True decode=True
 
     By default values stored in Consul are base64 encoded, passing the
     decode option will show them as the decoded values.
 
     .. code-block:: bash
 
-        salt '*' consul.list key='web' recurse='True' decode='True' raw='True'
+        salt '*' consul.get key='web' recurse=True decode=True raw=True
 
     By default Consult will return other information about the key, the raw
     option will return only the raw value.
@@ -220,10 +217,10 @@ def get(consul_url=None, key=None, token=None, recurse=False, decode=False, raw=
     if ret['res']:
         if decode:
             for item in ret['data']:
-                if item['Value'] != None:
-                    item['Value'] = base64.b64decode(item['Value'])
-                else:
+                if item['Value'] is None:
                     item['Value'] = ""
+                else:
+                    item['Value'] = base64.b64decode(item['Value'])
     return ret
 
 
@@ -251,11 +248,9 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
 
         salt '*' consul.put key='web/key1' value="Hello there"
 
-        salt '*' consul.put key='web/key1' value="Hello there"
-                                acquire='d5d371f4-c380-5280-12fd-8810be175592'
+        salt '*' consul.put key='web/key1' value="Hello there" acquire='d5d371f4-c380-5280-12fd-8810be175592'
 
-        salt '*' consul.put key='web/key1' value="Hello there"
-                                release='d5d371f4-c380-5280-12fd-8810be175592'
+        salt '*' consul.put key='web/key1' value="Hello there" release='d5d371f4-c380-5280-12fd-8810be175592'
 
     '''
     ret = {}
@@ -366,7 +361,6 @@ def delete(consul_url=None, token=None, key=None, **kwargs):
     .. code-block:: bash
 
         salt '*' consul.delete key='web'
-
         salt '*' consul.delete key='web' recurse='True'
 
     '''
@@ -714,8 +708,7 @@ def agent_check_register(consul_url=None, token=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.agent_check_register name='Memory Utilization'
-                script='/usr/local/bin/check_mem.py' interval='15s'
+        salt '*' consul.agent_check_register name='Memory Utilization' script='/usr/local/bin/check_mem.py' interval='15s'
 
     '''
     ret = {}
@@ -835,8 +828,7 @@ def agent_check_pass(consul_url=None, token=None, checkid=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.agent_check_pass checkid='redis_check1'
-                note='Forcing check into passing state.'
+        salt '*' consul.agent_check_pass checkid='redis_check1' note='Forcing check into passing state.'
 
     '''
     ret = {}
@@ -885,8 +877,7 @@ def agent_check_warn(consul_url=None, token=None, checkid=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.agent_check_warn checkid='redis_check1'
-                note='Forcing check into warning state.'
+        salt '*' consul.agent_check_warn checkid='redis_check1' note='Forcing check into warning state.'
 
     '''
     ret = {}
@@ -935,8 +926,7 @@ def agent_check_fail(consul_url=None, token=None, checkid=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.agent_check_fail checkid='redis_check1'
-                note='Forcing check into critical state.'
+        salt '*' consul.agent_check_fail checkid='redis_check1' note='Forcing check into critical state.'
 
     '''
     ret = {}
@@ -999,9 +989,7 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.agent_service_register name='redis'
-            tags='["master", "v1"]' address="127.0.0.1" port="8080"
-            check_script="/usr/local/bin/check_redis.py" interval="10s"
+        salt '*' consul.agent_service_register name='redis' tags='["master", "v1"]' address="127.0.0.1" port="8080" check_script="/usr/local/bin/check_redis.py" interval="10s"
 
     '''
     ret = {}
@@ -1015,7 +1003,7 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
             return ret
 
     lc_kwargs = dict()
-    for k, v in salt.ext.six.iteritems(kwargs):
+    for k, v in six.iteritems(kwargs):
         lc_kwargs[k.lower()] = v
 
     if 'name' in lc_kwargs:
@@ -1043,7 +1031,7 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
 
     if 'check' in lc_kwargs:
         dd = dict()
-        for k, v in salt.ext.six.iteritems(lc_kwargs['check']):
+        for k, v in six.iteritems(lc_kwargs['check']):
             dd[k.lower()] = v
         interval_required = False
         check_dd = dict()
@@ -1068,7 +1056,7 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
             if 'Interval' in check_dd:
                 del check_dd['Interval']  # not required, so ignore it
 
-        if len(check_dd) > 0:
+        if check_dd > 0:
             data['Check'] = check_dd  # if empty, ignore it
 
     function = 'agent/service/register'
@@ -1144,8 +1132,7 @@ def agent_service_maintenance(consul_url=None, token=None, serviceid=None, **kwa
 
     .. code-block:: bash
 
-        salt '*' consul.agent_service_deregister serviceid='redis'
-                enable='True' reason='Down for upgrade'
+        salt '*' consul.agent_service_deregister serviceid='redis' enable='True' reason='Down for upgrade'
 
     '''
     ret = {}
@@ -1216,8 +1203,7 @@ def session_create(consul_url=None, token=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.session_create node='node1' name='my-session'
-                behavior='delete' ttl='3600s'
+        salt '*' consul.session_create node='node1' name='my-session' behavior='delete' ttl='3600s'
 
     '''
     ret = {}
@@ -1254,7 +1240,7 @@ def session_create(consul_url=None, token=None, **kwargs):
 
     if 'ttl' in kwargs:
         _ttl = kwargs['ttl']
-        if str(_ttl).endswith('s'):
+        if six.text_type(_ttl).endswith('s'):
             _ttl = _ttl[:-1]
 
         if int(_ttl) < 0 or int(_ttl) > 3600:
@@ -1444,9 +1430,7 @@ def catalog_register(consul_url=None, token=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.catalog_register node='node1' address='192.168.1.1'
-            service='redis' service_address='127.0.0.1' service_port='8080'
-            service_id='redis_server1'
+        salt '*' consul.catalog_register node='node1' address='192.168.1.1' service='redis' service_address='127.0.0.1' service_port='8080' service_id='redis_server1'
 
     '''
     ret = {}
@@ -1596,8 +1580,7 @@ def catalog_deregister(consul_url=None, token=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.catalog_register node='node1'
-            serviceid='redis_server1' checkid='redis_check1'
+        salt '*' consul.catalog_register node='node1' serviceid='redis_server1' checkid='redis_check1'
 
     '''
     ret = {}
@@ -2284,7 +2267,7 @@ def acl_info(consul_url=None, **kwargs):
     function = 'acl/info/{0}'.format(kwargs['id'])
     ret = _query(consul_url=consul_url,
                  data=data,
-                 method='PUT',
+                 method='GET',
                  function=function)
     return ret
 

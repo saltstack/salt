@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import os
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -11,6 +12,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 # Import salt libs
 import salt.modules.vagrant as vagrant
 import salt.exceptions
+import salt.utils.platform
 
 TEMP_DATABASE_FILE = '/tmp/salt-tests-tmpdir/test_vagrant.sqlite'
 
@@ -43,11 +45,14 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                 vagrant.get_vm_info('thisNameDoesNotExist')
 
     def test_vagrant_init_positional(self):
+        path_nowhere = os.path.join(os.sep, 'tmp', 'nowhere')
+        if salt.utils.platform.is_windows():
+            path_nowhere = 'c:{0}'.format(path_nowhere)
         mock_sdb = MagicMock(return_value=None)
         with patch.dict(vagrant.__utils__, {'sdb.sdb_set': mock_sdb}):
             resp = vagrant.init(
                 'test1',
-                '/tmp/nowhere',
+                path_nowhere,
                 'onetest',
                 'nobody',
                 False,
@@ -56,14 +61,14 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                 )
             self.assertTrue(resp.startswith('Name test1 defined'))
             expected = dict(name='test1',
-                            cwd='/tmp/nowhere',
+                            cwd=path_nowhere,
                             machine='onetest',
                             runas='nobody',
                             vagrant_provider='french',
                             different='very'
                             )
             mock_sdb.assert_called_with(
-                'sdb://vagrant_sdb_data/onetest?/tmp/nowhere',
+                'sdb://vagrant_sdb_data/onetest?{0}'.format(path_nowhere),
                 'test1',
                 self.LOCAL_OPTS)
             mock_sdb.assert_any_call(
@@ -126,16 +131,19 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                     vagrant.get_ssh_config('test3')  # has not been started
 
     def test_vagrant_destroy(self):
+        path_mydir = os.path.join(os.sep, 'my', 'dir')
+        if salt.utils.platform.is_windows():
+            path_mydir = 'c:{0}'.format(path_mydir)
         mock_cmd = MagicMock(return_value={'retcode': 0})
         with patch.dict(vagrant.__salt__, {'cmd.run_all': mock_cmd}):
             mock_sdb = MagicMock(return_value=None)
             with patch.dict(vagrant.__utils__, {'sdb.sdb_delete': mock_sdb}):
                 mock_sdb_get = MagicMock(return_value={
-                    'machine': 'macfour', 'cwd': '/my/dir'})
+                    'machine': 'macfour', 'cwd': path_mydir})
                 with patch.dict(vagrant.__utils__, {'sdb.sdb_get': mock_sdb_get}):
                     self.assertTrue(vagrant.destroy('test4'))
                     mock_sdb.assert_any_call(
-                        'sdb://vagrant_sdb_data/macfour?/my/dir',
+                        'sdb://vagrant_sdb_data/macfour?{0}'.format(path_mydir),
                         self.LOCAL_OPTS)
                     mock_sdb.assert_any_call(
                         'sdb://vagrant_sdb_data/test4',
@@ -143,7 +151,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                     cmd = 'vagrant destroy -f macfour'
                     mock_cmd.assert_called_with(cmd,
                                                 runas=None,
-                                                cwd='/my/dir',
+                                                cwd=path_mydir,
                                                 output_loglevel='info')
 
     def test_vagrant_start(self):

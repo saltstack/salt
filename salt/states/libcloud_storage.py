@@ -5,14 +5,14 @@ Apache Libcloud Storage State
 
 Manage cloud storage using libcloud
 
-    :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
+:codeauthor: ``Anthony Shaw <anthonyshaw@apache.org>``
 
 Apache Libcloud Storage (object/blob) management for a full list
 of supported clouds, see http://libcloud.readthedocs.io/en/latest/storage/supported_providers.html
 
 Clouds include Amazon S3, Google Storage, Aliyun, Azure Blobs, Ceph, OpenStack swift
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :configuration:
     This module uses a configuration profile for one or multiple Storage providers
@@ -65,7 +65,7 @@ This example will download the file from the remote cloud and keep it locally
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import salt libs
@@ -101,7 +101,7 @@ def container_present(name, profile):
     '''
     containers = __salt__['libcloud_storage.list_containers'](profile)
     match = [z for z in containers if z['name'] == name]
-    if len(match) > 0:
+    if match:
         return state_result(True, "Container already exists", name, {})
     else:
         result = __salt__['libcloud_storage.create_container'](name, profile)
@@ -120,7 +120,7 @@ def container_absent(name, profile):
     '''
     containers = __salt__['libcloud_storage.list_containers'](profile)
     match = [z for z in containers if z['name'] == name]
-    if len(match) == 0:
+    if not match:
         return state_result(True, "Container already absent", name, {})
     else:
         result = __salt__['libcloud_storage.delete_container'](name, profile)

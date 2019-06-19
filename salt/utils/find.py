@@ -84,7 +84,7 @@ the following:
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import re
@@ -160,7 +160,7 @@ def _parse_interval(value):
         m = minute
         s = second
     '''
-    match = _INTERVAL_REGEX.match(str(value))
+    match = _INTERVAL_REGEX.match(six.text_type(value))
     if match is None:
         raise ValueError('invalid time interval: \'{0}\''.format(value))
 
@@ -188,7 +188,7 @@ def _parse_size(value):
     else:
         style = '='
 
-    if len(scalar) > 0:
+    if scalar:
         multiplier = {'b': 2 ** 0,
                       'k': 2 ** 10,
                       'm': 2 ** 20,
@@ -473,7 +473,7 @@ class PrintOption(Option):
             self.fmt.append(arg)
             if arg not in ['name', 'path']:
                 self.need_stat = True
-        if len(self.fmt) == 0:
+        if not self.fmt:
             self.fmt.append('path')
 
     def requires(self):
@@ -538,7 +538,7 @@ class DeleteOption(TypeOption):
     def __init__(self, key, value):
         if 'a' in value:
             value = 'bcdpfls'
-        super(self.__class__, self).__init__(key, value)
+        super(DeleteOption, self).__init__(key, value)
 
     def execute(self, fullpath, fstat, test=False):
         if test:
@@ -571,16 +571,16 @@ class ExecOption(Option):
             (out, err) = p.communicate()
             if err:
                 log.error(
-                    'Error running command: {0}\n\n{1}'.format(
+                    'Error running command: %s\n\n%s',
                     command,
-                    salt.utils.stringutils.to_str(err)))
+                    salt.utils.stringutils.to_str(err))
             return "{0}:\n{1}\n".format(command, salt.utils.stringutils.to_str(out))
 
         except Exception as e:
             log.error(
-                'Exception while executing command "{0}":\n\n{1}'.format(
-                    command,
-                    e))
+                'Exception while executing command "%s":\n\n%s',
+                command,
+                e)
             return '{0}: Failed'.format(fullpath)
 
 
@@ -606,7 +606,7 @@ class Finder(object):
             if key.startswith('_'):
                 # this is a passthrough object, continue
                 continue
-            if value is None or len(str(value)) == 0:
+            if not value:
                 raise ValueError('missing value for "{0}" option'.format(key))
             try:
                 obj = globals()[key.title() + "Option"](key, value)
@@ -622,7 +622,7 @@ class Finder(object):
                     criteria[_REQUIRES_PATH].append(obj)
             if hasattr(obj, 'execute'):
                 self.actions.append(obj)
-        if len(self.actions) == 0:
+        if not self.actions:
             self.actions.append(PrintOption('print', ''))
         # order criteria so that least expensive checks are done first
         self.criteria = criteria[_REQUIRES_PATH] + \
@@ -722,6 +722,7 @@ def _main():
 
     for result in finder.find(path):
         print(result)
+
 
 if __name__ == '__main__':
     _main()

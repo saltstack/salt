@@ -10,6 +10,7 @@ id: minion
 open_mode: True
 log_file: minion.log
 log_level_logfile: debug
+log_fmt_console: '%(asctime)s,%(msecs)03d [%(levelname)-8s] %(message)s'
 pidfile: minion.pid
 
 # Give the minion extra attempts to find the master
@@ -106,3 +107,8 @@ cmd_blacklist_glob:
 
 autosign_grains:
   - test_grain
+
+# disable discovery for test suite saltstack/salt-jenkins#683
+discovery: false
+sdbvault:
+  driver: vault

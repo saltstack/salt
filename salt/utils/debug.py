@@ -2,7 +2,7 @@
 '''
 Print a stacktrace when sent a SIGUSR1 for debugging
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -15,6 +15,7 @@ import inspect
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.stringutils
 
 
 def _makepretty(printout, stack):
@@ -98,7 +99,7 @@ def inspect_stack():
     return {'co_name': inspect.stack()[1][3]}
 
 
-def caller_name(skip=2):
+def caller_name(skip=2, include_lineno=False):
     '''
     Get a name of a caller in the format module.class.method
 
@@ -116,6 +117,11 @@ def caller_name(skip=2):
     parentframe = stack[start][0]
 
     name = []
+    if include_lineno is True:
+        try:
+            lineno = inspect.getframeinfo(parentframe).lineno
+        except:  # pylint: disable=bare-except
+            lineno = None
     module = inspect.getmodule(parentframe)
     # `modname` can be None when frame is executed directly in console
     # TODO(techtonik): consider using __main__
@@ -131,4 +137,7 @@ def caller_name(skip=2):
     if codename != '<module>':  # top level usually
         name.append(codename)   # function or a method
     del parentframe
-    return '.'.join(name)
+    fullname = '.'.join(name)
+    if include_lineno and lineno:
+        fullname += ':{}'.format(lineno)
+    return fullname

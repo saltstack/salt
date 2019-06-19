@@ -9,7 +9,7 @@ Management of Solaris Zones
 
 .. versionadded:: 2017.7.0
 
-Bellow are some examples of how to use this state.
+Below are some examples of how to use this state.
 Lets start with creating a zone and installing it.
 
 .. code-block:: yaml
@@ -47,7 +47,7 @@ Lets start with creating a zone and installing it.
 
 A zone without network access is not very useful. We could update
 the zone.present state in the example above to add a network interface
-or we could use a seperate state for this.
+or we could use a separate state for this.
 
 .. code-block:: yaml
 
@@ -109,7 +109,7 @@ Or we can remove the limit altogether!
         - property: cpu-shares
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -127,7 +127,6 @@ log = logging.getLogger(__name__)
 
 __func_alias__ = {
     'import_': 'import',
-    'export_': 'export',
 }
 
 # Define the state's virtual name
@@ -266,16 +265,17 @@ def resource_present(name, resource_type, resource_selector_property, resource_s
         unique resource identifier
     resource_selector_value : string
         value for resource selection
-    **kwargs : string|int|...
+    kwargs : string|int|...
         resource properties
 
     .. warning::
-        Both resource_selector_property and resource_selector_value must be provided, some properties
-        like ```name``` are already reserved by salt in there states.
+        Both resource_selector_property and resource_selector_value must be
+        provided, some properties like ``name`` are already reserved by salt in
+        states.
 
     .. note::
-        You can set both resource_selector_property and resource_selector_value to None for
-        resources that do not require them.
+        You can set both resource_selector_property and resource_selector_value
+        to None for resources that do not require them.
 
     '''
     ret = {'name': name,
@@ -320,11 +320,11 @@ def resource_present(name, resource_type, resource_selector_property, resource_s
 
                     ## check if update reauired
                     for key in kwargs:
-                        log.debug('zone.resource_preent - key={0} value={1} current_value={2}'.format(
+                        log.debug('zone.resource_preent - key=%s value=%s current_value=%s',
                             key,
                             resource[key] if key in resource else None,
                             _parse_value(kwargs[key]),
-                        ))
+                        )
                         # note: something odd with ncpus property, we fix it here for now
                         if key == 'ncpus' and key in kwargs:
                             kwargs[key] = '{0:.2f}'.format(float(kwargs[key]))
@@ -622,7 +622,7 @@ def halted(name, graceful=True):
     return ret
 
 
-def export_(name, path, replace=False):
+def export(name, path, replace=False):
     '''
     Export a zones configuration
 
@@ -759,6 +759,11 @@ def import_(name, path, mode='import', nodataset=False, brand_opts=None):
         ``install``: will import and then try to install the zone
         ``attach``: will import and then try to attach of the zone
 
+    .. code-block:: yaml
+
+        omipkg1:
+          zone.import:
+            - path: /foo/bar/baz
     '''
     ret = {'name': name,
            'changes': {},
@@ -836,7 +841,7 @@ def import_(name, path, mode='import', nodataset=False, brand_opts=None):
 
 def present(name, brand, zonepath, properties=None, resources=None):
     '''
-    Ensure a zone with certain properties and resouces
+    Ensure a zone with certain properties and resources
 
     name : string
         name of the zone
@@ -914,7 +919,7 @@ def present(name, brand, zonepath, properties=None, resources=None):
         if isinstance(properties, list):
             for prop in properties:
                 if not isinstance(prop, OrderedDict) or len(prop) != 1:
-                    log.warning('zone.present - failed to parse property: {0}'.format(prop))
+                    log.warning('zone.present - failed to parse property: %s', prop)
                     continue
                 for key, value in prop.items():
                     res = None
@@ -925,14 +930,14 @@ def present(name, brand, zonepath, properties=None, resources=None):
                     if res:
                         ret['result'] = ret['result'] if res['result'] else False
                         ret['comment'].append(res['comment'])
-                        if len(res['changes']) > 0:
+                        if res['changes']:
                             if 'property' not in ret['changes']:
                                 ret['changes']['property'] = {}
                             ret['changes']['property'] = merge_dict(ret['changes']['property'], res['changes'])
         if isinstance(resources, list):
             for resource in resources:
                 if not isinstance(prop, OrderedDict) or len(prop) != 1:
-                    log.warning('zone.present - failed to parse resource: {0}'.format(resource))
+                    log.warning('zone.present - failed to parse resource: %s', resource)
                     continue
                 for key, value in resource.items():
                     zonecfg = __salt__['zonecfg.info'](name, show_all=True)
@@ -972,7 +977,7 @@ def present(name, brand, zonepath, properties=None, resources=None):
                     if res:
                         ret['result'] = ret['result'] if res['result'] else False
                         ret['comment'].append(res['comment'])
-                        if len(res['changes']) > 0:
+                        if res['changes']:
                             if 'resource' not in ret['changes']:
                                 ret['changes']['resource'] = {}
                             ret['changes']['resource'] = merge_dict(ret['changes']['resource'], res['changes'])

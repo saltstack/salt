@@ -10,7 +10,7 @@ States to manage git repositories and git configuration
     This state module now requires git 1.6.5 (released 10 October 2009) or
     newer.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -110,28 +110,32 @@ def _get_branch_opts(branch, local_branch, all_local_branches,
     return ret
 
 
-def _get_local_rev_and_branch(target, user, password):
+def _get_local_rev_and_branch(target, user, password, output_encoding=None):
     '''
     Return the local revision for before/after comparisons
     '''
-    log.info('Checking local revision for {0}'.format(target))
+    log.info('Checking local revision for %s', target)
     try:
-        local_rev = __salt__['git.revision'](target,
-                                             user=user,
-                                             password=password,
-                                             ignore_retcode=True)
+        local_rev = __salt__['git.revision'](
+            target,
+            user=user,
+            password=password,
+            ignore_retcode=True,
+            output_encoding=output_encoding)
     except CommandExecutionError:
-        log.info('No local revision for {0}'.format(target))
+        log.info('No local revision for %s', target)
         local_rev = None
 
-    log.info('Checking local branch for {0}'.format(target))
+    log.info('Checking local branch for %s', target)
     try:
-        local_branch = __salt__['git.current_branch'](target,
-                                                      user=user,
-                                                      password=password,
-                                                      ignore_retcode=True)
+        local_branch = __salt__['git.current_branch'](
+            target,
+            user=user,
+            password=password,
+            ignore_retcode=True,
+            output_encoding=output_encoding)
     except CommandExecutionError:
-        log.info('No local branch for {0}'.format(target))
+        log.info('No local branch for %s', target)
         local_branch = None
 
     return local_rev, local_branch
@@ -148,13 +152,20 @@ def _strip_exc(exc):
 def _uptodate(ret, target, comments=None, local_changes=False):
     ret['comment'] = 'Repository {0} is up-to-date'.format(target)
     if local_changes:
-        ret['comment'] += ', but with local changes. Set \'force_reset\' to ' \
-                          'True to purge local changes.'
+        ret['comment'] += (
+            ', but with uncommitted changes. Set \'force_reset\' to True to '
+            'purge uncommitted changes.'
+        )
     if comments:
         # Shouldn't be making any changes if the repo was up to date, but
         # report on them so we are alerted to potential problems with our
         # logic.
-        ret['comment'] += '\n\nChanges made: ' + comments
+        ret['comment'] += (
+            '\n\nChanges {0}made: {1}'.format(
+                'that would be ' if __opts__['test'] else '',
+                _format_comments(comments)
+            )
+        )
     return ret
 
 
@@ -167,9 +178,24 @@ def _neutral_test(ret, comment):
 def _fail(ret, msg, comments=None):
     ret['result'] = False
     if comments:
-        msg += '\n\nChanges already made: '
-        msg += _format_comments(comments)
+        msg += '\n\nChanges already made: ' + _format_comments(comments)
     ret['comment'] = msg
+    return ret
+
+
+def _already_cloned(ret, target, branch=None, comments=None):
+    ret['result'] = True
+    ret['comment'] = 'Repository already exists at {0}{1}'.format(
+        target,
+        ' and is checked out to branch \'{0}\''.format(branch) if branch else ''
+    )
+    if comments:
+        ret['comment'] += (
+            '\n\nChanges {0}made: {1}'.format(
+                'that would be ' if __opts__['test'] else '',
+                _format_comments(comments)
+            )
+        )
     return ret
 
 
@@ -219,7 +245,7 @@ def _not_fast_forward(ret, rev, pre, post, branch, local_branch,
     return _fail(
         ret,
         'Repository would be updated {0}{1}, but {2}. Set \'force_reset\' to '
-        'True to force this update{3}.{4}'.format(
+        'True{3} to force this update{4}.{5}'.format(
             'from {0} to {1}'.format(pre, post)
                 if local_changes and pre != post
                 else 'to {0}'.format(post),
@@ -229,6 +255,7 @@ def _not_fast_forward(ret, rev, pre, post, branch, local_branch,
             'this is not a fast-forward merge'
                 if not local_changes
                 else 'there are uncommitted changes',
+            ' (or \'remote-changes\')' if local_changes else '',
             ' and discard these changes' if local_changes else '',
             branch_msg,
         ),
@@ -252,14 +279,16 @@ def latest(name,
            mirror=False,
            remote='origin',
            fetch_tags=True,
+           sync_tags=True,
            depth=None,
            identity=None,
            https_user=None,
            https_pass=None,
-           onlyif=False,
-           unless=False,
+           onlyif=None,
+           unless=None,
            refspec_branch='*',
            refspec_tag='*',
+           output_encoding=None,
            **kwargs):
     '''
     Make sure the repository is cloned to the given directory and is
@@ -416,6 +445,11 @@ def latest(name,
         argument to ``True`` to force a hard-reset to the remote revision in
         these cases.
 
+        .. versionchanged:: 2019.2.0
+            This option can now be set to ``remote-changes``, which will
+            instruct Salt not to discard local changes if the repo is
+            up-to-date with the remote repository.
+
     submodules : False
         Update submodules on clone or branch change
 
@@ -443,11 +477,21 @@ def latest(name,
         If ``True``, then when a fetch is performed all tags will be fetched,
         even those which are not reachable by any branch on the remote.
 
+    sync_tags : True
+        If ``True``, then Salt will delete tags which exist in the local clone
+        but are not found on the remote repository.
+
+        .. versionadded:: 2018.3.4
+
     depth
         Defines depth in history when git a clone is needed in order to ensure
         latest. E.g. ``depth: 1`` is useful when deploying from a repository
-        with a long history. Use rev to specify branch. This is not compatible
-        with tags or revision IDs.
+        with a long history. Use rev to specify branch or tag. This is not
+        compatible with revision IDs.
+
+        .. versionchanged:: 2019.2.0
+            This option now supports tags as well as branches, on Git 1.8.0 and
+            newer.
 
     identity
         Path to a private key to use for ssh URLs. This can be either a single
@@ -521,6 +565,18 @@ def latest(name,
 
         .. versionadded:: 2017.7.0
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-fetch(1)`: http://git-scm.com/docs/git-fetch
 
     .. note::
@@ -593,38 +649,43 @@ def latest(name,
             '\'{0}\' is not a valid value for the \'rev\' argument'.format(rev)
         )
 
+    if force_reset not in (True, False, 'remote-changes'):
+        return _fail(
+            ret,
+            '\'force_reset\' must be one of True, False, or \'remote-changes\''
+        )
+
     # Ensure that certain arguments are strings to ensure that comparisons work
     if not isinstance(rev, six.string_types):
-        rev = str(rev)
+        rev = six.text_type(rev)
     if target is not None:
         if not isinstance(target, six.string_types):
-            target = str(target)
+            target = six.text_type(target)
         if not os.path.isabs(target):
             return _fail(
                 ret,
                 'target \'{0}\' is not an absolute path'.format(target)
             )
     if branch is not None and not isinstance(branch, six.string_types):
-        branch = str(branch)
+        branch = six.text_type(branch)
     if user is not None and not isinstance(user, six.string_types):
-        user = str(user)
+        user = six.text_type(user)
     if password is not None and not isinstance(password, six.string_types):
-        password = str(password)
+        password = six.text_type(password)
     if remote is not None and not isinstance(remote, six.string_types):
-        remote = str(remote)
+        remote = six.text_type(remote)
     if identity is not None:
         if isinstance(identity, six.string_types):
             identity = [identity]
         elif not isinstance(identity, list):
             return _fail(ret, 'identity must be either a list or a string')
+        identity = [os.path.expanduser(x) for x in identity]
         for ident_path in identity:
             if 'salt://' in ident_path:
                 try:
                     ident_path = __salt__['cp.cache_file'](ident_path, __env__)
                 except IOError as exc:
-                    log.error(
-                        'Failed to cache {0}: {1}'.format(ident_path, exc)
-                    )
+                    log.exception('Failed to cache %s', ident_path)
                     return _fail(
                         ret,
                         'identity \'{0}\' does not exist.'.format(
@@ -639,9 +700,18 @@ def latest(name,
                     )
                 )
     if https_user is not None and not isinstance(https_user, six.string_types):
-        https_user = str(https_user)
+        https_user = six.text_type(https_user)
     if https_pass is not None and not isinstance(https_pass, six.string_types):
-        https_pass = str(https_pass)
+        https_pass = six.text_type(https_pass)
+
+    # Check for lfs filter settings, and setup lfs_opts accordingly. These opts
+    # will be passed where appropriate to ensure that these commands are
+    # authenticated and that the git LFS plugin can download files.
+    use_lfs = bool(
+        __salt__['git.config_get_regexp'](
+            r'filter\.lfs\.',
+            **{'global': True}))
+    lfs_opts = {'identity': identity} if use_lfs else {}
 
     if os.path.isfile(target):
         return _fail(
@@ -688,7 +758,7 @@ def latest(name,
         '+refs/tags/{0}:refs/tags/{0}'.format(refspec_tag)
     ] if fetch_tags else []
 
-    log.info('Checking remote revision for {0}'.format(name))
+    log.info('Checking remote revision for %s', name)
     try:
         all_remote_refs = __salt__['git.remote_refs'](
             name,
@@ -700,12 +770,19 @@ def latest(name,
             https_user=https_user,
             https_pass=https_pass,
             ignore_retcode=False,
-            saltenv=__env__)
+            saltenv=__env__,
+            output_encoding=output_encoding)
     except CommandExecutionError as exc:
         return _fail(
             ret,
             'Failed to check remote refs: {0}'.format(_strip_exc(exc))
         )
+    except NameError as exc:
+        if 'global name' in exc.message:
+            raise CommandExecutionError(
+                'Failed to check remote refs: You may need to install '
+                'GitPython or PyGit2')
+        raise
 
     if 'HEAD' in all_remote_refs:
         head_rev = all_remote_refs['HEAD']
@@ -788,6 +865,13 @@ def latest(name,
             )
             remote_loc = None
 
+    if depth is not None and remote_rev_type not in ('branch', 'tag'):
+        return _fail(
+            ret,
+            'When \'depth\' is used, \'rev\' must be set to the name of a '
+            'branch or tag on the remote repository'
+        )
+
     if remote_rev is None and not bare:
         if rev != 'HEAD':
             # A specific rev is desired, but that rev doesn't exist on the
@@ -803,18 +887,32 @@ def latest(name,
     check = 'refs' if bare else '.git'
     gitdir = os.path.join(target, check)
     comments = []
-    if os.path.isdir(gitdir) or __salt__['git.is_worktree'](target,
-                                                            user=user,
-                                                            password=password):
+    if os.path.isdir(gitdir) \
+            or __salt__['git.is_worktree'](
+                target,
+                user=user,
+                password=password,
+                output_encoding=output_encoding):
         # Target directory is a git repository or git worktree
         try:
             all_local_branches = __salt__['git.list_branches'](
-                target, user=user, password=password)
-            all_local_tags = __salt__['git.list_tags'](target,
-                                                       user=user,
-                                                       password=password)
-            local_rev, local_branch = \
-                _get_local_rev_and_branch(target, user, password)
+                target,
+                user=user,
+                password=password,
+                output_encoding=output_encoding)
+            all_local_tags = set(
+                __salt__['git.list_tags'](
+                    target,
+                    user=user,
+                    password=password,
+                    output_encoding=output_encoding
+                )
+            )
+            local_rev, local_branch = _get_local_rev_and_branch(
+                target,
+                user,
+                password,
+                output_encoding)
 
             if not bare and remote_rev is None and local_rev is not None:
                 return _fail(
@@ -850,7 +948,8 @@ def latest(name,
                             branch + '^{commit}',
                             user=user,
                             password=password,
-                            ignore_retcode=True)
+                            ignore_retcode=True,
+                            output_encoding=output_encoding)
                     except CommandExecutionError as exc:
                         return _fail(
                             ret,
@@ -862,7 +961,8 @@ def latest(name,
             remotes = __salt__['git.remotes'](target,
                                               user=user,
                                               password=password,
-                                              redact_auth=False)
+                                              redact_auth=False,
+                                              output_encoding=output_encoding)
 
             revs_match = _revs_equal(local_rev, remote_rev, remote_rev_type)
             try:
@@ -874,7 +974,8 @@ def latest(name,
                     __salt__['git.diff'](target,
                                          'HEAD',
                                          user=user,
-                                         password=password)
+                                         password=password,
+                                         output_encoding=output_encoding)
                 )
             except CommandExecutionError:
                 # No need to capture the error and log it, the _git_run()
@@ -887,11 +988,13 @@ def latest(name,
                 local_changes = False
 
             if local_changes and revs_match:
-                if force_reset:
+                if force_reset is True:
                     msg = (
-                        '{0} is up-to-date, but with local changes. Since '
-                        '\'force_reset\' is enabled, these local changes '
-                        'would be reset.'.format(target)
+                        '{0} is up-to-date, but with uncommitted changes. '
+                        'Since \'force_reset\' is set to True, these local '
+                        'changes would be reset. To only reset when there are '
+                        'changes in the remote repository, set '
+                        '\'force_reset\' to \'remote-changes\'.'.format(target)
                     )
                     if __opts__['test']:
                         ret['changes']['forced update'] = True
@@ -901,9 +1004,9 @@ def latest(name,
                     log.debug(msg.replace('would', 'will'))
                 else:
                     log.debug(
-                        '%s up-to-date, but with local changes. Since '
-                        '\'force_reset\' is disabled, no changes will be '
-                        'made.', target
+                        '%s up-to-date, but with uncommitted changes. Since '
+                        '\'force_reset\' is set to %s, no changes will be '
+                        'made.', target, force_reset
                     )
                     return _uptodate(ret,
                                      target,
@@ -928,7 +1031,8 @@ def latest(name,
                             remote_rev + '^{commit}',
                             user=user,
                             password=password,
-                            ignore_retcode=True)
+                            ignore_retcode=True,
+                            output_encoding=output_encoding)
                     except CommandExecutionError:
                         # Local checkout doesn't have the remote_rev
                         pass
@@ -949,7 +1053,8 @@ def latest(name,
                                         desired_upstream,
                                         user=user,
                                         password=password,
-                                        ignore_retcode=True)
+                                        ignore_retcode=True,
+                                        output_encoding=output_encoding)
                                 except CommandExecutionError:
                                     pass
                                 else:
@@ -969,7 +1074,8 @@ def latest(name,
                                         rev + '^{commit}',
                                         user=user,
                                         password=password,
-                                        ignore_retcode=True)
+                                        ignore_retcode=True,
+                                        output_encoding=output_encoding)
                                 except CommandExecutionError:
                                     # Shouldn't happen if the tag exists
                                     # locally but account for this just in
@@ -1002,20 +1108,23 @@ def latest(name,
                         elif remote_rev_type == 'sha1':
                             has_remote_rev = True
 
-            # If fast_forward is not boolean, then we don't know if this will
-            # be a fast forward or not, because a fetch is required.
-            fast_forward = None if not local_changes else False
+            # If fast_forward is not boolean, then we don't yet know if this
+            # will be a fast forward or not, because a fetch is required.
+            fast_forward = False \
+                if (local_changes and force_reset != 'remote-changes') \
+                else None
 
             if has_remote_rev:
                 if (not revs_match and not update_head) \
                         and (branch is None or branch == local_branch):
-                    ret['comment'] = remote_loc.capitalize() \
-                        if rev == 'HEAD' \
-                        else remote_loc
-                    ret['comment'] += (
-                        ' is already present and local HEAD ({0}) does not '
+                    ret['comment'] = (
+                        '{0} is already present and local HEAD ({1}) does not '
                         'match, but update_head=False. HEAD has not been '
-                        'updated locally.'.format(local_rev[:7])
+                        'updated locally.'.format(
+                            remote_loc.capitalize() if rev == 'HEAD'
+                                else remote_loc,
+                            local_rev[:7]
+                        )
                     )
                     return ret
 
@@ -1029,9 +1138,8 @@ def latest(name,
                         # existed there and a remote was added and fetched, but
                         # the repository was not fast-forwarded. Regardless,
                         # going from no HEAD to a locally-present rev is
-                        # considered a fast-forward update, unless there are
-                        # local changes.
-                        fast_forward = not bool(local_changes)
+                        # considered a fast-forward update.
+                        fast_forward = True
                     else:
                         fast_forward = __salt__['git.merge_base'](
                             target,
@@ -1039,10 +1147,11 @@ def latest(name,
                             is_ancestor=True,
                             user=user,
                             password=password,
-                            ignore_retcode=True)
+                            ignore_retcode=True,
+                            output_encoding=output_encoding)
 
             if fast_forward is False:
-                if not force_reset:
+                if force_reset is False:
                     return _not_fast_forward(
                         ret,
                         rev,
@@ -1070,7 +1179,8 @@ def latest(name,
                         opts=['--abbrev-ref'],
                         user=user,
                         password=password,
-                        ignore_retcode=True)
+                        ignore_retcode=True,
+                        output_encoding=output_encoding)
                 except CommandExecutionError:
                     # There is a local branch but the rev-parse command
                     # failed, so that means there is no upstream tracking
@@ -1086,8 +1196,8 @@ def latest(name,
                 fetch_url = remotes[remote]['fetch']
             else:
                 log.debug(
-                    'Remote \'{0}\' not found in git checkout at {1}'
-                    .format(remote, target)
+                    'Remote \'%s\' not found in git checkout at %s',
+                    remote, target
                 )
                 fetch_url = None
 
@@ -1139,7 +1249,8 @@ def latest(name,
                                            user=user,
                                            password=password,
                                            https_user=https_user,
-                                           https_pass=https_pass)
+                                           https_pass=https_pass,
+                                           output_encoding=output_encoding)
                 if fetch_url is None:
                     comments.append(
                         'Remote \'{0}\' set to {1}'.format(
@@ -1313,13 +1424,45 @@ def latest(name,
                         identity=identity,
                         saltenv=__env__,
                         ignore_retcode=True,
-                    ).keys() if '^{}' not in x
+                        output_encoding=output_encoding) if '^{}' not in x
                 ])
-                if set(all_local_tags) != remote_tags:
+                if all_local_tags != remote_tags:
                     has_remote_rev = False
-                    ret['changes']['new_tags'] = list(remote_tags.symmetric_difference(
-                        all_local_tags
-                    ))
+                    new_tags = remote_tags - all_local_tags
+                    deleted_tags = all_local_tags - remote_tags
+                    if new_tags:
+                        ret['changes']['new_tags'] = new_tags
+                    if sync_tags and deleted_tags:
+                        # Delete the local copy of the tags to keep up with the
+                        # remote repository.
+                        for tag_name in deleted_tags:
+                            try:
+                                if not __opts__['test']:
+                                    __salt__['git.tag'](
+                                        target,
+                                        tag_name,
+                                        opts='-d',
+                                        user=user,
+                                        password=password,
+                                        output_encoding=output_encoding)
+                            except CommandExecutionError as exc:
+                                ret.setdefault('warnings', []).append(
+                                    'Failed to remove local tag \'{0}\':\n\n'
+                                    '{1}\n\n'.format(tag_name, exc)
+                                )
+                            else:
+                                ret['changes'].setdefault(
+                                    'deleted_tags', []).append(tag_name)
+
+                        if ret['changes'].get('deleted_tags'):
+                            comments.append(
+                                'The following tags {0} removed from the local '
+                                'checkout: {1}'.format(
+                                    'would be' if __opts__['test']
+                                        else 'were',
+                                    ', '.join(ret['changes']['deleted_tags'])
+                                )
+                            )
 
                 if not has_remote_rev:
                     try:
@@ -1331,7 +1474,8 @@ def latest(name,
                             user=user,
                             password=password,
                             identity=identity,
-                            saltenv=__env__)
+                            saltenv=__env__,
+                            output_encoding=output_encoding)
                     except CommandExecutionError as exc:
                         return _failed_fetch(ret, exc, comments)
                     else:
@@ -1347,7 +1491,8 @@ def latest(name,
                             remote_rev + '^{commit}',
                             user=user,
                             password=password,
-                            ignore_retcode=True)
+                            ignore_retcode=True,
+                            output_encoding=output_encoding)
                     except CommandExecutionError as exc:
                         return _fail(
                             ret,
@@ -1379,9 +1524,13 @@ def latest(name,
                             refs=[base_rev, remote_rev],
                             is_ancestor=True,
                             user=user,
-                            password=password)
+                            password=password,
+                            output_encoding=output_encoding)
 
-                    if fast_forward is False and not force_reset:
+                    if fast_forward is force_reset is False \
+                            or (fast_forward is True
+                                and local_changes
+                                and force_reset is False):
                         return _not_fast_forward(
                             ret,
                             rev,
@@ -1422,7 +1571,8 @@ def latest(name,
                                              force=force_checkout,
                                              opts=checkout_opts,
                                              user=user,
-                                             password=password)
+                                             password=password,
+                                             output_encoding=output_encoding)
                     if '-b' in checkout_opts:
                         comments.append(
                             'New branch \'{0}\' was checked out, with {1} '
@@ -1436,27 +1586,37 @@ def latest(name,
                             '\'{0}\' was checked out'.format(checkout_rev)
                         )
 
-                if local_changes:
-                    comments.append('Local changes were discarded')
-
                 if fast_forward is False:
                     __salt__['git.reset'](
                         target,
                         opts=['--hard', remote_rev],
                         user=user,
                         password=password,
-                    )
+                        output_encoding=output_encoding,
+                        **lfs_opts)
                     ret['changes']['forced update'] = True
+                    if local_changes:
+                        comments.append('Uncommitted changes were discarded')
                     comments.append(
                         'Repository was hard-reset to {0}'.format(remote_loc)
                     )
+                elif fast_forward is True \
+                        and local_changes \
+                        and force_reset is not False:
+                    __salt__['git.discard_local_changes'](
+                        target,
+                        user=user,
+                        password=password,
+                        output_encoding=output_encoding)
+                    comments.append('Uncommitted changes were discarded')
 
                 if branch_opts is not None:
                     __salt__['git.branch'](
                         target,
                         opts=branch_opts,
                         user=user,
-                        password=password)
+                        password=password,
+                        output_encoding=output_encoding)
                     comments.append(upstream_action)
 
                 # Fast-forward to the desired revision
@@ -1469,12 +1629,14 @@ def latest(name,
                         # trying to merge changes. (The call to
                         # git.symbolic_ref will only return output if HEAD
                         # points to a branch.)
-                        if __salt__['git.symbolic_ref'](target,
-                                                        'HEAD',
-                                                        opts=['--quiet'],
-                                                        user=user,
-                                                        password=password,
-                                                        ignore_retcode=True):
+                        if __salt__['git.symbolic_ref'](
+                                target,
+                                'HEAD',
+                                opts=['--quiet'],
+                                user=user,
+                                password=password,
+                                ignore_retcode=True,
+                                output_encoding=output_encoding):
 
                             if git_ver >= _LooseVersion('1.8.1.6'):
                                 # --ff-only added in version 1.8.1.6. It's not
@@ -1494,7 +1656,9 @@ def latest(name,
                                 rev=remote_rev,
                                 opts=merge_opts,
                                 user=user,
-                                password=password)
+                                password=password,
+                                output_encoding=output_encoding,
+                                **lfs_opts)
                             comments.append(
                                 'Repository was fast-forwarded to {0}'
                                 .format(remote_loc)
@@ -1513,7 +1677,9 @@ def latest(name,
                             opts=['--hard',
                                   remote_rev if rev == 'HEAD' else rev],
                             user=user,
-                            password=password)
+                            password=password,
+                            output_encoding=output_encoding,
+                            **lfs_opts)
                         comments.append(
                             'Repository was reset to {0} (fast-forward)'
                             .format(rev)
@@ -1530,7 +1696,8 @@ def latest(name,
                             user=user,
                             password=password,
                             identity=identity,
-                            saltenv=__env__)
+                            saltenv=__env__,
+                            output_encoding=output_encoding)
                     except CommandExecutionError as exc:
                         return _failed_submodule_update(ret, exc, comments)
             elif bare:
@@ -1552,7 +1719,8 @@ def latest(name,
                         user=user,
                         password=password,
                         identity=identity,
-                        saltenv=__env__)
+                        saltenv=__env__,
+                        output_encoding=output_encoding)
                 except CommandExecutionError as exc:
                     return _failed_fetch(ret, exc, comments)
                 else:
@@ -1569,7 +1737,8 @@ def latest(name,
                     cwd=target,
                     user=user,
                     password=password,
-                    ignore_retcode=True)
+                    ignore_retcode=True,
+                    output_encoding=output_encoding)
             except CommandExecutionError:
                 new_rev = None
 
@@ -1581,7 +1750,7 @@ def latest(name,
             if isinstance(exc, CommandExecutionError):
                 msg = _strip_exc(exc)
             else:
-                msg = str(exc)
+                msg = six.text_type(exc)
             return _fail(ret, msg, comments)
 
         if not bare and not _revs_equal(new_rev,
@@ -1591,8 +1760,8 @@ def latest(name,
 
         if local_rev != new_rev:
             log.info(
-                'Repository {0} updated: {1} => {2}'.format(
-                    target, local_rev, new_rev)
+                'Repository %s updated: %s => %s',
+                target, local_rev, new_rev
             )
             ret['comment'] = _format_comments(comments)
             ret['changes']['revision'] = {'old': local_rev, 'new': new_rev}
@@ -1615,9 +1784,9 @@ def latest(name,
                         'be cloned into this directory.'.format(target, name)
                     )
                 log.debug(
-                    'Removing contents of {0} to clone repository {1} in its '
-                    'place (force_clone=True set in git.latest state)'
-                    .format(target, name)
+                    'Removing contents of %s to clone repository %s in its '
+                    'place (force_clone=True set in git.latest state)',
+                    target, name
                 )
                 removal_errors = {}
                 for target_object in target_contents:
@@ -1649,9 +1818,7 @@ def latest(name,
                     'cloning the remote repository'.format(target)
                 )
 
-        log.debug(
-            'Target {0} is not found, \'git clone\' is required'.format(target)
-        )
+        log.debug('Target %s is not found, \'git clone\' is required', target)
         if __opts__['test']:
             ret['changes']['new'] = name + ' => ' + target
             return _neutral_test(
@@ -1665,7 +1832,7 @@ def latest(name,
             if remote != 'origin':
                 clone_opts.extend(['--origin', remote])
             if depth is not None:
-                clone_opts.extend(['--depth', str(depth)])
+                clone_opts.extend(['--depth', six.text_type(depth), '--branch', rev])
 
             # We're cloning a fresh repo, there is no local branch or revision
             local_branch = local_rev = None
@@ -1679,7 +1846,8 @@ def latest(name,
                                       identity=identity,
                                       https_user=https_user,
                                       https_pass=https_pass,
-                                      saltenv=__env__)
+                                      saltenv=__env__,
+                                      output_encoding=output_encoding)
             except CommandExecutionError as exc:
                 msg = 'Clone failed: {0}'.format(_strip_exc(exc))
                 return _fail(ret, msg, comments)
@@ -1703,15 +1871,19 @@ def latest(name,
                         # failed, since a rev was specified but no matching rev
                         # exists on the remote host.
                         msg = (
-                            '{{0}} was cloned but is empty, so {0}/{1} '
+                            '%s was cloned but is empty, so {0}/{1} '
                             'cannot be checked out'.format(remote, rev)
                         )
-                        log.error(msg.format(name))
-                        return _fail(ret, msg.format('Repository'), comments)
+                        log.error(msg, name)
+                        # Disable check for string substitution
+                        return _fail(ret, msg % 'Repository', comments)  # pylint: disable=E1321
                 else:
                     if remote_rev_type == 'tag' \
                             and rev not in __salt__['git.list_tags'](
-                                target, user=user, password=password):
+                                target,
+                                user=user,
+                                password=password,
+                                output_encoding=output_encoding):
                         return _fail(
                             ret,
                             'Revision \'{0}\' does not exist in clone'
@@ -1724,18 +1896,21 @@ def latest(name,
                                 __salt__['git.list_branches'](
                                     target,
                                     user=user,
-                                    password=password):
+                                    password=password,
+                                    output_encoding=output_encoding):
                             if rev == 'HEAD':
                                 checkout_rev = remote_rev
                             else:
                                 checkout_rev = desired_upstream \
                                     if desired_upstream \
                                     else rev
-                            __salt__['git.checkout'](target,
-                                                     checkout_rev,
-                                                     opts=['-b', branch],
-                                                     user=user,
-                                                     password=password)
+                            __salt__['git.checkout'](
+                                target,
+                                checkout_rev,
+                                opts=['-b', branch],
+                                user=user,
+                                password=password,
+                                output_encoding=output_encoding)
                             comments.append(
                                 'Branch \'{0}\' checked out, with {1} '
                                 'as a starting point'.format(
@@ -1744,8 +1919,11 @@ def latest(name,
                                 )
                             )
 
-                    local_rev, local_branch = \
-                        _get_local_rev_and_branch(target, user, password)
+                    local_rev, local_branch = _get_local_rev_and_branch(
+                        target,
+                        user,
+                        password,
+                        output_encoding=output_encoding)
 
                     if local_branch is None \
                             and remote_rev is not None \
@@ -1767,7 +1945,8 @@ def latest(name,
                             target,
                             opts=['--hard', remote_rev],
                             user=user,
-                            password=password)
+                            password=password,
+                            output_encoding=output_encoding)
                         comments.append(
                             'Repository was reset to {0}'.format(remote_loc)
                         )
@@ -1779,7 +1958,8 @@ def latest(name,
                             opts=['--abbrev-ref'],
                             user=user,
                             password=password,
-                            ignore_retcode=True)
+                            ignore_retcode=True,
+                            output_encoding=output_encoding)
                     except CommandExecutionError:
                         upstream = False
 
@@ -1792,9 +1972,11 @@ def latest(name,
                         branch_opts = _get_branch_opts(
                             branch,
                             local_branch,
-                            __salt__['git.list_branches'](target,
-                                                          user=user,
-                                                          password=password),
+                            __salt__['git.list_branches'](
+                                target,
+                                user=user,
+                                password=password,
+                                output_encoding=output_encoding),
                             desired_upstream,
                             git_ver)
                     elif upstream and desired_upstream is False:
@@ -1817,9 +1999,11 @@ def latest(name,
                         branch_opts = _get_branch_opts(
                             branch,
                             local_branch,
-                            __salt__['git.list_branches'](target,
-                                                          user=user,
-                                                          password=password),
+                            __salt__['git.list_branches'](
+                                target,
+                                user=user,
+                                password=password,
+                                output_encoding=output_encoding),
                             desired_upstream,
                             git_ver)
                     else:
@@ -1830,17 +2014,20 @@ def latest(name,
                             target,
                             opts=branch_opts,
                             user=user,
-                            password=password)
+                            password=password,
+                            output_encoding=output_encoding)
                         comments.append(upstream_action)
 
             if submodules and remote_rev:
                 try:
-                    __salt__['git.submodule'](target,
-                                              'update',
-                                              opts=['--init', '--recursive'],
-                                              user=user,
-                                              password=password,
-                                              identity=identity)
+                    __salt__['git.submodule'](
+                        target,
+                        'update',
+                        opts=['--init', '--recursive'],
+                        user=user,
+                        password=password,
+                        identity=identity,
+                        output_encoding=output_encoding)
                 except CommandExecutionError as exc:
                     return _failed_submodule_update(ret, exc, comments)
 
@@ -1849,7 +2036,8 @@ def latest(name,
                     cwd=target,
                     user=user,
                     password=password,
-                    ignore_retcode=True)
+                    ignore_retcode=True,
+                    output_encoding=output_encoding)
             except CommandExecutionError:
                 new_rev = None
 
@@ -1861,7 +2049,7 @@ def latest(name,
             if isinstance(exc, CommandExecutionError):
                 msg = _strip_exc(exc)
             else:
-                msg = str(exc)
+                msg = six.text_type(exc)
             return _fail(ret, msg, comments)
 
         msg = _format_comments(comments)
@@ -1879,7 +2067,8 @@ def present(name,
             separate_git_dir=None,
             shared=None,
             user=None,
-            password=None):
+            password=None,
+            output_encoding=None):
     '''
     Ensure that a repository exists in the given directory
 
@@ -1911,7 +2100,7 @@ def present(name,
 
     template
         If a new repository is initialized, this argument will specify an
-        alternate `template directory`_
+        alternate template directory.
 
         .. versionadded:: 2015.8.0
 
@@ -1939,6 +2128,18 @@ def present(name,
 
       .. versionadded:: 2016.3.4
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
+
     .. _`git-init(1)`: http://git-scm.com/docs/git-init
     .. _`worktree`: http://git-scm.com/docs/git-worktree
     '''
@@ -1950,7 +2151,10 @@ def present(name,
             return ret
         elif not bare and \
                 (os.path.isdir(os.path.join(name, '.git')) or
-                 __salt__['git.is_worktree'](name, user=user, password=password)):
+                 __salt__['git.is_worktree'](name,
+                                             user=user,
+                                             password=password,
+                                             output_encoding=output_encoding)):
             return ret
         # Directory exists and is not a git repo, if force is set destroy the
         # directory and recreate, otherwise throw an error
@@ -1968,9 +2172,9 @@ def present(name,
                     .format(name, 'bare ' if bare else '')
                 )
             log.debug(
-                'Removing contents of {0} to initialize {1}repository in its '
-                'place (force=True set in git.present state)'
-                .format(name, 'bare ' if bare else '')
+                'Removing contents of %s to initialize %srepository in its '
+                'place (force=True set in git.present state)',
+                name, 'bare ' if bare else ''
             )
             try:
                 if os.path.islink(name):
@@ -2009,7 +2213,8 @@ def present(name,
                          separate_git_dir=separate_git_dir,
                          shared=shared,
                          user=user,
-                         password=password)
+                         password=password,
+                         output_encoding=output_encoding)
 
     actions = [
         'Initialized {0}repository in {1}'.format(
@@ -2044,14 +2249,15 @@ def detached(name,
            identity=None,
            https_user=None,
            https_pass=None,
-           onlyif=False,
-           unless=False,
+           onlyif=None,
+           unless=None,
+           output_encoding=None,
            **kwargs):
     '''
     .. versionadded:: 2016.3.0
 
     Make sure a repository is cloned to the given target directory and is
-    a detached HEAD checkout of the commit ID resolved from ``ref``.
+    a detached HEAD checkout of the commit ID resolved from ``rev``.
 
     name
         Address of the remote repository.
@@ -2060,10 +2266,6 @@ def detached(name,
         The branch, tag, or commit ID to checkout after clone.
         If a branch or tag is specified it will be resolved to a commit ID
         and checked out.
-
-    ref
-        .. deprecated:: 2017.7.0
-            Use ``rev`` instead.
 
     target
         Name of the target directory where repository is about to be cloned.
@@ -2128,26 +2330,27 @@ def detached(name,
         A command to run as a check, only run the named command if the command
         passed to the ``unless`` option returns false
 
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
     '''
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    ref = kwargs.pop('ref', None)
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
             ret,
             salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
-
-    if ref is not None:
-        rev = ref
-        deprecation_msg = (
-            'The \'ref\' argument has been renamed to \'rev\' for '
-            'consistency. Please update your SLS to reflect this.'
-        )
-        ret.setdefault('warnings', []).append(deprecation_msg)
-        salt.utils.versions.warn_until('Fluorine', deprecation_msg)
 
     if not rev:
         return _fail(
@@ -2163,32 +2366,31 @@ def detached(name,
 
     # Ensure that certain arguments are strings to ensure that comparisons work
     if not isinstance(rev, six.string_types):
-        rev = str(rev)
+        rev = six.text_type(rev)
     if target is not None:
         if not isinstance(target, six.string_types):
-            target = str(target)
+            target = six.text_type(target)
         if not os.path.isabs(target):
             return _fail(
                 ret,
                 'Target \'{0}\' is not an absolute path'.format(target)
             )
     if user is not None and not isinstance(user, six.string_types):
-        user = str(user)
+        user = six.text_type(user)
     if remote is not None and not isinstance(remote, six.string_types):
-        remote = str(remote)
+        remote = six.text_type(remote)
     if identity is not None:
         if isinstance(identity, six.string_types):
             identity = [identity]
         elif not isinstance(identity, list):
             return _fail(ret, 'Identity must be either a list or a string')
+        identity = [os.path.expanduser(x) for x in identity]
         for ident_path in identity:
             if 'salt://' in ident_path:
                 try:
                     ident_path = __salt__['cp.cache_file'](ident_path)
                 except IOError as exc:
-                    log.error(
-                        'Failed to cache {0}: {1}'.format(ident_path, exc)
-                    )
+                    log.error('Failed to cache %s: %s', ident_path, exc)
                     return _fail(
                         ret,
                         'Identity \'{0}\' does not exist.'.format(
@@ -2203,9 +2405,9 @@ def detached(name,
                     )
                 )
     if https_user is not None and not isinstance(https_user, six.string_types):
-        https_user = str(https_user)
+        https_user = six.text_type(https_user)
     if https_pass is not None and not isinstance(https_pass, six.string_types):
-        https_pass = str(https_pass)
+        https_pass = six.text_type(https_pass)
 
     if os.path.isfile(target):
         return _fail(
@@ -2250,10 +2452,17 @@ def detached(name,
 
     gitdir = os.path.join(target, '.git')
     if os.path.isdir(gitdir) \
-            or __salt__['git.is_worktree'](target, user=user, password=password):
+            or __salt__['git.is_worktree'](target,
+                                           user=user,
+                                           password=password,
+                                           output_encoding=output_encoding):
         # Target directory is a git repository or git worktree
 
-        local_commit_id = _get_local_rev_and_branch(target, user, password)[0]
+        local_commit_id = _get_local_rev_and_branch(
+            target,
+            user,
+            password,
+            output_encoding=output_encoding)[0]
 
         if remote_rev_type is 'hash':
             try:
@@ -2261,7 +2470,8 @@ def detached(name,
                                          rev,
                                          user=user,
                                          password=password,
-                                         ignore_retcode=True)
+                                         ignore_retcode=True,
+                                         output_encoding=output_encoding)
             except CommandExecutionError:
                 hash_exists_locally = False
             else:
@@ -2272,7 +2482,8 @@ def detached(name,
             remotes = __salt__['git.remotes'](target,
                                               user=user,
                                               password=password,
-                                              redact_auth=False)
+                                              redact_auth=False,
+                                              output_encoding=output_encoding)
 
             if remote in remotes and name in remotes[remote]['fetch']:
                 pass
@@ -2298,11 +2509,12 @@ def detached(name,
                                            user=user,
                                            password=password,
                                            https_user=https_user,
-                                           https_pass=https_pass)
+                                           https_pass=https_pass,
+                                           output_encoding=output_encoding)
                 comments.append(
                     'Remote {0} updated from \'{1}\' to \'{2}\''.format(
                         remote,
-                        str(current_fetch_url),
+                        current_fetch_url,
                         name
                     )
                 )
@@ -2310,6 +2522,7 @@ def detached(name,
     else:
         # Clone repository
         if os.path.isdir(target):
+            target_contents = os.listdir(target)
             if force_clone:
                 # Clone is required, and target directory exists, but the
                 # ``force`` option is enabled, so we need to clear out its
@@ -2322,24 +2535,30 @@ def detached(name,
                         'be cloned into this directory.'.format(target, name)
                     )
                 log.debug(
-                    'Removing contents of {0} to clone repository {1} in its '
-                    'place (force_clone=True set in git.detached state)'
-                    .format(target, name)
+                    'Removing contents of %s to clone repository %s in its '
+                    'place (force_clone=True set in git.detached state)',
+                    target, name
                 )
-                try:
-                    if os.path.islink(target):
-                        os.unlink(target)
-                    else:
-                        salt.utils.files.rm_rf(target)
-                except OSError as exc:
+                removal_errors = {}
+                for target_object in target_contents:
+                    target_path = os.path.join(target, target_object)
+                    try:
+                        salt.utils.files.rm_rf(target_path)
+                    except OSError as exc:
+                        if exc.errno != errno.ENOENT:
+                            removal_errors[target_path] = exc
+                if removal_errors:
+                    err_strings = [
+                        '  {0}\n    {1}'.format(k, v)
+                        for k, v in six.iteritems(removal_errors)
+                    ]
                     return _fail(
                         ret,
-                        'Unable to remove {0}: {1}'.format(target, exc),
+                        'Unable to remove\n{0}'.format('\n'.join(err_strings)),
                         comments
                     )
-                else:
-                    ret['changes']['forced clone'] = True
-            elif os.listdir(target):
+                ret['changes']['forced clone'] = True
+            elif target_contents:
                 # Clone is required, but target dir exists and is non-empty. We
                 # can't proceed.
                 return _fail(
@@ -2350,9 +2569,7 @@ def detached(name,
                     'cloning the remote repository'.format(target)
                 )
 
-        log.debug(
-            'Target {0} is not found, \'git clone\' is required'.format(target)
-        )
+        log.debug('Target %s is not found, \'git clone\' is required', target)
         if __opts__['test']:
             return _neutral_test(
                 ret,
@@ -2373,13 +2590,9 @@ def detached(name,
                                   identity=identity,
                                   https_user=https_user,
                                   https_pass=https_pass,
-                                  saltenv=__env__)
-            comments.append(
-                '{0} cloned to {1}'.format(
-                    name,
-                    target
-                )
-            )
+                                  saltenv=__env__,
+                                  output_encoding=output_encoding)
+            comments.append('{0} cloned to {1}'.format(name, target))
 
         except Exception as exc:
             log.error(
@@ -2389,7 +2602,7 @@ def detached(name,
             if isinstance(exc, CommandExecutionError):
                 msg = _strip_exc(exc)
             else:
-                msg = str(exc)
+                msg = six.text_type(exc)
             return _fail(ret, msg, comments)
 
     # Repository exists and is ready for fetch/checkout
@@ -2404,9 +2617,7 @@ def detached(name,
         if __opts__['test']:
             return _neutral_test(
                 ret,
-                'Repository remote {0} would be fetched'.format(
-                    remote
-                )
+                'Repository remote {0} would be fetched'.format(remote)
             )
         try:
             fetch_changes = __salt__['git.fetch'](
@@ -2417,10 +2628,11 @@ def detached(name,
                 user=user,
                 password=password,
                 identity=identity,
-                saltenv=__env__)
+                saltenv=__env__,
+                output_encoding=output_encoding)
         except CommandExecutionError as exc:
             msg = 'Fetch failed'
-            msg += ':\n\n' + str(exc)
+            msg += ':\n\n' + six.text_type(exc)
             return _fail(ret, msg, comments)
         else:
             if fetch_changes:
@@ -2429,10 +2641,15 @@ def detached(name,
                     'refs'.format(remote)
                 )
 
-    #get refs and checkout
+    # get refs and checkout
     checkout_commit_id = ''
     if remote_rev_type is 'hash':
-        if __salt__['git.describe'](target, rev, user=user, password=password):
+        if __salt__['git.describe'](
+                target,
+                rev,
+                user=user,
+                password=password,
+                output_encoding=output_encoding):
             checkout_commit_id = rev
         else:
             return _fail(
@@ -2448,7 +2665,8 @@ def detached(name,
                 identity=identity,
                 https_user=https_user,
                 https_pass=https_pass,
-                ignore_retcode=False)
+                ignore_retcode=False,
+                output_encoding=output_encoding)
 
             if 'refs/remotes/'+remote+'/'+rev in all_remote_refs:
                 checkout_commit_id = all_remote_refs['refs/remotes/' + remote + '/' + rev]
@@ -2470,15 +2688,14 @@ def detached(name,
         if __opts__['test']:
             return _neutral_test(
                 ret,
-                'Hard reset to HEAD would be performed on {0}'.format(
-                    target
-                )
+                'Hard reset to HEAD would be performed on {0}'.format(target)
             )
         __salt__['git.reset'](
             target,
             opts=['--hard', 'HEAD'],
             user=user,
-            password=password)
+            password=password,
+            output_encoding=output_encoding)
         comments.append(
             'Repository was reset to HEAD before checking out revision'
         )
@@ -2501,7 +2718,8 @@ def detached(name,
                                  checkout_commit_id,
                                  force=force_checkout,
                                  user=user,
-                                 password=password)
+                                 password=password,
+                                 output_encoding=output_encoding)
         comments.append(
             'Commit ID {0} was checked out at {1}'.format(
                 checkout_commit_id,
@@ -2514,7 +2732,8 @@ def detached(name,
                 cwd=target,
                 user=user,
                 password=password,
-                ignore_retcode=True)
+                ignore_retcode=True,
+                output_encoding=output_encoding)
         except CommandExecutionError:
             new_rev = None
 
@@ -2524,7 +2743,8 @@ def detached(name,
                                   opts=['--init', '--recursive'],
                                   user=user,
                                   password=password,
-                                  identity=identity)
+                                  identity=identity,
+                                  output_encoding=output_encoding)
         comments.append(
             'Submodules were updated'
         )
@@ -2541,11 +2761,208 @@ def detached(name,
     return ret
 
 
+def cloned(name,
+           target=None,
+           branch=None,
+           user=None,
+           password=None,
+           identity=None,
+           https_user=None,
+           https_pass=None,
+           output_encoding=None):
+    '''
+    .. versionadded:: 2018.3.3,2019.2.0
+
+    Ensure that a repository has been cloned to the specified target directory.
+    If not, clone that repository. No fetches will be performed once cloned.
+
+    name
+        Address of the remote repository
+
+    target
+        Name of the target directory where repository should be cloned
+
+    branch
+        Remote branch to check out. If unspecified, the default branch (i.e.
+        the one to the remote HEAD points) will be checked out.
+
+        .. note::
+            The local branch name will match the remote branch name. If the
+            branch name is changed, then that branch will be checked out
+            locally, but keep in mind that remote repository will not be
+            fetched. If your use case requires that you keep the clone up to
+            date with the remote repository, then consider using
+            :py:func:`git.latest <salt.states.git.latest>`.
+
+    user
+        User under which to run git commands. By default, commands are run by
+        the user under which the minion is running.
+
+    password
+        Windows only. Required when specifying ``user``. This parameter will be
+        ignored on non-Windows platforms.
+
+    identity
+        Path to a private key to use for ssh URLs. Works the same way as in
+        :py:func:`git.latest <salt.states.git.latest>`, see that state's
+        documentation for more information.
+
+    https_user
+        HTTP Basic Auth username for HTTPS (only) clones
+
+    https_pass
+        HTTP Basic Auth password for HTTPS (only) clones
+
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+    '''
+    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
+
+    if target is None:
+        ret['comment'] = '\'target\' argument is required'
+        return ret
+    elif not isinstance(target, six.string_types):
+        target = six.text_type(target)
+
+    if not os.path.isabs(target):
+        ret['comment'] = '\'target\' path must be absolute'
+        return ret
+
+    if branch is not None:
+        if not isinstance(branch, six.string_types):
+            branch = six.text_type(branch)
+        if not branch:
+            ret['comment'] = 'Invalid \'branch\' argument'
+            return ret
+
+    if not os.path.exists(target):
+        need_clone = True
+    else:
+        try:
+            __salt__['git.status'](target,
+                                   user=user,
+                                   password=password,
+                                   output_encoding=output_encoding)
+        except Exception as exc:
+            ret['comment'] = six.text_type(exc)
+            return ret
+        else:
+            need_clone = False
+
+    comments = []
+
+    def _clone_changes(ret):
+        ret['changes']['new'] = name + ' => ' + target
+
+    def _branch_changes(ret, old, new):
+        ret['changes']['branch'] = {'old': old, 'new': new}
+
+    if need_clone:
+        if __opts__['test']:
+            _clone_changes(ret)
+            comment = '{0} would be cloned to {1}{2}'.format(
+                name,
+                target,
+                ' with branch \'{0}\''.format(branch)
+                    if branch is not None
+                    else ''
+            )
+            return _neutral_test(ret, comment)
+        clone_opts = ['--branch', branch] if branch is not None else None
+        try:
+            __salt__['git.clone'](target,
+                                  name,
+                                  opts=clone_opts,
+                                  user=user,
+                                  password=password,
+                                  identity=identity,
+                                  https_user=https_user,
+                                  https_pass=https_pass,
+                                  output_encoding=output_encoding)
+        except CommandExecutionError as exc:
+            msg = 'Clone failed: {0}'.format(_strip_exc(exc))
+            return _fail(ret, msg, comments)
+
+        comments.append(
+            '{0} cloned to {1}{2}'.format(
+                name,
+                target,
+                ' with branch \'{0}\''.format(branch)
+                    if branch is not None
+                    else ''
+            )
+        )
+        _clone_changes(ret)
+        ret['comment'] = _format_comments(comments)
+        ret['result'] = True
+        return ret
+    else:
+        if branch is None:
+            return _already_cloned(ret, target, branch, comments)
+        else:
+            current_branch = __salt__['git.current_branch'](
+                target,
+                user=user,
+                password=password,
+                output_encoding=output_encoding)
+            if current_branch == branch:
+                return _already_cloned(ret, target, branch, comments)
+            else:
+                if __opts__['test']:
+                    _branch_changes(ret, current_branch, branch)
+                    return _neutral_test(
+                        ret,
+                        'Branch would be changed to \'{0}\''.format(branch))
+                try:
+                    __salt__['git.rev_parse'](
+                        target,
+                        rev=branch,
+                        user=user,
+                        password=password,
+                        ignore_retcode=True,
+                        output_encoding=output_encoding)
+                except CommandExecutionError:
+                    # Local head does not exist, so we need to check out a new
+                    # branch at the remote rev
+                    checkout_rev = '/'.join(('origin', branch))
+                    checkout_opts = ['-b', branch]
+                else:
+                    # Local head exists, so we just need to check it out
+                    checkout_rev = branch
+                    checkout_opts = None
+
+                try:
+                    __salt__['git.checkout'](
+                        target,
+                        rev=checkout_rev,
+                        opts=checkout_opts,
+                        user=user,
+                        password=password,
+                        output_encoding=output_encoding)
+                except CommandExecutionError as exc:
+                    msg = 'Failed to change branch to \'{0}\': {1}'.format(branch, exc)
+                    return _fail(ret, msg, comments)
+                else:
+                    comments.append('Branch changed to \'{0}\''.format(branch))
+                    _branch_changes(ret, current_branch, branch)
+                    ret['comment'] = _format_comments(comments)
+                    ret['result'] = True
+                    return ret
+
+
 def config_unset(name,
                  value_regex=None,
                  repo=None,
                  user=None,
                  password=None,
+                 output_encoding=None,
                  **kwargs):
     r'''
     .. versionadded:: 2015.8.0
@@ -2587,6 +3004,18 @@ def config_unset(name,
 
     global : False
         If ``True``, this will set a global git config option
+
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
 
 
     **Examples:**
@@ -2644,10 +3073,10 @@ def config_unset(name,
         )
 
     if not isinstance(name, six.string_types):
-        name = str(name)
+        name = six.text_type(name)
     if value_regex is not None:
         if not isinstance(value_regex, six.string_types):
-            value_regex = str(value_regex)
+            value_regex = six.text_type(value_regex)
 
     # Ensure that the key regex matches the full key name
     key = '^' + name.lstrip('^').rstrip('$') + '$'
@@ -2660,6 +3089,7 @@ def config_unset(name,
         user=user,
         password=password,
         ignore_retcode=True,
+        output_encoding=output_encoding,
         **{'global': global_}
     )
 
@@ -2709,6 +3139,7 @@ def config_unset(name,
             user=user,
             password=password,
             ignore_retcode=True,
+            output_encoding=output_encoding,
             **{'global': global_}
         )
 
@@ -2724,6 +3155,7 @@ def config_unset(name,
                 all=all_,
                 user=user,
                 password=password,
+                output_encoding=output_encoding,
                 **{'global': global_}
             )
         except CommandExecutionError as exc:
@@ -2748,6 +3180,7 @@ def config_unset(name,
         user=user,
         password=password,
         ignore_retcode=True,
+        output_encoding=output_encoding,
         **{'global': global_}
     )
 
@@ -2768,6 +3201,7 @@ def config_unset(name,
             user=user,
             password=password,
             ignore_retcode=True,
+            output_encoding=output_encoding,
             **{'global': global_}
         )
 
@@ -2789,6 +3223,7 @@ def config_set(name,
                repo=None,
                user=None,
                password=None,
+               output_encoding=None,
                **kwargs):
     '''
     .. versionadded:: 2014.7.0
@@ -2830,6 +3265,18 @@ def config_set(name,
 
     global : False
         If ``True``, this will set a global git config option
+
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+        .. versionadded:: 2018.3.1
 
     **Local Config Example:**
 
@@ -2894,10 +3341,10 @@ def config_set(name,
         )
 
     if not isinstance(name, six.string_types):
-        name = str(name)
+        name = six.text_type(name)
     if value is not None:
         if not isinstance(value, six.string_types):
-            value = str(value)
+            value = six.text_type(value)
         value_comment = '\'' + value + '\''
         desired = [value]
     if multivar is not None:
@@ -2905,14 +3352,14 @@ def config_set(name,
             try:
                 multivar = multivar.split(',')
             except AttributeError:
-                multivar = str(multivar).split(',')
+                multivar = six.text_type(multivar).split(',')
         else:
             new_multivar = []
             for item in multivar:
                 if isinstance(item, six.string_types):
                     new_multivar.append(item)
                 else:
-                    new_multivar.append(str(item))
+                    new_multivar.append(six.text_type(item))
             multivar = new_multivar
         value_comment = multivar
         desired = multivar
@@ -2924,6 +3371,7 @@ def config_set(name,
         user=user,
         password=password,
         ignore_retcode=True,
+        output_encoding=output_encoding,
         **{'all': True, 'global': global_}
     )
 
@@ -2954,6 +3402,7 @@ def config_set(name,
             multivar=multivar,
             user=user,
             password=password,
+            output_encoding=output_encoding,
             **{'global': global_}
         )
     except CommandExecutionError as exc:
@@ -2999,18 +3448,65 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
     Otherwise, returns ``True``
     '''
     cmd_kwargs = copy.deepcopy(cmd_kwargs)
-    cmd_kwargs['python_shell'] = True
-    if onlyif:
-        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+    cmd_kwargs.update({
+        'use_vt': False,
+        'bg': False,
+        'ignore_retcode': True,
+        'python_shell': True,
+    })
+
+    if onlyif is not None:
+        if not isinstance(onlyif, list):
+            onlyif = [onlyif]
+
+        for command in onlyif:
+            if not isinstance(command, six.string_types) and command:
+                # Boolean or some other non-string which resolves to True
+                continue
+            try:
+                if __salt__['cmd.retcode'](command, **cmd_kwargs) == 0:
+                    # Command exited with a zero retcode
+                    continue
+            except Exception as exc:
+                log.exception(
+                    'The following onlyif command raised an error: %s',
+                    command
+                )
+                return {
+                    'comment': 'onlyif raised error ({0}), see log for '
+                               'more details'.format(exc),
+                    'result': False
+                }
+
             return {'comment': 'onlyif condition is false',
                     'skip_watch': True,
                     'result': True}
 
-    if unless:
-        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+    if unless is not None:
+        if not isinstance(unless, list):
+            unless = [unless]
+
+        for command in unless:
+            if not isinstance(command, six.string_types) and not command:
+                # Boolean or some other non-string which resolves to False
+                break
+            try:
+                if __salt__['cmd.retcode'](command, **cmd_kwargs) != 0:
+                    # Command exited with a non-zero retcode
+                    break
+            except Exception as exc:
+                log.exception(
+                    'The following unless command raised an error: %s',
+                    command
+                )
+                return {
+                    'comment': 'unless raised error ({0}), see log for '
+                               'more details'.format(exc),
+                    'result': False
+                }
+        else:
             return {'comment': 'unless condition is true',
                     'skip_watch': True,
                     'result': True}
 
-    # No reason to stop, return True
     return True

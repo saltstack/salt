@@ -16,7 +16,7 @@ description.
     This is Erik's computer, don't touch!:
       system.computer_desc: []
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -24,6 +24,10 @@ import logging
 # Import Salt libs
 import salt.utils.functools
 import salt.utils.platform
+
+# Import 3rd party libs
+from salt.ext import six
+
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +52,7 @@ def computer_desc(name):
         The desired computer description
     '''
     # Just in case someone decides to enter a numeric description
-    name = str(name)
+    name = six.text_type(name)
 
     ret = {'name': name,
            'changes': {},
@@ -77,6 +81,7 @@ def computer_desc(name):
                           '\'{0}\''.format(name))
     return ret
 
+
 computer_description = salt.utils.functools.alias_function(computer_desc, 'computer_description')
 
 
@@ -88,7 +93,7 @@ def computer_name(name):
         The desired computer name
     '''
     # Just in case someone decides to enter a numeric description
-    name = str(name)
+    name = six.text_type(name)
 
     ret = {'name': name,
            'changes': {},
@@ -162,36 +167,104 @@ def hostname(name):
     return ret
 
 
-def join_domain(name, username=None, password=None, account_ou=None,
-                account_exists=False, restart=False):
-
+def workgroup(name):
     '''
-    Checks if a computer is joined to the Domain.
-    If the computer is not in the Domain, it will be joined.
+    .. versionadded:: 2019.2.0
 
-    name:
-        The name of the Domain.
+    Manage the workgroup of the computer
 
-    username:
-        Username of an account which is authorized to join computers to the
-        specified domain. Need to be either fully qualified like user@domain.tld
-        or simply user.
+    name
+        The workgroup to set
 
-    password:
-        Password of the account to add the computer to the Domain.
+    Example:
 
-    account_ou:
-        The DN of the OU below which the account for this computer should be
-        created when joining the domain,
-        e.g. ou=computers,ou=departm_432,dc=my-company,dc=com.
+    .. code-block:: yaml
 
-    account_exists:
-        Needs to be set to True to allow re-using an existing computer account.
+        set workgroup:
+          system.workgroup:
+            - name: local
+    '''
+    ret = {'name': name.upper(), 'result': False, 'changes': {}, 'comment': ''}
 
-    restart:
-        Needs to be set to True to restart the computer after a successful join.
+    # Grab the current domain/workgroup
+    out = __salt__['system.get_domain_workgroup']()
+    current_workgroup = out['Domain'] if 'Domain' in out else out['Workgroup'] if 'Workgroup' in out else ''
 
-    .. code-block::yaml
+    # Notify the user if the requested workgroup is the same
+    if current_workgroup.upper() == name.upper():
+        ret['result'] = True
+        ret['comment'] = "Workgroup is already set to '{0}'".format(name.upper())
+        return ret
+
+    # If being run in test-mode, inform the user what is supposed to happen
+    if __opts__['test']:
+        ret['result'] = None
+        ret['changes'] = {}
+        ret['comment'] = 'Computer will be joined to workgroup \'{0}\''.format(name)
+        return ret
+
+    # Set our new workgroup, and then immediately ask the machine what it
+    # is again to validate the change
+    res = __salt__['system.set_domain_workgroup'](name.upper())
+    out = __salt__['system.get_domain_workgroup']()
+    changed_workgroup = out['Domain'] if 'Domain' in out else out['Workgroup'] if 'Workgroup' in out else ''
+
+    # Return our results based on the changes
+    ret = {}
+    if res and current_workgroup.upper() == changed_workgroup.upper():
+        ret['result'] = True
+        ret['comment'] = "The new workgroup '{0}' is the same as '{1}'".format(current_workgroup.upper(), changed_workgroup.upper())
+    elif res:
+        ret['result'] = True
+        ret['comment'] = "The workgroup has been changed from '{0}' to '{1}'".format(current_workgroup.upper(), changed_workgroup.upper())
+        ret['changes'] = {'old': current_workgroup.upper(), 'new': changed_workgroup.upper()}
+    else:
+        ret['result'] = False
+        ret['comment'] = "Unable to join the requested workgroup '{0}'".format(changed_workgroup.upper())
+
+    return ret
+
+
+def join_domain(name,
+                username=None,
+                password=None,
+                account_ou=None,
+                account_exists=False,
+                restart=False):
+    '''
+    Checks if a computer is joined to the Domain. If the computer is not in the
+    Domain, it will be joined.
+
+    Args:
+
+        name (str):
+            The name of the Domain.
+
+        username (str):
+            Username of an account which is authorized to join computers to the
+            specified domain. Need to be either fully qualified like
+            user@domain.tld or simply user.
+
+        password (str):
+            Password of the account to add the computer to the Domain.
+
+        account_ou (str):
+            The DN of the OU below which the account for this computer should be
+            created when joining the domain,
+            e.g. ou=computers,ou=departm_432,dc=my-company,dc=com.
+
+        account_exists (bool):
+            Needs to be set to ``True`` to allow re-using an existing computer
+            account.
+
+        restart (bool):
+            Needs to be set to ``True`` to restart the computer after a
+            successful join.
+
+    Example:
+
+    .. code-block:: yaml
+
         join_to_domain:
           system.join_domain:
             - name: mydomain.local.com
@@ -205,9 +278,6 @@ def join_domain(name, username=None, password=None, account_ou=None,
            'result': True,
            'comment': 'Computer already added to \'{0}\''.format(name)}
 
-    # Set name to domain, needed for the add to domain module.
-    domain = name
-
     current_domain_dic = __salt__['system.get_domain_workgroup']()
     if 'Domain' in current_domain_dic:
         current_domain = current_domain_dic['Domain']
@@ -216,7 +286,7 @@ def join_domain(name, username=None, password=None, account_ou=None,
     else:
         current_domain = None
 
-    if domain == current_domain:
+    if name.lower() == current_domain.lower():
         ret['comment'] = 'Computer already added to \'{0}\''.format(name)
         return ret
 
@@ -225,11 +295,20 @@ def join_domain(name, username=None, password=None, account_ou=None,
         ret['comment'] = 'Computer will be added to \'{0}\''.format(name)
         return ret
 
-    result = __salt__['system.join_domain'](domain, username, password,
-                                            account_ou, account_exists,
-                                            restart)
+    result = __salt__['system.join_domain'](domain=name,
+                                            username=username,
+                                            password=password,
+                                            account_ou=account_ou,
+                                            account_exists=account_exists,
+                                            restart=restart)
     if result is not False:
         ret['comment'] = 'Computer added to \'{0}\''.format(name)
+        if restart:
+            ret['comment'] += '\nSystem will restart'
+        else:
+            ret['comment'] += '\nSystem needs to be restarted'
+        ret['changes'] = {'old': current_domain,
+                          'new': name}
     else:
         ret['comment'] = 'Computer failed to join \'{0}\''.format(name)
         ret['result'] = False

@@ -8,7 +8,7 @@ Service support for RHEL-based systems, including support for both upstart and s
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import glob
@@ -20,6 +20,7 @@ import re
 
 # Import salt libs
 import salt.utils.path
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -36,10 +37,10 @@ if salt.utils.path.which('initctl'):
     try:
         # Don't re-invent the wheel, import the helper functions from the
         # upstart module.
-        from salt.modules.upstart import _upstart_enable, _upstart_disable, _upstart_is_enabled
+        from salt.modules.upstart_service import _upstart_enable, _upstart_disable, _upstart_is_enabled
     except Exception as exc:
         log.error('Unable to import helper functions from '
-                  'salt.modules.upstart: {0}'.format(exc))
+                  'salt.modules.upstart: %s', exc)
     else:
         HAS_UPSTART = True
 
@@ -49,9 +50,14 @@ def __virtual__():
     Only work on select distros which still use Red Hat's /usr/bin/service for
     management of either sysvinit or a hybrid sysvinit/upstart init system.
     '''
+    # Disable when booted with systemd
+    if __utils__['systemd.booted'](__context__):
+        return (False, 'The rh_service execution module failed to load: this system was booted with systemd.')
+
     # Enable on these platforms only.
     enable = set((
         'XenServer',
+        'XCP-ng',
         'RedHat',
         'CentOS',
         'ScientificLinux',
@@ -68,18 +74,18 @@ def __virtual__():
     if __grains__['os'] in enable:
 
         if __grains__['os'] == 'SUSE':
-            if str(__grains__['osrelease']).startswith('11'):
+            if six.text_type(__grains__['osrelease']).startswith('11'):
                 return __virtualname__
             else:
                 return (False, 'Cannot load rh_service module on SUSE > 11')
 
         osrelease_major = __grains__.get('osrelease_info', [0])[0]
 
-        if __grains__['os'] == 'XenServer':
+        if __grains__['os'] in ('XenServer', 'XCP-ng'):
             if osrelease_major >= 7:
                 return (
                     False,
-                    'XenServer >= 7 uses systemd, will not load rh_service.py '
+                    'XenServer and XCP-ng >= 7 use systemd, will not load rh_service.py '
                     'as virtual \'service\''
                 )
             return __virtualname__
@@ -125,10 +131,10 @@ def _chkconfig_add(name):
     '''
     cmd = '/sbin/chkconfig --add {0}'.format(name)
     if __salt__['cmd.retcode'](cmd, python_shell=False) == 0:
-        log.info('Added initscript "{0}" to chkconfig'.format(name))
+        log.info('Added initscript "%s" to chkconfig', name)
         return True
     else:
-        log.error('Unable to add initscript "{0}" to chkconfig'.format(name))
+        log.error('Unable to add initscript "%s" to chkconfig', name)
         return False
 
 
@@ -475,7 +481,7 @@ def status(name, sig=None):
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
     Args:

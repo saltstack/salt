@@ -513,7 +513,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     os.setsid()
-    os.umask(0)
+    os.umask(0o000)  # pylint: disable=blacklisted-function
 
     try:
         pid = os.fork()

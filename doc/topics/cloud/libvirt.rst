@@ -9,11 +9,11 @@ libvirt with qemu-kvm.
 http://www.libvirt.org/
 
 Host Dependencies
-============
+=================
 * libvirt >= 1.2.18 (older might work)
 
 Salt-Cloud Dependencies
-============
+=======================
 * libvirt-python
 
 Provider Configuration
@@ -84,7 +84,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    # salt my-centos7-clone test.ping
+    # salt my-centos7-clone test.version
 
 
 Required Settings

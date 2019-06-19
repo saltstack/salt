@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Alexander Schwartz <alexander.schwartz@gmx.net>`
+    :codeauthor: Alexander Schwartz <alexander.schwartz@gmx.net>
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing libs
@@ -82,11 +82,11 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
             'z -v -weird-long-opt arg',
         ]
         ret_tar_opts = [
-            ['tar', 'x', '--no-anchored', 'foo', '-f'],
+            ['tar', 'xv', '--no-anchored', 'foo', '-f'],
             ['tar', 'xv', '-p', '--opt', '-f'],
-            ['tar', 'x', '-v', '-p', '-f'],
-            ['tar', 'x', '--long-opt', '-z', '-f'],
-            ['tar', 'xz', '-v', '-weird-long-opt', 'arg', '-f'],
+            ['tar', 'xv', '-p', '-f'],
+            ['tar', 'xv', '--long-opt', '-z', '-f'],
+            ['tar', 'xvz', '-weird-long-opt', 'arg', '-f'],
         ]
 
         mock_true = MagicMock(return_value=True)
@@ -163,7 +163,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                     options='xvzf',
                                     enforce_toplevel=False,
                                     keep=True)
-            self.assertEqual(ret['changes']['extracted_files'], 'stdout')
+            self.assertEqual(ret['changes']['extracted_files'], ['stdout'])
 
     def test_tar_bsdtar(self):
         '''
@@ -202,4 +202,26 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                     options='xvzf',
                                     enforce_toplevel=False,
                                     keep=True)
-            self.assertEqual(ret['changes']['extracted_files'], 'stderr')
+            self.assertEqual(ret['changes']['extracted_files'], ['stderr'])
+
+    def test_extracted_when_if_missing_path_exists(self):
+        '''
+        When if_missing exists, we should exit without making any changes.
+
+        NOTE: We're not mocking the __salt__ dunder because if we actually run
+        any functions from that dunder, we're doing something wrong. So, in
+        those cases we'll just let it raise a KeyError and cause the test to
+        fail.
+        '''
+        name = if_missing = '/tmp/foo'
+        source = 'salt://foo.bar.tar'
+        with patch.object(os.path, 'exists', MagicMock(return_value=True)):
+            ret = archive.extracted(
+                name,
+                source=source,
+                if_missing=if_missing)
+            self.assertTrue(ret['result'], ret)
+            self.assertEqual(
+                ret['comment'],
+                'Path {0} exists'.format(if_missing)
+            )

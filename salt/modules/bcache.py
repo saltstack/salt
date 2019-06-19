@@ -16,7 +16,7 @@ This module needs the bcache userspace tools to function.
 
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import time
@@ -75,7 +75,7 @@ def uuid(dev=None):
         else:
             # basename of the /sys/block/{dev}/bcache/cache symlink target
             return os.path.basename(_bcsys(dev, 'cache'))
-    except:  # pylint: disable=bare-except
+    except Exception:
         return False
 
 
@@ -96,7 +96,7 @@ def attach_(dev=None):
     '''
     cache = uuid()
     if not cache:
-        log.error('No cache to attach {0} to'.format(dev))
+        log.error('No cache to attach %s to', dev)
         return False
 
     if dev is None:
@@ -105,20 +105,17 @@ def attach_(dev=None):
             if 'cache' in data:
                 res[dev] = attach_(dev)
 
-        if len(res):
-            return res
-        else:
-            return None
+        return res if res else None
 
     bcache = uuid(dev)
     if bcache:
         if bcache == cache:
-            log.info('{0} is already attached to bcache {1}, doing nothing'.format(dev, cache))
+            log.info('%s is already attached to bcache %s, doing nothing', dev, cache)
             return None
         elif not detach(dev):
             return False
 
-    log.debug('Attaching {0} to bcache {1}'.format(dev, cache))
+    log.debug('Attaching %s to bcache %s', dev, cache)
 
     if not _bcsys(dev, 'attach', cache,
                   'error', 'Error attaching {0} to bcache {1}'.format(dev, cache)):
@@ -150,12 +147,9 @@ def detach(dev=None):
             if 'cache' in data:
                 res[dev] = detach(dev)
 
-        if len(res):
-            return res
-        else:
-            return None
+        return res if res else None
 
-    log.debug('Detaching {0}'.format(dev))
+    log.debug('Detaching %s', dev)
     if not _bcsys(dev, 'detach', 'goaway', 'error', 'Error detaching {0}'.format(dev)):
         return False
     return _wait(lambda: uuid(dev) is False, 'error', '{0} received detach, but did not comply'.format(dev), 300)
@@ -172,7 +166,7 @@ def start():
         salt '*' bcache.start
 
     '''
-    if not _run_all('udevadm trigger', 'error', 'Error starting bcache: {{0}}'):
+    if not _run_all('udevadm trigger', 'error', 'Error starting bcache: %s'):
         return False
     elif not _wait(lambda: uuid() is not False, 'warn', 'Bcache system started, but no active cache set found.'):
         return False
@@ -196,7 +190,7 @@ def stop(dev=None):
 
     '''
     if dev is not None:
-        log.warning('Stopping {0}, device will only reappear after reregistering!'.format(dev))
+        log.warning('Stopping %s, device will only reappear after reregistering!', dev)
         if not _bcsys(dev, 'stop', 'goaway', 'error', 'Error stopping {0}'.format(dev)):
             return False
         return _wait(lambda: _sysfs_attr(_bcpath(dev)) is False, 'error', 'Device {0} did not stop'.format(dev), 300)
@@ -239,7 +233,7 @@ def back_make(dev, cache_mode='writeback', force=False, attach=True, bucket_size
         return False
     elif _sysfs_attr(_bcpath(dev)):
         if not force:
-            log.error('{0} already contains a bcache. Wipe it manually or use force'.format(dev))
+            log.error('%s already contains a bcache. Wipe it manually or use force', dev)
             return False
         elif uuid(dev) and not detach(dev):
             return False
@@ -256,10 +250,10 @@ def back_make(dev, cache_mode='writeback', force=False, attach=True, bucket_size
     if force:
         cmd += ' --wipe-bcache'
 
-    if not _run_all(cmd, 'error', 'Error creating backing device {0}: {{0}}'.format(dev)):
+    if not _run_all(cmd, 'error', 'Error creating backing device {0}: %s'.format(dev)):
         return False
     elif not _sysfs_attr('fs/bcache/register', _devpath(dev),
-                         'error', 'Error registering backing device {0}: {{0}}'.format(dev)):
+                         'error', 'Error registering backing device {0}'.format(dev)):
         return False
     elif not _wait(lambda: _sysfs_attr(_bcpath(dev)) is not False,
                    'error', 'Backing device {0} did not register'.format(dev)):
@@ -298,7 +292,7 @@ def cache_make(dev, reserved=None, force=False, block_size=None, bucket_size=Non
     cache = uuid()
     if cache:
         if not force:
-            log.error('BCache cache {0} is already on the system'.format(cache))
+            log.error('BCache cache %s is already on the system', cache)
             return False
         cache = _bdev()
 
@@ -307,7 +301,7 @@ def cache_make(dev, reserved=None, force=False, block_size=None, bucket_size=Non
 
     if ('ID_FS_TYPE' in udev or (udev.get('DEVTYPE', None) != 'partition' and 'ID_PART_TABLE_TYPE' in udev)) \
             and not force:
-        log.error('{0} already contains data, wipe first or force'.format(dev))
+        log.error('%s already contains data, wipe first or force', dev)
         return False
     elif reserved is not None and udev.get('DEVTYPE', None) != 'disk':
         log.error('Need a partitionable blockdev for reserved to work')
@@ -340,7 +334,7 @@ def cache_make(dev, reserved=None, force=False, block_size=None, bucket_size=Non
               '/dev/{0} mklabel gpt mkpart bcache-reserved 1M {1} mkpart bcache {1} 100%'.format(dev, reserved)
         # if wipe was incomplete & part layout remains the same,
         # this is one condition set where udev would make it accidentally popup again
-        if not _run_all(cmd, 'error', 'Error creating bcache partitions on {0}: {{0}}'.format(dev)):
+        if not _run_all(cmd, 'error', 'Error creating bcache partitions on {0}: %s'.format(dev)):
             return False
         dev = '{0}2'.format(dev)
 
@@ -351,7 +345,7 @@ def cache_make(dev, reserved=None, force=False, block_size=None, bucket_size=Non
     if bucket_size:
         cmd += ' --bucket {0}'.format(bucket_size)
 
-    if not _run_all(cmd, 'error', 'Error creating cache {0}: {{0}}'.format(dev)):
+    if not _run_all(cmd, 'error', 'Error creating cache {0}: %s'.format(dev)):
         return False
     elif not _wait(lambda: uuid() is not False,
                    'error', 'Cache {0} seemingly created OK, but FS did not activate'.format(dev)):
@@ -492,7 +486,7 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
 
         try:
             result['dev'] = os.path.basename(_bcsys(dev, 'dev'))
-        except:  # pylint: disable=bare-except
+        except Exception:
             pass
         result['bdev'] = _bdev(dev)
 
@@ -536,7 +530,7 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
     if internals:
         interres = result.pop('inter_ro', {})
         interres.update(result.pop('inter_rw', {}))
-        if len(interres):
+        if interres:
             for key in interres:
                 if key.startswith('internal'):
                     nkey = re.sub(r'internal[s/]*', '', key)
@@ -582,7 +576,7 @@ def super_(dev):
     dev = _devpath(dev)
     ret = {}
 
-    res = _run_all('bcache-super-show {0}'.format(dev), 'error', 'Error reading superblock on {0}: {{0}}'.format(dev))
+    res = _run_all('bcache-super-show {0}'.format(dev), 'error', 'Error reading superblock on {0}: %s'.format(dev))
     if not res:
         return False
 
@@ -604,10 +598,10 @@ def super_(dev):
 
         try:
             rval = int(rval)
-        except:  # pylint: disable=bare-except
+        except Exception:
             try:
                 rval = float(rval)
-            except:  # pylint: disable=bare-except
+            except Exception:
                 if rval == 'yes':
                     rval = True
                 elif rval == 'no':
@@ -668,7 +662,7 @@ def _bdev(dev=None):
     if not dev:
         return False
     else:
-        return _devbase(os.path.realpath(os.path.join(dev, '../')))
+        return _devbase(os.path.dirname(dev))
 
 
 def _bcpath(dev):
@@ -714,7 +708,7 @@ def _sysfs_attr(name, value=None, log_lvl=None, log_msg=None):
     if isinstance(name, six.string_types):
         name = [name]
     res = __salt__['sysfs.attr'](os.path.join(*name), value)
-    if not res and log_lvl is not None:
+    if not res and log_lvl is not None and log_msg is not None:
         log.log(LOG[log_lvl], log_msg)
     return res
 
@@ -800,10 +794,10 @@ def _sysfs_parse(path, base_attr=None, stats=False, config=False, internals=Fals
                 val = val.strip()
                 try:
                     val = int(val)
-                except:  # pylint: disable=bare-except
+                except Exception:
                     try:
                         val = float(val)
-                    except:  # pylint: disable=bare-except
+                    except Exception:
                         pass
                 listres[key.strip()] = val
             result[strlist] = listres
@@ -826,7 +820,7 @@ def _sysfs_parse(path, base_attr=None, stats=False, config=False, internals=Fals
         for intf in intflist:
             if intf in result:
                 ifres[intf] = result.pop(intf)
-        if len(ifres):
+        if ifres:
             bresult[iftype] = ifres
 
     return bresult
@@ -846,7 +840,7 @@ def _size_map(size):
                 size = 1024**2 * float(re.sub(r'[Mm]', '', size))
             size = int(size)
         return size
-    except:  # pylint: disable=bare-except
+    except Exception:
         return None
 
 
@@ -894,10 +888,10 @@ def _wipe(dev):
     size, block, discard = _sizes(dev)
 
     if discard is None:
-        log.error('Unable to read SysFS props for {0}'.format(dev))
+        log.error('Unable to read SysFS props for %s', dev)
         return None
     elif not discard:
-        log.warning('{0} seems unable to discard'.format(dev))
+        log.warning('%s seems unable to discard', dev)
         wiper = 'dd'
     elif not HAS_BLKDISCARD:
         log.warning('blkdiscard binary not available, properly wipe the dev manually for optimal results')
@@ -905,7 +899,7 @@ def _wipe(dev):
     else:
         wiper = 'blkdiscard'
 
-    wipe_failmsg = 'Error wiping {0}: {{0}}'.format(dev)
+    wipe_failmsg = 'Error wiping {0}: %s'.format(dev)
     if wiper == 'dd':
         blocks = 4
         cmd = 'dd if=/dev/zero of=/dev/{0} bs=1M count={1}'.format(dev, blocks)
@@ -918,7 +912,7 @@ def _wipe(dev):
     elif wiper == 'blkdiscard':
         cmd = 'blkdiscard /dev/{0}'.format(dev)
         endres += _run_all(cmd, 'warn', wipe_failmsg)
-        # TODO: FUCKING annoying bug failing blkdiscard by trying to discard 1 sector past blkdev
+        # TODO: fix annoying bug failing blkdiscard by trying to discard 1 sector past blkdev
         endres = 1
 
     return endres > 0
@@ -927,7 +921,7 @@ def _wipe(dev):
 def _wait(lfunc, log_lvl=None, log_msg=None, tries=10):
     '''
     Wait for lfunc to be True
-    :return: True if lfunc succeeded within tries, False if it didnt
+    :return: True if lfunc succeeded within tries, False if it didn't
     '''
     i = 0
     while i < tries:
@@ -956,7 +950,7 @@ def _run_all(cmd, log_lvl=None, log_msg=None, exitcode=0):
             return True
 
     if log_lvl is not None:
-        log.log(LOG[log_lvl], log_msg.format(res['stderr']))
+        log.log(LOG[log_lvl], log_msg, res['stderr'])
     return False
 
 

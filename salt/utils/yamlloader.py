@@ -4,19 +4,21 @@ Custom YAML loading in Salt
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import warnings
 
-# Import third party libs
-import re
 import yaml  # pylint: disable=blacklisted-import
 from yaml.nodes import MappingNode, SequenceNode
 from yaml.constructor import ConstructorError
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
+    yaml.SafeLoader = yaml.CSafeLoader
+    yaml.SafeDumper = yaml.CSafeDumper
 except Exception:
     pass
+
+import salt.utils.stringutils
 
 __all__ = ['SaltYamlSafeLoader', 'load', 'safe_load']
 
@@ -26,11 +28,12 @@ class DuplicateKeyWarning(RuntimeWarning):
     Warned when duplicate keys exist
     '''
 
+
 warnings.simplefilter('always', category=DuplicateKeyWarning)
 
 
 # with code integrated from https://gist.github.com/844388
-class SaltYamlSafeLoader(yaml.SafeLoader, object):
+class SaltYamlSafeLoader(yaml.SafeLoader):
     '''
     Create a custom YAML loader that uses the custom constructor. This allows
     for the YAML loading defaults to be manipulated based on needs within salt
@@ -46,6 +49,9 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
             self.add_constructor(
                 'tag:yaml.org,2002:omap',
                 type(self).construct_yaml_map)
+        self.add_constructor(
+            'tag:yaml.org,2002:str',
+            type(self).construct_yaml_str)
         self.add_constructor(
             'tag:yaml.org,2002:python/unicode',
             type(self).construct_unicode)
@@ -76,18 +82,25 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
 
         self.flatten_mapping(node)
 
+        context = 'while constructing a mapping'
         mapping = self.dictclass()
         for key_node, value_node in node.value:
             key = self.construct_object(key_node, deep=deep)
             try:
                 hash(key)
             except TypeError:
-                err = ('While constructing a mapping {0} found unacceptable '
-                       'key {1}').format(node.start_mark, key_node.start_mark)
-                raise ConstructorError(err)
+                raise ConstructorError(
+                    context,
+                    node.start_mark,
+                    "found unacceptable key {0}".format(key_node.value),
+                    key_node.start_mark)
             value = self.construct_object(value_node, deep=deep)
             if key in mapping:
-                raise ConstructorError('Conflicting ID \'{0}\''.format(key))
+                raise ConstructorError(
+                    context,
+                    node.start_mark,
+                    "found conflicting ID '{0}'".format(key),
+                    key_node.start_mark)
             mapping[key] = value
         return mapping
 
@@ -105,12 +118,11 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
                 # an empty string. Change it to '0'.
                 if node.value == '':
                     node.value = '0'
-        elif node.tag == 'tag:yaml.org,2002:str':
-            # If any string comes in as a quoted unicode literal, eval it into
-            # the proper unicode string type.
-            if re.match(r'^u([\'"]).+\1$', node.value, flags=re.IGNORECASE):
-                node.value = eval(node.value, {}, {})  # pylint: disable=W0123
         return super(SaltYamlSafeLoader, self).construct_scalar(node)
+
+    def construct_yaml_str(self, node):
+        value = self.construct_scalar(node)
+        return salt.utils.stringutils.to_unicode(value)
 
     def flatten_mapping(self, node):
         merge = []
@@ -160,7 +172,7 @@ def load(stream, Loader=SaltYamlSafeLoader):
 
 def safe_load(stream, Loader=SaltYamlSafeLoader):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Helper function which automagically uses our custom loader.
     '''

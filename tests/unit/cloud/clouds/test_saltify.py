@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Alexander Schwartz <alexander.schwartz@gmx.net>`
+    :codeauthor: Alexander Schwartz <alexander.schwartz@gmx.net>
 '''
 
 # Import Python libs
@@ -112,7 +112,9 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
                     result = saltify.create(vm_)
                     mock_cmd.assert_called_once_with(vm_, ANY)
                     mm_cmd.assert_called_with('friend1', 'network.wol', ['aa-bb-cc-dd-ee-ff'])
-                    mock_sleep.assert_called_with(0.01)
+                    # The test suite might call time.sleep, look for any call
+                    # that has the expected wait time.
+                    mock_sleep.assert_any_call(0.01)
                     self.assertTrue(result)
 
     def test_avail_locations(self):

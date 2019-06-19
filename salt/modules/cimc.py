@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Module to provide Cisco UCS compatibility to Salt.
+Module to provide Cisco UCS compatibility to Salt
 
-:codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
+:codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
 :maturity:   new
 :depends:    none
 :platform:   unix
@@ -15,17 +15,18 @@ parameters, or as configuration settings in pillar as a Salt proxy.
 Options passed into opts will be ignored if options are passed into pillar.
 
 .. seealso::
-    :prox:`Cisco UCS Proxy Module <salt.proxy.cimc>`
+    :py:mod:`Cisco UCS Proxy Module <salt.proxy.cimc>`
 
 About
 =====
-This execution module was designed to handle connections to a Cisco UCS server. This module adds support to send
-connections directly to the device through the rest API.
+This execution module was designed to handle connections to a Cisco UCS server.
+This module adds support to send connections directly to the device through the
+rest API.
 
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs
@@ -256,6 +257,27 @@ def get_firmware():
     return ret
 
 
+def get_hostname():
+    '''
+    Retrieves the hostname from the device.
+
+    .. versionadded:: 2019.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.get_hostname
+
+    '''
+    ret = __proxy__['cimc.get_config_resolver_class']('mgmtIf', True)
+
+    try:
+        return ret['outConfigs']['mgmtIf'][0]['hostname']
+    except Exception as err:
+        return "Unable to retrieve hostname"
+
+
 def get_ldap():
     '''
     Retrieves LDAP server details.
@@ -368,6 +390,25 @@ def get_pci_adapters():
     return ret
 
 
+def get_power_configuration():
+    '''
+    Get the configuration of the power settings from the device. This is only available
+    on some C-Series servers.
+
+    .. versionadded:: 2019.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.get_power_configuration
+
+    '''
+    ret = __proxy__['cimc.get_config_resolver_class']('biosVfResumeOnACPowerLoss', True)
+
+    return ret
+
+
 def get_power_supplies():
     '''
     Retrieves the power supply unit details.
@@ -412,6 +453,24 @@ def get_syslog():
 
     '''
     ret = __proxy__['cimc.get_config_resolver_class']('commSyslogClient', False)
+
+    return ret
+
+
+def get_syslog_settings():
+    '''
+    Get the Syslog configuration settings from the system.
+
+    .. versionadded:: 2019.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.get_syslog_settings
+
+    '''
+    ret = __proxy__['cimc.get_config_resolver_class']('commSyslog', False)
 
     return ret
 
@@ -570,6 +629,91 @@ def reboot():
     return ret
 
 
+def set_hostname(hostname=None):
+    '''
+    Sets the hostname on the server.
+
+    .. versionadded:: 2019.2.0
+
+    Args:
+        hostname(str): The new hostname to set.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.set_hostname foobar
+
+    '''
+    if not hostname:
+        raise salt.exceptions.CommandExecutionError("Hostname option must be provided.")
+
+    dn = "sys/rack-unit-1/mgmt/if-1"
+    inconfig = """<mgmtIf dn="sys/rack-unit-1/mgmt/if-1" hostname="{0}" ></mgmtIf>""".format(hostname)
+
+    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+
+    try:
+        if ret['outConfig']['mgmtIf'][0]['status'] == 'modified':
+            return True
+        else:
+            return False
+    except Exception as err:
+        return False
+
+
+def set_logging_levels(remote=None, local=None):
+    '''
+    Sets the logging levels of the CIMC devices. The logging levels must match
+    the following options: emergency, alert, critical, error, warning, notice,
+    informational, debug.
+
+    .. versionadded:: 2019.2.0
+
+    Args:
+        remote(str): The logging level for SYSLOG logs.
+
+        local(str): The logging level for the local device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.set_logging_levels remote=error local=notice
+
+    '''
+
+    logging_options = ['emergency',
+                       'alert',
+                       'critical',
+                       'error',
+                       'warning',
+                       'notice',
+                       'informational',
+                       'debug']
+
+    query = ""
+
+    if remote:
+        if remote in logging_options:
+            query += ' remoteSeverity="{0}"'.format(remote)
+        else:
+            raise salt.exceptions.CommandExecutionError("Remote Severity option is not valid.")
+
+    if local:
+        if local in logging_options:
+            query += ' localSeverity="{0}"'.format(local)
+        else:
+            raise salt.exceptions.CommandExecutionError("Local Severity option is not valid.")
+
+    dn = "sys/svc-ext/syslog"
+    inconfig = """<commSyslog dn="sys/svc-ext/syslog"{0} ></commSyslog>""".format(query)
+
+    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+
+    return ret
+
+
 def set_ntp_server(server1='', server2='', server3='', server4=''):
     '''
     Sets the NTP servers configuration. This will also enable the client NTP service.
@@ -596,6 +740,77 @@ def set_ntp_server(server1='', server2='', server3='', server4=''):
     dn = "sys/svc-ext/ntp-svc"
     inconfig = """<commNtpProvider dn="sys/svc-ext/ntp-svc" ntpEnable="yes" ntpServer1="{0}" ntpServer2="{1}"
     ntpServer3="{2}" ntpServer4="{3}"/>""".format(server1, server2, server3, server4)
+
+    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+
+    return ret
+
+
+def set_power_configuration(policy=None, delayType=None, delayValue=None):
+    '''
+    Sets the power configuration on the device. This is only available for some
+    C-Series servers.
+
+    .. versionadded:: 2019.2.0
+
+    Args:
+        policy(str): The action to be taken when chassis power is restored after
+        an unexpected power loss. This can be one of the following:
+
+            reset: The server is allowed to boot up normally when power is
+            restored. The server can restart immediately or, optionally, after a
+            fixed or random delay.
+
+            stay-off: The server remains off until it is manually restarted.
+
+            last-state: The server restarts and the system attempts to restore
+            any processes that were running before power was lost.
+
+        delayType(str): If the selected policy is reset, the restart can be
+        delayed with this option. This can be one of the following:
+
+            fixed: The server restarts after a fixed delay.
+
+            random: The server restarts after a random delay.
+
+        delayValue(int): If a fixed delay is selected, once chassis power is
+        restored and the Cisco IMC has finished rebooting, the system waits for
+        the specified number of seconds before restarting the server. Enter an
+        integer between 0 and 240.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.set_power_configuration stay-off
+
+        salt '*' cimc.set_power_configuration reset fixed 0
+
+    '''
+
+    query = ""
+    if policy == "reset":
+        query = ' vpResumeOnACPowerLoss="reset"'
+        if delayType:
+            if delayType == "fixed":
+                query += ' delayType="fixed"'
+                if delayValue:
+                    query += ' delay="{0}"'.format(delayValue)
+            elif delayType == "random":
+                query += ' delayType="random"'
+            else:
+                raise salt.exceptions.CommandExecutionError("Invalid delay type entered.")
+    elif policy == "stay-off":
+        query = ' vpResumeOnACPowerLoss="reset"'
+    elif policy == "last-state":
+        query = ' vpResumeOnACPowerLoss="last-state"'
+    else:
+        raise salt.exceptions.CommandExecutionError("The power state must be specified.")
+
+    dn = "sys/rack-unit-1/board/Resume-on-AC-power-loss"
+    inconfig = """<biosVfResumeOnACPowerLoss
+    dn="sys/rack-unit-1/board/Resume-on-AC-power-loss"{0}>
+    </biosVfResumeOnACPowerLoss>""".format(query)
 
     ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
 
@@ -636,6 +851,57 @@ def set_syslog_server(server=None, type="primary"):
         dn='sys/svc-ext/syslog/client-secondary'> </commSyslogClient>""".format(server)
     else:
         raise salt.exceptions.CommandExecutionError("The SYSLOG type must be either primary or secondary.")
+
+    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+
+    return ret
+
+
+def set_user(uid=None, username=None, password=None, priv=None, status=None):
+    '''
+    Sets a CIMC user with specified configurations.
+
+    .. versionadded:: 2019.2.0
+
+    Args:
+        uid(int): The user ID slot to create the user account in.
+
+        username(str): The name of the user.
+
+        password(str): The clear text password of the user.
+
+        priv(str): The privilege level of the user.
+
+        status(str): The account status of the user.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.set_user 11 username=admin password=foobar priv=admin active
+
+    '''
+
+    conf = ""
+    if not uid:
+        raise salt.exceptions.CommandExecutionError("The user ID must be specified.")
+
+    if status:
+        conf += ' accountStatus="{0}"'.format(status)
+
+    if username:
+        conf += ' name="{0}"'.format(username)
+
+    if priv:
+        conf += ' priv="{0}"'.format(priv)
+
+    if password:
+        conf += ' pwd="{0}"'.format(password)
+
+    dn = "sys/user-ext/user-{0}".format(uid)
+
+    inconfig = """<aaaUser id="{0}"{1} dn="sys/user-ext/user-{0}"/>""".format(uid,
+                                                                               conf)
 
     ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
 

@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import os
+import pytest
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -29,7 +31,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.btrfs
     '''
     def setup_loader_modules(self):
-        return {btrfs: {}}
+        return {btrfs: {'__salt__': {}}}
 
     # 'version' function tests: 1
     def test_version(self):
@@ -362,3 +364,370 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.assertRaises(CommandExecutionError, btrfs.properties,
                           '/dev/sda1', 'subvol', True)
+
+    def test_subvolume_exists(self):
+        '''
+        Test subvolume_exists
+        '''
+        salt_mock = {
+            'cmd.retcode': MagicMock(return_value=0),
+        }
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert btrfs.subvolume_exists('/mnt/one')
+
+    def test_subvolume_not_exists(self):
+        '''
+        Test subvolume_exists
+        '''
+        salt_mock = {
+            'cmd.retcode': MagicMock(return_value=1),
+        }
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert not btrfs.subvolume_exists('/mnt/nowhere')
+
+    def test_subvolume_create_fails_parameters(self):
+        '''
+        Test btrfs subvolume create
+        '''
+        # Fails when qgroupids is not a list
+        with pytest.raises(CommandExecutionError):
+            btrfs.subvolume_create('var', qgroupids='1')
+
+    @patch('salt.modules.btrfs.subvolume_exists')
+    def test_subvolume_create_already_exists(self, subvolume_exists):
+        '''
+        Test btrfs subvolume create
+        '''
+        subvolume_exists.return_value = True
+        assert not btrfs.subvolume_create('var', dest='/mnt')
+
+    @patch('salt.modules.btrfs.subvolume_exists')
+    def test_subvolume_create(self, subvolume_exists):
+        '''
+        Test btrfs subvolume create
+        '''
+        subvolume_exists.return_value = False
+        salt_mock = {
+            'cmd.run_all': MagicMock(return_value={'recode': 0}),
+        }
+        expected_path = os.path.join('/mnt', 'var')
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert btrfs.subvolume_create('var', dest='/mnt')
+            subvolume_exists.assert_called_once()
+            salt_mock['cmd.run_all'].assert_called_once()
+            salt_mock['cmd.run_all'].assert_called_with(
+                ['btrfs', 'subvolume', 'create', expected_path])
+
+    def test_subvolume_delete_fails_parameters(self):
+        '''
+        Test btrfs subvolume delete
+        '''
+        # We need to provide name or names
+        with pytest.raises(CommandExecutionError):
+            btrfs.subvolume_delete()
+
+        with pytest.raises(CommandExecutionError):
+            btrfs.subvolume_delete(names='var')
+
+    def test_subvolume_delete_fails_parameter_commit(self):
+        '''
+        Test btrfs subvolume delete
+        '''
+        # Parameter commit can be 'after' or 'each'
+        with pytest.raises(CommandExecutionError):
+            btrfs.subvolume_delete(name='var', commit='maybe')
+
+    @patch('salt.modules.btrfs.subvolume_exists')
+    def test_subvolume_delete_already_missing(self, subvolume_exists):
+        '''
+        Test btrfs subvolume delete
+        '''
+        subvolume_exists.return_value = False
+        assert not btrfs.subvolume_delete(name='var', names=['tmp'])
+
+    @patch('salt.modules.btrfs.subvolume_exists')
+    def test_subvolume_delete_already_missing_name(self, subvolume_exists):
+        '''
+        Test btrfs subvolume delete
+        '''
+        subvolume_exists.return_value = False
+        assert not btrfs.subvolume_delete(name='var')
+
+    @patch('salt.modules.btrfs.subvolume_exists')
+    def test_subvolume_delete_already_missing_names(self, subvolume_exists):
+        '''
+        Test btrfs subvolume delete
+        '''
+        subvolume_exists.return_value = False
+        assert not btrfs.subvolume_delete(names=['tmp'])
+
+    @patch('salt.modules.btrfs.subvolume_exists')
+    def test_subvolume_delete(self, subvolume_exists):
+        '''
+        Test btrfs subvolume delete
+        '''
+        subvolume_exists.return_value = True
+        salt_mock = {
+            'cmd.run_all': MagicMock(return_value={'recode': 0}),
+        }
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert btrfs.subvolume_delete('var', names=['tmp'])
+            salt_mock['cmd.run_all'].assert_called_once()
+            salt_mock['cmd.run_all'].assert_called_with(
+                ['btrfs', 'subvolume', 'delete', 'var', 'tmp'])
+
+    def test_subvolume_find_new_empty(self):
+        '''
+        Test btrfs subvolume find-new
+        '''
+        salt_mock = {
+            'cmd.run_all': MagicMock(return_value={
+                'recode': 0,
+                'stdout': 'transid marker was 1024'
+            }),
+        }
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert btrfs.subvolume_find_new('var', '2000') == {
+                'files': [],
+                'transid': '1024'
+            }
+            salt_mock['cmd.run_all'].assert_called_once()
+            salt_mock['cmd.run_all'].assert_called_with(
+                ['btrfs', 'subvolume', 'find-new', 'var', '2000'])
+
+    def test_subvolume_find_new(self):
+        '''
+        Test btrfs subvolume find-new
+        '''
+        salt_mock = {
+            'cmd.run_all': MagicMock(return_value={
+                'recode': 0,
+                'stdout': '''inode 185148 ... gen 2108 flags NONE var/log/audit/audit.log
+inode 187390 ... INLINE etc/openvpn/openvpn-status.log
+transid marker was 1024'''
+            }),
+        }
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert btrfs.subvolume_find_new('var', '1023') == {
+                'files': ['var/log/audit/audit.log',
+                          'etc/openvpn/openvpn-status.log'],
+                'transid': '1024'
+            }
+            salt_mock['cmd.run_all'].assert_called_once()
+            salt_mock['cmd.run_all'].assert_called_with(
+                ['btrfs', 'subvolume', 'find-new', 'var', '1023'])
+
+    def test_subvolume_get_default_free(self):
+        '''
+        Test btrfs subvolume get-default
+        '''
+        salt_mock = {
+            'cmd.run_all': MagicMock(return_value={
+                'recode': 0,
+                'stdout': 'ID 5 (FS_TREE)',
+            }),
+        }
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert btrfs.subvolume_get_default('/mnt') == {
+                'id': '5',
+                'name': '(FS_TREE)',
+            }
+            salt_mock['cmd.run_all'].assert_called_once()
+            salt_mock['cmd.run_all'].assert_called_with(
+                ['btrfs', 'subvolume', 'get-default', '/mnt'])
+
+    def test_subvolume_get_default(self):
+        '''
+        Test btrfs subvolume get-default
+        '''
+        salt_mock = {
+            'cmd.run_all': MagicMock(return_value={
+                'recode': 0,
+                'stdout': 'ID 257 gen 8 top level 5 path var',
+            }),
+        }
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert btrfs.subvolume_get_default('/mnt') == {
+                'id': '257',
+                'name': 'var',
+            }
+            salt_mock['cmd.run_all'].assert_called_once()
+            salt_mock['cmd.run_all'].assert_called_with(
+                ['btrfs', 'subvolume', 'get-default', '/mnt'])
+
+    def test_subvolume_list_fails_parameters(self):
+        '''
+        Test btrfs subvolume list
+        '''
+        # Fails when sort is not a list
+        with pytest.raises(CommandExecutionError):
+            btrfs.subvolume_list('/mnt', sort='-rootid')
+
+        # Fails when sort is not recognized
+        with pytest.raises(CommandExecutionError):
+            btrfs.subvolume_list('/mnt', sort=['-root'])
+
+    def test_subvolume_list_simple(self):
+        '''
+        Test btrfs subvolume list
+        '''
+        salt_mock = {
+            'cmd.run_all': MagicMock(return_value={
+                'recode': 0,
+                'stdout': '''ID 257 gen 8 top level 5 path one
+ID 258 gen 10 top level 5 path another one
+''',
+            }),
+        }
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert btrfs.subvolume_list('/mnt') == [
+                {
+                    'id': '257',
+                    'gen': '8',
+                    'top level': '5',
+                    'path': 'one',
+                },
+                {
+                    'id': '258',
+                    'gen': '10',
+                    'top level': '5',
+                    'path': 'another one',
+                },
+            ]
+            salt_mock['cmd.run_all'].assert_called_once()
+            salt_mock['cmd.run_all'].assert_called_with(
+                ['btrfs', 'subvolume', 'list', '/mnt'])
+
+    def test_subvolume_list(self):
+        '''
+        Test btrfs subvolume list
+        '''
+        salt_mock = {
+            'cmd.run_all': MagicMock(return_value={
+                'recode': 0,
+                'stdout': '''\
+ID 257 gen 8 cgen 8 parent 5 top level 5 parent_uuid -     received_uuid - \
+             uuid 777...-..05 path one
+ID 258 gen 10 cgen 10 parent 5 top level 5 parent_uuid -     received_uuid - \
+             uuid a90...-..01 path another one
+''',
+            }),
+        }
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert btrfs.subvolume_list('/mnt', parent_id=True,
+                                        absolute=True,
+                                        ogeneration=True,
+                                        generation=True,
+                                        subvolumes=True, uuid=True,
+                                        parent_uuid=True,
+                                        sent_subvolume_uuid=True,
+                                        generation_cmp='-100',
+                                        ogeneration_cmp='+5',
+                                        sort=['-rootid', 'gen']) == [
+                {
+                    'id': '257',
+                    'gen': '8',
+                    'cgen': '8',
+                    'parent': '5',
+                    'top level': '5',
+                    'parent_uuid': '-',
+                    'received_uuid': '-',
+                    'uuid': '777...-..05',
+                    'path': 'one',
+                },
+                {
+                    'id': '258',
+                    'gen': '10',
+                    'cgen': '10',
+                    'parent': '5',
+                    'top level': '5',
+                    'parent_uuid': '-',
+                    'received_uuid': '-',
+                    'uuid': 'a90...-..01',
+                    'path': 'another one',
+                },
+            ]
+            salt_mock['cmd.run_all'].assert_called_once()
+            salt_mock['cmd.run_all'].assert_called_with(
+                ['btrfs', 'subvolume', 'list', '-p', '-a', '-c', '-g',
+                 '-o', '-u', '-q', '-R', '-G', '-100', '-C', '+5',
+                 '--sort=-rootid,gen', '/mnt'])
+
+    def test_subvolume_set_default(self):
+        '''
+        Test btrfs subvolume set-default
+        '''
+        salt_mock = {
+            'cmd.run_all': MagicMock(return_value={'recode': 0}),
+        }
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert btrfs.subvolume_set_default('257', '/mnt')
+            salt_mock['cmd.run_all'].assert_called_once()
+            salt_mock['cmd.run_all'].assert_called_with(
+                ['btrfs', 'subvolume', 'set-default', '257', '/mnt'])
+
+    def test_subvolume_show(self):
+        '''
+        Test btrfs subvolume show
+        '''
+        salt_mock = {
+            'cmd.run_all': MagicMock(return_value={
+                'recode': 0,
+                'stdout': '''@/var
+        Name:                   var
+        UUID:                   7a14...-...04
+        Parent UUID:            -
+        Received UUID:          -
+        Creation time:          2018-10-01 14:33:12 +0200
+        Subvolume ID:           258
+        Generation:             82479
+        Gen at creation:        10
+        Parent ID:              256
+        Top level ID:           256
+        Flags:                  -
+        Snapshot(s):
+''',
+            }),
+        }
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert btrfs.subvolume_show('/var') == {
+                '@/var': {
+                    'name': 'var',
+                    'uuid': '7a14...-...04',
+                    'parent uuid': '-',
+                    'received uuid': '-',
+                    'creation time': '2018-10-01 14:33:12 +0200',
+                    'subvolume id': '258',
+                    'generation': '82479',
+                    'gen at creation': '10',
+                    'parent id': '256',
+                    'top level id': '256',
+                    'flags': '-',
+                    'snapshot(s)': '',
+                },
+            }
+            salt_mock['cmd.run_all'].assert_called_once()
+            salt_mock['cmd.run_all'].assert_called_with(
+                ['btrfs', 'subvolume', 'show', '/var'])
+
+    def test_subvolume_sync_fail_parameters(self):
+        '''
+        Test btrfs subvolume sync
+        '''
+        # Fails when subvolids is not a list
+        with pytest.raises(CommandExecutionError):
+            btrfs.subvolume_sync('/mnt', subvolids='257')
+
+    def test_subvolume_sync(self):
+        '''
+        Test btrfs subvolume sync
+        '''
+        salt_mock = {
+            'cmd.run_all': MagicMock(return_value={'recode': 0}),
+        }
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert btrfs.subvolume_sync('/mnt', subvolids=['257'],
+                                        sleep='1')
+            salt_mock['cmd.run_all'].assert_called_once()
+            salt_mock['cmd.run_all'].assert_called_with(
+                ['btrfs', 'subvolume', 'sync', '-s', '1', '/mnt', '257'])

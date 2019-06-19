@@ -46,7 +46,6 @@ passed in as a dict, or as a string to pull from pillars or minion config:
       key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
         region: us-east-1
 
-XXX FIXME
 .. code-block:: yaml
 
     Ensure myelasticache exists:
@@ -60,6 +59,8 @@ XXX FIXME
         - keyid: GKTADJGHEIQSXMKKRBJ08H
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
+.. code-block:: yaml
+
     # Using a profile from pillars
     Ensure myelasticache exists:
       boto3_elasticache.present:
@@ -70,6 +71,8 @@ XXX FIXME
         - notification_topic_arn: arn:aws:sns:us-east-1:879879:my-sns-topic
         - region: us-east-1
         - profile: myprofile
+
+.. code-block:: yaml
 
     # Passing in a profile
     Ensure myelasticache exists:
@@ -86,10 +89,8 @@ XXX FIXME
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
-import logging
-
-log = logging.getLogger(__name__)
+from __future__ import absolute_import, print_function, unicode_literals
+from copy import deepcopy
 
 
 def __virtual__():
@@ -177,16 +178,24 @@ def cache_cluster_present(name, wait=900, security_groups=None, region=None, key
 
     security_groups
         One or more VPC security groups (names and/or IDs) associated with the cache cluster.
-        Note:  This is additive with any sec groups provided via the SecurityGroupIds parameter
-               below.  Use this parameter ONLY when you are creating a cluster in a VPC.
+
+        .. note::
+            This is additive with any sec groups provided via the
+            SecurityGroupIds parameter below.  Use this parameter ONLY when you
+            are creating a cluster in a VPC.
 
     CacheClusterId
         The node group (shard) identifier. This parameter is stored as a lowercase string.
+
         Constraints:
-             A name must contain from 1 to 20 alphanumeric characters or hyphens.
-             The first character must be a letter.
-             A name cannot end with a hyphen or contain two consecutive hyphens.
-        Note:  In general this parameter is not needed, as 'name' is used if it's not provided.
+
+        - A name must contain from 1 to 20 alphanumeric characters or hyphens.
+        - The first character must be a letter.
+        - A name cannot end with a hyphen or contain two consecutive hyphens.
+
+        .. note::
+            In general this parameter is not needed, as 'name' is used if it's
+            not provided.
 
     ReplicationGroupId
         The ID of the replication group to which this cache cluster should belong. If this
@@ -196,22 +205,28 @@ def cache_cluster_present(name, wait=900, security_groups=None, region=None, key
         Multi-AZ enabled and the Availability Zone is not specified, the cache cluster is
         created in Availability Zones that provide the best spread of read replicas across
         Availability Zones.
-        Notes:  This parameter is ONLY valid if the Engine parameter is redis.
-                Due to current limitations on Redis (cluster mode disabled), this parameter
-        is not supported on Redis (cluster mode enabled) replication groups.
+
+        .. note:
+            This parameter is ONLY valid if the Engine parameter is redis. Due
+            to current limitations on Redis (cluster mode disabled), this
+            parameter is not supported on Redis (cluster mode enabled)
+            replication groups.
 
     AZMode
         Specifies whether the nodes in this Memcached cluster are created in a single
         Availability Zone or created across multiple Availability Zones in the cluster's
-        region.  If the AZMode and PreferredAvailabilityZones are not specified,
+        region. If the AZMode and PreferredAvailabilityZones are not specified,
         ElastiCache assumes single-az mode.
-        Note:  This parameter is ONLY supported for Memcached cache clusters.
+
+        .. note::
+            This parameter is ONLY supported for Memcached cache clusters.
 
     PreferredAvailabilityZone
         The EC2 Availability Zone in which the cache cluster is created.  All nodes
         belonging to this Memcached cache cluster are placed in the preferred Availability
         Zone. If you want to create your nodes across multiple Availability Zones, use
         PreferredAvailabilityZones.
+
         Default:  System chosen Availability Zone.
 
     PreferredAvailabilityZones
@@ -220,27 +235,38 @@ def cache_cluster_present(name, wait=900, security_groups=None, region=None, key
         must equal the value of NumCacheNodes.  If you want all the nodes in the same
         Availability Zone, use PreferredAvailabilityZone instead, or repeat the
         Availability Zone multiple times in the list.
-        Note:  This option is ONLY supported on Memcached.
-        Note:  If you are creating your cache cluster in an Amazon VPC (recommended) you
-               can only locate nodes in Availability Zones that are associated with the
-               subnets in the selected subnet group.
+
         Default:  System chosen Availability Zones.
+
+        .. note::
+            This option is ONLY supported on Memcached.
+
+            If you are creating your cache cluster in an Amazon VPC
+            (recommended) you can only locate nodes in Availability Zones that
+            are associated with the subnets in the selected subnet group.
 
     NumCacheNodes
         The initial (integer) number of cache nodes that the cache cluster has.
-        Notes:  For clusters running Redis, this value must be 1.
-                For clusters running Memcached, this value must be between 1 and 20.
+
+        .. note::
+            For clusters running Redis, this value must be 1.
+
+            For clusters running Memcached, this value must be between 1 and 20.
 
     CacheNodeType
         The compute and memory capacity of the nodes in the node group (shard).
         Valid node types (and pricing for them) are exhaustively described at
         https://aws.amazon.com/elasticache/pricing/
-        Notes:  All T2 instances must be created in a VPC
-                Redis backup/restore is not supported for Redis (cluster mode disabled)
-                T1 and T2 instances. Backup/restore is supported on Redis (cluster mode
-                enabled) T2 instances.
-                Redis Append-only files (AOF) functionality is not supported for T1 or
-                T2 instances.
+
+        .. note::
+            All T2 instances must be created in a VPC
+
+           Redis backup/restore is not supported for Redis (cluster mode
+           disabled) T1 and T2 instances. Backup/restore is supported on Redis
+           (cluster mode enabled) T2 instances.
+
+           Redis Append-only files (AOF) functionality is not supported for T1
+           or T2 instances.
 
     Engine
         The name of the cache engine to be used for this cache cluster.  Valid values for
@@ -249,10 +275,12 @@ def cache_cluster_present(name, wait=900, security_groups=None, region=None, key
     EngineVersion
         The version number of the cache engine to be used for this cache cluster. To view
         the supported cache engine versions, use the DescribeCacheEngineVersions operation.
-        Note:  You can upgrade to a newer engine version but you cannot downgrade to an
-               earlier engine version. If you want to use an earlier engine version, you
-               must delete the existing cache cluster or replication group and create it
-               anew with the earlier engine version.
+
+        .. note::
+            You can upgrade to a newer engine version but you cannot downgrade
+            to an earlier engine version. If you want to use an earlier engine
+            version, you must delete the existing cache cluster or replication
+            group and create it anew with the earlier engine version.
 
     CacheParameterGroupName
         The name of the parameter group to associate with this cache cluster. If this
@@ -264,8 +292,9 @@ def cache_cluster_present(name, wait=900, security_groups=None, region=None, key
         The name of the Cache Subnet Group to be used for the cache cluster.  Use this
         parameter ONLY when you are creating a cache cluster within a VPC.
 
-        Note:  If you're going to launch your cluster in an Amazon VPC, you need to create
-        a subnet group before you start creating a cluster.
+        .. note::
+            If you're going to launch your cluster in an Amazon VPC, you need
+            to create a subnet group before you start creating a cluster.
 
     CacheSecurityGroupNames
         A list of Cache Security Group names to associate with this cache cluster.  Use
@@ -285,29 +314,38 @@ def cache_cluster_present(name, wait=900, security_groups=None, region=None, key
         uniquely identifies a Redis RDB snapshot file stored in Amazon S3. The snapshot
         file is used to populate the node group (shard). The Amazon S3 object name in
         the ARN cannot contain any commas.
-        Note: This parameter is ONLY valid if the Engine parameter is redis.
+
+        .. note::
+            This parameter is ONLY valid if the Engine parameter is redis.
 
     SnapshotName
         The name of a Redis snapshot from which to restore data into the new node group
         (shard). The snapshot status changes to restoring while the new node group (shard)
         is being created.
-        Note:  This parameter is ONLY valid if the Engine parameter is redis.
+
+        .. note::
+            This parameter is ONLY valid if the Engine parameter is redis.
 
     PreferredMaintenanceWindow
         Specifies the weekly time range during which maintenance on the cache cluster is
         permitted.  It is specified as a range in the format ddd:hh24:mi-ddd:hh24:mi
         (24H Clock UTC).  The minimum maintenance window is a 60 minute period.
         Valid values for ddd are:  sun, mon, tue, wed, thu, fri, sat
+
         Example:  sun:23:00-mon:01:30
 
     Port
         The port number on which each of the cache nodes accepts connections.
+
         Default:  6379
 
     NotificationTopicArn
         The Amazon Resource Name (ARN) of the Amazon Simple Notification Service (SNS)
         topic to which notifications are sent.
-        Note: The Amazon SNS topic owner must be the same as the cache cluster owner.
+
+        .. note::
+            The Amazon SNS topic owner must be the same as the cache cluster
+            owner.
 
     AutoMinorVersionUpgrade
         This (boolean) parameter is currently disabled.
@@ -315,22 +353,30 @@ def cache_cluster_present(name, wait=900, security_groups=None, region=None, key
     SnapshotRetentionLimit
         The number of days for which ElastiCache retains automatic snapshots before
         deleting them.
-        Note: This parameter is ONLY valid if the Engine parameter is redis.
+
         Default:  0 (i.e., automatic backups are disabled for this cache cluster).
+
+        .. note::
+            This parameter is ONLY valid if the Engine parameter is redis.
 
     SnapshotWindow
         The daily time range (in UTC) during which ElastiCache begins taking a daily
         snapshot of your node group (shard).  If you do not specify this parameter,
         ElastiCache automatically chooses an appropriate time range.
-        Note:  This parameter is ONLY valid if the Engine parameter is redis.
+
         Example:  05:00-09:00
+
+        .. note::
+            This parameter is ONLY valid if the Engine parameter is redis.
 
     AuthToken
         The password used to access a password protected server.
+
         Password constraints:
-            Must be only printable ASCII characters.
-            Must be at least 16 characters and no more than 128 characters in length.
-            Cannot contain any of the following characters: '/', '"', or "@".
+
+        - Must be only printable ASCII characters.
+        - Must be at least 16 characters and no more than 128 characters in length.
+        - Cannot contain any of the following characters: '/', '"', or "@".
 
     CacheNodeIdsToRemove
         A list of cache node IDs to be removed. A node ID is a numeric identifier (0001, 0002,
@@ -349,6 +395,7 @@ def cache_cluster_present(name, wait=900, security_groups=None, region=None, key
 
     NotificationTopicStatus
         The status of the SNS notification topic.  Notifications are sent only if the status is active.
+
         Valid values:  active | inactive
 
     region
@@ -361,8 +408,8 @@ def cache_cluster_present(name, wait=900, security_groups=None, region=None, key
         Access key to be used.
 
     profile
-        A dict with region, key and keyid, or a pillar key (string)
-        that contains a dict with region, key and keyid.
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
@@ -568,16 +615,24 @@ def replication_group_present(name, wait=900, security_groups=None, region=None,
 
     security_groups
         One or more VPC security groups (names and/or IDs) associated with the cache cluster.
-        Note:  This is additive with any sec groups provided via the SecurityGroupIds parameter
-               below.  Use this parameter ONLY when you are creating a cluster in a VPC.
+
+        .. note::
+            This is additive with any sec groups provided via the
+            SecurityGroupIds parameter below.  Use this parameter ONLY when you
+            are creating a cluster in a VPC.
 
     ReplicationGroupId
         The replication group identifier. This parameter is stored as a lowercase string.
+
         Constraints:
-            A name must contain from 1 to 20 alphanumeric characters or hyphens.
-            The first character must be a letter.
-            A name cannot end with a hyphen or contain two consecutive hyphens.
-        Note:  In general this parameter is not needed, as 'name' is used if it's not provided.
+
+        - A name must contain from 1 to 20 alphanumeric characters or hyphens.
+        - The first character must be a letter.
+        - A name cannot end with a hyphen or contain two consecutive hyphens.
+
+        .. note::
+            In general this parameter is not needed, as 'name' is used if it's
+            not provided.
 
     ReplicationGroupDescription
         A user-created description for the replication group.
@@ -591,13 +646,18 @@ def replication_group_present(name, wait=900, security_groups=None, region=None,
         Specifies whether a read-only replica is automatically promoted to read/write primary if
         the existing primary fails.  If true, Multi-AZ is enabled for this replication group. If
         false, Multi-AZ is disabled for this replication group.
-        Notes:  AutomaticFailoverEnabled must be enabled for Redis (cluster mode enabled)
-                replication groups.
-                ElastiCache Multi-AZ replication groups is not supported on:
-                    Redis versions earlier than 2.8.6.
-                    Redis (cluster mode disabled): T1 and T2 node types. Redis (cluster mode
-                    enabled): T2 node types.
+
         Default:  False
+
+        .. note::
+            AutomaticFailoverEnabled must be enabled for Redis (cluster mode
+            enabled) replication groups.
+
+            ElastiCache Multi-AZ replication groups is not supported on:
+
+            - Redis versions earlier than 2.8.6.
+            - Redis (cluster mode disabled): T1 and T2 node types.
+            - Redis (cluster mode enabled): T2 node types.
 
     NumCacheClusters
         The number of clusters this replication group initially has.  This parameter is not used
@@ -612,21 +672,24 @@ def replication_group_present(name, wait=900, security_groups=None, region=None,
         is not used if there is more than one node group (shard).  You should use
         NodeGroupConfiguration instead.  The number of Availability Zones listed must equal the
         value of NumCacheClusters.
-        Note:  If you are creating your replication group in an Amazon VPC (recommended), you can
-               only locate cache clusters in Availability Zones associated with the subnets in the
-               selected subnet group.
+
         Default:  System chosen Availability Zones.
 
+        .. note::
+            If you are creating your replication group in an Amazon VPC
+            (recommended), you can only locate cache clusters in Availability
+            Zones associated with the subnets in the selected subnet group.
+
     NumNodeGroups
-        An optional parameter that specifies the number of node groups (shards) for this Redis
-        (cluster mode enabled) replication group. For Redis (cluster mode disabled) either omit
-        this parameter or set it to 1.
+        An optional parameter that specifies the number of node groups (shards)
+        for this Redis (cluster mode enabled) replication group. For Redis
+        (cluster mode disabled) either omit this parameter or set it to 1.
+
         Default:  1
 
     ReplicasPerNodeGroup
-        An optional parameter that specifies the number of replica nodes in each node group
-        (shard).
-        Valid values are:  0 to 5
+        An optional parameter that specifies the number of replica nodes in
+        each node group (shard). Valid values are:  0 to 5
 
     NodeGroupConfiguration
         A list of node group (shard) configuration options. Each node group (shard) configuration
@@ -639,10 +702,13 @@ def replication_group_present(name, wait=900, security_groups=None, region=None,
     CacheNodeType
         The compute and memory capacity of the nodes in the node group (shard).
         See https://aws.amazon.com/elasticache/pricing/ for current sizing, prices, and constraints.
-        Notes:  All T2 instances are created in an Amazon Virtual Private Cloud (Amazon VPC).
-                Backup/restore is not supported for Redis (cluster mode disabled) T1 and T2 instances.
-                Backup/restore is supported on Redis (cluster mode enabled) T2 instances.
-                Redis Append-only files (AOF) functionality is not supported for T1 or T2 instances.
+
+        .. note:
+            All T2 instances are created in an Amazon Virtual Private Cloud
+            (Amazon VPC). Backup/restore is not supported for Redis (cluster
+            mode disabled) T1 and T2 instances. Backup/restore is supported on
+            Redis (cluster mode enabled) T2 instances. Redis Append-only files
+            (AOF) functionality is not supported for T1 or T2 instances.
 
     Engine
         The name of the cache engine to be used for the cache clusters in this replication group.
@@ -651,27 +717,35 @@ def replication_group_present(name, wait=900, security_groups=None, region=None,
         The version number of the cache engine to be used for the cache clusters in this replication
         group. To view the supported cache engine versions, use the DescribeCacheEngineVersions
         operation.
-        Note:  You can upgrade to a newer engine version but you cannot downgrade to an earlier
-               engine version.  If you want to use an earlier engine version, you must delete the
-               existing cache cluster or replication group and create it anew with the earlier
-               engine version.
+
+        .. note::
+            You can upgrade to a newer engine version but you cannot downgrade
+            to an earlier engine version. If you want to use an earlier engine
+            version, you must delete the existing cache cluster or replication
+            group and create it anew with the earlier engine version.
 
     CacheParameterGroupName
         The name of the parameter group to associate with this replication group. If this argument
         is omitted, the default cache parameter group for the specified engine is used.
-        Notes:  If you are running Redis version 3.2.4 or later, only one node group (shard), and
-                want to use a default parameter group, we recommend that you specify the parameter
-                group by name.
-                To create a Redis (cluster mode disabled) replication group, use
-                CacheParameterGroupName=default.redis3.2
-                To create a Redis (cluster mode enabled) replication group, use
-                CacheParameterGroupName=default.redis3.2.cluster.on
+
+        .. note::
+            If you are running Redis version 3.2.4 or later, only one node
+            group (shard), and want to use a default parameter group, we
+            recommend that you specify the parameter group by name.
+
+            To create a Redis (cluster mode disabled) replication group, use
+            CacheParameterGroupName=default.redis3.2
+
+            To create a Redis (cluster mode enabled) replication group, use
+            CacheParameterGroupName=default.redis3.2.cluster.on
 
     CacheSubnetGroupName
         The name of the cache subnet group to be used for the replication group.
-        Note:  If you're going to launch your cluster in an Amazon VPC, you need to create a s
-               group before you start creating a cluster. For more information, see Subnets and
-               Subnet Groups.
+
+        .. note::
+            If you're going to launch your cluster in an Amazon VPC, you need
+            to create a s group before you start creating a cluster. For more
+            information, see Subnets and Subnet Groups.
 
     CacheSecurityGroupNames
         A list of cache security group names to associate with this replication group.
@@ -690,7 +764,9 @@ def replication_group_present(name, wait=900, security_groups=None, region=None,
         These snapshot files are used to populate the replication group.  The Amazon S3 object name
         in the ARN cannot contain any commas. The list must match the number of node groups (shards)
         in the replication group, which means you cannot repartition.
-        Note:  This parameter is only valid if the Engine parameter is redis.
+
+        .. note::
+            This parameter is only valid if the Engine parameter is redis.
 
     SnapshotName
         The name of a snapshot from which to restore data into the new replication group.  The
@@ -702,6 +778,7 @@ def replication_group_present(name, wait=900, security_groups=None, region=None,
         specified as a range in the format ddd:hh24:mi-ddd:hh24:mi (24H Clock UTC). The minimum
         maintenance window is a 60 minute period.
         Valid values for ddd are:  sun, mon, tue, wed, thu, fri, sat
+
         Example:  sun:23:00-mon:01:30
 
     Port
@@ -709,7 +786,9 @@ def replication_group_present(name, wait=900, security_groups=None, region=None,
 
     NotificationTopicArn
         The ARN of an SNS topic to which notifications are sent.
-        Note:  The SNS topic owner must be the same as the cache cluster owner.
+
+        .. note::
+            The SNS topic owner must be the same as the cache cluster owner.
 
     AutoMinorVersionUpgrade
         This parameter is currently disabled.
@@ -717,22 +796,29 @@ def replication_group_present(name, wait=900, security_groups=None, region=None,
     SnapshotRetentionLimit
         The number of days for which ElastiCache will retain automatic snapshots before deleting
         them.
-        Note:  This parameter is only valid if the Engine parameter is redis .
+
         Default:  0 (that is, automatic backups are disabled for this cache cluster).
+
+        .. note::
+            This parameter is only valid if the Engine parameter is redis.
 
     SnapshotWindow
         The daily time range (in UTC) during which ElastiCache begins taking a daily snapshot of
         your node group (shard).  If you do not specify this parameter, ElastiCache automatically
         chooses an appropriate time range.
-        Note:  This parameter is only valid if the Engine parameter is redis .
+
         Example:  05:00-09:00
+
+        .. note::
+            This parameter is only valid if the Engine parameter is redis.
 
     AuthToken
         The password used to access a password protected server.
         Password constraints:
-            Must be only printable ASCII characters.
-            Must be at least 16 characters and no more than 128 characters in length.
-            Cannot contain any of the following characters: '/', '"', or "@".
+
+        - Must be only printable ASCII characters.
+        - Must be at least 16 characters and no more than 128 characters in length.
+        - Cannot contain any of the following characters: '/', '"', or "@".
 
     SnapshottingClusterId
         The cache cluster ID that is used as the daily snapshot source for the replication group.
@@ -817,7 +903,7 @@ def replication_group_present(name, wait=900, security_groups=None, region=None,
                     ret['comment'] += ' ... and then immediately modified.'
                 else:
                     ret['comment'] = 'Replication group {0} was modified.'.format(name)
-                    ret['changes']['old'] = current[0] if len(current) else None
+                    ret['changes']['old'] = current[0] if current else None
                 ret['changes']['new'] = new[0]
             else:
                 ret['result'] = False
@@ -1060,4 +1146,178 @@ def cache_subnet_group_absent(name, region=None, key=None, keyid=None, profile=N
             ret['comment'] = 'Failed to delete {0} cache_subnet group.'.format(name)
     else:
         ret['comment'] = 'Cache subnet group {0} already absent.'.format(name)
+    return ret
+
+
+def cache_parameter_group_present(name, region=None, key=None, keyid=None, profile=None, **args):
+    '''
+    Ensure cache parameter group exists.
+
+    name
+        A name for the cache parameter group.
+
+    CacheParameterGroupName
+        A name for the cache parameter group.
+        Note:  In general this parameter is not needed, as 'name' is used if it's not provided.
+
+
+    CacheParameterGroupFamily
+        The name of the cache parameter group family that the cache parameter group can be used with.
+
+        Valid values are:
+        - memcached1.4
+        - redis2.6
+        - redis2.8
+        - redis3.2
+
+    Description
+        A description for the cache parameter group.
+
+    ParameterNameValues
+        A newly created CacheParameterGroup is an exact duplicate of the default parameter group
+        of the requested CacheParameterGroupFamily.  This option provides a way to fine-tune
+        these settings.  It is formatted as [list] of {dicts}, each composed of a parameter name
+        and a value.
+
+    .. code-block:: yaml
+
+        ParameterNameValues:
+        - ParameterName: timeout
+          # Amazon requires ALL VALUES to be strings...
+          ParameterValue: "30"
+        - ParameterName: appendonly
+          # The YAML parser will turn a bare `yes` into a bool, which Amazon will then throw on...
+          ParameterValue: "yes"
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
+    tunables = args.pop('ParameterNameValues', None)
+    current = __salt__['boto3_elasticache.describe_cache_parameter_groups'](name, region=region,
+            key=key, keyid=keyid, profile=profile)
+
+    if not current:
+        if __opts__['test']:
+            ret['comment'] = 'Cache parameter group `{}` would be created.'.format(name)
+            ret['result'] = None
+            return ret
+        created = __salt__['boto3_elasticache.create_cache_parameter_group'](name, region=region,
+                key=key, keyid=keyid, profile=profile, **args)
+        if not created:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create cache parameter group `{}`.'.format(name)
+            return ret
+        new = __salt__['boto3_elasticache.describe_cache_parameter_groups'](name, region=region,
+                key=key, keyid=keyid, profile=profile)
+        new = new[0]
+        # Set any custom cache parameters requested...
+        if tunables:
+            kwargs = {'ParameterNameValues': tunables}
+            updated = __salt__['boto3_elasticache.modify_cache_parameter_groups'](name,
+                    region=region, key=key, keyid=keyid, profile=profile, **kwargs)
+            if not updated:
+                ret['result'] = False
+                ret['comment'] = 'Failed to update new cache parameter group `{}`.'.format(name)
+                return ret
+            kwargs = {'Source': 'user'}
+            new['ParameterNameValues'] = __salt__['boto3_elasticache.describe_cache_parameters'](
+                    name, region=region, key=key, keyid=keyid, profile=profile, **kwargs)
+        ret['comment'] = 'Cache parameter group `{}` was created.'.format(name)
+        ret['changes']['old'] = None
+        ret['changes']['new'] = new
+    else:
+        if not tunables:
+            ret['comment'] = 'Cache parameter group `{}` exists.'.format(name)
+        else:
+            oldvals = []
+            newvals = []
+            curr_params = __salt__['boto3_elasticache.describe_cache_parameters'](name,
+                    region=region, key=key, keyid=keyid, profile=profile)
+            # Note that the items under CacheNodeTypeSpecificParameters are never modifiable, so
+            # we ignore them completely.
+            curr_kvs = {p['ParameterName']: p['ParameterValue'] for p in curr_params['Parameters']}
+            req_kvs = {p['ParameterName']: p['ParameterValue'] for p in tunables}
+            for pname, pval in req_kvs.items():
+                if pname in curr_kvs and pval != curr_kvs[pname]:
+                    oldvals += [{'ParameterName': pname, 'ParameterValue': curr_kvs[pname]}]
+                    newvals += [{'ParameterName': pname, 'ParameterValue': pval}]
+            if newvals:
+                if __opts__['test']:
+                    ret['comment'] = 'Cache parameter group `{}` would be updated.'.format(name)
+                    ret['result'] = None
+                    ret['changes']['old'] = current[0]
+                    ret['changes']['old']['ParameterNameValues'] = oldvals
+                    ret['changes']['new'] = deepcopy(current[0])
+                    ret['changes']['new']['ParameterNameValues'] = newvals
+                    return ret
+                kwargs = {'ParameterNameValues': newvals}
+                if not __salt__['boto3_elasticache.modify_cache_parameter_groups'](name,
+                        region=region, key=key, keyid=keyid, profile=profile, **kwargs):
+                    ret['result'] = False
+                    ret['comment'] = 'Failed to update cache parameter group `{}`.'.format(name)
+                    return ret
+                ret['changes']['old'] = current[0]
+                ret['changes']['old']['ParameterNameValues'] = oldvals
+                ret['changes']['new'] = deepcopy(current[0])
+                ret['changes']['new']['ParameterNameValues'] = newvals
+            else:
+                ret['comment'] = 'Cache parameter group `{}` is in the desired state.'.format(name)
+    return ret
+
+
+def cache_parameter_group_absent(name, region=None, key=None, keyid=None, profile=None, **args):
+    '''
+    Ensure a given cache parameter group is absent.
+
+    name
+        Name of the cache parameter group.
+
+    CacheParameterGroupName
+        A name for the cache parameter group.
+        Note:  In general this parameter is not needed, as 'name' is used if it's not provided.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
+    exists = __salt__['boto3_elasticache.describe_cache_parameter_groups'](name, region=region,
+            key=key, keyid=keyid, profile=profile)
+    if exists:
+        if __opts__['test']:
+            ret['comment'] = 'Cache parameter group `{}` would be removed.'.format(name)
+            ret['result'] = None
+            return ret
+        deleted = __salt__['boto3_elasticache.delete_cache_parameter_group'](name, region=region,
+                key=key, keyid=keyid, profile=profile, **args)
+        if deleted:
+            ret['changes']['old'] = name
+            ret['changes']['new'] = None
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to delete cache parameter group `{}`.'.format(name)
+    else:
+        ret['comment'] = 'Cache parameter group `{}` already absent.'.format(name)
     return ret

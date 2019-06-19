@@ -22,7 +22,7 @@ Minions running systemd >= 219 will place new containers in
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import functools
 import logging
@@ -231,7 +231,7 @@ def _clear_context():
     Clear any lxc variables set in __context__
     '''
     for var in [x for x in __context__ if x.startswith('nspawn.')]:
-        log.trace('Clearing __context__[\'{0}\']'.format(var))
+        log.trace('Clearing __context__[\'%s\']', var)
         __context__.pop(var, None)
 
 
@@ -257,7 +257,7 @@ def _ensure_systemd(version):
 
     try:
         installed = _sd_version()
-        log.debug('nspawn: detected systemd {0}'.format(installed))
+        log.debug('nspawn: detected systemd %s', installed)
     except (IndexError, ValueError):
         raise CommandExecutionError('nspawn: Unable to get systemd version')
 
@@ -684,10 +684,7 @@ def bootstrap_container(name, dist=None, version=None):
     '''
     if not dist:
         dist = __grains__['os'].lower()
-        log.debug(
-            'nspawn.bootstrap: no dist provided, defaulting to \'{0}\''
-            .format(dist)
-        )
+        log.debug('nspawn.bootstrap: no dist provided, defaulting to \'%s\'', dist)
     try:
         return globals()['_bootstrap_{0}'.format(dist)](name, version=version)
     except KeyError:
@@ -789,9 +786,7 @@ def bootstrap_salt(name,
                     'chmod 700 {0}'.format(dest_dir),
                 ]:
                     if run_stdout(name, cmd):
-                        log.error(
-                            ('tmpdir {0} creation'
-                             ' failed ({1}').format(dest_dir, cmd))
+                        log.error('tmpdir %s creation failed (%s)', dest_dir, cmd)
                         return False
                 copy_to(name,
                    bs_,
@@ -810,8 +805,7 @@ def bootstrap_salt(name,
                                dest_dir))
                 # log ASAP the forged bootstrap command which can be wrapped
                 # out of the output in case of unexpected problem
-                log.info('Running {0} in LXC container \'{1}\''
-                         .format(cmd, name))
+                log.info('Running %s in LXC container \'%s\'', cmd, name)
                 ret = retcode(name, cmd, output_loglevel='info',
                                   use_vt=True) == 0
             else:
@@ -887,6 +881,7 @@ def list_running():
         except IndexError:
             pass
     return sorted(ret)
+
 
 # 'machinectl list' shows only running containers, so allow this to work as an
 # alias to nspawn.list_running
@@ -1319,6 +1314,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False):
         overwrite=overwrite,
         makedirs=makedirs)
 
+
 cp = salt.utils.functools.alias_function(copy_to, 'cp')
 
 
@@ -1483,5 +1479,6 @@ def pull_dkr(url, name, index):
         salt myminion nspawn.pull_docker centos/centos6 cent6 index=https://get.docker.com
     '''
     return _pull_image('dkr', url, name, index=index)
+
 
 pull_docker = salt.utils.functools.alias_function(pull_dkr, 'pull_docker')

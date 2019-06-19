@@ -114,27 +114,33 @@ def map_clonemode(vm_info):
 
 
 def create(vm_info):
-    """
-    Creates a virtual machine from the given VM information.
-    This is what is used to request a virtual machine to be created by the
-    cloud provider, wait for it to become available,
-    and then (optionally) log in and install Salt on it.
+    '''
+    Creates a virtual machine from the given VM information
 
-    Fires:
-        "starting create" : This event is tagged salt/cloud/<vm name>/creating.
-        The payload contains the names of the VM, profile and provider.
+    This is what is used to request a virtual machine to be created by the
+    cloud provider, wait for it to become available, and then (optionally) log
+    in and install Salt on it.
+
+    Events fired:
+
+    This function fires the event ``salt/cloud/vm_name/creating``, with the
+    payload containing the names of the VM, profile, and provider.
 
     @param vm_info
-            {
-                name: <str>
-                profile: <dict>
-                driver: <provider>:<profile>
-                clonefrom: <vm_name>
-                clonemode: <mode> (default: state, choices: state, child, all)
-            }
+
+    .. code-block:: text
+
+        {
+            name: <str>
+            profile: <dict>
+            driver: <provider>:<profile>
+            clonefrom: <vm_name>
+            clonemode: <mode> (default: state, choices: state, child, all)
+        }
+
     @type vm_info dict
     @return dict of resulting vm. !!!Passwords can and should be included!!!
-    """
+    '''
     try:
         # Check for required profile parameters before sending any API calls.
         if vm_info['profile'] and config.is_profile_configured(
@@ -198,7 +204,7 @@ def create(vm_info):
         vb_start_vm(vm_name, timeout=boot_timeout)
         ips = vb_wait_for_network_address(wait_for_ip_timeout, machine_name=vm_name, wait_for_pattern=wait_for_pattern)
 
-        if len(ips):
+        if ips:
             ip = ips[interface_index]
             log.info("[ %s ] IPv4 is: %s", vm_name, ip)
             # ssh or smb using ip and install salt only if deploy is True

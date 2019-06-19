@@ -2,20 +2,104 @@
 '''
 Beacon to fire events at failed login of users
 
+.. versionadded:: 2015.5.0
+
+Example Configuration
+=====================
+
 .. code-block:: yaml
 
+    # Fire events on all failed logins
     beacons:
       btmp: []
+
+    # Matching on user name, using a default time range
+    beacons:
+      btmp:
+        - users:
+            gareth:
+        - defaults:
+            time_range:
+                start: '8am'
+                end: '4pm'
+
+    # Matching on user name, overriding the default time range
+    beacons:
+      btmp:
+        - users:
+            gareth:
+                time_range:
+                    start: '8am'
+                    end: '4pm'
+        - defaults:
+            time_range:
+                start: '8am'
+                end: '4pm'
+
+    # Matching on group name, overriding the default time range
+    beacons:
+      btmp:
+        - groups:
+            users:
+                time_range:
+                    start: '8am'
+                    end: '4pm'
+        - defaults:
+            time_range:
+                start: '8am'
+                end: '4pm'
+
+
+Use Case: Posting Failed Login Events to Slack
+==============================================
+
+This can be done using the following reactor SLS:
+
+.. code-block:: jinja
+
+    report-wtmp:
+      runner.salt.cmd:
+        - args:
+          - fun: slack.post_message
+          - channel: mychannel      # Slack channel
+          - from_name: someuser     # Slack user
+          - message: "Failed login from `{{ data.get('user', '') or 'unknown user' }}` on `{{ data['id'] }}`"
+
+Match the event like so in the master config file:
+
+.. code-block:: yaml
+
+    reactor:
+
+      - 'salt/beacon/*/btmp/':
+        - salt://reactor/btmp.sls
+
+.. note::
+    This approach uses the :py:mod:`slack execution module
+    <salt.modules.slack_notify>` directly on the master, and therefore requires
+    that the master has a slack API key in its configuration:
+
+    .. code-block:: yaml
+
+        slack:
+          api_key: xoxb-XXXXXXXXXXXX-XXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXX
+
+    See the :py:mod:`slack execution module <salt.modules.slack_notify>`
+    documentation for more information. While you can use an individual user's
+    API key to post to Slack, a bot user is likely better suited for this. The
+    :py:mod:`slack engine <salt.engines.slack>` documentation has information
+    on how to set up a bot user.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
+import datetime
 import logging
 import os
 import struct
-import time
 
 # Import Salt Libs
+import salt.utils.stringutils
 import salt.utils.files
 
 # Import 3rd-party libs
@@ -26,7 +110,7 @@ from salt.ext.six.moves import map
 
 __virtualname__ = 'btmp'
 BTMP = '/var/log/btmp'
-FMT = 'hi32s4s32s256shhiii4i20x'
+FMT = b'hi32s4s32s256shhiii4i20x'
 FIELDS = [
           'type',
           'PID',
@@ -58,13 +142,51 @@ def __virtual__():
     return False
 
 
+def _validate_time_range(trange, status, msg):
+    '''
+    Check time range
+    '''
+    # If trange is empty, just return the current status & msg
+    if not trange:
+        return status, msg
+
+    if not isinstance(trange, dict):
+        status = False
+        msg = ('The time_range parameter for '
+               'btmp beacon must '
+               'be a dictionary.')
+
+    if not all(k in trange for k in ('start', 'end')):
+        status = False
+        msg = ('The time_range parameter for '
+               'btmp beacon must contain '
+               'start & end options.')
+
+    return status, msg
+
+
+def _gather_group_members(group, groups, users):
+    '''
+    Gather group members
+    '''
+    _group = __salt__['group.info'](group)
+
+    if not _group:
+        log.warning('Group %s does not exist, ignoring.', group)
+        return
+
+    for member in _group['members']:
+        if member not in users:
+            users[member] = groups[group]
+
+
 def _check_time_range(time_range, now):
     '''
     Check time range
     '''
     if _TIME_SUPPORTED:
-        _start = int(time.mktime(dateutil_parser.parse(time_range['start']).timetuple()))
-        _end = int(time.mktime(dateutil_parser.parse(time_range['end']).timetuple()))
+        _start = dateutil_parser.parse(time_range['start'])
+        _end = dateutil_parser.parse(time_range['end'])
 
         return bool(_start <= now <= _end)
     else:
@@ -84,91 +206,79 @@ def validate(config):
     '''
     Validate the beacon configuration
     '''
+    vstatus = True
+    vmsg = 'Valid beacon configuration'
+
     # Configuration for load beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ('Configuration for btmp beacon must '
-                       'be a list.')
+        vstatus = False
+        vmsg = ('Configuration for btmp beacon must '
+                'be a list.')
     else:
         _config = {}
         list(map(_config.update, config))
 
         if 'users' in _config:
             if not isinstance(_config['users'], dict):
-                return False, ('User configuration for btmp beacon must '
-                               'be a dictionary.')
+                vstatus = False
+                vmsg = ('User configuration for btmp beacon must '
+                        'be a dictionary.')
             else:
                 for user in _config['users']:
-                    if _config['users'][user] and \
-                       'time_range' in _config['users'][user]:
-                        _time_range = _config['users'][user]['time_range']
-                        if not isinstance(_time_range, dict):
-                            return False, ('The time_range parameter for '
-                                           'btmp beacon must '
-                                           'be a dictionary.')
-                        else:
-                            if not all(k in _time_range for k in ('start', 'end')):
-                                return False, ('The time_range parameter for '
-                                               'btmp beacon must contain '
-                                               'start & end options.')
+                    _time_range = _config['users'][user].get('time_range', {})
+                    vstatus, vmsg = _validate_time_range(_time_range,
+                                                         vstatus,
+                                                         vmsg)
+
+            if not vstatus:
+                return vstatus, vmsg
+
+        if 'groups' in _config:
+            if not isinstance(_config['groups'], dict):
+                vstatus = False
+                vmsg = ('Group configuration for btmp beacon must '
+                        'be a dictionary.')
+            else:
+                for group in _config['groups']:
+                    _time_range = _config['groups'][group].get('time_range', {})
+                    vstatus, vmsg = _validate_time_range(_time_range,
+                                                         vstatus,
+                                                         vmsg)
+            if not vstatus:
+                return vstatus, vmsg
+
         if 'defaults' in _config:
             if not isinstance(_config['defaults'], dict):
-                return False, ('Defaults configuration for btmp beacon must '
-                               'be a dictionary.')
+                vstatus = False
+                vmsg = ('Defaults configuration for btmp beacon must '
+                        'be a dictionary.')
             else:
-                if 'time_range' in _config['defaults']:
-                    _time_range = _config['defaults']['time_range']
-                    if not isinstance(_time_range, dict):
-                        return False, ('The time_range parameter for '
-                                       'btmp beacon must '
-                                       'be a dictionary.')
-                    else:
-                        if not all(k in _time_range for k in ('start', 'end')):
-                            return False, ('The time_range parameter for '
-                                           'btmp beacon must contain '
-                                           'start & end options.')
+                _time_range = _config['defaults'].get('time_range', {})
+                vstatus, vmsg = _validate_time_range(_time_range,
+                                                     vstatus,
+                                                     vmsg)
+            if not vstatus:
+                return vstatus, vmsg
 
-    return True, 'Valid beacon configuration'
+    return vstatus, vmsg
 
 
-# TODO: add support for only firing events for specific users and login times
 def beacon(config):
     '''
     Read the last btmp file and return information on the failed logins
-
-    .. code-block:: yaml
-
-        beacons:
-          btmp: []
-
-        beacons:
-          btmp:
-            - users:
-                gareth:
-            - defaults:
-                time_range:
-                    start: '8am'
-                    end: '4pm'
-
-        beacons:
-          btmp:
-            - users:
-                gareth:
-                    time_range:
-                        start: '8am'
-                        end: '4pm'
-            - defaults:
-                time_range:
-                    start: '8am'
-                    end: '4pm'
     '''
     ret = []
 
-    users = None
+    users = {}
+    groups = {}
     defaults = None
 
     for config_item in config:
         if 'users' in config_item:
             users = config_item['users']
+
+        if 'groups' in config_item:
+            groups = config_item['groups']
 
         if 'defaults' in config_item:
             defaults = config_item['defaults']
@@ -182,7 +292,7 @@ def beacon(config):
         else:
             fp_.seek(loc)
         while True:
-            now = int(time.time())
+            now = datetime.datetime.now()
             raw = fp_.read(SIZE)
             if len(raw) != SIZE:
                 return ret
@@ -193,10 +303,11 @@ def beacon(config):
                 event[field] = pack[ind]
                 if isinstance(event[field], salt.ext.six.string_types):
                     if isinstance(event[field], bytes):
-                        event[field] = event[field].decode()
-                        event[field] = event[field].strip('b\x00')
-                    else:
-                        event[field] = event[field].strip('\x00')
+                        event[field] = salt.utils.stringutils.to_unicode(event[field])
+                    event[field] = event[field].strip('\x00')
+
+            for group in groups:
+                _gather_group_members(group, groups, users)
 
             if users:
                 if event['user'] in users:

@@ -47,17 +47,18 @@ Installation Prerequisites
 :requires: purestorage
 :platform: all
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import platform
 from datetime import datetime
 
 # Import Salt libs
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd party modules
@@ -210,7 +211,7 @@ def snap_create(name, suffix=None):
 
     Will return False is volume selected to snap does not exist.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of volume to snapshot
@@ -227,7 +228,7 @@ def snap_create(name, suffix=None):
     '''
     array = _get_system()
     if suffix is None:
-        suffix = 'snap-' + str((datetime.utcnow() - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds())
+        suffix = 'snap-' + six.text_type((datetime.utcnow() - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds())
         suffix = suffix.replace('.', '')
     if _get_volume(name, array) is not None:
         try:
@@ -246,7 +247,7 @@ def snap_delete(name, suffix=None, eradicate=False):
 
     Will return False if selected snapshot does not exist.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of volume
@@ -286,9 +287,9 @@ def snap_eradicate(name, suffix=None):
 
     Eradicate a deleted volume snapshot on a Pure Storage FlashArray.
 
-    Will retunr False is snapshot is not in a deleted state.
+    Will return False if snapshot is not in a deleted state.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of volume
@@ -299,7 +300,7 @@ def snap_eradicate(name, suffix=None):
 
     .. code-block:: bash
 
-        salt '*' purefa.snap_delete foo suffix=snap eradicate=True
+        salt '*' purefa.snap_eradicate foo suffix=snap
 
     '''
     array = _get_system()
@@ -321,7 +322,7 @@ def volume_create(name, size=None):
 
     Will return False if volume already exists.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of volume (truncated to 63 characters)
@@ -359,7 +360,7 @@ def volume_delete(name, eradicate=False):
 
     Will return False if volume doesn't exist is already in a deleted state.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of volume
@@ -398,7 +399,7 @@ def volume_eradicate(name):
 
     Will return False is volume is not in a deleted state.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of volume
@@ -428,7 +429,7 @@ def volume_extend(name, size):
 
     Will return False if new size is less than or equal to existing size.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of volume
@@ -466,7 +467,7 @@ def snap_volume_create(name, target, overwrite=False):
     Will return False if target volume already exists and
     overwrite is not specified, or selected snapshot doesn't exist.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of volume snapshot
@@ -512,7 +513,7 @@ def volume_clone(name, target, overwrite=False):
     Will return False if source volume doesn't exist, or
     target volume already exists and overwrite not specified.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of volume
@@ -556,7 +557,7 @@ def volume_attach(name, host):
 
     Host and volume must exist or else will return False.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of volume
@@ -589,7 +590,7 @@ def volume_detach(name, host):
     Will return False if either host or volume do not exist, or
     if selected volume isn't already connected to the host.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of volume
@@ -614,7 +615,7 @@ def volume_detach(name, host):
             return False
 
 
-def host_create(name, iqn=None, wwn=None):
+def host_create(name, iqn=None, wwn=None, nqn=None):
     '''
 
     Add a host on a Pure Storage FlashArray.
@@ -623,12 +624,14 @@ def host_create(name, iqn=None, wwn=None):
     Fibre Channel parameters are not in a valid format.
     See Pure Storage FlashArray documentation.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of host (truncated to 63 characters)
     iqn : string
         iSCSI IQN of host
+    nqn : string
+        NVMeF NQN of host
     wwn : string
         Fibre Channel WWN of host
 
@@ -636,7 +639,7 @@ def host_create(name, iqn=None, wwn=None):
 
     .. code-block:: bash
 
-        salt '*' purefa.host_create foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
+        salt '*' purefa.host_create foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>' nqn='<Valid NQN>'
 
     '''
     array = _get_system()
@@ -647,6 +650,12 @@ def host_create(name, iqn=None, wwn=None):
             array.create_host(name)
         except purestorage.PureError:
             return False
+        if nqn is not None:
+            try:
+                array.set_host(name, addnqnlist=[nqn])
+            except purestorage.PureError:
+                array.delete_host(name)
+                return False
         if iqn is not None:
             try:
                 array.set_host(name, addiqnlist=[iqn])
@@ -665,7 +674,7 @@ def host_create(name, iqn=None, wwn=None):
     return True
 
 
-def host_update(name, iqn=None, wwn=None):
+def host_update(name, iqn=None, wwn=None, nqn=None):
     '''
 
     Update a hosts port definitions on a Pure Storage FlashArray.
@@ -674,10 +683,12 @@ def host_update(name, iqn=None, wwn=None):
     by another host, or are not in a valid format.
     See Pure Storage FlashArray documentation.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of host
+    nqn : string
+        Additional NVMeF NQN of host
     iqn : string
         Additional iSCSI IQN of host
     wwn : string
@@ -687,11 +698,16 @@ def host_update(name, iqn=None, wwn=None):
 
     .. code-block:: bash
 
-        salt '*' purefa.host_update foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
+        salt '*' purefa.host_update foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>' nqn='<Valid NQN>'
 
     '''
     array = _get_system()
     if _get_host(name, array) is not None:
+        if nqn is not None:
+            try:
+                array.set_host(name, addnqnlist=[nqn])
+            except purestorage.PureError:
+                return False
         if iqn is not None:
             try:
                 array.set_host(name, addiqnlist=[iqn])
@@ -714,7 +730,7 @@ def host_delete(name):
 
     Will return False if the host doesn't exist.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of host
@@ -750,7 +766,7 @@ def hg_create(name, host=None, volume=None):
     Will return False if hostgroup already exists, or if
     named host or volume do not exist.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of hostgroup (truncated to 63 characters)
@@ -806,7 +822,7 @@ def hg_update(name, host=None, volume=None):
     Will return False is hostgroup doesn't exist, or host
     or volume do not exist.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of hostgroup
@@ -852,7 +868,7 @@ def hg_delete(name):
 
     Will return False is hostgroup is already in a deleted state.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of hostgroup
@@ -890,7 +906,7 @@ def hg_remove(name, volume=None, host=None):
     Will return False is hostgroup does not exist, or named host or volume are
     not in the hostgroup.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of hostgroup
@@ -951,7 +967,7 @@ def pg_create(name, hostgroup=None, host=None, volume=None, enabled=True):
          hostgroups, hosts or volumes
        * Named type for protection group does not exist
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of protection group
@@ -1044,7 +1060,7 @@ def pg_update(name, hostgroup=None, host=None, volume=None):
       * Incorrect type selected for current protection group type
       * Specified type does not exist
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of protection group
@@ -1134,7 +1150,7 @@ def pg_delete(name, eradicate=False):
 
     Will return False if protection group is already in a deleted state.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of protection group
@@ -1171,7 +1187,7 @@ def pg_eradicate(name):
 
     Will return False if protection group is not in a deleted state.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of protection group
@@ -1203,7 +1219,7 @@ def pg_remove(name, hostgroup=None, host=None, volume=None):
       * Protection group does not exist
       * Specified type is not currently associated with the protection group
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     name : string
         name of hostgroup

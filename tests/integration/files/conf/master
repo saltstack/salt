@@ -28,10 +28,10 @@ tcp_master_workers: 64515
 
 peer:
   '.*':
-    - 'test.*'
+    - '(x509|test).*'
 
 ext_pillar:
-  - test_ext_pillar_opts:
+  - ext_pillar_opts:
     - test_issue_5951_actual_file_roots_in_opts
 
 config_opt:
@@ -99,3 +99,24 @@ libcloud_dns:
 
 autosign_grains_dir: autosign_grains
 autosign_file: autosign_file
+
+# disable discovery for test suite saltstack/salt-jenkins#683
+discovery: false
+
+# enable using ssh minions and regular minions
+#enable_ssh_minions: True
+#ignore_host_keys: True
+
+# test vault
+vault:
+  url: http://127.0.0.1:8200
+  auth:
+    method: token
+    token: testsecret
+  policies:
+  - testpolicy
+peer_run:
+  .*:
+  - vault.generate_token
+sdbvault:
+  driver: vault

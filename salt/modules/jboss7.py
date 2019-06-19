@@ -23,7 +23,7 @@ Example:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 import logging
 
@@ -201,7 +201,7 @@ def __format_value(key, value, ds_attributes):
             raise Exception("Don't know how to convert {0} to BOOLEAN type".format(value))
 
     elif type_ == 'INT':
-        return str(value)
+        return six.text_type(value)
     elif type_ == 'STRING':
         return '"{0}"'.format(value)
     else:
@@ -246,7 +246,7 @@ def update_datasource(jboss_config, name, new_properties, profile=None):
         'success': True,
         'comment': ''
     }
-    if len(changed_properties) > 0:
+    if changed_properties:
         ds_resource_description = __get_datasource_resource_description(jboss_config, name, profile)
         ds_attributes = ds_resource_description['attributes']
         for key in changed_properties:
@@ -474,9 +474,9 @@ def list_deployments(jboss_config):
     log.debug("======================== MODULE FUNCTION: jboss7.list_deployments")
     command_result = __salt__['jboss7_cli.run_command'](jboss_config, 'deploy')
     deployments = []
-    if len(command_result['stdout']) > 0:
+    if command_result['stdout']:
         deployments = re.split('\\s*', command_result['stdout'])
-    log.debug('deployments=%s', str(deployments))
+    log.debug('deployments=%s', deployments)
     return deployments
 
 

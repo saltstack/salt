@@ -5,7 +5,7 @@ expected to return
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import os
 import fnmatch
 import re
@@ -13,6 +13,7 @@ import logging
 
 # Import salt libs
 import salt.payload
+import salt.roster
 import salt.utils.data
 import salt.utils.files
 import salt.utils.network
@@ -25,10 +26,7 @@ import salt.cache
 from salt.ext import six
 
 # Import 3rd-party libs
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 HAS_RANGE = False
 try:
     import seco.range  # pylint: disable=import-error
@@ -55,7 +53,7 @@ def parse_target(target_expression):
 
     match = TARGET_REX.match(target_expression)
     if not match:
-        log.warning('Unable to parse target "{0}"'.format(target_expression))
+        log.warning('Unable to parse target "%s"', target_expression)
         ret = {
             'engine': None,
             'delimiter': None,
@@ -102,11 +100,11 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
     if skip is None:
         skip = set()
     elif nodegroup in skip:
-        log.error('Failed nodegroup expansion: illegal nested nodegroup "{0}"'.format(nodegroup))
+        log.error('Failed nodegroup expansion: illegal nested nodegroup "%s"', nodegroup)
         return ''
 
     if nodegroup not in nodegroups:
-        log.error('Failed nodegroup expansion: unknown nodegroup "{0}"'.format(nodegroup))
+        log.error('Failed nodegroup expansion: unknown nodegroup "%s"', nodegroup)
         return ''
 
     nglookup = nodegroups[nodegroup]
@@ -124,7 +122,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
     opers = ['and', 'or', 'not', '(', ')']
     for word in words:
         if not isinstance(word, six.string_types):
-            word = str(word)
+            word = six.text_type(word)
         if word in opers:
             ret.append(word)
         elif len(word) >= 3 and word.startswith('N@'):
@@ -139,7 +137,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
 
     skip.remove(nodegroup)
 
-    log.debug('nodegroup_comp({0}) => {1}'.format(nodegroup, ret))
+    log.debug('nodegroup_comp(%s) => %s', nodegroup, ret)
     # Only return list form if a nodegroup was expanded. Otherwise return
     # the original string to conserve backwards compat
     if expanded_nodegroup or not first_call:
@@ -151,7 +149,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
             # No compound operators found in nodegroup definition. Check for
             # group type specifiers
             group_type_re = re.compile('^[A-Z]@')
-            regex_chars = ['(', '[', '{', '\\', '?''}])']
+            regex_chars = ['(', '[', '{', '\\', '?', '}', ']', ')']
             if not [x for x in ret if '*' in x or group_type_re.match(x)]:
                 # No group type specifiers and no wildcards.
                 # Treat this as an expression.
@@ -215,7 +213,7 @@ class CkMinions(object):
         return {'minions': fnmatch.filter(self._pki_minions(), expr),
                 'missing': []}
 
-    def _check_list_minions(self, expr, greedy):  # pylint: disable=unused-argument
+    def _check_list_minions(self, expr, greedy, ignore_missing=False):  # pylint: disable=unused-argument
         '''
         Return the minions found by looking via a list
         '''
@@ -223,7 +221,7 @@ class CkMinions(object):
             expr = [m for m in expr.split(',') if m]
         minions = self._pki_minions()
         return {'minions': [x for x in expr if x in minions],
-                'missing': [x for x in expr if x not in minions]}
+                'missing': [] if ignore_missing else [x for x in expr if x not in minions]}
 
     def _check_pcre_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
@@ -238,17 +236,21 @@ class CkMinions(object):
         Retreive complete minion list from PKI dir.
         Respects cache if configured
         '''
-        if self.opts.get('__role') == 'master' and self.opts.get('__cli') == 'salt-run':
-            # Compiling pillar directly on the master, just return the master's
-            # ID as that is the only one that is available.
-            return [self.opts['id']]
         minions = []
         pki_cache_fn = os.path.join(self.opts['pki_dir'], self.acc, '.key_cache')
         try:
+            os.makedirs(os.path.dirname(pki_cache_fn))
+        except OSError:
+            pass
+        try:
             if self.opts['key_cache'] and os.path.exists(pki_cache_fn):
                 log.debug('Returning cached minion list')
-                with salt.utils.files.fopen(pki_cache_fn) as fn_:
-                    return self.serial.load(fn_)
+                if six.PY2:
+                    with salt.utils.files.fopen(pki_cache_fn) as fn_:
+                        return self.serial.load(fn_)
+                else:
+                    with salt.utils.files.fopen(pki_cache_fn, mode='rb') as fn_:
+                        return self.serial.load(fn_)
             else:
                 for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
                     if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
@@ -269,9 +271,10 @@ class CkMinions(object):
                              regex_match=False,
                              exact_match=False):
         '''
-        Helper function to search for minions in master caches
-        If 'greedy' return accepted minions that matched by the condition or absend in the cache.
-        If not 'greedy' return the only minions have cache data and matched by the condition.
+        Helper function to search for minions in master caches If 'greedy',
+        then return accepted minions matched by the condition or those absent
+        from the cache.  If not 'greedy' return the only minions have cache
+        data and matched by the condition.
         '''
         cache_enabled = self.opts.get('minion_data_cache', False)
 
@@ -386,12 +389,12 @@ class CkMinions(object):
             try:
                 # Target is an address?
                 tgt = ipaddress.ip_address(tgt)
-            except:  # pylint: disable=bare-except
+            except Exception:
                 try:
                     # Target is a network?
                     tgt = ipaddress.ip_network(tgt)
-                except:  # pylint: disable=bare-except
-                    log.error('Invalid IP/CIDR target: {0}'.format(tgt))
+                except Exception:
+                    log.error('Invalid IP/CIDR target: %s', tgt)
                     return {'minions': [],
                             'missing': []}
             proto = 'ipv{0}'.format(tgt.version)
@@ -407,7 +410,7 @@ class CkMinions(object):
                 if grains is None or proto not in grains:
                     match = False
                 elif isinstance(tgt, (ipaddress.IPv4Address, ipaddress.IPv6Address)):
-                    match = str(tgt) in grains[proto]
+                    match = six.text_type(tgt) in grains[proto]
                 else:
                     match = salt.utils.network.in_subnet(tgt, grains[proto])
 
@@ -432,7 +435,7 @@ class CkMinions(object):
             return self._range.expand(expr)
         except seco.range.RangeException as exc:
             log.error(
-                'Range exception in compound match: {0}'.format(exc)
+                'Range exception in compound match: %s', exc
             )
             cache_enabled = self.opts.get('minion_data_cache', False)
             if greedy:
@@ -472,7 +475,9 @@ class CkMinions(object):
             log.error('Compound target that is neither string, list nor tuple')
             return {'minions': [], 'missing': []}
         minions = set(self._pki_minions())
-        log.debug('minions: {0}'.format(minions))
+        log.debug('minions: %s', minions)
+
+        nodegroups = self.opts.get('nodegroups', {})
 
         if self.opts.get('minion_data_cache', False):
             ref = {'G': self._check_grain_minions,
@@ -496,22 +501,24 @@ class CkMinions(object):
             if isinstance(expr, six.string_types):
                 words = expr.split()
             else:
-                words = expr
+                # we make a shallow copy in order to not affect the passed in arg
+                words = expr[:]
 
-            for word in words:
+            while words:
+                word = words.pop(0)
                 target_info = parse_target(word)
 
                 # Easy check first
                 if word in opers:
                     if results:
                         if results[-1] == '(' and word in ('and', 'or'):
-                            log.error('Invalid beginning operator after "(": {0}'.format(word))
+                            log.error('Invalid beginning operator after "(": %s', word)
                             return {'minions': [], 'missing': []}
                         if word == 'not':
                             if not results[-1] in ('&', '|', '('):
                                 results.append('&')
                             results.append('(')
-                            results.append(str(set(minions)))
+                            results.append(six.text_type(set(minions)))
                             results.append('-')
                             unmatched.append('-')
                         elif word == 'and':
@@ -524,8 +531,8 @@ class CkMinions(object):
                         elif word == ')':
                             if not unmatched or unmatched[-1] != '(':
                                 log.error('Invalid compound expr (unexpected '
-                                          'right parenthesis): {0}'
-                                          .format(expr))
+                                          'right parenthesis): %s',
+                                          expr)
                                 return {'minions': [], 'missing': []}
                             results.append(word)
                             unmatched.pop()
@@ -533,14 +540,14 @@ class CkMinions(object):
                                 results.append(')')
                                 unmatched.pop()
                         else:  # Won't get here, unless oper is added
-                            log.error('Unhandled oper in compound expr: {0}'
-                                      .format(expr))
+                            log.error('Unhandled oper in compound expr: %s',
+                                      expr)
                             return {'minions': [], 'missing': []}
                     else:
                         # seq start with oper, fail
                         if word == 'not':
                             results.append('(')
-                            results.append(str(set(minions)))
+                            results.append(six.text_type(set(minions)))
                             results.append('-')
                             unmatched.append('-')
                         elif word == '(':
@@ -549,24 +556,26 @@ class CkMinions(object):
                         else:
                             log.error(
                                 'Expression may begin with'
-                                ' binary operator: {0}'.format(word)
+                                ' binary operator: %s', word
                             )
                             return {'minions': [], 'missing': []}
 
                 elif target_info and target_info['engine']:
                     if 'N' == target_info['engine']:
-                        # Nodegroups should already be expanded/resolved to other engines
-                        log.error('Detected nodegroup expansion failure of "{0}"'.format(word))
-                        return {'minions': [], 'missing': []}
+                        # if we encounter a node group, just evaluate it in-place
+                        decomposed = nodegroup_comp(target_info['pattern'], nodegroups)
+                        if decomposed:
+                            words = decomposed + words
+                        continue
+
                     engine = ref.get(target_info['engine'])
                     if not engine:
                         # If an unknown engine is called at any time, fail out
                         log.error(
-                            'Unrecognized target engine "{0}" for'
-                            ' target expression "{1}"'.format(
-                                target_info['engine'],
-                                word,
-                            )
+                            'Unrecognized target engine "%s" for'
+                            ' target expression "%s"',
+                            target_info['engine'],
+                            word,
                         )
                         return {'minions': [], 'missing': []}
 
@@ -575,8 +584,12 @@ class CkMinions(object):
                         engine_args.append(target_info['delimiter'] or ':')
                     engine_args.append(greedy)
 
+                    # ignore missing minions for lists if we exclude them with
+                    # a 'not'
+                    if 'L' == target_info['engine']:
+                        engine_args.append(results and results[-1] == '-')
                     _results = engine(*engine_args)
-                    results.append(str(set(_results['minions'])))
+                    results.append(six.text_type(set(_results['minions'])))
                     missing.extend(_results['missing'])
                     if unmatched and unmatched[-1] == '-':
                         results.append(')')
@@ -585,7 +598,7 @@ class CkMinions(object):
                 else:
                     # The match is not explicitly defined, evaluate as a glob
                     _results = self._check_glob_minions(word, True)
-                    results.append(str(set(_results['minions'])))
+                    results.append(six.text_type(set(_results['minions'])))
                     if unmatched and unmatched[-1] == '-':
                         results.append(')')
                         unmatched.pop()
@@ -594,22 +607,35 @@ class CkMinions(object):
             results.extend([')' for item in unmatched])
 
             results = ' '.join(results)
-            log.debug('Evaluating final compound matching expr: {0}'
-                      .format(results))
+            log.debug('Evaluating final compound matching expr: %s',
+                      results)
             try:
                 minions = list(eval(results))  # pylint: disable=W0123
                 return {'minions': minions, 'missing': missing}
             except Exception:
-                log.error('Invalid compound target: {0}'.format(expr))
+                log.error('Invalid compound target: %s', expr)
                 return {'minions': [], 'missing': []}
 
         return {'minions': list(minions),
                 'missing': []}
 
-    def connected_ids(self, subset=None, show_ipv4=False, include_localhost=False):
+    def connected_ids(self, subset=None, show_ip=False, show_ipv4=None, include_localhost=None):
         '''
         Return a set of all connected minion ids, optionally within a subset
         '''
+        if include_localhost is not None:
+            salt.utils.versions.warn_until(
+                'Sodium',
+                'The \'include_localhost\' argument is no longer required; any'
+                'connected localhost minion will always be included.'
+            )
+        if show_ipv4 is not None:
+            salt.utils.versions.warn_until(
+                'Sodium',
+                'The \'show_ipv4\' argument has been renamed to \'show_ip\' as'
+                'it now also includes IPv6 addresses for IPv6-connected'
+                'minions.'
+            )
         minions = set()
         if self.opts.get('minion_data_cache', False):
             search = self.cache.list('minions')
@@ -619,7 +645,11 @@ class CkMinions(object):
             if '127.0.0.1' in addrs:
                 # Add in the address of a possible locally-connected minion.
                 addrs.discard('127.0.0.1')
-                addrs.update(set(salt.utils.network.ip_addrs(include_loopback=include_localhost)))
+                addrs.update(set(salt.utils.network.ip_addrs(include_loopback=False)))
+            if '::1' in addrs:
+                # Add in the address of a possible locally-connected minion.
+                addrs.discard('::1')
+                addrs.update(set(salt.utils.network.ip_addrs6(include_loopback=False)))
             if subset:
                 search = subset
             for id_ in search:
@@ -635,13 +665,16 @@ class CkMinions(object):
                     continue
                 grains = mdata.get('grains', {})
                 for ipv4 in grains.get('ipv4', []):
-                    if ipv4 == '127.0.0.1' and not include_localhost:
-                        continue
-                    if ipv4 == '0.0.0.0':
-                        continue
                     if ipv4 in addrs:
-                        if show_ipv4:
+                        if show_ip:
                             minions.add((id_, ipv4))
+                        else:
+                            minions.add(id_)
+                        break
+                for ipv6 in grains.get('ipv6', []):
+                    if ipv6 in addrs:
+                        if show_ip:
+                            minions.add((id_, ipv6))
                         else:
                             minions.add(id_)
                         break
@@ -683,51 +716,27 @@ class CkMinions(object):
                 _res = check_func(expr, delimiter, greedy)
             else:
                 _res = check_func(expr, greedy)
+            _res['ssh_minions'] = False
+            if self.opts.get('enable_ssh_minions', False) is True and isinstance('tgt', six.string_types):
+                roster = salt.roster.Roster(self.opts, self.opts.get('roster', 'flat'))
+                ssh_minions = roster.targets(expr, tgt_type)
+                if ssh_minions:
+                    _res['minions'].extend(ssh_minions)
+                    _res['ssh_minions'] = True
         except Exception:
             log.exception(
-                    'Failed matching available minions with {0} pattern: {1}'
-                    .format(tgt_type, expr))
+                    'Failed matching available minions with %s pattern: %s',
+                    tgt_type, expr)
             _res = {'minions': [], 'missing': []}
         return _res
-
-    def _expand_matching(self, auth_entry):
-        ref = {'G': 'grain',
-               'P': 'grain_pcre',
-               'I': 'pillar',
-               'J': 'pillar_pcre',
-               'L': 'list',
-               'S': 'ipcidr',
-               'E': 'pcre',
-               'N': 'node',
-               None: 'glob'}
-
-        target_info = parse_target(auth_entry)
-        if not target_info:
-            log.error('Failed to parse valid target "{0}"'.format(auth_entry))
-
-        v_matcher = ref.get(target_info['engine'])
-        v_expr = target_info['pattern']
-
-        _res = self.check_minions(v_expr, v_matcher)
-        return set(_res['minions'])
 
     def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
         '''
         Return a Bool. This function returns if the expression sent in is
         within the scope of the valid expression
         '''
-        # remember to remove the expr_form argument from this function when
-        # performing the cleanup on this deprecation.
-        if expr_form is not None:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'the target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = expr_form
 
-        v_minions = self._expand_matching(valid)
+        v_minions = set(self.check_minions(valid, 'compound').get('minions', []))
         if minions is None:
             _res = self.check_minions(expr, tgt_type)
             minions = set(_res['minions'])
@@ -754,7 +763,7 @@ class CkMinions(object):
                 else:
                     vals.append(False)
             except Exception:
-                log.error('Invalid regular expression: {0}'.format(regex))
+                log.error('Invalid regular expression: %s', regex)
         return vals and all(vals)
 
     def any_auth(self, form, auth_list, fun, arg, tgt=None, tgt_type='glob'):
@@ -863,11 +872,11 @@ class CkMinions(object):
                 continue
             if isinstance(auth_list_entry, dict):
                 if len(auth_list_entry) != 1:
-                    log.info('Malformed ACL: {0}'.format(auth_list_entry))
+                    log.info('Malformed ACL: %s', auth_list_entry)
                     continue
             allowed_minions.update(set(auth_list_entry.keys()))
             for key in auth_list_entry:
-                for match in self._expand_matching(key):
+                for match in set(self.check_minions(key, 'compound')):
                     if match in auth_dictionary:
                         auth_dictionary[match].extend(auth_list_entry[key])
                     else:
@@ -875,12 +884,12 @@ class CkMinions(object):
 
         allowed_minions_from_auth_list = set()
         for next_entry in allowed_minions:
-            allowed_minions_from_auth_list.update(self._expand_matching(next_entry))
+            allowed_minions_from_auth_list.update(set(self.check_minions(next_entry, 'compound')))
         # 'minions' here are all the names of minions matched by the target
         # if we take out all the allowed minions, and there are any left, then
         # the target includes minions that are not allowed by eauth
         # so we can give up here.
-        if len(minions - allowed_minions_from_auth_list) > 0:
+        if minions - allowed_minions_from_auth_list:
             return False
 
         try:
@@ -1097,7 +1106,7 @@ class CkMinions(object):
                     break
                 if cond_arg is None:  # None == '.*' i.e. allow any
                     continue
-                if not self.match_check(cond_arg, str(args[i])):
+                if not self.match_check(cond_arg, six.text_type(args[i])):
                     good = False
                     break
             if not good:
@@ -1110,7 +1119,7 @@ class CkMinions(object):
                     break
                 if v is None:  # None == '.*' i.e. allow any
                     continue
-                if not self.match_check(v, str(kwargs[k])):
+                if not self.match_check(v, six.text_type(kwargs[k])):
                     good = False
                     break
             if good:
@@ -1131,11 +1140,27 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
             tgt_type)
     minions = _res['minions']
     cache = salt.cache.factory(opts)
+
+    if isinstance(fun, six.string_types):
+        functions = list(set(fun.split(',')))
+        _ret_dict = len(functions) > 1
+    elif isinstance(fun, list):
+        functions = fun
+        _ret_dict = True
+    else:
+        return {}
+
     for minion in minions:
         mdata = cache.fetch('minions/{0}'.format(minion), 'mine')
-        if mdata is None:
+
+        if not isinstance(mdata, dict):
             continue
-        fdata = mdata.get(fun)
-        if fdata:
-            ret[minion] = fdata
+
+        if not _ret_dict and functions and functions[0] in mdata:
+            ret[minion] = mdata.get(functions)
+        elif _ret_dict:
+            for fun in functions:
+                if fun in mdata:
+                    ret.setdefault(fun, {})[minion] = mdata.get(fun)
+
     return ret

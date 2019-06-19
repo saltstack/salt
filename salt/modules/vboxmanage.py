@@ -16,7 +16,7 @@ The default for this setting is ``False``.
 :depends: virtualbox
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 import os.path
 import logging
@@ -559,7 +559,7 @@ def list_items(item, details=False, group_by='UUID'):
         if not line.strip():
             continue
         comps = line.split(':')
-        if len(comps) < 1:
+        if not comps:
             continue
         if tmp_id is not None:
             ret[tmp_id] = tmp_dict

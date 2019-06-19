@@ -6,7 +6,7 @@ Commands for working with travisci.
 '''
 
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import base64
 
 try:
@@ -20,6 +20,10 @@ except ImportError:
 import salt.utils.json
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext.six.moves.urllib.parse import parse_qs  # pylint: disable=import-error,no-name-in-module
+
+# Import 3rd party libraries
+from salt.ext import six
+
 
 OPENSSL_MIN_VER = '16.0.0'
 __virtualname__ = 'travisci'
@@ -67,7 +71,7 @@ def verify_webhook(signature, body):
     payload = salt.utils.json.loads(parse_qs(body)['payload'][0])
 
     try:
-        OpenSSL.crypto.verify(certificate, signature, payload, str('sha1'))
+        OpenSSL.crypto.verify(certificate, signature, payload, six.text_type('sha1'))
     except OpenSSL.crypto.Error:
         return False
     return True

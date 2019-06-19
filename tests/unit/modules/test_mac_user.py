@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: Nicole Thomas <nicole@saltstack.com>
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 HAS_PWD = True
 try:
     import pwd
@@ -312,6 +312,11 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests the list of all users
         '''
-        with patch('pwd.getpwall', MagicMock(return_value=self.mock_pwall)):
-            ret = ['_amavisd', '_appleevents', '_appowner']
-            self.assertEqual(mac_user.list_users(), ret)
+        expected = ['spongebob', 'patrick', 'squidward']
+        mock_run = MagicMock(return_value={'pid': 4948,
+                                           'retcode': 0,
+                                           'stderr': '',
+                                           'stdout': '\n'.join(expected)})
+        with patch.dict(mac_user.__grains__, {'osrelease_info': (10, 9, 1)}), \
+                patch.dict(mac_user.__salt__, {'cmd.run_all': mock_run}):
+            self.assertEqual(mac_user.list_users(), expected)

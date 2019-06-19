@@ -72,7 +72,7 @@ variables, if set, but these values can also be overridden in several ways:
               pkg.installed:
                 - fromrepo: ftp://ftp2.freebsd.org/
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -199,6 +199,7 @@ def latest_version(*names, **kwargs):
     '''
     return '' if len(names) == 1 else dict((x, '') for x in names)
 
+
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
@@ -237,7 +238,7 @@ def version(*names, **kwargs):
     ])
 
 
-def refresh_db():
+def refresh_db(**kwargs):
     '''
     ``pkg_add(1)`` does not use a local database of available packages, so this
     function simply returns ``True``. it exists merely for API compatibility.
@@ -485,6 +486,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     return ret
 
+
 # Support pkg.delete to remove packages to more closely match pkg_delete
 delete = salt.utils.functools.alias_function(remove, 'delete')
 # No equivalent to purge packages, use remove instead
@@ -501,7 +503,7 @@ def _rehash():
         __salt__['cmd.shell']('rehash', output_loglevel='trace')
 
 
-def file_list(*packages):
+def file_list(*packages, **kwargs):
     '''
     List the files that belong to a package. Not specifying any packages will
     return a list of _every_ file on the system's package database (not
@@ -523,7 +525,7 @@ def file_list(*packages):
     return ret
 
 
-def file_dict(*packages):
+def file_dict(*packages, **kwargs):
     '''
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of _every_ file on the

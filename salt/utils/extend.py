@@ -10,12 +10,11 @@ directory. This tool uses Jinja2 for templating.
 
 This tool is accessed using `salt-extend`
 
-    :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
+    :codeauthor: Anthony Shaw <anthonyshaw@apache.org>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, unicode_literals, print_function
 
 from datetime import date
 import logging
@@ -73,7 +72,7 @@ def _fetch_templates(src):
     :returns: ``list`` of ('key', 'description')
     '''
     templates = []
-    log.debug('Listing contents of {0}'.format(src))
+    log.debug('Listing contents of %s', src)
     for item in os.listdir(src):
         s = os.path.join(src, item)
         if os.path.isdir(s):
@@ -81,8 +80,8 @@ def _fetch_templates(src):
             if os.path.isfile(template_path):
                 templates.append(_get_template(template_path, item))
             else:
-                log.debug("Directory does not contain {1} {0}".format(template_path,
-                                                                      TEMPLATE_FILE_NAME))
+                log.debug("Directory does not contain %s %s", template_path,
+                          TEMPLATE_FILE_NAME)
     return templates
 
 
@@ -100,13 +99,13 @@ def _mergetree(src, dst):
         s = os.path.join(src, item)
         d = os.path.join(dst, item)
         if os.path.isdir(s):
-            log.info("Copying folder {0} to {1}".format(s, d))
+            log.info("Copying folder %s to %s", s, d)
             if os.path.exists(d):
                 _mergetree(s, d)
             else:
                 shutil.copytree(s, d)
         else:
-            log.info("Copying file {0} to {1}".format(s, d))
+            log.info("Copying file %s to %s", s, d)
             shutil.copy2(s, d)
 
 
@@ -128,7 +127,7 @@ def _mergetreejinja(src, dst, context):
         s = os.path.join(src, item)
         d = os.path.join(dst, item)
         if os.path.isdir(s):
-            log.info("Copying folder {0} to {1}".format(s, d))
+            log.info("Copying folder %s to %s", s, d)
             if os.path.exists(d):
                 _mergetreejinja(s, d, context)
             else:
@@ -137,12 +136,12 @@ def _mergetreejinja(src, dst, context):
         else:
             if item != TEMPLATE_FILE_NAME:
                 d = Template(d).render(context)
-                log.info("Copying file {0} to {1}".format(s, d))
+                log.info("Copying file %s to %s", s, d)
                 with salt.utils.files.fopen(s, 'r') as source_file:
-                    src_contents = source_file.read()
+                    src_contents = salt.utils.stringutils.to_unicode(source_file.read())
                     dest_contents = Template(src_contents).render(context)
                 with salt.utils.files.fopen(d, 'w') as dest_file:
-                    dest_file.write(dest_contents)
+                    dest_file.write(salt.utils.stringutils.to_str(dest_contents))
 
 
 def _prompt_user_variable(var_name, default_value):
@@ -301,8 +300,9 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
         _mergetree(temp_dir, salt_dir)
         path = salt_dir
 
-    log.info('New module stored in {0}'.format(path))
+    log.info('New module stored in %s', path)
     return path
+
 
 if __name__ == '__main__':
     run()

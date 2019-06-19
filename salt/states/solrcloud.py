@@ -7,7 +7,7 @@ States for solrcloud alias and collection configuration
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt libs
 import salt.utils.json
@@ -34,51 +34,43 @@ def alias(name, collections, **kwargs):
         'changes': {},
         'result': False,
         'comment': '',
-        'pchanges': {},
     }
 
-    if __salt__["solrcloud.alias_exists"](name, **kwargs):
+    if __salt__['solrcloud.alias_exists'](name, **kwargs):
         alias_content = __salt__['solrcloud.alias_get_collections'](name, **kwargs)
         diff = set(alias_content).difference(set(collections))
 
-        if len(diff) == 0:
+        if not diff:
             ret['result'] = True
             ret['comment'] = 'Alias is in desired state'
             return ret
 
         if __opts__['test']:
             ret['comment'] = 'The alias "{0}" will be updated.'.format(name)
-            ret['pchanges'] = {
-                'old': ",".join(alias_content),
-                'new': ",".join(collections)
-            }
             ret['result'] = None
         else:
-            __salt__["solrcloud.alias_set_collections"](name, collections, **kwargs)
+            __salt__['solrcloud.alias_set_collections'](name, collections, **kwargs)
             ret['comment'] = 'The alias "{0}" has been updated.'.format(name)
-            ret['changes'] = {
-                'old': ",".join(alias_content),
-                'new': ",".join(collections)
-            }
-
             ret['result'] = True
+
+        ret['changes'] = {
+            'old': ','.join(alias_content),
+            'new': ','.join(collections),
+        }
+
     else:
         if __opts__['test']:
             ret['comment'] = 'The alias "{0}" will be created.'.format(name)
-            ret['pchanges'] = {
-                'old': None,
-                'new': ",".join(collections)
-            }
             ret['result'] = None
         else:
-            __salt__["solrcloud.alias_set_collections"](name, collections, **kwargs)
+            __salt__['solrcloud.alias_set_collections'](name, collections, **kwargs)
             ret['comment'] = 'The alias "{0}" has been created.'.format(name)
-            ret['changes'] = {
-                'old': None,
-                'new': ",".join(collections)
-            }
-
             ret['result'] = True
+
+        ret['changes'] = {
+            'old': None,
+            'new': ','.join(collections),
+        }
 
     return ret
 
@@ -101,7 +93,6 @@ def collection(name, options=None, **kwargs):
         'changes': {},
         'result': False,
         'comment': '',
-        'pchanges': {},
     }
 
     if options is None:
@@ -128,7 +119,7 @@ def collection(name, options=None, **kwargs):
             if key not in current_options or current_options[key] != value:
                 diff[key] = value
 
-        if len(diff) == 0:
+        if not diff:
             ret['result'] = True
             ret['comment'] = 'Collection options are in desired state'
             return ret
@@ -137,42 +128,32 @@ def collection(name, options=None, **kwargs):
 
             if __opts__['test']:
                 ret['comment'] = 'Collection options "{0}" will be changed.'.format(name)
-                ret['pchanges'] = {
-                    'old': salt.utils.json.dumps(current_options, sort_keys=True, indent=4, separators=(',', ': ')),
-                    'new': salt.utils.json.dumps(options, sort_keys=True, indent=4, separators=(',', ': '))
-                }
                 ret['result'] = None
-
-                return ret
             else:
-                __salt__["solrcloud.collection_set_options"](name, diff, **kwargs)
-
+                __salt__['solrcloud.collection_set_options'](name, diff, **kwargs)
                 ret['comment'] = 'Parameters were updated for collection "{0}".'.format(name)
                 ret['result'] = True
-                ret['changes'] = {
-                    'old': salt.utils.json.dumps(current_options, sort_keys=True, indent=4, separators=(',', ': ')),
-                    'new': salt.utils.json.dumps(options, sort_keys=True, indent=4, separators=(',', ': '))
-                }
 
-                return ret
+            ret['changes'] = {
+                'old': salt.utils.json.dumps(current_options, sort_keys=True, indent=4, separators=(',', ': ')),
+                'new': salt.utils.json.dumps(options, sort_keys=True, indent=4, separators=(',', ': '))
+            }
+            return ret
 
     else:
+
         new_changes = salt.utils.json.dumps(options, sort_keys=True, indent=4, separators=(',', ': '))
         if __opts__['test']:
             ret['comment'] = 'The collection "{0}" will be created.'.format(name)
-            ret['pchanges'] = {
-                'old': None,
-                'new': str('options=') + new_changes  # future lint: disable=blacklisted-function
-            }
             ret['result'] = None
         else:
             __salt__["solrcloud.collection_create"](name, options, **kwargs)
             ret['comment'] = 'The collection "{0}" has been created.'.format(name)
-            ret['changes'] = {
-                'old': None,
-                'new': str('options=') + new_changes  # future lint: disable=blacklisted-function
-            }
-
             ret['result'] = True
+
+        ret['changes'] = {
+            'old': None,
+            'new': str('options=') + new_changes  # future lint: disable=blacklisted-function
+        }
 
     return ret

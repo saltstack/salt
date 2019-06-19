@@ -5,7 +5,7 @@ NAPALM Route
 
 Retrieves route details from network devices.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -17,7 +17,7 @@ Dependencies
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import logging
 log = logging.getLogger(__file__)
@@ -33,6 +33,7 @@ from salt.utils.napalm import proxy_napalm_wrap
 __virtualname__ = 'route'
 __proxyenabled__ = ['napalm']
 # uses NAPALM-based proxy to interact with network devices
+__virtual_aliases__ = ('napalm_route',)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
@@ -67,7 +68,7 @@ def show(destination, protocol=None, **kwargs):  # pylint: disable=unused-argume
         In case the destination prefix is too short,
         there may be too many routes matched.
         Therefore in cases of devices having a very high number of routes
-        it may be necessary to adjust the prefix lenght and request
+        it may be necessary to adjust the prefix length and request
         using a longer prefix.
 
     destination

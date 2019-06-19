@@ -37,7 +37,7 @@ the location of composer in the state.
         - php: /usr/local/bin/php
         - no_dev: true
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 from salt.exceptions import SaltException
@@ -62,7 +62,8 @@ def installed(name,
               no_dev=None,
               quiet=False,
               composer_home='/root',
-              always_check=True):
+              always_check=True,
+              env=None):
     '''
     Verify that the correct versions of composer dependencies are present.
 
@@ -111,6 +112,9 @@ def installed(name,
         If ``True``, *always* run ``composer install`` in the directory.  This is the
         default behavior.  If ``False``, only run ``composer install`` if there is no
         vendor directory present.
+
+    env
+        A list of environment variables to be set prior to execution.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -153,7 +157,8 @@ def installed(name,
             optimize=optimize,
             no_dev=no_dev,
             quiet=quiet,
-            composer_home=composer_home
+            composer_home=composer_home,
+            env=env
         )
     except (SaltException) as err:
         ret['result'] = False
@@ -188,7 +193,8 @@ def update(name,
            optimize=None,
            no_dev=None,
            quiet=False,
-           composer_home='/root'):
+           composer_home='/root',
+           env=None):
     '''
     Composer update the directory to ensure we have the latest versions
     of all project dependencies.
@@ -233,6 +239,9 @@ def update(name,
 
     composer_home
         ``$COMPOSER_HOME`` environment variable
+
+    env
+        A list of environment variables to be set prior to execution.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -267,7 +276,8 @@ def update(name,
             optimize=optimize,
             no_dev=no_dev,
             quiet=quiet,
-            composer_home=composer_home
+            composer_home=composer_home,
+            env=env
         )
     except (SaltException) as err:
         ret['result'] = False

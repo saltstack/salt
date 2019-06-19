@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
+    :codeauthor: Rahul Handay <rahulha@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -46,7 +46,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value=[2, 'salt'])
             with patch.dict(win_dns_client.__salt__,
                             {'win_dns_client.get_dns_servers': mock}):
-                ret.update({'changes': {}, 'comment': "[2, 'salt'] are already"
+                ret.update({'changes': {}, 'comment': repr([2, 'salt']) + " are already"
                             " configured", 'result': True})
                 self.assertDictEqual(win_dns_client.dns_exists('salt',
                                                                [2, 'salt']),
@@ -120,13 +120,13 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
                                                            ), ret)
 
         mock = MagicMock(side_effect=[{'vdata': 'a'}, {'vdata': False}, {'vdata': 'b'}, {'vdata': False}])
-        with patch.dict(win_dns_client.__salt__, {'reg.read_value': mock}):
+        with patch.dict(win_dns_client.__utils__, {'reg.read_value': mock}):
             ret.update({'comment': 'No changes needed', 'result': True})
             self.assertDictEqual(win_dns_client.primary_suffix('salt', 'a'),
                                  ret)
 
             mock = MagicMock(return_value=True)
-            with patch.dict(win_dns_client.__salt__, {'reg.set_value': mock}):
+            with patch.dict(win_dns_client.__utils__, {'reg.set_value': mock}):
                 ret.update({'changes': {'new': {'suffix': 'a'},
                                         'old': {'suffix': 'b'}},
                             'comment': 'Updated primary DNS suffix (a)'})

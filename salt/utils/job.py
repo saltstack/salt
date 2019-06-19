@@ -4,7 +4,7 @@ Functions for interacting with the job cache
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 
 # Import Salt libs
@@ -44,6 +44,11 @@ def store_job(opts, load, event=None, mminion=None):
             emsg = "Returner '{0}' does not support function prep_jid".format(job_cache)
             log.error(emsg)
             raise KeyError(emsg)
+        except Exception:
+            log.critical(
+                "The specified '{0}' returner threw a stack trace:\n".format(job_cache),
+                exc_info=True
+            )
 
         # save the load, since we don't have it
         saveload_fstr = '{0}.save_load'.format(job_cache)
@@ -53,6 +58,11 @@ def store_job(opts, load, event=None, mminion=None):
             emsg = "Returner '{0}' does not support function save_load".format(job_cache)
             log.error(emsg)
             raise KeyError(emsg)
+        except Exception:
+            log.critical(
+                "The specified '{0}' returner threw a stack trace:\n".format(job_cache),
+                exc_info=True
+            )
     elif salt.utils.jid.is_jid(load['jid']):
         # Store the jid
         jidstore_fstr = '{0}.prep_jid'.format(job_cache)
@@ -62,10 +72,15 @@ def store_job(opts, load, event=None, mminion=None):
             emsg = "Returner '{0}' does not support function prep_jid".format(job_cache)
             log.error(emsg)
             raise KeyError(emsg)
+        except Exception:
+            log.critical(
+                "The specified '{0}' returner threw a stack trace:\n".format(job_cache),
+                exc_info=True
+            )
 
     if event:
         # If the return data is invalid, just ignore it
-        log.info('Got return from {id} for job {jid}'.format(**load))
+        log.info('Got return from %s for job %s', load['id'], load['jid'])
         event.fire_event(load,
                          salt.utils.event.tagify([load['jid'], 'ret', load['id']], 'job'))
         event.fire_ret_load(load)
@@ -77,7 +92,8 @@ def store_job(opts, load, event=None, mminion=None):
 
     # do not cache job results if explicitly requested
     if load.get('jid') == 'nocache':
-        log.debug('Ignoring job return with jid for caching {jid} from {id}'.format(**load))
+        log.debug('Ignoring job return with jid for caching %s from %s',
+                  load['jid'], load['id'])
         return
 
     # otherwise, write to the master cache
@@ -102,11 +118,24 @@ def store_job(opts, load, event=None, mminion=None):
         log.error(emsg)
         raise KeyError(emsg)
 
+    if job_cache != 'local_cache':
+        try:
+            mminion.returners[savefstr](load['jid'], load)
+        except KeyError as e:
+            log.error("Load does not contain 'jid': %s", e)
+        except Exception:
+            log.critical(
+                "The specified '{0}' returner threw a stack trace:\n".format(job_cache),
+                exc_info=True
+            )
+
     try:
-        mminion.returners[savefstr](load['jid'], load)
-    except KeyError as e:
-        log.error("Load does not contain 'jid': %s", e)
-    mminion.returners[fstr](load)
+        mminion.returners[fstr](load)
+    except Exception:
+        log.critical(
+            "The specified '{0}' returner threw a stack trace:\n".format(job_cache),
+            exc_info=True
+        )
 
     if (opts.get('job_cache_store_endtime')
             and updateetfstr in mminion.returners):

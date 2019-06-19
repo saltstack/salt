@@ -6,7 +6,7 @@ Module for interfacing with SysFS
 .. versionadded:: 2016.3.0
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 import stat
@@ -64,11 +64,13 @@ def write(key, value):
     '''
     try:
         key = target(key)
-        log.trace('Writing {0} to {1}'.format(value, key))
+        log.trace('Writing %s to %s', value, key)
         with salt.utils.files.fopen(key, 'w') as twriter:
-            twriter.write('{0}\n'.format(value))
+            twriter.write(
+                salt.utils.stringutils.to_str('{0}\n'.format(value))
+            )
             return True
-    except:  # pylint: disable=bare-except
+    except Exception:
         return False
 
 
@@ -106,7 +108,7 @@ def read(key, root=''):
                 subkeys = subkey.split('/')
                 subkey = subkeys.pop()
                 subresult = result
-                if len(subkeys):
+                if subkeys:
                     for skey in subkeys:
                         if skey not in subresult:
                             subresult[skey] = {}
@@ -115,7 +117,7 @@ def read(key, root=''):
         return result
     else:
         try:
-            log.trace('Reading {0}...'.format(key))
+            log.trace('Reading %s...', key)
 
             # Certain things in SysFS are pipes 'n such.
             # This opens it non-blocking, which prevents indefinite blocking
@@ -127,13 +129,13 @@ def read(key, root=''):
                     return False
                 try:
                     val = int(val)
-                except:  # pylint: disable=bare-except
+                except Exception:
                     try:
                         val = float(val)
-                    except:  # pylint: disable=bare-except
+                    except Exception:
                         pass
                 return val
-        except:  # pylint: disable=bare-except
+        except Exception:
             return False
 
 
@@ -157,7 +159,7 @@ def target(key, full=True):
     key = os.path.realpath(key)
 
     if not os.path.exists(key):
-        log.debug('Unkown SysFS key {0}'.format(key))
+        log.debug('Unkown SysFS key %s', key)
         return False
     elif full:
         return key
@@ -225,7 +227,7 @@ def interfaces(root):
 
     root = target(root)
     if root is False or not os.path.isdir(root):
-        log.error('SysFS {0} not a dir'.format(root))
+        log.error('SysFS %s not a dir', root)
         return False
 
     readwrites = []
@@ -252,7 +254,7 @@ def interfaces(root):
             elif is_r:
                 reads.append(relpath)
             else:
-                log.warning('Unable to find any interfaces in {0}'.format(canpath))
+                log.warning('Unable to find any interfaces in %s', canpath)
 
     return {
         'r': reads,

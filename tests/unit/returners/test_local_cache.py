@@ -10,13 +10,15 @@ Unit tests for the Default Job Cache (local_cache).
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
+import time
 import logging
 import tempfile
+import time
 
 # Import Salt Testing libs
 from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -35,17 +37,19 @@ from salt.ext import six
 
 log = logging.getLogger(__name__)
 
-TMP_CACHE_DIR = os.path.join(TMP, 'salt_test_job_cache')
-TMP_JID_DIR = os.path.join(TMP_CACHE_DIR, 'jobs')
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for the local_cache.clean_old_jobs function.
     '''
+    @classmethod
+    def setUpClass(cls):
+        cls.TMP_CACHE_DIR = os.path.join(RUNTIME_VARS.TMP, 'salt_test_job_cache')
+        cls.TMP_JID_DIR = os.path.join(cls.TMP_CACHE_DIR, 'jobs')
+
     def setup_loader_modules(self):
-        return {local_cache: {'__opts__': {'cachedir': TMP_CACHE_DIR, 'keep_jobs': 1}}}
+        return {local_cache: {'__opts__': {'cachedir': self.TMP_CACHE_DIR, 'keep_jobs': 1}}}
 
     def tearDown(self):
         '''
@@ -54,8 +58,8 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         Note that a setUp function is not used in this TestCase because the
         _make_tmp_jid_dirs replaces it.
         '''
-        if os.path.exists(TMP_CACHE_DIR):
-            shutil.rmtree(TMP_CACHE_DIR)
+        if os.path.exists(self.TMP_CACHE_DIR):
+            shutil.rmtree(self.TMP_CACHE_DIR)
 
     def test_clean_old_jobs_no_jid_root(self):
         '''
@@ -71,16 +75,25 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # Create temp job cache dir without files in it.
         jid_dir, jid_file = self._make_tmp_jid_dirs(create_files=False)
 
+        # File timestamps on Windows aren't as precise. Let a little time pass
+        if salt.utils.platform.is_windows():
+            time.sleep(.01)
+
         # Make sure there are no files in the directory before continuing
         self.assertEqual(jid_file, None)
 
         # Call clean_old_jobs function, patching the keep_jobs value with a
         # very small value to force the call to clean the job.
         with patch.dict(local_cache.__opts__, {'keep_jobs': 0.00000001}):
+            # Sleep on Windows because time.time is only precise to 3 decimal
+            # points, and therefore subtracting the jid_ctime from time.time
+            # will result in a negative number
+            if salt.utils.platform.is_windows():
+                time.sleep(0.25)
             local_cache.clean_old_jobs()
 
         # Assert that the JID dir was removed
-        self.assertEqual([], os.listdir(TMP_JID_DIR))
+        self.assertEqual([], os.listdir(self.TMP_JID_DIR))
 
     def test_clean_old_jobs_empty_jid_dir_remains(self):
         '''
@@ -103,7 +116,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
             jid_dir_name = jid_dir.rpartition('/')[2]
 
         # Assert the JID directory is still present to be cleaned after keep_jobs interval
-        self.assertEqual([jid_dir_name], os.listdir(TMP_JID_DIR))
+        self.assertEqual([jid_dir_name], os.listdir(self.TMP_JID_DIR))
 
     def test_clean_old_jobs_jid_file_corrupted(self):
         '''
@@ -124,7 +137,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
             local_cache.clean_old_jobs()
 
         # there should be only 1 dir in TMP_JID_DIR
-        self.assertEqual(1, len(os.listdir(TMP_JID_DIR)))
+        self.assertEqual(1, len(os.listdir(self.TMP_JID_DIR)))
         # top level dir should still be present
         self.assertEqual(True, os.path.exists(jid_dir))
         self.assertEqual(True, os.path.isdir(jid_dir))
@@ -138,6 +151,10 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # Create temp job cache dir and jid file
         jid_dir, jid_file = self._make_tmp_jid_dirs()
 
+        # File timestamps on Windows aren't as precise. Let a little time pass
+        if salt.utils.platform.is_windows():
+            time.sleep(.01)
+
         # Make sure there is a jid directory
         jid_dir_name = jid_file.rpartition('/')[2]
         self.assertEqual(jid_dir_name, 'jid')
@@ -145,10 +162,15 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # Call clean_old_jobs function, patching the keep_jobs value with a
         # very small value to force the call to clean the job.
         with patch.dict(local_cache.__opts__, {'keep_jobs': 0.00000001}):
+            # Sleep on Windows because time.time is only precise to 3 decimal
+            # points, and therefore subtracting the jid_ctime from time.time
+            # will result in a negative number
+            if salt.utils.platform.is_windows():
+                time.sleep(0.25)
             local_cache.clean_old_jobs()
 
         # there should be only 1 dir in TMP_JID_DIR
-        self.assertEqual(1, len(os.listdir(TMP_JID_DIR)))
+        self.assertEqual(1, len(os.listdir(self.TMP_JID_DIR)))
         # top level dir should still be present
         self.assertEqual(True, os.path.exists(jid_dir))
         self.assertEqual(True, os.path.isdir(jid_dir))
@@ -162,7 +184,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
 
         This emulates salt.utils.jid.jid_dir() by creating this structure:
 
-        TMP_JID_DIR dir/
+        RUNTIME_VARS.TMP_JID_DIR dir/
           random dir from tempfile.mkdtemp/
             'jid' directory/
               'jid' file
@@ -171,11 +193,11 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         the jid_file_path will be None.
         '''
         # First, create the /tmp/salt_test_job_cache/jobs/ directory to hold jid dirs
-        if not os.path.exists(TMP_JID_DIR):
-            os.makedirs(TMP_JID_DIR)
+        if not os.path.exists(self.TMP_JID_DIR):
+            os.makedirs(self.TMP_JID_DIR)
 
         # Then create a JID temp file in "/tmp/salt_test_job_cache/"
-        temp_dir = tempfile.mkdtemp(dir=TMP_JID_DIR)
+        temp_dir = tempfile.mkdtemp(dir=self.TMP_JID_DIR)
 
         jid_file_path = None
         if create_files:
@@ -204,7 +226,7 @@ class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleM
 
     @classmethod
     def setUpClass(cls):
-        cls.TMP_CACHE_DIR = os.path.join(TMP, 'rootdir', 'cache')
+        cls.TMP_CACHE_DIR = os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache')
         cls.JOBS_DIR = os.path.join(cls.TMP_CACHE_DIR, 'jobs')
         cls.JID_DIR = os.path.join(cls.JOBS_DIR, '31', 'c56eed380a4e899ae12bc42563cfdfc53066fb4a6b53e2378a08ac49064539')
         cls.JID_FILE = os.path.join(cls.JID_DIR, 'jid')

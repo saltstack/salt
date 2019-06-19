@@ -1,4 +1,7 @@
 -r base.txt
 
-pycrypto>=2.6.1
-pyzmq>=2.2.0
+# PyCrypto has issues on Windows, while pycryptodomex does not
+pycrypto>=2.6.1; sys.platform != 'win32'
+pycryptodomex; sys.platform == 'win32'
+pyzmq>=2.2.0,<17.1.0; python_version == '3.4'  # pyzmq 17.1.0 stopped building wheels for python3.4
+pyzmq>=2.2.0; python_version != '3.4'

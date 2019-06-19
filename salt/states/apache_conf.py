@@ -16,7 +16,7 @@ Enable and disable apache confs.
       apache_conf.disabled:
         - name: security
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from salt.ext import six
 
 # Import salt libs

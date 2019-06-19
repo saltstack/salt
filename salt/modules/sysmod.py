@@ -2,7 +2,7 @@
 '''
 The sys module provides information about the available functions on the minion
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import fnmatch
@@ -325,6 +325,55 @@ def renderer_doc(*args):
     return _strip_rst(docs)
 
 
+def utils_doc(*args):
+    '''
+    .. versionadded:: Neon
+
+    Return the docstrings for all utils modules. Optionally, specify a module
+    or a function to narrow the selection.
+
+    The strings are aggregated into a single document on the master for easy
+    reading.
+
+    Multiple modules/functions can be specified.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.utils_doc
+        salt '*' sys.utils_doc data stringutils
+        salt '*' sys.utils_doc stringutils.to_unicode
+        salt '*' sys.utils_doc data.encode data.decode
+    '''
+    docs = {}
+    if not args:
+        for fun in __utils__:
+            docs[fun] = __utils__[fun].__doc__
+        return _strip_rst(docs)
+
+    for module in args:
+        _use_fnmatch = False
+        if '*' in module:
+            target_mod = module
+            _use_fnmatch = True
+        elif module:
+            # allow both "sys" and "sys." to match sys, without also matching
+            # sysctl
+            target_mod = module + '.' if not module.endswith('.') else module
+        else:
+            target_mod = ''
+        if _use_fnmatch:
+            for fun in fnmatch.filter(__utils__, target_mod):
+                docs[fun] = __utils__[fun].__doc__
+        else:
+
+            for fun in __utils__:
+                if fun == module or fun.startswith(target_mod):
+                    docs[fun] = __utils__[fun].__doc__
+    return _strip_rst(docs)
+
+
 def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
     List the functions for all modules. Optionally, specify a module or modules
@@ -609,7 +658,7 @@ def list_state_modules(*args):
 
     if not args:
         for func in st_.states:
-            log.debug('func {0}'.format(func))
+            log.debug('func %s', func)
             modules.add(func.split('.')[0])
         return sorted(modules)
 

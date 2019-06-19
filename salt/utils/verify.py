@@ -2,7 +2,7 @@
 '''
 A few checks to make sure the environment is sane
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 
@@ -31,7 +31,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
-import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -173,8 +172,8 @@ def verify_files(files, user):
                     if err.errno != errno.EEXIST:
                         raise
             if not os.path.isfile(fn_):
-                with salt.utils.files.fopen(fn_, 'w+') as fp_:
-                    fp_.write('')
+                with salt.utils.files.fopen(fn_, 'w'):
+                    pass
 
         except IOError as err:
             if os.path.isfile(dirname):
@@ -204,28 +203,16 @@ def verify_env(
         permissive=False,
         pki_dir='',
         skip_extra=False,
-        root_dir=ROOT_DIR,
-        sensitive_dirs=None):
+        root_dir=ROOT_DIR):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
-    if pki_dir:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'Use of \'pki_dir\' was detected: \'pki_dir\' has been deprecated '
-            'in favor of \'sensitive_dirs\'. Support for \'pki_dir\' will be '
-            'removed in Salt Neon.'
-        )
-        sensitive_dirs = sensitive_dirs or []
-        sensitive_dirs.append(list(pki_dir))
-
     if salt.utils.platform.is_windows():
         return win_verify_env(root_dir,
                               dirs,
                               permissive=permissive,
-                              skip_extra=skip_extra,
-                              sensitive_dirs=sensitive_dirs)
+                              skip_extra=skip_extra)
     import pwd  # after confirming not running Windows
     try:
         pwnam = pwd.getpwnam(user)
@@ -243,12 +230,11 @@ def verify_env(
             continue
         if not os.path.isdir(dir_):
             try:
-                cumask = os.umask(18)  # 077
-                os.makedirs(dir_)
+                with salt.utils.files.set_umask(0o022):
+                    os.makedirs(dir_)
                 # If starting the process as root, chown the new dirs
                 if os.getuid() == 0:
                     os.chown(dir_, uid, gid)
-                os.umask(cumask)
             except OSError as err:
                 msg = 'Failed to create directory path "{0}" - {1}\n'
                 sys.stderr.write(msg.format(dir_, err))
@@ -300,11 +286,10 @@ def verify_env(
         # to read in what it needs to integrate.
         #
         # If the permissions aren't correct, default to the more secure 700.
-        # If acls are enabled, the sensitive_dirs (i.e. pki_dir, key_dir) needs to
-        # remain readable, this is still secure because the private keys are still
-        # only readable by the user running the master
-        sensitive_dirs = sensitive_dirs or []
-        if dir_ in sensitive_dirs:
+        # If acls are enabled, the pki_dir needs to remain readable, this
+        # is still secure because the private keys are still only readable
+        # by the user running the master
+        if dir_ == pki_dir:
             smode = stat.S_IMODE(mode.st_mode)
             if smode != 448 and smode != 488:
                 if os.access(dir_, os.W_OK):
@@ -444,9 +429,8 @@ def check_max_open_files(opts):
     accepted_count = len(os.listdir(accepted_keys_dir))
 
     log.debug(
-        'This salt-master instance has accepted {0} minion keys.'.format(
-            accepted_count
-        )
+        'This salt-master instance has accepted %s minion keys.',
+        accepted_count
     )
 
     level = logging.INFO
@@ -513,10 +497,10 @@ def valid_id(opts, id_):
     Returns if the passed id is valid
     '''
     try:
-        if any(x in id_ for x in ('/', '\\', '\0')):
+        if any(x in id_ for x in ('/', '\\', str('\0'))):
             return False
         return bool(clean_path(opts['pki_dir'], id_))
-    except (AttributeError, KeyError, TypeError):
+    except (AttributeError, KeyError, TypeError, UnicodeDecodeError):
         return False
 
 
@@ -556,22 +540,11 @@ def win_verify_env(
         dirs,
         permissive=False,
         pki_dir='',
-        skip_extra=False,
-        sensitive_dirs=None):
+        skip_extra=False):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
-    if pki_dir:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'Use of \'pki_dir\' was detected: \'pki_dir\' has been deprecated '
-            'in favor of \'sensitive_dirs\'. Support for \'pki_dir\' will be '
-            'removed in Salt Neon.'
-        )
-        sensitive_dirs = sensitive_dirs or []
-        sensitive_dirs.append(list(pki_dir))
-
     import salt.utils.win_functions
     import salt.utils.win_dacl
     import salt.utils.path
@@ -648,9 +621,8 @@ def win_verify_env(
                 sys.stderr.write(msg.format(dir_, err))
                 sys.exit(err.errno)
 
-        # The senitive_dirs (i.e. pki_dir, key_dir) gets its own permissions
-        sensitive_dirs = sensitive_dirs or []
-        if dir_ in sensitive_dirs:
+        # The PKI dir gets its own permissions
+        if dir_ == pki_dir:
             try:
                 # Make Administrators group the owner
                 salt.utils.win_dacl.set_owner(path, 'S-1-5-32-544')

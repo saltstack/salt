@@ -8,7 +8,7 @@ the user's global .gitconfig, then these tests will set one.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from contextlib import closing
 import errno
 import logging
@@ -20,12 +20,13 @@ import tarfile
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import TMP
 from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
+import salt.utils.data
 import salt.utils.files
 import salt.utils.platform
 from salt.utils.versions import LooseVersion
@@ -82,9 +83,9 @@ class GitModuleTest(ModuleCase):
         super(GitModuleTest, self).setUp()
         self.orig_cwd = os.getcwd()
         self.addCleanup(os.chdir, self.orig_cwd)
-        self.repo = tempfile.mkdtemp(dir=TMP)
+        self.repo = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.repo, ignore_errors=True)
-        self.files = ('foo', 'bar', 'baz')
+        self.files = ('foo', 'bar', 'baz', 'питон')
         self.dirs = ('', 'qux')
         self.branches = ('master', 'iamanewbranch')
         self.tags = ('git_testing',)
@@ -92,8 +93,10 @@ class GitModuleTest(ModuleCase):
             dir_path = os.path.join(self.repo, dirname)
             _makedirs(dir_path)
             for filename in self.files:
-                with salt.utils.files.fopen(os.path.join(dir_path, filename), 'w') as fp_:
-                    fp_.write('This is a test file named ' + filename + '.')
+                with salt.utils.files.fopen(os.path.join(dir_path, filename), 'wb') as fp_:
+                    fp_.write(
+                        'This is a test file named {0}.'.format(filename).encode('utf-8')
+                    )
         # Navigate to the root of the repo to init, stage, and commit
         os.chdir(self.repo)
         # Initialize a new git repository
@@ -126,7 +129,7 @@ class GitModuleTest(ModuleCase):
         )
         # Add a line to the file
         with salt.utils.files.fopen(self.files[0], 'a') as fp_:
-            fp_.write('Added a line\n')
+            fp_.write(salt.utils.stringutils.to_str('Added a line\n'))
         # Commit the updated file
         subprocess.check_call(
             ['git', 'commit', '--quiet',
@@ -136,6 +139,16 @@ class GitModuleTest(ModuleCase):
         subprocess.check_call(['git', 'checkout', '--quiet', 'master'])
         # Go back to original cwd
         os.chdir(self.orig_cwd)
+
+    def run_function(self, *args, **kwargs):
+        '''
+        Ensure that results are decoded
+
+        TODO: maybe move this behavior to ModuleCase itself?
+        '''
+        return salt.utils.data.decode(
+            super(GitModuleTest, self).run_function(*args, **kwargs)
+        )
 
     def tearDown(self):
         for key in ('orig_cwd', 'repo', 'files', 'dirs', 'branches', 'tags'):
@@ -153,10 +166,9 @@ class GitModuleTest(ModuleCase):
         files = [os.path.join(newdir_path, x) for x in self.files]
         files_relpath = [os.path.join(newdir, x) for x in self.files]
         for path in files:
-            with salt.utils.files.fopen(path, 'w') as fp_:
+            with salt.utils.files.fopen(path, 'wb') as fp_:
                 fp_.write(
-                    'This is a test file with relative path {0}.\n'
-                    .format(path)
+                    'This is a test file with relative path {0}.\n'.format(path).encode('utf-8')
                 )
         ret = self.run_function('git.add', [self.repo, newdir])
         res = '\n'.join(sorted(['add \'{0}\''.format(x) for x in files_relpath]))
@@ -171,7 +183,9 @@ class GitModuleTest(ModuleCase):
         filename = 'quux'
         file_path = os.path.join(self.repo, filename)
         with salt.utils.files.fopen(file_path, 'w') as fp_:
-            fp_.write('This is a test file named ' + filename + '.\n')
+            fp_.write(salt.utils.stringutils.to_str(
+                'This is a test file named {0}.\n'.format(filename)
+            ))
         ret = self.run_function('git.add', [self.repo, filename])
         self.assertEqual(ret, 'add \'{0}\''.format(filename))
 
@@ -179,43 +193,57 @@ class GitModuleTest(ModuleCase):
         '''
         Test git.archive
         '''
-        tar_archive = os.path.join(TMP, 'test_archive.tar.gz')
-        self.assertTrue(
-            self.run_function(
-                'git.archive',
-                [self.repo, tar_archive],
-                prefix='foo/'
+        tar_archive = os.path.join(RUNTIME_VARS.TMP, 'test_archive.tar.gz')
+        try:
+            self.assertTrue(
+                self.run_function(
+                    'git.archive',
+                    [self.repo, tar_archive],
+                    prefix='foo/'
+                )
             )
-        )
-        self.assertTrue(tarfile.is_tarfile(tar_archive))
-        with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
-            self.assertEqual(
-                tar_obj.getnames(),
-                ['foo', 'foo/bar', 'foo/baz', 'foo/foo', 'foo/qux',
-                 'foo/qux/bar', 'foo/qux/baz', 'foo/qux/foo']
-            )
-        os.unlink(tar_archive)
+            self.assertTrue(tarfile.is_tarfile(tar_archive))
+            self.run_function('cmd.run', ['cp ' + tar_archive + ' /root/'])
+            with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
+                self.assertEqual(
+                    sorted(salt.utils.data.decode(tar_obj.getnames())),
+                    sorted([
+                        'foo', 'foo/bar', 'foo/baz', 'foo/foo', 'foo/питон',
+                        'foo/qux', 'foo/qux/bar', 'foo/qux/baz', 'foo/qux/foo',
+                        'foo/qux/питон'
+                    ])
+                )
+        finally:
+            try:
+                os.unlink(tar_archive)
+            except OSError:
+                pass
 
     def test_archive_subdir(self):
         '''
         Test git.archive on a subdir, giving only a partial copy of the repo in
         the resulting archive
         '''
-        tar_archive = os.path.join(TMP, 'test_archive.tar.gz')
-        self.assertTrue(
-            self.run_function(
-                'git.archive',
-                [os.path.join(self.repo, 'qux'), tar_archive],
-                prefix='foo/'
+        tar_archive = os.path.join(RUNTIME_VARS.TMP, 'test_archive.tar.gz')
+        try:
+            self.assertTrue(
+                self.run_function(
+                    'git.archive',
+                    [os.path.join(self.repo, 'qux'), tar_archive],
+                    prefix='foo/'
+                )
             )
-        )
-        self.assertTrue(tarfile.is_tarfile(tar_archive))
-        with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
-            self.assertEqual(
-                tar_obj.getnames(),
-                ['foo', 'foo/bar', 'foo/baz', 'foo/foo']
-            )
-        os.unlink(tar_archive)
+            self.assertTrue(tarfile.is_tarfile(tar_archive))
+            with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
+                self.assertEqual(
+                    sorted(salt.utils.data.decode(tar_obj.getnames())),
+                    sorted(['foo', 'foo/bar', 'foo/baz', 'foo/foo', 'foo/питон'])
+                )
+        finally:
+            try:
+                os.unlink(tar_archive)
+            except OSError:
+                pass
 
     def test_branch(self):
         '''
@@ -278,7 +306,7 @@ class GitModuleTest(ModuleCase):
         '''
         Test cloning an existing repo
         '''
-        clone_parent_dir = tempfile.mkdtemp(dir=TMP)
+        clone_parent_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.assertTrue(
             self.run_function('git.clone', [clone_parent_dir, self.repo])
         )
@@ -289,7 +317,7 @@ class GitModuleTest(ModuleCase):
         '''
         Test cloning an existing repo with an alternate name for the repo dir
         '''
-        clone_parent_dir = tempfile.mkdtemp(dir=TMP)
+        clone_parent_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         clone_name = os.path.basename(self.repo)
         # Change to newly-created temp dir
         self.assertTrue(
@@ -589,7 +617,7 @@ class GitModuleTest(ModuleCase):
         '''
         Use git.init to init a new repo
         '''
-        new_repo = tempfile.mkdtemp(dir=TMP)
+        new_repo = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # `tempfile.mkdtemp` gets the path to the Temp directory using
         # environment variables. As a result, folder names longer than 8
@@ -614,13 +642,10 @@ class GitModuleTest(ModuleCase):
         else:
             self.assertEqual(
                 self.run_function('git.init', [new_repo]).lower(),
-                'Initialized empty Git repository in {0}/.git/'
-                ''.format(new_repo).lower()
+                'Initialized empty Git repository in {0}/.git/'.format(new_repo).lower()
             )
 
         shutil.rmtree(new_repo)
-
-    # Test for git.is_worktree is in test_worktree_add_rm
 
     def test_list_branches(self):
         '''
@@ -672,7 +697,8 @@ class GitModuleTest(ModuleCase):
         second_rev = self.run_function(
             'git.revision',
             [self.repo],
-            rev=self.branches[1]
+            rev=self.branches[1],
+            timeout=120
         )
         # Make sure revision is a 40-char string
         self.assertTrue(len(second_rev) == 40)
@@ -892,7 +918,9 @@ class GitModuleTest(ModuleCase):
                 fp_.write('Added a line\n')
         for filename in changes['new']:
             with salt.utils.files.fopen(os.path.join(self.repo, filename), 'w') as fp_:
-                fp_.write('This is a new file named ' + filename + '.')
+                fp_.write(salt.utils.stringutils.to_str(
+                    'This is a new file named {0}.'.format(filename)
+                ))
             # Stage the new file so it shows up as a 'new' file
             self.assertTrue(
                 'ERROR' not in self.run_function(
@@ -904,7 +932,9 @@ class GitModuleTest(ModuleCase):
             self.run_function('git.rm', [self.repo, filename])
         for filename in changes['untracked']:
             with salt.utils.files.fopen(os.path.join(self.repo, filename), 'w') as fp_:
-                fp_.write('This is a new file named ' + filename + '.')
+                fp_.write(salt.utils.stringutils.to_str(
+                    'This is a new file named {0}.'.format(filename)
+                ))
         self.assertEqual(
             self.run_function('git.status', [self.repo]),
             changes
@@ -941,9 +971,10 @@ class GitModuleTest(ModuleCase):
         else:
             worktree_add_prefix = 'Enter '
 
-        worktree_path = tempfile.mkdtemp(dir=TMP)
+        worktree_path = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         worktree_basename = os.path.basename(worktree_path)
-        worktree_path2 = tempfile.mkdtemp(dir=TMP)
+        worktree_path2 = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        worktree_basename2 = os.path.basename(worktree_path2)
 
         # Even though this is Windows, git commands return a unix style path
         if salt.utils.platform.is_windows():
@@ -954,17 +985,19 @@ class GitModuleTest(ModuleCase):
         ret = self.run_function(
             'git.worktree_add', [self.repo, worktree_path],
         )
-        self.assertTrue(worktree_add_prefix + worktree_path in ret)
+        self.assertTrue(worktree_add_prefix in ret)
+        self.assertTrue(worktree_basename in ret)
         ret = self.run_function(
             'git.worktree_add', [self.repo, worktree_path2]
         )
-        self.assertTrue(worktree_add_prefix + worktree_path2 in ret)
+        self.assertTrue(worktree_add_prefix in ret)
+        self.assertTrue(worktree_basename2 in ret)
         # Check if this new path is a worktree
         self.assertTrue(self.run_function('git.is_worktree', [worktree_path]))
         # Check if the main repo is a worktree
         self.assertFalse(self.run_function('git.is_worktree', [self.repo]))
         # Check if a non-repo directory is a worktree
-        empty_dir = tempfile.mkdtemp(dir=TMP)
+        empty_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.assertFalse(self.run_function('git.is_worktree', [empty_dir]))
         shutil.rmtree(empty_dir)
         # Remove the first worktree

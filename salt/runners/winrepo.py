@@ -12,15 +12,12 @@ import os
 
 # Import third party libs
 from salt.ext import six
-try:
-    import msgpack
-except ImportError:
-    import msgpack_pure as msgpack  # pylint: disable=import-error
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltRenderError
 import salt.utils.files
 import salt.utils.gitfs
+import salt.utils.msgpack
 import salt.utils.path
 import logging
 import salt.minion
@@ -37,6 +34,7 @@ PER_REMOTE_OVERRIDES = ('ssl_verify', 'refspecs')
 # salt.utils.gitfs.PER_REMOTE_ONLY for this value, so this is mainly for
 # runners and other modules that import salt.runners.winrepo.
 PER_REMOTE_ONLY = salt.utils.gitfs.PER_REMOTE_ONLY
+GLOBAL_ONLY = ('branch',)
 
 
 def genrepo(opts=None, fire_event=True):
@@ -123,7 +121,7 @@ def genrepo(opts=None, fire_event=True):
                     ret.setdefault('name_map', {}).update(revmap)
     with salt.utils.files.fopen(
             os.path.join(winrepo_dir, winrepo_cachefile), 'w+b') as repo:
-        repo.write(msgpack.dumps(ret))
+        repo.write(salt.utils.msgpack.dumps(ret))
     return ret
 
 
@@ -164,7 +162,8 @@ def update_git_repos(opts=None, clean=False, masterless=False):
 
     ret = {}
     for remotes, base_dir in winrepo_cfg:
-        if not any((salt.utils.gitfs.HAS_GITPYTHON, salt.utils.gitfs.HAS_PYGIT2)):
+        if not any((salt.utils.gitfs.GITPYTHON_VERSION,
+                    salt.utils.gitfs.PYGIT2_VERSION)):
             # Use legacy code
             winrepo_result = {}
             for remote_info in remotes:
@@ -217,6 +216,7 @@ def update_git_repos(opts=None, clean=False, masterless=False):
                     remotes,
                     per_remote_overrides=PER_REMOTE_OVERRIDES,
                     per_remote_only=PER_REMOTE_ONLY,
+                    global_only=GLOBAL_ONLY,
                     cache_root=base_dir)
                 winrepo.fetch_remotes()
                 # Since we're not running update(), we need to manually call

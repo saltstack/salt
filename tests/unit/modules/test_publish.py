@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -62,6 +62,9 @@ class Channel(object):
             raise SaltReqTimeoutError
         return True
 
+    def close(self):
+        pass
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PublishTestCase(TestCase, LoaderModuleMockMixin):
@@ -73,7 +76,7 @@ class PublishTestCase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.channel_patcher = patch('salt.transport.Channel', Channel())
+        cls.channel_patcher = patch('salt.transport.client.ReqChannel', Channel())
         cls.channel_patcher.start()
 
     @classmethod

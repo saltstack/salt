@@ -5,8 +5,11 @@ lack of support for reading NTFS links.
 '''
 
 # Import python libs
-from __future__ import absolute_import
-import collections
+from __future__ import absolute_import, print_function, unicode_literals
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 import errno
 import logging
 import os
@@ -14,14 +17,12 @@ import posixpath
 import re
 import string
 import struct
-import sys
 
 # Import Salt libs
 import salt.utils.args
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandNotFoundError
-from salt.utils.decorators import memoize as real_memoize
 from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd-party libs
@@ -192,56 +193,110 @@ def which(exe=None):
     '''
     Python clone of /usr/bin/which
     '''
-    def _is_executable_file_or_link(exe):
-        # check for os.X_OK doesn't suffice because directory may executable
-        return (os.access(exe, os.X_OK) and
-                (os.path.isfile(exe) or os.path.islink(exe)))
 
-    if exe:
-        if _is_executable_file_or_link(exe):
-            # executable in cwd or fullpath
-            return exe
-
-        ext_list = os.environ.get('PATHEXT', '.EXE').split(';')
-
-        @real_memoize
-        def _exe_has_ext():
-            '''
-            Do a case insensitive test if exe has a file extension match in
-            PATHEXT
-            '''
-            for ext in ext_list:
-                try:
-                    pattern = r'.*\.' + ext.lstrip('.') + r'$'
-                    re.match(pattern, exe, re.I).groups()
-                    return True
-                except AttributeError:
-                    continue
-            return False
-
-        # Enhance POSIX path for the reliability at some environments, when $PATH is changing
-        # This also keeps order, where 'first came, first win' for cases to find optional alternatives
-        search_path = os.environ.get('PATH') and os.environ['PATH'].split(os.pathsep) or list()
-        for default_path in ['/bin', '/sbin', '/usr/bin', '/usr/sbin', '/usr/local/bin']:
-            if default_path not in search_path:
-                search_path.append(default_path)
-        os.environ['PATH'] = os.pathsep.join(search_path)
-        for path in search_path:
-            full_path = os.path.join(path, exe)
-            if _is_executable_file_or_link(full_path):
-                return full_path
-            elif salt.utils.platform.is_windows() and not _exe_has_ext():
-                # On Windows, check for any extensions in PATHEXT.
-                # Allows both 'cmd' and 'cmd.exe' to be matched.
-                for ext in ext_list:
-                    # Windows filesystem is case insensitive so we
-                    # safely rely on that behavior
-                    if _is_executable_file_or_link(full_path + ext):
-                        return full_path + ext
-        log.trace('\'{0}\' could not be found in the following search path: \'{1}\''.format(exe, search_path))
-    else:
+    if not exe:
         log.error('No executable was passed to be searched by salt.utils.path.which()')
+        return None
 
+    ## define some utilities (we use closures here because our predecessor used them)
+    def is_executable_common(path):
+        '''
+        This returns truth if posixy semantics (which python simulates on
+        windows) states that this is executable.
+        '''
+        return os.path.isfile(path) and os.access(path, os.X_OK)
+
+    def resolve(path):
+        '''
+        This will take a path and recursively follow the link until we get to a
+        real file.
+        '''
+        while os.path.islink(path):
+            res = os.readlink(path)
+
+            # if the link points to a relative target, then convert it to an
+            # absolute path relative to the original path
+            if not os.path.isabs(res):
+                directory, _ = os.path.split(path)
+                res = join(directory, res)
+            path = res
+        return path
+
+    # windows-only
+    def has_executable_ext(path, ext_membership):
+        '''
+        Extract the extension from the specified path, lowercase it so we
+        can be insensitive, and then check it against the available exts.
+        '''
+        p, ext = os.path.splitext(path)
+        return ext.lower() in ext_membership
+
+    ## prepare related variables from the environment
+    res = salt.utils.stringutils.to_unicode(os.environ.get('PATH', ''))
+    system_path = res.split(os.pathsep)
+
+    # add some reasonable defaults in case someone's PATH is busted
+    if not salt.utils.platform.is_windows():
+        res = set(system_path)
+        extended_path = ['/sbin', '/bin', '/usr/sbin', '/usr/bin', '/usr/local/sbin', '/usr/local/bin']
+        system_path.extend([p for p in extended_path if p not in res])
+
+    ## now to define the semantics of what's considered executable on a given platform
+    if salt.utils.platform.is_windows():
+        # executable semantics on windows requires us to search PATHEXT
+        res = salt.utils.stringutils.to_str(os.environ.get('PATHEXT', str('.EXE')))
+
+        # generate two variables, one of them for O(n) searches (but ordered)
+        # and another for O(1) searches. the previous guy was trying to use
+        # memoization with a function that has no arguments, this provides
+        # the exact same benefit
+        pathext = res.split(os.pathsep)
+        res = {ext.lower() for ext in pathext}
+
+        # check if our caller already specified a valid extension as then we don't need to match it
+        _, ext = os.path.splitext(exe)
+        if ext.lower() in res:
+            pathext = ['']
+
+            is_executable = is_executable_common
+
+        # The specified extension isn't valid, so we just assume it's part of the
+        # filename and proceed to walk the pathext list
+        else:
+            is_executable = lambda path, membership=res: is_executable_common(path) and has_executable_ext(path, membership)
+
+    else:
+        # in posix, there's no such thing as file extensions..only zuul
+        pathext = ['']
+
+        # executable semantics are pretty simple on reasonable platforms...
+        is_executable = is_executable_common
+
+    ## search for the executable
+
+    # check to see if the full path was specified as then we don't need
+    # to actually walk the system_path for any reason
+    if is_executable(exe):
+        return exe
+
+    # now to search through our system_path
+    for path in system_path:
+        p = join(path, exe)
+
+        # iterate through all extensions to see which one is executable
+        for ext in pathext:
+            pext = p + ext
+            rp = resolve(pext)
+            if is_executable(rp):
+                return p + ext
+            continue
+        continue
+
+    ## if something was executable, we should've found it already...
+    log.trace(
+        '\'%s\' could not be found in the following search path: \'%s\'',
+        exe, system_path
+    )
     return None
 
 
@@ -249,7 +304,7 @@ def which_bin(exes):
     '''
     Scan over some possible executables and return the first one that is found
     '''
-    if not isinstance(exes, collections.Iterable):
+    if not isinstance(exes, Iterable):
         return None
     for exe in exes:
         path = which(exe)
@@ -293,27 +348,12 @@ def join(*parts, **kwargs):
         # No args passed to func
         return ''
 
+    root = salt.utils.stringutils.to_unicode(root)
     if not parts:
         ret = root
     else:
         stripped = [p.lstrip(os.sep) for p in parts]
-        try:
-            ret = pathlib.join(root, *stripped)
-        except UnicodeDecodeError:
-            # This is probably Python 2 and one of the parts contains unicode
-            # characters in a bytestring. First try to decode to the system
-            # encoding.
-            try:
-                enc = __salt_system_encoding__
-            except NameError:
-                enc = sys.stdin.encoding or sys.getdefaultencoding()
-            try:
-                ret = pathlib.join(root.decode(enc),
-                                   *[x.decode(enc) for x in stripped])
-            except UnicodeDecodeError:
-                # Last resort, try UTF-8
-                ret = pathlib.join(root.decode('UTF-8'),
-                                   *[x.decode('UTF-8') for x in stripped])
+        ret = pathlib.join(root, *salt.utils.data.decode(stripped))
     return pathlib.normpath(ret)
 
 
@@ -405,11 +445,12 @@ def safe_path(path, allow_path=None):
 
 def os_walk(top, *args, **kwargs):
     '''
-    This is a helper to ensure that we get unicode paths when walking a
-    filesystem. The reason for this is that when using os.walk, the paths in
-    the generator which is returned are all the same type as the top directory
-    passed in. This can cause problems when a str path is passed and the
-    filesystem underneath that path contains files with unicode characters in
-    the filename.
+    This is a helper than ensures that all paths returned from os.walk are
+    unicode.
     '''
-    return os.walk(salt.utils.stringutils.to_unicode(top), *args, **kwargs)
+    if six.PY2 and salt.utils.platform.is_windows():
+        top_query = top
+    else:
+        top_query = salt.utils.stringutils.to_str(top)
+    for item in os.walk(top_query, *args, **kwargs):
+        yield salt.utils.data.decode(item, preserve_tuples=True)

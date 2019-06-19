@@ -161,10 +161,10 @@ Sections with ``pre`` in their name are evaluated before a package is installed
 and sections with ``post`` are evaluated after a package is installed. ``local``
 states are evaluated before ``tgt`` states.
 
-Each of these sections needs to be evaluated as text, rather than as YAML. 
+Each of these sections needs to be evaluated as text, rather than as YAML.
 Consider the following block:
 
-.. code-block:: text
+.. code-block:: yaml
 
     pre_local_state: >
       echo test > /tmp/spmtest:
@@ -178,7 +178,7 @@ that the text following it can be evaluated properly.
 
 local States
 ~~~~~~~~~~~~
-``local`` states are evaluated locally; this is analagous to issuing a state
+``local`` states are evaluated locally; this is analogous to issuing a state
 run using a ``salt-call --local`` command. These commands will be issued on the
 local machine running the ``spm`` command, whether that machine is a master or
 a minion.
@@ -187,7 +187,7 @@ a minion.
 the ``>`` marker to denote that the state is evaluated as text, not a data
 structure.
 
-.. code-block:: text
+.. code-block:: yaml
 
     pre_local_state: >
       echo test > /tmp/spmtest:
@@ -203,7 +203,7 @@ the ``spm`` command is running on is a master.
 Because ``tgt`` states require that a target be specified, their code blocks
 are a little different. Consider the following state:
 
-.. code-block:: text
+.. code-block:: yaml
 
     pre_tgt_state:
       tgt: '*'
@@ -229,7 +229,7 @@ This means that you can use Jinja or any other supported renderer inside of
 Salt. All formula variables are available to the renderer, so you can reference
 ``FORMULA`` data inside your state if you need to:
 
-.. code-block:: text
+.. code-block:: yaml
 
     pre_tgt_state:
       tgt: '*'
@@ -242,7 +242,7 @@ You may also declare your own variables inside the ``FORMULA``. If SPM doesn't
 recognize them then it will ignore them, so there are no restrictions on
 variable names, outside of avoiding reserved words.
 
-By default the renderer is set to ``yaml_jinja``. You may change this by
+By default the renderer is set to ``jinja|yaml``. You may change this by
 changing the ``renderer`` setting in the ``FORMULA`` itself.
 
 Building a Package

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import pytohn libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin

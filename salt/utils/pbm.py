@@ -39,7 +39,7 @@ version currently listed in PyPi, run the following:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs
@@ -201,7 +201,7 @@ def get_storage_policies(profile_manager, policy_names=None,
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise VMwareRuntimeError(exc.msg)
-    log.trace('policy_ids = {0}'.format(policy_ids))
+    log.trace('policy_ids = %s', policy_ids)
     # More policies are returned so we need to filter again
     policies = [p for p in get_policies_by_id(profile_manager, policy_ids)
                 if p.resourceType.resourceType ==
@@ -277,7 +277,7 @@ def get_default_storage_policy_of_datastore(profile_manager, datastore):
     # Retrieve all datastores visible
     hub = pbm.placement.PlacementHub(
         hubId=datastore._moId, hubType='Datastore')
-    log.trace('placement_hub = {0}'.format(hub))
+    log.trace('placement_hub = %s', hub)
     try:
         policy_id = profile_manager.QueryDefaultRequirementProfile(hub)
     except vim.fault.NoPermission as exc:
@@ -313,7 +313,7 @@ def assign_default_storage_policy_to_datastore(profile_manager, policy,
     '''
     placement_hub = pbm.placement.PlacementHub(
         hubId=datastore._moId, hubType='Datastore')
-    log.trace('placement_hub = {0}'.format(placement_hub))
+    log.trace('placement_hub = %s', placement_hub)
     try:
         profile_manager.AssignDefaultRequirementProfile(policy.profileId,
                                                         [placement_hub])

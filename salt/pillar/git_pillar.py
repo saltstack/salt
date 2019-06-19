@@ -63,7 +63,7 @@ GitFS, as described :ref:`here <gitfs-dependencies>`.
     used for git_pillar remotes. This is the reverse behavior from gitfs, where
     branches/tags make up your environments.
 
-    See :ref:`here <git_pillar-config-opts>` for documentation on the
+    See :ref:`here <git-pillar-config-opts>` for documentation on the
     git_pillar configuration options and their usage.
 
 Here is an example git_pillar configuration:
@@ -144,7 +144,7 @@ The corresponding Pillar top file would look like this:
 
 .. code-block:: yaml
 
-    {{saltenv}}:
+    "{{saltenv}}":
       '*':
         - bar
 
@@ -163,7 +163,7 @@ instead of ``gitfs`` (e.g. :conf_master:`git_pillar_pubkey`,
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
 
-.. _git-pillar-multiple-repos:
+.. _git-pillar-multiple-remotes:
 
 How Multiple Remotes Are Handled
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -327,6 +327,29 @@ mountpoint to ``web/`` (and restart the ``salt-master`` daemon).
       :conf_master:`git_pillar_includes` is not disabled.
     - Content from mounted git_pillar repos can only be referenced by a top
       file in the same pillar environment.
+    - Salt versions prior to 2018.3.4 ignore the ``root`` parameter when
+      ``mountpoint`` is set.
+
+.. _git-pillar-all_saltenvs:
+
+all_saltenvs
+~~~~~~~~~~~~
+
+.. versionadded:: 2018.3.4
+
+When ``__env__`` is specified as the branch name, ``all_saltenvs`` per-remote configuration parameter overrides the logic Salt uses to map branches/tags to pillar environments (i.e. pillarenvs). This allows a single branch/tag to appear in all saltenvs. Example:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git:
+        - __env__ https://mydomain.tld/top.git
+          - all_saltenvs: master
+        - __env__ https://mydomain.tld/pillar-nginx.git:
+          - mountpoint: web/server/
+        - __env__ https://mydomain.tld/pillar-appdata.git:
+          - mountpoint: web/server/
+
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -345,8 +368,9 @@ from salt.pillar import Pillar
 # Import third party libs
 from salt.ext import six
 
-PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify', 'refspecs')
-PER_REMOTE_ONLY = ('name', 'mountpoint')
+PER_REMOTE_OVERRIDES = ('base', 'env', 'root', 'ssl_verify', 'refspecs')
+PER_REMOTE_ONLY = ('name', 'mountpoint', 'all_saltenvs')
+GLOBAL_ONLY = ('branch',)
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -385,7 +409,8 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
         opts,
         repos,
         per_remote_overrides=PER_REMOTE_OVERRIDES,
-        per_remote_only=PER_REMOTE_ONLY)
+        per_remote_only=PER_REMOTE_ONLY,
+        global_only=GLOBAL_ONLY)
     if __opts__.get('__role') == 'minion':
         # If masterless, fetch the remotes. We'll need to remove this once
         # we make the minion daemon able to run standalone.

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 try:
     import grp
 except ImportError:
@@ -84,21 +84,19 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if the group id is the same as argument
         '''
-        mock_pre_gid = MagicMock(return_value=10)
-        with patch.dict(groupadd.__salt__,
-                        {'file.group_to_gid': mock_pre_gid}):
+        mock = MagicMock(return_value={'gid': 10})
+        with patch.object(groupadd, 'info', mock):
             self.assertTrue(groupadd.chgid('test', 10))
 
     def test_chgid(self):
         '''
         Tests the gid for a named group was changed
         '''
-        mock_pre_gid = MagicMock(return_value=0)
-        mock_cmdrun = MagicMock(return_value=0)
-        with patch.dict(groupadd.__salt__,
-                        {'file.group_to_gid': mock_pre_gid}):
-            with patch.dict(groupadd.__salt__, {'cmd.run': mock_cmdrun}):
-                self.assertFalse(groupadd.chgid('test', 500))
+        mock = MagicMock(return_value=None)
+        with patch.dict(groupadd.__salt__, {'cmd.run': mock}):
+            mock = MagicMock(side_effect=[{'gid': 10}, {'gid': 500}])
+            with patch.object(groupadd, 'info', mock):
+                self.assertTrue(groupadd.chgid('test', 500))
 
     # 'delete' function tests: 1
 
@@ -158,7 +156,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         ]
 
         for os_version in os_version_list:
-            mock_ret = MagicMock(return_value={'retcode': 0})
+            mock_retcode = MagicMock(return_value=0)
             mock_stdout = MagicMock(return_value='test foo')
             mock_info = MagicMock(return_value={'passwd': '*',
                                                 'gid': 0,
@@ -166,10 +164,10 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
                                                 'members': ['root']})
 
             with patch.dict(groupadd.__grains__, os_version['grains']):
-                with patch.dict(groupadd.__salt__, {'cmd.retcode': mock_ret,
+                with patch.dict(groupadd.__salt__, {'cmd.retcode': mock_retcode,
                                                     'group.info': mock_info,
                                                     'cmd.run_stdout': mock_stdout}):
-                    self.assertFalse(groupadd.deluser('test', 'root'))
+                    self.assertTrue(groupadd.deluser('test', 'root'))
                     groupadd.__salt__['cmd.retcode'].assert_called_once_with(os_version['cmd'], python_shell=False)
 
     # 'deluser' function tests: 1

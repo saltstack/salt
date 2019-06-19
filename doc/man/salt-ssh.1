@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-SSH" "1" "October 31, 2016" "2016.11.0" "Salt"
+.TH "SALT-SSH" "1" "Apr 25, 2019" "2019.2.0-301-g6c02054" "Salt"
 .SH NAME
 salt-ssh \- salt-ssh Documentation
 .
@@ -49,13 +49,35 @@ Salt SSH allows for salt routines to be executed using only SSH for transport
 .SH OPTIONS
 .INDENT 0.0
 .TP
-.B \-r, \-\-raw, \-\-raw\-shell
-Execute a raw shell command.
+.B \-\-version
+Print the version of Salt that is running.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-\-priv
-Specify the SSH private key file to be used for authentication.
+.B \-\-versions\-report
+Show program\(aqs dependencies and version number, and then exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show the help message and exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c CONFIG_DIR, \-\-config\-dir=CONFIG_dir
+The location of the Salt configuration directory. This directory contains
+the configuration files for Salt master and minions. The default location
+on most systems is \fB/etc/salt\fP\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-hard\-crash
+Raise any original exception rather than exiting gracefully. Default: False.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-r, \-\-raw, \-\-raw\-shell
+Execute a raw shell command.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -90,9 +112,79 @@ is 25.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-\-extra\-filerefs=EXTRA_FILEREFS
+Pass in extra files to include in the state tarball.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-min\-extra\-modules=MIN_EXTRA_MODS
+One or comma\-separated list of extra Python modulesto be included
+into Minimal Salt.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-thin\-extra\-modules=THIN_EXTRA_MODS
+One or comma\-separated list of extra Python modulesto  be included
+into Thin Salt.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-v, \-\-verbose
+Turn on command verbosity, display jid.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-s, \-\-static
+Return the data from minions as a group after they all return.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-w, \-\-wipe
+Remove the deployment of the salt files when done executing.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-W, \-\-rand\-thin\-dir
+Select a random temp dir to deploy on the remote system. The dir
+will be cleaned after the execution.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-t, \-\-regen\-thin, \-\-thin
+Trigger a thin tarball regeneration. This is needed if  custom
+grains/modules/states have been added or updated.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-python2\-bin=PYTHON2_BIN
+Path to a python2 binary which has salt installed.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-python3\-bin=PYTHON3_BIN
+Path to a python3 binary which has salt installed.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-jid=JID
+Pass a JID to be used instead of generating one.
+.UNINDENT
+.SS Authentication Options
+.INDENT 0.0
+.TP
+.B \-\-priv=SSH_PRIV
+Specify the SSH private key file to be used for authentication.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-priv\-passwd=SSH_PRIV_PASSWD
+Specify the SSH private key file\(aqs passphrase if need be.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-i, \-\-ignore\-host\-keys
-Disables StrictHostKeyChecking to relax acceptance of new and unknown
-host keys.
+By default ssh host keys are honored and connections  will ask for
+approval. Use this option to disable StrictHostKeyChecking.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -103,8 +195,19 @@ changed and would still error with \-\-ignore\-host\-keys.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-\-user=SSH_USER
+Set the default user to attempt to use when authenticating.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-\-passwd
 Set the default password to attempt to use when authenticating.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-askpass
+Interactively ask for the SSH password with no echo \- avoids password
+in process args and stored in history.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -115,35 +218,25 @@ very fast and easy.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-\-version
-Print the version of Salt that is running.
+.B \-\-identities\-only
+Use the only authentication identity files configured in the ssh_config
+files. See IdentitiesOnly flag in man ssh_config.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-\-versions\-report
-Show program\(aqs dependencies and version number, and then exit
+.B \-\-sudo
+Run command via sudo.
+.UNINDENT
+.SS Scan Roster Options
+.INDENT 0.0
+.TP
+.B \-\-scan\-ports=SSH_SCAN_PORTS
+Comma\-separated list of ports to scan in the scan roster.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-h, \-\-help
-Show the help message and exit
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-c CONFIG_DIR, \-\-config\-dir=CONFIG_dir
-The location of the Salt configuration directory. This directory contains
-the configuration files for Salt master and minions. The default location
-on most systems is \fB/etc/salt\fP\&.
-.UNINDENT
-.SS Target Selection
-.sp
-The default matching that Salt utilizes is shell\-style globbing around the
-minion id. See \fI\%https://docs.python.org/2/library/fnmatch.html#module\-fnmatch\fP\&.
-.INDENT 0.0
-.TP
-.B \-E, \-\-pcre
-The target expression will be interpreted as a PCRE regular expression
-rather than a shell glob.
+.B \-\-scan\-timeout=SSH_SCAN_TIMEOUT
+Scanning socket timeout for the scan roster.
 .UNINDENT
 .SS Logging Options
 .sp
@@ -167,6 +260,16 @@ Logfile logging log level. One of \fBall\fP, \fBgarbage\fP, \fBtrace\fP,
 \fBdebug\fP, \fBinfo\fP, \fBwarning\fP, \fBerror\fP, \fBquiet\fP\&. Default:
 \fBwarning\fP\&.
 .UNINDENT
+.SS Target Selection
+.sp
+The default matching that Salt utilizes is shell\-style globbing around the
+minion id. See \fI\%https://docs.python.org/2/library/fnmatch.html#module\-fnmatch\fP\&.
+.INDENT 0.0
+.TP
+.B \-E, \-\-pcre
+The target expression will be interpreted as a PCRE regular expression
+rather than a shell glob.
+.UNINDENT
 .SS Output Options
 .INDENT 0.0
 .TP
@@ -175,14 +278,11 @@ Pass in an alternative outputter to display the return of data. This
 outputter can be any of the available outputters:
 .INDENT 7.0
 .INDENT 3.5
-\fBgrains\fP, \fBhighstate\fP, \fBjson\fP, \fBkey\fP, \fBoverstatestage\fP, \fBpprint\fP, \fBraw\fP, \fBtxt\fP, \fByaml\fP
+\fBhighstate\fP, \fBjson\fP, \fBkey\fP, \fBoverstatestage\fP, \fBpprint\fP, \fBraw\fP, \fBtxt\fP, \fByaml\fP, and many others\&.
 .UNINDENT
 .UNINDENT
 .sp
-Some outputters are formatted only for data returned from specific
-functions; for instance, the \fBgrains\fP outputter will not work for non\-grains
-data.
-.sp
+Some outputters are formatted only for data returned from specific functions.
 If an outputter is used that does not support the data passed into it, then
 Salt will fall back on the \fBpprint\fP outputter and display the return data
 using the Python \fBpprint\fP standard library module.
@@ -212,6 +312,11 @@ Write the output to the specified file.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-\-out\-file\-append, \-\-output\-file\-append
+Append the output to the specified file.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-\-no\-color
 Disable all colored output
 .UNINDENT
@@ -230,14 +335,25 @@ changes and success and \fByellow\fP denotes a expected future change in configu
 .UNINDENT
 .UNINDENT
 .UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-state\-output=STATE_OUTPUT, \-\-state_output=STATE_OUTPUT
+Override the configured state_output value for minion
+output. One of \(aqfull\(aq, \(aqterse\(aq, \(aqmixed\(aq, \(aqchanges\(aq or
+\(aqfilter\(aq. Default: \(aqnone\(aq.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-state\-verbose=STATE_VERBOSE, \-\-state_verbose=STATE_VERBOSE
+Override the configured state_verbose value for minion
+output. Set to True or False. Default: none.
+.UNINDENT
 .SH SEE ALSO
 .sp
-\fIsalt(7)\fP
-\fIsalt\-master(1)\fP
-\fIsalt\-minion(1)\fP
+\fBsalt(7)\fP
+\fBsalt\-master(1)\fP
+\fBsalt\-minion(1)\fP
 .SH AUTHOR
 Thomas S. Hatch <thatch45@gmail.com> and many others, please see the Authors file
-.SH COPYRIGHT
-2016 SaltStack, Inc.
 .\" Generated by docutils manpage writer.
 .

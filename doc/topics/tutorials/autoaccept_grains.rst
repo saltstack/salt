@@ -4,7 +4,7 @@
 Autoaccept minions from Grains
 ==============================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 To automatically accept minions based on certain characteristics, e.g. the ``uuid``
 you can specify certain grain values on the salt master. Minions with matching grains

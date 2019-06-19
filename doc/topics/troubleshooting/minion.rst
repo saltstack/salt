@@ -152,3 +152,6 @@ salt-minion service.
     Modifying the minion timeout value is not required when running commands
     from a Salt Master. It is only required when running commands locally on
     the minion.
+
+If a ``state.apply`` run takes too long, you can find a bottleneck by adding the
+:py:mod:`--out=profile <salt.output.profile>` option.

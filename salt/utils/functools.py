@@ -3,7 +3,7 @@
 Utility functions to modify other functions
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import types
@@ -56,6 +56,6 @@ def alias_function(fun, name, doc=None):
         orig_name = fun.__name__
         alias_msg = ('\nThis function is an alias of '
                      '``{0}``.\n'.format(orig_name))
-        alias_fun.__doc__ = alias_msg + fun.__doc__
+        alias_fun.__doc__ = alias_msg + (fun.__doc__ or '')
 
     return alias_fun

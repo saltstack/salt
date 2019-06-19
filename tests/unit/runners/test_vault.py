@@ -12,9 +12,12 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
+    Mock,
     patch,
     NO_MOCK,
-    NO_MOCK_REASON
+    NO_MOCK_REASON,
+    ANY,
+    call
 )
 
 # Import salt libs
@@ -84,7 +87,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
         for case, correct_output in six.iteritems(cases):
             output = vault._expand_pattern_lists(case, **mappings)  # pylint: disable=protected-access
             diff = set(output).symmetric_difference(set(correct_output))
-            if len(diff) != 0:
+            if diff:
                 log.debug('Test %s failed', case)
                 log.debug('Expected:\n\t%s\nGot\n\t%s', output, correct_output)
                 log.debug('Difference:\n\t%s', diff)
@@ -104,7 +107,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                 test_config = {'policies': [case]}
                 output = vault._get_policies(minion_id, test_config)  # pylint: disable=protected-access
                 diff = set(output).symmetric_difference(set(correct_output))
-                if len(diff) != 0:
+                if diff:
                     log.debug('Test %s failed', case)
                     log.debug('Expected:\n\t%s\nGot\n\t%s', output, correct_output)
                     log.debug('Difference:\n\t%s', diff)
@@ -145,8 +148,135 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                 test_config = {'policies': [case]}
                 output = vault._get_policies('test-minion', test_config)  # pylint: disable=protected-access
                 diff = set(output).symmetric_difference(set(correct_output))
-                if len(diff) != 0:
+                if diff:
                     log.debug('Test %s failed', case)
                     log.debug('Expected:\n\t%s\nGot\n\t%s', output, correct_output)
                     log.debug('Difference:\n\t%s', diff)
                 self.assertEqual(output, correct_output)
+
+    def test_get_token_create_url(self):
+        '''
+        Ensure _get_token_create_url parses config correctly
+        '''
+        self.assertEqual(vault._get_token_create_url(  # pylint: disable=protected-access
+            {"url": "http://127.0.0.1"}),
+            "http://127.0.0.1/v1/auth/token/create")
+        self.assertEqual(vault._get_token_create_url(  # pylint: disable=protected-access
+            {"url": "https://127.0.0.1/"}),
+            "https://127.0.0.1/v1/auth/token/create")
+        self.assertEqual(vault._get_token_create_url(  # pylint: disable=protected-access
+            {"url": "http://127.0.0.1:8200", "role_name": "therole"}),
+            "http://127.0.0.1:8200/v1/auth/token/create/therole")
+        self.assertEqual(vault._get_token_create_url(  # pylint: disable=protected-access
+            {"url": "https://127.0.0.1/test", "role_name": "therole"}),
+            "https://127.0.0.1/test/v1/auth/token/create/therole")
+
+
+def _mock_json_response(data, status_code=200, reason=""):
+    '''
+    Mock helper for http response
+    '''
+    response = MagicMock()
+    response.json = MagicMock(return_value=data)
+    response.status_code = status_code
+    response.reason = reason
+    return Mock(return_value=response)
+
+
+class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
+    '''
+    Tests for the runner module of the Vault with token setup
+    '''
+
+    def setup_loader_modules(self):
+        return {
+            vault: {
+                '__opts__': {
+                    'vault': {
+                        'url': "http://127.0.0.1",
+                        "auth": {
+                            'token': 'test',
+                            'method': 'token'
+                        }
+                    }
+                }
+            }
+        }
+
+    @patch('salt.runners.vault._validate_signature', MagicMock(return_value=None))
+    @patch('salt.runners.vault._get_token_create_url', MagicMock(return_value="http://fake_url"))
+    def test_generate_token(self):
+        '''
+        Basic tests for test_generate_token: all exits
+        '''
+        mock = _mock_json_response({'auth': {'client_token': 'test'}})
+        with patch('requests.post', mock):
+            result = vault.generate_token('test-minion', 'signature')
+            log.debug('generate_token result: %s', result)
+            self.assertTrue(isinstance(result, dict))
+            self.assertFalse('error' in result)
+            self.assertTrue('token' in result)
+            self.assertEqual(result['token'], 'test')
+            mock.assert_called_with("http://fake_url", headers=ANY, json=ANY, verify=ANY)
+
+        mock = _mock_json_response({}, status_code=403, reason="no reason")
+        with patch('requests.post', mock):
+            result = vault.generate_token('test-minion', 'signature')
+            self.assertTrue(isinstance(result, dict))
+            self.assertTrue('error' in result)
+            self.assertEqual(result['error'], "no reason")
+
+        with patch('salt.runners.vault._get_policies', MagicMock(return_value=[])):
+            result = vault.generate_token('test-minion', 'signature')
+            self.assertTrue(isinstance(result, dict))
+            self.assertTrue('error' in result)
+            self.assertEqual(result['error'], 'No policies matched minion')
+
+        with patch('requests.post',
+                   MagicMock(side_effect=Exception('Test Exception Reason'))):
+            result = vault.generate_token('test-minion', 'signature')
+            self.assertTrue(isinstance(result, dict))
+            self.assertTrue('error' in result)
+            self.assertEqual(result['error'], 'Test Exception Reason')
+
+
+class VaultAppRoleAuthTest(TestCase, LoaderModuleMockMixin):
+    '''
+    Tests for the runner module of the Vault with approle setup
+    '''
+
+    def setup_loader_modules(self):
+        return {
+            vault: {
+                '__opts__': {
+                    'vault': {
+                        'url': "http://127.0.0.1",
+                        "auth": {
+                            'method': 'approle',
+                            'role_id': 'role',
+                            'secret_id': 'secret'
+                        }
+                    }
+                }
+            }
+        }
+
+    @patch('salt.runners.vault._validate_signature', MagicMock(return_value=None))
+    @patch('salt.runners.vault._get_token_create_url', MagicMock(return_value="http://fake_url"))
+    def test_generate_token(self):
+        '''
+        Basic test for test_generate_token with approle (two vault calls)
+        '''
+        mock = _mock_json_response({'auth': {'client_token': 'test'}})
+        with patch('requests.post', mock):
+            result = vault.generate_token('test-minion', 'signature')
+            log.debug('generate_token result: %s', result)
+            self.assertTrue(isinstance(result, dict))
+            self.assertFalse('error' in result)
+            self.assertTrue('token' in result)
+            self.assertEqual(result['token'], 'test')
+            calls = [
+                call("http://127.0.0.1/v1/auth/approle/login", json=ANY, verify=ANY),
+                call("http://fake_url", headers=ANY, json=ANY, verify=ANY)
+                ]
+            mock.assert_has_calls(calls)

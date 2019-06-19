@@ -3,7 +3,7 @@
 Output Module
 =============
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Execution module that processes JSON serializable data
 and returns string having the format as processed by the outputters.
@@ -17,7 +17,7 @@ For example, inside a Jinja template:
 
     {{ salt.out.string_format(complex_object, out='highstate') }}
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -47,7 +47,7 @@ def out_format(data, out='nested', opts=None, **kwargs):
     opts
         Dictionary of configuration options. Default: ``__opts__``.
 
-    **kwargs
+    kwargs
         Arguments to sent to the outputter module.
 
     CLI Example:
@@ -74,7 +74,7 @@ def string_format(data, out='nested', opts=None, **kwargs):
     opts
         Dictionary of configuration options. Default: ``__opts__``.
 
-    **kwargs
+    kwargs
         Arguments to sent to the outputter module.
 
     CLI Example:
@@ -101,7 +101,7 @@ def html_format(data, out='nested', opts=None, **kwargs):
     opts
         Dictionary of configuration options. Default: ``__opts__``.
 
-    **kwargs
+    kwargs
         Arguments to sent to the outputter module.
 
     CLI Example:

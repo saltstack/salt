@@ -3,7 +3,7 @@
 Convenience functions for dealing with datetime classes
 '''
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Import Python libs
 import datetime
@@ -60,6 +60,7 @@ def date_cast(date):
                 'Unable to parse {0}. Consider installing timelib'.format(date))
 
 
+@jinja_filter('date_format')
 @jinja_filter('strftime')
 def strftime(date=None, format="%Y-%m-%d"):
     '''

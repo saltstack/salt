@@ -19,7 +19,7 @@ Module for working with the Zenoss API
 '''
 
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 import logging
 
@@ -50,6 +50,7 @@ def __virtual__():
     else:
         return False, 'The \'{0}\' module could not be loaded: ' \
                       '\'requests\' is not installed.'.format(__virtualname__)
+
 
 ROUTERS = {'MessagingRouter': 'messaging',
            'EventsRouter': 'evconsole',

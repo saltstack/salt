@@ -105,8 +105,11 @@ def post_message(message,
     :param api_url:     The Mattermost api url, if not specified in the configuration.
     :param hook:        The Mattermost hook, if not specified in the configuration.
     :return:            Boolean if message was sent successfully.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt-run mattermost.post_message message='Build is done'
     '''
     if not api_url:

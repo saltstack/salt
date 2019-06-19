@@ -84,7 +84,7 @@ Example of a ``cmd`` state calling a python function::
 #
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from uuid import uuid4 as _uuid
 
 # Import salt libs
@@ -445,7 +445,7 @@ class StateFunction(object):
                     mod, ref
                 )
             )
-        self.args.append({req_type: [{str(mod): str(ref)}]})
+        self.args.append({req_type: [{six.text_type(mod): six.text_type(ref)}]})
 
     ns = locals()
     for req_type in REQUISITES:

@@ -31,10 +31,11 @@ VM_NAME = 'winterfell'
 # Use certifi if installed
 try:
     if HAS_LIBCLOUD:
-        # This work-around for Issue #32743 is no longer needed for libcloud >= 1.4.0.
-        # However, older versions of libcloud must still be supported with this work-around.
-        # This work-around can be removed when the required minimum version of libcloud is
-        # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
+        # This work-around for Issue #32743 is no longer needed for libcloud >=
+        # 1.4.0. However, older versions of libcloud must still be supported
+        # with this work-around. This work-around can be removed when the
+        # required minimum version of libcloud is 2.0.0 (See PR #40837 - which
+        # is implemented in Salt 2018.3.0).
         if LooseVersion(libcloud.__version__) < LooseVersion('1.4.0'):
             import certifi
             libcloud.security.CA_CERTS_PATH.append(certifi.where())

@@ -59,7 +59,7 @@ default gateway using the ``gateway`` parameter:
           - 10.2.3.4/24
         - gateway: 10.2.3.1
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -70,6 +70,7 @@ import salt.utils.platform
 import salt.utils.validate.net
 from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -101,22 +102,20 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
         if dns_servers is not None:
             errors.append(
                 'The dns_servers param cannot be set if unless dns_proto is '
-                'set to \'static\'.'
+                'set to \'static\''
             )
     else:
-        if not dns_servers:
-            errors.append(
-                'The dns_servers param is required to set static DNS servers.'
-            )
+        if str(dns_servers).lower() in ['none', '[]']:
+            pass
         elif not isinstance(dns_servers, list):
             errors.append(
-                'The dns_servers param must be formatted as a list.'
+                'The dns_servers param must be formatted as a list'
             )
         else:
             bad_ips = [x for x in dns_servers
                        if not salt.utils.validate.net.ipv4_addr(x)]
             if bad_ips:
-                errors.append('Invalid DNS server IPs: {0}.'
+                errors.append('Invalid DNS server IPs: {0}'
                               .format(', '.join(bad_ips)))
 
     # Validate IP configuration
@@ -124,33 +123,33 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
         if ip_addrs is not None:
             errors.append(
                 'The ip_addrs param cannot be set if unless ip_proto is set '
-                'to \'static\'.'
+                'to \'static\''
             )
         if gateway is not None:
             errors.append(
                 'A gateway IP cannot be set if unless ip_proto is set to '
-                '\'static\'.'
+                '\'static\''
             )
     else:
         if not ip_addrs:
             errors.append(
-                'The ip_addrs param is required to set static IPs.'
+                'The ip_addrs param is required to set static IPs'
             )
         elif not isinstance(ip_addrs, list):
             errors.append(
-                'The ip_addrs param must be formatted as a list.'
+                'The ip_addrs param must be formatted as a list'
             )
         else:
             bad_ips = [x for x in ip_addrs
                        if not salt.utils.validate.net.ipv4_addr(x)]
             if bad_ips:
                 errors.append('The following static IPs are invalid: '
-                              '{0}.'.format(', '.join(bad_ips)))
+                              '{0}'.format(', '.join(bad_ips)))
 
             # Validate default gateway
             if gateway is not None:
                 if not salt.utils.validate.net.ipv4_addr(gateway):
-                    errors.append('Gateway IP {0} is invalid.'.format(gateway))
+                    errors.append('Gateway IP {0} is invalid'.format(gateway))
 
     return errors
 
@@ -177,7 +176,10 @@ def _changes(cur, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
         else 'dhcp'
     )
     if cur_dns_proto == 'static':
-        cur_dns_servers = cur['Statically Configured DNS Servers']
+        if isinstance(cur['Statically Configured DNS Servers'], list):
+            cur_dns_servers = cur['Statically Configured DNS Servers']
+        else:
+            cur_dns_servers = [cur['Statically Configured DNS Servers']]
         if set(dns_servers or ['None']) != set(cur_dns_servers):
             changes['dns_servers'] = dns_servers
     elif 'DNS servers configured through DHCP' in cur:
@@ -215,59 +217,93 @@ def managed(name,
     '''
     Ensure that the named interface is configured properly.
 
-    name
-        The name of the interface to manage
+    Args:
 
-    dns_proto : None
-        Set to ``static`` and use the ``dns_servers`` parameter to provide a
-        list of DNS nameservers. set to ``dhcp`` to use DHCP to get the DNS
-        servers.
+        name (str):
+            The name of the interface to manage
 
-    dns_servers : None
-        A list of static DNS servers.
+        dns_proto (str): None
+            Set to ``static`` and use the ``dns_servers`` parameter to provide a
+            list of DNS nameservers. set to ``dhcp`` to use DHCP to get the DNS
+            servers.
 
-    ip_proto : None
-        Set to ``static`` and use the ``ip_addrs`` and (optionally) ``gateway``
-        parameters to provide a list of static IP addresses and the default
-        gateway. Set to ``dhcp`` to use DHCP.
+        dns_servers (list): None
+            A list of static DNS servers. To clear the list of DNS servers pass
+            an empty list (``[]``). ``None`` will make no changes.
 
-    ip_addrs : None
-        A list of static IP addresses.
+        ip_proto (str): None
+            Set to ``static`` and use the ``ip_addrs`` and (optionally)
+            ``gateway`` parameters to provide a list of static IP addresses and
+            the default gateway. Set to ``dhcp`` to use DHCP.
 
-    gateway : None
-        A list of static IP addresses.
+        ip_addrs (list): None
+            A list of static IP addresses with netmask flag, ie: 192.168.0.11/24
 
-    enabled : True
-        Set to ``False`` to ensure that this interface is disabled.
+        gateway (str): None
+            The gateway to set for the interface
 
+        enabled (bool): True
+            Set to ``False`` to ensure that this interface is disabled.
+
+    Returns:
+        dict: A dictionary of old and new settings
+
+    Example:
+
+    .. code-block:: yaml
+
+        Ethernet1:
+          network.managed:
+            - dns_proto: static
+            - dns_servers:
+              - 8.8.8.8
+              - 8.8.8.4
+            - ip_proto: static
+            - ip_addrs:
+              - 192.168.0.100/24
+
+    Clear DNS entries example:
+
+    .. code-block:: yaml
+
+        Ethernet1:
+          network.managed:
+            - dns_proto: static
+            - dns_servers: []
+            - ip_proto: dhcp
     '''
     ret = {
         'name': name,
         'changes': {},
         'result': True,
-        'comment': 'Interface \'{0}\' is up to date.'.format(name)
+        'comment': 'Interface \'{0}\' is up to date'.format(name)
     }
 
-    dns_proto = str(dns_proto).lower()
-    ip_proto = str(ip_proto).lower()
+    dns_proto = six.text_type(dns_proto).lower()
+    ip_proto = six.text_type(ip_proto).lower()
 
     errors = []
     if dns_proto not in __VALID_PROTO:
         ret['result'] = False
-        errors.append('dns_proto must be one of the following: {0}.'
+        errors.append('dns_proto must be one of the following: {0}'
                       .format(', '.join(__VALID_PROTO)))
 
     if ip_proto not in __VALID_PROTO:
-        errors.append('ip_proto must be one of the following: {0}.'
+        errors.append('ip_proto must be one of the following: {0}'
                       .format(', '.join(__VALID_PROTO)))
 
     if errors:
         ret['result'] = False
-        ret['comment'] = ' '.join(errors)
+        ret['comment'] = '\n'.join(errors)
         return ret
 
+    try:
+        currently_enabled = __salt__['ip.is_enabled'](name)
+    except CommandExecutionError:
+        currently_enabled = False
+
     if not enabled:
-        if __salt__['ip.is_enabled'](name):
+        if currently_enabled:
             if __opts__['test']:
                 ret['result'] = None
                 ret['comment'] = ('Interface \'{0}\' will be disabled'
@@ -281,18 +317,13 @@ def managed(name,
             ret['comment'] += ' (already disabled)'
         return ret
     else:
-        try:
-            currently_enabled = __salt__['ip.is_disabled'](name)
-        except CommandExecutionError:
-            currently_enabled = False
         if not currently_enabled:
             if __opts__['test']:
                 ret['result'] = None
                 ret['comment'] = ('Interface \'{0}\' will be enabled'
                                   .format(name))
             else:
-                result = __salt__['ip.enable'](name)
-                if not result:
+                if not __salt__['ip.enable'](name):
                     ret['result'] = False
                     ret['comment'] = ('Failed to enable interface \'{0}\' to '
                                       'make changes'.format(name))
@@ -302,7 +333,7 @@ def managed(name,
         if errors:
             ret['result'] = False
             ret['comment'] = ('The following SLS configuration errors were '
-                              'detected: {0}'.format(' '.join(errors)))
+                              'detected:\n- {0}'.format('\n- '.join(errors)))
             return ret
 
         old = __salt__['ip.get_interface'](name)
@@ -318,49 +349,63 @@ def managed(name,
                            ip_proto,
                            ip_addrs,
                            gateway)
+
+        # If dns_servers is the default `None` make no changes
+        # To clear the list, pass an empty dict
+        if str(dns_servers).lower() == 'none':
+            changes.pop('dns_servers', None)
+
         if not changes:
             return ret
 
         if __opts__['test']:
             comments = []
             if 'dns_proto' in changes:
-                comments.append('DNS protocol will be changed to: {0}.'
+                comments.append('DNS protocol will be changed to: {0}'
                                 .format(changes['dns_proto']))
             if dns_proto == 'static' and 'dns_servers' in changes:
-                comments.append(
-                    'DNS servers will be set to the following: {0}.'
-                    .format(', '.join(changes['dns_servers']))
-                )
+                if not changes['dns_servers']:
+                    comments.append('The list of DNS servers will be cleared')
+                else:
+                    comments.append(
+                        'DNS servers will be set to the following: {0}'
+                        .format(', '.join(changes['dns_servers']))
+                    )
             if 'ip_proto' in changes:
-                comments.append('IP protocol will be changed to: {0}.'
+                comments.append('IP protocol will be changed to: {0}'
                                 .format(changes['ip_proto']))
             if ip_proto == 'static':
                 if 'ip_addrs' in changes:
                     comments.append(
-                        'IP addresses will be set to the following: {0}.'
+                        'IP addresses will be set to the following: {0}'
                         .format(', '.join(changes['ip_addrs']))
                     )
                 if 'gateway' in changes:
                     if changes['gateway'] is None:
-                        comments.append('Default gateway will be removed.')
+                        comments.append('Default gateway will be removed')
                     else:
                         comments.append(
-                            'Default gateway will be set to {0}.'
+                            'Default gateway will be set to {0}'
                             .format(changes['gateway'])
                         )
 
             ret['result'] = None
             ret['comment'] = ('The following changes will be made to '
-                              'interface \'{0}\': {1}'
-                              .format(name, ' '.join(comments)))
+                              'interface \'{0}\':\n- {1}'
+                              .format(name, '\n- '.join(comments)))
             return ret
 
         if changes.get('dns_proto') == 'dhcp':
             __salt__['ip.set_dhcp_dns'](name)
 
-        elif changes.get('dns_servers'):
-            if changes.get('dns_servers'):
-                __salt__['ip.set_static_dns'](name, *changes['dns_servers'])
+        elif 'dns_servers' in changes:
+            if not changes['dns_servers']:
+                # To clear the list of DNS servers you have to pass []. Later
+                # changes gets passed like *args and a single empty list is
+                # converted to an empty tuple. So, you have to add [] here
+                changes['dns_servers'] = [[]]
+
+            __salt__['ip.set_static_dns'](name, *changes['dns_servers'])
 
         if changes.get('ip_proto') == 'dhcp':
             __salt__['ip.set_dhcp_ip'](name)

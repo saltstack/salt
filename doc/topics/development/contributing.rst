@@ -21,14 +21,45 @@ SaltStack has its own coding style guide that informs contributors on various co
 approaches. Please review the :ref:`Salt Coding Style <coding-style>` documentation
 for information about Salt's particular coding patterns.
 
-Within the :ref:`Salt Coding Style <coding-style>` documentation, there is a section
-about running Salt's ``.pylintrc`` file. SaltStack recommends running the ``.pylintrc``
-file on any files you are changing with your code contribution before submitting a
-pull request to Salt's repository. Please see the :ref:`Linting<pylint-instructions>`
-documentation for more information.
+Within the :ref:`Salt Coding Style <coding-style>` documentation, there is a
+section about running Salt's ``.testing.pylintrc`` file. SaltStack recommends
+running the ``.testing.pylintrc`` file on any files you are changing with your
+code contribution before submitting a pull request to Salt's repository. Please
+see the :ref:`Linting<pylint-instructions>` documentation for more information.
+
+.. note::
+
+    There are two pylint files in the ``salt`` directory. One is the
+    ``.pylintrc`` file and the other is the ``.testing.pylintrc`` file. The
+    tests that run in Jenkins against GitHub Pull Requests use
+    ``.testing.pylintrc``. The ``testing.pylintrc`` file is a little less
+    strict than the ``.pylintrc`` and is used to make it easier for contributors
+    to submit changes. The ``.pylintrc`` file can be used for linting, but the
+    ``testing.pylintrc`` is the source of truth when submitting pull requests.
 
 
 .. _github-pull-request:
+
+New Features
+------------
+
+Feature requests through Salt go through a multi-stage process.
+
+All features are added to major releases only. Salt does not accept
+feature additions in bug-fix branches. Therefore, all feature work
+is done exclusively in the develop branch.
+
+To formally propose a new feature, the proposal must take the form
+of an RFC. To create an RFC, copy the template file found in the rfcs/
+directory of the Salt codebase and fill the outline with the reasoning
+for the new feature and with implementation details.
+
+Upon submitting the written RFC via a pull-request, it will be reviewed
+by the core development team as well as the community. Once discussed
+and agreed upon, the RFC may be merged.
+
+A merged RFC indicates that a feature has been accepted and will be
+added to an upcoming release of Salt.
 
 Sending a GitHub pull request
 -----------------------------
@@ -60,7 +91,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
         isolated into separate branches.
 
     If you're working on a bug or documentation fix, create your branch from
-    the oldest release branch that contains the bug or requires the documentation
+    the oldest **supported** main release branch that contains the bug or requires the documentation
     update. See :ref:`Which Salt Branch? <which-salt-branch>`.
 
     .. code-block:: bash
@@ -90,7 +121,8 @@ Fork a Repo Guide_>`_ and is well worth reading.
     .. note::
 
         If your change fixes a bug or implements a feature already filed in the
-        `issue tracker <GitHub issue tracker>`_, be sure to reference the issue
+        `issue tracker`_, be sure to
+	`reference the issue <https://help.github.com/en/articles/closing-issues-using-keywords>`_
         number in the commit message body.
 
     .. code-block:: bash
@@ -154,7 +186,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
             nothing to commit, working tree clean
 
         Do **NOT** perform a ``git pull`` or ``git merge`` here. Instead, add
-        ``--force`` to the end of the ``git push`` command to get the changes
+        ``--force-with-lease`` to the end of the ``git push`` command to get the changes
         pushed to your fork. Pulling or merging, while they will resolve the
         non-fast-forward issue, will likely add extra commits to the pull
         request which were not part of your changes.
@@ -212,8 +244,11 @@ There are three different kinds of branches in use: develop, main release
 branches, and dot release branches.
 
 - All feature work should go into the ``develop`` branch.
-- Bug fixes and documentation changes should go into the oldest supported
-  **main** release branch affected by the the bug or documentation change.
+- Bug fixes and documentation changes should go into the oldest **supported
+  main** release branch affected by the the bug or documentation change (you
+  can use the blame button in github to figure out when the bug was introduced).
+  Supported releases are the last 2 releases. For example, if the latest release
+  is 2018.3, the last two release are 2018.3 and 2017.7.
   Main release branches are named after a year and month, such as
   ``2016.11`` and ``2017.7``.
 - Hot fixes, as determined by SaltStack's release team, should be submitted
@@ -223,7 +258,7 @@ branches, and dot release branches.
 .. note::
 
     GitHub will open pull requests against Salt's main branch, ``develop``,
-    byndefault. Be sure to check which branch is selected when creating the
+    by default. Be sure to check which branch is selected when creating the
     pull request.
 
 The Develop Branch
@@ -247,7 +282,7 @@ Main Release Branches
 =====================
 
 The current release branch is the most recent stable release. Pull requests
-containing bug fixes or documentation changes should be made against the main
+containing bug fixes or documentation changes should be made against the oldest supported main
 release branch that is affected.
 
 The branch name will be a date-based name such as ``2016.11``.
@@ -282,9 +317,9 @@ The Salt repository follows a "Merge Forward" policy. The merge-forward
 behavior means that changes submitted to older main release branches will
 automatically be "merged-forward" into the newer branches.
 
-For example, a pull request is merged into ``2016.11``. Then, the entire
-``2016.11`` branch is merged-forward into the ``2017.7`` branch, and the
-``2017.7`` branch is merged-forward into the ``develop`` branch.
+For example, a pull request is merged into ``2017.7``. Then, the entire
+``2017.7`` branch is merged-forward into the ``2018.3`` branch, and the
+``2018.3`` branch is merged-forward into the ``develop`` branch.
 
 This process makes is easy for contributors to make only one pull-request
 against an older branch, but allows the change to propagate to all **main**
@@ -513,9 +548,22 @@ GPG key with ``git`` locally, and linking the GPG key to your GitHub account.
 Once these steps are completed, the commit signing verification will look like
 the example in GitHub's `GPG Signature Verification feature announcement`_.
 
+Bootstrap Script Changes
+------------------------
+
+Salt's Bootstrap Script, known as `bootstrap-salt.sh`_ in the Salt repo, has it's own
+repository, contributing guidelines, and release cadence.
+
+All changes to the Bootstrap Script should be made to `salt-bootstrap repo`_. Any
+pull requests made to the `bootstrap-salt.sh`_ file in the Salt repository will be
+automatically overwritten upon the next stable release of the Bootstrap Script.
+
+For more information on the release process or how to contribute to the Bootstrap
+Script, see the Bootstrap Script's `Contributing Guidelines`_.
+
 .. _`saltstack/salt`: https://github.com/saltstack/salt
 .. _`GitHub Fork a Repo Guide`: https://help.github.com/articles/fork-a-repo
-.. _`GitHub issue tracker`: https://github.com/saltstack/salt/issues
+.. _`issue tracker`: https://github.com/saltstack/salt/issues
 .. _`Fork saltstack/salt`: https://github.com/saltstack/salt/fork
 .. _'Git resources`: https://help.github.com/articles/good-resources-for-learning-git-and-github/
 .. _`Closing issues via commit message`: https://help.github.com/articles/closing-issues-via-commit-messages
@@ -524,3 +572,6 @@ the example in GitHub's `GPG Signature Verification feature announcement`_.
 .. _GPG Probot: https://probot.github.io/apps/gpg/
 .. _help articles: https://help.github.com/articles/signing-commits-with-gpg/
 .. _GPG Signature Verification feature announcement: https://github.com/blog/2144-gpg-signature-verification
+.. _bootstrap-salt.sh: https://github.com/saltstack/salt/blob/develop/salt/cloud/deploy/bootstrap-salt.sh
+.. _salt-bootstrap repo: https://github.com/saltstack/salt-bootstrap
+.. _Contributing Guidelines: https://github.com/saltstack/salt-bootstrap/blob/develop/CONTRIBUTING.md

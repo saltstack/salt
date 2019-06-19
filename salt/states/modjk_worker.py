@@ -18,8 +18,7 @@ Mandatory Settings:
 - The modjk load balancer must be configured as stated in the :strong:`modjk`
   execution module :mod:`documentation <salt.modules.modjk>`
 '''
-from __future__ import absolute_import
-import salt.utils.versions
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -70,7 +69,7 @@ def _send_command(cmd,
             cmd
         )
         return ret
-    elif len(errors) > 0:
+    elif errors:
         ret['msg'] = 'the following minions return False'
         ret['minions'] = errors
         return ret
@@ -172,7 +171,7 @@ def _talk2modjk(name, lbn, target, action, profile='default', tgt_type='glob'):
     return ret
 
 
-def stop(name, lbn, target, profile='default', tgt_type='glob', expr_form=None):
+def stop(name, lbn, target, profile='default', tgt_type='glob'):
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -192,21 +191,10 @@ def stop(name, lbn, target, profile='default', tgt_type='glob', expr_form=None):
             - target: 'roles:balancer'
             - tgt_type: grain
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     return _talk2modjk(name, lbn, target, 'worker_stop', profile, tgt_type)
 
 
-def activate(name, lbn, target, profile='default', tgt_type='glob', expr_form=None):
+def activate(name, lbn, target, profile='default', tgt_type='glob'):
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -226,21 +214,10 @@ def activate(name, lbn, target, profile='default', tgt_type='glob', expr_form=No
             - target: 'roles:balancer'
             - tgt_type: grain
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     return _talk2modjk(name, lbn, target, 'worker_activate', profile, tgt_type)
 
 
-def disable(name, lbn, target, profile='default', tgt_type='glob', expr_form=None):
+def disable(name, lbn, target, profile='default', tgt_type='glob'):
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -261,15 +238,4 @@ def disable(name, lbn, target, profile='default', tgt_type='glob', expr_form=Non
             - target: 'roles:balancer'
             - tgt_type: grain
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     return _talk2modjk(name, lbn, target, 'worker_disable', profile, tgt_type)

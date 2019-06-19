@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Management of SQLite3 databases
 ===============================
 
+.. versionadded:: 2016.3.0
+
 :depends:   - SQLite3 Python Module
 :configuration: See :py:mod:`salt.modules.sqlite3` for setup instructions
-.. versionadded:: 2016.3.0
 
 The sqlite3 module is used to create and manage sqlite3 databases
 and execute queries
 
 Here is an example of creating a table using sql statements:
 
-  .. code-block:: yaml
+.. code-block:: yaml
 
     users:
       sqlite3.table_present:
@@ -22,7 +23,7 @@ Here is an example of creating a table using sql statements:
 
 Here is an example of creating a table using yaml/jinja instead of sql:
 
-  .. code-block:: yaml
+.. code-block:: yaml
 
     users:
       sqlite3.table_present:
@@ -38,7 +39,7 @@ Here is an example of creating a table using yaml/jinja instead of sql:
 
 Here is an example of making sure a table is absent:
 
-  .. code-block:: yaml
+.. code-block:: yaml
 
     badservers:
       sqlite3.table_absent:
@@ -48,7 +49,7 @@ Here is an example of making sure a table is absent:
 Sometimes you would to have specific data in tables to be used by other services
 Here is an example of making sure rows with specific data exist:
 
-  .. code-block:: yaml
+.. code-block:: yaml
 
     user_john_doe_xyz:
       sqlite3.row_present:
@@ -68,7 +69,7 @@ Here is an example of making sure rows with specific data exist:
 
 Here is an example of removing a row from a table:
 
-  .. code-block:: yaml
+.. code-block:: yaml
 
     user_john_doe_abc:
       sqlite3.row_absent:
@@ -81,7 +82,7 @@ Here is an example of removing a row from a table:
 Note that there is no explicit state to perform random queries, however, this
 can be approximated with sqlite3's module functions and module.run:
 
-  .. code-block:: yaml
+.. code-block:: yaml
 
     zone-delete:
       module.run:
@@ -90,10 +91,10 @@ can be approximated with sqlite3's module functions and module.run:
         - sql: "DELETE FROM records WHERE id > {{ count[0] }} AND domain_id = {{ domain_id }}"
         - watch:
           - sqlite3: zone-insert-12
-"""
+'''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt libs
 from salt.ext import six
@@ -107,14 +108,14 @@ except ImportError:
 
 
 def __virtual__():
-    """
+    '''
     Only load if the sqlite3 module is available
-    """
+    '''
     return HAS_SQLITE3
 
 
 def row_absent(name, db, table, where_sql, where_args=None):
-    """
+    '''
     Makes sure the specified row is absent in db.  If multiple rows
     match where_sql, then the state will fail.
 
@@ -132,7 +133,7 @@ def row_absent(name, db, table, where_sql, where_args=None):
 
     where_args
         The list parameters to substitute in where_sql
-    """
+    '''
     changes = {'name': name,
                'changes': {},
                'result': None,
@@ -181,7 +182,7 @@ def row_absent(name, db, table, where_sql, where_args=None):
 
     except Exception as e:
         changes['result'] = False
-        changes['comment'] = str(e)
+        changes['comment'] = six.text_type(e)
 
     finally:
         if conn:
@@ -197,7 +198,7 @@ def row_present(name,
                 where_sql,
                 where_args=None,
                 update=False):
-    """
+    '''
     Checks to make sure the given row exists. If row exists and update is True
     then row will be updated with data. Otherwise it will leave existing
     row unmodified and check it against data. If the existing data
@@ -228,7 +229,7 @@ def row_present(name,
         True will replace the existing row with data
         When False and the row exists and data does not equal
         the row data then the state will fail
-    """
+    '''
     changes = {'name': name,
                'changes': {},
                'result': None,
@@ -321,7 +322,7 @@ def row_present(name,
 
     except Exception as e:
         changes['result'] = False
-        changes['comment'] = str(e)
+        changes['comment'] = six.text_type(e)
 
     finally:
         if conn:
@@ -331,7 +332,7 @@ def row_present(name,
 
 
 def table_absent(name, db):
-    """
+    '''
     Make sure the specified table does not exist
 
     name
@@ -339,7 +340,7 @@ def table_absent(name, db):
 
     db
         The name of the database file
-    """
+    '''
     changes = {'name': name,
                'changes': {},
                'result': None,
@@ -360,7 +361,7 @@ def table_absent(name, db):
                 changes['changes']['old'] = tables[0][0]
                 changes['result'] = True
                 changes['comment'] = "'" + name + "' was dropped"
-        elif len(tables) == 0:
+        elif not tables:
             changes['result'] = True
             changes['comment'] = "'" + name + "' is already absent"
         else:
@@ -370,7 +371,7 @@ def table_absent(name, db):
 
     except Exception as e:
         changes['result'] = False
-        changes['comment'] = str(e)
+        changes['comment'] = six.text_type(e)
 
     finally:
         if conn:
@@ -380,7 +381,7 @@ def table_absent(name, db):
 
 
 def table_present(name, db, schema, force=False):
-    """
+    '''
     Make sure the specified table exists with the specified schema
 
     name
@@ -396,7 +397,7 @@ def table_present(name, db, schema, force=False):
         If the name of the table exists and force is set to False,
         the state will fail.  If force is set to True, the existing
         table will be replaced with the new table
-    """
+    '''
     changes = {'name': name,
                'changes': {},
                'result': None,
@@ -438,7 +439,7 @@ def table_present(name, db, schema, force=False):
                 changes['result'] = True
                 changes['comment'] = "'" + name + \
                                      "' exists with matching schema"
-        elif len(tables) == 0:
+        elif not tables:
             # Create the table
             sql = None
             if isinstance(schema, six.string_types):

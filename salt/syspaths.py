@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-
-
     salt.syspaths
     ~~~~~~~~~~~~~
 
@@ -21,9 +18,17 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import os.path
+import logging
 
 __PLATFORM = sys.platform.lower()
-
+typo_warning = True
+log = logging.getLogger(__name__)
+EXPECTED_VARIABLES = ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',
+                      'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'HOME_DIR',
+                      'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
+                      'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
+                      'SPM_PARENT_PATH', 'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH',
+                      'SPM_REACTOR_PATH', 'SHARE_DIR')
 
 try:
     # Let's try loading the system paths from the generated module at
@@ -32,14 +37,19 @@ try:
 except ImportError:
     import types
     __generated_syspaths = types.ModuleType(str('salt._syspaths'))  # future lint: blacklisted-function
-    for key in ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',
-                'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'HOME_DIR',
-                'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
-                'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
-                'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH', 'SPM_REACTOR_PATH',
-                'SHARE_DIR'):
+    for key in EXPECTED_VARIABLES:
         setattr(__generated_syspaths, key, None)
-
+else:
+    for key in EXPECTED_VARIABLES:
+        if hasattr(__generated_syspaths, key):
+            continue
+        else:
+            if typo_warning:
+                log.warning('Possible Typo?')
+                log.warning('To dissolve this warning add `[variable] = None` to _syspaths.py')
+            typo_warning = False
+            log.warning('Variable %s is missing, value set to None', key)
+            setattr(__generated_syspaths, key, None)  # missing variables defaulted to None
 
 # Let's find out the path of this module
 if 'SETUP_DIRNAME' in globals():
@@ -124,17 +134,21 @@ PIDFILE_DIR = __generated_syspaths.PIDFILE_DIR
 if PIDFILE_DIR is None:
     PIDFILE_DIR = os.path.join(ROOT_DIR, 'var', 'run')
 
+SPM_PARENT_PATH = __generated_syspaths.SPM_PARENT_PATH
+if SPM_PARENT_PATH is None:
+    SPM_PARENT_PATH = os.path.join(SRV_ROOT_DIR, 'spm')
+
 SPM_FORMULA_PATH = __generated_syspaths.SPM_FORMULA_PATH
 if SPM_FORMULA_PATH is None:
-    SPM_FORMULA_PATH = os.path.join(SRV_ROOT_DIR, 'spm', 'salt')
+    SPM_FORMULA_PATH = os.path.join(SPM_PARENT_PATH, 'salt')
 
 SPM_PILLAR_PATH = __generated_syspaths.SPM_PILLAR_PATH
 if SPM_PILLAR_PATH is None:
-    SPM_PILLAR_PATH = os.path.join(SRV_ROOT_DIR, 'spm', 'pillar')
+    SPM_PILLAR_PATH = os.path.join(SPM_PARENT_PATH, 'pillar')
 
 SPM_REACTOR_PATH = __generated_syspaths.SPM_REACTOR_PATH
 if SPM_REACTOR_PATH is None:
-    SPM_REACTOR_PATH = os.path.join(SRV_ROOT_DIR, 'spm', 'reactor')
+    SPM_REACTOR_PATH = os.path.join(SPM_PARENT_PATH, 'reactor')
 
 HOME_DIR = __generated_syspaths.HOME_DIR
 if HOME_DIR is None:
@@ -157,6 +171,7 @@ __all__ = [
     'INSTALL_DIR',
     'CLOUD_DIR',
     'BOOTSTRAP',
+    'SPM_PARENT_PATH',
     'SPM_FORMULA_PATH',
     'SPM_PILLAR_PATH',
     'SPM_REACTOR_PATH'

@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
+    :codeauthor: Rahul Handay <rahulha@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
+    Mock,
     MagicMock,
     patch,
     NO_MOCK,
@@ -18,6 +20,8 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.states.user as user
+
+log = logging.getLogger(__name__)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -60,9 +64,13 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                         self.assertDictEqual(user.present('salt'), ret)
 
                     with patch.dict(user.__opts__, {"test": False}):
-                        ret.update({'comment': "These values could not be"
-                                    " changed: {'key': 'value'}",
-                                    'result': False})
+                        # pylint: disable=repr-flag-used-in-string
+                        comment = (
+                            'These values could not be changed: {0!r}'
+                            .format({'key': 'value'})
+                        )
+                        # pylint: enable=repr-flag-used-in-string
+                        ret.update({'comment': comment, 'result': False})
                         self.assertDictEqual(user.present('salt'), ret)
 
                         with patch.dict(user.__opts__, {"test": True}):
@@ -74,6 +82,110 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                             ret.update({'comment': 'Failed to create new'
                                         ' user salt', 'result': False})
                             self.assertDictEqual(user.present('salt'), ret)
+
+    def test_present_invalid_uid_change(self):
+        mock_info = MagicMock(side_effect=[
+            {'uid': 5000,
+             'gid': 5000,
+             'groups': ['foo'],
+             'home': '/home/foo',
+             'fullname': 'Foo Bar'}
+        ])
+        dunder_salt = {'user.info': mock_info,
+                       'file.group_to_gid': MagicMock(side_effect=['foo']),
+                       'file.gid_to_group': MagicMock(side_effect=[5000])}
+        # side_effect used because these mocks should only be called once
+        with patch.dict(user.__grains__, {'kernel': 'Linux'}), \
+                patch.dict(user.__salt__, dunder_salt):
+            ret = user.present('foo', uid=5001)
+            # State should have failed
+            self.assertFalse(ret['result'])
+            # Only one of uid/gid should have been flagged in the comment
+            self.assertEqual(ret['comment'].count('not permitted'), 1)
+
+    def test_present_invalid_gid_change(self):
+        mock_info = MagicMock(side_effect=[
+            {'uid': 5000,
+             'gid': 5000,
+             'groups': ['foo'],
+             'home': '/home/foo',
+             'fullname': 'Foo Bar'}
+        ])
+        dunder_salt = {'user.info': mock_info,
+                       'file.group_to_gid': MagicMock(side_effect=['foo']),
+                       'file.gid_to_group': MagicMock(side_effect=[5000])}
+        # side_effect used because these mocks should only be called once
+        with patch.dict(user.__grains__, {'kernel': 'Linux'}), \
+                patch.dict(user.__salt__, dunder_salt):
+            ret = user.present('foo', gid=5001)
+            # State should have failed
+            self.assertFalse(ret['result'])
+            # Only one of uid/gid should have been flagged in the comment
+            self.assertEqual(ret['comment'].count('not permitted'), 1)
+
+    def test_present_invalid_uid_gid_change(self):
+        mock_info = MagicMock(side_effect=[
+            {'uid': 5000,
+             'gid': 5000,
+             'groups': ['foo'],
+             'home': '/home/foo',
+             'fullname': 'Foo Bar'}
+        ])
+        dunder_salt = {'user.info': mock_info,
+                       'file.group_to_gid': MagicMock(side_effect=['foo']),
+                       'file.gid_to_group': MagicMock(side_effect=[5000])}
+        # side_effect used because these mocks should only be called once
+        with patch.dict(user.__grains__, {'kernel': 'Linux'}), \
+                patch.dict(user.__salt__, dunder_salt):
+            ret = user.present('foo', uid=5001, gid=5001)
+            # State should have failed
+            self.assertFalse(ret['result'])
+            # Both the uid and gid should have been flagged in the comment
+            self.assertEqual(ret['comment'].count('not permitted'), 2)
+
+    def test_present_uid_gid_change(self):
+        before = {'uid': 5000,
+                  'gid': 5000,
+                  'groups': ['foo'],
+                  'home': '/home/foo',
+                  'fullname': 'Foo Bar'}
+        after = {'uid': 5001,
+                 'gid': 5001,
+                 'groups': ['othergroup'],
+                 'home': '/home/foo',
+                 'fullname': 'Foo Bar'}
+        # user.info should be called 4 times. Once the first time that
+        # _changes() is called, once before and after changes are applied (to
+        # get the before/after for the changes dict, and one last time to
+        # confirm that no changes still need to be made.
+        mock_info = MagicMock(side_effect=[before, before, after, after])
+        mock_group_to_gid = MagicMock(side_effect=['foo', 'othergroup'])
+        mock_gid_to_group = MagicMock(side_effect=[5000, 5001])
+        dunder_salt = {'user.info': mock_info,
+                       'user.chuid': Mock(),
+                       'user.chgid': Mock(),
+                       'file.group_to_gid': mock_group_to_gid,
+                       'file.gid_to_group': mock_gid_to_group}
+        # side_effect used because these mocks should only be called once
+        with patch.dict(user.__grains__, {'kernel': 'Linux'}), \
+                patch.dict(user.__salt__, dunder_salt), \
+                patch.dict(user.__opts__, {'test': False}), \
+                patch('os.path.isdir', MagicMock(return_value=True)):
+            ret = user.present(
+                'foo',
+                uid=5001,
+                gid=5001,
+                allow_uid_change=True,
+                allow_gid_change=True)
+            self.assertEqual(
+                ret,
+                {'comment': 'Updated user foo',
+                 'changes': {'gid': 5001,
+                             'uid': 5001,
+                             'groups': ['othergroup']},
+                 'name': 'foo',
+                 'result': True}
+            )
 
     def test_absent(self):
         '''
@@ -100,3 +212,48 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'comment': 'User salt is not present',
                         'result': True})
             self.assertDictEqual(user.absent('salt'), ret)
+
+    def test_changes(self):
+        '''
+        Test salt.states.user._changes
+        '''
+        mock_info = MagicMock(
+            return_value={
+                'uid': 5000,
+                 'gid': 5000,
+                 'groups': ['foo'],
+                 'home': '/home/foo',
+                 'fullname': 'Foo Bar',
+            }
+        )
+        shadow_info = MagicMock(
+            return_value={
+                'min': 2,
+                'max': 88888,
+                'inact': 77,
+                'warn': 14,
+            }
+        )
+        shadow_hash = MagicMock(return_value='abcd')
+        dunder_salt = {'user.info': mock_info,
+                       'shadow.info': shadow_info,
+                       'shadow.default_hash': shadow_hash,
+                       'file.group_to_gid': MagicMock(side_effect=['foo']),
+                       'file.gid_to_group': MagicMock(side_effect=[5000])}
+
+        def mock_exists(*args):
+            return True
+
+        # side_effect used because these mocks should only be called once
+        with patch.dict(user.__grains__, {'kernel': 'Linux'}), \
+                patch.dict(user.__salt__, dunder_salt), \
+                patch.dict(user.__opts__, {"test": False}), \
+                patch('os.path.isdir', mock_exists):
+            ret = user._changes('foo', maxdays=999999, inactdays=0, warndays=7)
+            assert ret == {
+                'maxdays': 999999,
+                'mindays': 0,
+                'fullname': '',
+                'warndays': 7,
+                'inactdays': 0
+            }

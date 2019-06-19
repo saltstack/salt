@@ -4,7 +4,7 @@ tests for host state
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -14,14 +14,11 @@ class HandleErrorTest(ModuleCase):
     '''
     Validate that ordering works correctly
     '''
-    def test_handle_error(self):
+    def test_function_do_not_return_dictionary_type(self):
         '''
-        Test how an error can be recovered
+        Handling a case when function returns anything but a dictionary type
         '''
-        # without sync_states, the custom state may not be installed
-        # (resulting in :
-        # State salttest.hello found in sls issue-... is unavailable
         ret = self.run_function('state.sls', ['issue-9983-handleerror'])
-        self.assertTrue(
-            'An exception occurred in this state: Traceback'
-            in ret[[a for a in ret][0]]['comment'])
+        self.assertTrue('Data must be a dictionary type' in ret[[a for a in ret][0]]['comment'])
+        self.assertTrue(not ret[[a for a in ret][0]]['result'])
+        self.assertTrue(ret[[a for a in ret][0]]['changes'] == {})

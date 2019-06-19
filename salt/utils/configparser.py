@@ -48,13 +48,11 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
     DEFAULTSECT = 'DEFAULT'
     SPACEINDENT = ' ' * 8
 
-    def __init__(self, defaults=None, dict_type=_default_dict,
-                 allow_no_value=True):
+    def __init__(self, defaults=None, dict_type=_default_dict, allow_no_value=True):
         '''
         Changes default value for allow_no_value from False to True
         '''
-        super(GitConfigParser, self).__init__(
-            defaults, dict_type, allow_no_value)
+        super(GitConfigParser, self).__init__(defaults, dict_type, allow_no_value)
 
     def _read(self, fp, fpname):
         '''
@@ -72,9 +70,7 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
         lineno = 0
         e = None                              # None, or an exception
         while True:
-            line = fp.readline()
-            if six.PY2:
-                line = line.decode(__salt_system_encoding__)
+            line = salt.utils.stringutils.to_unicode(fp.readline())
             if not line:
                 break
             lineno = lineno + 1

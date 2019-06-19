@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import datetime
@@ -229,7 +229,7 @@ deployment1_ret = dict(createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                        description=('{\n'
                                     '    "api_name": "unit test api",\n'
                                     '    "swagger_file": "temp-swagger-sample.yaml",\n'
-                                    '    "swagger_file_md5sum": "693c57997a12a2446bb5c08c793d943c",\n'
+                                    '    "swagger_file_md5sum": "55a948ff90ad80ff747ec91657c7a299",\n'
                                     '    "swagger_info_object": {\n'
                                     '        "description": "salt boto apigateway unit test service",\n'
                                     '        "title": "salt boto apigateway unit test service",\n'
@@ -371,7 +371,7 @@ class TempSwaggerFile(object):
     def __enter__(self):
         self.swaggerfile = 'temp-swagger-sample.yaml'
         with salt.utils.files.fopen(self.swaggerfile, 'w') as fp_:
-            salt.utils.yaml.safe_dump(self.swaggerdict, fp_)
+            salt.utils.yaml.safe_dump(self.swaggerdict, fp_, default_flow_style=False)
         return self.swaggerfile
 
     def __exit__(self, objtype, value, traceback):
@@ -384,7 +384,7 @@ class TempSwaggerFile(object):
             self.swaggerdict['invalid_key'] = 'invalid'
             # remove one of the required keys 'schemes'
             self.swaggerdict.pop('schemes', None)
-            # set swagger version to an unsupported verison 3.0
+            # set swagger version to an unsupported version 3.0
             self.swaggerdict['swagger'] = '3.0'
             # missing info object
             self.swaggerdict.pop('info', None)
@@ -397,7 +397,7 @@ class BotoApiGatewayStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     @classmethod
@@ -406,7 +406,10 @@ class BotoApiGatewayStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         context = {}
-        utils = salt.loader.utils(self.opts, whitelist=['boto', 'boto3'], context=context)
+        utils = salt.loader.utils(
+            self.opts,
+            whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform'],
+            context=context)
         serializers = salt.loader.serializers(self.opts)
         self.funcs = salt.loader.minion_mods(self.opts, context=context, utils=utils, whitelist=['boto_apigateway'])
         self.salt_states = salt.loader.states(opts=self.opts, functions=self.funcs, utils=utils, whitelist=['boto_apigateway'], serializers=serializers)
@@ -1173,7 +1176,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
 
     def test_usage_plan_present_if_IOError_is_raised(self, *args):
         '''
@@ -1185,7 +1188,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
 
     def test_usage_plan_absent_if_describe_fails(self, *args):
         '''
@@ -1248,7 +1251,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
                 self.assertIn('result', result)
                 self.assertEqual(result['result'], False)
                 self.assertIn('comment', result)
-                self.assertEqual(result['comment'], 'Failed to delete usage plan plan_name, {\'error\': \'error\'}')
+                self.assertEqual(result['comment'], 'Failed to delete usage plan plan_name, ' + repr({'error': 'error'}))
                 self.assertIn('changes', result)
                 self.assertEqual(result['changes'], {})
 
@@ -1278,7 +1281,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
 
     def test_usage_plan_absent_if_IOError_is_raised(self, *args):
         '''
@@ -1290,7 +1293,7 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -1410,7 +1413,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
             self.assertIn('changes', result)
             self.assertEqual(result['changes'], {})
 
@@ -1424,7 +1427,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
             self.assertIn('changes', result)
             self.assertEqual(result['changes'], {})
 
@@ -1540,7 +1543,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
             self.assertIn('changes', result)
             self.assertEqual(result['changes'], {})
 
@@ -1554,6 +1557,6 @@ class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase
             self.assertIn('result', result)
             self.assertEqual(result['result'], False)
             self.assertIn('comment', result)
-            self.assertEqual(result['comment'], "('error',)")
+            self.assertEqual(result['comment'], repr(('error',)))
             self.assertIn('changes', result)
             self.assertEqual(result['changes'], {})

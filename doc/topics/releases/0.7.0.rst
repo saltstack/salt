@@ -50,10 +50,6 @@ to Matthias Teege for tracking down some configuration bugs!
 
 Salt can be downloaded from the following locations;
 
-Source Tarball:
-
-:download:`salt-0.7.0.tar.gz`
-
 Arch Linux Package:
 
 https://aur.archlinux.org/packages/salt-git/

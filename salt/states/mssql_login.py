@@ -12,7 +12,7 @@ and manage SQL Server Logins
       mssql_login.present
         - domain: mydomain
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 
 
@@ -26,7 +26,7 @@ def __virtual__():
 def _normalize_options(options):
     if type(options) in [dict, collections.OrderedDict]:
         return ['{0}={1}'.format(k, v) for k, v in options.items()]
-    if type(options) is list and (not len(options) or type(options[0]) is str):
+    if type(options) is list and (not options or type(options[0]) is str):
         return options
     # Invalid options
     if type(options) is not list or type(options[0]) not in [dict, collections.OrderedDict]:

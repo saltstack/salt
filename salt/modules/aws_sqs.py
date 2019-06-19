@@ -4,7 +4,7 @@ Support for the Amazon Simple Queue Service.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -103,7 +103,7 @@ def receive_message(queue, region, num=1, opts=None, user=None):
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
     if queue not in url_map:
-        log.info('"{0}" queue does not exist.'.format(queue))
+        log.info('"%s" queue does not exist.', queue)
         return ret
 
     out = _run_aws('receive-message', region, opts, user, queue=url_map[queue],
@@ -144,7 +144,7 @@ def delete_message(queue, region, receipthandle, opts=None, user=None):
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
     if queue not in url_map:
-        log.info('"{0}" queue does not exist.'.format(queue))
+        log.info('"%s" queue does not exist.', queue)
         return False
 
     out = _run_aws('delete-message', region, opts, user,
@@ -237,8 +237,7 @@ def delete_queue(name, region, opts=None, user=None):
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
 
-    logger = logging.getLogger(__name__)
-    logger.debug('map ' + six.text_type(url_map))
+    log.debug('map %s', url_map)
     if name in url_map:
         delete = {'queue-url': url_map[name]}
 

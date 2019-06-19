@@ -64,18 +64,18 @@ config:
               - binlog_cache_size: 32768
               - binlog_checksum: CRC32
             - region: eu-west-1
-.. note::
 
 :depends: boto3
 
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
 # Import Salt Libs
+from salt.ext import six
 from salt.exceptions import SaltInvocationError
 import salt.utils.data
 
@@ -412,7 +412,7 @@ def replica_present(name, source, db_instance_class=None,
         pmg_name = __salt__['boto_rds.describe_db_instances'](name=name,
               jmespath=jmespath, region=region, key=key, keyid=keyid,
               profile=profile)
-        pmg_name = pmg_name[0] if len(pmg_name) else None
+        pmg_name = pmg_name[0] if pmg_name else None
         if pmg_name != db_parameter_group_name:
             modified = __salt__['boto_rds.modify_db_instance'](
                   name=name, db_parameter_group_name=db_parameter_group_name,
@@ -572,7 +572,7 @@ def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
 
     current = __salt__['boto_rds.describe_db_instances'](
             name=name, region=region, key=key, keyid=keyid, profile=profile)
-    if not len(current):
+    if not current:
         ret['result'] = True
         ret['comment'] = '{0} RDS already absent.'.format(name)
         return ret
@@ -700,18 +700,23 @@ def parameter_present(name, db_parameter_group_family, description, parameters=N
                 if type(value) is bool:
                     params[k] = 'on' if value else 'off'
                 else:
-                    params[k] = str(value)
-        logging.debug('Parameters from user are : {0}.'.format(params))
+                    params[k] = six.text_type(value)
+        log.debug('Parameters from user are : %s.', params)
         options = __salt__['boto_rds.describe_parameters'](name=name, region=region, key=key, keyid=keyid, profile=profile)
         if not options.get('result'):
             ret['result'] = False
             ret['comment'] = os.linesep.join([ret['comment'], 'Faled to get parameters for group  {0}.'.format(name)])
             return ret
         for parameter in options['parameters'].values():
-            if parameter['ParameterName'] in params and params.get(parameter['ParameterName']) != str(parameter['ParameterValue']):
-                logging.debug('Values that are being compared for {0} are {1}:{2} .'.format(parameter['ParameterName'], params.get(parameter['ParameterName']), parameter['ParameterValue']))
+            if parameter['ParameterName'] in params and params.get(parameter['ParameterName']) != six.text_type(parameter['ParameterValue']):
+                log.debug(
+                    'Values that are being compared for %s are %s:%s.',
+                    parameter['ParameterName'],
+                    params.get(parameter['ParameterName']),
+                    parameter['ParameterValue']
+                )
                 changed[parameter['ParameterName']] = params.get(parameter['ParameterName'])
-        if len(changed) > 0:
+        if changed:
             if __opts__['test']:
                 ret['comment'] = os.linesep.join([ret['comment'], 'Parameters {0} for group {1} are set to be changed.'.format(changed, name)])
                 ret['result'] = None

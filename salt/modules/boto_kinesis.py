@@ -46,12 +46,15 @@ Connection module for Amazon Kinesis
 # pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 import random
 import sys
+
+# Import Salt libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+import salt.utils.versions
 
 # Import third party libs
 # pylint: disable=unused-import
@@ -73,10 +76,11 @@ def __virtual__():
     '''
     Only load if boto3 libraries exist.
     '''
-    if not HAS_BOTO:
-        return False, 'The boto_kinesis module could not be loaded: boto libraries not found.'
-    __utils__['boto3.assign_funcs'](__name__, 'kinesis')
-    return __virtualname__
+    has_boto_reqs = salt.utils.versions.check_boto_reqs()
+    if has_boto_reqs is True:
+        __utils__['boto3.assign_funcs'](__name__, 'kinesis')
+        return __virtualname__
+    return has_boto_reqs
 
 
 def _get_basic_stream(stream_name, conn):
@@ -300,7 +304,7 @@ def get_info_for_reshard(stream_details):
         shard_id = shard["ShardId"]
         if "EndingSequenceNumber" in shard["SequenceNumberRange"]:
             # EndingSequenceNumber is null for open shards, so this shard must be closed
-            log.debug("skipping closed shard {0}".format(shard_id))
+            log.debug("skipping closed shard %s", shard_id)
             continue
         stream_details["OpenShards"].append(shard)
         shard["HashKeyRange"]["StartingHashKey"] = long_int(
@@ -359,8 +363,8 @@ def reshard(stream_name, desired_size, force=False,
     stream_details = stream_response['result']["StreamDescription"]
     min_hash_key, max_hash_key, stream_details = get_info_for_reshard(stream_details)
 
-    log.debug("found {0} open shards, min_hash_key {1} max_hash_key {2}".format(
-        len(stream_details["OpenShards"]), min_hash_key, max_hash_key))
+    log.debug("found %s open shards, min_hash_key %s max_hash_key %s",
+              len(stream_details["OpenShards"]), min_hash_key, max_hash_key)
 
     # find the first open shard that doesn't match the desired pattern. When we find it,
     # either split or merge (depending on if it's too big or too small), and then return.
@@ -368,7 +372,7 @@ def reshard(stream_name, desired_size, force=False,
         shard_id = shard["ShardId"]
         if "EndingSequenceNumber" in shard["SequenceNumberRange"]:
             # something went wrong, there's a closed shard in our open shard list
-            log.debug("this should never happen! closed shard {0}".format(shard_id))
+            log.debug("this should never happen! closed shard %s", shard_id)
             continue
 
         starting_hash_key = shard["HashKeyRange"]["StartingHashKey"]
@@ -383,12 +387,16 @@ def reshard(stream_name, desired_size, force=False,
         if expected_ending_hash_key > max_hash_key:
             expected_ending_hash_key = max_hash_key
 
-        log.debug("Shard {0} ({1}) should start at {2}: {3}".format(shard_num, shard_id, expected_starting_hash_key,
-                                                                    starting_hash_key == expected_starting_hash_key
-                                                                    ))
-        log.debug("Shard {0} ({1}) should end at {2}: {3}".format(shard_num, shard_id, expected_ending_hash_key,
-                                                                  ending_hash_key == expected_ending_hash_key
-                                                                  ))
+        log.debug(
+            "Shard %s (%s) should start at %s: %s",
+            shard_num, shard_id, expected_starting_hash_key,
+            starting_hash_key == expected_starting_hash_key
+        )
+        log.debug(
+            "Shard %s (%s) should end at %s: %s",
+            shard_num, shard_id, expected_ending_hash_key,
+            ending_hash_key == expected_ending_hash_key
+        )
 
         if starting_hash_key != expected_starting_hash_key:
             r['error'] = "starting hash keys mismatch, don't know what to do!"
@@ -400,16 +408,16 @@ def reshard(stream_name, desired_size, force=False,
         if ending_hash_key > expected_ending_hash_key + 1:
             # split at expected_ending_hash_key
             if force:
-                log.debug("{0} should end at {1}, actual {2}, splitting".format(
-                    shard_id, expected_ending_hash_key, ending_hash_key))
+                log.debug("%s should end at %s, actual %s, splitting",
+                          shard_id, expected_ending_hash_key, ending_hash_key)
                 r = _execute_with_retries(conn,
                                           "split_shard",
                                           StreamName=stream_name,
                                           ShardToSplit=shard_id,
-                                          NewStartingHashKey=str(expected_ending_hash_key + 1))
+                                          NewStartingHashKey=str(expected_ending_hash_key + 1))  # future lint: disable=blacklisted-function
             else:
-                log.debug("{0} should end at {1}, actual {2} would split".format(
-                    shard_id, expected_ending_hash_key, ending_hash_key))
+                log.debug("%s should end at %s, actual %s would split",
+                          shard_id, expected_ending_hash_key, ending_hash_key)
 
             if 'error' not in r:
                 r['result'] = True
@@ -421,16 +429,16 @@ def reshard(stream_name, desired_size, force=False,
                 r['error'] = "failed to find next shard after {0}".format(shard_id)
                 return r
             if force:
-                log.debug("{0} should continue past {1}, merging with {2}".format(
-                    shard_id, ending_hash_key, next_shard_id))
+                log.debug("%s should continue past %s, merging with %s",
+                          shard_id, ending_hash_key, next_shard_id)
                 r = _execute_with_retries(conn,
                                           "merge_shards",
                                           StreamName=stream_name,
                                           ShardToMerge=shard_id,
                                           AdjacentShardToMerge=next_shard_id)
             else:
-                log.debug("{0} should continue past {1}, would merge with {2}".format(
-                    shard_id, ending_hash_key, next_shard_id))
+                log.debug("%s should continue past %s, would merge with %s",
+                          shard_id, ending_hash_key, next_shard_id)
 
             if 'error' not in r:
                 r['result'] = True
@@ -511,7 +519,7 @@ def _execute_with_retries(conn, function, **kwargs):
     max_attempts = 18
     max_retry_delay = 10
     for attempt in range(max_attempts):
-        log.info("attempt: {0} function: {1}".format(attempt, function))
+        log.info("attempt: %s function: %s", attempt, function)
         try:
             fn = getattr(conn, function)
             r['result'] = fn(**kwargs)
@@ -521,7 +529,7 @@ def _execute_with_retries(conn, function, **kwargs):
             if "LimitExceededException" in error_code or "ResourceInUseException" in error_code:
                 # could be rate limited by AWS or another command is blocking,
                 # retry with exponential backoff
-                log.debug("Retrying due to AWS exception {0}".format(e))
+                log.debug("Retrying due to AWS exception", exc_info=True)
                 time.sleep(_jittered_backoff(attempt, max_retry_delay))
             else:
                 # ResourceNotFoundException or InvalidArgumentException

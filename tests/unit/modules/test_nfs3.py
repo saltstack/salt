@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
+    :codeauthor: Rahul Handay <rahulha@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
+    MagicMock,
     mock_open,
     patch,
     NO_MOCK,
@@ -32,21 +33,21 @@ class NfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test for List configured exports
         '''
-        file_d = '\n'.join(['A B1(23'])
-        with patch('salt.utils.files.fopen',
-                   mock_open(read_data=file_d), create=True) as mfi:
-            mfi.return_value.__iter__.return_value = file_d.splitlines()
-            self.assertDictEqual(nfs3.list_exports(),
-                                 {'A': [{'hosts': 'B1', 'options': ['23']}]})
+        with patch('salt.utils.files.fopen', mock_open(read_data='A B1(23')):
+            exports = nfs3.list_exports()
+            assert exports == {'A': [{'hosts': 'B1', 'options': ['23']}]}, exports
 
     def test_del_export(self):
         '''
         Test for Remove an export
         '''
-        with patch.object(nfs3,
-                          'list_exports',
-                          return_value={'A':
-                                        [{'hosts':
-                                          ['B1'], 'options': ['23']}]}):
-            with patch.object(nfs3, '_write_exports', return_value=None):
-                self.assertDictEqual(nfs3.del_export(path='A'), {})
+        list_exports_mock = MagicMock(return_value={
+            'A': [
+                {'hosts': ['B1'],
+                 'options': ['23']},
+            ],
+        })
+        with patch.object(nfs3, 'list_exports', list_exports_mock), \
+                patch.object(nfs3, '_write_exports', MagicMock(return_value=None)):
+            result = nfs3.del_export(path='A')
+            assert result == {}, result

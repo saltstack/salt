@@ -8,12 +8,13 @@ See http://code.google.com/p/psutil.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import time
 import datetime
 import re
 
 # Import salt libs
+import salt.utils.data
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
@@ -53,9 +54,9 @@ def _get_proc_cmdline(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.cmdline() if PSUTIL2 else proc.cmdline
+        return salt.utils.data.decode(proc.cmdline() if PSUTIL2 else proc.cmdline)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
-        return ''
+        return []
 
 
 def _get_proc_create_time(proc):
@@ -65,7 +66,7 @@ def _get_proc_create_time(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.create_time() if PSUTIL2 else proc.create_time
+        return salt.utils.data.decode(proc.create_time() if PSUTIL2 else proc.create_time)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return None
 
@@ -77,7 +78,7 @@ def _get_proc_name(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.name() if PSUTIL2 else proc.name
+        return salt.utils.data.decode(proc.name() if PSUTIL2 else proc.name)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return []
 
@@ -89,7 +90,7 @@ def _get_proc_status(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.status() if PSUTIL2 else proc.status
+        return salt.utils.data.decode(proc.status() if PSUTIL2 else proc.status)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return None
 
@@ -101,7 +102,7 @@ def _get_proc_username(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.username() if PSUTIL2 else proc.username
+        return salt.utils.data.decode(proc.username() if PSUTIL2 else proc.username)
     except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError):
         return None
 
@@ -156,7 +157,7 @@ def top(num_processes=5, interval=3):
     for idx, (diff, process) in enumerate(reversed(sorted(usage))):
         if num_processes and idx >= num_processes:
             break
-        if len(_get_proc_cmdline(process)) == 0:
+        if not _get_proc_cmdline(process):
             cmdline = _get_proc_name(process)
         else:
             cmdline = _get_proc_cmdline(process)
@@ -301,7 +302,7 @@ def pkill(pattern, user=None, signal=15, full=False):
         return {'killed': killed}
 
 
-def pgrep(pattern, user=None, full=False):
+def pgrep(pattern, user=None, full=False, pattern_is_regex=False):
     '''
     Return the pids for processes matching a pattern.
 
@@ -322,6 +323,12 @@ def pgrep(pattern, user=None, full=False):
         A boolean value indicating whether only the name of the command or
         the full command line should be matched against the pattern.
 
+    pattern_is_regex
+        This flag enables ps.pgrep to mirror the regex search functionality
+         found in the pgrep command line utility.
+
+        .. versionadded:: Neon
+
     **Examples:**
 
     Find all httpd processes on all 'www' minions:
@@ -336,14 +343,28 @@ def pgrep(pattern, user=None, full=False):
 
         salt '*' ps.pgrep bash user=tom
     '''
+    procs = []
+
+    if pattern_is_regex:
+        pattern = re.compile(str(pattern))
 
     procs = []
     for proc in psutil.process_iter():
-        name_match = pattern in ' '.join(_get_proc_cmdline(proc)) if full \
-            else pattern in _get_proc_name(proc)
+        if full:
+            process_line = ' '.join(_get_proc_cmdline(proc))
+        else:
+            process_line = _get_proc_name(proc)
+
+        if pattern_is_regex:
+            name_match = re.search(pattern, process_line)
+        else:
+            name_match = pattern in process_line
+
         user_match = True if user is None else user == _get_proc_username(proc)
+
         if name_match and user_match:
             procs.append(_get_proc_pid(proc))
+
     return procs or None
 
 
@@ -649,7 +670,7 @@ def lsof(name):
 
         salt '*' ps.lsof apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     lsof_infos = __salt__['cmd.run']("lsof -c " + sanitize_name)
     ret = []
     ret.extend([sanitize_name, lsof_infos])
@@ -667,7 +688,7 @@ def netstat(name):
 
         salt '*' ps.netstat apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     netstat_infos = __salt__['cmd.run']("netstat -nap")
     found_infos = []
     ret = []
@@ -692,7 +713,7 @@ def ss(name):
     .. versionadded:: 2016.11.6
 
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     ss_infos = __salt__['cmd.run']("ss -neap")
     found_infos = []
     ret = []
@@ -715,7 +736,7 @@ def psaux(name):
 
         salt '*' ps.psaux www-data.+apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     pattern = re.compile(sanitize_name)
     salt_exception_pattern = re.compile("salt.+ps.psaux.+")
     ps_aux = __salt__['cmd.run']("ps aux")
@@ -729,7 +750,7 @@ def psaux(name):
             if not salt_exception_pattern.search(info):
                 nb_lines += 1
                 found_infos.append(info)
-    pid_count = str(nb_lines) + " occurence(s)."
+    pid_count = six.text_type(nb_lines) + " occurence(s)."
     ret = []
     ret.extend([sanitize_name, found_infos, pid_count])
     return ret

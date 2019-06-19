@@ -4,14 +4,17 @@ Manage HP ILO
 
 :depends: hponcfg (SmartStart Scripting Toolkit Linux Edition)
 '''
-from __future__ import absolute_import
 
-from salt._compat import ElementTree as ET
-import salt.utils.path
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import os
 import tempfile
 
-import logging
+# Import Salt libs
+from salt._compat import ElementTree as ET
+from salt.ext import six
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +40,7 @@ def __execute_cmd(name, xml):
     if not os.path.isdir(tmp_dir):
         os.mkdir(tmp_dir)
     with tempfile.NamedTemporaryFile(dir=tmp_dir,
-                                     prefix=name+str(os.getpid()),
+                                     prefix=name + six.text_type(os.getpid()),
                                      suffix='.xml',
                                      delete=False) as fh:
         tmpfilename = fh.name
@@ -59,7 +62,7 @@ def __execute_cmd(name, xml):
             # Make sure dict keys don't collide
             if ret[name.replace('_', ' ')].get(i.tag, False):
                 ret[name.replace('_', ' ')].update(
-                    {i.tag + '_' + str(id_num): i.attrib}
+                    {i.tag + '_' + six.text_type(id_num): i.attrib}
                 )
                 id_num += 1
             else:

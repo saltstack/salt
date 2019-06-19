@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Lukas Raska <lukas@raska.me>`
+    :codeauthor: Lukas Raska <lukas@raska.me>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -187,7 +187,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': "Alias foo for index bar does not exist and will be created", 'result': None, 'changes': {'new': {"test2": "key"}}})
                 self.assertDictEqual(elasticsearch.alias_present(name, index, {"test2": "key"}), ret)
 
-                ret.update({'comment': "Alias foo for index bar exists with wrong configuration and will be overriden", 'result': None, 'changes': {'old': {"test": "key"}, 'new': {"test2": "key"}}})
+                ret.update({'comment': "Alias foo for index bar exists with wrong configuration and will be overridden", 'result': None, 'changes': {'old': {"test": "key"}, 'new': {"test2": "key"}}})
                 self.assertDictEqual(elasticsearch.alias_present(name, index, {"test2": "key"}), ret)
 
             ret.update({'comment': '', 'result': False, 'changes': {}})
@@ -278,6 +278,68 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'comment': '', 'result': False, 'changes': {}})
             self.assertDictEqual(elasticsearch.index_template_present(name, {}), ret)
 
+    def test_index_template_present_check_definition(self):
+        '''
+        Test to manage a elasticsearch index template.
+        with check_definition set
+        '''
+        name = 'foo'
+
+        index_template = {name: {"test2": "key",
+                                 "aliases": {},
+                                 "mappings": {},
+                                 "settings": {}}}
+
+        expected = {'name': name,
+                    'result': True,
+                    'comment': 'Index template foo is already present and up to date',
+                    'changes': {}}
+
+        mock_exists = MagicMock(side_effect=[True])
+        mock_create = MagicMock(side_effect=[True])
+        mock_get = MagicMock(side_effect=[index_template])
+
+        with patch.dict(elasticsearch.__salt__, {'elasticsearch.index_template_get': mock_get,
+                                             'elasticsearch.index_template_create': mock_create,
+                                             'elasticsearch.index_template_exists': mock_exists}):
+
+            ret = elasticsearch.index_template_present(name,
+                                                      {"test2": "key",
+                                                       "aliases": {}},
+                                                      check_definition=True)
+            self.assertDictEqual(expected, ret)
+
+    def test_index_template_present_check_definition_alias_not_empty(self):
+        '''
+        Test to manage a elasticsearch index template.
+        with check_definition set and alias is not empty
+        '''
+        name = 'foo'
+
+        index_template = {name: {"test2": "key",
+                                 "aliases": {},
+                                 "mappings": {},
+                                 "settings": {}}}
+
+        expected = {'name': name,
+                    'result': True,
+                    'comment': 'Successfully updated index template foo',
+                    'changes': {'new': {'aliases': {'alias1': {}}}, 'old': {'aliases': {}}}}
+
+        mock_exists = MagicMock(side_effect=[True])
+        mock_create = MagicMock(side_effect=[True])
+        mock_get = MagicMock(side_effect=[index_template])
+
+        with patch.dict(elasticsearch.__salt__, {'elasticsearch.index_template_get': mock_get,
+                                             'elasticsearch.index_template_create': mock_create,
+                                             'elasticsearch.index_template_exists': mock_exists}):
+
+            ret = elasticsearch.index_template_present(name,
+                                                      {"test2": "key",
+                                                       "aliases": {'alias1': {}}},
+                                                      check_definition=True)
+            self.assertDictEqual(expected, ret)
+
     # 'pipeline_absent' function tests: 1
 
     def test_pipeline_absent(self):
@@ -352,7 +414,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': "Pipeline foo does not exist and will be created", 'result': None, 'changes': {'new': {"test2": "key"}}})
                 self.assertDictEqual(elasticsearch.pipeline_present(name, {"test2": "key"}), ret)
 
-                ret.update({'comment': "Pipeline foo exists with wrong configuration and will be overriden", 'result': None, 'changes': {'old': {"test": "key"}, 'new': {"test2": "key"}}})
+                ret.update({'comment': "Pipeline foo exists with wrong configuration and will be overridden", 'result': None, 'changes': {'old': {"test": "key"}, 'new': {"test2": "key"}}})
                 self.assertDictEqual(elasticsearch.pipeline_present(name, {"test2": "key"}), ret)
 
             ret.update({'comment': '', 'result': False, 'changes': {}})
@@ -434,7 +496,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': "Search template foo does not exist and will be created", 'result': None, 'changes': {'new': {"test2": "key"}}})
                 self.assertDictEqual(elasticsearch.search_template_present(name, {"test2": "key"}), ret)
 
-                ret.update({'comment': "Search template foo exists with wrong configuration and will be overriden", 'result': None, 'changes': {'old': {"test": "key"}, 'new': {"test2": "key"}}})
+                ret.update({'comment': "Search template foo exists with wrong configuration and will be overridden", 'result': None, 'changes': {'old': {"test": "key"}, 'new': {"test2": "key"}}})
                 self.assertDictEqual(elasticsearch.search_template_present(name, {"test2": "key"}), ret)
 
             ret.update({'comment': '', 'result': False, 'changes': {}})

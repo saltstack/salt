@@ -52,7 +52,7 @@ The dependencies listed above can be installed via package or pip.
 # pylint: disable=W0106
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -60,8 +60,8 @@ from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error
 import salt.utils.compat
 import salt.utils.json
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -86,18 +86,12 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto3_version = '1.2.1'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    if not HAS_BOTO:
-        return (False, 'The boto_s3_bucket module could not be loaded: '
-                'boto libraries not found')
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_cognitoidentity module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto3_version))
-    else:
-        return True
+    return salt.utils.versions.check_boto_reqs(
+        boto3_ver='1.2.1'
+    )
 
 
 def __init__(opts):
@@ -166,14 +160,14 @@ def create(Bucket,
                     'GrantRead', 'GrantReadACP',
                     'GrantWrite', 'GrantWriteACP'):
             if locals()[arg] is not None:
-                kwargs[arg] = str(locals()[arg])
+                kwargs[arg] = str(locals()[arg])  # future lint: disable=blacklisted-function
         if LocationConstraint:
             kwargs['CreateBucketConfiguration'] = {'LocationConstraint': LocationConstraint}
         location = conn.create_bucket(Bucket=Bucket,
                                   **kwargs)
         conn.get_waiter("bucket_exists").wait(Bucket=Bucket)
         if location:
-            log.info('The newly created bucket name is located at {0}'.format(location['Location']))
+            log.info('The newly created bucket name is located at %s', location['Location'])
 
             return {'created': True, 'name': Bucket, 'Location': location['Location']}
         else:
@@ -249,7 +243,7 @@ def delete_objects(Bucket, Delete, MFA=None, RequestPayer=None,
         except ClientError as e:
             return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
 
-    if len(failed):
+    if failed:
         return {'deleted': False, 'failed': failed}
     else:
         return {'deleted': True}
@@ -342,11 +336,11 @@ def empty(Bucket, MFA=None, RequestPayer=None, region=None, key=None,
     Delete = {}
     Delete['Objects'] = [{'Key': v['Key'], 'VersionId': v['VersionId']} for v in stuff.get('Versions', [])]
     Delete['Objects'] += [{'Key': v['Key'], 'VersionId': v['VersionId']} for v in stuff.get('DeleteMarkers', [])]
-    if len(Delete['Objects']):
+    if Delete['Objects']:
         ret = delete_objects(Bucket, Delete, MFA=MFA, RequestPayer=RequestPayer,
                              region=region, key=key, keyid=keyid, profile=profile)
         failed = ret.get('failed', [])
-        if len(failed):
+        if failed:
             return {'deleted': False, 'failed': ret[failed]}
     return {'deleted': True}
 
@@ -490,7 +484,7 @@ def put_acl(Bucket,
                     'GrantRead', 'GrantReadACP',
                     'GrantWrite', 'GrantWriteACP'):
             if locals()[arg] is not None:
-                kwargs[arg] = str(locals()[arg])
+                kwargs[arg] = str(locals()[arg])  # future lint: disable=blacklisted-function
         conn.put_bucket_acl(Bucket=Bucket, **kwargs)
         return {'updated': True, 'name': Bucket}
     except ClientError as e:
@@ -770,9 +764,9 @@ def put_tagging(Bucket,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
         for k, v in six.iteritems(kwargs):
-            if str(k).startswith('__'):
+            if six.text_type(k).startswith('__'):
                 continue
-            tagslist.append({'Key': str(k), 'Value': str(v)})
+            tagslist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
         conn.put_bucket_tagging(Bucket=Bucket, Tagging={
                 'TagSet': tagslist,
         })

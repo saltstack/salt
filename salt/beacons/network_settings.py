@@ -5,7 +5,7 @@ Beacon to monitor network adapter setting changes on Linux
 .. versionadded:: 2016.3.0
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 # Import third party libs
 try:
     from pyroute2 import IPDB
@@ -58,14 +58,18 @@ def validate(config):
         _config = {}
         list(map(_config.update, config))
 
-        for item in _config.get('interfaces', {}):
+        interfaces = _config.get('interfaces', {})
+        if isinstance(interfaces, list):
+            #Old syntax
+            return False, ('interfaces section for network_settings beacon'
+                           ' must be a dictionary.')
+
+        for item in interfaces:
             if not isinstance(_config['interfaces'][item], dict):
-                return False, ('Configuration for network_settings beacon '
-                               ' must be a list of dictionaries.')
-            else:
-                if not all(j in ATTRS for j in _config['interfaces'][item]):
-                    return False, ('Invalid configuration item in Beacon '
-                                   'configuration.')
+                return False, ('Interface attributes for network_settings beacon'
+                               ' must be a dictionary.')
+            if not all(j in ATTRS for j in _config['interfaces'][item]):
+                return False, ('Invalid attributes in beacon configuration.')
     return True, 'Valid beacon configuration'
 
 
@@ -103,12 +107,12 @@ def beacon(config):
         beacons:
           network_settings:
             - interfaces:
-                - eth0:
-                    ipaddr:
-                    promiscuity:
-                      onvalue: 1
-                - eth1:
-                    linkmode:
+                eth0:
+                  ipaddr:
+                  promiscuity:
+                    onvalue: 1
+                eth1:
+                  linkmode:
 
     The config above will check for value changes on eth0 ipaddr and eth1 linkmode. It will also
     emit if the promiscuity value changes to 1.
@@ -125,9 +129,9 @@ def beacon(config):
           network_settings:
             - coalesce: True
             - interfaces:
-                - eth0:
-                    ipaddr:
-                    promiscuity:
+                eth0:
+                  ipaddr:
+                  promiscuity:
 
     '''
     _config = {}
@@ -150,7 +154,7 @@ def beacon(config):
         coalesce = True
         changes = {}
 
-    log.debug('_stats {}'.format(_stats))
+    log.debug('_stats %s', _stats)
     # Get list of interfaces included in config that are registered in the
     # system, including interfaces defined by wildcards (eth*, wlan*)
     for interface in _config.get('interfaces', {}):
@@ -159,26 +163,23 @@ def beacon(config):
         else:
             # No direct match, try with * wildcard regexp
             interface_regexp = interface.replace('*', '[0-9]+')
-            for interface in _stats:
-                match = re.search(interface_regexp, interface)
+            for _interface in _stats:
+                match = re.search(interface_regexp, _interface)
                 if match:
                     interfaces.append(match.group())
-                    expanded_config[match.group()] = config['interfaces'][interface]
+                    expanded_config[match.group()] = _config['interfaces'][interface]
 
     if expanded_config:
-        config.update(expanded_config)
+        _config['interfaces'].update(expanded_config)
 
-        # config updated so update _config
-        list(map(_config.update, config))
-
-    log.debug('interfaces {}'.format(interfaces))
+    log.debug('interfaces %s', interfaces)
     for interface in interfaces:
         _send_event = False
         _diff_stats = _stats[interface] - LAST_STATS[interface]
         _ret_diff = {}
         interface_config = _config['interfaces'][interface]
 
-        log.debug('_diff_stats {}'.format(_diff_stats))
+        log.debug('_diff_stats %s', _diff_stats)
         if _diff_stats:
             _diff_stats_dict = {}
             LAST_STATS[interface] = _stats[interface]

@@ -4,7 +4,10 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
+import logging
+
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -17,172 +20,187 @@ from tests.support.mock import (
 )
 import salt.modules.libcloud_compute as libcloud_compute
 
-from libcloud.compute.base import (
-    BaseDriver, Node,
-    NodeSize, NodeState, NodeLocation,
-    StorageVolume, StorageVolumeState,
-    VolumeSnapshot, NodeImage, KeyPair)
+REQUIRED_LIBCLOUD_VERSION = '2.0.0'
+try:
+    import libcloud
+    from libcloud.compute.base import (
+        BaseDriver, Node,
+        NodeSize, NodeState, NodeLocation,
+        StorageVolume, StorageVolumeState,
+        VolumeSnapshot, NodeImage, KeyPair)
+    if hasattr(libcloud, '__version__') and _LooseVersion(libcloud.__version__) < _LooseVersion(REQUIRED_LIBCLOUD_VERSION):
+        raise ImportError()
+    logging.getLogger('libcloud').setLevel(logging.CRITICAL)
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
 
 
-class MockComputeDriver(BaseDriver):
-    def __init__(self):
-        self._TEST_SIZE = NodeSize(
-            id='test_id', name='test_size',
-            ram=4096, disk=10240, bandwidth=100000, price=0,
-            driver=self)
-        self._TEST_NODE = Node(
-            id='test_id', name='test_node',
-            state=NodeState.RUNNING, public_ips=['1.2.3.4'],
-            private_ips=['2.3.4.5'], driver=self,
-            size=self._TEST_SIZE, extra={
-                'ex_key': 'ex_value'
-            })
-        self._TEST_LOCATION = NodeLocation(
-            id='test_location',
-            name='location1',
-            country='Australia',
-            driver=self)
-        self._TEST_VOLUME = StorageVolume(
-            id='vol1',
-            name='vol_name',
-            size=40960,
-            driver=self,
-            state=StorageVolumeState.AVAILABLE,
-            extra={
-                'ex_key': 'ex_value'
-            }
-        )
-        self._TEST_VOLUME_SNAPSHOT = VolumeSnapshot(
-            id='snap1',
-            size=80960,
-            driver=self
-        )
-        self._TEST_IMAGE = NodeImage(
-            id='image1',
-            name='test_image',
-            extra={
-                'ex_key': 'ex_value'
-            },
-            driver=self
-        )
-        self._TEST_KEY_PAIR = KeyPair(
-            name='test_key',
-            fingerprint='abc123',
-            public_key='pub123',
-            private_key='priv123',
-            driver=self,
-            extra={
-                'ex_key': 'ex_value'
-            }
-        )
+if HAS_LIBCLOUD:
+    class MockComputeDriver(BaseDriver):
+        def __init__(self):  # pylint: disable=W0231
+            self._TEST_SIZE = NodeSize(
+                id='test_id', name='test_size',
+                ram=4096, disk=10240, bandwidth=100000, price=0,
+                driver=self)
+            self._TEST_NODE = Node(
+                id='test_id', name='test_node',
+                state=NodeState.RUNNING, public_ips=['1.2.3.4'],
+                private_ips=['2.3.4.5'], driver=self,
+                size=self._TEST_SIZE, extra={
+                    'ex_key': 'ex_value'
+                })
+            self._TEST_LOCATION = NodeLocation(
+                id='test_location',
+                name='location1',
+                country='Australia',
+                driver=self)
+            self._TEST_VOLUME = StorageVolume(
+                id='vol1',
+                name='vol_name',
+                size=40960,
+                driver=self,
+                state=StorageVolumeState.AVAILABLE,
+                extra={
+                    'ex_key': 'ex_value'
+                }
+            )
+            self._TEST_VOLUME_SNAPSHOT = VolumeSnapshot(
+                id='snap1',
+                size=80960,
+                driver=self
+            )
+            self._TEST_IMAGE = NodeImage(
+                id='image1',
+                name='test_image',
+                extra={
+                    'ex_key': 'ex_value'
+                },
+                driver=self
+            )
+            self._TEST_KEY_PAIR = KeyPair(
+                name='test_key',
+                fingerprint='abc123',
+                public_key='pub123',
+                private_key='priv123',
+                driver=self,
+                extra={
+                    'ex_key': 'ex_value'
+                }
+            )
 
-    def list_nodes(self):
-        return [self._TEST_NODE]
+        def list_nodes(self):
+            return [self._TEST_NODE]
 
-    def list_sizes(self, location=None):
-        if location:
-            assert location.id == 'test_location'
-        return [self._TEST_SIZE]
+        def list_sizes(self, location=None):
+            if location:
+                assert location.id == 'test_location'
+            return [self._TEST_SIZE]
 
-    def list_locations(self):
-        return [self._TEST_LOCATION]
+        def list_locations(self):
+            return [self._TEST_LOCATION]
 
-    def reboot_node(self, node):
-        assert node.id == 'test_id'
-        return True
+        def reboot_node(self, node):
+            assert node.id == 'test_id'
+            return True
 
-    def destroy_node(self, node):
-        assert node.id == 'test_id'
-        return True
+        def destroy_node(self, node):
+            assert node.id == 'test_id'
+            return True
 
-    def list_volumes(self):
-        return [self._TEST_VOLUME]
+        def list_volumes(self):
+            return [self._TEST_VOLUME]
 
-    def list_volume_snapshots(self, volume):
-        assert volume.id == 'vol1'
-        return [self._TEST_VOLUME_SNAPSHOT]
+        def list_volume_snapshots(self, volume):
+            assert volume.id == 'vol1'
+            return [self._TEST_VOLUME_SNAPSHOT]
 
-    def create_volume(self, size, name, location=None, snapshot=None):
-        assert size == 9000
-        assert name == 'test_new_volume'
-        if location:
-            assert location.country == 'Australia'
-        return self._TEST_VOLUME
+        def create_volume(self, size, name, location=None, snapshot=None):
+            assert size == 9000
+            assert name == 'test_new_volume'
+            if location:
+                assert location.country == 'Australia'
+            return self._TEST_VOLUME
 
-    def create_volume_snapshot(self, volume, name=None):
-        assert volume.id == 'vol1'
-        if name:
-            assert name == 'test_snapshot'
-        return self._TEST_VOLUME_SNAPSHOT
+        def create_volume_snapshot(self, volume, name=None):
+            assert volume.id == 'vol1'
+            if name:
+                assert name == 'test_snapshot'
+            return self._TEST_VOLUME_SNAPSHOT
 
-    def attach_volume(self, node, volume, device=None):
-        assert node.id == 'test_id'
-        assert volume.id == 'vol1'
-        if device:
-            assert device == '/dev/sdc'
-        return True
+        def attach_volume(self, node, volume, device=None):
+            assert node.id == 'test_id'
+            assert volume.id == 'vol1'
+            if device:
+                assert device == '/dev/sdc'
+            return True
 
-    def detach_volume(self, volume):
-        assert volume.id == 'vol1'
-        return True
+        def detach_volume(self, volume):
+            assert volume.id == 'vol1'
+            return True
 
-    def destroy_volume(self, volume):
-        assert volume.id == 'vol1'
-        return True
+        def destroy_volume(self, volume):
+            assert volume.id == 'vol1'
+            return True
 
-    def destroy_volume_snapshot(self, snapshot):
-        assert snapshot.id == 'snap1'
-        return True
+        def destroy_volume_snapshot(self, snapshot):
+            assert snapshot.id == 'snap1'
+            return True
 
-    def list_images(self, location=None):
-        if location:
-            assert location.id == 'test_location'
-        return [self._TEST_IMAGE]
+        def list_images(self, location=None):
+            if location:
+                assert location.id == 'test_location'
+            return [self._TEST_IMAGE]
 
-    def create_image(self, node, name, description=None):
-        assert node.id == 'test_id'
-        return self._TEST_IMAGE
+        def create_image(self, node, name, description=None):
+            assert node.id == 'test_id'
+            return self._TEST_IMAGE
 
-    def delete_image(self, node_image):
-        return True
+        def delete_image(self, node_image):
+            return True
 
-    def get_image(self, image_id):
-        assert image_id == 'image1'
-        return self._TEST_IMAGE
+        def get_image(self, image_id):
+            assert image_id == 'image1'
+            return self._TEST_IMAGE
 
-    def copy_image(self, source_region, node_image, name, description=None):
-        assert source_region == 'us-east1'
-        assert node_image.id == 'image1'
-        assert name == 'copy_test'
-        return self._TEST_IMAGE
+        def copy_image(self, source_region, node_image, name, description=None):
+            assert source_region == 'us-east1'
+            assert node_image.id == 'image1'
+            assert name == 'copy_test'
+            return self._TEST_IMAGE
 
-    def list_key_pairs(self):
-        return [self._TEST_KEY_PAIR]
+        def list_key_pairs(self):
+            return [self._TEST_KEY_PAIR]
 
-    def get_key_pair(self, name):
-        assert name == 'test_key'
-        return self._TEST_KEY_PAIR
+        def get_key_pair(self, name):
+            assert name == 'test_key'
+            return self._TEST_KEY_PAIR
 
-    def create_key_pair(self, name):
-        assert name == 'test_key'
-        return self._TEST_KEY_PAIR
+        def create_key_pair(self, name):
+            assert name == 'test_key'
+            return self._TEST_KEY_PAIR
 
-    def import_key_pair_from_string(self, name, key_material):
-        assert name == 'test_key'
-        assert key_material == 'test_key_value'
-        return self._TEST_KEY_PAIR
+        def import_key_pair_from_string(self, name, key_material):
+            assert name == 'test_key'
+            assert key_material == 'test_key_value'
+            return self._TEST_KEY_PAIR
 
-    def import_key_pair_from_file(self, name, key_file_path):
-        assert name == 'test_key'
-        assert key_file_path == '/path/to/key'
-        return self._TEST_KEY_PAIR
+        def import_key_pair_from_file(self, name, key_file_path):
+            assert name == 'test_key'
+            assert key_file_path == '/path/to/key'
+            return self._TEST_KEY_PAIR
 
-    def delete_key_pair(self, key_pair):
-        assert key_pair.name == 'test_key'
-        return True
+        def delete_key_pair(self, key_pair):
+            assert key_pair.name == 'test_key'
+            return True
+
+
+else:
+    MockComputeDriver = object
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_LIBCLOUD, 'No libcloud installed')
 @patch('salt.modules.libcloud_compute._get_driver',
        MagicMock(return_value=MockComputeDriver()))
 class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):

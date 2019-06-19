@@ -6,6 +6,9 @@ Management of InfluxDB users
 (compatible with InfluxDB version 0.9+)
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 
 def __virtual__():
     '''
@@ -17,7 +20,7 @@ def __virtual__():
 
 
 def present(name,
-            password,
+            passwd,
             admin=False,
             grants=None,
             **client_args):
@@ -27,7 +30,7 @@ def present(name,
     name
         Name of the user to manage
 
-    password
+    passwd
         Password of the user
 
     admin : False
@@ -45,10 +48,11 @@ def present(name,
     **Example:**
 
     .. code-block:: yaml
+
         example user present in influxdb:
           influxdb_user.present:
             - name: example
-            - password: somepassword
+            - passwd: somepassword
             - admin: False
             - grants:
                 foo_db: read
@@ -68,7 +72,7 @@ def present(name,
             return ret
         else:
             if not __salt__['influxdb.create_user'](
-                    name, password, admin=admin, **client_args):
+                    name, passwd, admin=admin, **client_args):
                 ret['comment'] = 'Failed to create user {0}'.format(name)
                 ret['result'] = False
                 return ret
@@ -115,11 +119,12 @@ def present(name,
             ret['changes'][name] = 'User created'
         else:
             if __opts__['test']:
+                ret['result'] = None
                 ret['comment'] = 'User {0} will be updated with the ' \
                         'following changes:'.format(name)
-                for k, v in ret['changes']:
+                for k, v in ret['changes'].items():
                     ret['comment'] += '\n{0} => {1}'.format(k, v)
-                ret['changes'] = None
+                ret['changes'] = {}
             else:
                 ret['comment'] = 'Updated user {0}'.format(name)
 

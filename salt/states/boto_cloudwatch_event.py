@@ -53,7 +53,7 @@ config:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
@@ -92,7 +92,7 @@ def present(name, Name=None,
         not provided.
 
     ScheduleExpression
-        The scheduling expression. For example, "cron(0 20 * * ? *)",
+        The scheduling expression. For example, ``cron(0 20 * * ? *)``,
         "rate(5 minutes)"
 
     EventPattern

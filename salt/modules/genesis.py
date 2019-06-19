@@ -4,7 +4,7 @@ Module for managing container and VM images
 
 .. versionadded:: 2014.7.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -21,6 +21,7 @@ import salt.syspaths
 import salt.utils.kickstart
 import salt.utils.path
 import salt.utils.preseed
+import salt.utils.stringutils
 import salt.utils.validate.path
 import salt.utils.yast
 from salt.exceptions import SaltInvocationError
@@ -155,7 +156,7 @@ def bootstrap(
             try:
                 __salt__['file.mkdir'](root)
             except Exception as exc:
-                return {'Error': pprint.pformat(exc)}
+                return {'Error': salt.utils.stringutils.to_unicode(pprint.pformat(exc))}
     elif img_format == 'sparse':
         if not img_size:
             raise SaltInvocationError('An img_size must be specified for a sparse file')
@@ -166,11 +167,11 @@ def bootstrap(
         _mkpart(root, fs_format, fs_opts, mount_dir)
 
         loop1 = __salt__['cmd.run']('losetup -f')
-        log.debug('First loop device is {0}'.format(loop1))
+        log.debug('First loop device is %s', loop1)
         __salt__['cmd.run']('losetup {0} {1}'.format(loop1, root))
         loop2 = __salt__['cmd.run']('losetup -f')
-        log.debug('Second loop device is {0}'.format(loop2))
-        start = str(2048 * 2048)
+        log.debug('Second loop device is %s', loop2)
+        start = six.text_type(2048 * 2048)
         __salt__['cmd.run']('losetup -o {0} {1} {2}'.format(start, loop2, loop1))
         __salt__['mount.mount'](mount_dir, loop2)
 
@@ -231,16 +232,16 @@ def _mkpart(root, fs_format, fs_opts, mount_dir):
     '''
     __salt__['partition.mklabel'](root, 'msdos')
     loop1 = __salt__['cmd.run']('losetup -f')
-    log.debug('First loop device is {0}'.format(loop1))
+    log.debug('First loop device is %s', loop1)
     __salt__['cmd.run']('losetup {0} {1}'.format(loop1, root))
     part_info = __salt__['partition.list'](loop1)
-    start = str(2048 * 2048) + 'B'
+    start = six.text_type(2048 * 2048) + 'B'
     end = part_info['info']['size']
     __salt__['partition.mkpart'](loop1, 'primary', start=start, end=end)
     __salt__['partition.set'](loop1, '1', 'boot', 'on')
     part_info = __salt__['partition.list'](loop1)
     loop2 = __salt__['cmd.run']('losetup -f')
-    log.debug('Second loop device is {0}'.format(loop2))
+    log.debug('Second loop device is %s', loop2)
     start = start.rstrip('B')
     __salt__['cmd.run']('losetup -o {0} {1} {2}'.format(start, loop2, loop1))
     _mkfs(loop2, fs_format, fs_opts)
@@ -405,8 +406,7 @@ def _bootstrap_deb(
         return False
 
     if static_qemu and not salt.utils.validate.path.is_executable(static_qemu):
-        log.error('Required tool qemu not '
-                  'present/readable at: {0}'.format(static_qemu))
+        log.error('Required tool qemu not present/readable at: %s', static_qemu)
         return False
 
     if isinstance(pkgs, (list, tuple)):
@@ -623,7 +623,7 @@ def _tar(name, root, path=None, compress='bzip2'):
         try:
             __salt__['file.mkdir'](path)
         except Exception as exc:
-            return {'Error': pprint.pformat(exc)}
+            return {'Error': salt.utils.stringutils.to_unicode(pprint.pformat(exc))}
 
     compression, ext = _compress(compress)
 
@@ -650,7 +650,7 @@ def _untar(name, dest=None, path=None, compress='bz2'):
         try:
             __salt__['file.mkdir'](dest)
         except Exception as exc:
-            return {'Error': pprint.pformat(exc)}
+            return {'Error': salt.utils.stringutils.to_unicode(pprint.pformat(exc))}
 
     compression, ext = _compress(compress)
 

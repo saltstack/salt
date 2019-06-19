@@ -4,7 +4,7 @@ Salt-specific interface for calling Salt Cloud directly
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 import copy
@@ -204,11 +204,24 @@ def map_run(path=None, **kwargs):
     '''
     Execute a salt cloud map file
 
+    Cloud Map data can be retrieved from several sources:
+
+    - a local file (provide the path to the file to the 'path' argument)
+    - a JSON-formatted map directly (provide the appropriately formatted to using the 'map_data' argument)
+    - the Salt Pillar (provide the map name of under 'pillar:cloud:maps' to the 'map_pillar' argument)
+
+    .. note::
+        Only one of these sources can be read at a time. The options are listed
+        in their order of precedence.
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt minionname cloud.map_run /path/to/cloud.map
+        salt minionname cloud.map_run path=/path/to/cloud.map
+        salt minionname cloud.map_run map_pillar='<map_pillar>'
+          .. versionchanged:: 2018.3.1
         salt minionname cloud.map_run map_data='<actual map data>'
     '''
     client = _get_client()

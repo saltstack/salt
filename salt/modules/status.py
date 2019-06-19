@@ -5,7 +5,7 @@ These data can be useful for compiling into stats later.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import os
 import re
@@ -28,6 +28,7 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 from salt.ext.six.moves import zip
 from salt.exceptions import CommandExecutionError
 
@@ -299,7 +300,7 @@ def cpustats():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added support for OpenBSD
 
     CLI Example:
@@ -315,7 +316,7 @@ def cpustats():
         ret = {}
         try:
             with salt.utils.files.fopen('/proc/stat', 'r') as fp_:
-                stats = fp_.read()
+                stats = salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             pass
         else:
@@ -447,7 +448,7 @@ def meminfo():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added support for OpenBSD
 
     CLI Example:
@@ -463,7 +464,7 @@ def meminfo():
         ret = {}
         try:
             with salt.utils.files.fopen('/proc/meminfo', 'r') as fp_:
-                stats = fp_.read()
+                stats = salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             pass
         else:
@@ -611,7 +612,7 @@ def cpuinfo():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added support for NetBSD and OpenBSD
 
     CLI Example:
@@ -627,7 +628,7 @@ def cpuinfo():
         ret = {}
         try:
             with salt.utils.files.fopen('/proc/cpuinfo', 'r') as fp_:
-                stats = fp_.read()
+                stats = salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             pass
         else:
@@ -832,7 +833,7 @@ def diskstats():
         ret = {}
         try:
             with salt.utils.files.fopen('/proc/diskstats', 'r') as fp_:
-                stats = fp_.read()
+                stats = salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             pass
         else:
@@ -982,13 +983,13 @@ def diskusage(*args):
         if __grains__['kernel'] == 'Linux':
             try:
                 with salt.utils.files.fopen('/proc/mounts', 'r') as fp_:
-                    ifile = fp_.read().splitlines()
+                    ifile = salt.utils.stringutils.to_unicode(fp_.read()).splitlines()
             except OSError:
                 return {}
         elif __grains__['kernel'] in ('FreeBSD', 'SunOS'):
             ifile = __salt__['cmd.run']('mount -p').splitlines()
         else:
-            ifile = []
+            raise CommandExecutionError('status.diskusage not yet supported on this platform')
 
         for line in ifile:
             comps = line.split()
@@ -1037,7 +1038,7 @@ def vmstats():
         ret = {}
         try:
             with salt.utils.files.fopen('/proc/vmstat', 'r') as fp_:
-                stats = fp_.read()
+                stats = salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             pass
         else:
@@ -1080,7 +1081,7 @@ def nproc():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added support for Darwin, FreeBSD and OpenBSD
 
     CLI Example:
@@ -1129,7 +1130,7 @@ def netstats():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added support for OpenBSD
 
     CLI Example:
@@ -1145,7 +1146,7 @@ def netstats():
         ret = {}
         try:
             with salt.utils.files.fopen('/proc/net/netstat', 'r') as fp_:
-                stats = fp_.read()
+                stats = salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             pass
         else:
@@ -1271,7 +1272,7 @@ def netdev():
         ret = {}
         try:
             with salt.utils.files.fopen('/proc/net/dev', 'r') as fp_:
-                stats = fp_.read()
+                stats = salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             pass
         else:
@@ -1554,7 +1555,7 @@ def version():
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Added support for OpenBSD
 
     CLI Example:
@@ -1569,7 +1570,7 @@ def version():
         '''
         try:
             with salt.utils.files.fopen('/proc/version', 'r') as fp_:
-                return fp_.read().strip()
+                return salt.utils.stringutils.to_unicode(fp_.read()).strip()
         except IOError:
             return {}
 
@@ -1629,11 +1630,11 @@ def master(master=None, connected=True):
 
     # Connection to master is not as expected
     if master_connection_status is not connected:
-        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-        if master_connection_status:
-            event.fire_event({'master': master}, salt.minion.master_event(type='connected'))
-        else:
-            event.fire_event({'master': master}, salt.minion.master_event(type='disconnected'))
+        with salt.utils.event.get_event('minion', opts=__opts__, listen=False) as event:
+            if master_connection_status:
+                event.fire_event({'master': master}, salt.minion.master_event(type='connected'))
+            else:
+                event.fire_event({'master': master}, salt.minion.master_event(type='disconnected'))
 
     return master_connection_status
 
@@ -1676,8 +1677,8 @@ def ping_master(master):
         pass
 
     if result:
-        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-        event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
+        with salt.utils.event.get_event('minion', opts=__opts__, listen=False) as event:
+            event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
 
     return result
 
@@ -1710,18 +1711,10 @@ def proxy_reconnect(proxy_name, opts=None):
     is_alive = __proxy__[proxy_keepalive_fn](opts)
     if not is_alive:
         minion_id = opts.get('proxyid', '') or opts.get('id', '')
-        log.info('{minion_id} ({proxy_name} proxy) is down. Restarting.'.format(
-                minion_id=minion_id,
-                proxy_name=proxy_name
-            )
-        )
+        log.info('%s (%s proxy) is down. Restarting.', minion_id, proxy_name)
         __proxy__[proxy_name+'.shutdown'](opts)  # safely close connection
         __proxy__[proxy_name+'.init'](opts)  # reopen connection
-        log.debug('Restarted {minion_id} ({proxy_name} proxy)!'.format(
-                minion_id=minion_id,
-                proxy_name=proxy_name
-            )
-        )
+        log.debug('Restarted %s (%s proxy)!', minion_id, proxy_name)
 
     return True  # success
 

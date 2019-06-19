@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Denys Havrysh <denys.gavrysh@gmail.com>`
+    :codeauthor: Denys Havrysh <denys.gavrysh@gmail.com>
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
-import logging
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
@@ -24,6 +23,11 @@ import salt.config
 import salt.syspaths
 import salt.utils.parsers
 import salt.utils.platform
+
+try:
+    import pytest
+except ImportError:
+    pytest = None
 
 
 class ErrorMock(object):  # pylint: disable=too-few-public-methods
@@ -500,18 +504,17 @@ class LogSettingsParserTests(TestCase):
         log_file_name = self.logfile_config_setting_name
         opts = self.default_config.copy()
         opts.update({'log_file': log_file})
-        if log_file_name is not 'log_file':
-            opts.update({log_file_name:
-                         getattr(self, log_file_name)})
+        if log_file_name != 'log_file':
+            opts.update({log_file_name: getattr(self, log_file_name)})
 
-        if log_file_name is 'key_logfile':
+        if log_file_name == 'key_logfile':
             self.skipTest('salt-key creates log file outside of parse_args.')
 
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=opts)):
             parser.parse_args(args)
 
-        if log_file_name is 'log_file':
+        if log_file_name == 'log_file':
             self.assertEqual(os.path.getsize(log_file), 0)
         else:
             self.assertEqual(os.path.getsize(getattr(self, log_file_name)), 0)
@@ -528,7 +531,7 @@ class MasterOptionParserTestCase(LogSettingsParserTests):
         Setting up
         '''
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -555,7 +558,7 @@ class MinionOptionParserTestCase(LogSettingsParserTests):
         Setting up
         '''
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MINION_OPTS
+        self.default_config = salt.config.DEFAULT_MINION_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -612,7 +615,7 @@ class SyndicOptionParserTestCase(LogSettingsParserTests):
         self.logfile_config_setting_name = 'syndic_log_file'
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -642,7 +645,7 @@ class SaltCMDOptionParserTestCase(LogSettingsParserTests):
         self.args = ['foo', 'bar.baz']
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -671,7 +674,7 @@ class SaltCPOptionParserTestCase(LogSettingsParserTests):
         self.args = ['foo', 'bar', 'baz']
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -702,14 +705,14 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
         self.logfile_config_setting_name = 'key_logfile'
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
         self.log_file = '/tmp/salt_key_parser_test'
         self.key_logfile = '/tmp/key_logfile'
         # Function to patch
-        self.config_func = 'salt.config.master_config'
+        self.config_func = 'salt.config.client_config'
 
         # Mock log setup
         self.setup_log()
@@ -817,7 +820,7 @@ class SaltCallOptionParserTestCase(LogSettingsParserTests):
         self.args = ['foo.bar']
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MINION_OPTS
+        self.default_config = salt.config.DEFAULT_MINION_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -846,7 +849,7 @@ class SaltRunOptionParserTestCase(LogSettingsParserTests):
         self.args = ['foo.bar']
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -878,7 +881,7 @@ class SaltSSHOptionParserTestCase(LogSettingsParserTests):
         self.logfile_config_setting_name = 'ssh_log_file'
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -996,6 +999,7 @@ class SaltAPIParserTestCase(LogSettingsParserTests):
         self.addCleanup(delattr, self, 'parser')
 
 
+@skipIf(not pytest, False)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class DaemonMixInTestCase(TestCase):
     '''
@@ -1006,39 +1010,71 @@ class DaemonMixInTestCase(TestCase):
         '''
         Setting up
         '''
-        # Set PID
-        self.pid = '/some/fake.pid'
-
         # Setup mixin
-        self.mixin = salt.utils.parsers.DaemonMixIn()
-        self.mixin.config = {}
-        self.mixin.config['pidfile'] = self.pid
+        self.daemon_mixin = salt.utils.parsers.DaemonMixIn()
+        self.daemon_mixin.config = {}
+        self.daemon_mixin.config['pidfile'] = '/some/fake.pid'
 
-        # logger
-        self.logger = logging.getLogger('salt.utils.parsers')
+    def tearDown(self):
+        '''
+        Tear down test
+        :return:
+        '''
+        del self.daemon_mixin
 
+    @patch('os.unlink', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('salt.utils.parsers.logger', MagicMock())
     def test_pid_file_deletion(self):
         '''
         PIDfile deletion without exception.
         '''
-        with patch('os.unlink', MagicMock()) as os_unlink:
-            with patch('os.path.isfile', MagicMock(return_value=True)):
-                with patch.object(self.logger, 'info') as mock_logger:
-                    self.mixin._mixin_before_exit()
-                    assert mock_logger.call_count == 0
-                    assert os_unlink.call_count == 1
+        self.daemon_mixin._mixin_before_exit()
+        assert salt.utils.parsers.os.unlink.call_count == 1
+        salt.utils.parsers.logger.info.assert_not_called()
+        salt.utils.parsers.logger.debug.assert_not_called()
 
-    def test_pid_file_deletion_with_oserror(self):
+    @patch('os.unlink', MagicMock(side_effect=OSError()))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('salt.utils.parsers.logger', MagicMock())
+    def test_pid_deleted_oserror_as_root(self):
         '''
-        PIDfile deletion with exception
+        PIDfile deletion with exception, running as root.
         '''
-        with patch('os.unlink', MagicMock(side_effect=OSError())) as os_unlink:
-            with patch('os.path.isfile', MagicMock(return_value=True)):
-                with patch.object(self.logger, 'info') as mock_logger:
-                    self.mixin._mixin_before_exit()
-                    assert os_unlink.call_count == 1
-                    mock_logger.assert_called_with(
-                        'PIDfile could not be deleted: {0}'.format(self.pid))
+        if salt.utils.platform.is_windows():
+            patch_args = ('salt.utils.win_functions.is_admin',
+                          MagicMock(return_value=True))
+        else:
+            patch_args = ('os.getuid', MagicMock(return_value=0))
+
+        with patch(*patch_args):
+            self.daemon_mixin._mixin_before_exit()
+            assert salt.utils.parsers.os.unlink.call_count == 1
+            salt.utils.parsers.logger.info.assert_called_with(
+                'PIDfile could not be deleted: %s',
+                format(self.daemon_mixin.config['pidfile'])
+            )
+            salt.utils.parsers.logger.debug.assert_called()
+
+    @patch('os.unlink', MagicMock(side_effect=OSError()))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('salt.utils.parsers.logger', MagicMock())
+    def test_pid_deleted_oserror_as_non_root(self):
+        '''
+        PIDfile deletion with exception, running as non-root.
+        '''
+        if salt.utils.platform.is_windows():
+            patch_args = ('salt.utils.win_functions.is_admin',
+                          MagicMock(return_value=False))
+        else:
+            patch_args = ('os.getuid', MagicMock(return_value=1000))
+
+        with patch(*patch_args):
+            self.daemon_mixin._mixin_before_exit()
+            assert salt.utils.parsers.os.unlink.call_count == 1
+            salt.utils.parsers.logger.info.assert_not_called()
+            salt.utils.parsers.logger.debug.assert_not_called()
+
 
 # Hide the class from unittest framework when it searches for TestCase classes in the module
 del LogSettingsParserTests

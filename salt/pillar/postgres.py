@@ -8,8 +8,8 @@ Retrieve Pillar data by doing a postgres query
 :depends: psycopg2
 :platform: all
 
-Complete example
-=====================================
+Complete Example
+================
 
 .. code-block:: yaml
 

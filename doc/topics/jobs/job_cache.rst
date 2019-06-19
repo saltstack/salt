@@ -21,7 +21,7 @@ management.
 
 The default job cache is a temporary cache and jobs will be stored for 24
 hours. If the default cache needs to store jobs for a different period the
-time can be easily adjusted by changing the `keep_jobs` parameter in the
+time can be easily adjusted by changing the ``keep_jobs`` parameter in the
 Salt Master configuration file. The value passed in is measured via hours:
 
 
@@ -47,7 +47,7 @@ checking for and preventing JID collisions.
 The default location for the job cache is in the ``/var/cache/salt/master/jobs/``
 directory.
 
-Setting the :conf_master:`job_cache`` to ``False`` in addition to setting
+Setting the :conf_master:`job_cache` to ``False`` in addition to setting
 the :conf_master:`keep_jobs` option to a smaller value, such as ``1``, in the Salt
 Master configuration file will reduce the size of the Default Job Cache, and thus
 the burden on the Salt Master.

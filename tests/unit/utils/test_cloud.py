@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.unit.utils.cloud_test
@@ -10,19 +10,20 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
-from tests.support.paths import TMP, CODE_DIR
 
 # Import salt libs
 import salt.utils.cloud as cloud
 import salt.utils.platform
+from salt.ext import six
 
-GPG_KEYDIR = os.path.join(TMP, 'gpg-keydir')
+GPG_KEYDIR = os.path.join(RUNTIME_VARS.TMP, 'gpg-keydir')
 
 # The keyring library uses `getcwd()`, let's make sure we in a good directory
 # before importing keyring
@@ -62,8 +63,8 @@ try:
     HAS_KEYRING = True
 except ImportError:
     HAS_KEYRING = False
-
-os.chdir(CODE_DIR)
+finally:
+    os.chdir(RUNTIME_VARS.CODE_DIR)
 
 
 class CloudUtilsTestCase(TestCase):
@@ -86,7 +87,7 @@ class CloudUtilsTestCase(TestCase):
                 cloud.SSH_PASSWORD_PROMP_RE.match(pattern.lower().strip()), None
             )
 
-    @skipIf(HAS_KEYRING is False, 'The python keyring library is not installed')
+    @skipIf(HAS_KEYRING is False, 'The "keyring" python module is not installed')
     def test__save_password_in_keyring(self):
         '''
         Test storing password in the keyring
@@ -106,7 +107,7 @@ class CloudUtilsTestCase(TestCase):
         )
         self.assertEqual(stored_pw, 'fake_password_c8231')
 
-    @skipIf(HAS_KEYRING is False, 'The python keyring library is not installed')
+    @skipIf(HAS_KEYRING is False, 'The "keyring" python module is not installed')
     def test_retrieve_password_from_keyring(self):
         keyring.set_password(
             'salt.cloud.provider.test_case_provider',
@@ -122,7 +123,7 @@ class CloudUtilsTestCase(TestCase):
         with self.assertRaises(Exception) as context:
             cloud.sftp_file("/tmp/test", "ТЕСТ test content")
         # we successful pass the place with os.write(tmpfd, ...
-        self.assertNotEqual("a bytes-like object is required, not 'str'", str(context.exception))
+        self.assertNotEqual("a bytes-like object is required, not 'str'", six.text_type(context.exception))
 
     @skipIf(salt.utils.platform.is_windows(), 'Not applicable to Windows')
     def test_check_key_path_and_mode(self):

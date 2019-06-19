@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     salt.utils.odict
@@ -21,8 +21,11 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
-from collections import Callable
+from __future__ import absolute_import, unicode_literals, print_function
+try:
+    from collections.abc import Callable
+except ImportError:
+    from collections import Callable
 
 # Import 3rd-party libs
 from salt.ext import six

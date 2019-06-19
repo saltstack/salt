@@ -6,7 +6,7 @@ Beacon to monitor statistics from ethernet adapters
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 
 # Import third party libs
@@ -131,11 +131,11 @@ def beacon(config):
     _config = {}
     list(map(_config.update, config))
 
-    log.debug('psutil.net_io_counters {}'.format(psutil.net_io_counters))
+    log.debug('psutil.net_io_counters %s', psutil.net_io_counters)
 
     _stats = psutil.net_io_counters(pernic=True)
 
-    log.debug('_stats {}'.format(_stats))
+    log.debug('_stats %s', _stats)
     for interface in _config.get('interfaces', {}):
         if interface in _stats:
             interface_config = _config['interfaces'][interface]
@@ -154,8 +154,8 @@ def beacon(config):
                                 int(interface_config[attr]):
                             _diff = True
                         else:
-                            log.debug('attr {}'.format(getattr(_if_stats,
-                                                               attr, None)))
+                            log.debug('attr %s', getattr(_if_stats,
+                                                         attr, None))
                     else:
                         if getattr(_if_stats, attr, None) == \
                                 int(interface_config[attr]):

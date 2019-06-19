@@ -46,6 +46,9 @@ This example would allow the file state to change, but would limit the
 concurrency of the trafficserver service restart to 4.
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 # TODO: use depends decorator to make these per function deps, instead of all or nothing
 REQUIRED_FUNCS = (
     'zk_concurrency.lock',
@@ -183,7 +186,7 @@ def min_party(name,
     num_nodes = len(nodes)
 
     if num_nodes >= min_nodes or blocking:
-        ret['result'] = None if __opts__['test'] else True
+        ret['result'] = True
         if not blocking:
             ret['comment'] = 'Currently {0} nodes, which is >= {1}'.format(num_nodes, min_nodes)
         else:

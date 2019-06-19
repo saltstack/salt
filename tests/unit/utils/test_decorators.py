@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Bo Maryniuk (bo@suse.de)`
+    :codeauthor: Bo Maryniuk (bo@suse.de)
     unit.utils.decorators_test
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.decorators as decorators
@@ -352,3 +352,27 @@ class DecoratorsTest(TestCase):
         depr._curr_version = self._mk_version("Helium")[1]
         with self.assertRaises(SaltConfigurationError):
             assert depr(self.new_function)() == self.new_function()
+
+    def test_with_depreciated_should_wrap_function(self):
+        wrapped = decorators.with_deprecated({}, "Beryllium")(self.old_function)
+        assert wrapped.__module__ == self.old_function.__module__
+
+    def test_is_deprecated_should_wrap_function(self):
+        wrapped = decorators.is_deprecated({}, "Beryllium")(self.old_function)
+        assert wrapped.__module__ == self.old_function.__module__
+
+    def test_ensure_unicode_args_should_wrap_function(self):
+        wrapped = decorators.ensure_unicode_args(self.old_function)
+        assert wrapped.__module__ == self.old_function.__module__
+
+    def test_ignores_kwargs_should_wrap_function(self):
+        wrapped = decorators.ignores_kwargs('foo', 'bar')(self.old_function)
+        assert wrapped.__module__ == self.old_function.__module__
+
+    def test_memoize_should_wrap_function(self):
+        wrapped = decorators.memoize(self.old_function)
+        assert wrapped.__module__ == self.old_function.__module__
+
+    def timing_should_wrap_function(self):
+        wrapped = decorators.timing(self.old_function)
+        assert wrapped.__module__ == self.old_function.__module__

@@ -3,7 +3,7 @@
 Common functions for managing package refreshes during states
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
 import os
@@ -68,11 +68,10 @@ def check_refresh(opts, refresh=None):
 
 
 def split_comparison(version):
-    match = re.match(r'^([<>])?(=)?([^<>=]+)$', version)
+    match = re.match(r'^(<=>|!=|>=|<=|>>|<<|<>|>|<|=)?\s?([^<>=]+)$', version)
     if match:
         comparison = match.group(1) or ''
-        comparison += match.group(2) or ''
-        version = match.group(3)
+        version = match.group(2)
     else:
         comparison = ''
     return comparison, version

@@ -23,7 +23,7 @@ This module requires the ``augeas`` Python module.
     For affected Debian/Ubuntu hosts, installing ``libpython2.7`` has been
     known to resolve the issue.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -42,6 +42,8 @@ except ImportError:
 
 # Import salt libs
 import salt.utils.args
+import salt.utils.data
+import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -95,8 +97,8 @@ def _lstrip_word(word, prefix):
     from the beginning of the string
     '''
 
-    if str(word).startswith(prefix):
-        return str(word)[len(prefix):]
+    if six.text_type(word).startswith(prefix):
+        return six.text_type(word)[len(prefix):]
     return word
 
 
@@ -116,7 +118,7 @@ def _check_load_paths(load_path):
         else:
             log.info('Invalid augeas_cfg load_path entry: %s removed', _path)
 
-    if len(_paths) == 0:
+    if not _paths:
         return None
 
     return ':'.join(_paths)
@@ -231,7 +233,7 @@ def execute(context=None, lens=None, commands=(), load_path=None):
                 path = make_path(parts[0])
                 args = {'path': path}
         except ValueError as err:
-            log.error(str(err))
+            log.error(err)
             # if command.split fails arg will not be set
             if 'arg' not in locals():
                 arg = command
@@ -239,7 +241,8 @@ def execute(context=None, lens=None, commands=(), load_path=None):
                            'see debug log for details: {0}'.format(arg)
             return ret
 
-        log.debug('{0}: {1}'.format(method, args))
+        args = salt.utils.data.decode(args, to_str=True)
+        log.debug('%s: %s', method, args)
 
         func = getattr(aug, method)
         func(**args)
@@ -248,7 +251,7 @@ def execute(context=None, lens=None, commands=(), load_path=None):
         aug.save()
         ret['retval'] = True
     except IOError as err:
-        ret['error'] = str(err)
+        ret['error'] = six.text_type(err)
 
         if lens and not lens.endswith('.lns'):
             ret['error'] += '\nLenses are normally configured as "name.lns". ' \
@@ -293,7 +296,7 @@ def get(path, value='', load_path=None):
     try:
         _match = aug.match(path)
     except RuntimeError as err:
-        return {'error': str(err)}
+        return {'error': six.text_type(err)}
 
     if _match:
         ret[path] = aug.get(path)
@@ -341,7 +344,7 @@ def setvalue(*args):
         %wheel ALL = PASSWD : ALL , NOPASSWD : /usr/bin/apt-get , /usr/bin/aptitude
     '''
     load_path = None
-    load_paths = [x for x in args if str(x).startswith('load_path=')]
+    load_paths = [x for x in args if six.text_type(x).startswith('load_path=')]
     if load_paths:
         if len(load_paths) > 1:
             raise SaltInvocationError(
@@ -356,9 +359,9 @@ def setvalue(*args):
 
     tuples = [
         x for x in args
-        if not str(x).startswith('prefix=') and
-        not str(x).startswith('load_path=')]
-    prefix = [x for x in args if str(x).startswith('prefix=')]
+        if not six.text_type(x).startswith('prefix=') and
+        not six.text_type(x).startswith('load_path=')]
+    prefix = [x for x in args if six.text_type(x).startswith('prefix=')]
     if prefix:
         if len(prefix) > 1:
             raise SaltInvocationError(
@@ -376,7 +379,7 @@ def setvalue(*args):
         if prefix:
             target_path = os.path.join(prefix.rstrip('/'), path.lstrip('/'))
         try:
-            aug.set(target_path, str(value))
+            aug.set(target_path, six.text_type(value))
         except ValueError as err:
             ret['error'] = 'Multiple values: {0}'.format(err)
 
@@ -384,7 +387,7 @@ def setvalue(*args):
         aug.save()
         ret['retval'] = True
     except IOError as err:
-        ret['error'] = str(err)
+        ret['error'] = six.text_type(err)
     return ret
 
 
@@ -462,7 +465,7 @@ def remove(path, load_path=None):
         else:
             ret['retval'] = True
     except (RuntimeError, IOError) as err:
-        ret['error'] = str(err)
+        ret['error'] = six.text_type(err)
 
     ret['count'] = count
 
@@ -492,7 +495,7 @@ def ls(path, load_path=None):  # pylint: disable=C0103
     def _match(path):
         ''' Internal match function '''
         try:
-            matches = aug.match(path)
+            matches = aug.match(salt.utils.stringutils.to_str(path))
         except RuntimeError:
             return {}
 

@@ -19,15 +19,17 @@
 Salt Service Discovery Protocol.
 JSON-based service discovery protocol, used by minions to find running Master.
 '''
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import time
 import logging
 import random
 import socket
+import copy
 from collections import OrderedDict
 
 import salt.utils.json
+import salt.utils.stringutils
 
 _json = salt.utils.json.import_json()
 if not hasattr(_json, 'dumps'):
@@ -157,7 +159,7 @@ class SSDPFactory(SSDPBase):
                 self.log.debug('Sent successfully')
                 return
             except AttributeError as ex:
-                self.log.debug('Permission error: {0}'.format(ex))
+                self.log.debug('Permission error: %s', ex)
                 time.sleep(slp)
                 tries += 1
                 slp += slp_time()
@@ -170,12 +172,15 @@ class SSDPFactory(SSDPBase):
         :param addr:
         :return:
         '''
-        message = data.decode()
+        message = salt.utils.stringutils.to_unicode(data)
         if message.startswith(self.signature):
             try:
                 timestamp = float(message[len(self.signature):])
-            except TypeError:
-                self.log.debug('Received invalid timestamp in package from {}'.format("{}:{}".format(*addr)))
+            except (TypeError, ValueError):
+                self.log.debug(
+                    'Received invalid timestamp in package from %s:%s',
+                    *addr
+                )
                 if self.disable_hidden:
                     self._sendto('{0}:E:{1}'.format(self.signature, 'Invalid timestamp'), addr)
                 return
@@ -183,21 +188,26 @@ class SSDPFactory(SSDPBase):
             if datetime.datetime.fromtimestamp(timestamp) < (datetime.datetime.now() - datetime.timedelta(seconds=20)):
                 if self.disable_hidden:
                     self._sendto('{0}:E:{1}'.format(self.signature, 'Timestamp is too old'), addr)
-                self.log.debug('Received outdated package from {}'.format("{}:{}".format(*addr)))
+                self.log.debug('Received outdated package from %s:%s', *addr)
                 return
 
-            self.log.debug('Received "{}" from {}'.format(message, "{}:{}".format(*addr)))
+            self.log.debug('Received "%s" from %s:%s', message, *addr)
             self._sendto(
-                str('{0}:@:{1}').format(  # future lint: disable=blacklisted-function
+                salt.utils.stringutils.to_bytes(str('{0}:@:{1}').format(  # future lint: disable=blacklisted-function
                     self.signature,
                     salt.utils.json.dumps(self.answer, _json_module=_json)
-                ),
+                )),
                 addr
             )
         else:
             if self.disable_hidden:
-                self._sendto('{0}:E:{1}'.format(self.signature, 'Invalid packet signature').encode(), addr)
-            self.log.debug('Received bad signature from {}:{}'.format(*addr))
+                self._sendto(
+                    salt.utils.stringutils.to_bytes(
+                        '{0}:E:{1}'.format(self.signature, 'Invalid packet signature'),
+                        addr
+                    )
+                )
+            self.log.debug('Received bad signature from %s:%s', *addr)
 
 
 class SSDPDiscoveryServer(SSDPBase):
@@ -219,7 +229,7 @@ class SSDPDiscoveryServer(SSDPBase):
 
         :param config:
         '''
-        self._config = config.copy()
+        self._config = copy.deepcopy(config)
         if self.ANSWER not in self._config:
             self._config[self.ANSWER] = {}
         self._config[self.ANSWER].update({'master': self.get_self_ip()})
@@ -301,7 +311,7 @@ class SSDPDiscoveryServer(SSDPBase):
         '''
         listen_ip = self._config.get(self.LISTEN_IP, self.DEFAULTS[self.LISTEN_IP])
         port = self._config.get(self.PORT, self.DEFAULTS[self.PORT])
-        self.log.info('Starting service discovery listener on udp://{0}:{1}'.format(listen_ip, port))
+        self.log.info('Starting service discovery listener on udp://%s:%s', listen_ip, port)
         loop = asyncio.get_event_loop()
         protocol = SSDPFactory(answer=self._config[self.ANSWER])
         if asyncio.ported:
@@ -347,8 +357,9 @@ class SSDPDiscoveryClient(SSDPBase):
         Query the broadcast for defined services.
         :return:
         '''
-        query = "{}{}".format(self.signature, time.time())
-        self._socket.sendto(query.encode(), ('<broadcast>', self.port))
+        query = salt.utils.stringutils.to_bytes(
+            "{}{}".format(self.signature, time.time()))
+        self._socket.sendto(query, ('<broadcast>', self.port))
 
         return query
 
@@ -366,10 +377,10 @@ class SSDPDiscoveryClient(SSDPBase):
                     response[addr].append(data)
                 else:
                     break
-            except socket.timeout:
+            except Exception as err:
+                if not response:
+                    self.log.error('Discovery master collection failure: %s', err)
                 break
-            except socket.error as err:
-                self.log.error('Error ocurred while discovering masters from the network: {0}'.format(err))
 
     def discover(self):
         '''
@@ -377,30 +388,36 @@ class SSDPDiscoveryClient(SSDPBase):
 
         :return:
         '''
-        self.log.info("Looking for a server discovery")
         response = {}
-        try:
-            self._query()
-            self._collect_masters_map(response)
-        except socket.timeout:
+        masters = {}
+        self.log.info("Looking for a server discovery")
+        self._query()
+        self._collect_masters_map(response)
+        if not response:
             msg = 'No master has been discovered.'
             self.log.info(msg)
-        masters = {}
-        for addr, descriptions in response.items():
-            for data in descriptions:  # Several masters can run at the same machine.
-                msg = data.decode()
-                if msg.startswith(self.signature):
-                    msg = msg.split(self.signature)[-1]
-                    self.log.debug("Service announcement at '{0}'. Response: '{1}'".format("{}:{}".format(*addr), msg))
-                    if ':E:' in msg:
-                        err = msg.split(':E:')[-1]
-                        self.log.error('Error response from the service publisher at {0}: {1}'.format(addr, err))
-                        if "timestamp" in err:
-                            self.log.error('Publisher sent shifted timestamp from {0}'.format(addr))
-                    else:
-                        if addr not in masters:
-                            masters[addr] = []
-                        masters[addr].append(
-                            salt.utils.json.loads(msg.split(':@:')[-1], _json_module=_json)
+        else:
+            for addr, descriptions in response.items():
+                for data in descriptions:  # Several masters can run at the same machine.
+                    msg = salt.utils.stringutils.to_unicode(data)
+                    if msg.startswith(self.signature):
+                        msg = msg.split(self.signature)[-1]
+                        self.log.debug(
+                            "Service announcement at '%s:%s'. Response: '%s'",
+                            addr[0], addr[1], msg
                         )
+                        if ':E:' in msg:
+                            err = msg.split(':E:')[-1]
+                            self.log.error(
+                                'Error response from the service publisher at %s: %s',
+                                addr, err
+                            )
+                            if "timestamp" in err:
+                                self.log.error('Publisher sent shifted timestamp from %s', addr)
+                        else:
+                            if addr not in masters:
+                                masters[addr] = []
+                            masters[addr].append(
+                                salt.utils.json.loads(msg.split(':@:')[-1], _json_module=_json)
+                            )
         return masters

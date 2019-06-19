@@ -14,7 +14,7 @@ Roadmap:
 
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import os
 import re
@@ -63,7 +63,7 @@ def _guess_apiserver(apiserver_url=None):
     else:
         # we failed to discover, lets use k8s default address
         apiserver_url = "http://127.0.0.1:8080"
-    log.debug("Discoverd k8s API server address: {0}".format(apiserver_url))
+    log.debug("Discoverd k8s API server address: %s", apiserver_url)
     return apiserver_url
 
 
@@ -73,7 +73,7 @@ def _kpost(url, data):
     # Prepare headers
     headers = {"Content-Type": "application/json"}
     # Make request
-    log.trace("url is: {0}, data is: {1}".format(url, data))
+    log.trace("url is: %s, data is: %s", url, data)
     ret = http.query(url,
                      method='POST',
                      header_dict=headers,
@@ -112,7 +112,7 @@ def _kpatch(url, data):
                      data=salt.utils.json.dumps(data))
     # Check requests status
     if ret.get('error'):
-        log.error("Got an error: {0}".format(ret.get("error")))
+        log.error("Got an error: %s", ret.get("error"))
         return ret
     else:
         return salt.utils.json.loads(ret.get('body'))
@@ -137,10 +137,10 @@ def _is_dns_subdomain(name):
 
     dns_subdomain = re.compile(r"""^[a-z0-9\.-]{1,253}$""")
     if dns_subdomain.match(name):
-        log.debug("Name: {0} is valid DNS subdomain".format(name))
+        log.debug("Name: %s is valid DNS subdomain", name)
         return True
     else:
-        log.debug("Name: {0} is not valid DNS subdomain".format(name))
+        log.debug("Name: %s is not valid DNS subdomain", name)
         return False
 
 
@@ -210,6 +210,7 @@ def _set_labels(node, apiserver_url, labels):
 def get_labels(node=None, apiserver_url=None):
     '''
     .. versionadded:: 2016.3.0
+
     Get labels from the current node
 
     CLI Example:
@@ -410,10 +411,10 @@ def _create_namespace(namespace, apiserver_url):
             "name": namespace,
         }
     }
-    log.trace("namespace creation requests: {0}".format(data))
+    log.trace("namespace creation requests: %s", data)
     # Make request
     ret = _kpost(url, data)
-    log.trace("result is: {0}".format(ret))
+    log.trace("result is: %s", ret)
     # Check requests status
     return ret
 
@@ -539,14 +540,14 @@ def _create_secret(namespace, name, data, apiserver_url):
 
 def _is_valid_secret_file(filename):
     if os.path.exists(filename) and os.path.isfile(filename):
-        log.debug("File: {0} is valid secret file".format(filename))
+        log.debug("File: %s is valid secret file", filename)
         return True
-    log.warning("File: {0} does not exists or not file".format(filename))
+    log.warning("File: %s does not exists or not file", filename)
     return False
 
 
 def _file_encode(filename):
-    log.trace("Encoding secret file: {0}".format(filename))
+    log.trace("Encoding secret file: %s", filename)
     with salt.utils.files.fopen(filename, "rb") as f:
         data = f.read()
         return base64.b64encode(data)
@@ -600,12 +601,12 @@ def _source_encode(source, saltenv):
 
     protos = ('salt', 'http', 'https', 'ftp', 'swift', 's3', 'file')
 
-    log.trace("parsed source looks like: {0}".format(source_url))
+    log.trace("parsed source looks like: %s", source_url)
     if not source_url.scheme or source_url.scheme == 'file':
         # just a regular file
         filename = os.path.abspath(source_url.path)
         sname = os.path.basename(filename)
-        log.debug("Source is a regular local file: {0}".format(source_url.path))
+        log.debug("Source is a regular local file: %s", source_url.path)
         if _is_dns_subdomain(sname) and _is_valid_secret_file(filename):
             return sname, _file_encode(filename)
     else:
@@ -613,7 +614,7 @@ def _source_encode(source, saltenv):
             # The source is a file on a server
             filename = __salt__['cp.cache_file'](source, saltenv)
             if not filename:
-                log.warning("Source file: {0} can not be retrieved".format(source))
+                log.warning("Source file: %s can not be retrieved", source)
                 return "", ""
             return os.path.basename(filename), _file_encode(filename)
     return "", ""
@@ -722,7 +723,7 @@ def create_secret(namespace, name, sources, apiserver_url=None, force=False, upd
 
     secret = _get_secrets(namespace, name, apiserver_url)
     if secret and not update:
-        log.info("Secret {0} is already present on {1}".format(name, namespace))
+        log.info("Secret %s is already present on %s", name, namespace)
         return {'name': name, 'result': False,
                 'comment': 'Secret {0} is already present'.format(name),
                 'changes': {}}
@@ -730,11 +731,11 @@ def create_secret(namespace, name, sources, apiserver_url=None, force=False, upd
     data = {}
 
     for source in sources:
-        log.debug("source is: {0}".format(source))
+        log.debug("source is: %s", source)
         if isinstance(source, dict):
             # format is array of dictionaries:
             # [{public_auth: salt://public_key}, {test: "/tmp/test"}]
-            log.trace("source is dictionary: {0}".format(source))
+            log.trace("source is dictionary: %s", source)
             for k, v in six.iteritems(source):
                 sname, encoded = _source_encode(v, saltenv)
                 if sname == encoded == "":
@@ -755,7 +756,7 @@ def create_secret(namespace, name, sources, apiserver_url=None, force=False, upd
                     return ret
             data[sname] = encoded
 
-    log.trace("secret data is: {0}".format(data))
+    log.trace('secret data is: %s', data)
 
     if secret and update:
         if not data:

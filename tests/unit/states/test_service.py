@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
+    :codeauthor: Rahul Handay <rahulha@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -57,7 +57,10 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                 'name': 'salt', 'result': True},
                {'changes': 'saltstack',
                 'comment': 'Service salt failed to start', 'name': 'salt',
-                'result': False}]
+                'result': False},
+               {'changes': 'saltstack',
+                'comment': 'Started Service salt\nService masking not available on this minion',
+                'name': 'salt', 'result': True, 'warnings': ["The 'unmask' argument is not supported by this platform/action"]}]
 
         tmock = MagicMock(return_value=True)
         fmock = MagicMock(return_value=False)
@@ -90,6 +93,13 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                                                    'service.start': MagicMock(return_value="stack")}):
                     with patch.object(service, '_enable', MagicMock(return_value={'changes': 'saltstack'})):
                         self.assertDictEqual(service.running("salt", True), ret[4])
+
+                with patch.dict(service.__salt__, {'service.status': MagicMock(side_effect=[False, True]),
+                                                   'service.enabled': MagicMock(side_effect=[False, True]),
+                                                   'service.unmask': MagicMock(side_effect=[False, True]),
+                                                   'service.start': MagicMock(return_value="stack")}):
+                    with patch.object(service, '_enable', MagicMock(return_value={'changes': 'saltstack'})):
+                        self.assertDictEqual(service.running("salt", True, unmask=True), ret[7])
 
             with patch.dict(service.__opts__, {'test': True}):
                 with patch.dict(service.__salt__, {'service.status': tmock}):
@@ -125,6 +135,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                {'changes': 'saltstack',
                 'comment': 'The service salt is already dead', 'name': 'salt',
                 'result': True}]
+        info_mock = MagicMock(return_value={'StartType': ''})
 
         mock = MagicMock(return_value="salt")
         with patch.object(service, '_enabled_used_error', mock):
@@ -140,31 +151,36 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(service.__opts__, {'test': True}):
                 with patch.dict(service.__salt__, {'service.enabled': fmock,
                                                    'service.stop': tmock,
-                                                   'service.status': fmock}):
+                                                   'service.status': fmock,
+                                                   'service.info': info_mock}):
                     with patch.object(service, '_enable', mock):
                         self.assertDictEqual(service.dead("salt", True), ret[5])
 
                 with patch.dict(service.__salt__, {'service.enabled': tmock,
-                                                   'service.status': tmock}):
+                                                   'service.status': tmock,
+                                                   'service.info': info_mock}):
                     self.assertDictEqual(service.dead("salt"), ret[2])
 
             with patch.dict(service.__opts__, {'test': False}):
                 with patch.dict(service.__salt__, {'service.enabled': fmock,
                                                    'service.stop': tmock,
-                                                   'service.status': fmock}):
+                                                   'service.status': fmock,
+                                                   'service.info': info_mock}):
                     with patch.object(service, '_enable', mock):
                         self.assertDictEqual(service.dead("salt", True), ret[1])
 
                 with patch.dict(service.__salt__, {'service.enabled': MagicMock(side_effect=[True, True, False]),
                                                    'service.status': MagicMock(side_effect=[True, False, False]),
-                                                   'service.stop': MagicMock(return_value="stack")}):
+                                                   'service.stop': MagicMock(return_value="stack"),
+                                                   'service.info': info_mock}):
                     with patch.object(service, '_enable', MagicMock(return_value={'changes': 'saltstack'})):
                         self.assertDictEqual(service.dead("salt", True), ret[3])
 
                 # test an initd which a wrong status (True even if dead)
                 with patch.dict(service.__salt__, {'service.enabled': MagicMock(side_effect=[False, False, False]),
                                                    'service.status': MagicMock(side_effect=[True, True, True]),
-                                                   'service.stop': MagicMock(return_value="stack")}):
+                                                   'service.stop': MagicMock(return_value="stack"),
+                                                   'service.info': info_mock}):
                     with patch.object(service, '_disable', MagicMock(return_value={})):
                         self.assertDictEqual(service.dead("salt", False), ret[4])
 

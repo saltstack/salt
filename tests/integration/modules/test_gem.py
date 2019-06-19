@@ -4,7 +4,7 @@ Integration tests for Ruby Gem module
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -110,7 +110,7 @@ class GemModuleTest(ModuleCase):
         gem.sources_add
         gem.sources_remove
         '''
-        source = 'http://gems.github.com'
+        source = 'http://production.cf.rubygems.org'
 
         self.run_function('gem.sources_add', [source])
         sources_list = self.run_function('gem.sources_list')

@@ -5,7 +5,7 @@ Network Probes
 
 Configure RPM (JunOS)/SLA (Cisco) probes on the device via NAPALM proxy.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -25,9 +25,9 @@ import logging
 log = logging.getLogger(__name__)
 
 from copy import deepcopy
-from json import loads, dumps
 
 # salt modules
+from salt.utils.json import loads, dumps
 from salt.ext import six
 # import NAPALM utils
 import salt.utils.napalm
@@ -255,10 +255,12 @@ def managed(name, probes, defaults=None):
     Ensure the networks device is configured as specified in the state SLS file.
     Probes not specified will be removed, while probes not confiured as expected will trigger config updates.
 
-    :param probes:      Defines the probes as expected to be configured on the device.
-    In order to ease the configuration and avoid repeating the same parameters for each probe,
-    the next parameter (defaults) can be used, providing common characteristics.
-    :param defaults:    Specifies common parameters for the probes.
+    :param probes: Defines the probes as expected to be configured on the
+        device.  In order to ease the configuration and avoid repeating the
+        same parameters for each probe, the next parameter (defaults) can be
+        used, providing common characteristics.
+
+    :param defaults: Specifies common parameters for the probes.
 
     SLS Example:
 
@@ -290,16 +292,19 @@ def managed(name, probes, defaults=None):
     dictionary).  All the other parameters will use the operating system
     defaults, if not provided:
 
-    * source:           Specifies the source IP Address to be used during the tests.
-                        If not specified will use the IP Address of the logical interface loopback0.
-    * target:           Destination IP Address.
-    * probe_count:      Total number of probes per test (1..15). System defaults: 1 on both JunOS & Cisco.
-    * probe_interval:   Delay between tests (0..86400 seconds). System defaults: 3 on JunOS, 5 on Cisco.
-    * probe_type:       Probe request type. Available options:
+    - ``source`` - Specifies the source IP Address to be used during the tests.  If
+      not specified will use the IP Address of the logical interface loopback0.
 
-            * icmp-ping
-            * tcp-ping
-            * udp-ping
+    - ``target`` - Destination IP Address.
+    - ``probe_count`` - Total number of probes per test (1..15). System
+      defaults: 1 on both JunOS & Cisco.
+    - ``probe_interval`` - Delay between tests (0..86400 seconds). System
+      defaults: 3 on JunOS, 5 on Cisco.
+    - ``probe_type`` - Probe request type. Available options:
+
+      - icmp-ping
+      - tcp-ping
+      - udp-ping
 
     Using the example configuration above, after running the state, on the device will be configured 4 probes,
     with the following properties:

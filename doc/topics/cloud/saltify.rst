@@ -89,7 +89,7 @@ to it can be verified with Salt:
 Destroy Options
 ---------------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 For obvious reasons, the ``destroy`` action does not actually vaporize hardware.
 If the salt  master is connected, it can tear down parts of the client machines.
@@ -113,7 +113,7 @@ and can execute the following options:
 Wake On LAN
 -----------
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 In addition to connecting a hardware machine to a Salt master,
 you have the option of sending a wake-on-LAN
@@ -125,7 +125,7 @@ to start that machine running.
 The "magic packet" must be sent by an existing salt minion which is on
 the same network segment as the target machine. (Or your router
 must be set up especially to route WoL packets.) Your target machine
-must be set up to listen for WoL and to respond appropriatly.
+must be set up to listen for WoL and to respond appropriately.
 
 You must provide the Salt node id of the machine which will send
 the WoL packet \(parameter ``wol_sender_node``\), and
@@ -168,6 +168,13 @@ example of how to use the Saltify driver with a map file follows:
           ssh_username: root
           password: another-bad-pass
 
+In this example, the names ``my-instance-0`` and ``my-instance-1`` will be the
+identifiers of the deployed minions.
+
+Note: The ``ssh_host`` directive is also used for Windows hosts, even though they do
+not typically run the SSH service. It indicates IP address or host name for the target
+system.
+
 Note: When using a cloud map with the Saltify driver, the name of the profile
 to use, in this case ``make_salty``, must be defined in a profile config. For
 example:
@@ -195,7 +202,48 @@ Connectivity to the new "Salted" instances can now be verified with Salt:
 
 .. code-block:: bash
 
-    salt 'my-instance-*' test.ping
+    salt 'my-instance-*' test.version
+
+Bulk Deployments
+----------------
+
+When deploying large numbers of Salt Minions using Saltify, it may be
+preferable to organize the configuration in a way that duplicates data
+as little as possible. For example, if a group of target systems have 
+the same credentials, they can be specified in the profile, rather than
+in a map file.
+
+.. code-block:: yaml
+
+    # /etc/salt/cloud.profiles.d/saltify.conf
+
+    make_salty:
+      provider: my-saltify-config
+      ssh_username: root
+      password: very-bad-password
+
+.. code-block:: yaml
+
+    # /etc/salt/saltify-map
+
+    make_salty:
+      - my-instance-0:
+          ssh_host: 12.34.56.78
+      - my-instance-1:
+          ssh_host: 44.33.22.11
+
+If ``ssh_host`` is not provided, its default value will be the Minion identifier
+(``my-instance-0`` and ``my-instance-1``, in the example above). For deployments with
+working DNS resolution, this can save a lot of redundant data in the map. Here is an
+example map file using DNS names instead of IP addresses:
+
+.. code-block:: yaml
+
+    # /etc/salt/saltify-map
+
+    make_salty:
+      - my-instance-0
+      - my-instance-1
 
 Credential Verification
 =======================
@@ -203,7 +251,7 @@ Credential Verification
 Because the Saltify driver does not actually create VM's, unlike other
 salt-cloud drivers, it has special behaviour when the ``deploy`` option is set
 to ``False``. When the cloud configuration specifies ``deploy: False``, the
-Saltify driver will attept to authenticate to the target node(s) and return
+Saltify driver will attempt to authenticate to the target node(s) and return
 ``True`` for each one that succeeds. This can be useful to verify ports,
 protocols, services and credentials are correctly configured before a live
 deployment.

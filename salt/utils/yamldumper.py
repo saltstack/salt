@@ -7,7 +7,7 @@
 # pylint: disable=W0232
 #         class has no __init__ method
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 try:
     from yaml import CDumper as Dumper
     from yaml import CSafeDumper as SafeDumper
@@ -17,15 +17,9 @@ except ImportError:
 
 import yaml  # pylint: disable=blacklisted-import
 import collections
-
+import salt.utils.context
+import salt.utils.thread_local_proxy
 from salt.utils.odict import OrderedDict
-
-try:
-    from ioflo.aid.odicting import odict  # pylint: disable=E0611
-    HAS_IOFLO = True
-except ImportError:
-    odict = None
-    HAS_IOFLO = False
 
 __all__ = ['OrderedDumper', 'SafeOrderedDumper', 'IndentedSafeOrderedDumper',
            'get_dumper', 'dump', 'safe_dump']
@@ -77,6 +71,14 @@ SafeOrderedDumper.add_representer(
     collections.defaultdict,
     yaml.representer.SafeRepresenter.represent_dict
 )
+OrderedDumper.add_representer(
+    salt.utils.context.NamespacedDictWrapper,
+    yaml.representer.SafeRepresenter.represent_dict
+)
+SafeOrderedDumper.add_representer(
+    salt.utils.context.NamespacedDictWrapper,
+    yaml.representer.SafeRepresenter.represent_dict
+)
 
 OrderedDumper.add_representer(
     'tag:yaml.org,2002:timestamp',
@@ -85,9 +87,22 @@ SafeOrderedDumper.add_representer(
     'tag:yaml.org,2002:timestamp',
     SafeOrderedDumper.represent_scalar)
 
-if HAS_IOFLO:
-    OrderedDumper.add_representer(odict, represent_ordereddict)
-    SafeOrderedDumper.add_representer(odict, represent_ordereddict)
+
+# DO NOT MOVE THIS FUNCTION! It must be defined after the representers above
+# have been added, so that it has access to the manually-added representers
+# above when it looks for a representer for the proxy object's __class__.
+def represent_thread_local_proxy(dumper, data):
+    if data.__class__ in dumper.yaml_representers:
+        return dumper.yaml_representers[data.__class__](dumper, data)
+    return dumper.represent_undefined(data)
+
+
+OrderedDumper.add_representer(
+    salt.utils.thread_local_proxy.ThreadLocalProxy,
+    represent_thread_local_proxy)
+SafeOrderedDumper.add_representer(
+    salt.utils.thread_local_proxy.ThreadLocalProxy,
+    represent_thread_local_proxy)
 
 
 def get_dumper(dumper_name):
@@ -100,13 +115,14 @@ def get_dumper(dumper_name):
 
 def dump(data, stream=None, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Helper that wraps yaml.dump and ensures that we encode unicode strings
     unless explicitly told not to.
     '''
     if 'allow_unicode' not in kwargs:
         kwargs['allow_unicode'] = True
+    kwargs.setdefault('default_flow_style', None)
     return yaml.dump(data, stream, **kwargs)
 
 
@@ -118,4 +134,5 @@ def safe_dump(data, stream=None, **kwargs):
     '''
     if 'allow_unicode' not in kwargs:
         kwargs['allow_unicode'] = True
+    kwargs.setdefault('default_flow_style', None)
     return yaml.dump(data, stream, Dumper=SafeOrderedDumper, **kwargs)

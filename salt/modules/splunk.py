@@ -20,7 +20,7 @@ Module for interop with the Splunk API
             host: example.splunkcloud.com
             port: 8080
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
@@ -77,7 +77,7 @@ def _get_secret_key(profile):
 
 
 def _generate_password(email):
-    m = hmac.new(base64.b64decode(_get_secret_key('splunk')), str([email, SERVICE_NAME]))
+    m = hmac.new(base64.b64decode(_get_secret_key('splunk')), six.text_type([email, SERVICE_NAME]))
     return base64.urlsafe_b64encode(m.digest()).strip().replace('=', '')
 
 
@@ -93,11 +93,11 @@ def _send_email(name, email):
         try:
             mail_process = subprocess.Popen(['mail', '-s', subject, '-c', cc, email], stdin=subprocess.PIPE)
         except Exception as e:
-            log.error("unable to send email to {0}: {1}".format(email, str(e)))
+            log.error("unable to send email to %s: %s", email, e)
 
         mail_process.communicate(message)
 
-        log.info("sent account creation email to {0}".format(email))
+        log.info("sent account creation email to %s", email)
 
 
 def _populate_cache(profile="splunk"):
@@ -212,7 +212,7 @@ def create_user(email, profile="splunk", **kwargs):
     user = list_users(profile).get(email)
 
     if user:
-        log.error("User is already present {0}".format(email))
+        log.error("User is already present %s", email)
         return False
 
     property_map = {}
@@ -225,7 +225,8 @@ def create_user(email, profile="splunk", **kwargs):
         # create
         for req_field in REQUIRED_FIELDS_FOR_CREATE:
             if not property_map.get(req_field):
-                log.error("Missing required params {0}".format(', '.join([str(k) for k in REQUIRED_FIELDS_FOR_CREATE])))
+                log.error("Missing required params %s",
+                          ', '.join([six.text_type(k) for k in REQUIRED_FIELDS_FOR_CREATE]))
                 return False
 
         newuser = client.users.create(username=property_map['name'],
@@ -241,7 +242,7 @@ def create_user(email, profile="splunk", **kwargs):
             response[field] = newuser[field]
 
     except Exception as e:
-        log.error("Caught exception {0}".format(str(e)))
+        log.error("Caught exception %s", e)
         return False
 
 
@@ -261,7 +262,7 @@ def update_user(email, profile="splunk", **kwargs):
     user = list_users(profile).get(email)
 
     if not user:
-        log.error("Failed to retrieve user {0}".format(email))
+        log.error('Failed to retrieve user %s', email)
         return False
 
     property_map = {}
@@ -288,7 +289,7 @@ def update_user(email, profile="splunk", **kwargs):
             elif resource_value != v:
                 kwargs[k] = v
 
-    if len(kwargs) > 0:
+    if kwargs:
         user.update(**kwargs).refresh()
 
         fields_modified = {}
@@ -317,7 +318,7 @@ def delete_user(email, profile="splunk"):
         try:
             client.users.delete(user.name)
         except (AuthenticationError, HTTPError) as e:
-            log.info('Exception: {0}'.format(str(e)))
+            log.info('Exception: %s', e)
             return False
     else:
         return False

@@ -6,9 +6,15 @@ Management of Zabbix users.
 
 
 '''
-from __future__ import absolute_import
-from json import loads, dumps
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+from salt.utils.json import loads, dumps
 from copy import deepcopy
+
+# Import Salt libs
+from salt.ext import six
+from salt.exceptions import SaltException
 
 
 def __virtual__():
@@ -18,7 +24,101 @@ def __virtual__():
     return 'zabbix.user_create' in __salt__
 
 
-def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
+def admin_password_present(name, password=None, **kwargs):
+    '''
+    Initial change of Zabbix Admin password to password taken from one of the sources (only the most prioritized one):
+        1. 'password' parameter
+        2. '_connection_password' parameter
+        3. pillar 'zabbix.password' setting
+
+    1) Tries to log in as Admin with password found in state password parameter or _connection_password
+       or pillar or default zabbix password in this precise order, if any of them is present.
+    2) If one of above passwords matches, it tries to change the password to the most prioritized one.
+    3) If not able to connect with any password then it fails.
+
+    :param name: Just a name of state
+    :param password: Optional - desired password for Admin to be set
+    :param _connection_user: Optional - Ignored in this state (always assumed 'Admin')
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    .. code-block:: yaml
+
+        # password taken from pillar or _connection_password
+        zabbix-admin-password:
+            zabbix_user.admin_password_present
+
+        # directly set password
+        zabbix-admin-password:
+            zabbix_user.admin_password_present:
+                - password: SECRET_PASS
+    '''
+    dry_run = __opts__['test']
+    default_zabbix_user = 'Admin'
+    default_zabbix_password = 'zabbix'
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    passwords = []
+    connection_args = {}
+    connection_args['_connection_user'] = default_zabbix_user
+    if '_connection_url' in kwargs:
+        connection_args['_connection_url'] = kwargs['_connection_url']
+
+    config_password = __salt__['config.option']('zabbix.password', None)
+    if config_password:
+        passwords.append(config_password)
+    if '_connection_password' in kwargs:
+        passwords.append(kwargs['_connection_password'])
+    if password:
+        passwords.append(password)
+
+    # get unique list in preserved order and reverse it
+    seen = set()
+    unique_passwords = [six.text_type(x) for x in passwords if x not in seen and not seen.add(x)]
+    unique_passwords.reverse()
+
+    if not unique_passwords:
+        ret['comment'] = 'Could not find any Zabbix Admin password setting! See documentation.'
+        return ret
+    else:
+        desired_password = unique_passwords[0]
+
+    unique_passwords.append(default_zabbix_password)
+
+    for pwd in unique_passwords:
+        connection_args['_connection_password'] = pwd
+        try:
+            user_get = __salt__['zabbix.user_get'](default_zabbix_user, **connection_args)
+        except SaltException as err:
+            if 'Login name or password is incorrect' in six.text_type(err):
+                user_get = False
+            else:
+                raise
+        if user_get:
+            if pwd == desired_password:
+                ret['result'] = True
+                ret['comment'] = 'Admin password is correct.'
+                return ret
+            else:
+                break
+
+    if user_get:
+        if not dry_run:
+            user_update = __salt__['zabbix.user_update'](user_get[0]['userid'],
+                                                         passwd=desired_password,
+                                                         **connection_args)
+            if user_update:
+                ret['result'] = True
+                ret['changes']['passwd'] = 'changed to \'' + six.text_type(desired_password) + '\''
+        else:
+            ret['result'] = None
+            ret['comment'] = 'Password for user ' + six.text_type(default_zabbix_user) \
+                             + ' updated to \'' + six.text_type(desired_password) + '\''
+
+    return ret
+
+
+def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs):
     '''
     Ensures that the user exists, eventually creates new user.
     NOTE: use argument firstname instead of name to not mess values with name from salt sls.
@@ -28,7 +128,7 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
     :param alias: user alias
     :param passwd: user's password
     :param usrgrps: user groups to add the user to
-    :param medias: user's medias to create
+    :param medias: Optional - user's medias to create
     :param password_reset: whether or not to reset password at update
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
@@ -64,6 +164,8 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
                         - sendto: '+42032132588568'
 
     '''
+    if medias is None:
+        medias = []
     connection_args = {}
     if '_connection_user' in kwargs:
         connection_args['_connection_user'] = kwargs['_connection_user']
@@ -111,20 +213,20 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
         medias_list = list()
         for key, value in medias_dict.items():
             # Load media values or default values
-            active = '0' if str(value.get('active', 'true')).lower() == 'true' else '1'
-            mediatype_sls = str(value.get('mediatype', 'mail')).lower()
-            mediatypeid = str(media_type.get(mediatype_sls, 1))
+            active = '0' if six.text_type(value.get('active', 'true')).lower() == 'true' else '1'
+            mediatype_sls = six.text_type(value.get('mediatype', 'mail')).lower()
+            mediatypeid = six.text_type(media_type.get(mediatype_sls, 1))
             period = value.get('period', '1-7,00:00-24:00')
             sendto = value.get('sendto', key)
 
             severity_sls = value.get('severity', 'HD')
-            severity_bin = str()
+            severity_bin = six.text_type()
             for sev in media_severities:
                 if sev in severity_sls:
                     severity_bin += '1'
                 else:
                     severity_bin += '0'
-            severity = str(int(severity_bin, 2))
+            severity = six.text_type(int(severity_bin, 2))
 
             medias_list.append({'active': active,
                                 'mediatypeid': mediatypeid,
@@ -199,7 +301,7 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
                 if usrgrp_diff:
                     error.append('Unable to update grpup(s): {0}'.format(usrgrp_diff))
 
-                ret['changes']['usrgrps'] = str(updated_groups)
+                ret['changes']['usrgrps'] = six.text_type(updated_groups)
 
             if password_reset:
                 updated_password = __salt__['zabbix.user_update'](userid, passwd=passwd, **connection_args)
@@ -226,7 +328,7 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
                     if 'error' in updatemed:
                         error.append(updatemed['error'])
 
-                ret['changes']['medias'] = str(medias_formated)
+                ret['changes']['medias'] = six.text_type(medias_formated)
 
         else:
             ret['comment'] = comment_user_exists
@@ -239,13 +341,13 @@ def present(alias, passwd, usrgrps, medias, password_reset=False, **kwargs):
             ret['changes'] = changes_user_created
         else:
             ret['result'] = False
-            ret['comment'] = comment_user_notcreated + str(user_create['error'])
+            ret['comment'] = comment_user_notcreated + six.text_type(user_create['error'])
 
     # error detected
     if error:
         ret['changes'] = {}
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
 
     return ret
 
@@ -314,6 +416,6 @@ def absent(name, **kwargs):
             ret['changes'] = changes_user_deleted
         else:
             ret['result'] = False
-            ret['comment'] = comment_user_notdeleted + str(user_delete['error'])
+            ret['comment'] = comment_user_notdeleted + six.text_type(user_delete['error'])
 
     return ret

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
     .. _runtime_vars:
 
@@ -49,15 +49,16 @@
 # Import Python modules
 from __future__ import absolute_import, print_function
 import os
-import sys
 import shutil
 import logging
 import multiprocessing
 
 import salt.utils.json
+import salt.utils.path
 
 # Import tests support libs
 import tests.support.paths as paths
+import tests.support.helpers
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -104,12 +105,9 @@ try:
 except ImportError:
     pass
 
-if sys.platform.startswith('win'):
-    import win32api  # pylint: disable=import-error
-    RUNNING_TESTS_USER = win32api.GetUserName()
-else:
-    import pwd
-    RUNNING_TESTS_USER = pwd.getpwuid(os.getuid()).pw_name
+
+RUNNING_TESTS_USER = tests.support.helpers.this_user()
+
 
 log = logging.getLogger(__name__)
 
@@ -135,20 +133,20 @@ def recursive_copytree(source, destination, overwrite=False):
             src_path = os.path.join(root, item)
             dst_path = os.path.join(destination, src_path.replace(source, '').lstrip(os.sep))
             if not os.path.exists(dst_path):
-                log.debug('Creating directory: {0}'.format(dst_path))
+                log.debug('Creating directory: %s', dst_path)
                 os.makedirs(dst_path)
         for item in files:
             src_path = os.path.join(root, item)
             dst_path = os.path.join(destination, src_path.replace(source, '').lstrip(os.sep))
             if os.path.exists(dst_path) and not overwrite:
                 if os.stat(src_path).st_mtime > os.stat(dst_path).st_mtime:
-                    log.debug('Copying {0} to {1}'.format(src_path, dst_path))
+                    log.debug('Copying %s to %s', src_path, dst_path)
                     shutil.copy2(src_path, dst_path)
             else:
                 if not os.path.isdir(os.path.dirname(dst_path)):
-                    log.debug('Creating directory: {0}'.format(os.path.dirname(dst_path)))
+                    log.debug('Creating directory: %s', os.path.dirname(dst_path))
                     os.makedirs(os.path.dirname(dst_path))
-                log.debug('Copying {0} to {1}'.format(src_path, dst_path))
+                log.debug('Copying %s to %s', src_path, dst_path)
                 shutil.copy2(src_path, dst_path)
 
 
@@ -187,7 +185,10 @@ class RuntimeVars(object):
             object.__setattr__(self, name, value)
             return
         self._vars[name] = value
+
+
 # <---- Helper Methods -----------------------------------------------------------------------------------------------
+
 
 # ----- Global Variables -------------------------------------------------------------------------------------------->
 XML_OUTPUT_DIR = os.environ.get('SALT_XML_TEST_REPORTS_DIR', os.path.join(paths.TMP, 'xml-test-reports'))
@@ -204,6 +205,7 @@ RUNTIME_VARS = RuntimeVars(
     PILLAR_DIR=paths.PILLAR_DIR,
     ENGINES_DIR=paths.ENGINES_DIR,
     LOG_HANDLERS_DIR=paths.LOG_HANDLERS_DIR,
+    TMP_ROOT_DIR=paths.TMP_ROOT_DIR,
     TMP_CONF_DIR=paths.TMP_CONF_DIR,
     TMP_CONF_MASTER_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'master.d'),
     TMP_CONF_MINION_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'minion.d'),
@@ -219,6 +221,13 @@ RUNTIME_VARS = RuntimeVars(
     TMP_PILLAR_TREE=paths.TMP_PILLAR_TREE,
     TMP_PRODENV_STATE_TREE=paths.TMP_PRODENV_STATE_TREE,
     RUNNING_TESTS_USER=RUNNING_TESTS_USER,
-    RUNTIME_CONFIGS={}
+    RUNTIME_CONFIGS={},
+    CODE_DIR=paths.CODE_DIR,
+    BASE_FILES=paths.BASE_FILES,
+    PROD_FILES=paths.PROD_FILES,
+    TESTS_DIR=paths.TESTS_DIR,
+    PYTEST_SESSION=False,
+    SHELL_TRUE_PATH=salt.utils.path.which('true'),
+    SHELL_FALSE_PATH=salt.utils.path.which('false'),
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------

@@ -70,7 +70,7 @@ Mon Oct 12 08:48:25 UTC 2015 - dmacvicar@suse.de
 -------------------------------------------------------------------
 Mon Oct 12 08:19:45 UTC 2015 - dmacvicar@suse.de
 
-- allow to disable docs in preparation for building
+- allow one to disable docs in preparation for building
   on other platforms without all dependencies.
 
 -------------------------------------------------------------------
@@ -1042,7 +1042,7 @@ Thu Sep 19 17:18:06 UTC 2013 - aboe76@gmail.com
      * salt-ssh requires sshpass
      * salt-syndic requires salt-master
   Minor features:
-  - 0.17.0 release wil be last release for 0.XX.X numbering system
+  - 0.17.0 release will be last release for 0.XX.X numbering system
     Next release will be <Year>.<Month>.<Minor>
 
 -------------------------------------------------------------------

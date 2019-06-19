@@ -23,10 +23,15 @@ import logging
 # pylint: disable=import-error
 try:
     try:
-        from Cryptodome.Util import asn1
+        from M2Crypto import X509
+        HAS_M2 = True
     except ImportError:
-        from Crypto.Util import asn1
-    import OpenSSL
+        HAS_M2 = False
+        try:
+            from Cryptodome.Util import asn1
+        except ImportError:
+            from Crypto.Util import asn1
+        import OpenSSL
     HAS_DEPS = True
 except ImportError:
     HAS_DEPS = False
@@ -69,17 +74,28 @@ def auth(username, password, **kwargs):
             your_user:
               - .*
     '''
-    c = OpenSSL.crypto
     pem = password
-    cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem)
-
     cacert_file = __salt__['config.get']('external_auth:pki:ca_file')
-    with salt.utils.files.fopen(cacert_file) as f:
-        cacert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
 
     log.debug('Attempting to authenticate via pki.')
     log.debug('Using CA file: %s', cacert_file)
     log.debug('Certificate contents: %s', pem)
+
+    if HAS_M2:
+        cert = X509.load_cert_string(pem, X509.FORMAT_PEM)
+        cacert = X509.load_cert(cacert_file, X509.FORMAT_PEM)
+        if cert.verify(cacert.get_pubkey()):
+            log.info('Successfully authenticated certificate: %s', pem)
+            return True
+        else:
+            log.info('Failed to authenticate certificate: %s', pem)
+            return False
+
+    c = OpenSSL.crypto
+    cert = c.load_certificate(c.FILETYPE_PEM, pem)
+
+    with salt.utils.files.fopen(cacert_file) as f:
+        cacert = c.load_certificate(c.FILETYPE_PEM, f.read())
 
     # Get the signing algorithm
     algo = cert.get_signature_algorithm()

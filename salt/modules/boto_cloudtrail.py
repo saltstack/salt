@@ -50,14 +50,13 @@ The dependencies listed above can be installed via package or pip.
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
 from salt.ext import six
-import salt.utils.boto3
 import salt.utils.compat
-from salt.utils.versions import LooseVersion as _LooseVersion
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -82,17 +81,12 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto3_version = '1.2.5'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    if not HAS_BOTO:
-        return (False, 'The boto_cloudtrial module could not be loaded: boto libraries not found')
-    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_cloudtrial module could not be loaded: '
-                'boto version {0} or later must be installed.'.format(required_boto3_version))
-    else:
-        return True
+    return salt.utils.versions.check_boto_reqs(
+        boto3_ver='1.2.5'
+    )
 
 
 def __init__(opts):
@@ -122,7 +116,7 @@ def exists(Name,
         conn.get_trail_status(Name=Name)
         return {'exists': True}
     except ClientError as e:
-        err = salt.utils.boto3.get_error(e)
+        err = __utils__['boto3.get_error'](e)
         if e.response.get('Error', {}).get('Code') == 'TrailNotFoundException':
             return {'exists': False}
         return {'error': err}
@@ -165,14 +159,14 @@ def create(Name,
                                   S3BucketName=S3BucketName,
                                   **kwargs)
         if trail:
-            log.info('The newly created trail name is {0}'.format(trail['Name']))
+            log.info('The newly created trail name is %s', trail['Name'])
 
             return {'created': True, 'name': trail['Name']}
         else:
             log.warning('Trail was not created')
             return {'created': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'created': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def delete(Name,
@@ -196,7 +190,7 @@ def delete(Name,
         conn.delete_trail(Name=Name)
         return {'deleted': True}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def describe(Name,
@@ -217,7 +211,7 @@ def describe(Name,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         trails = conn.describe_trails(trailNameList=[Name])
-        if trails and len(trails.get('trailList', [])) > 0:
+        if trails and trails.get('trailList'):
             keys = ('Name', 'S3BucketName', 'S3KeyPrefix',
                     'SnsTopicName', 'IncludeGlobalServiceEvents',
                     'IsMultiRegionTrail',
@@ -229,10 +223,10 @@ def describe(Name,
         else:
             return {'trail': None}
     except ClientError as e:
-        err = salt.utils.boto3.get_error(e)
+        err = __utils__['boto3.get_error'](e)
         if e.response.get('Error', {}).get('Code') == 'TrailNotFoundException':
             return {'trail': None}
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def status(Name,
@@ -270,10 +264,10 @@ def status(Name,
         else:
             return {'trail': None}
     except ClientError as e:
-        err = salt.utils.boto3.get_error(e)
+        err = __utils__['boto3.get_error'](e)
         if e.response.get('Error', {}).get('Code') == 'TrailNotFoundException':
             return {'trail': None}
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def list(region=None, key=None, keyid=None, profile=None):
@@ -298,7 +292,7 @@ def list(region=None, key=None, keyid=None, profile=None):
             log.warning('No trails found')
         return {'trails': trails.get('trailList', [])}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def update(Name,
@@ -338,14 +332,14 @@ def update(Name,
                                   S3BucketName=S3BucketName,
                                   **kwargs)
         if trail:
-            log.info('The updated trail name is {0}'.format(trail['Name']))
+            log.info('The updated trail name is %s', trail['Name'])
 
             return {'updated': True, 'name': trail['Name']}
         else:
             log.warning('Trail was not created')
             return {'updated': False}
     except ClientError as e:
-        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'updated': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def start_logging(Name,
@@ -369,7 +363,7 @@ def start_logging(Name,
         conn.start_logging(Name=Name)
         return {'started': True}
     except ClientError as e:
-        return {'started': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'started': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def stop_logging(Name,
@@ -393,7 +387,7 @@ def stop_logging(Name,
         conn.stop_logging(Name=Name)
         return {'stopped': True}
     except ClientError as e:
-        return {'stopped': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'stopped': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def _get_trail_arn(name, region=None, key=None, keyid=None, profile=None):
@@ -430,15 +424,15 @@ def add_tags(Name,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
         for k, v in six.iteritems(kwargs):
-            if str(k).startswith('__'):
+            if six.text_type(k).startswith('__'):
                 continue
-            tagslist.append({'Key': str(k), 'Value': str(v)})
+            tagslist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
         conn.add_tags(ResourceId=_get_trail_arn(Name,
                       region=region, key=key, keyid=keyid,
                       profile=profile), TagsList=tagslist)
         return {'tagged': True}
     except ClientError as e:
-        return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'tagged': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def remove_tags(Name,
@@ -461,15 +455,15 @@ def remove_tags(Name,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
         for k, v in six.iteritems(kwargs):
-            if str(k).startswith('__'):
+            if six.text_type(k).startswith('__'):
                 continue
-            tagslist.append({'Key': str(k), 'Value': str(v)})
+            tagslist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
         conn.remove_tags(ResourceId=_get_trail_arn(Name,
                               region=region, key=key, keyid=keyid,
                               profile=profile), TagsList=tagslist)
         return {'tagged': True}
     except ClientError as e:
-        return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'tagged': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def list_tags(Name,
@@ -502,4 +496,4 @@ def list_tags(Name,
             tagdict[tag.get('Key')] = tag.get('Value')
         return {'tags': tagdict}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}

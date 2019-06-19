@@ -4,7 +4,7 @@ Return data to a postgresql server
 
 .. note::
     There are three PostgreSQL returners.  Any can function as an external
-    :ref:`master job cache <external-master-cache>`. but each has different
+    :ref:`master job cache <external-job-cache>`. but each has different
     features.  SaltStack recommends
     :mod:`returners.pgjsonb <salt.returners.pgjsonb>` if you are working with
     a version of PostgreSQL that has the appropriate native binary JSON types.
@@ -210,7 +210,7 @@ def _get_serv(ret=None, commit=False):
         error = err.args
         sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
-        raise err
+        six.reraise(*sys.exc_info())
     else:
         if commit:
             cursor.execute("COMMIT")
@@ -274,7 +274,7 @@ def save_load(jid, load, minions=None):  # pylint: disable=unused-argument
                               salt.utils.json.dumps(load)))
         except psycopg2.IntegrityError:
             # https://github.com/saltstack/salt/issues/22171
-            # Without this try:except: we get tons of duplicate entry errors
+            # Without this try/except we get tons of duplicate entry errors
             # which result in job returns not being stored properly
             pass
 

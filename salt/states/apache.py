@@ -36,16 +36,63 @@ the above word between angle brackets (<>).
                   - Indexes
                   - FollowSymlinks
                 AllowOverride: All
+
+.. versionchanged:: 2018.3
+
+Allows having the same section container multiple times (e.g. <Directory /path/to/dir>).
+
+YAML structure stays the same only replace dictionary with a list.
+
+When a section container does not have mandatory attribute, such as <Else>,
+it still needs keyword ``this`` with empty string (or "\b" if nicer output is required - without space).
+
+.. code-block:: yaml
+
+    /etc/httpd/conf.d/website.com.conf:
+      apache.configfile:
+        - config:
+          - VirtualHost:
+              - this: '*:80'
+              - ServerName:
+                - website.com
+              - DocumentRoot: /var/www/vhosts/website.com
+              - Directory:
+                  this: /var/www/vhosts/website.com
+                  Order: Deny,Allow
+                  Deny from: all
+                  Allow from:
+                    - 127.0.0.1
+                    - 192.168.100.0/24
+                  Options:
+                    - Indexes
+                    - FollowSymlinks
+                  AllowOverride: All
+              - Directory:
+                - this: /var/www/vhosts/website.com/private
+                - Order: Deny,Allow
+                - Deny from: all
+                - Allow from:
+                  - 127.0.0.1
+                  - 192.168.100.0/24
+                - If:
+                    this: some condition
+                    do: something
+                - Else:
+                    this:
+                    do: something else
+                - Else:
+                    this: "\b"
+                    do: another thing
 '''
 
-from __future__ import with_statement, print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement, print_function, unicode_literals
 
 # Import python libs
-import os.path
+import os
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.stringutils
 
 
 def __virtual__():
@@ -62,9 +109,9 @@ def configfile(name, config):
     current_configs = ''
     if os.path.exists(name):
         with salt.utils.files.fopen(name) as config_file:
-            current_configs = config_file.read()
+            current_configs = salt.utils.stringutils.to_unicode(config_file.read())
 
-    if configs == current_configs.strip():
+    if configs.strip() == current_configs.strip():
         ret['result'] = True
         ret['comment'] = 'Configuration is up to date.'
         return ret
@@ -79,7 +126,7 @@ def configfile(name, config):
 
     try:
         with salt.utils.files.fopen(name, 'w') as config_file:
-            print(configs, file=config_file)
+            print(salt.utils.stringutils.to_str(configs), file=config_file)
         ret['changes'] = {
             'old': current_configs,
             'new': configs

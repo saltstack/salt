@@ -20,10 +20,11 @@ Module for execution of ServiceNow CI (configuration items)
           password: ''
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import third party libs
+from salt.ext import six
 HAS_LIBS = False
 try:
     from servicenow_rest.api import Client
@@ -78,7 +79,7 @@ def set_change_request_state(change_id, state='approved'):
     client.table = 'change_request'
     # Get the change record first
     record = client.get({'number': change_id})
-    if record is None or len(record) == 0:
+    if not record:
         log.error('Failed to fetch change record, maybe it does not exist?')
         return False
     # Use the sys_id as the unique system record
@@ -139,7 +140,7 @@ def non_structured_query(table, query=None, **kwargs):
         for key, value in kwargs.items():
             query_parts.append('{0}={1}'.format(key, value))
         query = '^'.join(query_parts)
-    query = str(query)
+    query = six.text_type(query)
     response = client.get(query)
     return response
 

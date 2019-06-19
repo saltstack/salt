@@ -4,7 +4,7 @@ A decorator which returns a function with the same signature of the function
 which is being wrapped.
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import inspect
 from functools import wraps
 

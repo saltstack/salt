@@ -8,7 +8,7 @@ Manage accounts in Samba's passdb using pdbedit
 
 .. versionadded:: 2017.7.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -20,6 +20,7 @@ except ImportError:
     from pipes import quote as _quote_args
 
 # Import Salt libs
+from salt.ext import six
 import salt.utils.path
 
 log = logging.getLogger(__name__)
@@ -84,36 +85,41 @@ def list_users(verbose=True, hashes=False):
     users = {} if verbose else []
 
     if verbose:
-        ## parse detailed user data
+        # parse detailed user data
         res = __salt__['cmd.run_all'](
             'pdbedit --list --verbose {hashes}'.format(hashes="--smbpasswd-style" if hashes else ""),
         )
 
         if res['retcode'] > 0:
             log.error(res['stderr'] if 'stderr' in res else res['stdout'])
-        else:
-            user_data = {}
-            for user in res['stdout'].splitlines():
-                if user.startswith('-'):
-                    if len(user_data) > 0:
-                        users[user_data['unix username']] = user_data
-                    user_data = {}
-                else:
-                    label = user[:user.index(':')].strip().lower()
-                    data = user[(user.index(':')+1):].strip()
-                    user_data[label] = data
+            return users
 
-            if len(user_data) > 0:
-                users[user_data['unix username']] = user_data
+        user_data = {}
+        for user in res['stdout'].splitlines():
+            if user.startswith('-'):
+                if 'unix username' in user_data:
+                    users[user_data['unix username']] = user_data
+                user_data = {}
+            elif ':' in user:
+                label = user[:user.index(':')].strip().lower()
+                data = user[(user.index(':')+1):].strip()
+                user_data[label] = data
+
+        if user_data:
+            users[user_data['unix username']] = user_data
     else:
-        ## list users
+        # list users
         res = __salt__['cmd.run_all']('pdbedit --list')
 
         if res['retcode'] > 0:
             return {'Error': res['stderr'] if 'stderr' in res else res['stdout']}
-        else:
-            for user in res['stdout'].splitlines():
-                users.append(user.split(':')[0])
+
+        for user in res['stdout'].splitlines():
+            if ':' not in user:
+                continue
+            user_data = user.split(':')
+            if len(user_data) >= 3:
+                users.append(user_data[0])
 
     return users
 
@@ -185,14 +191,14 @@ def create(login, password, password_hashed=False, machine_account=False):
     '''
     ret = 'unchanged'
 
-    ## generate nt hash if needed
+    # generate nt hash if needed
     if password_hashed:
         password_hash = password.upper()
         password = ""  # wipe password
     else:
         password_hash = generate_nt_hash(password)
 
-    ## create user
+    # create user
     if login not in list_users(False):
         # NOTE: --create requires a password, even if blank
         res = __salt__['cmd.run_all'](
@@ -208,7 +214,7 @@ def create(login, password, password_hashed=False, machine_account=False):
 
         ret = 'created'
 
-    ## update password if needed
+    # update password if needed
     user = get_user(login, True)
     if user['nt hash'] != password_hash:
         res = __salt__['cmd.run_all'](
@@ -266,7 +272,7 @@ def modify(
         specify user account control properties
 
         .. note::
-            Only the follwing can be set:
+            Only the following can be set:
             - N: No password required
             - D: Account disabled
             - H: Home directory required
@@ -291,7 +297,7 @@ def modify(
     '''
     ret = 'unchanged'
 
-    ## flag mapping
+    # flag mapping
     flags = {
         'domain': '--domain=',
         'full name': '--fullname=',
@@ -305,7 +311,7 @@ def modify(
         'machine sid': '-M ',
     }
 
-    ## field mapping
+    # field mapping
     provided = {
         'domain': domain,
         'full name': fullname,
@@ -319,7 +325,7 @@ def modify(
         'machine sid': machine_sid,
     }
 
-    ## update password
+    # update password
     if password:
         ret = create(login, password, password_hashed)[login]
         if ret not in ['updated', 'created', 'unchanged']:
@@ -327,13 +333,13 @@ def modify(
     elif login not in list_users(False):
         return {login: 'absent'}
 
-    ## check for changes
+    # check for changes
     current = get_user(login, hashes=True)
     changes = {}
     for key, val in provided.items():
         if key in ['user sid', 'machine sid']:
-            if val is not None and key in current and not current[key].endswith(str(val)):
-                changes[key] = str(val)
+            if val is not None and key in current and not current[key].endswith(six.text_type(val)):
+                changes[key] = six.text_type(val)
         elif key in ['account flags']:
             if val is not None:
                 if val.startswith('['):
@@ -341,9 +347,8 @@ def modify(
                 new = []
                 for f in val.upper():
                     if f not in ['N', 'D', 'H', 'L', 'X']:
-                        log.warning(
-                            'pdbedit.modify - unknown {f} flag for account_control, ignored'.format(f=f)
-                        )
+                        logmsg = 'pdbedit.modify - unknown {} flag for account_control, ignored'.format(f)
+                        log.warning(logmsg)
                     else:
                         new.append(f)
                 changes[key] = "[{flags}]".format(flags="".join(new))
@@ -351,8 +356,8 @@ def modify(
             if val is not None and key in current and current[key] != val:
                 changes[key] = val
 
-    ## apply changes
-    if len(changes) > 0 or reset_login_hours or reset_bad_password_count:
+    # apply changes
+    if changes or reset_login_hours or reset_bad_password_count:
         cmds = []
         for change in changes:
             cmds.append('{flag}{value}'.format(

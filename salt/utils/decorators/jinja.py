@@ -2,10 +2,11 @@
 '''
 Jinja-specific decorators
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
-import logging
+# Ensure we're using the custom logging from Salt
+import salt.log.setup as logging
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ class JinjaGlobal(object):
         '''
         name = self.name or function.__name__
         if name not in self.salt_jinja_globals:
-            log.debug('Marking "{0}" as a jinja global'.format(name))
+            log.debug('Marking \'%s\' as a jinja global', name)
             self.salt_jinja_globals[name] = function
         return function
 

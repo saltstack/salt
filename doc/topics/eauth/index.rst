@@ -12,6 +12,25 @@ command authorization to any external authentication system, such as PAM or LDAP
     eAuth using the PAM external auth system requires salt-master to be run as
     root as this system needs root access to check authentication.
 
+.. note::
+
+    ``publisher_acl`` is useful for allowing local system users to run Salt
+    commands without giving them root access. If you can log into the Salt
+    master directly, then ``publisher_acl`` allows you to use Salt without
+    root privileges. If the local system is configured to authenticate against
+    a remote system, like LDAP or Active Directory, then ``publisher_acl`` will
+    interact with the remote system transparently.
+
+    ``external_auth`` is useful for ``salt-api`` or for making your own scripts
+    that use Salt's Python API. It can be used at the CLI (with the ``-a``
+    flag) but it is more cumbersome as there are more steps involved.  The only
+    time it is useful at the CLI is when the local system is *not* configured
+    to authenticate against an external service *but* you still want Salt to
+    authenticate against an external service.
+
+    For more information and examples, see :ref:`this Access Control System
+    <acl_types>` section.
+
 External Authentication System Configuration
 ============================================
 The external authentication system allows for specific users to be granted
@@ -27,12 +46,13 @@ in the master configuration file and uses the :ref:`access control system
           - 'web*':
             - test.*
             - network.*
-        steve:
+        steve|admin.*:
           - .*
 
-The above configuration allows the user ``thatch`` to execute functions
-in the test and network modules on the minions that match the web* target.
-User ``steve`` is given unrestricted access to minion commands.
+The above configuration allows the user ``thatch`` to execute functions in the
+test and network modules on the minions that match the web* target.  User
+``steve`` and the users whose logins start with ``admin``, are granted
+unrestricted access to minion commands.
 
 Salt respects the current PAM configuration in place, and uses the 'login'
 service to authenticate.
@@ -71,8 +91,8 @@ Matching syntax
 ---------------
 
 The structure of the ``external_auth`` dictionary can take the following
-shapes. Function matches are regular expressions; minion matches are compound
-targets.
+shapes. User and function matches are exact matches, shell glob patterns or
+regular expressions; minion matches are compound targets.
 
 By user:
 
@@ -142,8 +162,8 @@ Positional arguments or keyword arguments to functions can also be whitelisted.
           - '*':
             - 'my_mod.*':
                 args:
-                - 'a.*'
-                - 'b.*'
+                  - 'a.*'
+                  - 'b.*'
                 kwargs:
                   'kwa': 'kwa.*'
                   'kwb': 'kwb'
@@ -179,7 +199,7 @@ any user on the same system as the master with the ``-a`` option:
 
 .. code-block:: bash
 
-    $ salt -a pam web\* test.ping
+    $ salt -a pam web\* test.version
 
 The system will ask the user for the credentials required by the
 authentication system and then publish the command.
@@ -197,7 +217,7 @@ adding a ``-T`` option when authenticating:
 
 .. code-block:: bash
 
-    $ salt -T -a pam web\* test.ping
+    $ salt -T -a pam web\* test.version
 
 Now a token will be created that has an expiration of 12 hours (by default).
 This token is stored in a file named ``salt_token`` in the active user's home
@@ -235,6 +255,9 @@ Server configuration values and their defaults:
     # Use TLS when connecting
     auth.ldap.tls: False
 
+    # Use STARTTLS when connecting
+    auth.ldap.starttls: False
+
     # LDAP scope level, almost always 2
     auth.ldap.scope: 2
 
@@ -271,7 +294,7 @@ Server configuration values and their defaults:
     auth.ldap.persontype: 'person'
 
     auth.ldap.minion_stripdomains: []
-    
+
     # Redhat Identity Policy Audit
     auth.ldap.freeipa: False
 
@@ -340,7 +363,7 @@ from LDAP or Active Directory have fully-qualified domain names attached, while 
 instead are simple hostnames.  The parameter below allows the administrator to strip
 off a certain set of domain names so the hostnames looked up in the directory service
 can match the minion IDs.
-               
+
 .. code-block:: yaml
 
    auth.ldap.minion_stripdomains: ['.external.bigcorp.com', '.internal.bigcorp.com']

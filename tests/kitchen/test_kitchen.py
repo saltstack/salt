@@ -79,5 +79,6 @@ def func_builder(testdir):
         )
     return func
 
+
 for testdir in os.listdir(os.path.join(CURRENT_DIR, 'tests')):
     setattr(KitchenTestCase, 'test_kitchen_{0}'.format(testdir), func_builder(testdir))

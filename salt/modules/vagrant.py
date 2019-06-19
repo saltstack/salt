@@ -2,7 +2,7 @@
 '''
 Work with virtual machines managed by Vagrant.
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Mapping between a Salt node id and the Vagrant machine name
 (and the path to the Vagrantfile where it is defined)
@@ -29,20 +29,17 @@ requirements:
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.ext.six as six
-
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 
 log = logging.getLogger(__name__)
 
@@ -211,7 +208,7 @@ def list_domains():
     vms = []
     cmd = 'vagrant global-status'
     reply = __salt__['cmd.shell'](cmd)
-    log.info('--->\n' + reply)
+    log.info('--->\n%s', reply)
     for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         try:
@@ -240,7 +237,7 @@ def list_active_vms(cwd=None):
     vms = []
     cmd = 'vagrant status'
     reply = __salt__['cmd.shell'](cmd, cwd=cwd)
-    log.info('--->\n' + reply)
+    log.info('--->\n%s', reply)
     for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         if len(tokens) > 1:
@@ -264,7 +261,7 @@ def list_inactive_vms(cwd=None):
     vms = []
     cmd = 'vagrant status'
     reply = __salt__['cmd.shell'](cmd, cwd=cwd)
-    log.info('--->\n' + reply)
+    log.info('--->\n%s', reply)
     for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         if len(tokens) > 1 and tokens[-1].endswith(')'):
@@ -317,7 +314,7 @@ def vm_state(name='', cwd=None):
     info = []
     cmd = 'vagrant status {}'.format(machine)
     reply = __salt__['cmd.shell'](cmd, cwd)
-    log.info('--->\n' + reply)
+    log.info('--->\n%s', reply)
     for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         if len(tokens) > 1 and tokens[-1].endswith(')'):
@@ -376,7 +373,7 @@ def init(name,  # Salt_id for created VM
     _update_vm_info(name, vm_)
 
     if start:
-        log.debug('Starting VM {0}'.format(name))
+        log.debug('Starting VM %s', name)
         ret = _start(name, vm_)
     else:
         ret = 'Name {} defined using VM {}'.format(name, vm_['machine'] or '(default)')
@@ -527,7 +524,7 @@ def destroy(name):
                                   output_loglevel='info')
     if ret['retcode'] == 0:
         _erase_vm_info(name)
-        return u'Destroyed VM {0}'.format(name)
+        return 'Destroyed VM {0}'.format(name)
     return False
 
 
@@ -595,9 +592,12 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
                   '-oControlPath=none ' \
                   '{User}@{HostName} ifconfig'.format(**ssh_config)
 
-        log.info('Trying ssh -p {Port} {User}@{HostName} ifconfig'.format(**ssh_config))
+        log.info(
+            'Trying ssh -p %s %s@%s ifconfig',
+            ssh_config['Port'], ssh_config['User'], ssh_config['HostName']
+        )
         reply = __salt__['cmd.shell'](command)
-        log.info('--->\n' + reply)
+        log.info('--->\n%s', reply)
         target_network_range = ipaddress.ip_network(network_mask, strict=False)
 
         for line in reply.split('\n'):
@@ -614,7 +614,7 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
                     nxt = tokens.index("inet6") + 1
                     found_address = ipaddress.ip_address(tokens[nxt].split('/')[0])
                 if found_address in target_network_range:
-                    ans['ip_address'] = str(found_address)
+                    ans['ip_address'] = six.text_type(found_address)
                     break  # we have located a good matching address
             except (IndexError, AttributeError, TypeError):
                 pass  # all syntax and type errors loop here
@@ -626,7 +626,7 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
         # retrieve the Vagrant private key from the host
         try:
             with salt.utils.files.fopen(ssh_config['IdentityFile']) as pks:
-                ans['private_key'] = pks.read()
+                ans['private_key'] = salt.utils.stringutils.to_unicode(pks.read())
         except (OSError, IOError) as e:
             raise CommandExecutionError("Error processing Vagrant private key file: {}".format(e))
     return ans

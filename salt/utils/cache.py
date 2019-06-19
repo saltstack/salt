@@ -3,30 +3,26 @@
 In-memory caching used by Salt
 '''
 # Import Python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import time
 import logging
 try:
-    import msgpack
-    HAS_MSGPACK = True
+    import salt.utils.msgpack as msgpack
 except ImportError:
-    HAS_MSGPACK = False
+    msgpack = None
 
 # Import salt libs
 import salt.config
 import salt.payload
+import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 
 # Import third party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-try:
-    import zmq
-    HAS_ZMQ = True
-except ImportError:
-    HAS_ZMQ = False
+from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +33,7 @@ class CacheFactory(object):
     '''
     @classmethod
     def factory(cls, backend, ttl, *args, **kwargs):
-        log.info('Factory backend: {0}'.format(backend))
+        log.debug('Factory backend: %s', backend)
         if backend == 'memory':
             return CacheDict(ttl, *args, **kwargs)
         elif backend == 'disk':
@@ -46,12 +42,23 @@ class CacheFactory(object):
             log.error('CacheFactory received unrecognized cache type')
 
 
-class CacheDict(dict):
+class CacheAPI(dict):
+    '''
+    Stub to export any cache implementation API
+    '''
+    def store(self):
+        '''
+        Store data in the cache persistence.
+        :return:
+        '''
+
+
+class CacheDict(CacheAPI):
     '''
     Subclass of dict that will lazily delete items past ttl
     '''
-    def __init__(self, ttl, *args, **kwargs):
-        dict.__init__(self, *args, **kwargs)
+    def __init__(self, ttl, *args, **kwargs):  # pylint: disable=W0231
+        dict.__init__(self, *args, **kwargs)   # pylint: disable=W0233
         self._ttl = ttl
         self._key_cache_time = {}
 
@@ -59,7 +66,7 @@ class CacheDict(dict):
         '''
         Enforce the TTL to a specific key, delete if its past TTL
         '''
-        if key not in self._key_cache_time:
+        if key not in self._key_cache_time or self._ttl == 0:
             return
         if time.time() - self._key_cache_time[key] > self._ttl:
             del self._key_cache_time[key]
@@ -100,7 +107,7 @@ class CacheDisk(CacheDict):
         '''
         Enforce the TTL to a specific key, delete if its past TTL
         '''
-        if key not in self._key_cache_time:
+        if key not in self._key_cache_time or self._ttl == 0:
             return
         if time.time() - self._key_cache_time[key] > self._ttl:
             del self._key_cache_time[key]
@@ -110,12 +117,39 @@ class CacheDisk(CacheDict):
         self._enforce_ttl_key(key)
         return self._dict.__contains__(key)
 
+    def __repr__(self):
+        '''
+        Represent CacheDisk.
+        :return:
+        '''
+        return '<{name} of {length} entries at {memaddr}>'.format(
+            name=self.__class__.__name__, length=len(self), memaddr=hex(id(self)))
+
+    def __str__(self):
+        '''
+        String version of this object.
+        :return:
+        '''
+        return self.__repr__()
+
+    def __len__(self):
+        '''
+        Length of the cache storage.
+
+        :return:
+        '''
+        return len(self._dict)
+
     def __getitem__(self, key):
         '''
         Check if the key is ttld out, then do the get
         '''
         self._enforce_ttl_key(key)
-        return self._dict.__getitem__(key)
+        item = None
+        if key in self._dict:
+            item = self._dict.__getitem__(key)
+
+        return item
 
     def __setitem__(self, key, val):
         '''
@@ -124,7 +158,7 @@ class CacheDisk(CacheDict):
         self._key_cache_time[key] = time.time()
         self._dict.__setitem__(key, val)
         # Do the same as the parent but also persist
-        self._write()
+        self.store()
 
     def __delitem__(self, key):
         '''
@@ -133,41 +167,50 @@ class CacheDisk(CacheDict):
         del self._key_cache_time[key]
         self._dict.__delitem__(key)
         # Do the same as the parent but also persist
-        self._write()
+        self.store()
 
     def _read(self):
         '''
         Read in from disk
         '''
-        if not HAS_MSGPACK or not os.path.exists(self._path):
-            return
-        with salt.utils.files.fopen(self._path, 'rb') as fp_:
-            cache = msgpack.load(fp_, encoding=__salt_system_encoding__)
-        if "CacheDisk_cachetime" in cache:  # new format
-            self._dict = cache["CacheDisk_data"]
-            self._key_cache_time = cache["CacheDisk_cachetime"]
-        else:  # old format
-            self._dict = cache
-            timestamp = os.path.getmtime(self._path)
-            for key in self._dict:
-                self._key_cache_time[key] = timestamp
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug('Disk cache retrieved: {0}'.format(cache))
+        if msgpack is None:
+            log.error('Cache cannot be read from the disk: msgpack is missing')
+        elif not os.path.exists(self._path):
+            log.debug('Cache path does not exist for reading: %s', self._path)
+        else:
+            try:
+                with salt.utils.files.fopen(self._path, 'rb') as fp_:
+                    cache = salt.utils.data.decode(msgpack.load(fp_, encoding=__salt_system_encoding__))
+                if "CacheDisk_cachetime" in cache:  # new format
+                    self._dict = cache["CacheDisk_data"]
+                    self._key_cache_time = cache["CacheDisk_cachetime"]
+                else:  # old format
+                    self._dict = cache
+                    timestamp = os.path.getmtime(self._path)
+                    for key in self._dict:
+                        self._key_cache_time[key] = timestamp
+                if log.isEnabledFor(logging.DEBUG):
+                    log.debug('Disk cache retrieved: %s', cache)
+            except (IOError, OSError) as err:
+                log.error('Error while reading disk cache from %s: %s', self._path, err)
 
-    def _write(self):
+    def store(self):
         '''
-        Write out to disk
+        Write content of the entire cache to disk
         '''
-        if not HAS_MSGPACK:
-            return
-        # TODO Add check into preflight to ensure dir exists
-        # TODO Dir hashing?
-        with salt.utils.files.fopen(self._path, 'wb+') as fp_:
-            cache = {
-                "CacheDisk_data": self._dict,
-                "CacheDisk_cachetime": self._key_cache_time
-            }
-            msgpack.dump(cache, fp_, use_bin_type=True)
+        if msgpack is None:
+            log.error('Cache cannot be stored on disk: msgpack is missing')
+        else:
+            # TODO Dir hashing?
+            try:
+                with salt.utils.files.fopen(self._path, 'wb+') as fp_:
+                    cache = {
+                        "CacheDisk_data": self._dict,
+                        "CacheDisk_cachetime": self._key_cache_time
+                    }
+                    msgpack.dump(cache, fp_, use_bin_type=True)
+            except (IOError, OSError) as err:
+                log.error('Error storing cache data to the disk: %s', err)
 
 
 class CacheCli(object):
@@ -295,7 +338,7 @@ class ContextCache(object):
         Retrieve a context cache from disk
         '''
         with salt.utils.files.fopen(self.cache_path, 'rb') as cache:
-            return self.serial.load(cache)
+            return salt.utils.data.decode(self.serial.load(cache))
 
 
 def context_cache(func):

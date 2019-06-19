@@ -2,7 +2,7 @@
 '''
 Module to manage FreeBSD kernel modules
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -72,6 +72,7 @@ def _get_persistent_modules():
     mods = set()
     with salt.utils.files.fopen(_LOADER_CONF, 'r') as loader_conf:
         for line in loader_conf:
+            line = salt.utils.stringutils.to_unicode(line)
             line = line.strip()
             mod_name = _get_module_name(line)
             if mod_name:
@@ -90,13 +91,19 @@ def _set_persistent_module(mod):
     return set([mod])
 
 
-def _remove_persistent_module(mod):
+def _remove_persistent_module(mod, comment):
     '''
-    Remove module from loader.conf.
+    Remove module from loader.conf. If comment is true only comment line where
+    module is.
     '''
     if not mod or mod not in mod_list(True):
         return set()
-    __salt__['file.sed'](_LOADER_CONF, _MODULE_RE.format(mod), '')
+
+    if comment:
+        __salt__['file.comment'](_LOADER_CONF, _MODULE_RE.format(mod))
+    else:
+        __salt__['file.sed'](_LOADER_CONF, _MODULE_RE.format(mod), '')
+
     return set([mod])
 
 
@@ -232,9 +239,19 @@ def is_loaded(mod):
     return mod in mod_list()
 
 
-def remove(mod, persist=False):
+def remove(mod, persist=False, comment=True):
     '''
     Remove the specified kernel module
+
+    mod
+        Name of module to remove
+
+    persist
+        Also remove module from /boot/loader.conf
+
+    comment
+        If persist is set don't remove line from /boot/loader.conf but only
+        comment it
 
     CLI Example:
 
@@ -243,11 +260,14 @@ def remove(mod, persist=False):
         salt '*' kmod.remove vmm
     '''
     pre_mods = lsmod()
-    __salt__['cmd.run_all']('kldunload {0}'.format(mod),
+    res = __salt__['cmd.run_all']('kldunload {0}'.format(mod),
                             python_shell=False)
-    post_mods = lsmod()
-    mods = _rm_mods(pre_mods, post_mods)
-    persist_mods = set()
-    if persist:
-        persist_mods = _remove_persistent_module(mod)
-    return sorted(list(mods | persist_mods))
+    if res['retcode'] == 0:
+        post_mods = lsmod()
+        mods = _rm_mods(pre_mods, post_mods)
+        persist_mods = set()
+        if persist:
+            persist_mods = _remove_persistent_module(mod, comment)
+        return sorted(list(mods | persist_mods))
+    else:
+        return 'Error removing module {0}: {1}'.format(mod, res['stderr'])

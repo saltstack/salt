@@ -8,9 +8,9 @@ Module for managaging metadata in SmartOS Zones
 :maturity:      new
 :platform:      smartos
 '''
-from __future__ import absolute_import
 
 # Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -116,7 +116,7 @@ def get_(*keyname):
     mdata = _check_mdata_get()
     ret = {}
 
-    if len(keyname) == 0:
+    if not keyname:
         keyname = list_()
 
     for k in keyname:

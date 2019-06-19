@@ -4,13 +4,12 @@
 Understanding Jinja
 ===================
 
-`Jinja <http://jinja.pocoo.org/docs/>`_ is the default templating language
-in SLS files.
+`Jinja`_ is the default templating language in SLS files.
+
+.. _Jinja: http://jinja.pocoo.org/docs/templates/
 
 Jinja in States
 ===============
-
-.. _Jinja: http://jinja.pocoo.org/docs/templates/
 
 Jinja is evaluated before YAML, which means it is evaluated before the States
 are run.
@@ -35,7 +34,7 @@ wrap conditional or redundant state elements:
         {% endif %}
         - source: salt://motd
 
-In this example, the first if block will only be evaluated on minions that
+In this example, the first **if** block will only be evaluated on minions that
 aren't running FreeBSD, and the second block changes the file name based on the
 *os* grain.
 
@@ -88,6 +87,13 @@ the context into the included file is required:
 .. code-block:: jinja
 
     {% from 'lib.sls' import test with context %}
+    
+Includes must use full paths, like so:
+
+.. code-block:: jinja
+   :caption: spam/eggs.jinja
+
+    {% include 'spam/foobar.jinja' %}
 
 Including Context During Include/Import
 ---------------------------------------
@@ -153,7 +159,7 @@ starts at the root of the state tree or pillar.
 Errors
 ======
 
-Saltstack allows to raise custom errors using the ``raise`` jinja function.
+Saltstack allows raising custom errors using the ``raise`` jinja function.
 
 .. code-block:: jinja
 
@@ -176,10 +182,9 @@ Saltstack extends `builtin filters`_ with these custom filters:
 ``strftime``
 ------------
 
-Converts any time related object into a time based string. It requires a
-valid :ref:`strftime directives <python2:strftime-strptime-behavior>`. An
-:ref:`exhaustive list <python2:strftime-strptime-behavior>` can be found in
-the official Python documentation.
+Converts any time related object into a time based string. It requires valid
+strftime directives. An exhaustive list can be found :ref:`here
+<python:strftime-strptime-behavior>` in the Python documentation.
 
 .. code-block:: jinja
 
@@ -224,8 +229,8 @@ maps.
     {%- load_yaml as foo %}
     bar: {{ bar|yaml_encode }}
     baz: {{ baz|yaml_encode }}
-    baz: {{ zip|yaml_encode }}
-    baz: {{ zap|yaml_encode }}
+    zip: {{ zip|yaml_encode }}
+    zap: {{ zap|yaml_encode }}
     {%- endload %}
 
 In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
@@ -398,6 +403,29 @@ Returns:
 .. code-block:: text
 
   None
+
+
+.. jinja_ref:: regex_replace
+
+``regex_replace``
+-----------------
+
+.. versionadded:: 2017.7.0
+
+Searches for a pattern and replaces with a sequence of characters.
+
+Example:
+
+.. code-block:: jinja
+
+    {% set my_text = 'yes, this is a TEST' %}
+    {{ my_text | regex_replace(' ([a-z])', '__\\1', ignorecase=True) }}
+
+Returns:
+
+.. code-block:: text
+
+    yes,__this__is__a__TEST
 
 
 .. jinja_ref:: uuid
@@ -621,6 +649,56 @@ Returns:
   1, 4
 
 
+.. jinja_ref:: method_call
+
+``method_call``
+---------------
+
+.. versionadded:: Neon
+
+Returns a result of object's method call.
+
+Example #1:
+
+.. code-block:: jinja
+
+  {{ [1, 2, 1, 3, 4] | method_call('index', 1, 1, 3) }}
+
+Returns:
+
+.. code-block:: text
+
+  2
+
+This filter can be used with the `map filter`_ to apply object methods without
+using loop constructs or temporary variables.
+
+Example #2:
+
+.. code-block:: jinja
+
+  {% set host_list = ['web01.example.com', 'db01.example.com'] %}
+  {% set host_list_split = [] %}
+  {% for item in host_list %}
+    {% do host_list_split.append(item.split('.', 1)) %}
+  {% endfor %}
+  {{ host_list_split }}
+
+Example #3:
+
+.. code-block:: jinja
+
+  {{ host_list|map('method_call', 'split', '.', 1)|list }}
+
+Return of examples #2 and #3:
+
+.. code-block:: text
+
+  [[web01, example.com], [db01, example.com]]
+
+.. _`map filter`: http://jinja.pocoo.org/docs/2.10/templates/#map
+
+
 .. jinja_ref:: is_sorted
 
 ``is_sorted``
@@ -628,7 +706,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return is an iterable object is already sorted.
+Return ``True`` if an iterable object is already sorted.
 
 Example:
 
@@ -662,7 +740,7 @@ Returns:
 
 .. code-block:: python
 
-  {'new': 4, 'old': 3}
+  {'new': [4], 'old': [3]}
 
 
 .. jinja_ref:: compare_dicts
@@ -678,7 +756,7 @@ Example:
 
 .. code-block:: jinja
 
-  {{ {'a': 'b'} | compare_lists({'a': 'c'}) }}
+  {{ {'a': 'b'} | compare_dicts({'a': 'c'}) }}
 
 Returns:
 
@@ -694,7 +772,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return True if the value is hexazecimal.
+Return ``True`` if the value is hexadecimal.
 
 Example:
 
@@ -718,7 +796,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return True if a text contains whitespaces.
+Return ``True`` if a text contains whitespaces.
 
 Example:
 
@@ -742,7 +820,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return is a substring is found in a list of string values.
+Return ``True`` if a substring is found in a list of string values.
 
 Example:
 
@@ -834,7 +912,7 @@ Returns:
 ----------
 
 .. versionadded:: 2017.7.0
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Renamed from ``str_to_num`` to ``to_num``.
 
 Converts a string to its numerical value.
@@ -870,7 +948,7 @@ Example:
 .. note::
 
     This option may have adverse effects when using the default renderer,
-    ``yaml_jinja``. This is due to the fact that YAML requires proper handling
+    ``jinja|yaml``. This is due to the fact that YAML requires proper handling
     in regard to special characters. Please see the section on :ref:`YAML ASCII
     support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
     <yaml-idiosyncrasies>` documentation for more information.
@@ -882,12 +960,16 @@ Example:
 --------------------
 
 .. versionadded:: 2017.7.0
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Renamed from ``json_decode_list`` to ``json_encode_list``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
     when it was added. ``json_decode_list`` will be supported until the Neon
     release.
+.. deprecated:: 2018.3.3,2019.2.0
+    The :jinja_ref:`tojson` filter accomplishes what this filter was designed
+    to do, making this filter redundant.
+
 
 Recursively encodes all string elements of the list to bytes.
 
@@ -911,12 +993,15 @@ Returns:
 --------------------
 
 .. versionadded:: 2017.7.0
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Renamed from ``json_decode_dict`` to ``json_encode_dict``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
     when it was added. ``json_decode_dict`` will be supported until the Neon
     release.
+.. deprecated:: 2018.3.3,2019.2.0
+    The :jinja_ref:`tojson` filter accomplishes what this filter was designed
+    to do, making this filter redundant.
 
 Recursively encodes all string items in the dictionary to bytes.
 
@@ -936,13 +1021,29 @@ Returns:
   {'a': '\xd0\x94'}
 
 
+.. jinja_ref:: tojson
+
+``tojson``
+----------
+
+.. versionadded:: 2018.3.3,2019.2.0
+
+Dumps a data structure to JSON.
+
+This filter was added to provide this functionality to hosts which have a
+Jinja release older than version 2.9 installed. If Jinja 2.9 or newer is
+installed, then the upstream version of the filter will be used. See the
+`upstream docs`__ for more information.
+
+.. __: http://jinja.pocoo.org/docs/2.10/templates/#tojson
+
 .. jinja_ref:: random_hash
 
 ``random_hash``
 ---------------
 
 .. versionadded:: 2017.7.0
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
     Renamed from ``rand_str`` to ``random_hash`` to more accurately describe
     what the filter does. ``rand_str`` will be supported until the Neon
     release.
@@ -966,6 +1067,137 @@ Returns:
 
   43ec517d68b6edd3015b3edc9a11367b
   d94a45acd81f8e3107d237dbc0d5d195f6a52a0d188bc0284c0763ece1eac9f9496fb6a531a296074c87b3540398dace1222b42e150e67c9301383fde3d66ae5
+
+
+.. jinja_ref:: set_dict_key_value
+
+``set_dict_key_value``
+----------------------
+
+..versionadded:: Neon
+
+Allows you to set a value in a nested dictionary without having to worry if all the nested keys actually exist.
+Missing keys will be automatically created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {} %}
+  {{ foo | set_dict_key_value('bar:baz', 42) }}
+
+Example 2:
+  {{ {} | set_dict_key_value('bar.baz.qux', 42, delimiter='.') }}
+
+Returns:
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': 42}}
+
+Example 2:
+  {'bar': {'baz': {'qux': 42}}}
+
+
+.. jinja_ref:: append_dict_key_value
+
+``append_dict_key_value``
+-------------------------
+
+..versionadded:: Neon
+
+Allows you to append to a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
+Missing keys will automatically be created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {'bar': {'baz': [1, 2]}} %}
+  {{ foo | append_dict_key_value('bar:baz', 42) }}
+
+Example 2:
+  {%- set foo = {} %}
+  {{ foo | append_dict_key_value('bar:baz:qux', 42) }}
+
+Returns:
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': [1, 2, 42]}}
+
+Example 2:
+  {'bar': {'baz': {'qux': [42]}}}
+
+
+.. jinja_ref:: extend_dict_key_value
+
+``extend_dict_key_value``
+-------------------------
+
+..versionadded:: Neon
+
+Allows you to extend a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
+Missing keys will automatically be created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {'bar': {'baz': [1, 2]}} %}
+  {{ foo | extend_dict_key_value('bar:baz', [42, 42]) }}
+
+Example 2:
+  {{ {} | extend_dict_key_value('bar:baz:qux', [42]) }}
+
+Returns:
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': [1, 2, 42, 42]}}
+
+Example 2:
+  {'bar': {'baz': {'qux': [42]}}}
+
+
+.. jinja_ref:: update_dict_key_value
+
+``update_dict_key_value``
+-------------------------
+
+..versionadded:: Neon
+
+Allows you to update a dictionary nested (deep) in another dictionary without having to worry if all the nested keys actually exist.
+Missing keys will automatically be created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {'bar': {'baz': {'qux': 1}}} %}
+  {{ foo | update_dict_key_value('bar:baz', {'quux': 3}) }}
+
+Example 2:
+  {{ {} | update_dict_key_value('bar:baz:qux', {'quux': 3}) }}
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': {'qux': 1, 'quux': 3}}}
+
+Example 2:
+  {'bar': {'baz': {'qux': {'quux': 3}}}}
 
 
 .. jinja_ref:: md5
@@ -1122,13 +1354,134 @@ Returns:
     'body': '{
       "userId": 1,
       "id": 1,
-      "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+      "title": "sunt aut facere repellat provident occaecati excepturi option reprehenderit",
       "body": "quia et suscipit\\nsuscipit recusandae consequuntur expedita et cum\\nreprehenderit molestiae ut ut quas totam\\nnostrum rerum est autem sunt rem eveniet architecto"
     }'
   }
 
+
+.. jinja_ref:: traverse
+
+``traverse``
+------------
+
+.. versionadded:: 2018.3.3
+
+Traverse a dict or list using a colon-delimited target string.
+The target 'foo:bar:0' will return data['foo']['bar'][0] if this value exists,
+and will otherwise return the provided default value.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ {'a1': {'b1': {'c1': 'foo'}}, 'a2': 'bar'} | traverse('a1:b1', 'default') }}
+
+Returns:
+
+.. code-block:: python
+
+  {'c1': 'foo'}
+
+.. code-block:: jinja
+
+  {{ {'a1': {'b1': {'c1': 'foo'}}, 'a2': 'bar'} | traverse('a2:b2', 'default') }}
+
+Returns:
+
+.. code-block:: python
+
+  'default'
+
+
+.. jinja_ref:: json_query
+
+``json_query``
+--------------
+
+.. versionadded:: Neon
+
+A port of Ansible ``json_query`` Jinja filter to make queries against JSON data using `JMESPath language`_.
+Could be used to filter ``pillar`` data, ``yaml`` maps, and together with :jinja_ref:`http_query`.
+Depends on the `jmespath`_ Python module.
+
+Examples:
+
+.. code-block:: jinja
+
+  Example 1: {{ [1, 2, 3, 4, [5, 6]] | json_query('[]') }}
+
+  Example 2: {{
+  {"machines": [
+    {"name": "a", "state": "running"},
+    {"name": "b", "state": "stopped"},
+    {"name": "b", "state": "running"}
+  ]} | json_query("machines[?state=='running'].name") }}
+
+  Example 3: {{
+  {"services": [
+    {"name": "http", "host": "1.2.3.4", "port": 80},
+    {"name": "smtp", "host": "1.2.3.5", "port": 25},
+    {"name": "ssh",  "host": "1.2.3.6", "port": 22},
+  ]} | json_query("services[].port") }}
+
+Returns:
+
+.. code-block:: text
+
+  Example 1: [1, 2, 3, 4, 5, 6]
+
+  Example 2: ['a', 'b']
+
+  Example 3: [80, 25, 22]
+
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
+.. _`JMESPath language`: http://jmespath.org/
+.. _`jmespath`: https://github.com/jmespath/jmespath.py
+
+
+.. jinja_ref:: to_snake_case
+
+``to_snake_case``
+-----------------
+
+.. versionadded:: Neon
+
+Converts a string from camelCase (or CamelCase) to snake_case.
+
+.. code-block:: jinja
+
+  Example: {{ camelsWillLoveThis | to_snake_case }}
+
+Returns:
+
+.. code-block:: text
+
+  Example: camels_will_love_this
+
+
+.. jinja_ref:: to_camelcase
+
+``to_camelcase``
+----------------
+
+.. versionadded:: Neon
+
+Converts a string from snake_case to camelCase (or UpperCamelCase if so indicated).
+
+.. code-block:: jinja
+
+  Example 1: {{ snake_case_for_the_win | to_camelcase }}
+
+  Example 2: {{ snake_case_for_the_win | to_camelcase(uppercamel=True) }}
+
+Returns:
+
+.. code-block:: text
+
+  Example 1: snakeCaseForTheWin
+  Example 2: SnakeCaseForTheWin
 
 Networking Filters
 ------------------
@@ -1364,11 +1717,11 @@ Example:
 
 .. note::
 
-    This option may have adverse effects when using the default renderer, ``yaml_jinja``.
-    This is due to the fact that YAML requires proper handling in regard to special
-    characters. Please see the section on :ref:`YAML ASCII support <yaml_plain_ascii>`
-    in the :ref:`YAML Idiosyncracies <yaml-idiosyncrasies>` documentation for more
-    information.
+    This option may have adverse effects when using the default renderer,
+    ``jinja|yaml``. This is due to the fact that YAML requires proper handling
+    in regard to special characters. Please see the section on :ref:`YAML ASCII
+    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
+    <yaml-idiosyncrasies>` documentation for more information.
 
 .. jinja_ref:: dns_check
 
@@ -1380,11 +1733,14 @@ Example:
 Return the ip resolved by dns, but do not exit on failure, only raise an
 exception. Obeys system preference for IPv4/6 address resolution.
 
+This function tries to connect to the address/port before considering it
+valid and therefor requires a port to test. The default port tested is 80.
+
 Example:
 
 .. code-block:: jinja
 
-  {{ 'www.google.com' | dns_check }}
+  {{ 'www.google.com' | dns_check(port=443) }}
 
 Returns:
 
@@ -1394,6 +1750,15 @@ Returns:
 
 File filters
 ------------
+
+.. jinja_ref:: connection_check
+
+``connection_check``
+--------------------
+
+.. versionadded:: Neon
+
+Return the IP resolved by DNS. This is an alias of ``dns_check``.
 
 .. jinja_ref:: is_text_file
 
@@ -1805,7 +2170,7 @@ Logs
 Yes, in Salt, one is able to debug a complex Jinja template using the logs.
 For example, making the call:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {%- do salt.log.error('testing jinja logging') -%}
 

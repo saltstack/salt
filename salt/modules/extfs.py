@@ -2,9 +2,9 @@
 '''
 Module for managing ext2/3/4 file systems
 '''
-from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs

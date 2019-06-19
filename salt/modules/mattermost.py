@@ -109,7 +109,7 @@ def post_message(message,
 
     .. code-block:: bash
 
-        salt '*' mattermost.post_message message='Build is done"
+        salt '*' mattermost.post_message message='Build is done'
     '''
     if not api_url:
         api_url = _get_api_url()
@@ -133,7 +133,7 @@ def post_message(message,
         parameters['username'] = username
     parameters['text'] = '```' + message + '```'  # pre-formatted, fixed-width text
     log.debug('Parameters: %s', parameters)
-    data = str('payload={0}').format(salt.utils.json.dumps(parameters))  # future lint: disable=blacklisted-function
+    data = str('payload={0}').format(salt.utils.json.dumps(parameters))  # pylint: disable=blacklisted-function
     result = salt.utils.mattermost.query(api_url=api_url, hook=hook, data=data)
 
     return bool(result)

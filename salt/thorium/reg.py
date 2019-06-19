@@ -53,7 +53,7 @@ def list_(name, add, match, stamp=False, prune=0):
 
     If ``stamp`` is True, then the timestamp from the event will also be added
     if ``prune`` is set to an integer higher than ``0``, then only the last
-        ``prune`` values will be kept in the list.
+    ``prune`` values will be kept in the list.
 
     USAGE:
 

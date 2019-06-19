@@ -4,7 +4,7 @@ Support for ipset
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -13,10 +13,7 @@ from salt.ext.six.moves import map, range
 import salt.utils.path
 
 # Import third-party libs
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -28,6 +25,7 @@ def long_range(start, end):
     while start < end:
         yield start
         start += 1
+
 
 _IPSET_FAMILIES = {
         'ipv4': 'inet',
@@ -288,7 +286,7 @@ def list_sets(family='ipv4'):
     sets = []
     sets.append({})
     for item in _tmp:
-        if len(item) == 0:
+        if not item:
             count = count + 1
             sets.append({})
             continue
@@ -359,7 +357,7 @@ def add(setname=None, entry=None, family='ipv4', **kwargs):
         if 'comment' not in entry:
             cmd = '{0} comment "{1}"'.format(cmd, kwargs['comment'])
 
-    if len(set(['skbmark', 'skbprio', 'skbqueue']) & set(kwargs.keys())) > 0:
+    if set(['skbmark', 'skbprio', 'skbqueue']) & set(kwargs):
         if 'skbinfo' not in setinfo['Header']:
             return 'Error: Set {0} not created with skbinfo support'.format(setname)
 
@@ -375,7 +373,7 @@ def add(setname=None, entry=None, family='ipv4', **kwargs):
     cmd = '{0} add -exist {1} {2}'.format(_ipset_cmd(), setname, cmd)
     out = __salt__['cmd.run'](cmd, python_shell=False)
 
-    if len(out) == 0:
+    if not out:
         return 'Success'
     return 'Error: {0}'.format(out)
 
@@ -404,7 +402,7 @@ def delete(set=None, entry=None, family='ipv4', **kwargs):
     cmd = '{0} del {1} {2}'.format(_ipset_cmd(), set, entry)
     out = __salt__['cmd.run'](cmd, python_shell=False)
 
-    if len(out) == 0:
+    if not out:
         return 'Success'
     return 'Error: {0}'.format(out)
 
@@ -447,7 +445,7 @@ def check(set=None, entry=None, family='ipv4'):
 
     current_members = _parse_members(settype, _find_set_members(set))
 
-    if not len(current_members):
+    if not current_members:
         return False
 
     if isinstance(entry, list):
@@ -458,7 +456,6 @@ def check(set=None, entry=None, family='ipv4'):
     for current_member in current_members:
         for entry in entries:
             if _member_contains(current_member, entry):
-                # print "{0} contains {1}".format(current_member, entry)
                 return True
 
     return False
@@ -521,17 +518,12 @@ def flush(set=None, family='ipv4'):
 
     ipset_family = _IPSET_FAMILIES[family]
     if set:
-        # cmd = '{0} flush {1} family {2}'.format(_ipset_cmd(), set, ipset_family)
         cmd = '{0} flush {1}'.format(_ipset_cmd(), set)
     else:
-        # cmd = '{0} flush family {1}'.format(_ipset_cmd(), ipset_family)
         cmd = '{0} flush'.format(_ipset_cmd())
     out = __salt__['cmd.run'](cmd, python_shell=False)
 
-    if len(out) == 0:
-        return True
-    else:
-        return False
+    return not out
 
 
 def _find_set_members(set):

@@ -65,14 +65,15 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 #pylint: disable=E1320
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import uuid
 
 # Import Salt Libs
-import salt.utils.dictupdate as dictupdate
-from salt.utils import exactly_one
 from salt.exceptions import SaltInvocationError
-import logging
+import salt.utils.data
+import salt.utils.dictupdate
+
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
 
@@ -83,62 +84,8 @@ def __virtual__():
     return 'boto3_route53' if 'boto3_route53.find_hosted_zone' in __salt__ else False
 
 
-def _to_aws_encoding(instring):
-    '''
-    A partial implememtation of the `AWS domain encoding`__ rules. The punycode section is
-    ignored for now, so you'll have to input any unicode characters already punycoded.
-
-    .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
-
-    The only breakage is that we don't permit ASCII 92 ('backslash') in domain names, even though
-    AWS seems to allow it, becuase it's used to introduce octal escapes, and I can't think of a
-    good way to allow it while still parsing those escapes.  Imagine a domain name containing the
-    literal string '\134' - pathological to be sure, but allowed by AWS's rules.  If someone
-    dislikes this restriction, feel free to update this function to correctly handle such madness.
-
-    Oh, and the idea of allowing '.' (period) within a domain component (e.g. not as a separator,
-    but as part of a field) is as stupid it sounds, and is also not supported by these functions.
-    Again, if you can figure out a sensible way to make it work, more power too you.  If you
-    REALLY need this, just embed '\056' directly in your strings.  I can't promise it won't break
-    your DNS out in the real world though.
-    '''
-    instring = instring.lower()                                           # Always lowercase
-    send_as_is_get_the_same_back = list(range(97, 123))                   # a-z is 97-122 inclusive
-    send_as_is_get_the_same_back += [ord(n) for n in ['0', '1', '2', '3', '4', '5', '6', '7', '8',
-                                                      '9', '-', '_', '.']]
-    send_as_is_get_octal_back = [ord(n) for n in ['!', '"', '#', '$', '%', '&', "'", '(', ')', '*',
-                                                  '+', ',', '/', '\\', ':', ';', '<', '=', '>', '?',
-                                                  '@', '[', ']', '^', '`', '{', '|', '}']]
-    # Non-printable ASCII - AWS claims it's valid in DNS entries... YMMV
-    acceptable_points_which_must_be_octalized = list(range(0, 33))        # 0-32 inclusive
-    # "Extended ASCII" stuff
-    acceptable_points_which_must_be_octalized += list(range(127, 256))    # 127-255 inclusive
-    # ^^^ This, BTW, is incompatible with punycode as far as I can tell, since unicode only aligns
-    # with ASCII for the first 127 code-points...  Oh well.
-    outlist = []
-    for char in instring:
-        point = ord(char)
-        octal = '\\{:03o}'.format(point)
-        if point in send_as_is_get_the_same_back:
-            outlist += [char]
-        elif point in send_as_is_get_octal_back:
-            outlist += [char]
-        elif point in acceptable_points_which_must_be_octalized:
-            outlist += [octal]
-        else:
-            raise SaltInvocationError("Invalid Route53 domain character seen (octal {0}) in string "
-                                      "{1}.  Do you need to punycode it?".format(octal, instring))
-    ret = ''.join(outlist)
-    log.debug('Name after massaging is: {}'.format(ret))
-    return ret
-
-
-def _from_aws_encoding(string):  # XXX TODO
-    pass
-
-
 def hosted_zone_present(name, Name=None, PrivateZone=False,
-                        CallerReference=None, Comment='', VPCs=None,
+                        CallerReference=None, Comment=None, VPCs=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
     Ensure a hosted zone exists with the given attributes.
@@ -186,7 +133,6 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
             bound account, in which case you'll need to provide an explicit value for VPCRegion.
     '''
     Name = Name if Name else name
-    Name = _to_aws_encoding(Name)
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -198,7 +144,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
         if not isinstance(VPCs, list):
             raise SaltInvocationError("Parameter 'VPCs' must be a list of dicts.")
         for v in VPCs:
-            if not isinstance(v, dict) or not exactly_one((v.get('VPCId'), v.get('VPCName'))):
+            if not isinstance(v, dict) or not salt.utils.data.exactly_one((v.get('VPCId'), v.get('VPCName'))):
                 raise SaltInvocationError("Parameter 'VPCs' must be a list of dicts, each composed "
                                       "of either a 'VPCId' or a 'VPCName', and optionally a "
                                       "'VPCRegion', to help distinguish between multitple matches.")
@@ -247,7 +193,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
         if len(fixed_vpcs) > 1:
             add_vpcs = fixed_vpcs[1:]
             fixed_vpcs = fixed_vpcs[:1]
-        CallerReference = CallerReference if CallerReference else str(uuid.uuid4())
+        CallerReference = CallerReference if CallerReference else str(uuid.uuid4())  # future lint: disable=blacklisted-function
     else:
         # Currently the only modifiable traits about a zone are associated VPCs and the comment.
         zone = zone[0]
@@ -306,7 +252,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
             log.info(msg)
             ret['comment'] = '  '.join([ret['comment'], msg])
             ret['changes']['old'] = zone
-            ret['changes']['new'] = dictupdate.update(ret['changes'].get('new', {}), r)
+            ret['changes']['new'] = salt.utils.dictupdate.update(ret['changes'].get('new', {}), r)
         else:
             ret['comment'] = 'Update of Route 53 {} hosted zone {} comment failed'.format('private'
                     if PrivateZone else 'public', Name)
@@ -369,7 +315,6 @@ def hosted_zone_absent(name, Name=None, PrivateZone=False,
 
     '''
     Name = Name if Name else name
-    Name = _to_aws_encoding(Name)
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -448,21 +393,23 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         ratio of a resource's weight to the total.
 
         Note the following:
-          - You must specify a value for the Weight element for every weighted resource record set.
-          - You can only specify one ResourceRecord per weighted resource record set.
-          - You can't create latency, failover, or geolocation resource record sets that have the
-            same values for the Name and Type elements as weighted resource record sets.
-          - You can create a maximum of 100 weighted resource record sets that have the same values
-            for the Name and Type elements.
-          - For weighted (but not weighted alias) resource record sets, if you set Weight to 0 for a
-            resource record set, Amazon Route 53 never responds to queries with the applicable value
-            for that resource record set.  However, if you set Weight to 0 for all resource record
-            sets that have the same combination of DNS name and type, traffic is routed to all
-            resources with equal probability.  The effect of setting Weight to 0 is different when
-            you associate health checks with weighted resource record sets. For more information,
-            see `Options for Configuring Amazon Route 53 Active-Active and Active-Passive Failover`__
-            in the Amazon Route 53 Developer Guide.
-            .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover-configuring-options.html
+
+        - You must specify a value for the Weight element for every weighted resource record set.
+        - You can only specify one ResourceRecord per weighted resource record set.
+        - You can't create latency, failover, or geolocation resource record sets that have the
+          same values for the Name and Type elements as weighted resource record sets.
+        - You can create a maximum of 100 weighted resource record sets that have the same values
+          for the Name and Type elements.
+        - For weighted (but not weighted alias) resource record sets, if you set Weight to 0 for a
+          resource record set, Amazon Route 53 never responds to queries with the applicable value
+          for that resource record set.  However, if you set Weight to 0 for all resource record
+          sets that have the same combination of DNS name and type, traffic is routed to all
+          resources with equal probability.  The effect of setting Weight to 0 is different when
+          you associate health checks with weighted resource record sets. For more information,
+          see `Options for Configuring Amazon Route 53 Active-Active and Active-Passive Failover`__
+          in the Amazon Route 53 Developer Guide.
+
+          .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover-configuring-options.html
 
     Region
         Valid for Latency-based resource record sets only.  The Amazon EC2 Region where the resource
@@ -476,6 +423,8 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         queries from Africa to be routed to a web server with an IP address of 192.0.2.111, create a
         resource record set with a Type of A and a ContinentCode of AF.
 
+        .. code-block:: text
+
             ContinentCode
                 The two-letter code for the continent.
                 Valid values: AF | AN | AS | EU | OC | NA | SA
@@ -488,50 +437,54 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                 province in Canada.
 
         Notes
-          - Creating geolocation and geolocation alias resource record sets in private hosted zones
-            is not supported.
-          - If you create separate resource record sets for overlapping geographic regions (for
-            example, one resource record set for a continent and one for a country on the same
-            continent), priority goes to the smallest geographic region. This allows you to route
-            most queries for a continent to one resource and to route queries for a country on that
-            continent to a different resource.
-          - You can't create two geolocation resource record sets that specify the same geographic
-            location.
-          - The value * in the CountryCode element matches all geographic locations that aren't
-            specified in other geolocation resource record sets that have the same values for the
-            Name and Type elements.
-          - Geolocation works by mapping IP addresses to locations.  However, some IP addresses
-            aren't mapped to geographic locations, so even if you create geolocation resource
-            record sets that cover all seven continents, Amazon Route 53 will receive some DNS
-            queries from locations that it can't identify.  We recommend that you create a resource
-            record set for which the value of CountryCode is *, which handles both queries that
-            come from locations for which you haven't created geolocation resource record sets and
-            queries from IP addresses that aren't mapped to a location.  If you don't create a *
-            resource record set, Amazon Route 53 returns a "no answer" response for queries from
-            those locations.
-          - You can't create non-geolocation resource record sets that have the same values for the
-            Name and Type elements as geolocation resource record sets.
+
+        - Creating geolocation and geolocation alias resource record sets in private hosted zones
+          is not supported.
+        - If you create separate resource record sets for overlapping geographic regions (for
+          example, one resource record set for a continent and one for a country on the same
+          continent), priority goes to the smallest geographic region. This allows you to route
+          most queries for a continent to one resource and to route queries for a country on that
+          continent to a different resource.
+        - You can't create two geolocation resource record sets that specify the same geographic
+          location.
+        - The value ``*`` in the CountryCode element matches all geographic locations that aren't
+          specified in other geolocation resource record sets that have the same values for the
+          Name and Type elements.
+        - Geolocation works by mapping IP addresses to locations.  However, some IP addresses
+          aren't mapped to geographic locations, so even if you create geolocation resource
+          record sets that cover all seven continents, Amazon Route 53 will receive some DNS
+          queries from locations that it can't identify.  We recommend that you
+          create a resource record set for which the value of CountryCode is
+          ``*``, which handles both queries that come from locations for which you
+          haven't created geolocation resource record sets and queries from IP
+          addresses that aren't mapped to a location.  If you don't create a ``*``
+          resource record set, Amazon Route 53 returns a "no answer" response
+          for queries from those locations.
+        - You can't create non-geolocation resource record sets that have the same values for the
+          Name and Type elements as geolocation resource record sets.
 
     TTL
         The resource record cache time to live (TTL), in seconds.
         Note the following:
-          - If you're creating an alias resource record set, omit TTL. Amazon Route 53 uses the
-            value of TTL for the alias target.
-          - If you're associating this resource record set with a health check (if you're adding
-            a HealthCheckId element), we recommend that you specify a TTL of 60 seconds or less so
-            clients respond quickly to changes in health status.
-          - All of the resource record sets in a group of weighted, latency, geolocation, or
-            failover resource record sets must have the same value for TTL.
-          - If a group of weighted resource record sets includes one or more weighted alias
-            resource record sets for which the alias target is an ELB load balancer, we recommend
-            that you specify a TTL of 60 seconds for all of the non-alias weighted resource record
-            sets that have the same name and type. Values other than 60 seconds (the TTL for load
-            balancers) will change the effect of the values that you specify for Weight.
+
+        - If you're creating an alias resource record set, omit TTL. Amazon Route 53 uses the
+          value of TTL for the alias target.
+        - If you're associating this resource record set with a health check (if you're adding
+          a HealthCheckId element), we recommend that you specify a TTL of 60 seconds or less so
+          clients respond quickly to changes in health status.
+        - All of the resource record sets in a group of weighted, latency, geolocation, or
+          failover resource record sets must have the same value for TTL.
+        - If a group of weighted resource record sets includes one or more weighted alias
+          resource record sets for which the alias target is an ELB load balancer, we recommend
+          that you specify a TTL of 60 seconds for all of the non-alias weighted resource record
+          sets that have the same name and type. Values other than 60 seconds (the TTL for load
+          balancers) will change the effect of the values that you specify for Weight.
 
     ResourceRecords
         A list, containing one or more values for the resource record.  No single value can exceed
         4,000 characters.  For details on how to format values for different record types, see
         `Supported DNS Resource Record Types`__ in the Amazon Route 53 Developer Guide.
+
         .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/ResourceRecordTypes.html
 
         Note:  You can specify more than one value for all record types except CNAME and SOA.
@@ -559,6 +512,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         in their entirety) would be silly and counterproductive.  If you need this feature, then
         Read The Fine Materials at the `Boto 3 Route 53 page`__ and/or the `AWS Route 53 docs`__
         and suss them for yourself - I sure won't claim to understand them partcularly well.
+
         .. __: http://boto3.readthedocs.io/en/latest/reference/services/route53.html#Route53.Client.change_resource_record_sets
         .. __: http://docs.aws.amazon.com/Route53/latest/APIReference/API_AliasTarget.html
 
@@ -575,7 +529,6 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
     '''
     Name = Name if Name else name
-    Name = _to_aws_encoding(Name)
 
     if Type is None:
         raise SaltInvocationError("'Type' is a required parameter when adding or updating"
@@ -595,63 +548,69 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
 
     # Convert any magic RR values to something AWS will understand, and otherwise clean them up.
     fixed_rrs = []
-    for rr in ResourceRecords:
-        if rr.startswith('magic:'):
-            fields = rr.split(':')
-            if fields[1] == 'ec2_instance_tag':
-                if len(fields) != 5:
-                    log.warning("Invalid magic RR value seen: '{}'.  Passing as-is.".format(rr))
-                    fixed_rrs += [rr]
-                    continue
-                tag_name = fields[2]
-                tag_value = fields[3]
-                instance_attr = fields[4]
-                good_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
-                r = __salt__['boto_ec2.find_instances'](
-                        tags={tag_name: tag_value}, return_objs=True, in_states=good_states,
-                        region=region, key=key, keyid=keyid, profile=profile)
-                if len(r) < 1:
-                    ret['comment'] = 'No EC2 instance with tag {} == {} found'.format(tag_name,
-                            tag_value)
-                    log.error(ret['comment'])
-                    ret['result'] = False
-                    return ret
-                if len(r) > 1:
-                    ret['comment'] = 'Multiple EC2 instances with tag {} == {} found'.format(
-                            tag_name, tag_value)
-                    log.error(ret['comment'])
-                    ret['result'] = False
-                    return ret
-                instance = r[0]
-                res = getattr(instance, instance_attr, None)
-                if res:
-                    log.debug('Found {} {} for instance {}'.format(instance_attr, res, instance.id))
-                    fixed_rrs += [_to_aws_encoding(res)]
+    if ResourceRecords:
+        for rr in ResourceRecords:
+            if rr.startswith('magic:'):
+                fields = rr.split(':')
+                if fields[1] == 'ec2_instance_tag':
+                    if len(fields) != 5:
+                        log.warning("Invalid magic RR value seen: '%s'.  Passing as-is.", rr)
+                        fixed_rrs += [rr]
+                        continue
+                    tag_name = fields[2]
+                    tag_value = fields[3]
+                    instance_attr = fields[4]
+                    good_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+                    r = __salt__['boto_ec2.find_instances'](
+                            tags={tag_name: tag_value}, return_objs=True, in_states=good_states,
+                            region=region, key=key, keyid=keyid, profile=profile)
+                    if not r:
+                        ret['comment'] = 'No EC2 instance with tag {} == {} found'.format(tag_name,
+                                tag_value)
+                        log.error(ret['comment'])
+                        ret['result'] = False
+                        return ret
+                    if len(r) > 1:
+                        ret['comment'] = 'Multiple EC2 instances with tag {} == {} found'.format(
+                                tag_name, tag_value)
+                        log.error(ret['comment'])
+                        ret['result'] = False
+                        return ret
+                    instance = r[0]
+                    res = getattr(instance, instance_attr, None)
+                    if res:
+                        log.debug('Found %s %s for instance %s', instance_attr, res, instance.id)
+                        fixed_rrs += [__salt__['boto3_route53.aws_encode'](res)]
+                    else:
+                        ret['comment'] = 'Attribute {} not found on instance {}'.format(instance_attr,
+                                instance.id)
+                        log.error(ret['comment'])
+                        ret['result'] = False
+                        return ret
                 else:
-                    ret['comment'] = 'Attribute {} not found on instance {}'.format(instance_attr,
-                            instance.id)
+                    ret['comment'] = ('Unknown RR magic value seen: {}.  Please extend the '
+                                      'boto3_route53 state module to add support for your preferred '
+                                      'incantation.'.format(fields[1]))
                     log.error(ret['comment'])
                     ret['result'] = False
                     return ret
             else:
-                ret['comment'] = ('Unknown RR magic value seen: {}.  Please extend the '
-                                  'boto3_route53 state module to add support for your preferred '
-                                  'incantation.'.format(fields[1]))
-                log.error(ret['comment'])
-                ret['result'] = False
-                return ret
-        else:
-            fixed_rrs += [rr]
-    ResourceRecords = [{'Value': rr} for rr in sorted(fixed_rrs)]
+                # for TXT records the entry must be encapsulated in quotes as required by the API
+                # this appears to be incredibly difficult with the jinja templating engine
+                # so inject the quotations here to make a viable ChangeBatch
+                if Type == 'TXT':
+                    rr = '"{}"'.format(rr)
+                fixed_rrs += [rr]
+        ResourceRecords = [{'Value': rr} for rr in sorted(fixed_rrs)]
 
     recordsets = __salt__['boto3_route53.get_resource_records'](HostedZoneId=HostedZoneId,
             StartRecordName=Name, StartRecordType=Type, region=region, key=key, keyid=keyid,
             profile=profile)
 
     if SetIdentifier and recordsets:
-        log.debug('Filter recordsets {} by SetIdentifier {}.'.format(recordsets, SetIdentifier))
+        log.debug('Filter recordsets %s by SetIdentifier %s.', recordsets, SetIdentifier)
         recordsets = [r for r in recordsets if r.get('SetIdentifier') == SetIdentifier]
-        log.debug('Resulted in recordsets {}.'.format(recordsets))
+        log.debug('Resulted in recordsets %s.', recordsets)
 
     create = False
     update = False
@@ -675,8 +634,12 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
             if locals().get(u) != rrset.get(u):
                 update = True
                 break
-        if ResourceRecords != sorted(rrset.get('ResourceRecords'), key=lambda x: x['Value']):
-            update = True
+        if rrset.get('ResourceRecords') is not None:
+            if ResourceRecords != sorted(rrset.get('ResourceRecords', {}), key=lambda x: x['Value']):
+                update = True
+        elif (AliasTarget is not None) and (rrset.get('AliasTarget') is not None):
+            if sorted(AliasTarget) != sorted(rrset.get('AliasTarget')):
+                update = True
 
     if not create and not update:
         ret['comment'] = ('Route 53 resource record {} with type {} is already in the desired state.'
@@ -691,11 +654,15 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
             return ret
         ResourceRecordSet = {
             'Name': Name,
-            'Type': Type,
-            'ResourceRecords': ResourceRecords
+            'Type': Type
         }
+        if ResourceRecords:
+            ResourceRecordSet['ResourceRecords'] = ResourceRecords
         for u in updatable:
-            ResourceRecordSet.update({u: locals().get(u)}) if locals().get(u) else None
+            if locals().get(u) or (locals().get(u) == 0):
+                ResourceRecordSet.update({u: locals().get(u)})
+            else:
+                log.debug('Not updating ResourceRecordSet with local value: %s', locals().get(u))
 
         ChangeBatch = {
             'Changes': [
@@ -770,7 +737,6 @@ def rr_absent(name, HostedZoneId=None, DomainName=None, PrivateZone=False,
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
     '''
     Name = Name if Name else name
-    Name = _to_aws_encoding(Name)
 
     if Type is None:
         raise SaltInvocationError("'Type' is a required parameter when deleting resource records.")
@@ -791,9 +757,9 @@ def rr_absent(name, HostedZoneId=None, DomainName=None, PrivateZone=False,
             StartRecordName=Name, StartRecordType=Type, region=region, key=key, keyid=keyid,
             profile=profile)
     if SetIdentifier and recordsets:
-        log.debug('Filter recordsets {} by SetIdentifier {}.'.format(recordsets, SetIdentifier))
+        log.debug('Filter recordsets %s by SetIdentifier %s.', recordsets, SetIdentifier)
         recordsets = [r for r in recordsets if r.get('SetIdentifier') == SetIdentifier]
-        log.debug('Resulted in recordsets {}.'.format(recordsets))
+        log.debug('Resulted in recordsets %s.', recordsets)
     if not recordsets:
         ret['comment'] = 'Route 53 resource record {} with type {} already absent.'.format(
                 Name, Type)

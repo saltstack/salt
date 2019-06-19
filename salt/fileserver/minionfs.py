@@ -17,8 +17,8 @@ allowed to push files to the Master), and ``minionfs`` must be added to the
       - minionfs
 
 .. note::
-    ``minion`` also works here. Prior to the Oxygen release, *only* ``minion``
-    would work.
+    ``minion`` also works here. Prior to the 2018.3.0 release, *only*
+    ``minion`` would work.
 
 Other minionfs settings include: :conf_master:`minionfs_whitelist`,
 :conf_master:`minionfs_blacklist`, :conf_master:`minionfs_mountpoint`, and
@@ -27,7 +27,7 @@ Other minionfs settings include: :conf_master:`minionfs_whitelist`,
 .. seealso:: :ref:`tutorial-minionfs`
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -83,8 +83,10 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
     if tgt_env not in envs():
         return fnd
     if os.path.basename(path) == 'top.sls':
-        log.debug('minionfs will NOT serve top.sls '
-                  'for security reasons (path requested: {0})'.format(path))
+        log.debug(
+            'minionfs will NOT serve top.sls '
+            'for security reasons (path requested: %s)', path
+        )
         return fnd
 
     mountpoint = salt.utils.url.strip_proto(__opts__['minionfs_mountpoint'])
@@ -188,7 +190,8 @@ def file_hash(load, fnd):
     # cache file's contents should be "hash:mtime"
     cache_path = os.path.join(
         __opts__['cachedir'],
-        'minionfs/hash',
+        'minionfs',
+        'hash',
         load['saltenv'],
         '{0}.hash.{1}'.format(fnd['rel'], __opts__['hash_type'])
     )
@@ -197,7 +200,7 @@ def file_hash(load, fnd):
         try:
             with salt.utils.files.fopen(cache_path, 'rb') as fp_:
                 try:
-                    hsum, mtime = fp_.read().split(':')
+                    hsum, mtime = salt.utils.stringutils.to_unicode(fp_.read()).split(':')
                 except ValueError:
                     log.debug(
                         'Fileserver attempted to read incomplete cache file. '
@@ -261,8 +264,8 @@ def file_list(load):
         # pushed files
         if tgt_minion not in minion_dirs:
             log.warning(
-                'No files found in minionfs cache for minion ID \'{0}\''
-                .format(tgt_minion)
+                'No files found in minionfs cache for minion ID \'%s\'',
+                tgt_minion
             )
             return []
         minion_dirs = [tgt_minion]
@@ -274,8 +277,8 @@ def file_list(load):
         minion_files_dir = os.path.join(minions_cache_dir, minion, 'files')
         if not os.path.isdir(minion_files_dir):
             log.debug(
-                'minionfs: could not find files directory under {0}!'
-                .format(os.path.join(minions_cache_dir, minion))
+                'minionfs: could not find files directory under %s!',
+                os.path.join(minions_cache_dir, minion)
             )
             continue
         walk_dir = os.path.join(minion_files_dir, prefix)
@@ -340,8 +343,8 @@ def dir_list(load):
         # pushed files
         if tgt_minion not in minion_dirs:
             log.warning(
-                'No files found in minionfs cache for minion ID \'{0}\''
-                .format(tgt_minion)
+                'No files found in minionfs cache for minion ID \'%s\'',
+                tgt_minion
             )
             return []
         minion_dirs = [tgt_minion]
@@ -353,8 +356,8 @@ def dir_list(load):
         minion_files_dir = os.path.join(minions_cache_dir, minion, 'files')
         if not os.path.isdir(minion_files_dir):
             log.warning(
-                'minionfs: could not find files directory under {0}!'
-                .format(os.path.join(minions_cache_dir, minion))
+                'minionfs: could not find files directory under %s!',
+                os.path.join(minions_cache_dir, minion)
             )
             continue
         walk_dir = os.path.join(minion_files_dir, prefix)

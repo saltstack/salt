@@ -2,26 +2,33 @@
 '''
 Send events through Salt's event system during state runs
 '''
-from __future__ import absolute_import
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 # import salt libs
 import salt.utils.functools
 
 
 def send(name,
-        data=None,
-        preload=None,
-        with_env=False,
-        with_grains=False,
-        with_pillar=False,
-        **kwargs):
+         data=None,
+         preload=None,
+         with_env=False,
+         with_grains=False,
+         with_pillar=False,
+         show_changed=True,
+         **kwargs):
     '''
     Send an event to the Salt Master
 
     .. versionadded:: 2014.7.0
 
     Accepts the same arguments as the :py:func:`event.send
-    <salt.modules.event.send>` execution module of the same name.
+    <salt.modules.event.send>` execution module of the same name,
+    with the additional argument:
+
+    :param show_changed: If ``True``, state will show as changed with the data
+        argument as the change value. If ``False``, shows as unchanged.
 
     Example:
 
@@ -37,7 +44,10 @@ def send(name,
         # ...snip bunch of states below
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-    ret['changes'] = {'tag': name, 'data': data}
+    if show_changed:
+        ret['changes'] = {'tag': name, 'data': data}
+    else:
+        ret['changes'] = {}
 
     if __opts__['test']:
         ret['result'] = None
@@ -45,12 +55,12 @@ def send(name,
         return ret
 
     ret['result'] = __salt__['event.send'](name,
-            data=data,
-            preload=preload,
-            with_env=with_env,
-            with_grains=with_grains,
-            with_pillar=with_pillar,
-            **kwargs)
+                                           data=data,
+                                           preload=preload,
+                                           with_env=with_env,
+                                           with_grains=with_grains,
+                                           with_pillar=with_pillar,
+                                           **kwargs)
     ret['comment'] = 'Event fired'
 
     return ret
@@ -64,7 +74,7 @@ def wait(name, sfun=None):
 
     Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         # Stand up a new web server.
         apache:

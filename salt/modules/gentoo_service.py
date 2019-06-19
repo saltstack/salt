@@ -11,7 +11,7 @@ to the correct service manager
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import fnmatch
 import re
@@ -31,7 +31,7 @@ def __virtual__():
     '''
     Only work on systems which default to OpenRC
     '''
-    if __grains__['os'] == 'Gentoo' and not salt.utils.systemd.booted(__context__):
+    if __grains__['os_family'] == 'Gentoo' and not salt.utils.systemd.booted(__context__):
         return __virtualname__
     if __grains__['os'] == 'Alpine':
         return __virtualname__
@@ -39,9 +39,9 @@ def __virtual__():
             'only available on Gentoo/Open-RC systems.')
 
 
-def _ret_code(cmd):
-    log.debug('executing [{0}]'.format(cmd))
-    sts = __salt__['cmd.retcode'](cmd, python_shell=False)
+def _ret_code(cmd, ignore_retcode=False):
+    log.debug('executing [%s]', cmd)
+    sts = __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=ignore_retcode)
     return sts
 
 
@@ -242,7 +242,7 @@ def status(name, sig=None):
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
     Args:
@@ -270,7 +270,7 @@ def status(name, sig=None):
     results = {}
     for service in services:
         cmd = _service_cmd(service, 'status')
-        results[service] = not _ret_code(cmd)
+        results[service] = not _ret_code(cmd, ignore_retcode=True)
     if contains_globbing:
         return results
     return results[name]

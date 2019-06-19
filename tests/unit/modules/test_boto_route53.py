@@ -2,13 +2,30 @@
 # -*- coding: utf-8 -*-
 
 # import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import pkg_resources
+import os.path
+import sys
+
+# Import Salt Libs
+import salt.config
+from salt.ext import six
+import salt.loader
+import salt.modules.boto_route53 as boto_route53
+import salt.utils.versions
+
+# Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.runtests import RUNTIME_VARS
 
 # import Python Third Party Libs
 # pylint: disable=import-error
 try:
+    import boto
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     from moto import mock_route53_deprecated
     HAS_MOTO = True
 except ImportError:
@@ -26,18 +43,6 @@ except ImportError:
         return stub_function
 # pylint: enable=import-error
 
-# Import Salt Libs
-import salt.config
-from salt.ext import six
-import salt.loader
-import salt.modules.boto_route53 as boto_route53
-import salt.utils.versions
-
-# Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
-
 log = logging.getLogger(__name__)
 
 required_moto = '0.3.7'
@@ -53,9 +58,9 @@ def _has_required_moto():
         return False
     else:
         moto_version = salt.utils.versions.LooseVersion(pkg_resources.get_distribution('moto').version)
-        if moto_version < required_moto:
+        if moto_version < salt.utils.versions.LooseVersion(required_moto):
             return False
-        elif six.PY3 and moto_version < required_moto_py3:
+        elif six.PY3 and moto_version < salt.utils.versions.LooseVersion(required_moto_py3):
             return False
 
     return True
@@ -65,12 +70,13 @@ def _has_required_moto():
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_moto() is False, 'The moto module must be >= to {0} for '
                                        'PY2 or {1} for PY3.'.format(required_moto, required_moto_py3))
+@skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
 class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.boto_route53 module
     '''
     def setup_loader_modules(self):
-        self.opts = salt.config.DEFAULT_MINION_OPTS
+        self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         self.opts['route53.keyid'] = 'GKTADJGHEIQSXMKKRBJ08H'
         self.opts['route53.key'] = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
         utils = salt.loader.utils(self.opts)

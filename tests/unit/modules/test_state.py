@@ -1,16 +1,23 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
+    :codeauthor: Rahul Handay <rahulha@saltstack.com>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import copy
 import os
+import shutil
+import tempfile
+import textwrap
+import time
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
+    Mock,
     MagicMock,
     patch,
     mock_open,
@@ -21,6 +28,10 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.config
 import salt.loader
+import salt.state
+import salt.utils.args
+import salt.utils.files
+import salt.utils.json
 import salt.utils.hashutils
 import salt.utils.odict
 import salt.utils.platform
@@ -226,7 +237,7 @@ class MockState(object):
             '''
                 Mock compile_low_chunks method
             '''
-            return True
+            return [{"__id__": "ABC", "__sls__": "abc"}]
 
         def render_highstate(self, data):
             '''
@@ -334,7 +345,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         utils = salt.loader.utils(
             salt.config.DEFAULT_MINION_OPTS,
-            whitelist=['state']
+            whitelist=['state', 'args', 'systemd', 'path', 'platform']
         )
         utils.keys()
         patcher = patch('salt.modules.state.salt.state', MockState())
@@ -350,6 +361,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 '__utils__': utils,
                 '__salt__': {
                     'config.get': config.get,
+                    'config.option': MagicMock(return_value=''),
                 }
             },
             config: {
@@ -522,7 +534,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 mock = MagicMock(return_value={"test": ""})
                 with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
-                    with patch.object(salt.utils, 'test_mode', mock):
+                    with patch.object(salt.utils.args, 'test_mode', mock):
                         self.assertRaises(SaltInvocationError,
                                           state.single,
                                           "pkg.installed",
@@ -610,6 +622,16 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(state.show_state_usage(), "A")
 
+    def test_show_states(self):
+        '''
+            Test to display the low data from a specific sls
+        '''
+        mock = MagicMock(side_effect=["A", None])
+        with patch.object(state, '_check_queue', mock):
+
+            self.assertEqual(state.show_low_sls("foo"), "A")
+            self.assertListEqual(state.show_states("foo"), ['abc'])
+
     def test_sls_id(self):
         '''
             Test to call a single ID from the
@@ -626,7 +648,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
-                    with patch.object(salt.utils, 'test_mode', mock):
+                    with patch.object(salt.utils.args, 'test_mode', mock):
                         MockState.State.flag = True
                         MockState.HighState.flag = True
                         self.assertEqual(state.sls_id("apache", "http"), 2)
@@ -675,7 +697,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
-                    with patch.object(salt.utils, 'test_mode', mock):
+                    with patch.object(salt.utils.args, 'test_mode', mock):
                         self.assertRaises(SaltInvocationError,
                                           state.show_sls,
                                           "foo",
@@ -687,6 +709,49 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                         MockState.State.flag = False
                         self.assertListEqual(state.show_sls("foo"),
                                              ['a', 'b'])
+
+    def test_sls_exists(self):
+        '''
+            Test of sls_exists
+        '''
+        test_state = {}
+        test_missing_state = []
+
+        mock = MagicMock(return_value=test_state)
+        with patch.object(state, 'show_sls', mock):
+            self.assertTrue(state.sls_exists("state_name"))
+        mock = MagicMock(return_value=test_missing_state)
+        with patch.object(state, 'show_sls', mock):
+            self.assertFalse(state.sls_exists("missing_state"))
+
+    def test_id_exists(self):
+        '''
+            Test of id_exists
+        '''
+        test_state = [{
+                        "key1": "value1",
+                        "name": "value1",
+                        "state": "file",
+                        "fun": "test",
+                        "__env__": "base",
+                        "__sls__": "test-sls",
+                        "order": 10000,
+                        "__id__": "state_id1"
+                    },
+                    {
+                        "key2": "value2",
+                        "name": "value2",
+                        "state": "file",
+                        "fun": "directory",
+                        "__env__": "base",
+                        "__sls__": "test-sls",
+                        "order": 10001,
+                        "__id__": "state_id2"
+                    }]
+        mock = MagicMock(return_value=test_state)
+        with patch.object(state, 'show_low_sls', mock):
+            self.assertTrue(state.id_exists("state_id1,state_id2", "test-sls"))
+            self.assertFalse(state.id_exists("invalid", "state_name"))
 
     def test_top(self):
         '''
@@ -706,7 +771,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     mock = MagicMock(return_value={'test': True})
                     with patch.object(salt.utils.state, 'get_sls_opts', mock):
                         mock = MagicMock(return_value=True)
-                        with patch.object(salt.utils, 'test_mode', mock):
+                        with patch.object(salt.utils.args, 'test_mode', mock):
                             self.assertRaises(SaltInvocationError,
                                               state.top,
                                               "reverse_top.sls",
@@ -751,56 +816,49 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                           "whitelist=sls1.sls",
                                           pillar="A")
 
-                        mock = MagicMock(return_value=True)
-                        with patch.dict(state.__salt__,
-                                        {'config.option': mock}):
-                            mock = MagicMock(return_value="A")
+                        mock = MagicMock(return_value="A")
+                        with patch.object(state, '_filter_running',
+                                          mock):
+                            mock = MagicMock(return_value=True)
                             with patch.object(state, '_filter_running',
                                               mock):
                                 mock = MagicMock(return_value=True)
-                                with patch.object(state, '_filter_running',
+                                with patch.object(salt.payload, 'Serial',
                                                   mock):
-                                    mock = MagicMock(return_value=True)
-                                    with patch.object(salt.payload, 'Serial',
-                                                      mock):
-                                        with patch.object(os.path,
-                                                          'join', mock):
-                                            with patch.object(
-                                                              state,
-                                                              '_set'
-                                                              '_retcode',
-                                                              mock):
-                                                self.assertTrue(state.
-                                                                highstate
-                                                                (arg))
+                                    with patch.object(os.path,
+                                                      'join', mock):
+                                        with patch.object(
+                                                          state,
+                                                          '_set'
+                                                          '_retcode',
+                                                          mock):
+                                            self.assertTrue(state.
+                                                            highstate
+                                                            (arg))
 
     def test_clear_request(self):
         '''
             Test to clear out the state execution request without executing it
         '''
         mock = MagicMock(return_value=True)
-        with patch.object(os.path, 'join', mock):
-            mock = MagicMock(return_value=True)
-            with patch.object(salt.payload, 'Serial', mock):
-                mock = MagicMock(side_effect=[False, True, True])
-                with patch.object(os.path, 'isfile', mock):
-                    self.assertTrue(state.clear_request("A"))
+        with patch.object(salt.payload, 'Serial', mock):
+            mock = MagicMock(side_effect=[False, True, True])
+            with patch.object(os.path, 'isfile', mock):
+                self.assertTrue(state.clear_request("A"))
 
-                    mock = MagicMock(return_value=True)
-                    with patch.object(os, 'remove', mock):
-                        self.assertTrue(state.clear_request())
+                mock = MagicMock(return_value=True)
+                with patch.object(os, 'remove', mock):
+                    self.assertTrue(state.clear_request())
 
-                    mock = MagicMock(return_value={})
-                    with patch.object(state, 'check_request', mock):
-                        self.assertFalse(state.clear_request("A"))
+                mock = MagicMock(return_value={})
+                with patch.object(state, 'check_request', mock):
+                    self.assertFalse(state.clear_request("A"))
 
     def test_check_request(self):
         '''
             Test to return the state request information
         '''
-        mock = MagicMock(return_value=True)
-        with patch.object(os.path, 'join', mock), \
-                patch('salt.modules.state.salt.payload', MockSerial):
+        with patch('salt.modules.state.salt.payload', MockSerial):
             mock = MagicMock(side_effect=[True, True, False])
             with patch.object(os.path, 'isfile', mock):
                 with patch('salt.utils.files.fopen', mock_open()):
@@ -870,7 +928,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                        "saltenv": None})
                         with patch.object(salt.utils.state, 'get_sls_opts', mock):
                             mock = MagicMock(return_value=True)
-                            with patch.object(salt.utils,
+                            with patch.object(salt.utils.args,
                                               'test_mode',
                                               mock):
                                 self.assertRaises(
@@ -892,7 +950,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                       mock):
                                         with patch(
                                                    'salt.utils.files.fopen',
-                                                   mock_open()):
+                                                   mock_open(b'')):
                                             self.assertTrue(
                                                             state.sls(arg,
                                                                       None,
@@ -913,17 +971,11 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                                     MockState.HighState.flag = False
                                     mock = MagicMock(return_value=True)
-                                    with patch.dict(state.__salt__,
-                                                    {'config.option':
-                                                     mock}):
-                                        mock = MagicMock(return_value=
-                                                         True)
-                                        with patch.object(
-                                                          state,
-                                                          '_filter_'
-                                                          'running',
-                                                          mock):
-                                            self.sub_test_sls()
+                                    with patch.object(state,
+                                                      '_filter_'
+                                                      'running',
+                                                      mock):
+                                        self.sub_test_sls()
 
     def test_get_test_value(self):
         '''
@@ -1005,6 +1057,75 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                               None,
                                                               None,
                                                               True))
+
+    def test_sls_sync(self):
+        '''
+        Test test.sls with the sync argument
+
+        We're only mocking the sync functions we expect to sync. If any other
+        sync functions are run then they will raise a KeyError, which we want
+        as it will tell us that we are syncing things we shouldn't.
+        '''
+        mock_empty_list = MagicMock(return_value=[])
+        with patch.object(state, 'running', mock_empty_list), \
+                patch.object(state, '_disabled', mock_empty_list), \
+                patch.object(state, '_get_pillar_errors', mock_empty_list):
+
+            sync_mocks = {
+                'saltutil.sync_modules': Mock(),
+                'saltutil.sync_states': Mock(),
+            }
+            with patch.dict(state.__salt__, sync_mocks):
+                state.sls('foo', sync_mods='modules,states')
+
+            for key in sync_mocks:
+                call_count = sync_mocks[key].call_count
+                expected = 1
+                assert call_count == expected, \
+                    '{0} called {1} time(s) (expected: {2})'.format(
+                        key, call_count, expected
+                    )
+
+            # Test syncing all
+            sync_mocks = {'saltutil.sync_all': Mock()}
+            with patch.dict(state.__salt__, sync_mocks):
+                state.sls('foo', sync_mods='all')
+
+            for key in sync_mocks:
+                call_count = sync_mocks[key].call_count
+                expected = 1
+                assert call_count == expected, \
+                    '{0} called {1} time(s) (expected: {2})'.format(
+                        key, call_count, expected
+                    )
+
+            # sync_mods=True should be interpreted as sync_mods=all
+            sync_mocks = {'saltutil.sync_all': Mock()}
+            with patch.dict(state.__salt__, sync_mocks):
+                state.sls('foo', sync_mods=True)
+
+            for key in sync_mocks:
+                call_count = sync_mocks[key].call_count
+                expected = 1
+                assert call_count == expected, \
+                    '{0} called {1} time(s) (expected: {2})'.format(
+                        key, call_count, expected
+                    )
+
+            # Test syncing all when "all" is passed along with module types.
+            # This tests that we *only* run a sync_all and avoid unnecessary
+            # extra syncing.
+            sync_mocks = {'saltutil.sync_all': Mock()}
+            with patch.dict(state.__salt__, sync_mocks):
+                state.sls('foo', sync_mods='modules,all')
+
+            for key in sync_mocks:
+                call_count = sync_mocks[key].call_count
+                expected = 1
+                assert call_count == expected, \
+                    '{0} called {1} time(s) (expected: {2})'.format(
+                        key, call_count, expected
+                    )
 
     def test_pkg(self):
         '''
@@ -1179,3 +1300,305 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                   ({'force': False}, errors),
                                   ({}, errors)]:
                     assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+
+
+class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {
+            state: {
+                '__opts__': salt.config.minion_config(
+                    os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion')
+                ),
+                '__salt__': {
+                    'saltutil.is_running': MagicMock(return_value=[]),
+                },
+            },
+        }
+
+    def setUp(self):
+        self.cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.fileserver_root = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.addCleanup(shutil.rmtree, self.cachedir, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, self.fileserver_root, ignore_errors=True)
+
+        self.saltenvs = ['base', 'foo', 'bar', 'baz']
+        self.saltenv_roots = {
+            x: os.path.join(self.fileserver_root, x)
+            for x in ('base', 'foo', 'bar', 'baz')
+        }
+        self.base_top_file = os.path.join(self.saltenv_roots['base'], 'top.sls')
+        self.dunder_opts = salt.utils.yaml.safe_load(
+            textwrap.dedent('''\
+                file_client: local
+                default_top: base
+
+                file_roots:
+                  base:
+                    - {base}
+                  foo:
+                    - {foo}
+                  bar:
+                    - {bar}
+                  baz:
+                    - {baz}
+                '''.format(**self.saltenv_roots)
+            )
+        )
+        self.dunder_opts['env_order'] = self.saltenvs
+
+        # Write top files for all but the "baz" environment
+        for saltenv in self.saltenv_roots:
+            os.makedirs(self.saltenv_roots[saltenv])
+            if saltenv == 'baz':
+                continue
+            top_file = os.path.join(self.saltenv_roots[saltenv], 'top.sls')
+            with salt.utils.files.fopen(top_file, 'w') as fp_:
+                # Add a section for every environment to each top file, with
+                # the SLS target prefixed with the current saltenv.
+                for env_name in self.saltenvs:
+                    fp_.write(textwrap.dedent('''\
+                        {env_name}:
+                          '*':
+                            - {saltenv}_{env_name}
+                        '''.format(env_name=env_name, saltenv=saltenv)))
+
+    def tearDown(self):
+        time.sleep(1)
+        os.remove(self.base_top_file)
+
+    def show_top(self, **kwargs):
+        local_opts = copy.deepcopy(self.dunder_opts)
+        local_opts.update(kwargs)
+        with patch.dict(state.__opts__, local_opts), \
+                patch.object(salt.state.State, '_gather_pillar',
+                             MagicMock(return_value={})):
+            ret = state.show_top()
+            # Lazy way of converting ordered dicts to regular dicts. We don't
+            # care about dict ordering for these tests.
+            return salt.utils.json.loads(salt.utils.json.dumps(ret))
+
+    def use_limited_base_top_file(self):
+        '''
+        Overwrites the base top file so that it only contains sections for its
+        own saltenv.
+        '''
+        with salt.utils.files.fopen(self.base_top_file, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                base:
+                  '*':
+                    - base_base
+                '''))
+        time.sleep(1)
+
+    def test_merge_strategy_merge(self):
+        '''
+        Base overrides everything
+        '''
+        ret = self.show_top(top_file_merging_strategy='merge')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['base_foo'],
+            'bar': ['base_bar'],
+            'baz': ['base_baz'],
+        }, ret
+
+    def test_merge_strategy_merge_limited_base(self):
+        '''
+        Test with a "base" top file containing only a "base" section. The "baz"
+        saltenv should not be in the return data because that env doesn't have
+        its own top file and there will be no "baz" section in the "base" env's
+        top file.
+
+        Next, append a "baz" section to the rewritten top file and we should
+        get results for that saltenv in the return data.
+        '''
+        self.use_limited_base_top_file()
+        ret = self.show_top(top_file_merging_strategy='merge')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['foo_foo'],
+            'bar': ['bar_bar'],
+        }, ret
+
+        # Add a "baz" section
+        with salt.utils.files.fopen(self.base_top_file, 'a') as fp_:
+            fp_.write(textwrap.dedent('''\
+                baz:
+                  '*':
+                    - base_baz
+                '''))
+
+        ret = self.show_top(top_file_merging_strategy='merge')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['foo_foo'],
+            'bar': ['bar_bar'],
+            'baz': ['base_baz'],
+        }, ret
+
+    def test_merge_strategy_merge_state_top_saltenv_base(self):
+        '''
+        This tests with state_top_saltenv=base, which should pull states *only*
+        from the base saltenv.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='merge',
+            state_top_saltenv='base')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['base_foo'],
+            'bar': ['base_bar'],
+            'baz': ['base_baz'],
+        }, ret
+
+    def test_merge_strategy_merge_state_top_saltenv_foo(self):
+        '''
+        This tests with state_top_saltenv=foo, which should pull states *only*
+        from the foo saltenv. Since that top file is only authoritative for
+        its own saltenv, *only* the foo saltenv's matches from the foo top file
+        should be in the return data.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='merge',
+            state_top_saltenv='foo')
+        assert ret == {'foo': ['foo_foo']}, ret
+
+    def test_merge_strategy_merge_all(self):
+        '''
+        Include everything in every top file
+        '''
+        ret = self.show_top(top_file_merging_strategy='merge_all')
+        assert ret == {
+            'base': ['base_base', 'foo_base', 'bar_base'],
+            'foo': ['base_foo', 'foo_foo', 'bar_foo'],
+            'bar': ['base_bar', 'foo_bar', 'bar_bar'],
+            'baz': ['base_baz', 'foo_baz', 'bar_baz'],
+        }, ret
+
+    def test_merge_strategy_merge_all_alternate_env_order(self):
+        '''
+        Use an alternate env_order. This should change the order in which the
+        SLS targets appear in the result.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='merge_all',
+            env_order=['bar', 'foo', 'base'])
+        assert ret == {
+            'base': ['bar_base', 'foo_base', 'base_base'],
+            'foo': ['bar_foo', 'foo_foo', 'base_foo'],
+            'bar': ['bar_bar', 'foo_bar', 'base_bar'],
+            'baz': ['bar_baz', 'foo_baz', 'base_baz'],
+        }, ret
+
+    def test_merge_strategy_merge_all_state_top_saltenv_base(self):
+        '''
+        This tests with state_top_saltenv=base, which should pull states *only*
+        from the base saltenv. Since we are using the "merge_all" strategy, all
+        the states from that top file should be in the return data.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='merge_all',
+            state_top_saltenv='base')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['base_foo'],
+            'bar': ['base_bar'],
+            'baz': ['base_baz'],
+        }, ret
+
+    def test_merge_strategy_merge_all_state_top_saltenv_foo(self):
+        '''
+        This tests with state_top_saltenv=foo, which should pull states *only*
+        from the foo saltenv. Since we are using the "merge_all" strategy, all
+        the states from that top file should be in the return data.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='merge_all',
+            state_top_saltenv='foo')
+        assert ret == {
+            'base': ['foo_base'],
+            'foo': ['foo_foo'],
+            'bar': ['foo_bar'],
+            'baz': ['foo_baz'],
+        }, ret
+
+    def test_merge_strategy_same(self):
+        '''
+        Each env should get its SLS targets from its own top file, with the
+        "baz" env pulling from "base" since default_top=base and there is no
+        top file in the "baz" saltenv.
+        '''
+        ret = self.show_top(top_file_merging_strategy='same')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['foo_foo'],
+            'bar': ['bar_bar'],
+            'baz': ['base_baz'],
+        }, ret
+
+    def test_merge_strategy_same_limited_base(self):
+        '''
+        Each env should get its SLS targets from its own top file, with the
+        "baz" env pulling from "base" since default_top=base and there is no
+        top file in the "baz" saltenv.
+        '''
+        self.use_limited_base_top_file()
+        ret = self.show_top(top_file_merging_strategy='same')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['foo_foo'],
+            'bar': ['bar_bar'],
+        }, ret
+
+    def test_merge_strategy_same_default_top_foo(self):
+        '''
+        Each env should get its SLS targets from its own top file, with the
+        "baz" env pulling from "foo" since default_top=foo and there is no top
+        file in the "baz" saltenv.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='same',
+            default_top='foo')
+        assert ret == {
+            'base': ['base_base'],
+            'foo': ['foo_foo'],
+            'bar': ['bar_bar'],
+            'baz': ['foo_baz'],
+        }, ret
+
+    def test_merge_strategy_same_state_top_saltenv_base(self):
+        '''
+        Test the state_top_saltenv parameter to load states exclusively from
+        the base saltenv, with the "same" merging strategy. This should
+        result in just the base environment's states from the base top file
+        being in the merged result.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='same',
+            state_top_saltenv='base')
+        assert ret == {'base': ['base_base']}, ret
+
+    def test_merge_strategy_same_state_top_saltenv_foo(self):
+        '''
+        Test the state_top_saltenv parameter to load states exclusively from
+        the foo saltenv, with the "same" merging strategy. This should
+        result in just the foo environment's states from the foo top file
+        being in the merged result.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='same',
+            state_top_saltenv='foo')
+        assert ret == {'foo': ['foo_foo']}, ret
+
+    def test_merge_strategy_same_state_top_saltenv_baz(self):
+        '''
+        Test the state_top_saltenv parameter to load states exclusively from
+        the baz saltenv, with the "same" merging strategy. This should
+        result in an empty dictionary since there is no top file in that
+        environment.
+        '''
+        ret = self.show_top(
+            top_file_merging_strategy='same',
+            state_top_saltenv='baz')
+        assert ret == {}, ret

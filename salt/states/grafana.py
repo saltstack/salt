@@ -167,7 +167,7 @@ they exist in dashboards. The module will not manage rows that are not defined,
 allowing users to manage their own custom rows.
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 
 # Import Salt libs
@@ -343,10 +343,10 @@ def dashboard_present(
         ret['comment'] = msg
         return ret
     body = {
-        "user":  "guest",
-        "group": "guest",
-        "title": name,
-        "dashboard": salt.utils.json.dumps(_dashboard)
+        'user':  'guest',
+        'group': 'guest',
+        'title': name,
+        'dashboard': salt.utils.json.dumps(_dashboard)
     }
     updated = __salt__['elasticsearch.index'](
         index=index, doc_type='dashboard', body=body, id=name,

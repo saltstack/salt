@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: Nicole Thomas <nicole@saltstack.com>
 '''
 
 # Import Salt Libs
@@ -14,7 +14,9 @@ from tests.support.mixins import RUNTIME_VARS
 
 # Import Salt libs
 import salt.config
+import salt.utils.yaml
 from salt.output import display_output
+from salt.ext import six
 
 
 class OutputReturnTest(ShellCase):
@@ -53,7 +55,7 @@ class OutputReturnTest(ShellCase):
         '''
         Tests the return of pprint-formatted data
         '''
-        expected = ["{'local': True}"]
+        expected = ["{u'local': True}"] if six.PY2 else ["{'local': True}"]
         ret = self.run_call('test.ping --out=pprint')
         self.assertEqual(ret, expected)
 
@@ -61,7 +63,7 @@ class OutputReturnTest(ShellCase):
         '''
         Tests the return of raw-formatted data
         '''
-        expected = ["{'local': True}"]
+        expected = ["{u'local': True}"] if six.PY2 else ["{'local': True}"]
         ret = self.run_call('test.ping --out=raw')
         self.assertEqual(ret, expected)
 
@@ -80,6 +82,20 @@ class OutputReturnTest(ShellCase):
         expected = ['local: true']
         ret = self.run_call('test.ping --out=yaml')
         self.assertEqual(ret, expected)
+
+    def test_output_yaml_namespaced_dict_wrapper(self):
+        '''
+        Tests the ability to dump a NamespacedDictWrapper instance, as used in
+        magic dunders like __grains__ and __pillar__
+
+        See https://github.com/saltstack/salt/issues/49269
+        '''
+        dumped_yaml = '\n'.join(self.run_call('grains.items --out=yaml'))
+        loaded_yaml = salt.utils.yaml.safe_load(dumped_yaml)
+        # We just want to check that the dumped YAML loades as a dict with a
+        # single top-level key, we don't care about the real contents.
+        assert isinstance(loaded_yaml, dict)
+        assert list(loaded_yaml) == ['local']
 
     def test_output_unicodebad(self):
         '''

@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
 '''
 Module for sending messages to MS Teams
+
 .. versionadded:: 2017.7.0
+
 :configuration: This module can be used by either passing a hook_url
     directly or by specifying it in a configuration profile in the salt
-    master/minion config.
-    For example:
-    .. code-block:: yaml
-        msteams:
-          hook_url: https://outlook.office.com/webhook/837
+    master/minion config. For example:
+
+.. code-block:: yaml
+
+    msteams:
+      hook_url: https://outlook.office.com/webhook/837
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -59,8 +62,11 @@ def post_card(message,
     :param title:       Optional title for the posted card
     :param theme_color:  Optional hex color highlight for the posted card
     :return:            Boolean if message was sent successfully.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' msteams.post_card message="Build is done"
     '''
 

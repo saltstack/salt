@@ -15,15 +15,16 @@ In the minion configuration file, the following block is required:
   mandrill:
     key: <API_KEY>
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
-from __future__ import absolute_import
 
 # Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
 import salt.utils.json
+import salt.utils.versions
 
 # import third party
 try:
@@ -32,20 +33,12 @@ try:
 except ImportError:
     HAS_REQUESTS = False
 
-# ------------------------------------------------------------------------------
-# module properties
-# ------------------------------------------------------------------------------
-
 __virtualname__ = 'mandrill'
 
 log = logging.getLogger(__file__)
 
 BASE_URL = 'https://mandrillapp.com/api'
 DEFAULT_VERSION = 1
-
-# ------------------------------------------------------------------------------
-# property functions
-# ------------------------------------------------------------------------------
 
 
 def __virtual__():
@@ -114,7 +107,7 @@ def _http_request(url,
     if not headers:
         headers = _get_headers()
     session = requests.session()
-    log.debug('Querying {}'.format(url))
+    log.debug('Querying %s', url)
     req = session.post(url,
                        headers=headers,
                        data=salt.utils.json.dumps(data))
@@ -145,12 +138,13 @@ def _http_request(url,
 
 
 def send(message,
-         async=False,
+         asynchronous=False,
          ip_pool=None,
          send_at=None,
          api_url=None,
          api_version=None,
-         api_key=None):
+         api_key=None,
+         **kwargs):
     '''
     Send out the email using the details from the ``message`` argument.
 
@@ -159,14 +153,14 @@ def send(message,
         sent as dictionary with at fields as specified in the Mandrill API
         documentation.
 
-    async: ``False``
+    asynchronous: ``False``
         Enable a background sending mode that is optimized for bulk sending.
-        In async mode, messages/send will immediately return a status of
-        "queued" for every recipient. To handle rejections when sending in async
+        In asynchronous mode, messages/send will immediately return a status of
+        "queued" for every recipient. To handle rejections when sending in asynchronous
         mode, set up a webhook for the 'reject' event. Defaults to false for
         messages with no more than 10 recipients; messages with more than 10
         recipients are always sent asynchronously, regardless of the value of
-        async.
+        asynchronous.
 
     ip_pool
         The name of the dedicated ip pool that should be used to send the
@@ -237,6 +231,11 @@ def send(message,
             result:
                 True
     '''
+    if 'async' in kwargs:  # Remove this in Sodium
+        salt.utils.versions.warn_until('Sodium', 'Parameter "async" is renamed to "asynchronous" '
+                                                 'and will be removed in version {version}.')
+        asynchronous = bool(kwargs['async'])
+
     params = _get_api_params(api_url=api_url,
                              api_version=api_version,
                              api_key=api_key)
@@ -246,7 +245,7 @@ def send(message,
     data = {
         'key': params['api_key'],
         'message': message,
-        'async': async,
+        'async': asynchronous,
         'ip_pool': ip_pool,
         'send_at': send_at
     }

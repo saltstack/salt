@@ -4,7 +4,7 @@ Manage groups on Mac OS 10.7+
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 try:
     import grp
 except ImportError:
@@ -16,6 +16,7 @@ import salt.utils.itertools
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.mac_user import _dscl, _flush_dscl_cache
+from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = 'group'
@@ -59,7 +60,7 @@ def add(name, gid=None, **kwargs):
         raise SaltInvocationError('gid must be an integer')
     # check if gid is already in use
     gid_list = _list_gids()
-    if str(gid) in gid_list:
+    if six.text_type(gid) in gid_list:
         raise CommandExecutionError(
             'gid \'{0}\' already exists'.format(gid)
         )

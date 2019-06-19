@@ -5,7 +5,7 @@ NAPALM Probes
 
 Manages RPM/SLA probes on the network device.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -22,7 +22,7 @@ Dependencies
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python lib
 import logging
@@ -178,26 +178,29 @@ def results(**kwargs):  # pylint: disable=unused-argument
 
 @proxy_napalm_wrap
 def set_probes(probes, test=False, commit=True, **kwargs):  # pylint: disable=unused-argument
-
     '''
     Configures RPM/SLA probes on the device.
     Calls the configuration template 'set_probes' from the NAPALM library,
     providing as input a rich formatted dictionary with the configuration details of the probes to be configured.
 
     :param probes: Dictionary formatted as the output of the function config()
+
     :param test: Dry run? If set as True, will apply the config, discard and return the changes. Default: False
-    and will commit the changes on the device.
-    :param commit: Commit? (default: True) Sometimes it is not needed to commit the config immediately
-        after loading the changes. E.g.: a state loads a couple of parts (add / remove / update)
-        and would not be optimal to commit after each operation.
-        Also, from the CLI when the user needs to apply the similar changes before committing,
-        can specify commit=False and will not discard the config.
+
+    :param commit: Commit? (default: True) Sometimes it is not needed to commit
+        the config immediately after loading the changes. E.g.: a state loads a
+        couple of parts (add / remove / update) and would not be optimal to
+        commit after each operation.  Also, from the CLI when the user needs to
+        apply the similar changes before committing, can specify commit=False
+        and will not discard the config.
+
     :raise MergeConfigException: If there is an error on the configuration sent.
     :return a dictionary having the following keys:
 
-        * result (bool): if the config was applied successfully. It is `False` only in case of failure. In case
-        there are no changes to be applied and successfully performs all operations it is still `True` and so will be
-        the `already_configured` flag (example below)
+        * result (bool): if the config was applied successfully. It is `False`
+          only in case of failure. In case there are no changes to be applied
+          and successfully performs all operations it is still `True` and so
+          will be the `already_configured` flag (example below)
         * comment (str): a message for the user
         * already_configured (bool): flag to check if there were no changes applied
         * diff (str): returns the config changes applied
@@ -275,24 +278,27 @@ def delete_probes(probes, test=False, commit=True, **kwargs):  # pylint: disable
     providing as input a rich formatted dictionary with the configuration details of the probes to be removed
     from the configuration of the device.
 
-    :param probes: Dictionary with a similar format as the output dictionary of the function config(),
-    where the details are not necessary.
-    :param test: Dry run? If set as True, will apply the config, discard and return the changes. Default: False
-    and will commit the changes on the device.
-    :param commit: Commit? (default: True) Sometimes it is not needed to commit the config immediately
-        after loading the changes. E.g.: a state loads a couple of parts (add / remove / update)
-        and would not be optimal to commit after each operation.
-        Also, from the CLI when the user needs to apply the similar changes before committing,
-        can specify commit=False and will not discard the config.
-    :raise MergeConfigException: If there is an error on the configuration sent.
-    :return a dictionary having the following keys:
+    :param probes: Dictionary with a similar format as the output dictionary of
+        the function config(), where the details are not necessary.
+    :param test: Dry run? If set as True, will apply the config, discard and
+        return the changes. Default: False
+    :param commit: Commit? (default: True) Sometimes it is not needed to commit
+        the config immediately after loading the changes. E.g.: a state loads a
+        couple of parts (add / remove / update) and would not be optimal to
+        commit after each operation.  Also, from the CLI when the user needs to
+        apply the similar changes before committing, can specify commit=False
+        and will not discard the config.
 
-        * result (bool): if the config was applied successfully. It is `False` only in case of failure. In case
-        there are no changes to be applied and successfully performs all operations it is still `True` and so will be
-        the `already_configured` flag (example below)
-        * comment (str): a message for the user
-        * already_configured (bool): flag to check if there were no changes applied
-        * diff (str): returns the config changes applied
+    :raise MergeConfigException: If there is an error on the configuration sent.
+    :return: A dictionary having the following keys:
+
+    - result (bool): if the config was applied successfully. It is `False` only
+      in case of failure. In case there are no changes to be applied and
+      successfully performs all operations it is still `True` and so will be
+      the `already_configured` flag (example below)
+    - comment (str): a message for the user
+    - already_configured (bool): flag to check if there were no changes applied
+    - diff (str): returns the config changes applied
 
     Input example:
 
@@ -318,29 +324,34 @@ def delete_probes(probes, test=False, commit=True, **kwargs):  # pylint: disable
 def schedule_probes(probes, test=False, commit=True, **kwargs):  # pylint: disable=unused-argument
 
     '''
-    Will schedule the probes. On Cisco devices, it is not enough to define the probes, it is also necessary
-    to schedule them.
-    This method calls the configuration template 'schedule_probes' from the NAPALM library,
-    providing as input a rich formatted dictionary with the names of the probes and the tests to be scheduled.
+    Will schedule the probes. On Cisco devices, it is not enough to define the
+    probes, it is also necessary to schedule them.
 
-    :param probes: Dictionary with a similar format as the output dictionary of the function config(),
-    where the details are not necessary.
-    :param test: Dry run? If set as True, will apply the config, discard and return the changes. Default: False
-    and will commit the changes on the device.
-    :param commit: Commit? (default: True) Sometimes it is not needed to commit the config immediately
-        after loading the changes. E.g.: a state loads a couple of parts (add / remove / update)
-        and would not be optimal to commit after each operation.
-        Also, from the CLI when the user needs to apply the similar changes before committing,
-        can specify commit=False and will not discard the config.
+    This function calls the configuration template ``schedule_probes`` from the
+    NAPALM library, providing as input a rich formatted dictionary with the
+    names of the probes and the tests to be scheduled.
+
+    :param probes: Dictionary with a similar format as the output dictionary of
+        the function config(), where the details are not necessary.
+    :param test: Dry run? If set as True, will apply the config, discard and
+        return the changes. Default: False
+    :param commit: Commit? (default: True) Sometimes it is not needed to commit
+        the config immediately after loading the changes. E.g.: a state loads a
+        couple of parts (add / remove / update) and would not be optimal to
+        commit after each operation.  Also, from the CLI when the user needs to
+        apply the similar changes before committing, can specify commit=False
+        and will not discard the config.
+
     :raise MergeConfigException: If there is an error on the configuration sent.
-    :return a dictionary having the following keys:
+    :return: a dictionary having the following keys:
 
-        * result (bool): if the config was applied successfully. It is `False` only in case of failure. In case
-        there are no changes to be applied and successfully performs all operations it is still `True` and so will be
-        the `already_configured` flag (example below)
-        * comment (str): a message for the user
-        * already_configured (bool): flag to check if there were no changes applied
-        * diff (str): returns the config changes applied
+    - result (bool): if the config was applied successfully. It is `False` only
+      in case of failure. In case there are no changes to be applied and
+      successfully performs all operations it is still `True` and so will be
+      the `already_configured` flag (example below)
+    - comment (str): a message for the user
+    - already_configured (bool): flag to check if there were no changes applied
+    - diff (str): returns the config changes applied
 
     Input example:
 

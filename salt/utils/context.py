@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :codeauthor: :email:`Thomas Jackson (jacksontj.89@gmail.com)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+    :codeauthor: Thomas Jackson (jacksontj.89@gmail.com)
 
 
     salt.utils.context
@@ -14,7 +14,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import copy
 import threading
-import collections
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping
+
 from contextlib import contextmanager
 
 from salt.ext import six
@@ -57,7 +61,7 @@ def func_globals_inject(func, **overrides):
         del func_globals[injected]
 
 
-class ContextDict(collections.MutableMapping):
+class ContextDict(MutableMapping):
     '''
     A context manager that saves some per-thread state globally.
     Intended for use with Tornado's StackContext.
@@ -142,7 +146,7 @@ class ContextDict(collections.MutableMapping):
         return new_obj
 
 
-class ChildContextDict(collections.MutableMapping):
+class ChildContextDict(MutableMapping):
     '''An overrideable child of ContextDict
 
     '''
@@ -190,7 +194,7 @@ class ChildContextDict(collections.MutableMapping):
         self.parent._state.data = self._old_data
 
 
-class NamespacedDictWrapper(collections.MutableMapping, dict):
+class NamespacedDictWrapper(MutableMapping, dict):
     '''
     Create a dict which wraps another dict with a specific prefix of key(s)
 
@@ -203,10 +207,14 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
             self.pre_keys = (pre_keys,)
         else:
             self.pre_keys = pre_keys
-        if override_name:
-            self.__class__.__module__ = 'salt'
-            # __name__ can't be assigned a unicode
-            self.__class__.__name__ = str(override_name)  # future lint: disable=blacklisted-function
+        if override_name is not None:
+            import salt.utils.versions
+            salt.utils.versions.warn_until(
+                'Neon',
+                'Overriding the class name is no longer supported. Please '
+                'remove the override_name argument before it is removed in '
+                'Salt Sodium.'
+            )
         super(NamespacedDictWrapper, self).__init__(self._dict())
 
     def _dict(self):

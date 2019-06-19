@@ -2,8 +2,9 @@
 '''
 Support for eselect, Gentoo's configuration and management tool.
 '''
-from __future__ import absolute_import
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -16,7 +17,7 @@ def __virtual__():
     '''
     Only work on Gentoo systems with eselect installed
     '''
-    if __grains__['os'] == 'Gentoo' and salt.utils.path.which('eselect'):
+    if __grains__['os_family'] == 'Gentoo' and salt.utils.path.which('eselect'):
         return 'eselect'
     return (False, 'The eselect execution module cannot be loaded: either the system is not Gentoo or the eselect binary is not in the path.')
 
@@ -59,7 +60,7 @@ def exec_action(module, action, module_parameter=None, action_parameter=None, st
     if state_only:
         return True
 
-    if len(out) < 1:
+    if not out:
         return False
 
     if len(out) == 1 and not out[0].strip():
@@ -191,7 +192,7 @@ def set_target(module, target, module_parameter=None, action_parameter=None):
 
     # get list of available modules
     if module not in get_modules():
-        log.error('Module {0} not available'.format(module))
+        log.error('Module %s not available', module)
         return False
 
     exec_result = exec_action(module, 'set', module_parameter=module_parameter, action_parameter=action_parameter, state_only=True)

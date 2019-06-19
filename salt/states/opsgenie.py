@@ -3,7 +3,7 @@
 Create/Close an alert in OpsGenie
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 This state is useful for creating or closing alerts in OpsGenie
 during state runs.
@@ -33,7 +33,7 @@ during state runs.
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import inspect
 
@@ -70,7 +70,7 @@ def create_alert(name=None, api_key=None, reason=None, action_type="Create"):
     '''
 
     _, _, _, values = inspect.getargvalues(inspect.currentframe())
-    log.info("Arguments values:" + str(values))
+    log.info("Arguments values: %s", values)
 
     ret = {
         'result': '',
@@ -86,9 +86,7 @@ def create_alert(name=None, api_key=None, reason=None, action_type="Create"):
     if __opts__['test'] is True:
         ret[
             'comment'] = 'Test: {0} alert request will be processed ' \
-                         'using the API Key="{1}".'.format(
-            action_type,
-            api_key)
+                         'using the API Key="{1}".'.format(action_type, api_key)
 
         # Return ``None`` when running with ``test=true``.
         ret['result'] = None
@@ -104,9 +102,8 @@ def create_alert(name=None, api_key=None, reason=None, action_type="Create"):
 
     if 200 <= response_status_code < 300:
         log.info(
-            "POST Request has succeeded with message:" +
-            response_text + " status code:" + str(
-                response_status_code))
+            "POST Request has succeeded with message: %s status code: %s",
+            response_text, response_status_code)
         ret[
             'comment'] = 'Test: {0} alert request will be processed' \
                          ' using the API Key="{1}".'.format(
@@ -115,9 +112,8 @@ def create_alert(name=None, api_key=None, reason=None, action_type="Create"):
         ret['result'] = True
     else:
         log.error(
-            "POST Request has failed with error:" +
-            response_text + " status code:" + str(
-                response_status_code))
+            "POST Request has failed with error: %s status code: %s",
+            response_text, response_status_code)
         ret['result'] = False
 
     return ret

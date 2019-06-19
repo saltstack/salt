@@ -86,8 +86,8 @@ option on the master:
       - minionfs
 
 .. note::
-    ``minion`` also works here. Prior to the Oxygen release, *only* ``minion``
-    would work.
+    ``minion`` also works here. Prior to the 2018.3.0 release, *only*
+    ``minion`` would work.
 
     Also, as described earlier, ``file_recv: True`` is needed to enable the
     master to receive files pushed from minions. As always, changes to the
@@ -139,7 +139,7 @@ blacklist, can be found below:
       - web*
       - 'mail\d+\.domain\.tld'
 
-    minionfs_whitelist:
+    minionfs_blacklist:
       - web21
 
 Potential Concerns

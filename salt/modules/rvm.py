@@ -2,7 +2,7 @@
 '''
 Manage ruby installations and gemsets with RVM, the Ruby Version Manager.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import re
@@ -12,6 +12,9 @@ import logging
 # Import salt libs
 import salt.utils.args
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -464,5 +467,5 @@ def do(ruby, command, runas=None, cwd=None, env=None):  # pylint: disable=C0103
     try:
         command = salt.utils.args.shlex_split(command)
     except AttributeError:
-        command = salt.utils.args.shlex_split(str(command))
+        command = salt.utils.args.shlex_split(six.text_type(command))
     return _rvm_do(ruby, command, runas=runas, cwd=cwd, env=env)

@@ -4,7 +4,7 @@ Functions used for CLI color themes.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
@@ -20,23 +20,24 @@ def get_color_theme(theme):
     Return the color theme to use
     '''
     # Keep the heavy lifting out of the module space
+    import salt.utils.data
     import salt.utils.files
     import salt.utils.yaml
     if not os.path.isfile(theme):
-        log.warning('The named theme {0} if not available'.format(theme))
+        log.warning('The named theme %s if not available', theme)
 
     try:
         with salt.utils.files.fopen(theme, 'rb') as fp_:
-            colors = salt.utils.yaml.safe_load(fp_)
+            colors = salt.utils.data.decode(salt.utils.yaml.safe_load(fp_))
             ret = {}
             for color in colors:
                 ret[color] = '\033[{0}m'.format(colors[color])
             if not isinstance(colors, dict):
-                log.warning('The theme file {0} is not a dict'.format(theme))
+                log.warning('The theme file %s is not a dict', theme)
                 return {}
             return ret
     except Exception:
-        log.warning('Failed to read the color theme {0}'.format(theme))
+        log.warning('Failed to read the color theme %s', theme)
         return {}
 
 

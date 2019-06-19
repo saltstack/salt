@@ -11,6 +11,7 @@ import tornado.web
 
 # import salt libs
 import salt.utils.event
+import salt.utils.stringutils
 
 
 def start(address=None, port=5000, ssl_crt=None, ssl_key=None):
@@ -70,7 +71,10 @@ def start(address=None, port=5000, ssl_crt=None, ssl_key=None):
         def post(self, tag):  # pylint: disable=arguments-differ
             body = self.request.body
             headers = self.request.headers
-            payload = {'headers': headers, 'body': body}
+            payload = {
+                'headers': headers if isinstance(headers, dict) else dict(headers),
+                'body': salt.utils.stringutils.to_str(body),
+            }
             fire('salt/engines/hook/' + tag, payload)
 
     application = tornado.web.Application([(r"/(.*)", WebHook), ])
@@ -78,6 +82,7 @@ def start(address=None, port=5000, ssl_crt=None, ssl_key=None):
     if all([ssl_crt, ssl_key]):
         ssl_options = {"certfile": ssl_crt, "keyfile": ssl_key}
     io_loop = tornado.ioloop.IOLoop(make_current=False)
-    http_server = tornado.httpserver.HTTPServer(application, ssl_options=ssl_options, io_loop=io_loop)
+    io_loop.make_current()
+    http_server = tornado.httpserver.HTTPServer(application, ssl_options=ssl_options)
     http_server.listen(port, address=address)
     io_loop.start()

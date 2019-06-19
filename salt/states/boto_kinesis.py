@@ -58,7 +58,7 @@ pillars or minion config:
 # Keep pylint from chocking on ret
 # pylint: disable=undefined-variable
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 log = logging.getLogger(__name__)
@@ -270,7 +270,7 @@ def present(name,
         enable_metrics = list(new_monitoring_set.difference(matching_metrics))
         disable_metrics = list(old_monitoring_set.difference(matching_metrics))
 
-        if len(enable_metrics) != 0:
+        if enable_metrics:
             if __opts__['test']:
                 ret['result'] = None
                 comments.append('Kinesis stream {0}: would enable enhanced monitoring for {1}'
@@ -295,7 +295,7 @@ def present(name,
                 comments.append('Kinesis stream {0}: enhanced monitoring was enabled for shard-level metrics {1}'
                                 .format(name, enable_metrics))
 
-        if len(disable_metrics) != 0:
+        if disable_metrics:
             if __opts__['test']:
                 ret['result'] = None
                 comments.append('Kinesis stream {0}: would disable enhanced monitoring for {1}'
@@ -320,13 +320,13 @@ def present(name,
                 comments.append('Kinesis stream {0}: enhanced monitoring was disabled for shard-level metrics {1}'
                                 .format(name, disable_metrics))
 
-        if len(disable_metrics) == 0 and len(enable_metrics) == 0:
+        if not disable_metrics and not enable_metrics:
             comments.append('Kinesis stream {0}: enhanced monitoring did not require change, already set at {1}'
-                            .format(name, (old_enhanced_monitoring if len(old_enhanced_monitoring) > 0 else "None")))
+                            .format(name, (old_enhanced_monitoring if old_enhanced_monitoring else "None")))
         elif not __opts__['test']:
-            changes_old['enhanced_monitoring'] = (old_enhanced_monitoring if len(old_enhanced_monitoring) > 0
+            changes_old['enhanced_monitoring'] = (old_enhanced_monitoring if old_enhanced_monitoring
                                                   else "None")
-            changes_new['enhanced_monitoring'] = (enhanced_monitoring if len(enhanced_monitoring) > 0
+            changes_new['enhanced_monitoring'] = (enhanced_monitoring if enhanced_monitoring
                                                   else "None")
     else:
         comments.append('Kinesis stream {0}: did not configure enhanced monitoring'.format(name))
@@ -345,8 +345,10 @@ def present(name,
                 comments.append('Kinesis stream {0}: would be resharded from {1} to {2} shards'
                                 .format(name, old_num_shards, num_shards))
             else:
-                log.info("Resharding stream from {0} to {1} shards, this could take a while"
-                         .format(old_num_shards, num_shards))
+                log.info(
+                    'Resharding stream from %s to %s shards, this could take '
+                    'a while', old_num_shards, num_shards
+                )
                 # reshard returns True when a split/merge action is taken,
                 # or False when no more actions are required
                 continue_reshard = True

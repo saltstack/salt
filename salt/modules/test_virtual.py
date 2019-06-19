@@ -2,7 +2,7 @@
 '''
 Module for running arbitrary tests with a __virtual__ function
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 
 def __virtual__():

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`jmoney <justin@saltstack.com>`
+    :codeauthor: jmoney <justin@saltstack.com>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -21,7 +21,8 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.utils.files
 import salt.utils.templates as templates
-import salt.transport
+import salt.utils.platform
+import salt.transport.client
 import salt.modules.cp as cp
 from salt.exceptions import CommandExecutionError
 
@@ -131,23 +132,32 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if push works with good posix path.
         '''
+        filename = '/saltines/test.file'
+        if salt.utils.platform.is_windows():
+            filename = 'c:\\saltines\\test.file'
         with patch('salt.modules.cp.os.path',
                    MagicMock(isfile=Mock(return_value=True), wraps=cp.os.path)), \
+                patch('salt.modules.cp.os.path',
+                      MagicMock(getsize=MagicMock(return_value=10), wraps=cp.os.path)), \
                 patch.multiple('salt.modules.cp',
                                _auth=MagicMock(**{'return_value.gen_token.return_value': 'token'}),
                                __opts__={'id': 'abc', 'file_buffer_size': 10}), \
-                patch('salt.utils.files.fopen', mock_open(read_data='content')), \
-                patch('salt.transport.Channel.factory', MagicMock()):
-            response = cp.push('/saltines/test.file')
-            self.assertEqual(response, True)
-            self.assertEqual(salt.utils.files.fopen().read.call_count, 2)  # pylint: disable=resource-leakage
-            salt.transport.Channel.factory({}).send.assert_called_once_with(
+                patch('salt.utils.files.fopen', mock_open(read_data=b'content')) as m_open, \
+                patch('salt.transport.client.ReqChannel.factory', MagicMock()):
+            response = cp.push(filename)
+            assert response, response
+            num_opens = len(m_open.filehandles[filename])
+            assert num_opens == 1, num_opens
+            fh_ = m_open.filehandles[filename][0]
+            assert fh_.read.call_count == 2, fh_.read.call_count
+            salt.transport.client.ReqChannel.factory({}).send.assert_called_once_with(
                 dict(
-                    loc=salt.utils.files.fopen().tell(),  # pylint: disable=resource-leakage
+                    loc=fh_.tell(),  # pylint: disable=resource-leakage
                     cmd='_file_recv',
                     tok='token',
                     path=['saltines', 'test.file'],
-                    data='',  # data is empty here because load['data'] is overwritten
+                    size=10,
+                    data=b'',  # data is empty here because load['data'] is overwritten
                     id='abc'
                 )
             )

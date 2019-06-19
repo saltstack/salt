@@ -3,7 +3,7 @@
 Control a salt cloud system
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import salt libs
 import salt.utils.data
@@ -42,7 +42,7 @@ def create(name, profile):
     cmd = 'salt-cloud --out json -p {0} {1}'.format(profile, name)
     out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
     try:
-        ret = salt.utils.json.loads(out, object_hook=salt.utils.data.encode_dict)
+        ret = salt.utils.json.loads(out)
     except ValueError:
         ret = {}
     return ret

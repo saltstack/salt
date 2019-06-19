@@ -8,13 +8,12 @@ This state allows for grains to be set.
 Grains set or altered with this module are stored in the 'grains'
 file on the minions, By default, this file is located at: ``/etc/salt/grains``
 
-.. Note::
-
+.. note::
    This does **NOT** override any grains set in the minion config file.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 # Import Salt libs
@@ -44,6 +43,30 @@ def exists(name, delimiter=DEFAULT_TARGET_DELIM):
         ret['result'] = False
         ret['comment'] = 'Grain does not exist'
     return ret
+
+
+def make_hashable(list_grain, result=None):
+    '''
+    Ensure that a list grain is hashable.
+
+    list_grain
+        The list grain that should be hashable
+
+    result
+        This function is recursive, so it must be possible to use a
+        sublist as parameter to the function. Should not be used by a caller
+        outside of the function.
+
+    Make it possible to compare two list grains to each other if the list
+    contains complex objects.
+    '''
+    result = result or set()
+    for sublist in list_grain:
+        if type(sublist) == list:
+            make_hashable(sublist, result)
+        else:
+            result.add(frozenset(sublist))
+    return result
 
 
 def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
@@ -97,7 +120,7 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
       with,a,custom,delimiter:
         grains.present:
           - value: yay
-          - delimiter: ,
+          - delimiter: ','
     '''
     name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {'name': name,
@@ -175,7 +198,7 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
             ret['comment'] = 'Grain {0} is not a valid list'.format(name)
             return ret
         if isinstance(value, list):
-            if set(value).issubset(set(__salt__['grains.get'](name))):
+            if make_hashable(value).issubset(make_hashable(__salt__['grains.get'](name))):
                 ret['comment'] = 'Value {1} is already in grain {0}'.format(name, value)
                 return ret
             elif name in __context__.get('pending_grains', {}):
@@ -332,7 +355,7 @@ def absent(name,
     .. code-block:: yaml
 
       grain_name:
-        grains.absent: []
+        grains.absent
     '''
 
     _non_existent = object()
@@ -347,8 +370,7 @@ def absent(name,
         if __opts__['test']:
             ret['result'] = None
             if destructive is True:
-                ret['comment'] = 'Grain {0} is set to be deleted'\
-                    .format(name)
+                ret['comment'] = 'Grain {0} is set to be deleted'.format(name)
                 ret['changes'] = {'deleted': name}
             return ret
         ret = __salt__['grains.set'](name,
@@ -357,16 +379,14 @@ def absent(name,
                                      force=force)
         if ret['result']:
             if destructive is True:
-                ret['comment'] = 'Grain {0} was deleted'\
-                    .format(name)
+                ret['comment'] = 'Grain {0} was deleted'.format(name)
                 ret['changes'] = {'deleted': name}
         ret['name'] = name
     elif grain is not _non_existent:
         if __opts__['test']:
             ret['result'] = None
             if destructive is True:
-                ret['comment'] = 'Grain {0} is set to be deleted'\
-                    .format(name)
+                ret['comment'] = 'Grain {0} is set to be deleted'.format(name)
                 ret['changes'] = {'deleted': name}
             else:
                 ret['comment'] = 'Value for grain {0} is set to be ' \
@@ -379,12 +399,10 @@ def absent(name,
                                      force=force)
         if ret['result']:
             if destructive is True:
-                ret['comment'] = 'Grain {0} was deleted'\
-                    .format(name)
+                ret['comment'] = 'Grain {0} was deleted'.format(name)
                 ret['changes'] = {'deleted': name}
             else:
-                ret['comment'] = 'Value for grain {0} was set to None' \
-                                 .format(name)
+                ret['comment'] = 'Value for grain {0} was set to None'.format(name)
                 ret['changes'] = {'grain': name, 'value': None}
         ret['name'] = name
     else:
@@ -445,8 +463,7 @@ def append(name, value, convert=False,
                 ret['changes'] = {'added': value}
                 return ret
             __salt__['grains.append'](name, value)
-            ret['comment'] = 'Value {1} was added to grain {0}'\
-                .format(name, value)
+            ret['comment'] = 'Value {1} was added to grain {0}'.format(name, value)
             ret['changes'] = {'added': value}
         else:
             if convert is True:
@@ -460,13 +477,11 @@ def append(name, value, convert=False,
                 grain = [] if grain is None else [grain]
                 grain.append(value)
                 __salt__['grains.setval'](name, grain)
-                ret['comment'] = 'Value {1} was added to grain {0}'\
-                    .format(name, value)
+                ret['comment'] = 'Value {1} was added to grain {0}'.format(name, value)
                 ret['changes'] = {'added': value}
             else:
                 ret['result'] = False
-                ret['comment'] = 'Grain {0} is not a valid list'\
-                    .format(name)
+                ret['comment'] = 'Grain {0} is not a valid list'.format(name)
     else:
         ret['result'] = False
         ret['comment'] = 'Grain {0} does not exist'.format(name)

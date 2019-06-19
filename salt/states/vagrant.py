@@ -3,8 +3,6 @@ r'''
 Manage Vagrant VMs
 ==================
 
-.. index:: Vagrant state function
-
 Manange execution of Vagrant virtual machines on Salt minions.
 
 Vagrant_ is a tool for building and managing virtual machine environments.
@@ -19,7 +17,7 @@ developers who use Vagrant to quickly define their virtual environments.
 .. _Docker: https://www.docker.io/
 .. _VMWare: https://www.vmware.com/
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
 The configuration of each virtual machine is defined in a file named
 ``Vagrantfile`` which must exist on the VM host machine.
@@ -51,7 +49,7 @@ value will select the ``primary`` (or only) machine in the Vagrantfile.
       create_table: True  # if not present
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import fnmatch
@@ -116,7 +114,7 @@ def _vagrant_call(node, function, section, comment, status_when_done=None, **kwa
                 response = response['name']
             changed_nodes.append({'node': node, function: response})
         except (SaltInvocationError, CommandExecutionError) as err:
-            ignored_nodes.append({'node': node, 'issue': str(err)})
+            ignored_nodes.append({'node': node, 'issue': six.text_type(err)})
     if not changed_nodes:
         ret['result'] = True
         ret['comment'] = 'No changes seen'
@@ -319,7 +317,7 @@ def powered_off(name):
 
 def destroyed(name):
     '''
-    Stops a VM (or VMs) and removes all refences to it (them). (Runs ``vagrant destroy``.)
+    Stops a VM (or VMs) and removes all references to it (them). (Runs ``vagrant destroy``.)
 
     Subsequent re-use of the same machine will requere another operation of ``vagrant.running``
     or a call to the ``vagrant.init`` execution module.

@@ -7,12 +7,17 @@ Set up the version of Salt
 from __future__ import absolute_import, print_function, unicode_literals
 import re
 import sys
-import locale
 import platform
+import warnings
 
-# linux_distribution depreacted in py3.7
+# linux_distribution deprecated in py3.7
 try:
-    from platform import linux_distribution
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
 except ImportError:
     from distro import linux_distribution
 
@@ -98,13 +103,12 @@ class SaltStackVersion(object):
         'Boron'         : (2016, 3),
         'Carbon'        : (2016, 11),
         'Nitrogen'      : (2017, 7),
-        'Oxygen'        : (MAX_SIZE - 101, 0),
-        'Fluorine'      : (MAX_SIZE - 100, 0),
+        'Oxygen'        : (2018, 3),
+        'Fluorine'      : (2019, 2),
         'Neon'          : (MAX_SIZE - 99, 0),
         'Sodium'        : (MAX_SIZE - 98, 0),
+        'Magnesium'     : (MAX_SIZE - 97, 0),
         # pylint: disable=E8265
-        #'Sodium'       : (MAX_SIZE - 98, 0),
-        #'Magnesium'    : (MAX_SIZE - 97, 0),
         #'Aluminium'    : (MAX_SIZE - 96, 0),
         #'Silicon'      : (MAX_SIZE - 95, 0),
         #'Phosphorus'   : (MAX_SIZE - 94, 0),
@@ -506,6 +510,9 @@ def __discover_version(saltstack_version):
             process = subprocess.Popen(
                 ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
             out, err = process.communicate()
+        if six.PY3:
+            out = out.decode()
+            err = err.decode()
         out = out.strip()
         err = err.strip()
 
@@ -576,11 +583,8 @@ def dependency_information(include_salt_cloud=False):
         ('msgpack-pure', 'msgpack_pure', 'version'),
         ('pycrypto', 'Crypto', '__version__'),
         ('pycryptodome', 'Cryptodome', 'version_info'),
-        ('libnacl', 'libnacl', '__version__'),
         ('PyYAML', 'yaml', '__version__'),
-        ('ioflo', 'ioflo', '__version__'),
         ('PyZMQ', 'zmq', '__version__'),
-        ('RAET', 'raet', '__version__'),
         ('ZMQ', 'zmq', 'zmq_version'),
         ('Mako', 'mako', '__version__'),
         ('Tornado', 'tornado', 'version'),
@@ -644,26 +648,47 @@ def system_information():
         else:
             return ''
 
-    version = system_version()
-    release = platform.release()
     if platform.win32_ver()[0]:
+        # Get the version and release info based on the Windows Operating
+        # System Product Name. As long as Microsoft maintains a similar format
+        # this should be future proof
         import win32api  # pylint: disable=3rd-party-module-not-gated
-        server = {'Vista': '2008Server',
-                  '7': '2008ServerR2',
-                  '8': '2012Server',
-                  '8.1': '2012ServerR2',
-                  '10': '2016Server'}
-        # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
-        # started reporting the Desktop version instead of the Server version on
-        # Server versions of Windows, so we need to look those up
-        # So, if you find a Server Platform that's a key in the server
-        # dictionary, then lookup the actual Server Release.
-        # If this is a Server Platform then `GetVersionEx` will return a number
-        # greater than 1.
-        if win32api.GetVersionEx(1)[8] > 1 and release in server:
-            release = server[release]
+        import win32con  # pylint: disable=3rd-party-module-not-gated
+
+        # Get the product name from the registry
+        hkey = win32con.HKEY_LOCAL_MACHINE
+        key = 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion'
+        value_name = 'ProductName'
+        reg_handle = win32api.RegOpenKey(hkey, key)
+
+        # Returns a tuple of (product_name, value_type)
+        product_name, _ = win32api.RegQueryValueEx(reg_handle, value_name)
+
+        version = 'Unknown'
+        release = ''
+        if 'Server' in product_name:
+            for item in product_name.split(' '):
+                # If it's all digits, then it's version
+                if re.match(r'\d+', item):
+                    version = item
+                # If it starts with R and then numbers, it's the release
+                # ie: R2
+                if re.match(r'^R\d+$', item):
+                    release = item
+            release = '{0}Server{1}'.format(version, release)
+        else:
+            for item in product_name.split(' '):
+                # If it's a number, decimal number, Thin or Vista, then it's the
+                # version
+                if re.match(r'^(\d+(\.\d+)?)|Thin|Vista$', item):
+                    version = item
+            release = version
+
         _, ver, sp, extra = platform.win32_ver()
         version = ' '.join([release, ver, sp, extra])
+    else:
+        version = system_version()
+        release = platform.release()
 
     system = [
         ('system', platform.system()),
@@ -671,7 +696,7 @@ def system_information():
         ('release', release),
         ('machine', platform.machine()),
         ('version', version),
-        ('locale', locale.getpreferredencoding()),
+        ('locale', __salt_system_encoding__),
     ]
 
     for name, attr in system:
@@ -697,10 +722,11 @@ def versions_report(include_salt_cloud=False):
     Yield each version properly formatted for console output.
     '''
     ver_info = versions_information(include_salt_cloud)
-
+    not_installed = 'Not Installed'
+    ns_pad = len(not_installed)
     lib_pad = max(len(name) for name in ver_info['Dependency Versions'])
     sys_pad = max(len(name) for name in ver_info['System Versions'])
-    padding = max(lib_pad, sys_pad) + 1
+    padding = max(lib_pad, sys_pad, ns_pad) + 1
 
     fmt = '{0:>{pad}}: {1}'
     info = []
@@ -709,7 +735,7 @@ def versions_report(include_salt_cloud=False):
         # List dependencies in alphabetical, case insensitive order
         for name in sorted(ver_info[ver_type], key=lambda x: x.lower()):
             ver = fmt.format(name,
-                             ver_info[ver_type][name] or 'Not Installed',
+                             ver_info[ver_type][name] or not_installed,
                              pad=padding)
             info.append(ver)
         info.append(' ')
@@ -720,21 +746,39 @@ def versions_report(include_salt_cloud=False):
 
 def msi_conformant_version():
     '''
-    An msi conformant version consists of up to 4 numbers, each smaller than 256, except the 4th.
-    Therefore, the year must be represented as 'short year'.
+    An msi installer uninstalls/replaces a lower "internal version" of itself.
+    "internal version" is ivMAJOR.ivMINOR.ivBUILD with max values 255.255.65535.
+    Using the build nr allows continuous integration of the installer.
+    "Display version" is indipendent and free format: Year.Month.Bugfix as in Salt 2016.11.3.
+    Calculation of the internal version fields:
+        ivMAJOR = 'short year' (2 digits).
+        ivMINOR = 20*(month-1) + Bugfix
+            Combine Month and Bugfix to free ivBUILD for the build number
+            This limits Bugfix < 20.
+            The msi automatically replaces only 19 bugfixes of a month, one must uninstall manually.
+        ivBUILD = git commit count (noc)
+            noc for tags is 0, representing the final word, translates to the highest build number (65535).
 
-    Examples (depend on git checkout):
-      develop                2016.11.0-742-g5ca4d20     16.11.0.742
-      20166.11 (branch)      2016.11.2-78-gce1f01f      16.11.2.78
-      v20166.11.2 (tag)      2016.11.2                  16.11.2.0
+    Examples:
+      git checkout    Display version      Internal version    Remark
+      develop         2016.11.0-742        16.200.742          The develop branch has bugfix 0
+      2016.11         2016.11.2-78         16.202.78
+      2016.11         2016.11.9-88         16.209.88
+      2018.8          2018.3.2-1306        18.42.1306
+      v2016.11.0      2016.11.0            16.200.65535        Tags have noc 0
+      v2016.11.2      2016.11.2            16.202.65535
 
-    Note that the commit count for tags is 0(zero)
     '''
-    year2 = int(six.text_type(__saltstack_version__.major)[2:])
+    short_year = int(six.text_type(__saltstack_version__.major)[2:])
     month = __saltstack_version__.minor
-    minor = __saltstack_version__.bugfix
-    commi = __saltstack_version__.noc
-    return '{0}.{1}.{2}.{3}'.format(year2, month, minor, commi)
+    bugfix = __saltstack_version__.bugfix
+    if bugfix > 19:
+        bugfix = 19
+    noc = __saltstack_version__.noc
+    if noc == 0:
+        noc = 65535
+    return '{}.{}.{}'.format(short_year, 20*(month-1)+bugfix, noc)
+
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == 'msi':

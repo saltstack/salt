@@ -4,13 +4,14 @@ Module for fetching artifacts from Artifactory
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import base64
 import logging
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.stringutils
 import salt.ext.six.moves.http_client  # pylint: disable=import-error,redefined-builtin,no-name-in-module
 from salt.ext.six.moves import urllib  # pylint: disable=no-name-in-module
 from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disable=no-name-in-module
@@ -222,7 +223,8 @@ def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, versio
                             version=version)
                 raise ArtifactoryError(error_message)
 
-            if has_classifier and classifier not in snapshot_version_metadata['snapshot_versions']:
+            packaging_with_classifier = packaging if not has_classifier else packaging + ':' + classifier
+            if has_classifier and packaging_with_classifier not in snapshot_version_metadata['snapshot_versions']:
                 error_message = '''Cannot find requested classifier '{classifier}' in the snapshot version metadata.
                           artifactory_url: {artifactory_url}
                           repository: {repository}
@@ -240,7 +242,7 @@ def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, versio
                             version=version)
                 raise ArtifactoryError(error_message)
 
-            snapshot_version = snapshot_version_metadata['snapshot_versions'][packaging]
+            snapshot_version = snapshot_version_metadata['snapshot_versions'][packaging_with_classifier]
         except CommandExecutionError as err:
             log.error('Could not fetch maven-metadata.xml. Assuming snapshot_version=%s.', version)
             snapshot_version = version
@@ -386,7 +388,11 @@ def _get_snapshot_version_metadata(artifactory_url, repository, group_id, artifa
     for snapshot_version in snapshot_versions:
         extension = snapshot_version.find('extension').text
         value = snapshot_version.find('value').text
-        extension_version_dict[extension] = value
+        if snapshot_version.find('classifier') is not None:
+            classifier = snapshot_version.find('classifier').text
+            extension_version_dict[extension + ':' + classifier] = value
+        else:
+            extension_version_dict[extension] = value
 
     return {
         'snapshot_versions': extension_version_dict
@@ -442,10 +448,11 @@ def __save_artifact(artifact_url, target_file, headers):
     }
 
     if os.path.isfile(target_file):
-        log.debug("File {0} already exists, checking checksum...".format(target_file))
+        log.debug("File %s already exists, checking checksum...", target_file)
         checksum_url = artifact_url + ".sha1"
 
         checksum_success, artifact_sum, checksum_comment = __download(checksum_url, headers)
+        artifact_sum = salt.utils.stringutils.to_str(artifact_sum)
         if checksum_success:
             log.debug("Downloaded SHA1 SUM: %s", artifact_sum)
             file_sum = __salt__['file.get_hash'](path=target_file, form='sha1')
@@ -466,13 +473,13 @@ def __save_artifact(artifact_url, target_file, headers):
             result['comment'] = checksum_comment
             return result
 
-    log.debug('Downloading: {url} -> {target_file}'.format(url=artifact_url, target_file=target_file))
+    log.debug('Downloading: %s -> %s', artifact_url, target_file)
 
     try:
         request = urllib.request.Request(artifact_url, None, headers)
         f = urllib.request.urlopen(request)
         with salt.utils.files.fopen(target_file, "wb") as local_file:
-            local_file.write(f.read())
+            local_file.write(salt.utils.stringutils.to_bytes(f.read()))
         result['status'] = True
         result['comment'] = __append_comment(('Artifact downloaded from URL: {0}'.format(artifact_url)), result['comment'])
         result['changes']['downloaded_file'] = target_file
@@ -497,7 +504,7 @@ def __get_classifier_url(classifier):
 
 
 def __download(request_url, headers):
-    log.debug('Downloading content from {0}'.format(request_url))
+    log.debug('Downloading content from %s', request_url)
 
     success = False
     content = None

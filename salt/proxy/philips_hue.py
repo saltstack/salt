@@ -18,6 +18,19 @@
 Philips HUE lamps module for proxy.
 
 .. versionadded:: 2015.8.3
+
+First create a new user on the Hue bridge by following the
+`Meet hue <https://www.developers.meethue.com/documentation/getting-started>`_ instructions.
+
+To configure the proxy minion:
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: philips_hue
+      host: [hostname or ip]
+      user: [username]
+
 '''
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -294,6 +307,7 @@ def call_status(*args, **kwargs):
     res = dict()
     devices = _get_lights()
     for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
+        dev_id = six.text_type(dev_id)
         res[dev_id] = {
             'on': devices[dev_id]['state']['on'],
             'reachable': devices[dev_id]['state']['reachable']

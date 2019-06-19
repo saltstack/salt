@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import textwrap
 
 # Import Salt Testing Libs
@@ -25,12 +25,8 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         utils = salt.loader.utils(
             self.opts,
-            whitelist=['boto3', 'yamldumper'],
-            context={}
-        )
-        # Force the LazyDict to populate its references. Otherwise the lookup
-        # will fail inside the unit tests.
-        list(utils)
+            whitelist=['boto3', 'yaml', 'args', 'systemd', 'path', 'platform'],
+            context={})
         return {
             boto_sqs: {
                 '__utils__': utils,
@@ -39,7 +35,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
 
     @classmethod
     def tearDownClass(cls):
@@ -78,16 +74,25 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({
                     'result': None,
                     'comment': comt,
-                    'pchanges': {'old': None, 'new': 'mysqs'},
+                    'changes': {'old': None, 'new': 'mysqs'},
                 })
                 self.assertDictEqual(boto_sqs.present(name), ret)
                 diff = textwrap.dedent('''\
-                    --- 
-                    +++ 
+                    ---
+                    +++
                     @@ -1 +1 @@
                     -{}
                     +DelaySeconds: 20
-                ''')
+
+                ''').splitlines()
+                # Difflib adds a trailing space after the +++/--- lines,
+                # programatically add them back here. Having them in the test
+                # file itself is not feasible since a few popular plugins for
+                # vim will remove trailing whitespace.
+                for idx in (0, 1):
+                    diff[idx] += ' '
+                diff = '\n'.join(diff)
+
                 comt = [
                     'SQS queue mysqs present.',
                     'Attribute(s) DelaySeconds set to be updated:\n{0}'.format(
@@ -96,7 +101,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 ]
                 ret.update({
                     'comment': comt,
-                    'pchanges': {'attributes': {'diff': diff}},
+                    'changes': {'attributes': {'diff': diff}},
                 })
                 self.assertDictEqual(boto_sqs.present(name, attributes), ret)
 
@@ -128,6 +133,6 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({
                     'result': None,
                     'comment': comt,
-                    'pchanges': {'old': name, 'new': None},
+                    'changes': {'old': name, 'new': None},
                 })
                 self.assertDictEqual(boto_sqs.absent(name), ret)

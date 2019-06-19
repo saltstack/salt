@@ -4,7 +4,7 @@ Create and verify ANSI X9.31 RSA signatures using OpenSSL libcrypto
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import glob
 import sys
 import os
@@ -14,7 +14,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 
 # Import 3rd-party libs
-from salt.ext import six
 from ctypes import cdll, c_char_p, c_int, c_void_p, pointer, create_string_buffer
 from ctypes.util import find_library
 
@@ -29,13 +28,17 @@ def _load_libcrypto():
     Load OpenSSL libcrypto
     '''
     if sys.platform.startswith('win'):
-        return cdll.LoadLibrary('libeay32')
+        # cdll.LoadLibrary on windows requires an 'str' argument
+        return cdll.LoadLibrary(str('libeay32'))  # future lint: disable=blacklisted-function
     elif getattr(sys, 'frozen', False) and salt.utils.platform.is_smartos():
         return cdll.LoadLibrary(glob.glob(os.path.join(
             os.path.dirname(sys.executable),
             'libcrypto.so*'))[0])
     else:
         lib = find_library('crypto')
+        if not lib and sys.platform.startswith('sunos5'):
+            # ctypes.util.find_library defaults to 32 bit library path on sunos5, test for 64 bit python execution
+            lib = find_library('crypto', sys.maxsize > 2**32)
         if not lib and salt.utils.platform.is_sunos():
             # Solaris-like distribution that use pkgsrc have
             # libraries in a non standard location.
@@ -44,7 +47,15 @@ def _load_libcrypto():
             # or /opt/local/lib (non-Global Zone), thus the
             # two checks below
             lib = glob.glob('/opt/local/lib/libcrypto.so*') + glob.glob('/opt/tools/lib/libcrypto.so*')
-            lib = lib[0] if len(lib) > 0 else None
+            lib = lib[0] if lib else None
+        if not lib and salt.utils.platform.is_aix():
+            if os.path.isdir('/opt/salt/lib'):
+                # preference for Salt installed fileset
+                lib = glob.glob('/opt/salt/lib/libcrypto.so*')
+                lib = lib[0] if lib else None
+            else:
+                lib = glob.glob('/opt/freeware/lib/libcrypto.so*')
+                lib = lib[0] if lib else None
         if lib:
             return cdll.LoadLibrary(lib)
         raise OSError('Cannot locate OpenSSL libcrypto')
@@ -55,6 +66,18 @@ def _init_libcrypto():
     Set up libcrypto argtypes and initialize the library
     '''
     libcrypto = _load_libcrypto()
+
+    try:
+        # If we're greater than OpenSSL 1.1.0, no need to to the init
+        openssl_version_num = libcrypto.OpenSSL_version_num
+        if callable(openssl_version_num):
+            openssl_version_num = openssl_version_num()
+        if openssl_version_num < 0x10100000:
+            libcrypto.OPENSSL_init_crypto()
+    except AttributeError:
+        # Support for OpenSSL < 1.1 (OPENSSL_API_COMPAT < 0x10100000L)
+        libcrypto.OPENSSL_no_config()
+        libcrypto.OPENSSL_add_all_algorithms_noconf()
 
     libcrypto.RSA_new.argtypes = ()
     libcrypto.RSA_new.restype = c_void_p
@@ -69,16 +92,6 @@ def _init_libcrypto():
     libcrypto.PEM_read_bio_RSA_PUBKEY.restype = c_void_p
     libcrypto.RSA_private_encrypt.argtypes = (c_int, c_char_p, c_char_p, c_void_p, c_int)
     libcrypto.RSA_public_decrypt.argtypes = (c_int, c_char_p, c_char_p, c_void_p, c_int)
-
-    try:
-        if libcrypto.OPENSSL_init_crypto(OPENSSL_INIT_NO_LOAD_CONFIG |
-                                         OPENSSL_INIT_ADD_ALL_CIPHERS |
-                                         OPENSSL_INIT_ADD_ALL_DIGESTS, None) != 1:
-            raise OSError("Failed to initialize OpenSSL library (OPENSSL_init_crypto failed)")
-    except AttributeError:
-        # Support for OpenSSL < 1.1 (OPENSSL_API_COMPAT < 0x10100000L)
-        libcrypto.OPENSSL_no_config()
-        libcrypto.OPENSSL_add_all_algorithms_noconf()
 
     return libcrypto
 
@@ -137,7 +150,7 @@ class RSAX931Verifier(object):
         :param str pubdata: The RSA public key in PEM format
         '''
         pubdata = salt.utils.stringutils.to_bytes(pubdata, 'ascii')
-        pubdata = pubdata.replace(six.b('RSA '), six.b(''))
+        pubdata = pubdata.replace(b'RSA ', b'')
         self._bio = libcrypto.BIO_new_mem_buf(pubdata, len(pubdata))
         self._rsa = c_void_p(libcrypto.RSA_new())
         if not libcrypto.PEM_read_bio_RSA_PUBKEY(self._bio, pointer(self._rsa), None, None):

@@ -7,7 +7,7 @@ NAPALM YANG basic operations.
 
 .. versionadded:: 2017.7.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python stdlib
 import logging
@@ -28,7 +28,7 @@ from salt.utils.napalm import proxy_napalm_wrap
 # -----------------------------------------------------------------------------
 
 __virtualname__ = 'napalm_yang'
-__proxyenabled__ = ['napalm']
+__proxyenabled__ = ['*']
 # uses NAPALM-based proxy to interact with network devices
 
 log = logging.getLogger(__file__)
@@ -155,7 +155,7 @@ def parse(*models, **kwargs):
 
     Output Example:
 
-    .. code-block:: json
+    .. code-block:: python
 
         {
             "interfaces": {
@@ -442,7 +442,7 @@ def load_config(data, *models, **kwargs):
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     replace: ``False``
         Should replace the config with the new generate one?

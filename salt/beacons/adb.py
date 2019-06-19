@@ -6,7 +6,7 @@ Beacon to emit adb device state changes for Android devices
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 
 # Salt libs
@@ -54,7 +54,7 @@ def validate(config):
                       'sideload', 'unauthorized', 'unknown', 'missing']
             if any(s not in states for s in _config['states']):
                 log.info('Need a one of the following adb '
-                         'states: {0}'.format(', '.join(states)))
+                         'states: %s', ', '.join(states))
                 return False, ('Need a one of the following adb '
                                'states: {0}'.format(', '.join(states)))
     return True, 'Valid beacon configuration'
@@ -134,11 +134,11 @@ def beacon(config):
 
     # Maybe send an event if we don't have any devices
     if 'no_devices_event' in _config and _config['no_devices_event'] is True:
-        if len(found_devices) == 0 and not last_state_extra['no_devices']:
+        if not found_devices and not last_state_extra['no_devices']:
             ret.append({'tag': 'no_devices'})
 
     # Did we have no devices listed this time around?
 
-    last_state_extra['no_devices'] = len(found_devices) == 0
+    last_state_extra['no_devices'] = not found_devices
 
     return ret

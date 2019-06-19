@@ -4,7 +4,7 @@ Execute puppet routines
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from distutils import version  # pylint: disable=no-name-in-module
 import logging
 import os
@@ -16,6 +16,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.yaml
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -245,8 +246,8 @@ def disable(message=None):
         with salt.utils.files.fopen(puppet.disabled_lockfile, 'w') as lockfile:
             try:
                 # Puppet chokes when no valid json is found
-                str = '{{"disabled_message":"{0}"}}'.format(message) if message is not None else '{}'
-                lockfile.write(str)
+                msg = '{{"disabled_message":"{0}"}}'.format(message) if message is not None else '{}'
+                lockfile.write(salt.utils.stringutils.to_str(msg))
                 lockfile.close()
                 return True
             except (IOError, OSError) as exc:
@@ -275,7 +276,7 @@ def status():
     if os.path.isfile(puppet.run_lockfile):
         try:
             with salt.utils.files.fopen(puppet.run_lockfile, 'r') as fp_:
-                pid = int(fp_.read())
+                pid = int(salt.utils.stringutils.to_unicode(fp_.read()))
                 os.kill(pid, 0)  # raise an OSError if process doesn't exist
         except (OSError, ValueError):
             return 'Stale lockfile'
@@ -285,7 +286,7 @@ def status():
     if os.path.isfile(puppet.agent_pidfile):
         try:
             with salt.utils.files.fopen(puppet.agent_pidfile, 'r') as fp_:
-                pid = int(fp_.read())
+                pid = int(salt.utils.stringutils.to_unicode(fp_.read()))
                 os.kill(pid, 0)  # raise an OSError if process doesn't exist
         except (OSError, ValueError):
             return 'Stale pidfile'
@@ -371,7 +372,12 @@ def facts(puppet=False):
     '''
     ret = {}
     opt_puppet = '--puppet' if puppet else ''
-    output = __salt__['cmd.run']('facter {0}'.format(opt_puppet))
+    cmd_ret = __salt__['cmd.run_all']('facter {0}'.format(opt_puppet))
+
+    if cmd_ret['retcode'] != 0:
+        raise CommandExecutionError(cmd_ret['stderr'])
+
+    output = cmd_ret['stdout']
 
     # Loop over the facter output and  properly
     # parse it into a nice dictionary for using
@@ -397,9 +403,13 @@ def fact(name, puppet=False):
         salt '*' puppet.fact kernel
     '''
     opt_puppet = '--puppet' if puppet else ''
-    ret = __salt__['cmd.run'](
+    ret = __salt__['cmd.run_all'](
             'facter {0} {1}'.format(opt_puppet, name),
             python_shell=False)
-    if not ret:
+
+    if ret['retcode'] != 0:
+        raise CommandExecutionError(ret['stderr'])
+
+    if not ret['stdout']:
         return ''
-    return ret
+    return ret['stdout']

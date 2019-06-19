@@ -5,6 +5,11 @@ Manage Apigateway Rest APIs
 
 .. versionadded:: 2016.11.0
 
+:depends:
+  - boto >= 2.8.0
+  - boto3 >= 1.2.1
+  - botocore >= 1.4.49
+
 Create and destroy rest apis depending on a swagger version 2 definition file.
 Be aware that this interacts with Amazon's services, and so may incur charges.
 
@@ -47,7 +52,7 @@ config:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import hashlib
 import logging
 import os
@@ -85,6 +90,9 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
 
     There may be multiple deployments for the API object, each deployment is tagged with a description
     (i.e. unique label) in pretty printed json format consisting of the following key/values.
+
+    .. code-block:: text
+
         {
             "api_name": api_name,
             "swagger_file": basename_of_swagger_file
@@ -95,57 +103,60 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
     Please note that the name of the lambda function to be integrated will be derived
     via the provided lambda_funcname_format parameters:
 
-        the default lambda_funcname_format is a string with the following substitutable keys:
-        "{stage}_{api}_{resource}_{method}".  The user can choose to reorder the known keys.
+    - the default lambda_funcname_format is a string with the following
+      substitutable keys: "{stage}_{api}_{resource}_{method}".  The user can
+      choose to reorder the known keys.
+    - the stage key corresponds to the stage_name passed in.
+    - the api key corresponds to the api_name passed in.
+    - the resource corresponds to the resource path defined in the passed swagger file.
+    - the method corresponds to the method for a resource path defined in the passed swagger file.
 
-        the stage key corresponds to the stage_name passed in.
-        the api key corresponds to the api_name passed in.
-        the resource corresponds to the resource path defined in the passed swagger file.
-        the method corresponds to the method for a resource path defined in the passed swagger file.
+    For the default lambda_funcname_format, given the following input:
 
-        for the default lambda_funcname_format, given the following
-        input:
-            api_name = '  Test    Service'
-            stage_name = 'alpha'
-            basePath = '/api'
-            path = '/a/{b}/c'
-            method = 'POST'
+    .. code-block:: python
 
-        we will end up with the following Lambda Function Name that will be looked up:
-            'test_service_alpha_a_b_c_post'
+        api_name = '  Test    Service'
+        stage_name = 'alpha'
+        basePath = '/api'
+        path = '/a/{b}/c'
+        method = 'POST'
 
-        The canconicalization of these input parameters is done in the following order:
-            1) lambda_funcname_format is formatted with the input parameters as passed,
-            2) resulting string is stripped for leading/trailing spaces,
-            3) path parameter's curly braces are removed from the resource path,
-            4) consecutive spaces and forward slashes in the paths are replaced with '_'
-            5) consecutive '_' are replaced with '_'
+    We will end up with the following Lambda Function Name that will be looked
+    up: 'test_service_alpha_a_b_c_post'
+
+    The canconicalization of these input parameters is done in the following order:
+
+    1. lambda_funcname_format is formatted with the input parameters as passed,
+    2. resulting string is stripped for leading/trailing spaces,
+    3. path parameter's curly braces are removed from the resource path,
+    4. consecutive spaces and forward slashes in the paths are replaced with '_'
+    5. consecutive '_' are replaced with '_'
 
     Please note that for error response handling, the swagger file must have an error response model
     with the following schema.  The lambda functions should throw exceptions for any non successful responses.
     An optional pattern field can be specified in errorMessage field to aid the response mapping from Lambda
     to the proper error return status codes.
 
-        .. code-block:: yaml
+    .. code-block:: yaml
 
-            Error:
-              type: object
-              properties:
-                stackTrace:
-                  type: array
-                  items:
-                    type: array
-                    items:
-                      type: string
-                  description: call stack
-              errorType:
-                type: string
-                description: error type
-              errorMessage:
-                type: string
-                description: |
-                  Error message, will be matched based on pattern.
-                  If no pattern is specified, the default pattern used for response mapping will be +*.
+        Error:
+          type: object
+          properties:
+            stackTrace:
+              type: array
+              items:
+                type: array
+                items:
+                  type: string
+              description: call stack
+          errorType:
+            type: string
+            description: error type
+          errorMessage:
+            type: string
+            description: |
+              Error message, will be matched based on pattern.
+              If no pattern is specified, the default pattern used for response mapping will be +*.
 
     name
         The name of the state definition
@@ -173,12 +184,12 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
         integration purposes.  The region determination is based on the following
         priority:
 
-        1) lambda_region as passed in (is not None)
-        2) if lambda_region is None, use the region as if a boto_lambda function were
-        executed without explicitly specifying lambda region.
-        3) if region determined in (2) is different than the region used by
-        boto_apigateway functions, a final lookup will be attempted using the
-        boto_apigateway region.
+        1. lambda_region as passed in (is not None)
+        2. if lambda_region is None, use the region as if a boto_lambda
+           function were executed without explicitly specifying lambda region.
+        3. if region determined in (2) is different than the region used by
+           boto_apigateway functions, a final lookup will be attempted using
+           the boto_apigateway region.
 
     stage_variables
         A dict with variables and their values, or a pillar key (string) that
@@ -209,30 +220,35 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
 
     error_response_template
         String value that defines the response template mapping that should be applied in cases error occurs.
-        Refer to AWS documentation for details:
-            http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-mapping-template-reference.html
+        Refer to AWS documentation for details: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-mapping-template-reference.html
+
         If set to None, the following default value is used:
-            '#set($inputRoot = $input.path(\'$\'))\n'
-            '{\n'
-            '  "errorMessage" : "$inputRoot.errorMessage",\n'
-            '  "errorType" : "$inputRoot.errorType",\n'
-            '  "stackTrace" : [\n'
-            '#foreach($stackTrace in $inputRoot.stackTrace)\n'
-            '    [\n'
-            '#foreach($elem in $stackTrace)\n'
-            '      "$elem"\n'
-            '#if($foreach.hasNext),#end\n'
-            '#end\n'
-            '    ]\n'
-            '#if($foreach.hasNext),#end\n'
-            '#end\n'
-            '  ]\n'
+
+        .. code-block:: text
+
+            '#set($inputRoot = $input.path(\'$\'))\\n'
+            '{\\n'
+            '  "errorMessage" : "$inputRoot.errorMessage",\\n'
+            '  "errorType" : "$inputRoot.errorType",\\n'
+            '  "stackTrace" : [\\n'
+            '#foreach($stackTrace in $inputRoot.stackTrace)\\n'
+            '    [\\n'
+            '#foreach($elem in $stackTrace)\\n'
+            '      "$elem"\\n'
+            '#if($foreach.hasNext),#end\\n'
+            '#end\\n'
+            '    ]\\n'
+            '#if($foreach.hasNext),#end\\n'
+            '#end\\n'
+            '  ]\\n'
 
         .. versionadded:: 2017.7.0
 
     response_template
-        String value that defines the response template mapping applied in case of success (including OPTIONS method)
-        If set to None, empty ({}) template is assumed, which will transfer response from the lambda function as is.
+        String value that defines the response template mapping applied in case
+        of success (including OPTIONS method) If set to None, empty ({})
+        template is assumed, which will transfer response from the lambda
+        function as is.
 
         .. versionadded:: 2017.7.0
     '''
@@ -748,7 +764,7 @@ class _Swagger(object):
                 if 'responses' not in opobj:
                     raise ValueError('missing mandatory responses field in path item object')
                 for rescode, resobj in six.iteritems(opobj.get('responses')):
-                    if not self._is_http_error_rescode(str(rescode)):
+                    if not self._is_http_error_rescode(str(rescode)):  # future lint: disable=blacklisted-function
                         continue
 
                     # only check for response code from 400-599
@@ -792,7 +808,7 @@ class _Swagger(object):
                                     method='')
                 self._lambda_funcname_format.format(**known_kwargs)
             return True
-        except:
+        except Exception:
             raise ValueError('Invalid lambda_funcname_format {0}.  Please review '
                              'documentation for known substitutable keys'.format(self._lambda_funcname_format))
 
@@ -1598,7 +1614,7 @@ class _Swagger(object):
 
         if 'responses' in method_data:
             for response, response_data in six.iteritems(method_data['responses']):
-                httpStatus = str(response)
+                httpStatus = str(response)  # future lint: disable=blacklisted-function
                 method_response = self._parse_method_response(method_name.lower(),
                                                               _Swagger.SwaggerMethodResponse(response_data), httpStatus)
 

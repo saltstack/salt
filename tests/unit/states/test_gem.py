@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -46,6 +46,61 @@ class TestGemState(TestCase, LoaderModuleMockMixin):
                     version=None, proxy=None, rdoc=False, source=None,
                     ri=False, gem_bin=None
                 )
+
+    def test_installed_with_version(self):
+        gems = {'foo': ['1.0'], 'bar': ['2.0']}
+        gem_list = MagicMock(return_value=gems)
+        gem_install_succeeds = MagicMock(return_value=True)
+        gem_install_fails = MagicMock(return_value=False)
+
+        with patch.dict(gem.__salt__, {'gem.list': gem_list}):
+            with patch.dict(gem.__salt__,
+                            {'gem.install': gem_install_succeeds}):
+                ret = gem.installed('foo')
+                self.assertEqual(True, ret['result'])
+                ret = gem.installed('quux', version='1.0')
+                self.assertEqual(True, ret['result'])
+                gem_install_succeeds.assert_called_once_with(
+                    'quux', pre_releases=False, ruby=None, runas=None,
+                    version='1.0', proxy=None, rdoc=False, source=None,
+                    ri=False, gem_bin=None
+                )
+
+            with patch.dict(gem.__salt__,
+                            {'gem.install': gem_install_fails}):
+                ret = gem.installed('quux')
+                self.assertEqual(False, ret['result'])
+                gem_install_fails.assert_called_once_with(
+                    'quux', pre_releases=False, ruby=None, runas=None,
+                    version=None, proxy=None, rdoc=False, source=None,
+                    ri=False, gem_bin=None
+                )
+
+    def test_installed_with_version_with_rvm_output_style(self):
+        gems = {'foo': ['1.0'], 'bar': ['2.0'], 'baz': ['default: 3.0']}
+        gem_list = MagicMock(return_value=gems)
+        gem_install_succeeds = MagicMock(return_value=True)
+        gem_install_fails = MagicMock(return_value=False)
+
+        with patch.dict(gem.__salt__, {'gem.list': gem_list}):
+            with patch.dict(gem.__salt__,
+                            {'gem.install': gem_install_succeeds}):
+                ret = gem.installed('baz', version='3.0')
+                self.assertEqual(True, ret['result'])
+                self.assertEqual('Gem is already installed.', ret['comment'])
+
+    def test_installed_version(self):
+        gems = {'foo': ['1.0'], 'bar': ['2.0']}
+        gem_list = MagicMock(return_value=gems)
+        gem_install_succeeds = MagicMock(return_value=True)
+
+        with patch.dict(gem.__salt__, {'gem.list': gem_list}):
+            with patch.dict(gem.__salt__,
+                            {'gem.install': gem_install_succeeds}):
+                ret = gem.installed('foo', version='>= 1.0')
+                self.assertEqual(True, ret['result'])
+                self.assertEqual('Installed Gem meets version requirements.',
+                                 ret['comment'])
 
     def test_removed(self):
         gems = ['foo', 'bar']

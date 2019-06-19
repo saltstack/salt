@@ -13,6 +13,7 @@ state modules
     acme
     alias
     alternatives
+    ansiblegate
     apache
     apache_conf
     apache_module
@@ -23,11 +24,17 @@ state modules
     at
     augeas
     aws_sqs
+    azurearm_compute
+    azurearm_dns
+    azurearm_network
+    azurearm_resource
     beacon
     bigip
     blockdev
+    bluecoat_sslv
     boto3_elasticache
     boto3_route53
+    boto3_sns
     boto_apigateway
     boto_asg
     boto_cfn
@@ -52,34 +59,40 @@ state modules
     boto_lc
     boto_rds
     boto_route53
+    boto_s3
     boto_s3_bucket
     boto_secgroup
     boto_sns
     boto_sqs
     boto_vpc
     bower
+    btrfs
     cabal
     ceph
     chef
     chocolatey
     chronos_job
+    cimc
     cisconso
     cloud
     cmd
     composer
+    consul
     cron
+    cryptdev
     csf
     cyg
     ddns
     debconfmod
     dellchassis
     disk
-    docker
     docker_container
     docker_image
     docker_network
     docker_volume
     drac
+    dracr
+    dvs
     elasticsearch
     elasticsearch_index
     elasticsearch_index_template
@@ -87,15 +100,21 @@ state modules
     eselect
     etcd_mod
     ethtool
+    esxcluster
+    esxdatacenter
     esxi
+    esxvm
     event
     file
     firewall
     firewalld
+    flatpak
     gem
     git
     github
     glance
+    glance_image
+    glassfish
     glusterfs
     gnomedesktop
     gpg
@@ -110,9 +129,8 @@ state modules
     group
     heat
     hg
-    hipchat
+    highstate_doc
     host
-    htpasswd
     http
     icinga2
     ifttt
@@ -123,7 +141,10 @@ state modules
     influxdb_database
     influxdb_retention_policy
     influxdb_user
-    infoblox
+    infoblox_a
+    infoblox_cname
+    infoblox_host_record
+    infoblox_range
     ini_manage
     ipmi
     ipset
@@ -131,11 +152,19 @@ state modules
     jboss7
     jenkins
     junos
-    k8s
     kapacitor
     kernelpkg
     keyboard
     keystone
+    keystone_domain
+    keystone_endpoint
+    keystone_group
+    keystone_project
+    keystone_role
+    keystone_role_grant
+    keystone_service
+    keystone_user
+    keystore
     kmod
     kubernetes
     layman
@@ -152,14 +181,18 @@ state modules
     lvs_server
     lvs_service
     lxc
+    lxd
+    lxd_container
+    lxd_image
+    lxd_profile
     mac_assistive
-    mac_defaults
+    macdefaults
     mac_keychain
-    mac_package
+    macpackage
     mac_xattr
     makeconf
     marathon_app
-    mdadm
+    mdadm_raid
     memcached
     modjk
     modjk_worker
@@ -168,6 +201,10 @@ state modules
     mongodb_user
     monit
     mount
+    mssql_database
+    mssql_login
+    mssql_role
+    mssql_user
     msteams
     mysql_database
     mysql_grants
@@ -179,14 +216,23 @@ state modules
     netsnmp
     netusers
     network
-    netyang
+    net_napalm_yang
+    neutron_network
+    neutron_secgroup
+    neutron_secgroup_rule
+    neutron_subnet
+    nexus
     nfs_export
     nftables
+    nova
     npm
     ntp
     nxos
+    nxos_upgrade
+    onyx
     openstack_config
     openvswitch_bridge
+    openvswitch_db
     openvswitch_port
     opsgenie
     pagerduty
@@ -194,6 +240,8 @@ state modules
     pagerduty_schedule
     pagerduty_service
     pagerduty_user
+    panos
+    pbm
     pcs
     pecl
     pdbedit
@@ -206,6 +254,7 @@ state modules
     ports
     postgres_cluster
     postgres_database
+    postgres_default_privileges
     postgres_extension
     postgres_group
     postgres_initdb
@@ -236,6 +285,8 @@ state modules
     rvm
     salt_proxy
     saltmod
+    saltsupport
+    saltutil
     schedule
     selinux
     serverdensity_device
@@ -243,6 +294,7 @@ state modules
     slack
     smartos
     smtp
+    snap
     snapper
     solrcloud
     splunk
@@ -274,6 +326,7 @@ state modules
     victorops
     virt
     virtualenv_mod
+    webutil
     win_certutil
     win_dacl
     win_dism
@@ -290,19 +343,28 @@ state modules
     win_smtp_server
     win_snmp
     win_system
-    win_update
+    win_task
     win_wua
+    win_wusa
     winrepo
+    wordpress
     x509
+    xml
     xmpp
+    zabbix_action
     zabbix_host
     zabbix_hostgroup
     zabbix_mediatype
+    zabbix_template
+    zabbix_service
     zabbix_user
     zabbix_usergroup
+    zabbix_usermacro
+    zabbix_valuemap
     zcbuildout
     zenoss
     zk_concurrency
     zfs
     zone
+    zookeeper
     zpool

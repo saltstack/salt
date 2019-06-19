@@ -5,7 +5,7 @@ NAPALM SNMP
 
 Manages SNMP on network devices.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -21,7 +21,7 @@ Dependencies
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import logging
 log = logging.getLogger(__file__)
@@ -37,6 +37,7 @@ from salt.utils.napalm import proxy_napalm_wrap
 __virtualname__ = 'snmp'
 __proxyenabled__ = ['napalm']
 # uses NAPALM-based proxy to interact with network devices
+__virtual_aliases__ = ('napalm_snmp',)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
@@ -92,26 +93,35 @@ def remove_config(chassis_id=None,
     Removes a configuration element from the SNMP configuration.
 
     :param chassis_id: (optional) Chassis ID
+
     :param community: (optional) A dictionary having the following optional keys:
-        * acl (if any policy / ACL need to be set)
-        * mode: rw or ro. Default: ro
+
+    - acl (if any policy / ACL need to be set)
+    - mode: rw or ro. Default: ro
+
     :param contact: Contact details
+
     :param location: Location
+
     :param test: Dry run? If set as True, will apply the config, discard and return the changes. Default: False
-    and will commit the changes on the device.
-    :param commit: Commit? (default: True) Sometimes it is not needed to commit the config immediately
-        after loading the changes. E.g.: a state loads a couple of parts (add / remove / update)
-        and would not be optimal to commit after each operation.
-        Also, from the CLI when the user needs to apply the similar changes before committing,
-        can specify commit=False and will not discard the config.
+
+    :param commit: Commit? (default: True) Sometimes it is not needed to commit
+        the config immediately after loading the changes. E.g.: a state loads a
+        couple of parts (add / remove / update) and would not be optimal to
+        commit after each operation.  Also, from the CLI when the user needs to
+        apply the similar changes before committing, can specify commit=False
+        and will not discard the config.
+
     :raise MergeConfigException: If there is an error on the configuration sent.
-    :return a dictionary having the following keys:
-        * result (bool): if the config was applied successfully. It is `False` only in case of failure. In case
-        there are no changes to be applied and successfully performs all operations it is still `True` and so will be
-        the `already_configured` flag (example below)
-        * comment (str): a message for the user
-        * already_configured (bool): flag to check if there were no changes applied
-        * diff (str): returns the config changes applied
+    :return: A dictionary having the following keys:
+
+    - result (bool): if the config was applied successfully. It is `False`
+      only in case of failure. In case there are no changes to be applied
+      and successfully performs all operations it is still `True` and so
+      will be the `already_configured` flag (example below)
+    - comment (str): a message for the user
+    - already_configured (bool): flag to check if there were no changes applied
+    - diff (str): returns the config changes applied
 
     CLI Example:
 
@@ -153,12 +163,13 @@ def update_config(chassis_id=None,
 
     :param chassis_id: (optional) Chassis ID
     :param community: (optional) A dictionary having the following optional keys:
-        * acl (if any policy / ACL need to be set)
-        * mode: rw or ro. Default: ro
+
+    - acl (if any policy / ACL need to be set)
+    - mode: rw or ro. Default: ro
+
     :param contact: Contact details
     :param location: Location
     :param test: Dry run? If set as True, will apply the config, discard and return the changes. Default: False
-    and will commit the changes on the device.
     :param commit: Commit? (default: True) Sometimes it is not needed to commit the config immediately
         after loading the changes. E.g.: a state loads a couple of parts (add / remove / update)
         and would not be optimal to commit after each operation.
@@ -166,12 +177,14 @@ def update_config(chassis_id=None,
         can specify commit=False and will not discard the config.
     :raise MergeConfigException: If there is an error on the configuration sent.
     :return a dictionary having the following keys:
-        * result (bool): if the config was applied successfully. It is `False` only in case of failure. In case
-        there are no changes to be applied and successfully performs all operations it is still `True` and so will be
-        the `already_configured` flag (example below)
-        * comment (str): a message for the user
-        * already_configured (bool): flag to check if there were no changes applied
-        * diff (str): returns the config changes applied
+
+    - result (bool): if the config was applied successfully. It is `False` only
+      in case of failure. In case there are no changes to be applied and
+      successfully performs all operations it is still `True` and so will be
+      the `already_configured` flag (example below)
+    - comment (str): a message for the user
+    - already_configured (bool): flag to check if there were no changes applied
+    - diff (str): returns the config changes applied
 
     CLI Example:
 

@@ -3,7 +3,7 @@
 Tests for the Chocolatey State
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Testing libs
@@ -50,7 +50,7 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
         target = 'firefox'
         pre_version = '52.0.2'
         upg_version = '57.0.2'
-        log.debug('Making sure {0} is not installed'.format(target))
+        log.debug('Making sure %s is not installed', target)
         self.assertFalse(
             self.run_function('chocolatey.version', [target]))
 
@@ -102,5 +102,5 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
 
         finally:
             # Always uninstall
-            log.debug('Uninstalling {0}'.format(target))
+            log.debug('Uninstalling %s', target)
             self.run_function('chocolatey.uninstall', [target])

@@ -4,14 +4,14 @@ integration tests for mac_system
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, unicode_literals, print_function
 import random
 import string
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest, skip_if_not_root, flaky
 
 # Import salt libs
 import salt.utils.path
@@ -34,6 +34,7 @@ SET_SUBNET_NAME = __random_string()
 
 
 @skip_if_not_root
+@flaky(attempts=8)
 @skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
 @skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacSystemModuleTest(ModuleCase):

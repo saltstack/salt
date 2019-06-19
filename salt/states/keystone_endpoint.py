@@ -3,7 +3,7 @@
 Management of OpenStack Keystone Endpoints
 ==========================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.keystoneng` for setup instructions
@@ -37,7 +37,7 @@ Example States
         - service_name: glance
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 __virtualname__ = 'keystone_endpoint'
 
@@ -101,6 +101,8 @@ def present(name, service_name, auth=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+
     __salt__['keystoneng.setup_clouds'](auth)
 
     success, val = _, endpoint = _common(ret, name, service_name, kwargs)
@@ -111,7 +113,6 @@ def present(name, service_name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = kwargs
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Endpoint will be created.'
             return ret
 
@@ -131,7 +132,6 @@ def present(name, service_name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = changes
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Endpoint will be updated.'
             return ret
 
@@ -174,7 +174,6 @@ def absent(name, service_name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = {'id': endpoint.id}
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Endpoint will be deleted.'
             return ret
 

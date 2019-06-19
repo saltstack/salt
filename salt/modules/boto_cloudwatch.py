@@ -44,14 +44,17 @@ Connection module for Amazon CloudWatch
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
 import yaml  # pylint: disable=blacklisted-import
 
+# Import Salt libs
+from salt.ext import six
 import salt.utils.json
 import salt.utils.odict as odict
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -66,19 +69,17 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext import six
-
 
 def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The boto_cloudwatch module cannot be loaded: boto libraries are unavailable.')
-    __utils__['boto.assign_funcs'](__name__, 'cloudwatch',
-                                   module='ec2.cloudwatch',
-                                   pack=__salt__)
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(check_boto3=False)
+    if has_boto_reqs is True:
+        __utils__['boto.assign_funcs'](__name__, 'cloudwatch',
+                                       module='ec2.cloudwatch',
+                                       pack=__salt__)
+    return has_boto_reqs
 
 
 def get_alarm(name, region=None, key=None, keyid=None, profile=None):
@@ -92,10 +93,10 @@ def get_alarm(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     alarms = conn.describe_alarms(alarm_names=[name])
-    if len(alarms) == 0:
+    if not alarms:
         return None
     if len(alarms) > 1:
-        log.error("multiple alarms matched name '{0}'".format(name))
+        log.error("multiple alarms matched name '%s'", name)
     return _metric_alarm_to_dict(alarms[0])
 
 
@@ -168,9 +169,7 @@ def get_all_alarms(region=None, prefix=None, key=None, keyid=None,
                 continue
             name = prefix + alarm["name"]
         del alarm["name"]
-        alarm_sls = []
-        alarm_sls.append({"name": name})
-        alarm_sls.append({"attributes": alarm})
+        alarm_sls = [{"name": name}, {"attributes": alarm}]
         results["manage alarm " + name] = {"boto_cloudwatch_alarm.present":
                                            alarm_sls}
     return _safe_dump(results)
@@ -219,7 +218,7 @@ def create_or_update_alarm(
     if isinstance(dimensions, six.string_types):
         dimensions = salt.utils.json.loads(dimensions)
         if not isinstance(dimensions, dict):
-            log.error("could not parse dimensions argument: must be json encoding of a dict: '{0}'".format(dimensions))
+            log.error("could not parse dimensions argument: must be json encoding of a dict: '%s'", dimensions)
             return False
     if isinstance(alarm_actions, six.string_types):
         alarm_actions = alarm_actions.split(",")
@@ -268,7 +267,7 @@ def create_or_update_alarm(
         ok_actions=ok_actions
     )
     conn.create_alarm(alarm)
-    log.info('Created/updated alarm {0}'.format(name))
+    log.info('Created/updated alarm %s', name)
     return True
 
 
@@ -291,7 +290,7 @@ def convert_to_arn(arns, region=None, key=None, keyid=None, profile=None):
             if policy_arn:
                 results.append(policy_arn)
             else:
-                log.error('Could not convert: {0}'.format(arn))
+                log.error('Could not convert: %s', arn)
         else:
             results.append(arn)
     return results
@@ -308,7 +307,7 @@ def delete_alarm(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     conn.delete_alarms([name])
-    log.info('Deleted alarm {0}'.format(name))
+    log.info('Deleted alarm %s', name)
     return True
 
 

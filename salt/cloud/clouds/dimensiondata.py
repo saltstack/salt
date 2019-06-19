@@ -32,7 +32,7 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 # Import libcloud
 try:
     import libcloud
-    from libcloud.compute.base import NodeState
+    from libcloud.compute.base import NodeDriver, NodeState
     from libcloud.compute.base import NodeAuthPassword
     from libcloud.compute.types import Provider
     from libcloud.compute.providers import get_driver
@@ -40,10 +40,11 @@ try:
     from libcloud.loadbalancer.types import Provider as Provider_lb
     from libcloud.loadbalancer.providers import get_driver as get_driver_lb
 
-    # This work-around for Issue #32743 is no longer needed for libcloud >= 1.4.0.
-    # However, older versions of libcloud must still be supported with this work-around.
-    # This work-around can be removed when the required minimum version of libcloud is
-    # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
+    # This work-around for Issue #32743 is no longer needed for libcloud >=
+    # 1.4.0. However, older versions of libcloud must still be supported with
+    # this work-around. This work-around can be removed when the required
+    # minimum version of libcloud is 2.0.0 (See PR #40837 - which is
+    # implemented in Salt 2018.3.0).
     if _LooseVersion(libcloud.__version__) < _LooseVersion('1.4.0'):
         # See https://github.com/saltstack/salt/issues/32743
         import libcloud.security
@@ -51,9 +52,6 @@ try:
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
-
-# Import generic libcloud functions
-# from salt.cloud.libcloudfuncs import *
 
 # Import salt.cloud libs
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
@@ -141,7 +139,7 @@ def get_dependencies():
 def _query_node_data(vm_, data):
     running = False
     try:
-        node = show_instance(vm_['name'], 'action')
+        node = show_instance(vm_['name'], 'action')  # pylint: disable=not-callable
         running = (node['state'] == NodeState.RUNNING)
         log.debug('Loaded node data for %s:\nname: %s\nstate: %s',
                   vm_['name'], pprint.pformat(node['name']), node['state'])
@@ -217,7 +215,6 @@ def create(vm_):
 
     log.info('Creating Cloud VM %s', vm_['name'])
     conn = get_conn()
-    rootPw = NodeAuthPassword(vm_['auth'])
 
     location = conn.ex_get_location_by_id(vm_['location'])
     images = conn.list_images(location=location)
@@ -248,15 +245,13 @@ def create(vm_):
     kwargs = {
         'name': vm_['name'],
         'image': image,
-        'auth': rootPw,
         'ex_description': vm_['description'],
         'ex_network_domain': network_domain,
         'ex_vlan': vlan,
         'ex_is_started': vm_['is_started']
     }
 
-    event_data = kwargs.copy()
-    del event_data['auth']
+    event_data = _to_event_data(kwargs)
 
     __utils__['cloud.fire_event'](
         'event',
@@ -266,6 +261,10 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
+
+    # Initial password (excluded from event payload)
+    initial_password = NodeAuthPassword(vm_['auth'])
+    kwargs['auth'] = initial_password
 
     try:
         data = conn.create_node(**kwargs)
@@ -280,7 +279,7 @@ def create(vm_):
         return False
 
     try:
-        data = salt.utils.cloud.wait_for_ip(
+        data = __utils__['cloud.wait_for_ip'](
             _query_node_data,
             update_args=(vm_, data),
             timeout=config.get_cloud_config_value(
@@ -293,7 +292,7 @@ def create(vm_):
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
             # It might be already up, let's destroy it!
-            destroy(vm_['name'])
+            destroy(vm_['name'])  # pylint: disable=not-callable
         except SaltCloudSystemExit:
             pass
         finally:
@@ -306,7 +305,7 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address %s', ip_address)
 
-    if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
+    if __utils__['cloud.get_salt_interface'](vm_, __opts__) == 'private_ips':
         salt_ip_address = preferred_ip(vm_, data.private_ips)
         log.info('Salt interface set to: %s', salt_ip_address)
     else:
@@ -322,7 +321,7 @@ def create(vm_):
     vm_['ssh_host'] = ip_address
     vm_['password'] = vm_['auth']
 
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     ret.update(data.__dict__)
 
@@ -387,7 +386,7 @@ def create_lb(kwargs=None, call=None):
         for member in membersList:
             try:
                 log.debug('Member: %s', member)
-                node = get_node(conn, member)
+                node = get_node(conn, member)  # pylint: disable=not-callable
                 log.debug('Node: %s', node)
                 ip = node.private_ips[0]
             except Exception as err:
@@ -414,11 +413,13 @@ def create_lb(kwargs=None, call=None):
     log.debug('Network Domain: %s', network_domain.id)
     lb_conn.ex_set_current_network_domain(network_domain.id)
 
+    event_data = _to_event_data(kwargs)
+
     __utils__['cloud.fire_event'](
         'event',
         'create load_balancer',
         'salt/cloud/loadbalancer/creating',
-        args=kwargs,
+        args=event_data,
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -427,11 +428,13 @@ def create_lb(kwargs=None, call=None):
         name, port, protocol, algorithm, members
     )
 
+    event_data = _to_event_data(kwargs)
+
     __utils__['cloud.fire_event'](
         'event',
         'created load_balancer',
         'salt/cloud/loadbalancer/created',
-        args=kwargs,
+        args=event_data,
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -491,7 +494,7 @@ def stop(name, call=None):
         salt-cloud -a stop vm_name
     '''
     conn = get_conn()
-    node = get_node(conn, name)
+    node = get_node(conn, name)  # pylint: disable=not-callable
     log.debug('Node of Cloud VM: %s', node)
 
     status = conn.ex_shutdown_graceful(node)
@@ -515,7 +518,7 @@ def start(name, call=None):
     '''
 
     conn = get_conn()
-    node = get_node(conn, name)
+    node = get_node(conn, name)  # pylint: disable=not-callable
     log.debug('Node of Cloud VM: %s', node)
 
     status = conn.ex_start_node(node)
@@ -573,3 +576,46 @@ def get_lb_conn(dd_driver=None):
             'Missing dimensiondata_driver for get_lb_conn method.'
         )
     return get_driver_lb(Provider_lb.DIMENSIONDATA)(user_id, key, region=region)
+
+
+def _to_event_data(obj):
+    '''
+    Convert the specified object into a form that can be serialised by msgpack as event data.
+
+    :param obj: The object to convert.
+    '''
+
+    if obj is None:
+        return None
+    if isinstance(obj, bool):
+        return obj
+    if isinstance(obj, int):
+        return obj
+    if isinstance(obj, float):
+        return obj
+    if isinstance(obj, str):
+        return obj
+    if isinstance(obj, bytes):
+        return obj
+    if isinstance(obj, dict):
+        return obj
+
+    if isinstance(obj, NodeDriver):  # Special case for NodeDriver (cyclic references)
+        return obj.name
+
+    if isinstance(obj, list):
+        return [_to_event_data(item) for item in obj]
+
+    event_data = {}
+    for attribute_name in dir(obj):
+        if attribute_name.startswith('_'):
+            continue
+
+        attribute_value = getattr(obj, attribute_name)
+
+        if callable(attribute_value):  # Strip out methods
+            continue
+
+        event_data[attribute_name] = _to_event_data(attribute_value)
+
+    return event_data

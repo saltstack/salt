@@ -7,11 +7,20 @@ Module for managing the Salt schedule on a minion
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy as pycopy
+import datetime
 import difflib
 import logging
 import os
+
+try:
+    import dateutil.parser as dateutil_parser
+    _WHEN_SUPPORTED = True
+    _RANGE_SUPPORTED = True
+except ImportError:
+    _WHEN_SUPPORTED = False
+    _RANGE_SUPPORTED = False
 
 # Import salt libs
 import salt.utils.event
@@ -57,7 +66,7 @@ SCHEDULE_CONF = [
         'after',
         'return_config',
         'return_kwargs',
-        'run_on_start'
+        'run_on_start',
         'skip_during_range',
         'run_after_skip_range',
 ]
@@ -86,13 +95,13 @@ def list_(show_all=False,
 
     schedule = {}
     try:
-        eventer = salt.utils.event.get_event('minion', opts=__opts__)
-        res = __salt__['event.fire']({'func': 'list',
-                                      'where': where}, 'manage_schedule')
-        if res:
-            event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_list_complete', wait=30)
-            if event_ret and event_ret['complete']:
-                schedule = event_ret['schedule']
+        with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
+            res = __salt__['event.fire']({'func': 'list',
+                                          'where': where}, 'manage_schedule')
+            if res:
+                event_ret = event_bus.get_event(tag='/salt/minion/minion_schedule_list_complete', wait=30)
+                if event_ret and event_ret['complete']:
+                    schedule = event_ret['schedule']
     except KeyError:
         # Effectively a no-op, since we can't really return without an event system
         ret = {}
@@ -121,6 +130,9 @@ def list_(show_all=False,
 
         for item in pycopy.copy(schedule[job]):
             if item not in SCHEDULE_CONF:
+                del schedule[job][item]
+                continue
+            if schedule[job][item] is None:
                 del schedule[job][item]
                 continue
             if schedule[job][item] == 'true':
@@ -197,20 +209,20 @@ def purge(**kwargs):
                 persist = kwargs['persist']
 
             try:
-                eventer = salt.utils.event.get_event('minion', opts=__opts__)
-                res = __salt__['event.fire']({'name': name,
-                                              'func': 'delete',
-                                              'persist': persist}, 'manage_schedule')
-                if res:
-                    event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_delete_complete', wait=30)
-                    if event_ret and event_ret['complete']:
-                        _schedule_ret = event_ret['schedule']
-                        if name not in _schedule_ret:
-                            ret['result'] = True
-                            ret['comment'].append('Deleted job: {0} from schedule.'.format(name))
-                        else:
-                            ret['comment'].append('Failed to delete job {0} from schedule.'.format(name))
-                            ret['result'] = True
+                with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
+                    res = __salt__['event.fire']({'name': name,
+                                                  'func': 'delete',
+                                                  'persist': persist}, 'manage_schedule')
+                    if res:
+                        event_ret = event_bus.get_event(tag='/salt/minion/minion_schedule_delete_complete', wait=30)
+                        if event_ret and event_ret['complete']:
+                            _schedule_ret = event_ret['schedule']
+                            if name not in _schedule_ret:
+                                ret['result'] = True
+                                ret['comment'].append('Deleted job: {0} from schedule.'.format(name))
+                            else:
+                                ret['comment'].append('Failed to delete job {0} from schedule.'.format(name))
+                                ret['result'] = True
 
             except KeyError:
                 # Effectively a no-op, since we can't really return without an event system
@@ -253,18 +265,21 @@ def delete(name, **kwargs):
             return ret
 
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
-            res = __salt__['event.fire'](event_data, 'manage_schedule')
-            if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_delete_complete', wait=30)
-                if event_ret and event_ret['complete']:
-                    schedule = event_ret['schedule']
-                    if name not in schedule:
-                        ret['result'] = True
-                        ret['comment'] = 'Deleted Job {0} from schedule.'.format(name)
-                    else:
-                        ret['comment'] = 'Failed to delete job {0} from schedule.'.format(name)
-                    return ret
+            with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
+                res = __salt__['event.fire'](event_data, 'manage_schedule')
+                if res:
+                    event_ret = event_bus.get_event(
+                        tag='/salt/minion/minion_schedule_delete_complete',
+                        wait=30,
+                    )
+                    if event_ret and event_ret['complete']:
+                        schedule = event_ret['schedule']
+                        if name not in schedule:
+                            ret['result'] = True
+                            ret['comment'] = 'Deleted Job {0} from schedule.'.format(name)
+                        else:
+                            ret['comment'] = 'Failed to delete job {0} from schedule.'.format(name)
+                        return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Schedule add failed.'
@@ -355,6 +370,23 @@ def build_schedule_item(name, **kwargs):
         else:
             schedule[name]['splay'] = kwargs['splay']
 
+    if 'when' in kwargs:
+        if not _WHEN_SUPPORTED:
+            ret['result'] = False
+            ret['comment'] = 'Missing dateutil.parser, "when" is unavailable.'
+            return ret
+        else:
+            validate_when = kwargs['when']
+            if not isinstance(validate_when, list):
+                validate_when = [validate_when]
+            for _when in validate_when:
+                try:
+                    dateutil_parser.parse(_when)
+                except ValueError:
+                    ret['result'] = False
+                    ret['comment'] = 'Schedule item {0} for "when" in invalid.'.format(_when)
+                    return ret
+
     for item in ['range', 'when', 'once', 'once_fmt', 'cron',
                  'returner', 'after', 'return_config', 'return_kwargs',
                  'until', 'run_on_start', 'skip_during_range']:
@@ -409,6 +441,8 @@ def add(name, **kwargs):
         persist = kwargs['persist']
 
     _new = build_schedule_item(name, **kwargs)
+    if 'result' in _new and not _new['result']:
+        return _new
 
     schedule_data = {}
     schedule_data[name] = _new
@@ -418,19 +452,22 @@ def add(name, **kwargs):
         ret['result'] = True
     else:
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
-            res = __salt__['event.fire']({'name': name,
-                                          'schedule': schedule_data,
-                                          'func': 'add',
-                                          'persist': persist}, 'manage_schedule')
-            if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_add_complete', wait=30)
-                if event_ret and event_ret['complete']:
-                    schedule = event_ret['schedule']
-                    if name in schedule:
-                        ret['result'] = True
-                        ret['comment'] = 'Added job: {0} to schedule.'.format(name)
-                        return ret
+            with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
+                res = __salt__['event.fire']({'name': name,
+                                              'schedule': schedule_data,
+                                              'func': 'add',
+                                              'persist': persist}, 'manage_schedule')
+                if res:
+                    event_ret = event_bus.get_event(
+                        tag='/salt/minion/minion_schedule_add_complete',
+                        wait=30,
+                    )
+                    if event_ret and event_ret['complete']:
+                        schedule = event_ret['schedule']
+                        if name in schedule:
+                            ret['result'] = True
+                            ret['comment'] = 'Added job: {0} to schedule.'.format(name)
+                            return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Schedule add failed.'
@@ -483,6 +520,9 @@ def modify(name, **kwargs):
         del _current['_seconds']
 
     _new = build_schedule_item(name, **kwargs)
+    if 'result' in _new and not _new['result']:
+        return _new
+
     if _new == _current:
         ret['comment'] = 'Job {0} in correct state'.format(name)
         return ret
@@ -596,20 +636,23 @@ def enable_job(name, **kwargs):
             return ret
 
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
-            res = __salt__['event.fire'](event_data, 'manage_schedule')
-            if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_enabled_job_complete', wait=30)
-                if event_ret and event_ret['complete']:
-                    schedule = event_ret['schedule']
-                    # check item exists in schedule and is enabled
-                    if name in schedule and schedule[name]['enabled']:
-                        ret['result'] = True
-                        ret['comment'] = 'Enabled Job {0} in schedule.'.format(name)
-                    else:
-                        ret['result'] = False
-                        ret['comment'] = 'Failed to enable job {0} in schedule.'.format(name)
-                    return ret
+            with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
+                res = __salt__['event.fire'](event_data, 'manage_schedule')
+                if res:
+                    event_ret = event_bus.get_event(
+                        tag='/salt/minion/minion_schedule_enabled_job_complete',
+                        wait=30,
+                    )
+                    if event_ret and event_ret['complete']:
+                        schedule = event_ret['schedule']
+                        # check item exists in schedule and is enabled
+                        if name in schedule and schedule[name]['enabled']:
+                            ret['result'] = True
+                            ret['comment'] = 'Enabled Job {0} in schedule.'.format(name)
+                        else:
+                            ret['result'] = False
+                            ret['comment'] = 'Failed to enable job {0} in schedule.'.format(name)
+                        return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Schedule enable job failed.'
@@ -651,20 +694,23 @@ def disable_job(name, **kwargs):
             return ret
 
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
-            res = __salt__['event.fire'](event_data, 'manage_schedule')
-            if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_disabled_job_complete', wait=30)
-                if event_ret and event_ret['complete']:
-                    schedule = event_ret['schedule']
-                    # check item exists in schedule and is enabled
-                    if name in schedule and not schedule[name]['enabled']:
-                        ret['result'] = True
-                        ret['comment'] = 'Disabled Job {0} in schedule.'.format(name)
-                    else:
-                        ret['result'] = False
-                        ret['comment'] = 'Failed to disable job {0} in schedule.'.format(name)
-                    return ret
+            with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
+                res = __salt__['event.fire'](event_data, 'manage_schedule')
+                if res:
+                    event_ret = event_bus.get_event(
+                        tag='/salt/minion/minion_schedule_disabled_job_complete',
+                        wait=30,
+                    )
+                    if event_ret and event_ret['complete']:
+                        schedule = event_ret['schedule']
+                        # check item exists in schedule and is enabled
+                        if name in schedule and not schedule[name]['enabled']:
+                            ret['result'] = True
+                            ret['comment'] = 'Disabled Job {0} in schedule.'.format(name)
+                        else:
+                            ret['result'] = False
+                            ret['comment'] = 'Failed to disable job {0} in schedule.'.format(name)
+                        return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Schedule enable job failed.'
@@ -689,16 +735,19 @@ def save(**kwargs):
         ret['comment'] = 'Schedule would be saved.'
     else:
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
-            res = __salt__['event.fire']({'func': 'save_schedule'}, 'manage_schedule')
-            if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_saved', wait=30)
-                if event_ret and event_ret['complete']:
-                    ret['result'] = True
-                    ret['comment'] = 'Schedule (non-pillar items) saved.'
-                else:
-                    ret['result'] = False
-                    ret['comment'] = 'Failed to save schedule.'
+            with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
+                res = __salt__['event.fire']({'func': 'save_schedule'}, 'manage_schedule')
+                if res:
+                    event_ret = event_bus.get_event(
+                        tag='/salt/minion/minion_schedule_saved',
+                        wait=30,
+                    )
+                    if event_ret and event_ret['complete']:
+                        ret['result'] = True
+                        ret['comment'] = 'Schedule (non-pillar items) saved.'
+                    else:
+                        ret['result'] = False
+                        ret['comment'] = 'Failed to save schedule.'
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Schedule save failed.'
@@ -723,19 +772,22 @@ def enable(**kwargs):
         ret['comment'] = 'Schedule would be enabled.'
     else:
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
-            res = __salt__['event.fire']({'func': 'enable'}, 'manage_schedule')
-            if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_enabled_complete', wait=30)
-                if event_ret and event_ret['complete']:
-                    schedule = event_ret['schedule']
-                    if 'enabled' in schedule and schedule['enabled']:
-                        ret['result'] = True
-                        ret['comment'] = 'Enabled schedule on minion.'
-                    else:
-                        ret['result'] = False
-                        ret['comment'] = 'Failed to enable schedule on minion.'
-                    return ret
+            with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
+                res = __salt__['event.fire']({'func': 'enable'}, 'manage_schedule')
+                if res:
+                    event_ret = event_bus.get_event(
+                        tag='/salt/minion/minion_schedule_enabled_complete',
+                        wait=30,
+                    )
+                    if event_ret and event_ret['complete']:
+                        schedule = event_ret['schedule']
+                        if 'enabled' in schedule and schedule['enabled']:
+                            ret['result'] = True
+                            ret['comment'] = 'Enabled schedule on minion.'
+                        else:
+                            ret['result'] = False
+                            ret['comment'] = 'Failed to enable schedule on minion.'
+                        return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Schedule enable job failed.'
@@ -760,19 +812,22 @@ def disable(**kwargs):
         ret['comment'] = 'Schedule would be disabled.'
     else:
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
-            res = __salt__['event.fire']({'func': 'disable'}, 'manage_schedule')
-            if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_disabled_complete', wait=30)
-                if event_ret and event_ret['complete']:
-                    schedule = event_ret['schedule']
-                    if 'enabled' in schedule and not schedule['enabled']:
-                        ret['result'] = True
-                        ret['comment'] = 'Disabled schedule on minion.'
-                    else:
-                        ret['result'] = False
-                        ret['comment'] = 'Failed to disable schedule on minion.'
-                    return ret
+            with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
+                res = __salt__['event.fire']({'func': 'disable'}, 'manage_schedule')
+                if res:
+                    event_ret = event_bus.get_event(
+                        tag='/salt/minion/minion_schedule_disabled_complete',
+                        wait=30,
+                    )
+                    if event_ret and event_ret['complete']:
+                        schedule = event_ret['schedule']
+                        if 'enabled' in schedule and not schedule['enabled']:
+                            ret['result'] = True
+                            ret['comment'] = 'Disabled schedule on minion.'
+                        else:
+                            ret['result'] = False
+                            ret['comment'] = 'Failed to disable schedule on minion.'
+                        return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Schedule disable job failed.'
@@ -881,7 +936,7 @@ def move(name, target, **kwargs):
         if not response:
             ret['comment'] = 'no servers answered the published schedule.add command'
             return ret
-        elif len(errors) > 0:
+        elif errors:
             ret['comment'] = 'the following minions return False'
             ret['minions'] = errors
             return ret
@@ -945,7 +1000,7 @@ def copy(name, target, **kwargs):
         if not response:
             ret['comment'] = 'no servers answered the published schedule.add command'
             return ret
-        elif len(errors) > 0:
+        elif errors:
             ret['comment'] = 'the following minions return False'
             ret['minions'] = errors
             return ret
@@ -957,21 +1012,28 @@ def copy(name, target, **kwargs):
     return ret
 
 
-def postpone_job(name, current_time, new_time, **kwargs):
+def postpone_job(name,
+                 current_time,
+                 new_time,
+                 **kwargs):
     '''
     Postpone a job in the minion's schedule
 
-    Current time and new time should be specified as Unix timestamps
+    Current time and new time should be in date string format,
+    default value is %Y-%m-%dT%H:%M:%S.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' schedule.postpone_job job current_time new_time
+
+        salt '*' schedule.postpone_job job current_time new_time time_fmt='%Y-%m-%dT%H:%M:%S'
     '''
 
+    time_fmt = kwargs.get('time_fmt') or '%Y-%m-%dT%H:%M:%S'
     ret = {'comment': [],
            'result': True}
 
@@ -985,8 +1047,14 @@ def postpone_job(name, current_time, new_time, **kwargs):
         ret['result'] = False
         return ret
     else:
-        if not isinstance(current_time, six.integer_types):
-            ret['comment'] = 'Job current time must be an integer.'
+        try:
+            # Validate date string
+            datetime.datetime.strptime(current_time, time_fmt)
+        except (TypeError, ValueError):
+            log.error('Date string could not be parsed: %s, %s',
+                      new_time, time_fmt)
+
+            ret['comment'] = 'Date string could not be parsed.'
             ret['result'] = False
             return ret
 
@@ -995,8 +1063,14 @@ def postpone_job(name, current_time, new_time, **kwargs):
         ret['result'] = False
         return ret
     else:
-        if not isinstance(new_time, six.integer_types):
-            ret['comment'] = 'Job new time must be an integer.'
+        try:
+            # Validate date string
+            datetime.datetime.strptime(new_time, time_fmt)
+        except (TypeError, ValueError):
+            log.error('Date string could not be parsed: %s, %s',
+                      new_time, time_fmt)
+
+            ret['comment'] = 'Date string could not be parsed.'
             ret['result'] = False
             return ret
 
@@ -1008,11 +1082,13 @@ def postpone_job(name, current_time, new_time, **kwargs):
             event_data = {'name': name,
                           'time': current_time,
                           'new_time': new_time,
+                          'time_fmt': time_fmt,
                           'func': 'postpone_job'}
         elif name in list_(show_all=True, where='pillar', return_yaml=False):
             event_data = {'name': name,
                           'time': current_time,
                           'new_time': new_time,
+                          'time_fmt': time_fmt,
                           'where': 'pillar',
                           'func': 'postpone_job'}
         else:
@@ -1021,33 +1097,37 @@ def postpone_job(name, current_time, new_time, **kwargs):
             return ret
 
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
-            res = __salt__['event.fire'](event_data, 'manage_schedule')
-            if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_postpone_job_complete', wait=30)
-                if event_ret and event_ret['complete']:
-                    schedule = event_ret['schedule']
-                    # check item exists in schedule and is enabled
-                    if name in schedule and schedule[name]['enabled']:
-                        ret['result'] = True
-                        ret['comment'] = 'Postponed Job {0} in schedule.'.format(name)
-                    else:
-                        ret['result'] = False
-                        ret['comment'] = 'Failed to postpone job {0} in schedule.'.format(name)
-                    return ret
+            with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
+                res = __salt__['event.fire'](event_data, 'manage_schedule')
+                if res:
+                    event_ret = event_bus.get_event(
+                        tag='/salt/minion/minion_schedule_postpone_job_complete',
+                        wait=30,
+                    )
+                    if event_ret and event_ret['complete']:
+                        schedule = event_ret['schedule']
+                        # check item exists in schedule and is enabled
+                        if name in schedule and schedule[name]['enabled']:
+                            ret['result'] = True
+                            ret['comment'] = 'Postponed Job {0} in schedule.'.format(name)
+                        else:
+                            ret['result'] = False
+                            ret['comment'] = 'Failed to postpone job {0} in schedule.'.format(name)
+                        return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Schedule postpone job failed.'
     return ret
 
 
-def skip_job(name, time, **kwargs):
+def skip_job(name, current_time, **kwargs):
     '''
     Skip a job in the minion's schedule at specified time.
 
-    Time to skip should be specified as Unix timestamps
+    Time to skip should be specified as date string format,
+    default value is %Y-%m-%dT%H:%M:%S.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -1055,6 +1135,7 @@ def skip_job(name, time, **kwargs):
 
         salt '*' schedule.skip_job job time
     '''
+    time_fmt = kwargs.get('time_fmt') or '%Y-%m-%dT%H:%M:%S'
 
     ret = {'comment': [],
            'result': True}
@@ -1063,9 +1144,20 @@ def skip_job(name, time, **kwargs):
         ret['comment'] = 'Job name is required.'
         ret['result'] = False
 
-    if not time:
+    if not current_time:
         ret['comment'] = 'Job time is required.'
         ret['result'] = False
+    else:
+        # Validate date string
+        try:
+            datetime.datetime.strptime(current_time, time_fmt)
+        except (TypeError, ValueError):
+            log.error('Date string could not be parsed: %s, %s',
+                      current_time, time_fmt)
+
+            ret['comment'] = 'Date string could not be parsed.'
+            ret['result'] = False
+            return ret
 
     if 'test' in __opts__ and __opts__['test']:
         ret['comment'] = 'Job: {0} would be skipped in schedule.'.format(name)
@@ -1073,11 +1165,13 @@ def skip_job(name, time, **kwargs):
 
         if name in list_(show_all=True, where='opts', return_yaml=False):
             event_data = {'name': name,
-                          'time': time,
+                          'time': current_time,
+                          'time_fmt': time_fmt,
                           'func': 'skip_job'}
         elif name in list_(show_all=True, where='pillar', return_yaml=False):
             event_data = {'name': name,
-                          'time': time,
+                          'time': current_time,
+                          'time_fmt': time_fmt,
                           'where': 'pillar',
                           'func': 'skip_job'}
         else:
@@ -1086,20 +1180,23 @@ def skip_job(name, time, **kwargs):
             return ret
 
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
-            res = __salt__['event.fire'](event_data, 'manage_schedule')
-            if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_skip_job_complete', wait=30)
-                if event_ret and event_ret['complete']:
-                    schedule = event_ret['schedule']
-                    # check item exists in schedule and is enabled
-                    if name in schedule and schedule[name]['enabled']:
-                        ret['result'] = True
-                        ret['comment'] = 'Added Skip Job {0} in schedule.'.format(name)
-                    else:
-                        ret['result'] = False
-                        ret['comment'] = 'Failed to skip job {0} in schedule.'.format(name)
-                    return ret
+            with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
+                res = __salt__['event.fire'](event_data, 'manage_schedule')
+                if res:
+                    event_ret = event_bus.get_event(
+                        tag='/salt/minion/minion_schedule_skip_job_complete',
+                        wait=30,
+                    )
+                    if event_ret and event_ret['complete']:
+                        schedule = event_ret['schedule']
+                        # check item exists in schedule and is enabled
+                        if name in schedule and schedule[name]['enabled']:
+                            ret['result'] = True
+                            ret['comment'] = 'Added Skip Job {0} in schedule.'.format(name)
+                        else:
+                            ret['result'] = False
+                            ret['comment'] = 'Failed to skip job {0} in schedule.'.format(name)
+                        return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Schedule skip job failed.'
@@ -1110,7 +1207,7 @@ def show_next_fire_time(name, **kwargs):
     '''
     Show the next fire time for scheduled job
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -1120,8 +1217,7 @@ def show_next_fire_time(name, **kwargs):
 
     '''
 
-    ret = {'comment': [],
-           'result': True}
+    ret = {'result': True}
 
     if not name:
         ret['comment'] = 'Job name is required.'
@@ -1129,17 +1225,23 @@ def show_next_fire_time(name, **kwargs):
 
     try:
         event_data = {'name': name, 'func': 'get_next_fire_time'}
-        eventer = salt.utils.event.get_event('minion', opts=__opts__)
-        res = __salt__['event.fire'](event_data,
-                                     'manage_schedule')
-        if res:
-            event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_next_fire_time_complete', wait=30)
+        with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
+            res = __salt__['event.fire'](event_data,
+                                         'manage_schedule')
+            if res:
+                event_ret = event_bus.get_event(
+                    tag='/salt/minion/minion_schedule_next_fire_time_complete',
+                    wait=30,
+                )
     except KeyError:
         # Effectively a no-op, since we can't really return without an event system
         ret = {}
         ret['comment'] = 'Event module not available. Schedule show next fire time failed.'
         ret['result'] = True
-        log.debug(ret['comment'])
         return ret
 
-    return event_ret
+    if 'next_fire_time' in event_ret:
+        ret['next_fire_time'] = event_ret['next_fire_time']
+    else:
+        ret['comment'] = 'next fire time not available.'
+    return ret

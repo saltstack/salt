@@ -8,7 +8,7 @@
 
 # Add files or directories to the blacklist. They should be base names, not
 # paths.
-ignore=CVS
+ignore=CVS,ext
 
 # Pickle collected data for later comparisons.
 persistent=no
@@ -28,6 +28,25 @@ load-plugins=saltpylint.pep8,
 # Use multiple processes to speed up Pylint.
 # Don't bump this values on PyLint 1.4.0 - Know bug that ignores the passed --rcfile
 jobs=1
+
+# List of blacklisted functions and suggested replacements
+#
+# NOTE: This pylint check will infer the full name of the function by walking
+# back up from the function name to the parent, to the parent's parent, etc.,
+# and this means that functions which come from platform-specific modules need
+# to be referenced using name of the module from which the function was
+# imported. This happens a lot in the os and os.path modules. Functions from
+# os.path should be defined using posixpath.funcname and ntpath.funcname, while
+# functions from os should be defined using posix.funcname and nt.funcname.
+#
+# When defining a blacklisted function, the format is:
+#
+#   <func_name>=<suggested_replacement>
+#
+# The replacement text will be included in the alert message.
+#
+blacklisted-functions=posix.umask=salt.utils.files.set_umask or get_umask,
+  nt.umask=salt.utils.files.set_umask or get_umask
 
 # Allow loading of arbitrary C extensions. Extensions are imported into the
 # active Python interpreter and may run arbitrary code.
@@ -135,7 +154,8 @@ disable=R,
   E8266,
   E8402,
   E8731,
-  3rd-party-local-module-not-gated
+  3rd-party-local-module-not-gated,
+  pep8-reserved-keywords
 
 # Disabled:
 # R* [refactoring suggestions & reports]
@@ -248,6 +268,7 @@ additional-builtins=__opts__,
   __proxy__,
   __serializers__,
   __reg__,
+  __executors__,
   __events__
 
 

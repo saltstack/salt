@@ -44,7 +44,7 @@ Connection module for Amazon ELB
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -55,20 +55,13 @@ log = logging.getLogger(__name__)
 # Import Salt libs
 import salt.utils.json
 import salt.utils.odict as odict
-from salt.utils.versions import LooseVersion as _LooseVersion
+import salt.utils.versions
 
 # Import third party libs
 from salt.ext import six
 try:
     import boto
     import boto.ec2  # pylint: enable=unused-import
-    # connection settings were added in 2.33.0
-    required_boto_version = '2.33.0'
-    if (_LooseVersion(boto.__version__) <
-            _LooseVersion(required_boto_version)):
-        msg = 'boto_elb requires boto {0}.'.format(required_boto_version)
-        logging.debug(msg)
-        raise ImportError()
     from boto.ec2.elb import HealthCheck
     from boto.ec2.elb.attributes import AccessLogAttribute
     from boto.ec2.elb.attributes import ConnectionDrainingAttribute
@@ -84,10 +77,14 @@ def __virtual__():
     '''
     Only load if boto libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, "The boto_elb module cannot be loaded: boto library not found")
-    __utils__['boto.assign_funcs'](__name__, 'elb', module='ec2.elb', pack=__salt__)
-    return True
+    # connection settings were added in 2.33.0
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(
+        boto_ver='2.33.0',
+        check_boto3=False
+    )
+    if has_boto_reqs is True:
+        __utils__['boto.assign_funcs'](__name__, 'elb', module='ec2.elb', pack=__salt__)
+    return has_boto_reqs
 
 
 def exists(name, region=None, key=None, keyid=None, profile=None):
@@ -107,8 +104,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
         if elb:
             return True
         else:
-            msg = 'The load balancer does not exist in region {0}'.format(region)
-            log.debug(msg)
+            log.debug('The load balancer does not exist in region %s', region)
             return False
     except boto.exception.BotoServerError as error:
         log.warning(error)
@@ -208,7 +204,7 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
                 time.sleep(5)
                 retries -= 1
                 continue
-            log.error('Error fetching config for ELB {0}: {1}'.format(name, error.message))
+            log.error('Error fetching config for ELB %s: %s', name, error.message)
             log.error(error)
             return {}
     return {}
@@ -268,16 +264,15 @@ def create(name, availability_zones, listeners, subnets=None,
                                        security_groups=security_groups, scheme=scheme,
                                        complex_listeners=_complex_listeners)
         if lb:
-            log.info('Created ELB {0}'.format(name))
+            log.info('Created ELB %s', name)
             return True
         else:
-            msg = 'Failed to create ELB {0}'.format(name)
-            log.error(msg)
+            log.error('Failed to create ELB %s', name)
             return False
     except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to create ELB {0}: {1}: {2}'.format(name, error.error_code, error.message)
-        log.error(msg)
+        log.error('Failed to create ELB %s: %s: %s',
+                  name, error.error_code, error.message,
+                  exc_info_on_loglevel=logging.DEBUG)
         return False
 
 
@@ -297,13 +292,11 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
         return True
     try:
         conn.delete_load_balancer(name)
-        msg = 'Deleted ELB {0}.'.format(name)
-        log.info(msg)
+        log.info('Deleted ELB %s.', name)
         return True
     except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to delete ELB {0}'.format(name)
-        log.error(msg)
+        log.error('Failed to delete ELB %s', name,
+                  exc_info_on_loglevel=logging.DEBUG)
         return False
 
 
@@ -328,13 +321,11 @@ def create_listeners(name, listeners, region=None, key=None, keyid=None,
         _complex_listeners.append(listener_dict_to_tuple(listener))
     try:
         conn.create_load_balancer_listeners(name, [], _complex_listeners)
-        msg = 'Created ELB listeners on {0}'.format(name)
-        log.info(msg)
+        log.info('Created ELB listeners on %s', name)
         return True
     except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to create ELB listeners on {0}: {1}'.format(name, error)
-        log.error(msg)
+        log.error('Failed to create ELB listeners on %s: %s', name, error,
+                  exc_info_on_loglevel=logging.DEBUG)
         return False
 
 
@@ -355,13 +346,11 @@ def delete_listeners(name, ports, region=None, key=None, keyid=None,
         ports = salt.utils.json.loads(ports)
     try:
         conn.delete_load_balancer_listeners(name, ports)
-        msg = 'Deleted ELB listeners on {0}'.format(name)
-        log.info(msg)
+        log.info('Deleted ELB listeners on %s', name)
         return True
     except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to delete ELB listeners on {0}: {1}'.format(name, error)
-        log.error(msg)
+        log.error('Failed to delete ELB listeners on %s: %s', name, error,
+                  exc_info_on_loglevel=logging.DEBUG)
         return False
 
 
@@ -382,14 +371,12 @@ def apply_security_groups(name, security_groups, region=None, key=None,
         security_groups = salt.utils.json.loads(security_groups)
     try:
         conn.apply_security_groups_to_lb(name, security_groups)
-        msg = 'Applied security_groups on ELB {0}'.format(name)
-        log.info(msg)
+        log.info('Applied security_groups on ELB %s', name)
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to appply security_groups on ELB {0}: {1}'
-        msg = msg.format(name, e.message)
-        log.error(msg)
+        log.error('Failed to appply security_groups on ELB %s: %s',
+                  name, e.message)
         return False
 
 
@@ -410,13 +397,10 @@ def enable_availability_zones(name, availability_zones, region=None, key=None,
         availability_zones = salt.utils.json.loads(availability_zones)
     try:
         conn.enable_availability_zones(name, availability_zones)
-        msg = 'Enabled availability_zones on ELB {0}'.format(name)
-        log.info(msg)
+        log.info('Enabled availability_zones on ELB %s', name)
         return True
     except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to enable availability_zones on ELB {0}: {1}'.format(name, error)
-        log.error(msg)
+        log.error('Failed to enable availability_zones on ELB %s: %s', name, error)
         return False
 
 
@@ -437,13 +421,11 @@ def disable_availability_zones(name, availability_zones, region=None, key=None,
         availability_zones = salt.utils.json.loads(availability_zones)
     try:
         conn.disable_availability_zones(name, availability_zones)
-        msg = 'Disabled availability_zones on ELB {0}'.format(name)
-        log.info(msg)
+        log.info('Disabled availability_zones on ELB %s', name)
         return True
     except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to disable availability_zones on ELB {0}: {1}'.format(name, error)
-        log.error(msg)
+        log.error('Failed to disable availability_zones on ELB %s: %s',
+                  name, error, exc_info_on_loglevel=logging.DEBUG)
         return False
 
 
@@ -464,13 +446,11 @@ def attach_subnets(name, subnets, region=None, key=None, keyid=None,
         subnets = salt.utils.json.loads(subnets)
     try:
         conn.attach_lb_to_subnets(name, subnets)
-        msg = 'Attached ELB {0} on subnets.'.format(name)
-        log.info(msg)
+        log.info('Attached ELB %s on subnets.', name)
         return True
     except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to attach ELB {0} on subnets: {1}'.format(name, error)
-        log.error(msg)
+        log.error('Failed to attach ELB %s on subnets: %s', name, error,
+                  exc_info_on_loglevel=logging.DEBUG)
         return False
 
 
@@ -491,13 +471,11 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None,
         subnets = salt.utils.json.loads(subnets)
     try:
         conn.detach_lb_from_subnets(name, subnets)
-        msg = 'Detached ELB {0} from subnets.'.format(name)
-        log.info(msg)
+        log.info('Detached ELB %s from subnets.', name)
         return True
     except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to detach ELB {0} from subnets: {1}'.format(name, error)
-        log.error(msg)
+        log.error('Failed to detach ELB %s from subnets: %s', name, error,
+                  exc_info_on_loglevel=logging.DEBUG)
         return False
 
 
@@ -541,7 +519,7 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
                 time.sleep(5)
                 retries -= 1
                 continue
-            log.error('ELB {0} does not exist: {1}'.format(name, e.message))
+            log.error('ELB %s does not exist: %s', name, e.message)
             return {}
     return {}
 
@@ -609,10 +587,9 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
         _al.emit_interval = al.get('emit_interval', None)
         added_attr = conn.modify_lb_attribute(name, 'accessLog', _al)
         if added_attr:
-            log.info('Added access_log attribute to {0} elb.'.format(name))
+            log.info('Added access_log attribute to %s elb.', name)
         else:
-            msg = 'Failed to add access_log attribute to {0} elb.'
-            log.error(msg.format(name))
+            log.error('Failed to add access_log attribute to %s elb.', name)
             return False
     if czlb:
         _czlb = CrossZoneLoadBalancingAttribute()
@@ -620,8 +597,7 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
         added_attr = conn.modify_lb_attribute(name, 'crossZoneLoadBalancing',
                                               _czlb.enabled)
         if added_attr:
-            msg = 'Added cross_zone_load_balancing attribute to {0} elb.'
-            log.info(msg.format(name))
+            log.info('Added cross_zone_load_balancing attribute to %s elb.', name)
         else:
             log.error('Failed to add cross_zone_load_balancing attribute.')
             return False
@@ -631,8 +607,7 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
         _cd.timeout = cd.get('timeout', 300)
         added_attr = conn.modify_lb_attribute(name, 'connectionDraining', _cd)
         if added_attr:
-            msg = 'Added connection_draining attribute to {0} elb.'
-            log.info(msg.format(name))
+            log.info('Added connection_draining attribute to %s elb.', name)
         else:
             log.error('Failed to add connection_draining attribute.')
             return False
@@ -641,8 +616,7 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
         _cs.idle_timeout = cs.get('idle_timeout', 60)
         added_attr = conn.modify_lb_attribute(name, 'connectingSettings', _cs)
         if added_attr:
-            msg = 'Added connecting_settings attribute to {0} elb.'
-            log.info(msg.format(name))
+            log.info('Added connecting_settings attribute to %s elb.', name)
         else:
             log.error('Failed to add connecting_settings attribute.')
             return False
@@ -680,8 +654,8 @@ def get_health_check(name, region=None, key=None, keyid=None, profile=None):
                 time.sleep(5)
                 retries -= 1
                 continue
-            log.error(error)
-            log.error('ELB {0} not found.'.format(name))
+            log.error('ELB %s not found.', name,
+                      exc_info_on_logleve=logging.DEBUG)
             return {}
 
 
@@ -703,7 +677,7 @@ def set_health_check(name, health_check, region=None, key=None, keyid=None,
     while True:
         try:
             conn.configure_health_check(name, hc)
-            log.info('Configured health check on ELB {0}'.format(name))
+            log.info('Configured health check on ELB %s', name)
             return True
         except boto.exception.BotoServerError as error:
             if retries and e.code == 'Throttling':
@@ -711,8 +685,7 @@ def set_health_check(name, health_check, region=None, key=None, keyid=None,
                 time.sleep(5)
                 retries -= 1
                 continue
-            log.error(error)
-            log.error('Failed to configure health check on ELB {0}'.format(name))
+            log.exception('Failed to configure health check on ELB %s', name)
             return False
 
 
@@ -751,8 +724,8 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     # able to be registered with the given ELB
     register_failures = set(instances).difference(set(registered_instance_ids))
     if register_failures:
-        log.warning('Instance(s): {0} not registered with ELB {1}.'
-                 .format(list(register_failures), name))
+        log.warning('Instance(s): %s not registered with ELB %s.',
+                    list(register_failures), name)
         register_result = False
     else:
         register_result = True
@@ -792,9 +765,10 @@ def deregister_instances(name, instances, region=None, key=None, keyid=None,
         # deregister_instances returns "None" because the instances are
         # effectively deregistered from ELB
         if error.error_code == 'InvalidInstance':
-            log.warning('One or more of instance(s) {0} are not part of ELB {1}.'
-                     ' deregister_instances not performed.'
-                     .format(instances, name))
+            log.warning(
+                'One or more of instance(s) %s are not part of ELB %s. '
+                'deregister_instances not performed.', instances, name
+            )
             return None
         else:
             log.warning(error)
@@ -805,8 +779,10 @@ def deregister_instances(name, instances, region=None, key=None, keyid=None,
     # unable to be deregistered from the given ELB
     deregister_failures = set(instances).intersection(set(registered_instance_ids))
     if deregister_failures:
-        log.warning('Instance(s): {0} not deregistered from ELB {1}.'
-                 .format(list(deregister_failures), name))
+        log.warning(
+            'Instance(s): %s not deregistered from ELB %s.',
+            list(deregister_failures), name
+        )
         deregister_result = False
     else:
         deregister_result = True
@@ -831,10 +807,10 @@ def set_instances(name, instances, test=False, region=None, key=None, keyid=None
     remove = current - desired
     if test:
         return bool(add or remove)
-    if len(remove):
+    if remove:
         if deregister_instances(name, list(remove), region, key, keyid, profile) is False:
             ret = False
-    if len(add):
+    if add:
         if register_instances(name, list(add), region, key, keyid, profile) is False:
             ret = False
     return ret
@@ -888,16 +864,15 @@ def create_policy(name, policy_name, policy_type, policy, region=None,
     try:
         success = conn.create_lb_policy(name, policy_name, policy_type, policy)
         if success:
-            log.info('Created policy {0} on ELB {1}'.format(policy_name, name))
+            log.info('Created policy %s on ELB %s', policy_name, name)
             return True
         else:
-            msg = 'Failed to create policy {0} on ELB {1}'.format(policy_name, name)
-            log.error(msg)
+            log.error('Failed to create policy %s on ELB %s', policy_name, name)
             return False
     except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to create policy {0} on ELB {1}: {2}'.format(policy_name, name, e.message)
-        log.error(msg)
+        log.error('Failed to create policy %s on ELB %s: %s',
+                  policy_name, name, e.message,
+                  exc_info_on_loglevel=logging.DEBUG)
         return False
 
 
@@ -920,12 +895,12 @@ def delete_policy(name, policy_name, region=None, key=None, keyid=None,
         return True
     try:
         conn.delete_lb_policy(name, policy_name)
-        log.info('Deleted policy {0} on ELB {1}'.format(policy_name, name))
+        log.info('Deleted policy %s on ELB %s', policy_name, name)
         return True
     except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to delete policy {0} on ELB {1}: {2}'.format(policy_name, name, e.message)
-        log.error(msg)
+        log.error('Failed to delete policy %s on ELB %s: %s',
+                  policy_name, name, e.message,
+                  exc_info_on_loglevel=logging.DEBUG)
         return False
 
 
@@ -950,10 +925,11 @@ def set_listener_policy(name, port, policies=None, region=None, key=None,
         policies = []
     try:
         conn.set_lb_policies_of_listener(name, port, policies)
-        log.info('Set policies {0} on ELB {1} listener {2}'.format(policies, name, port))
+        log.info('Set policies %s on ELB %s listener %s', policies, name, port)
     except boto.exception.BotoServerError as e:
-        log.debug(e)
-        log.info('Failed to set policy {0} on ELB {1} listener {2}: {3}'.format(policies, name, port, e.message))
+        log.info('Failed to set policy %s on ELB %s listener %s: %s',
+                 policies, name, port, e.message,
+                 exc_info_on_loglevel=logging.DEBUG)
         return False
     return True
 
@@ -975,10 +951,12 @@ def set_backend_policy(name, port, policies=None, region=None, key=None,
         policies = []
     try:
         conn.set_lb_policies_of_backend_server(name, port, policies)
-        log.info('Set policies {0} on ELB {1} backend server {2}'.format(policies, name, port))
+        log.info('Set policies %s on ELB %s backend server %s',
+                 policies, name, port)
     except boto.exception.BotoServerError as e:
-        log.debug(e)
-        log.info('Failed to set policy {0} on ELB {1} backend server {2}: {3}'.format(policies, name, port, e.message))
+        log.info('Failed to set policy %s on ELB %s backend server %s: %s',
+                 policies, name, port, e.message,
+                 exc_info_on_loglevel=logging.DEBUG)
         return False
     return True
 

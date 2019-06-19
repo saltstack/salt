@@ -16,10 +16,11 @@ Module to provide redis functionality to Salt
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 from salt.ext.six.moves import zip
 from salt.ext import six
 from datetime import datetime
+import salt.utils.args
 
 # Import third party libs
 try:
@@ -54,7 +55,7 @@ def _connect(host=None, port=None, db=None, password=None):
     if not password:
         password = __salt__['config.option']('redis.password')
 
-    return redis.StrictRedis(host, port, db, password)
+    return redis.StrictRedis(host, port, db, password, decode_responses=True)
 
 
 def _sconnect(host=None, port=None, password=None):
@@ -68,7 +69,7 @@ def _sconnect(host=None, port=None, password=None):
     if password is None:
         password = __salt__['config.option']('redis_sentinel.password')
 
-    return redis.StrictRedis(host, port, password=password)
+    return redis.StrictRedis(host, port, password=password, decode_responses=True)
 
 
 def bgrewriteaof(host=None, port=None, db=None, password=None):
@@ -395,7 +396,7 @@ def hmset(key, **fieldsvals):
     database = fieldsvals.pop('db', None)
     password = fieldsvals.pop('password', None)
     server = _connect(host, port, database, password)
-    return server.hmset(key, **fieldsvals)
+    return server.hmset(key, salt.utils.args.clean_kwargs(**fieldsvals))
 
 
 def hset(key, field, value, host=None, port=None, db=None, password=None):

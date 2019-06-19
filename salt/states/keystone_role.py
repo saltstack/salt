@@ -3,7 +3,7 @@
 Management of OpenStack Keystone Roles
 ======================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.keystoneng` for setup instructions
@@ -26,7 +26,7 @@ Example States
         - description: 'my group'
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 __virtualname__ = 'keystone_role'
 
@@ -52,6 +52,8 @@ def present(name, auth=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+
     __salt__['keystoneng.setup_clouds'](auth)
 
     kwargs['name'] = name
@@ -61,7 +63,6 @@ def present(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = kwargs
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Role will be created.'
             return ret
 
@@ -95,7 +96,6 @@ def absent(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = {'id': role.id}
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Role will be deleted.'
             return ret
 

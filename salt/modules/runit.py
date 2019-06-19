@@ -45,7 +45,7 @@ Service's alias:
     XBPS package management uses a service's alias to provides service
     alternative(s), such as chrony and openntpd both aliased to ntpd.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -351,7 +351,7 @@ def _get_svc_path(name='*', status=None):
     for el in glob.glob(os.path.join(SERVICE_DIR, name)):
         if _is_svc(el):
             ena.add(os.readlink(el))
-            log.trace('found enabled service path: {0}'.format(el))
+            log.trace('found enabled service path: %s', el)
 
     if status == 'ENABLED':
         return sorted(ena)
@@ -362,7 +362,7 @@ def _get_svc_path(name='*', status=None):
         for el in glob.glob(os.path.join(d, name)):
             if _is_svc(el):
                 ava.add(el)
-                log.trace('found available service path: {0}'.format(el))
+                log.trace('found available service path: %s', el)
 
     if status == 'DISABLED':
         # service available but not enabled
@@ -561,10 +561,8 @@ def enable(name, start=False, **kwargs):
     name
         the service's name
 
-    start
-        ``False`` : Do not start the service once enabled. Default mode.
-                    (consistent with other service management)
-        ``True``  : also start the service at the same time (default sv mode)
+    start : False
+        If ``True``, start the service once enabled.
 
     CLI Example:
 
@@ -594,7 +592,7 @@ def enable(name, start=False, **kwargs):
             try:
                 os.unlink(down_file)
             except OSError:
-                log.error('Unable to remove file {0}'.format(down_file))
+                log.error('Unable to remove file %s', down_file)
                 return False
         return True
 
@@ -603,12 +601,12 @@ def enable(name, start=False, **kwargs):
     if not start:
         # create a temp 'down' file BEFORE enabling service.
         # will prevent sv from starting this service automatically.
-        log.trace('need a temporary file {0}'.format(down_file))
+        log.trace('need a temporary file %s', down_file)
         if not os.path.exists(down_file):
             try:
                 salt.utils.files.fopen(down_file, "w").close()  # pylint: disable=resource-leakage
             except IOError:
-                log.error('Unable to create file {0}'.format(down_file))
+                log.error('Unable to create file %s', down_file)
                 return False
 
     # enable the service
@@ -617,7 +615,7 @@ def enable(name, start=False, **kwargs):
 
     except IOError:
         # (attempt to) remove temp down_file anyway
-        log.error('Unable to create symlink {0}'.format(down_file))
+        log.error('Unable to create symlink %s', down_file)
         if not start:
             os.unlink(down_file)
         return False
@@ -640,7 +638,7 @@ def enable(name, start=False, **kwargs):
         try:
             os.unlink(down_file)
         except OSError:
-            log.error('Unable to remove temp file {0}'.format(down_file))
+            log.error('Unable to remove temp file %s', down_file)
             retcode_sv = 1
 
     # if an error happened, revert our changes
@@ -683,7 +681,7 @@ def disable(name, stop=False, **kwargs):
         try:
             salt.utils.files.fopen(down_file, "w").close()  # pylint: disable=resource-leakage
         except IOError:
-            log.error('Unable to create file {0}'.format(down_file))
+            log.error('Unable to create file %s', down_file)
             return False
 
     return True
@@ -710,16 +708,16 @@ def remove(name):
 
     svc_path = _service_path(name)
     if not os.path.islink(svc_path):
-        log.error('{0} is not a symlink: not removed'.format(svc_path))
+        log.error('%s is not a symlink: not removed', svc_path)
         return False
 
     if not stop(name):
-        log.error('Failed to stop service {0}'.format(name))
+        log.error('Failed to stop service %s', name)
         return False
     try:
         os.remove(svc_path)
     except IOError:
-        log.error('Unable to remove symlink {0}'.format(svc_path))
+        log.error('Unable to remove symlink %s', svc_path)
         return False
     return True
 

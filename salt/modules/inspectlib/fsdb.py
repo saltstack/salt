@@ -15,7 +15,7 @@
 # limitations under the License.
 
 '''
-    :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
+    :codeauthor: Bo Maryniuk <bo@suse.de>
 '''
 
 from __future__ import absolute_import, with_statement
@@ -325,7 +325,7 @@ class CsvDB(object):
         elif type == 'float':
             data = float(data)
         elif type == 'long':
-            data = sys.version_info[0] == 2 and long(data) or int(data)  # pylint: disable=W1699
+            data = sys.version_info[0] == 2 and long(data) or int(data)  # pylint: disable=incompatible-py3-code,undefined-variable
         else:
             data = str(data)
         return data

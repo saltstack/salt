@@ -43,7 +43,7 @@ class SaltException(Exception):
         import salt.utils.stringutils
         if not isinstance(message, six.string_types):
             message = six.text_type(message)
-        if six.PY3 or isinstance(message, unicode):  # pylint: disable=incompatible-py3-code
+        if six.PY3 or isinstance(message, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             super(SaltException, self).__init__(
                 salt.utils.stringutils.to_str(message)
             )
@@ -57,7 +57,7 @@ class SaltException(Exception):
             # a str version, and convert the passed value to unicode for the
             # message/strerror attributes.
             super(SaltException, self).__init__(str(message))  # future lint: blacklisted-function
-            self.message = self.strerror = unicode(message)  # pylint: disable=incompatible-py3-code
+            self.message = self.strerror = unicode(message)  # pylint: disable=incompatible-py3-code,undefined-variable
 
     def __unicode__(self):
         return self.strerror
@@ -96,6 +96,12 @@ class SaltSyndicMasterError(SaltException):
     '''
 
 
+class SaltMasterUnresolvableError(SaltException):
+    '''
+    Problem resolving the name of the Salt master
+    '''
+
+
 class MasterExit(SystemExit):
     '''
     Rise when the master exits
@@ -122,7 +128,19 @@ class CommandExecutionError(SaltException):
     def __init__(self, message='', info=None):
         # Avoid circular import
         import salt.utils.stringutils
-        self.error = exc_str_prefix = six.text_type(message)
+        try:
+            exc_str_prefix = salt.utils.stringutils.to_unicode(message)
+        except TypeError:
+            # Exception class instance passed. The SaltException __init__ will
+            # gracefully handle non-string types passed to it, but since this
+            # class needs to do some extra stuff with the exception "message"
+            # before handing it off to the parent class' __init__, we'll need
+            # to extract the message from the exception instance here
+            try:
+                exc_str_prefix = six.text_type(message)
+            except UnicodeDecodeError:
+                exc_str_prefix = salt.utils.stringutils.to_unicode(str(message))  # future lint: disable=blacklisted-function
+        self.error = exc_str_prefix
         self.info = info
         if self.info:
             if exc_str_prefix:
@@ -253,7 +271,18 @@ class SaltRenderError(SaltException):
         # Avoid circular import
         import salt.utils.stringutils
         self.error = message
-        exc_str = salt.utils.stringutils.to_unicode(message)
+        try:
+            exc_str = salt.utils.stringutils.to_unicode(message)
+        except TypeError:
+            # Exception class instance passed. The SaltException __init__ will
+            # gracefully handle non-string types passed to it, but since this
+            # class needs to do some extra stuff with the exception "message"
+            # before handing it off to the parent class' __init__, we'll need
+            # to extract the message from the exception instance here
+            try:
+                exc_str = six.text_type(message)
+            except UnicodeDecodeError:
+                exc_str = salt.utils.stringutils.to_unicode(str(message))  # future lint: disable=blacklisted-function
         self.line_num = line_num
         self.buffer = buf
         self.context = ''
@@ -262,7 +291,7 @@ class SaltRenderError(SaltException):
         if self.line_num and self.buffer:
             # Avoid circular import
             import salt.utils.templates
-            self.context = salt.utils.templates.get_context(
+            self.context = salt.utils.stringutils.get_context(
                 self.buffer,
                 self.line_num,
                 marker=marker
@@ -373,7 +402,7 @@ class SaltCloudSystemExit(SaltCloudException):
     This exception is raised when the execution should be stopped.
     '''
     def __init__(self, message, exit_code=salt.defaults.exitcodes.EX_GENERIC):
-        SaltCloudException.__init__(self, message)
+        super(SaltCloudSystemExit, self).__init__(message)
         self.message = message
         self.exit_code = exit_code
 
@@ -530,4 +559,34 @@ class VMwareVmRegisterError(VMwareSaltError):
 class VMwareVmCreationError(VMwareSaltError):
     '''
     Used when a configuration parameter is incorrect
+    '''
+
+
+class MissingSmb(SaltException):
+    '''
+    Raised when no smb library is found.
+    '''
+
+
+class NxosError(SaltException):
+    '''
+    NX-OS Base Exception class
+    '''
+
+
+class NxosCliError(NxosError):
+    '''
+    NX-OS Cli Error raised when Cli command rejected by the NX-OS device
+    '''
+
+
+class NxosClientError(NxosError):
+    '''
+    NX-OS Client Error raised for problems connecting to the NX-OS device
+    '''
+
+
+class NxosRequestNotSupported(NxosError):
+    '''
+    Raised for unsupported client requests
     '''

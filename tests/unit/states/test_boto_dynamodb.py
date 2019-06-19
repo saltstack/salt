@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -101,8 +101,7 @@ class BotoDynamodbTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(boto_dynamodb.absent(name), ret)
 
             with patch.dict(boto_dynamodb.__opts__, {'test': True}):
-                comt = ('DynamoDB table {0} is set to be deleted \
-                         '.format(name))
+                comt = 'DynamoDB table {0} is set to be deleted'.format(name)
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(boto_dynamodb.absent(name), ret)
 

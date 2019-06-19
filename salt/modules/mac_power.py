@@ -5,7 +5,7 @@ Module for editing power settings on macOS
  .. versionadded:: 2016.3.0
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt libs
 import salt.utils.mac_utils
@@ -78,7 +78,8 @@ def get_sleep():
     Computer, Display, and Hard Disk are displayed.
 
     :return: A dictionary containing the sleep status for Computer, Display, and
-    Hard Disk
+        Hard Disk
+
     :rtype: dict
 
     CLI Example:
@@ -287,8 +288,8 @@ def set_wake_on_modem(enabled):
     detected.
 
     :param bool enabled: True to enable, False to disable. "On" and "Off" are
-    also acceptable values. Additionally you can pass 1 and 0 to represent True
-    and False respectively
+        also acceptable values. Additionally you can pass 1 and 0 to represent
+        True and False respectively
 
     :return: True if successful, False if not
     :rtype: bool
@@ -334,8 +335,8 @@ def set_wake_on_network(enabled):
     is detected.
 
     :param bool enabled: True to enable, False to disable. "On" and "Off" are
-    also acceptable values. Additionally you can pass 1 and 0 to represent True
-    and False respectively
+        also acceptable values. Additionally you can pass 1 and 0 to represent
+        True and False respectively
 
     :return: True if successful, False if not
     :rtype: bool
@@ -381,8 +382,8 @@ def set_restart_power_failure(enabled):
     failure.
 
     :param bool enabled: True to enable, False to disable. "On" and "Off" are
-    also acceptable values. Additionally you can pass 1 and 0 to represent True
-    and False respectively
+        also acceptable values. Additionally you can pass 1 and 0 to represent
+        True and False respectively
 
     :return: True if successful, False if not
     :rtype: bool
@@ -430,8 +431,8 @@ def set_restart_freeze(enabled):
     functions remains in case they ever fix the bug.
 
     :param bool enabled: True to enable, False to disable. "On" and "Off" are
-    also acceptable values. Additionally you can pass 1 and 0 to represent True
-    and False respectively
+        also acceptable values. Additionally you can pass 1 and 0 to represent
+        True and False respectively
 
     :return: True if successful, False if not
     :rtype: bool
@@ -459,7 +460,8 @@ def get_sleep_on_power_button():
     supported
 
     :return: A string value representing the "allow power button to sleep
-    computer" settings
+        computer" settings
+
     :rtype: string
 
     CLI Example:
@@ -479,8 +481,8 @@ def set_sleep_on_power_button(enabled):
     Set whether or not the power button can sleep the computer.
 
     :param bool enabled: True to enable, False to disable. "On" and "Off" are
-    also acceptable values. Additionally you can pass 1 and 0 to represent True
-    and False respectively
+        also acceptable values. Additionally you can pass 1 and 0 to represent
+        True and False respectively
 
     :return: True if successful, False if not
     :rtype: bool

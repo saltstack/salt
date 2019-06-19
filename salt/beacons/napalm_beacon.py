@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-NAPALM functions
-================
+Watch NAPALM functions and fire events on specific triggers
+===========================================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
-Watch NAPALM functions and fire events on specific triggers.
 
 .. note::
 
@@ -14,7 +13,7 @@ Watch NAPALM functions and fire events on specific triggers.
     Check the documentation for the
     :mod:`NAPALM proxy module <salt.proxy.napalm>`.
 
-    _NAPALM: http://napalm.readthedocs.io/en/latest/index.html
+    .. _NAPALM: http://napalm.readthedocs.io/en/latest/index.html
 
 The configuration accepts a list of Salt functions to be
 invoked, and the corresponding output hierarchy that should
@@ -134,7 +133,7 @@ Event structure example:
 
 .. code-block:: json
 
-    salt/beacon/edge01.bjm01/napalm/junos/ntp.stats {
+    {
         "_stamp": "2017-09-05T09:51:09.377202",
         "args": [],
         "data": {
@@ -168,7 +167,7 @@ The event examplified above has been fired when the device
 identified by the Minion id ``edge01.bjm01`` has been synchronized
 with a NTP server at a stratum level greater than 5.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import Python std lib
 import re
@@ -311,16 +310,12 @@ def beacon(config):
         fun_cfg = mod.values()[0]
         args = fun_cfg.pop('_args', [])
         kwargs = fun_cfg.pop('_kwargs', {})
-        log.debug('Executing {fun} with {args} and {kwargs}'.format(
-            fun=fun,
-            args=args,
-            kwargs=kwargs
-        ))
+        log.debug('Executing %s with %s and %s', fun, args, kwargs)
         fun_ret = __salt__[fun](*args, **kwargs)
         log.debug('Got the reply from the minion:')
         log.debug(fun_ret)
         if not fun_ret.get('result', False):
-            log.error('Error whilst executing {}'.format(fun))
+            log.error('Error whilst executing %s', fun)
             log.error(fun_ret)
             continue
         fun_ret_out = fun_ret['out']
@@ -333,12 +328,9 @@ def beacon(config):
             # catch any exception and continue
             # to not jeopardise the execution of the next function in the list
             continue
-        log.debug('Result of comparison: {res}'.format(res=fun_cmp_result))
+        log.debug('Result of comparison: %s', fun_cmp_result)
         if fun_cmp_result:
-            log.info('Matched {fun} with {cfg}'.format(
-                fun=fun,
-                cfg=fun_cfg
-            ))
+            log.info('Matched %s with %s', fun, fun_cfg)
             event['tag'] = '{os}/{fun}'.format(os=__grains__['os'], fun=fun)
             event['fun'] = fun
             event['args'] = args

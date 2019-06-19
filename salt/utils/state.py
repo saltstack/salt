@@ -2,11 +2,11 @@
 '''
 Utility functions for state functions
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 
 # Import Salt libs
@@ -212,10 +212,6 @@ def merge_subreturn(original_return, sub_return, subkey=None):
         original_return.setdefault('changes', {})
         original_return['changes'][subkey] = sub_return['changes']
 
-    if sub_return.get('pchanges'):  # pchanges may or may not exist
-        original_return.setdefault('pchanges', {})
-        original_return['pchanges'][subkey] = sub_return['pchanges']
-
     return original_return
 
 
@@ -239,11 +235,14 @@ def get_sls_opts(opts, **kwargs):
                 )
             opts['saltenv'] = kwargs['saltenv']
 
-    if 'pillarenv' in kwargs or opts.get('pillarenv_from_saltenv', False):
-        pillarenv = kwargs.get('pillarenv') or kwargs.get('saltenv')
-        if pillarenv is not None and not isinstance(pillarenv, six.string_types):
-            opts['pillarenv'] = str(pillarenv)
-        else:
-            opts['pillarenv'] = pillarenv
+    pillarenv = None
+    if kwargs.get('pillarenv'):
+        pillarenv = kwargs.get('pillarenv')
+    if opts.get('pillarenv_from_saltenv') and not pillarenv:
+        pillarenv = kwargs.get('saltenv')
+    if pillarenv is not None and not isinstance(pillarenv, six.string_types):
+        opts['pillarenv'] = six.text_type(pillarenv)
+    else:
+        opts['pillarenv'] = pillarenv
 
     return opts

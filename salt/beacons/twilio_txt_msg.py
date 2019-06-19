@@ -4,8 +4,11 @@ Beacon to emit Twilio text messages
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
+
 import logging
+
+from salt.ext import six
 from salt.ext.six.moves import map
 
 # Import 3rd Party libs
@@ -83,24 +86,25 @@ def beacon(config):
     output['texts'] = []
     client = TwilioRestClient(_config['account_sid'], _config['auth_token'])
     messages = client.messages.list(to=_config['twilio_number'])
-    log.trace('Num messages: {0}'.format(len(messages)))
-    if len(messages) < 1:
+    num_messages = len(messages)
+    log.trace('Num messages: %d', num_messages)
+    if not num_messages:
         log.trace('Twilio beacon has no texts')
         return ret
 
     for message in messages:
         item = {}
-        item['id'] = str(message.sid)
-        item['body'] = str(message.body)
-        item['from'] = str(message.from_)
-        item['sent'] = str(message.date_sent)
+        item['id'] = six.text_type(message.sid)
+        item['body'] = six.text_type(message.body)
+        item['from'] = six.text_type(message.from_)
+        item['sent'] = six.text_type(message.date_sent)
         item['images'] = []
 
         if int(message.num_media):
             media = client.media(message.sid).list()
-            if len(media):
+            if media:
                 for pic in media:
-                    item['images'].append(str(pic.uri))
+                    item['images'].append(six.text_type(pic.uri))
         output['texts'].append(item)
         message.delete()
     ret.append(output)

@@ -6,11 +6,18 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 
+# Import 3rd-party libs
+from salt.ext import six
+import salt.utils.platform
+
 
 class StdTest(ModuleCase):
     '''
     Test standard client calls
     '''
+    def setUp(self):
+        self.TIMEOUT = 600 if salt.utils.platform.is_windows() else 10
+
     def test_cli(self):
         '''
         Test cli function
@@ -66,6 +73,7 @@ class StdTest(ModuleCase):
                 'minion',
                 'test.arg',
                 ['foo', 'bar', 'baz'],
+                timeout=self.TIMEOUT,
                 kwarg={'qux': 'quux'}
                 )
         data = ret['minion']['ret']
@@ -78,20 +86,25 @@ class StdTest(ModuleCase):
         '''
         terrible_yaml_string = 'foo: ""\n# \''
         ret = self.client.cmd_full_return(
-                'minion',
-                'test.arg_type',
-                ['a', 1],
-                kwarg={'outer': {'a': terrible_yaml_string},
-                       'inner': 'value'}
-                )
+            'minion',
+            'test.arg_type',
+            ['a', 1],
+            kwarg={
+                'outer': {'a': terrible_yaml_string},
+                'inner': 'value'
+            },
+            timeout=self.TIMEOUT,
+        )
         data = ret['minion']['ret']
-        self.assertIn('str', data['args'][0])
+        self.assertIn(six.text_type.__name__, data['args'][0])
         self.assertIn('int', data['args'][1])
         self.assertIn('dict', data['kwargs']['outer'])
-        self.assertIn('str', data['kwargs']['inner'])
+        self.assertIn(six.text_type.__name__, data['kwargs']['inner'])
 
     def test_full_return_kwarg(self):
-        ret = self.client.cmd('minion', 'test.ping', full_return=True)
+        ret = self.client.cmd(
+            'minion', 'test.ping', full_return=True, timeout=self.TIMEOUT,
+        )
         for mid, data in ret.items():
             self.assertIn('retcode', data)
 
@@ -104,8 +117,9 @@ class StdTest(ModuleCase):
             ],
             kwarg={
                 'quux': 'Quux',
-            })
-
+            },
+            timeout=self.TIMEOUT,
+        )
         self.assertEqual(ret['minion'], {
             'args': ['foo'],
             'kwargs': {

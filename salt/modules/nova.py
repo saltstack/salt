@@ -5,7 +5,9 @@ Module for handling OpenStack Nova calls
 :depends:   - novaclient Python module
 :configuration: This module is not usable until the user, password, tenant, and
     auth URL are specified either in a pillar or in the minion's config file.
-    For example::
+    For example:
+
+    .. code-block:: yaml
 
         keystone.user: admin
         keystone.password: verybadpass
@@ -16,7 +18,9 @@ Module for handling OpenStack Nova calls
 
     If configuration for multiple OpenStack accounts is required, they can be
     set up as different configuration profiles:
-    For example::
+    For example:
+
+    .. code-block:: yaml
 
         openstack1:
           keystone.user: admin
@@ -32,37 +36,64 @@ Module for handling OpenStack Nova calls
 
     With this configuration in place, any of the nova functions can make use of
     a configuration profile by declaring it explicitly.
-    For example::
+    For example:
+
+    .. code-block:: bash
 
         salt '*' nova.flavor_list profile=openstack1
+
+    Configured options can be overridden by use of dictionary of particular options.
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' nova.flavor_list profile=openstack1 keystone_api_args='{"tenant": "SomeTenant"}'
 
     To use keystoneauth1 instead of keystoneclient, include the `use_keystoneauth`
     option in the pillar or minion config.
 
-    .. note:: this is required to use keystone v3 as for authentication.
+    .. note::
+        This is required to use keystone v3 as for authentication.
 
     .. code-block:: yaml
 
         keystone.user: admin
         keystone.password: verybadpass
         keystone.tenant: admin
-        keystone.auth_url: 'http://127.0.0.1:5000/v3/'
-        keystone.use_keystoneauth: true
+        keystone.auth_url: 'http://127.0.0.1:5000'
+        keystone.use_keystoneauth: True
+        keystone.region_name: RegionOne
+        keystone.project_id: befcf35ea5094743b81ee12fb43484f5
+        keystone.user_domain_name: Default
+        # Optional
         keystone.verify: '/path/to/custom/certs/ca-bundle.crt'
 
+    .. note::
+        Auto detection of API version is added so there is no need to add /v3
+        to auth_url.
 
-    Note: by default the nova module will attempt to verify its connection
-    utilizing the system certificates. If you need to verify against another bundle
-    of CA certificates or want to skip verification altogether you will need to
-    specify the `verify` option. You can specify True or False to verify (or not)
-    against system certificates, a path to a bundle or CA certs to check against, or
-    None to allow keystoneauth to search for the certificates on its own.(defaults to True)
+    .. note::
+        By default the nova module will attempt to verify its connection
+        utilizing the system certificates. If you need to verify against
+        another bundle of CA certificates or want to skip verification
+        altogether you will need to specify the `verify` option. You can
+        specify True or False to verify (or not) against system certificates, a
+        path to a bundle or CA certs to check against, or None to allow
+        keystoneauth to search for the certificates on its own. (defaults to
+        True)
+
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
 
+# Import salt libs
+try:
+    import salt.utils.openstack.nova as suon
+    HAS_NOVA = True
+except ImportError as exc:
+    HAS_NOVA = False
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -72,11 +103,8 @@ __func_alias__ = {
     'list_': 'list'
 }
 
-try:
-    import salt.utils.openstack.nova as suon
-    HAS_NOVA = True
-except NameError as exc:
-    HAS_NOVA = False
+# Define the module's virtual name
+__virtualname__ = 'nova'
 
 
 def __virtual__():
@@ -84,16 +112,24 @@ def __virtual__():
     Only load this module if nova
     is installed on this minion.
     '''
-    return HAS_NOVA
+    if HAS_NOVA:
+        return __virtualname__
+    return (False, 'The nova execution module failed to load: '
+            'only available if nova client is installed.')
 
 
 __opts__ = {}
 
 
-def _auth(profile=None):
+def _auth(profile=None, **kwargs):
     '''
     Set up nova credentials
     '''
+    keystone_api_args = None
+    if kwargs is not None:
+        if kwargs.get('keystone_api_args') is not None:
+            keystone_api_args = kwargs['keystone_api_args']
+
     if profile:
         credentials = __salt__['config.option'](profile)
         user = credentials['keystone.user']
@@ -104,7 +140,6 @@ def _auth(profile=None):
         api_key = credentials.get('keystone.api_key', None)
         os_auth_system = credentials.get('keystone.os_auth_system', None)
         use_keystoneauth = credentials.get('keystone.use_keystoneauth', False)
-        verify = credentials.get('keystone.verify', None)
     else:
         user = __salt__['config.option']('keystone.user')
         password = __salt__['config.option']('keystone.password')
@@ -114,25 +149,55 @@ def _auth(profile=None):
         api_key = __salt__['config.option']('keystone.api_key')
         os_auth_system = __salt__['config.option']('keystone.os_auth_system')
         use_keystoneauth = __salt__['config.option']('keystone.use_keystoneauth')
-        verify = __salt__['config.option']('keystone.verify')
+
+    # Override pillar settings with settings provided by module argument
+    if keystone_api_args:
+        user = keystone_api_args.get('user', user)
+        password = keystone_api_args.get('password', password)
+        tenant = keystone_api_args.get('tenant', tenant)
+        auth_url = keystone_api_args.get('auth_url', auth_url)
+        region_name = keystone_api_args.get('region_name', region_name)
+        api_key = keystone_api_args.get('api_key', api_key)
+        os_auth_system = keystone_api_args.get('os_auth_system', os_auth_system)
+        use_keystoneauth = keystone_api_args.get('use_keystoneauth', use_keystoneauth)
 
     if use_keystoneauth is True:
-        project_domain_name = credentials['keystone.project_domain_name']
-        user_domain_name = credentials['keystone.user_domain_name']
+        if profile:
+            credentials = __salt__['config.option'](profile)
+            project_id = credentials.get('keystone.project_id', None)
+            project_name = credentials.get('keystone.project_name', None)
+            user_domain_name = credentials.get('keystone.user_domain_name', None)
+            project_domain_name = credentials.get('keystone.project_domain_name', None)
+            verify = credentials.get('keystone.verify', None)
+        else:
+            project_id = __salt__['config.option']('keystone.project_id')
+            project_name = __salt__['config.option']('keystone.project_name')
+            user_domain_name = __salt__['config.option']('keystone.user_domain_name')
+            project_domain_name = __salt__['config.option']('keystone.project_domain_name')
+            verify = __salt__['config.option']('keystone.verify')
 
-        kwargs = {
+        # Override pillar settings with settings provided by module argument
+        if keystone_api_args:
+            project_id = keystone_api_args.get('project_id', project_id)
+            project_name = keystone_api_args.get('project_name', project_name)
+            user_domain_name = keystone_api_args.get('user_domain_name', user_domain_name)
+            project_domain_name = keystone_api_args.get('project_domain_name', project_domain_name)
+            verify = keystone_api_args.get('verify', verify)
+
+        send_kwargs = {
             'username': user,
             'password': password,
-            'project_id': tenant,
+            'project_id': project_id,
             'auth_url': auth_url,
             'region_name': region_name,
             'use_keystoneauth': use_keystoneauth,
             'verify': verify,
+            'project_name': project_name,
             'project_domain_name': project_domain_name,
             'user_domain_name': user_domain_name
         }
     else:
-        kwargs = {
+        send_kwargs = {
             'username': user,
             'password': password,
             'api_key': api_key,
@@ -141,11 +206,11 @@ def _auth(profile=None):
             'region_name': region_name,
             'os_auth_plugin': os_auth_system
         }
+    log.debug('SEND_KWARGS: %s', send_kwargs)
+    return suon.SaltNova(**send_kwargs)
 
-    return suon.SaltNova(**kwargs)
 
-
-def boot(name, flavor_id=0, image_id=0, profile=None, timeout=300):
+def boot(name, flavor_id=0, image_id=0, profile=None, timeout=300, **kwargs):
     '''
     Boot (create) a new instance
 
@@ -178,11 +243,11 @@ def boot(name, flavor_id=0, image_id=0, profile=None, timeout=300):
         salt '*' nova.flavor_list
         salt '*' nova.image_list
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.boot(name, flavor_id, image_id, timeout)
 
 
-def volume_list(search_opts=None, profile=None):
+def volume_list(search_opts=None, profile=None, **kwargs):
     '''
     List storage volumes
 
@@ -196,16 +261,14 @@ def volume_list(search_opts=None, profile=None):
 
     .. code-block:: bash
 
-        salt '*' nova.volume_list \
-                search_opts='{"display_name": "myblock"}' \
-                profile=openstack
+        salt '*' nova.volume_list search_opts='{"display_name": "myblock"}' profile=openstack
 
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.volume_list(search_opts=search_opts)
 
 
-def volume_show(name, profile=None):
+def volume_show(name, profile=None, **kwargs):
     '''
     Create a block storage volume
 
@@ -222,12 +285,11 @@ def volume_show(name, profile=None):
         salt '*' nova.volume_show myblock profile=openstack
 
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.volume_show(name)
 
 
-def volume_create(name, size=100, snapshot=None, voltype=None,
-                  profile=None):
+def volume_create(name, size=100, snapshot=None, voltype=None, profile=None, **kwargs):
     '''
     Create a block storage volume
 
@@ -253,7 +315,7 @@ def volume_create(name, size=100, snapshot=None, voltype=None,
         salt '*' nova.volume_create myblock size=300 profile=openstack
 
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.volume_create(
         name,
         size,
@@ -262,7 +324,7 @@ def volume_create(name, size=100, snapshot=None, voltype=None,
     )
 
 
-def volume_delete(name, profile=None):
+def volume_delete(name, profile=None, **kwargs):
     '''
     Destroy the volume
 
@@ -279,13 +341,11 @@ def volume_delete(name, profile=None):
         salt '*' nova.volume_delete myblock profile=openstack
 
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.volume_delete(name)
 
 
-def volume_detach(name,
-                  profile=None,
-                  timeout=300):
+def volume_detach(name, profile=None, timeout=300, **kwargs):
     '''
     Attach a block storage volume
 
@@ -305,7 +365,7 @@ def volume_detach(name,
         salt '*' nova.volume_detach myblock profile=openstack
 
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.volume_detach(
         name,
         timeout
@@ -316,7 +376,7 @@ def volume_attach(name,
                   server_name,
                   device='/dev/xvdb',
                   profile=None,
-                  timeout=300):
+                  timeout=300, **kwargs):
     '''
     Attach a block storage volume
 
@@ -337,11 +397,10 @@ def volume_attach(name,
     .. code-block:: bash
 
         salt '*' nova.volume_attach myblock slice.example.com profile=openstack
-        salt '*' nova.volume_attach myblock server.example.com \
-                device='/dev/xvdb' profile=openstack
+        salt '*' nova.volume_attach myblock server.example.com device='/dev/xvdb' profile=openstack
 
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.volume_attach(
         name,
         server_name,
@@ -350,7 +409,7 @@ def volume_attach(name,
     )
 
 
-def suspend(instance_id, profile=None):
+def suspend(instance_id, profile=None, **kwargs):
     '''
     Suspend an instance
 
@@ -364,11 +423,11 @@ def suspend(instance_id, profile=None):
         salt '*' nova.suspend 1138
 
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.suspend(instance_id)
 
 
-def resume(instance_id, profile=None):
+def resume(instance_id, profile=None, **kwargs):
     '''
     Resume an instance
 
@@ -382,11 +441,11 @@ def resume(instance_id, profile=None):
         salt '*' nova.resume 1138
 
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.resume(instance_id)
 
 
-def lock(instance_id, profile=None):
+def lock(instance_id, profile=None, **kwargs):
     '''
     Lock an instance
 
@@ -400,11 +459,11 @@ def lock(instance_id, profile=None):
         salt '*' nova.lock 1138
 
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.lock(instance_id)
 
 
-def delete(instance_id, profile=None):
+def delete(instance_id, profile=None, **kwargs):
     '''
     Delete an instance
 
@@ -418,11 +477,11 @@ def delete(instance_id, profile=None):
         salt '*' nova.delete 1138
 
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.delete(instance_id)
 
 
-def flavor_list(profile=None):
+def flavor_list(profile=None, **kwargs):
     '''
     Return a list of available flavors (nova flavor-list)
 
@@ -432,8 +491,9 @@ def flavor_list(profile=None):
 
         salt '*' nova.flavor_list
     '''
-    conn = _auth(profile)
-    return conn.flavor_list()
+    filters = kwargs.get('filter', {})
+    conn = _auth(profile, **kwargs)
+    return conn.flavor_list(**filters)
 
 
 def flavor_create(name,      # pylint: disable=C0103
@@ -441,7 +501,8 @@ def flavor_create(name,      # pylint: disable=C0103
                   ram=0,
                   disk=0,
                   vcpus=1,
-                  profile=None):
+                  is_public=True,
+                  profile=None, **kwargs):
     '''
     Add a flavor to nova (nova flavor-create). The following parameters are
     required:
@@ -456,25 +517,27 @@ def flavor_create(name,      # pylint: disable=C0103
         Disk size in GB
     vcpus
         Number of vcpus
+    is_public
+        Whether flavor is public. Default is True.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' nova.flavor_create myflavor flavor_id=6 \
-                ram=4096 disk=10 vcpus=1
+        salt '*' nova.flavor_create myflavor flavor_id=6 ram=4096 disk=10 vcpus=1
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.flavor_create(
         name,
         flavor_id,
         ram,
         disk,
-        vcpus
+        vcpus,
+        is_public
     )
 
 
-def flavor_delete(flavor_id, profile=None):  # pylint: disable=C0103
+def flavor_delete(flavor_id, profile=None, **kwargs):  # pylint: disable=C0103
     '''
     Delete a flavor from nova by id (nova flavor-delete)
 
@@ -484,11 +547,53 @@ def flavor_delete(flavor_id, profile=None):  # pylint: disable=C0103
 
         salt '*' nova.flavor_delete 7
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.flavor_delete(flavor_id)
 
 
-def keypair_list(profile=None):
+def flavor_access_list(flavor_id, profile=None, **kwargs):
+    '''
+    Return a list of project IDs assigned to flavor ID
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.flavor_access_list flavor_id=ID
+    '''
+    conn = _auth(profile, **kwargs)
+    return conn.flavor_access_list(flavor_id=flavor_id, **kwargs)
+
+
+def flavor_access_add(flavor_id, project_id, profile=None, **kwargs):
+    '''
+    Add a project to the flavor access list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.flavor_access_add flavor_id=fID project_id=pID
+    '''
+    conn = _auth(profile, **kwargs)
+    return conn.flavor_access_add(flavor_id, project_id)
+
+
+def flavor_access_remove(flavor_id, project_id, profile=None, **kwargs):
+    '''
+    Remove a project from the flavor access list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.flavor_access_remove flavor_id=fID project_id=pID
+    '''
+    conn = _auth(profile, **kwargs)
+    return conn.flavor_access_remove(flavor_id, project_id)
+
+
+def keypair_list(profile=None, **kwargs):
     '''
     Return a list of available keypairs (nova keypair-list)
 
@@ -498,11 +603,11 @@ def keypair_list(profile=None):
 
         salt '*' nova.keypair_list
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.keypair_list()
 
 
-def keypair_add(name, pubfile=None, pubkey=None, profile=None):
+def keypair_add(name, pubfile=None, pubkey=None, profile=None, **kwargs):
     '''
     Add a keypair to nova (nova keypair-add)
 
@@ -513,7 +618,7 @@ def keypair_add(name, pubfile=None, pubkey=None, profile=None):
         salt '*' nova.keypair_add mykey pubfile='/home/myuser/.ssh/id_rsa.pub'
         salt '*' nova.keypair_add mykey pubkey='ssh-rsa <key> myuser@mybox'
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.keypair_add(
         name,
         pubfile,
@@ -521,7 +626,7 @@ def keypair_add(name, pubfile=None, pubkey=None, profile=None):
     )
 
 
-def keypair_delete(name, profile=None):
+def keypair_delete(name, profile=None, **kwargs):
     '''
     Add a keypair to nova (nova keypair-delete)
 
@@ -529,13 +634,13 @@ def keypair_delete(name, profile=None):
 
     .. code-block:: bash
 
-        salt '*' nova.keypair_delete mykey'
+        salt '*' nova.keypair_delete mykey
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.keypair_delete(name)
 
 
-def image_list(name=None, profile=None):
+def image_list(name=None, profile=None, **kwargs):
     '''
     Return a list of available images (nova images-list + nova image-show)
     If a name is provided, only that image will be displayed.
@@ -547,7 +652,7 @@ def image_list(name=None, profile=None):
         salt '*' nova.image_list
         salt '*' nova.image_list myimage
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.image_list(name)
 
 
@@ -562,11 +667,10 @@ def image_meta_set(image_id=None,
 
     .. code-block:: bash
 
-        salt '*' nova.image_meta_set 6f52b2ff-0b31-4d84-8fd1-af45b84824f6 \
-                cheese=gruyere
+        salt '*' nova.image_meta_set 6f52b2ff-0b31-4d84-8fd1-af45b84824f6 cheese=gruyere
         salt '*' nova.image_meta_set name=myimage salad=pasta beans=baked
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.image_meta_set(
         image_id,
         name,
@@ -577,7 +681,7 @@ def image_meta_set(image_id=None,
 def image_meta_delete(image_id=None,     # pylint: disable=C0103
                       name=None,
                       keys=None,
-                      profile=None):
+                      profile=None, **kwargs):
     '''
     Delete a key=value pair from the metadata for an image
     (nova image-meta set)
@@ -586,11 +690,10 @@ def image_meta_delete(image_id=None,     # pylint: disable=C0103
 
     .. code-block:: bash
 
-        salt '*' nova.image_meta_delete \
-                6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
+        salt '*' nova.image_meta_delete 6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
         salt '*' nova.image_meta_delete name=myimage keys=salad,beans
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.image_meta_delete(
         image_id,
         name,
@@ -598,7 +701,7 @@ def image_meta_delete(image_id=None,     # pylint: disable=C0103
     )
 
 
-def list_(profile=None):
+def list_(profile=None, **kwargs):
     '''
     To maintain the feel of the nova command line, this function simply calls
     the server_list function.
@@ -609,10 +712,10 @@ def list_(profile=None):
 
         salt '*' nova.list
     '''
-    return server_list(profile=profile)
+    return server_list(profile=profile, **kwargs)
 
 
-def server_list(profile=None):
+def server_list(profile=None, **kwargs):
     '''
     Return list of active servers
 
@@ -622,11 +725,11 @@ def server_list(profile=None):
 
         salt '*' nova.server_list
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.server_list()
 
 
-def show(server_id, profile=None):
+def show(server_id, profile=None, **kwargs):
     '''
     To maintain the feel of the nova command line, this function simply calls
     the server_show function.
@@ -637,10 +740,10 @@ def show(server_id, profile=None):
 
         salt '*' nova.show
     '''
-    return server_show(server_id, profile)
+    return server_show(server_id, profile, **kwargs)
 
 
-def server_list_detailed(profile=None):
+def server_list_detailed(profile=None, **kwargs):
     '''
     Return detailed list of active servers
 
@@ -650,11 +753,11 @@ def server_list_detailed(profile=None):
 
         salt '*' nova.server_list_detailed
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.server_list_detailed()
 
 
-def server_show(server_id, profile=None):
+def server_show(server_id, profile=None, **kwargs):
     '''
     Return detailed information for an active server
 
@@ -664,11 +767,11 @@ def server_show(server_id, profile=None):
 
         salt '*' nova.server_show <server_id>
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.server_show(server_id)
 
 
-def secgroup_create(name, description, profile=None):
+def secgroup_create(name, description, profile=None, **kwargs):
     '''
     Add a secgroup to nova (nova secgroup-create)
 
@@ -678,11 +781,11 @@ def secgroup_create(name, description, profile=None):
 
         salt '*' nova.secgroup_create mygroup 'This is my security group'
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.secgroup_create(name, description)
 
 
-def secgroup_delete(name, profile=None):
+def secgroup_delete(name, profile=None, **kwargs):
     '''
     Delete a secgroup to nova (nova secgroup-delete)
 
@@ -692,11 +795,11 @@ def secgroup_delete(name, profile=None):
 
         salt '*' nova.secgroup_delete mygroup
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.secgroup_delete(name)
 
 
-def secgroup_list(profile=None):
+def secgroup_list(profile=None, **kwargs):
     '''
     Return a list of available security groups (nova items-list)
 
@@ -706,11 +809,11 @@ def secgroup_list(profile=None):
 
         salt '*' nova.secgroup_list
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.secgroup_list()
 
 
-def server_by_name(name, profile=None):
+def server_by_name(name, profile=None, **kwargs):
     '''
     Return information about a server
 
@@ -723,7 +826,7 @@ def server_by_name(name, profile=None):
 
         salt '*' nova.server_by_name myserver profile=openstack
     '''
-    conn = _auth(profile)
+    conn = _auth(profile, **kwargs)
     return conn.server_by_name(name)
 
 

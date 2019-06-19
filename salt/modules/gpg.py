@@ -13,7 +13,7 @@ Sign, encrypt and sign plus encrypt text and files.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import functools
 import logging
 import os
@@ -71,14 +71,13 @@ VERIFY_TRUST_LEVELS = {
     '4': 'Ultimate'
 }
 
-HAS_LIBS = False
 GPG_1_3_1 = False
-
 try:
     import gnupg
-    HAS_LIBS = True
+    HAS_GPG_BINDINGS = True
+    GPG_1_3_1 = _LooseVersion(gnupg.__version__) >= _LooseVersion('1.3.1')
 except ImportError:
-    pass
+    HAS_GPG_BINDINGS = False
 
 
 def _gpg():
@@ -96,15 +95,10 @@ def __virtual__():
     if not _gpg():
         return (False, 'The gpg execution module cannot be loaded: '
                 'gpg binary is not in the path.')
-    if HAS_LIBS:
-        gnupg_version = _LooseVersion(gnupg.__version__)
-        if gnupg_version >= '1.3.1':
-            global GPG_1_3_1
-            GPG_1_3_1 = True
-        return __virtualname__
 
-    return (False, 'The gpg execution module cannot be loaded; the'
-       ' gnupg python module is not installed.')
+    return __virtualname__ if HAS_GPG_BINDINGS \
+        else (False, 'The gpg execution module cannot be loaded; the '
+                     'gnupg python module is not installed.')
 
 
 def _get_user_info(user=None):
@@ -187,7 +181,7 @@ def _create_gpg(user=None, gnupghome=None):
         gnupghome = _get_user_gnupghome(user)
 
     if GPG_1_3_1:
-        gpg = gnupg.GPG(homedir=gnupghome)
+        gpg = gnupg.GPG(homedir=gnupghome)  # pylint: disable=unexpected-keyword-arg
     else:
         gpg = gnupg.GPG(gnupghome=gnupghome)
 
@@ -546,12 +540,12 @@ def delete_key(keyid=None,
             ret['res'] = False
             ret['message'] = 'Secret key exists, delete first or pass delete_secret=True.'
             return ret
-        elif skey and delete_secret and str(gpg.delete_keys(fingerprint, True)) == 'ok':
+        elif skey and delete_secret and six.text_type(gpg.delete_keys(fingerprint, True)) == 'ok':
             # Delete the secret key
             ret['message'] = 'Secret key for {0} deleted\n'.format(fingerprint)
 
         # Delete the public key
-        if str(gpg.delete_keys(fingerprint)) == 'ok':
+        if six.text_type(gpg.delete_keys(fingerprint)) == 'ok':
             ret['message'] += 'Public key for {0} deleted'.format(fingerprint)
         ret['res'] = True
         return ret
@@ -930,7 +924,7 @@ def trust_key(keyid=None,
 
     if user == 'salt':
         homeDir = os.path.join(__salt__['config.get']('config_dir'), 'gpgkeys')
-        cmd.extend([' --homedir', homeDir])
+        cmd.extend(['--homedir', homeDir])
         _user = 'root'
     res = __salt__['cmd.run_all'](cmd,
                                   stdin=stdin,
@@ -1037,7 +1031,8 @@ def verify(text=None,
            user=None,
            filename=None,
            gnupghome=None,
-           signature=None):
+           signature=None,
+           trustmodel=None):
     '''
     Verify a message or file
 
@@ -1057,32 +1052,55 @@ def verify(text=None,
 
     signature
         Specify the filename of a detached signature.
-    .. versionadded:: Oxygen
+
+        .. versionadded:: 2018.3.0
+
+    trustmodel
+        Explicitly define the used trust model. One of:
+          - pgp
+          - classic
+          - tofu
+          - tofu+pgp
+          - direct
+          - always
+          - auto
+
+        .. versionadded:: fluorine
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' gpg.verify text='Hello there.  How are you?'
-
         salt '*' gpg.verify filename='/path/to/important.file'
-
         salt '*' gpg.verify filename='/path/to/important.file' use_passphrase=True
+        salt '*' gpg.verify filename='/path/to/important.file' trustmodel=direct
 
     '''
     gpg = _create_gpg(user)
+    trustmodels = ('pgp', 'classic', 'tofu', 'tofu+pgp', 'direct', 'always', 'auto')
+
+    if trustmodel and trustmodel not in trustmodels:
+        msg = 'Invalid trustmodel defined: {}. Use one of: {}'.format(trustmodel, ', '.join(trustmodels))
+        log.warn(msg)
+        return {'res': False, 'message': msg}
+
+    extra_args = []
+
+    if trustmodel:
+        extra_args.extend(['--trust-model', trustmodel])
 
     if text:
-        verified = gpg.verify(text)
+        verified = gpg.verify(text, extra_args=extra_args)
     elif filename:
         if signature:
             # need to call with fopen instead of flopen due to:
             # https://bitbucket.org/vinay.sajip/python-gnupg/issues/76/verify_file-closes-passed-file-handle
             with salt.utils.files.fopen(signature, 'rb') as _fp:
-                verified = gpg.verify_file(_fp, filename)
+                verified = gpg.verify_file(_fp, filename, extra_args=extra_args)
         else:
             with salt.utils.files.flopen(filename, 'rb') as _fp:
-                verified = gpg.verify_file(_fp)
+                verified = gpg.verify_file(_fp, extra_args=extra_args)
     else:
         raise SaltInvocationError('filename or text must be passed.')
 
@@ -1091,7 +1109,7 @@ def verify(text=None,
         ret['res'] = True
         ret['username'] = verified.username
         ret['key_id'] = verified.key_id
-        ret['trust_level'] = VERIFY_TRUST_LEVELS[str(verified.trust_level)]
+        ret['trust_level'] = VERIFY_TRUST_LEVELS[six.text_type(verified.trust_level)]
         ret['message'] = 'The signature is verified.'
     else:
         ret['res'] = False

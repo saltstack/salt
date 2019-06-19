@@ -10,7 +10,7 @@ The postgres_group module is used to create and manage Postgres groups.
     frank:
       postgres_group.present
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 
@@ -36,7 +36,6 @@ def __virtual__():
 def present(name,
             createdb=None,
             createroles=None,
-            createuser=None,
             encrypted=None,
             superuser=None,
             inherit=None,
@@ -65,10 +64,6 @@ def present(name,
 
     createroles
         Is the group allowed to create other roles/users
-
-    createuser
-        Alias to create roles, and history problem, in pgsql normally
-        createuser == superuser
 
     encrypted
         Should the password be encrypted in the system catalog?
@@ -131,8 +126,6 @@ def present(name,
            'result': True,
            'comment': 'Group {0} is already present'.format(name)}
 
-    if createuser:
-        createroles = True
     # default to encrypted passwords
     if encrypted is not False:
         encrypted = postgres._DEFAULT_PASSWORDS_ENCRYPTION

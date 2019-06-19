@@ -9,7 +9,7 @@ Return data to a PostgreSQL server with json data stored in Pg's jsonb data type
 
 .. note::
     There are three PostgreSQL returners.  Any can function as an external
-    :ref:`master job cache <external-master-cache>`. but each has different
+    :ref:`master job cache <external-job-cache>`. but each has different
     features.  SaltStack recommends
     :mod:`returners.pgjsonb <salt.returners.pgjsonb>` if you are working with
     a version of PostgreSQL that has the appropriate native binary JSON types.
@@ -58,6 +58,22 @@ optional. The following ssl options are simply for illustration purposes:
     alternative.pgjsonb.ssl_ca: '/etc/pki/mysql/certs/localhost.pem'
     alternative.pgjsonb.ssl_cert: '/etc/pki/mysql/certs/localhost.crt'
     alternative.pgjsonb.ssl_key: '/etc/pki/mysql/certs/localhost.key'
+
+Should you wish the returner data to be cleaned out every so often, set
+``keep_jobs`` to the number of hours for the jobs to live in the tables.
+Setting it to ``0`` or leaving it unset will cause the data to stay in the tables.
+
+Should you wish to archive jobs in a different table for later processing,
+set ``archive_jobs`` to True.  Salt will create 3 archive tables;
+
+- ``jids_archive``
+- ``salt_returns_archive``
+- ``salt_events_archive``
+
+and move the contents of ``jids``, ``salt_returns``, and ``salt_events`` that are
+more than ``keep_jobs`` hours old to these tables.
+
+.. versionadded:: 2019.2.0
 
 Use the following Pg database schema:
 
@@ -173,6 +189,8 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'pgjsonb'
 
+PG_SAVE_LOAD_SQL = '''INSERT INTO jids (jid, load) VALUES (%(jid)s, %(load)s)'''
+
 
 def __virtual__():
     if not HAS_PG:
@@ -241,6 +259,14 @@ def _get_serv(ret=None, commit=False):
     except psycopg2.OperationalError as exc:
         raise salt.exceptions.SaltMasterError('pgjsonb returner could not connect to database: {exc}'.format(exc=exc))
 
+    if conn.server_version is not None and conn.server_version >= 90500:
+        global PG_SAVE_LOAD_SQL
+        PG_SAVE_LOAD_SQL = '''INSERT INTO jids
+                              (jid, load)
+                              VALUES (%(jid)s, %(load)s)
+                              ON CONFLICT (jid) DO UPDATE
+                              SET load=%(load)s'''
+
     cursor = conn.cursor()
 
     try:
@@ -249,7 +275,7 @@ def _get_serv(ret=None, commit=False):
         error = err.args
         sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
-        raise err
+        six.reraise(*sys.exc_info())
     else:
         if commit:
             cursor.execute("COMMIT")
@@ -301,16 +327,12 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid id
     '''
     with _get_serv(commit=True) as cur:
-
-        sql = '''INSERT INTO jids
-               (jid, load)
-                VALUES (%s, %s)'''
-
         try:
-            cur.execute(sql, (jid, psycopg2.extras.Json(load)))
+            cur.execute(PG_SAVE_LOAD_SQL,
+                        {'jid': jid, 'load': psycopg2.extras.Json(load)})
         except psycopg2.IntegrityError:
             # https://github.com/saltstack/salt/issues/22171
-            # Without this try:except: we get tons of duplicate entry errors
+            # Without this try/except we get tons of duplicate entry errors
             # which result in job returns not being stored properly
             pass
 
@@ -417,3 +439,126 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     Do any work necessary to prepare a JID, including sending a custom id
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
+
+
+def _purge_jobs(timestamp):
+    '''
+    Purge records from the returner tables.
+    :param job_age_in_seconds:  Purge jobs older than this
+    :return:
+    '''
+    with _get_serv() as cursor:
+        try:
+            sql = 'delete from jids where jid in (select distinct jid from salt_returns where alter_time < %s)'
+            cursor.execute(sql, (timestamp,))
+            cursor.execute('COMMIT')
+        except psycopg2.DatabaseError as err:
+            error = err.args
+            sys.stderr.write(six.text_type(error))
+            cursor.execute("ROLLBACK")
+            raise err
+
+        try:
+            sql = 'delete from salt_returns where alter_time < %s'
+            cursor.execute(sql, (timestamp,))
+            cursor.execute('COMMIT')
+        except psycopg2.DatabaseError as err:
+            error = err.args
+            sys.stderr.write(six.text_type(error))
+            cursor.execute("ROLLBACK")
+            raise err
+
+        try:
+            sql = 'delete from salt_events where alter_time < %s'
+            cursor.execute(sql, (timestamp,))
+            cursor.execute('COMMIT')
+        except psycopg2.DatabaseError as err:
+            error = err.args
+            sys.stderr.write(six.text_type(error))
+            cursor.execute("ROLLBACK")
+            raise err
+
+    return True
+
+
+def _archive_jobs(timestamp):
+    '''
+    Copy rows to a set of backup tables, then purge rows.
+    :param timestamp: Archive rows older than this timestamp
+    :return:
+    '''
+    source_tables = ['jids',
+                     'salt_returns',
+                     'salt_events']
+
+    with _get_serv() as cursor:
+        target_tables = {}
+        for table_name in source_tables:
+            try:
+                tmp_table_name = table_name + '_archive'
+                sql = 'create table IF NOT exists {0} (LIKE {1})'.format(tmp_table_name, table_name)
+                cursor.execute(sql)
+                cursor.execute('COMMIT')
+                target_tables[table_name] = tmp_table_name
+            except psycopg2.DatabaseError as err:
+                error = err.args
+                sys.stderr.write(six.text_type(error))
+                cursor.execute("ROLLBACK")
+                raise err
+
+        try:
+            sql = 'insert into {0} select * from {1} where jid in (select distinct jid from salt_returns where alter_time < %s)'.format(target_tables['jids'], 'jids')
+            cursor.execute(sql, (timestamp,))
+            cursor.execute('COMMIT')
+        except psycopg2.DatabaseError as err:
+            error = err.args
+            sys.stderr.write(six.text_type(error))
+            cursor.execute("ROLLBACK")
+            raise err
+        except Exception as e:
+            log.error(e)
+            raise
+
+        try:
+            sql = 'insert into {0} select * from {1} where alter_time < %s'.format(target_tables['salt_returns'], 'salt_returns')
+            cursor.execute(sql, (timestamp,))
+            cursor.execute('COMMIT')
+        except psycopg2.DatabaseError as err:
+            error = err.args
+            sys.stderr.write(six.text_type(error))
+            cursor.execute("ROLLBACK")
+            raise err
+
+        try:
+            sql = 'insert into {0} select * from {1} where alter_time < %s'.format(target_tables['salt_events'], 'salt_events')
+            cursor.execute(sql, (timestamp,))
+            cursor.execute('COMMIT')
+        except psycopg2.DatabaseError as err:
+            error = err.args
+            sys.stderr.write(six.text_type(error))
+            cursor.execute("ROLLBACK")
+            raise err
+
+    return _purge_jobs(timestamp)
+
+
+def clean_old_jobs():
+    '''
+    Called in the master's event loop every loop_interval.  Archives and/or
+    deletes the events and job details from the database.
+    :return:
+    '''
+    if __opts__.get('keep_jobs', False) and int(__opts__.get('keep_jobs', 0)) > 0:
+        try:
+            with _get_serv() as cur:
+                sql = "select (NOW() -  interval '{0}' hour) as stamp;".format(__opts__['keep_jobs'])
+                cur.execute(sql)
+                rows = cur.fetchall()
+                stamp = rows[0][0]
+
+            if __opts__.get('archive_jobs', False):
+                _archive_jobs(stamp)
+            else:
+                _purge_jobs(stamp)
+        except Exception as e:
+            log.error(e)

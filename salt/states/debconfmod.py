@@ -36,8 +36,32 @@ set_file
 .. note::
     Due to how PyYAML imports nested dicts (see :ref:`here <yaml-idiosyncrasies>`),
     the values in the ``data`` dict must be indented four spaces instead of two.
+
+If you're setting debconf values that requires `dpkg-reconfigure`, you can use
+the ``onchanges`` requisite to reconfigure your package:
+
+.. code-block:: yaml
+
+    set-default-shell:
+      debconf.set:
+        - name: dash
+        - data:
+              'dash/sh': {'type': 'boolean', 'value': false}
+
+    reconfigure-dash:
+      cmd.run:
+        - name: dpkg-reconfigure -f noninteractive dash
+        - onchanges:
+          - debconf: set-default-shell
+
+Every time the ``set-default-shell`` state changes, the ``reconfigure-dash``
+state will also run.
+
+.. note::
+    For boolean types, the value should be ``true`` or ``false``, not
+    ``'true'`` or ``'false'``.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from salt.ext import six
 
 
@@ -185,7 +209,7 @@ def set(name, data, **kwargs):
         if args['type'] == 'boolean':
             args['value'] = 'true' if args['value'] else 'false'
 
-        if current is not None and [key, args['type'], str(args['value'])] in current:
+        if current is not None and [key, args['type'], six.text_type(args['value'])] in current:
             if ret['comment'] is '':
                 ret['comment'] = 'Unchanged answers: '
             ret['comment'] += ('{0} ').format(key)

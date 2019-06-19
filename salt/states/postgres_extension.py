@@ -13,7 +13,7 @@ A module used to install and manage PostgreSQL extensions.
 
 .. versionadded:: 2014.7.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging

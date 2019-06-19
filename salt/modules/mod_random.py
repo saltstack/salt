@@ -7,7 +7,7 @@ Provides access to randomness generators.
 
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import hashlib
 import random
@@ -164,7 +164,7 @@ def shadow_hash(crypt_salt=None, password=None, algorithm='sha512'):
     return salt.utils.pycrypto.gen_hash(crypt_salt, password, algorithm)
 
 
-def rand_int(start=1, end=10):
+def rand_int(start=1, end=10, seed=None):
     '''
     Returns a random integer number between the start and end number.
 
@@ -176,12 +176,21 @@ def rand_int(start=1, end=10):
     end : 10
         Any valid integer number
 
+    seed :
+        Optional hashable object
+
+    .. versionchanged:: 2019.2.0
+        Added seed argument. Will return the same result when run with the same seed.
+
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' random.rand_int 1 10
     '''
+    if seed is not None:
+        random.seed(seed)
     return random.randint(start, end)
 
 

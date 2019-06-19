@@ -16,7 +16,7 @@ https://technet.microsoft.com/en-us/library/hh848636(v=wps.620).aspx
 .. versionadded:: 2016.11.0
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import ast
 import logging
 import os
@@ -27,6 +27,9 @@ import salt.utils.platform
 import salt.utils.powershell
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
+
+# Import 3rd party libs
+from salt.ext import six
 
 _DEFAULT_CONTEXT = 'LocalMachine'
 _DEFAULT_FORMAT = 'cer'
@@ -72,7 +75,7 @@ def _cmd_run(cmd, as_json=False):
     else:
         cmd_full.append(cmd)
     cmd_ret = __salt__['cmd.run_all'](
-        str().join(cmd_full), shell='powershell', python_shell=True)
+        six.text_type().join(cmd_full), shell='powershell', python_shell=True)
 
     if cmd_ret['retcode'] != 0:
         _LOG.error('Unable to execute command: %s\nError: %s', cmd,
@@ -163,7 +166,7 @@ def get_certs(context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
     cmd.append(r"Get-ChildItem -Path '{0}' | Select-Object".format(store_path))
     cmd.append(' DnsNameList, SerialNumber, Subject, Thumbprint, Version')
 
-    items = _cmd_run(cmd=str().join(cmd), as_json=True)
+    items = _cmd_run(cmd=six.text_type().join(cmd), as_json=True)
 
     for item in items:
         cert_info = dict()
@@ -231,7 +234,7 @@ def get_cert_file(name, cert_format=_DEFAULT_FORMAT, password=''):
         cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, '
                    'Thumbprint, Version')
 
-    items = _cmd_run(cmd=str().join(cmd), as_json=True)
+    items = _cmd_run(cmd=six.text_type().join(cmd), as_json=True)
 
     for item in items:
         for key in item:
@@ -326,7 +329,7 @@ def import_cert(name,
                    r"-FilePath '{0}'".format(cached_source_path))
         cmd.append(r" -CertStoreLocation '{0}'".format(store_path))
 
-    _cmd_run(cmd=str().join(cmd))
+    _cmd_run(cmd=six.text_type().join(cmd))
 
     new_certs = get_certs(context=context, store=store)
 
@@ -397,7 +400,7 @@ def export_cert(name,
 
     cmd.append(r" | Out-Null; Test-Path -Path '{0}'".format(name))
 
-    ret = ast.literal_eval(_cmd_run(cmd=str().join(cmd)))
+    ret = ast.literal_eval(_cmd_run(cmd=six.text_type().join(cmd)))
 
     if ret:
         _LOG.debug('Certificate exported successfully: %s', name)
@@ -450,7 +453,7 @@ def test_cert(thumbprint,
 
     cmd.append(' -ErrorAction SilentlyContinue')
 
-    return ast.literal_eval(_cmd_run(cmd=str().join(cmd)))
+    return ast.literal_eval(_cmd_run(cmd=six.text_type().join(cmd)))
 
 
 def remove_cert(thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):

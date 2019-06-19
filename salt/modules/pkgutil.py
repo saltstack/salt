@@ -8,7 +8,7 @@ Pkgutil support for Solaris
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -240,6 +240,7 @@ def latest_version(*names, **kwargs):
         return ret[names[0]]
     return ret
 
+
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
@@ -286,7 +287,7 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     if pkgs is None and version and len(pkg_params) == 1:

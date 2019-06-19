@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :codeauthor: :email:`Alexandru Bleotu (alexandru.bleotu@morganstanley.com)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+    :codeauthor: Alexandru Bleotu (alexandru.bleotu@morganstanley.com)
 
 
     salt.utils.schema
@@ -320,7 +320,7 @@
         }
 '''
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import inspect
 import textwrap
@@ -402,6 +402,7 @@ of a field to null.
 # make sure nobody creates another Null value
 def _failing_new(*args, **kwargs):
     raise TypeError('Can\'t create another NullSentinel instance')
+
 
 NullSentinel.__new__ = staticmethod(_failing_new)
 del _failing_new
@@ -731,7 +732,7 @@ class SchemaItem(six.with_metaclass(BaseSchemaItemMeta, object)):
         '''
         Return the argname value looking up on all possible attributes
         '''
-        # Let's see if there's a private fuction to get the value
+        # Let's see if there's a private function to get the value
         argvalue = getattr(self, '__get_{0}__'.format(argname), None)
         if argvalue is not None and callable(argvalue):
             argvalue = argvalue()
@@ -1442,7 +1443,7 @@ class NotItem(SchemaItem):
         if not isinstance(self.item, (Schema, SchemaItem)):
             raise RuntimeError(
                 'The passed item be of type Schema, SchemaItem or '
-                'BaseSchemaItem, not \'{1}\''.format(type(self.item))
+                'BaseSchemaItem, not \'{0}\''.format(type(self.item))
             )
 
     def serialize(self):

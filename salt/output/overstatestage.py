@@ -3,8 +3,8 @@
 Display clean output of an overstate stage
 ==========================================
 
-This outputter is used to display :ref:`OverState <states-overstate>` stages,
-and should not be called directly.
+This outputter is used to display :ref:`Orchestrate Runner
+<orchestrate-runner>` stages, and should not be called directly.
 '''
 
 # Import python libs

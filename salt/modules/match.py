@@ -2,18 +2,21 @@
 '''
 The match module allows for match routines to be run and determine target specs
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import inspect
 import logging
 import sys
+import collections
+import copy
 
 # Import salt libs
 import salt.minion
-import salt.utils.versions
+import salt.loader
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.ext.six import string_types
+from salt.ext import six
+from salt.exceptions import SaltException
 
 __func_alias__ = {
     'list_': 'list'
@@ -37,16 +40,16 @@ def compound(tgt, minion_id=None):
 
         salt '*' match.compound 'L@cheese,foo and *'
     '''
-    opts = {'grains': __grains__, 'pillar': __pillar__}
     if minion_id is not None:
-        if not isinstance(minion_id, string_types):
-            minion_id = str(minion_id)
+        opts = copy.copy(__opts__)
+        if not isinstance(minion_id, six.string_types):
+            minion_id = six.text_type(minion_id)
+        opts['id'] = minion_id
     else:
-        minion_id = __grains__['id']
-    opts['id'] = minion_id
-    matcher = salt.minion.Matcher(opts, __salt__)
+        opts = __opts__
+    matchers = salt.loader.matchers(opts)
     try:
-        return matcher.compound_match(tgt)
+        return matchers['compound_match.match'](tgt, opts=opts)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -72,9 +75,9 @@ def ipcidr(tgt):
          - nodeclass: internal
 
     '''
-    matcher = salt.minion.Matcher({'grains': __grains__}, __salt__)
+    matchers = salt.loader.matchers(__opts__)
     try:
-        return matcher.ipcidr_match(tgt)
+        return matchers['ipcidr_match.match'](tgt, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -103,9 +106,9 @@ def pillar_pcre(tgt, delimiter=DEFAULT_TARGET_DELIM):
         .. versionadded:: 0.16.4
         .. deprecated:: 2015.8.0
     '''
-    matcher = salt.minion.Matcher({'pillar': __pillar__}, __salt__)
+    matchers = salt.loader.matchers(__opts__)
     try:
-        return matcher.pillar_pcre_match(tgt, delimiter=delimiter)
+        return matchers['pillar_pcre_match.match'](tgt, delimiter=delimiter, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -134,9 +137,9 @@ def pillar(tgt, delimiter=DEFAULT_TARGET_DELIM):
         .. versionadded:: 0.16.4
         .. deprecated:: 2015.8.0
     '''
-    matcher = salt.minion.Matcher({'pillar': __pillar__}, __salt__)
+    matchers = salt.loader.matchers(__opts__)
     try:
-        return matcher.pillar_match(tgt, delimiter=delimiter)
+        return matchers['pillar_match.match'](tgt, delimiter=delimiter, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -152,9 +155,9 @@ def data(tgt):
 
         salt '*' match.data 'spam:eggs'
     '''
-    matcher = salt.minion.Matcher(__opts__, __salt__)
+    matchers = salt.loader.matchers(__opts__)
     try:
-        return matcher.data_match(tgt)
+        return matchers['data_match.match'](tgt, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -183,9 +186,9 @@ def grain_pcre(tgt, delimiter=DEFAULT_TARGET_DELIM):
         .. versionadded:: 0.16.4
         .. deprecated:: 2015.8.0
     '''
-    matcher = salt.minion.Matcher({'grains': __grains__}, __salt__)
+    matchers = salt.loader.matchers(__opts__)
     try:
-        return matcher.grain_pcre_match(tgt, delimiter=delimiter)
+        return matchers['grain_pcre_match.match'](tgt, delimiter=delimiter, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -214,9 +217,9 @@ def grain(tgt, delimiter=DEFAULT_TARGET_DELIM):
         .. versionadded:: 0.16.4
         .. deprecated:: 2015.8.0
     '''
-    matcher = salt.minion.Matcher({'grains': __grains__}, __salt__)
+    matchers = salt.loader.matchers(__opts__)
     try:
-        return matcher.grain_match(tgt, delimiter=delimiter)
+        return matchers['grain_match.match'](tgt, delimiter=delimiter, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -238,13 +241,15 @@ def list_(tgt, minion_id=None):
         salt '*' match.list 'server1,server2'
     '''
     if minion_id is not None:
-        if not isinstance(minion_id, string_types):
-            minion_id = str(minion_id)
+        opts = copy.copy(__opts__)
+        if not isinstance(minion_id, six.string_types):
+            minion_id = six.text_type(minion_id)
+        opts['id'] = minion_id
     else:
-        minion_id = __grains__['id']
-    matcher = salt.minion.Matcher({'id': minion_id}, __salt__)
+        opts = __opts__
+    matchers = salt.loader.matchers(opts)
     try:
-        return matcher.list_match(tgt)
+        return matchers['list_match.match'](tgt, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -266,13 +271,15 @@ def pcre(tgt, minion_id=None):
         salt '*' match.pcre '.*'
     '''
     if minion_id is not None:
-        if not isinstance(minion_id, string_types):
-            minion_id = str(minion_id)
+        opts = copy.copy(__opts__)
+        if not isinstance(minion_id, six.string_types):
+            minion_id = six.text_type(minion_id)
+        opts['id'] = minion_id
     else:
-        minion_id = __grains__['id']
-    matcher = salt.minion.Matcher({'id': minion_id}, __salt__)
+        opts = __opts__
+    matchers = salt.loader.matchers(opts)
     try:
-        return matcher.pcre_match(tgt)
+        return matchers['pcre_match.match'](tgt, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -294,13 +301,16 @@ def glob(tgt, minion_id=None):
         salt '*' match.glob '*'
     '''
     if minion_id is not None:
-        if not isinstance(minion_id, string_types):
-            minion_id = str(minion_id)
+        opts = copy.copy(__opts__)
+        if not isinstance(minion_id, six.string_types):
+            minion_id = six.text_type(minion_id)
+        opts['id'] = minion_id
     else:
-        minion_id = __grains__['id']
-    matcher = salt.minion.Matcher({'id': minion_id}, __salt__)
+        opts = __opts__
+    matchers = salt.loader.matchers(opts)
+
     try:
-        return matcher.glob_match(tgt)
+        return matchers['glob_match.match'](tgt, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -309,7 +319,8 @@ def glob(tgt, minion_id=None):
 def filter_by(lookup,
               tgt_type='compound',
               minion_id=None,
-              expr_form=None,
+              merge=None,
+              merge_lists=False,
               default='default'):
     '''
     Return the first match in a dictionary of target patterns
@@ -335,23 +346,22 @@ def filter_by(lookup,
         # Make the filtered data available to Pillar:
         roles: {{ roles | yaml() }}
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     expr_funcs = dict(inspect.getmembers(sys.modules[__name__],
-        predicate=inspect.isfunction))
+                                         predicate=inspect.isfunction))
 
     for key in lookup:
         params = (key, minion_id) if minion_id else (key, )
         if expr_funcs[tgt_type](*params):
+            if merge:
+                if not isinstance(merge, collections.Mapping):
+                    raise SaltException(
+                        'filter_by merge argument must be a dictionary.')
+
+                if lookup[key] is None:
+                    return merge
+                else:
+                    salt.utils.dictupdate.update(lookup[key], copy.deepcopy(merge), merge_lists=merge_lists)
+
             return lookup[key]
 
     return lookup.get(default, None)
@@ -369,13 +379,13 @@ def search_by(lookup, tgt_type='compound', minion_id=None):
 
     CLI Example:
 
-    .. code-block:: base
+    .. code-block:: bash
 
         salt '*' match.search_by '{web: [node1, node2], db: [node2, node]}'
 
     Pillar Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set roles = salt.match.search_by({
             'web': ['G@os_family:Debian not nodeX'],

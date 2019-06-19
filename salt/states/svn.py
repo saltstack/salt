@@ -17,7 +17,7 @@ requisite to a pkg.installed state for the package which provides subversion
       svn.latest:
         - target: /tmp/swallow
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
@@ -26,6 +26,9 @@ import os
 # Import salt libs
 from salt import exceptions
 from salt.states.git import _fail, _neutral_test
+
+# Import 3rd party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +48,8 @@ def latest(name,
            password=None,
            force=False,
            externals=True,
-           trust=False):
+           trust=False,
+           trust_failures=None):
     '''
     Checkout or update the working directory to the latest revision from the
     remote repository.
@@ -81,6 +85,14 @@ def latest(name,
 
     trust : False
         Automatically trust the remote server. SVN's --trust-server-cert
+
+    trust_failures : None
+        Comma-separated list of certificate trust failures, that shall be
+        ignored. This can be used if trust=True is not sufficient. The
+        specified string is passed to SVN's --trust-server-cert-failures
+        option as-is.
+
+        .. versionadded:: 2019.2.0
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
@@ -98,7 +110,7 @@ def latest(name,
 
     if __opts__['test']:
         if rev:
-            new_rev = str(rev)
+            new_rev = six.text_type(rev)
         else:
             new_rev = 'HEAD'
 
@@ -133,7 +145,7 @@ def latest(name,
         pass
 
     if rev:
-        opts += ('-r', str(rev))
+        opts += ('-r', six.text_type(rev))
 
     if force:
         opts += ('--force',)
@@ -143,6 +155,9 @@ def latest(name,
 
     if trust:
         opts += ('--trust-server-cert',)
+
+    if trust_failures:
+        opts += ('--trust-server-cert-failures', trust_failures)
 
     if svn_cmd == 'svn.update':
         out = __salt__[svn_cmd](cwd, basename, user, username, password, *opts)
@@ -181,7 +196,8 @@ def export(name,
            force=False,
            overwrite=False,
            externals=True,
-           trust=False):
+           trust=False,
+           trust_failures=None):
     '''
     Export a file or directory from an SVN repository
 
@@ -219,6 +235,14 @@ def export(name,
 
     trust : False
         Automatically trust the remote server. SVN's --trust-server-cert
+
+    trust_failures : None
+        Comma-separated list of certificate trust failures, that shall be
+        ignored. This can be used if trust=True is not sufficient. The
+        specified string is passed to SVN's --trust-server-cert-failures
+        option as-is.
+
+        .. versionadded:: 2019.2.0
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
@@ -257,8 +281,12 @@ def export(name,
     if trust:
         opts += ('--trust-server-cert',)
 
+    if trust_failures:
+        opts += ('--trust-server-cert-failures', trust_failures)
+
     out = __salt__[svn_cmd](cwd, name, basename, user, username, password, rev, *opts)
-    ret['changes'] = name + ' was Exported to ' + target
+    ret['changes']['new'] = name
+    ret['changes']['comment'] = name + ' was Exported to ' + target
 
     return ret
 

@@ -1,23 +1,29 @@
 # -*- coding: utf-8 -*-
 '''
 Send a message card to Microsoft Teams
-=======================
+======================================
 
 This state is useful for sending messages to Teams during state runs.
+
 .. versionadded:: 2017.7.0
+
 .. code-block:: yaml
+
     teams-message:
       msteams.post_card:
         - message: 'This state was executed successfully.'
         - hook_url:  https://outlook.office.com/webhook/837
+
 The hook_url can be specified in the master or minion configuration like below:
+
 .. code-block:: yaml
+
     msteams:
       hook_url: https://outlook.office.com/webhook/837
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 from salt.exceptions import SaltInvocationError
@@ -36,16 +42,22 @@ def post_card(name,
               title=None,
               theme_color=None):
     '''
-    Send a message to a Microsft Teams channel.
+    Send a message to a Microsft Teams channel
+
     .. code-block:: yaml
+
         send-msteams-message:
           msteams.post_card:
             - message: 'This state was executed successfully.'
             - hook_url: https://outlook.office.com/webhook/837
+
     The following parameters are required:
+
     message
         The message that is to be sent to the MS Teams channel.
+
     The following parameters are optional:
+
     hook_url
         The webhook URL given configured in Teams interface,
         if not specified in the configuration options of master or minion.

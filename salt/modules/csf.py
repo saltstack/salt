@@ -8,13 +8,13 @@ Support for Config Server Firewall (CSF)
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 # Import Salt Libs
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import map
+from salt.ext import six
 
 
 def __virtual__():
@@ -215,8 +215,7 @@ def _csf_to_list(option):
 
 
 def split_option(option):
-    l = re.split("(?: +)?\=(?: +)?", option)  # pylint: disable=W1401
-    return l
+    return re.split(r'(?: +)?\=(?: +)?', option)
 
 
 def get_option(option):
@@ -260,7 +259,7 @@ def skip_nics(nics, ipv6=False):
         ipv6 = '6'
     else:
         ipv6 = ''
-    nics_csv = ','.join(map(str, nics))
+    nics_csv = ','.join(six.moves.map(six.text_type, nics))
     result = __salt__['file.replace']('/etc/csf/csf.conf',
             pattern='^ETH{0}_DEVICE_SKIP(\ +)?\=(\ +)?".*"'.format(ipv6),  # pylint: disable=W1401
                                         repl='ETH{0}_DEVICE_SKIP = "{1}"'.format(ipv6, nics_csv))
@@ -552,7 +551,7 @@ def allow_ports(ports, proto='tcp', direction='in'):
     proto = proto.upper()
     direction = direction.upper()
     _validate_direction_and_proto(direction, proto)
-    ports_csv = ','.join(map(str, ports))
+    ports_csv = ','.join(six.moves.map(six.text_type, ports))
     directions = build_directions(direction)
 
     for direction in directions:

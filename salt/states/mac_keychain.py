@@ -11,7 +11,7 @@ Install certificats to the macOS keychain
       keychain.installed:
         - password: test123
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -180,7 +180,7 @@ def default_keychain(name, domain="user", user=None):
             ret['comment'] += "{0} was already the default keychain.".format(name)
         else:
             out = __salt__['keychain.set_default_keychain'](name, domain, user)
-            if len(out) == 0:
+            if not out:
                 ret['changes']['default'] = name
             else:
                 ret['result'] = False

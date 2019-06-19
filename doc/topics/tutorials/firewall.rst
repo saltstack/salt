@@ -28,8 +28,11 @@ FirewallD use the command line client ``firewall-cmd``.
 
     firewall-cmd --permanent --zone=<zone> --add-port=4505-4506/tcp
 
-Please choose the desired zone according to your setup. Don't forget to reload
-after you made your changes.
+A network zone defines the security level of trust for the the network. 
+The user should choose an appropriate zone value for their setup.
+Possible values include: drop, block, public, external, dmz, work, home, internal, trusted.
+
+Don't forget to reload after you made your changes.
 
 .. code-block:: bash
 
@@ -130,7 +133,7 @@ command line.
 The Windows Firewall rule can be created by issuing a single command. Run the
 following command from the command line or a run prompt:
 
-.. code-block:: cmd
+.. code-block:: bash
 
     netsh advfirewall firewall add rule name="Salt" dir=in action=allow protocol=TCP localport=4505-4506
 
@@ -163,13 +166,12 @@ common locations, but your mileage may vary.
 
 Follow these instructions: https://wiki.debian.org/iptables
 
-Once you've found your firewall rules, you'll need to add the two lines below
+Once you've found your firewall rules, you'll need to add the below line
 to allow traffic on ``tcp/4505`` and ``tcp/4506``:
 
 .. code-block:: text
 
-    -A INPUT -m state --state new -m tcp -p tcp --dport 4505 -j ACCEPT
-    -A INPUT -m state --state new -m tcp -p tcp --dport 4506 -j ACCEPT
+    -A INPUT -m state --state new -m tcp -p tcp --dport 4505:4506 -j ACCEPT
 
 **Ubuntu**
 
@@ -184,15 +186,14 @@ pf.conf
 =======
 
 The BSD-family of operating systems uses `packet filter (pf)`_. The following
-example describes the additions to ``pf.conf`` needed to access the Salt
+example describes the addition to ``pf.conf`` needed to access the Salt
 master.
 
 .. code-block:: text
 
-    pass in on $int_if proto tcp from any to $int_if port 4505
-    pass in on $int_if proto tcp from any to $int_if port 4506
+    pass in on $int_if proto tcp from any to $int_if port 4505:4506
 
-Once these additions have been made to the ``pf.conf`` the rules will need to
+Once this addition has been made to the ``pf.conf`` the rules will need to
 be reloaded. This can be done using the ``pfctl`` command.
 
 .. code-block:: bash
@@ -218,12 +219,12 @@ be set on the Master:
 .. code-block:: bash
 
     # Allow Minions from these networks
-    -I INPUT -s 10.1.2.0/24 -p tcp -m multiport --dports 4505,4506 -j ACCEPT
-    -I INPUT -s 10.1.3.0/24 -p tcp -m multiport --dports 4505,4506 -j ACCEPT
+    -I INPUT -s 10.1.2.0/24 -p tcp --dports 4505:4506 -j ACCEPT
+    -I INPUT -s 10.1.3.0/24 -p tcp --dports 4505:4506 -j ACCEPT
     # Allow Salt to communicate with Master on the loopback interface
-    -A INPUT -i lo -p tcp -m multiport --dports 4505,4506 -j ACCEPT
+    -A INPUT -i lo -p tcp --dports 4505:4506 -j ACCEPT
     # Reject everything else
-    -A INPUT -p tcp -m multiport --dports 4505,4506 -j REJECT
+    -A INPUT -p tcp --dports 4505:4506 -j REJECT
 
 .. note::
 
@@ -231,5 +232,5 @@ be set on the Master:
     needs to communicate with the listening network socket of
     ``salt-master`` on the *loopback* interface. Without this you will
     see no outgoing Salt traffic from the master, even for a simple
-    ``salt '*' test.ping``, because the ``salt`` client never reached
+    ``salt '*' test.version``, because the ``salt`` client never reached
     the ``salt-master`` to tell it to carry out the execution.

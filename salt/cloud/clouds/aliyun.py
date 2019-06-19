@@ -50,6 +50,7 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+from salt.utils.stringutils import to_bytes
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -359,7 +360,7 @@ def list_nodes_full(call=None):
                 ret[name]['private_ips'] = items[item]['IpAddress']
             if item == 'VpcAttributes':
                 vpc_ips = items[item]['PrivateIpAddress']['IpAddress']
-                if len(vpc_ips) > 0:
+                if vpc_ips:
                     ret[name]['private_ips'] = vpc_ips
             ret[name][item] = value
 
@@ -708,9 +709,9 @@ def create(vm_):
         finally:
             raise SaltCloudSystemExit(six.text_type(exc))
 
-    if len(data['public_ips']) > 0:
+    if data['public_ips']:
         ssh_ip = data['public_ips'][0]
-    elif len(data['private_ips']) > 0:
+    elif data['private_ips']:
         ssh_ip = data['private_ips'][0]
     else:
         log.info('No available ip:cant connect to salt')
@@ -770,7 +771,7 @@ def _compute_signature(parameters, access_key_secret):
     # All aliyun API only support GET method
     stringToSign = 'GET&%2F&' + percent_encode(canonicalizedQueryString[1:])
 
-    h = hmac.new(access_key_secret + "&", stringToSign, sha1)
+    h = hmac.new(to_bytes(access_key_secret + "&"), stringToSign, sha1)
     signature = base64.encodestring(h.digest()).strip()
     return signature
 
@@ -823,7 +824,7 @@ def query(params=None):
 
     content = request.text
 
-    result = salt.utils.json.loads(content, object_hook=salt.utils.data.encode_dict)
+    result = salt.utils.json.loads(content)
     if 'Code' in result:
         raise SaltCloudSystemExit(
             pprint.pformat(result.get('Message', {}))
@@ -974,7 +975,7 @@ def show_image(kwargs, call=None):
     # DescribeImages so far support input multi-image. And
     # if not found certain image, the response will include
     # blank image list other than 'not found' error message
-    if 'Code' in items or len(items['Images']['Image']) == 0:
+    if 'Code' in items or not items['Images']['Image']:
         raise SaltCloudNotFound('The specified image could not be found.')
 
     log.debug(

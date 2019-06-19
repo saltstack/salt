@@ -57,7 +57,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import difflib
@@ -136,7 +136,7 @@ def present(
             ret['comment'].append(
                 'SQS queue {0} is set to be created.'.format(name),
             )
-            ret['pchanges'] = {'old': None, 'new': name}
+            ret['changes'] = {'old': None, 'new': name}
             return ret
 
         r = __salt__['boto_sqs.create'](
@@ -188,10 +188,10 @@ def present(
             if isinstance(val, six.string_types):
                 val = salt.utils.json.loads(val)
             if _val != val:
-                log.debug('Policies differ:\n{0}\n{1}'.format(_val, val))
+                log.debug('Policies differ:\n%s\n%s', _val, val)
                 attrs_to_set[attr] = salt.utils.json.dumps(val, sort_keys=True)
-        elif str(_val) != str(val):
-            log.debug('Attributes differ:\n{0}\n{1}'.format(_val, val))
+        elif six.text_type(_val) != six.text_type(val):
+            log.debug('Attributes differ:\n%s\n%s', _val, val)
             attrs_to_set[attr] = val
     attr_names = ', '.join(attrs_to_set)
 
@@ -225,7 +225,7 @@ def present(
                 attributes_diff,
             )
         )
-        ret['pchanges'] = {'attributes': {'diff': attributes_diff}}
+        ret['changes'] = {'attributes': {'diff': attributes_diff}}
         return ret
 
     r = __salt__['boto_sqs.set_attributes'](
@@ -287,7 +287,7 @@ def absent(
     )
     if 'error' in r:
         ret['result'] = False
-        ret['comment'] = str(r['error'])
+        ret['comment'] = six.text_type(r['error'])
         return ret
 
     if not r['result']:
@@ -300,7 +300,7 @@ def absent(
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'SQS queue {0} is set to be removed.'.format(name)
-        ret['pchanges'] = {'old': name, 'new': None}
+        ret['changes'] = {'old': name, 'new': None}
         return ret
 
     r = __salt__['boto_sqs.delete'](
@@ -312,7 +312,7 @@ def absent(
     )
     if 'error' in r:
         ret['result'] = False
-        ret['comment'] = str(r['error'])
+        ret['comment'] = six.text_type(r['error'])
         return ret
 
     ret['comment'] = 'SQS queue {0} was deleted.'.format(name)

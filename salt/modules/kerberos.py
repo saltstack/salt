@@ -20,8 +20,8 @@ authenticate as.
     auth_principal: kadmin/admin
 '''
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs

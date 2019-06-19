@@ -1,46 +1,32 @@
 # -*- coding: utf-8 -*-
 '''
-Namecheap users management
+Namecheap User Management
 
- .. versionadded:: 2017.7.0
+.. versionadded:: 2017.7.0
 
- General Notes
- -------------
+Prerequisites
+-------------
 
- Use this module to manage users through the namecheap
- api.  The Namecheap settings will be set in grains.
+This module uses the ``requests`` Python module to communicate to the namecheap
+API.
 
- Installation Prerequisites
- --------------------------
+Configuration
+-------------
 
- - This module uses the following python libraries to communicate to
-   the namecheap API:
+The Namecheap username, API key and URL should be set in the minion configuration
+file, or in the Pillar data.
 
-        * ``requests``
-        .. code-block:: bash
+.. code-block:: yaml
 
-            pip install requests
-
- - As saltstack depends on ``requests`` this shouldn't be a problem
-
- Prerequisite Configuration
- --------------------------
-
- - The namecheap username, api key and url should be set in a minion
-   configuration file or pillar
-
-   .. code-block:: yaml
-
-        namecheap.name: companyname
-        namecheap.key: a1b2c3d4e5f67a8b9c0d1e2f3
-        namecheap.client_ip: 162.155.30.172
-        #Real url
-        namecheap.url: https://api.namecheap.com/xml.response
-        #Sandbox url
-        #namecheap.url: https://api.sandbox.namecheap.xml.response
-
+    namecheap.name: companyname
+    namecheap.key: a1b2c3d4e5f67a8b9c0d1e2f3
+    namecheap.client_ip: 162.155.30.172
+    #Real url
+    namecheap.url: https://api.namecheap.com/xml.response
+    #Sandbox url
+    #namecheap.url: https://api.sandbox.namecheap.xml.response
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 CAN_USE_NAMECHEAP = True
 
@@ -62,13 +48,14 @@ def __virtual__():
 
 def get_balances():
     '''
-    Gets information about fund in the user's account. This method returns the following information:
-    Available Balance, Account Balance, Earned Amount, Withdrawable Amount and Funds Required for AutoRenew.
+    Gets information about fund in the user's account. This method returns the
+    following information: Available Balance, Account Balance, Earned Amount,
+    Withdrawable Amount and Funds Required for AutoRenew.
 
-    NOTE: If a domain setup with automatic renewal is expiring within the next 90 days,
-    the FundsRequiredForAutoRenew attribute shows the amount needed in your Namecheap account to complete auto renewal.
-
-    returns a dictionary of the results
+    .. note::
+        If a domain setup with automatic renewal is expiring within the next 90
+        days, the FundsRequiredForAutoRenew attribute shows the amount needed
+        in your Namecheap account to complete auto renewal.
 
     CLI Example:
 
@@ -91,11 +78,11 @@ def check_balances(minimum=100):
     '''
     Checks if the provided minimum value is present in the user's account.
 
-    Returns a boolean. Returns ``False`` if the user's account balance is less than the
-    provided minimum or ``True`` if greater than the minimum.
+    Returns a boolean. Returns ``False`` if the user's account balance is less
+    than the provided minimum or ``True`` if greater than the minimum.
 
-    minimum
-        The value to check. Defaults to ``100``.
+    minimum : 100
+        The value to check
 
     CLI Example:
 

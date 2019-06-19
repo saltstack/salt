@@ -1,50 +1,39 @@
 # -*- coding: utf-8 -*-
 '''
-Namecheap ssl management
+Namecheap SSL Certificate Management
 
- .. versionadded:: 2017.7.0
+.. versionadded:: 2017.7.0
 
- General Notes
- -------------
+Prerequisites
+-------------
 
- Use this module to manage ssl certificates through the namecheap
- api.  The Namecheap settings will be set in grains.
+This module uses the ``requests`` Python module to communicate to the namecheap
+API.
 
- Installation Prerequisites
- --------------------------
+Configuration
+-------------
 
- - This module uses the following python libraries to communicate to
-   the namecheap API:
+The Namecheap username, API key and URL should be set in the minion configuration
+file, or in the Pillar data.
 
-        * ``requests``
-        .. code-block:: bash
+.. code-block:: yaml
 
-            pip install requests
-
- - As saltstack depends on ``requests`` this shouldn't be a problem
-
- Prerequisite Configuration
- --------------------------
-
- - The namecheap username, api key and url should be set in a minion
-   configuration file or pillar
-
-   .. code-block:: yaml
-
-        namecheap.name: companyname
-        namecheap.key: a1b2c3d4e5f67a8b9c0d1e2f3
-        namecheap.client_ip: 162.155.30.172
-        #Real url
-        namecheap.url: https://api.namecheap.com/xml.response
-        #Sandbox url
-        #namecheap.url: https://api.sandbox.namecheap.xml.response
-
+    namecheap.name: companyname
+    namecheap.key: a1b2c3d4e5f67a8b9c0d1e2f3
+    namecheap.client_ip: 162.155.30.172
+    #Real url
+    namecheap.url: https://api.namecheap.com/xml.response
+    #Sandbox url
+    #namecheap.url: https://api.sandbox.namecheap.xml.response
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.stringutils
+
 try:
     import salt.utils.namecheap
     CAN_USE_NAMECHEAP = True
@@ -53,6 +42,8 @@ except ImportError:
 
 # Import 3rd-party libs
 from salt.ext import six
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -71,42 +62,61 @@ def reissue(csr_file,
             http_dc_validation=False,
             **kwargs):
     '''
-    Reissues a purchased SSL certificate
+    Reissues a purchased SSL certificate. Returns a dictionary of result
+    values.
 
-    returns a dictionary of result values
+    csr_file
+        Path to Certificate Signing Request file
 
-    Required Parameters:
-        csr
-            string  Certificate Signing Request
+    certificate_id
+        Unique ID of the SSL certificate you wish to activate
 
-        certificate_id
-            integer  Unique ID of the SSL certificate you wish to activate
+    web_server_type
+        The type of certificate format to return. Possible values include:
 
-        web_server_type
-            string  The type of certificate format to return
-                    Possible values: apacheopenssl, apachessl, apacheraven,
-                                     apachessleay, c2net, ibmhttp, iplanet,
-                                     domino, dominogo4625, dominogo4626,
-                                     netscape, zeusv3, apache2,
-                                     apacheapachessl, cobaltseries, cpanel,
-                                     ensim, hsphere, ipswitch, plesk,
-                                     tomcat, weblogic, website, webstar,
-                                     iis, other, iis4, iis5
+        - apache2
+        - apacheapachessl
+        - apacheopenssl
+        - apacheraven
+        - apachessl
+        - apachessleay
+        - c2net
+        - cobaltseries
+        - cpanel
+        - domino
+        - dominogo4625
+        - dominogo4626
+        - ensim
+        - hsphere
+        - ibmhttp
+        - iis
+        - iis4
+        - iis5
+        - iplanet
+        - ipswitch
+        - netscape
+        - other
+        - plesk
+        - tomcat
+        - weblogic
+        - website
+        - webstar
+        - zeusv3
 
-        approver_email
-            string  The email ID which is on the approver email list
-                    http_dc_validation must be set to False if this parameter
-                    is used
+    approver_email
+        The email ID which is on the approver email list.
 
-        http_dc_validation
-            bool  An indicator that shows if certificate should be
-                  activated using HTTP-based validation. Please specify
-                  True if you wish to use HTTP-based validation.
-                  approver_email should be set to None if this parameter
-                  is used
+        .. note::
+            ``http_dc_validation`` must be set to ``False`` if this option is
+            used.
 
-    Other required parameters:
-        please see https://www.namecheap.com/support/api/methods/ssl/reissue.aspx
+    http_dc_validation : False
+        Whether or not to activate using HTTP-based validation.
+
+    .. note::
+        For other parameters which may be required, see here__.
+
+        .. __: https://www.namecheap.com/support/api/methods/ssl/reissue.aspx
 
     CLI Example:
 
@@ -125,42 +135,61 @@ def activate(csr_file,
              http_dc_validation=False,
              **kwargs):
     '''
-    Activates a newly purchased SSL certificate
+    Activates a newly-purchased SSL certificate. Returns a dictionary of result
+    values.
 
-    returns a dictionary of result values
+    csr_file
+        Path to Certificate Signing Request file
 
-    Required Parameters:
-        csr
-            string  Certificate Signing Request
+    certificate_id
+        Unique ID of the SSL certificate you wish to activate
 
-        certificate_id
-            integer  Unique ID of the SSL certificate you wish to activate
+    web_server_type
+        The type of certificate format to return. Possible values include:
 
-        web_server_type
-            string  The type of certificate format to return
-                    Possible values: apacheopenssl, apachessl, apacheraven,
-                                     apachessleay, c2net, ibmhttp, iplanet,
-                                     domino, dominogo4625, dominogo4626,
-                                     netscape, zeusv3, apache2,
-                                     apacheapachessl, cobaltseries, cpanel,
-                                     ensim, hsphere, ipswitch, plesk,
-                                     tomcat, weblogic, website, webstar,
-                                     iis, other, iis4, iis5
+        - apache2
+        - apacheapachessl
+        - apacheopenssl
+        - apacheraven
+        - apachessl
+        - apachessleay
+        - c2net
+        - cobaltseries
+        - cpanel
+        - domino
+        - dominogo4625
+        - dominogo4626
+        - ensim
+        - hsphere
+        - ibmhttp
+        - iis
+        - iis4
+        - iis5
+        - iplanet
+        - ipswitch
+        - netscape
+        - other
+        - plesk
+        - tomcat
+        - weblogic
+        - website
+        - webstar
+        - zeusv3
 
-        approver_email
-            string  The email ID which is on the approver email list
-                    http_dc_validation must be set to False if this parameter
-                    is used
+    approver_email
+        The email ID which is on the approver email list.
 
-        http_dc_validation
-            bool  An indicator that shows if certificate should be
-                  activated using HTTP-based validation. Please specify
-                  True if you wish to use HTTP-based validation.
-                  approver_email should be set to None if this parameter
-                  is used
+        .. note::
+            ``http_dc_validation`` must be set to ``False`` if this option is
+            used.
 
-    Other required parameters:
-        please see https://www.namecheap.com/support/api/methods/ssl/activate.aspx
+    http_dc_validation : False
+        Whether or not to activate using HTTP-based validation.
+
+    .. note::
+        For other parameters which may be required, see here__.
+
+        .. __: https://www.namecheap.com/support/api/methods/ssl/activate.aspx
 
     CLI Example:
 
@@ -181,51 +210,54 @@ def __get_certificates(command,
                        http_dc_validation,
                        kwargs):
 
-    web_server_types = set(['apacheopenssl',
-                            'apachessl',
-                            'apacheraven',
-                            'apachessleay',
-                            'c2net',
-                            'ibmhttp',
-                            'iplanet',
-                            'domino',
-                            'dominogo4625',
-                            'dominogo4626',
-                            'netscape',
-                            'zeusv3',
-                            'apache2',
-                            'apacheapachessl',
-                            'cobaltseries',
-                            'cpanel',
-                            'ensim',
-                            'hsphere',
-                            'ipswitch',
-                            'plesk',
-                            'tomcat',
-                            'weblogic',
-                            'website',
-                            'webstar',
-                            'iis',
-                            'other',
-                            'iis4',
-                            'iis5'])
+    web_server_types = ('apacheopenssl',
+                        'apachessl',
+                        'apacheraven',
+                        'apachessleay',
+                        'c2net',
+                        'ibmhttp',
+                        'iplanet',
+                        'domino',
+                        'dominogo4625',
+                        'dominogo4626',
+                        'netscape',
+                        'zeusv3',
+                        'apache2',
+                        'apacheapachessl',
+                        'cobaltseries',
+                        'cpanel',
+                        'ensim',
+                        'hsphere',
+                        'ipswitch',
+                        'plesk',
+                        'tomcat',
+                        'weblogic',
+                        'website',
+                        'webstar',
+                        'iis',
+                        'other',
+                        'iis4',
+                        'iis5',
+                        )
 
     if web_server_type not in web_server_types:
-        salt.utils.namecheap.log.error('Invalid option for web_server_type=' + web_server_type)
+        log.error('Invalid option for web_server_type=%s', web_server_type)
         raise Exception('Invalid option for web_server_type=' + web_server_type)
 
     if approver_email is not None and http_dc_validation:
-        salt.utils.namecheap.log.error('approver_email and http_dc_validation cannot both have values')
+        log.error('approver_email and http_dc_validation cannot both have values')
         raise Exception('approver_email and http_dc_validation cannot both have values')
 
     if approver_email is None and not http_dc_validation:
-        salt.utils.namecheap.log.error('approver_email or http_dc_validation must have a value')
+        log.error('approver_email or http_dc_validation must have a value')
         raise Exception('approver_email or http_dc_validation must have a value')
 
     opts = salt.utils.namecheap.get_opts(command)
 
     with salt.utils.files.fopen(csr_file, 'rb') as csr_handle:
-        opts['csr'] = csr_handle.read()
+        opts['csr'] = salt.utils.stringutils.to_unicode(
+            csr_handle.read()
+        )
 
     opts['CertificateID'] = certificate_id
     opts['WebServerType'] = web_server_type
@@ -248,7 +280,7 @@ def __get_certificates(command,
 
     if http_dc_validation:
         validation_tag = sslresult.getElementsByTagName('HttpDCValidation')
-        if validation_tag is not None and len(validation_tag) > 0:
+        if validation_tag:
             validation_tag = validation_tag[0]
 
             if validation_tag.getAttribute('ValueAvailable').lower() == 'true':
@@ -262,39 +294,56 @@ def __get_certificates(command,
 
 def renew(years, certificate_id, certificate_type, promotion_code=None):
     '''
-    Renews an SSL certificate if it is ACTIVE and Expires <= 30 days
+    Renews an SSL certificate if it is ACTIVE and Expires <= 30 days. Returns
+    the following information:
 
-    returns a dictionary with the following values:
-        orderid A unique integer value that represents the order
-        transactionid A unique integer value that represents the transaction
-        chargedamount The amount charged for the order
-        certificateid A unique integer value that represents the SSL
+    - The certificate ID
+    - The order ID
+    - The transaction ID
+    - The amount charged for the order
 
-    Required parameters:
-        years
-            integer  Number of years to register
-                     Default: 1
+    years : 1
+        Number of years to register
 
-        certificate_id
-            integer  Unique identifier for the existing certificate to renew
+    certificate_id
+        Unique ID of the SSL certificate you wish to renew
 
-        certificate_type
-            string  Type of SSL Certificate,
-                    Possible Values: QuickSSL Premium, RapidSSL, RapidSSL Wildcard,
-                                     PremiumSSL, InstantSSL, PositiveSSL, PositiveSSL Wildcard,
-                                     True BusinessID with EV, True BusinessID,
-                                     True BusinessID Wildcard, True BusinessID Multi Domain,
-                                     True BusinessID with EV Multi Domain, Secure Site,
-                                     Secure Site Pro, Secure Site with EV,
-                                     Secure Site Pro with EV, EssentialSSL, EssentialSSL Wildcard,
-                                     InstantSSL Pro, PremiumSSL Wildcard, EV SSL, EV SSL SGC,
-                                     SSL123, SSL Web Server, SGC Supercert, SSL Webserver EV,
-                                     EV Multi Domain SSL, Multi Domain SSL,
-                                     PositiveSSL Multi Domain, Unified Communications
+    certificate_type
+        Type of SSL Certificate. Possible values include:
 
-    Optional parameters:
-        promotional_code
-            string  Promotional (coupon) code for the certificate
+        - EV Multi Domain SSL
+        - EV SSL
+        - EV SSL SGC
+        - EssentialSSL
+        - EssentialSSL Wildcard
+        - InstantSSL
+        - InstantSSL Pro
+        - Multi Domain SSL
+        - PositiveSSL
+        - PositiveSSL Multi Domain
+        - PositiveSSL Wildcard
+        - PremiumSSL
+        - PremiumSSL Wildcard
+        - QuickSSL Premium
+        - RapidSSL
+        - RapidSSL Wildcard
+        - SGC Supercert
+        - SSL Web Server
+        - SSL Webserver EV
+        - SSL123
+        - Secure Site
+        - Secure Site Pro
+        - Secure Site Pro with EV
+        - Secure Site with EV
+        - True BusinessID
+        - True BusinessID Multi Domain
+        - True BusinessID Wildcard
+        - True BusinessID with EV
+        - True BusinessID with EV Multi Domain
+        - Unified Communications
+
+    promotional_code
+        An optional promo code to use when renewing the certificate
 
     CLI Example:
 
@@ -303,48 +352,49 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
         salt 'my-minion' namecheap_ssl.renew 1 my-cert-id RapidSSL
     '''
 
-    valid_certs = set(['QuickSSL Premium',
-                       'RapidSSL',
-                       'RapidSSL Wildcard',
-                       'PremiumSSL',
-                       'InstantSSL',
-                       'PositiveSSL',
-                       'PositiveSSL Wildcard',
-                       'True BusinessID with EV',
-                       'True BusinessID',
-                       'True BusinessID Wildcard',
-                       'True BusinessID Multi Domain',
-                       'True BusinessID with EV Multi Domain',
-                       'Secure Site',
-                       'Secure Site Pro',
-                       'Secure Site with EV',
-                       'Secure Site Pro with EV',
-                       'EssentialSSL',
-                       'EssentialSSL Wildcard',
-                       'InstantSSL Pro',
-                       'PremiumSSL Wildcard',
-                       'EV SSL',
-                       'EV SSL SGC',
-                       'SSL123',
-                       'SSL Web Server',
-                       'SGC Supercert',
-                       'SSL Webserver EV',
-                       'EV Multi Domain SSL',
-                       'Multi Domain SSL',
-                       'PositiveSSL Multi Domain',
-                       'Unified Communications'])
+    valid_certs = ('QuickSSL Premium',
+                   'RapidSSL',
+                   'RapidSSL Wildcard',
+                   'PremiumSSL',
+                   'InstantSSL',
+                   'PositiveSSL',
+                   'PositiveSSL Wildcard',
+                   'True BusinessID with EV',
+                   'True BusinessID',
+                   'True BusinessID Wildcard',
+                   'True BusinessID Multi Domain',
+                   'True BusinessID with EV Multi Domain',
+                   'Secure Site',
+                   'Secure Site Pro',
+                   'Secure Site with EV',
+                   'Secure Site Pro with EV',
+                   'EssentialSSL',
+                   'EssentialSSL Wildcard',
+                   'InstantSSL Pro',
+                   'PremiumSSL Wildcard',
+                   'EV SSL',
+                   'EV SSL SGC',
+                   'SSL123',
+                   'SSL Web Server',
+                   'SGC Supercert',
+                   'SSL Webserver EV',
+                   'EV Multi Domain SSL',
+                   'Multi Domain SSL',
+                   'PositiveSSL Multi Domain',
+                   'Unified Communications',
+                   )
 
     if certificate_type not in valid_certs:
-        salt.utils.namecheap.log.error('Invalid option for certificate_type=' + certificate_type)
+        log.error('Invalid option for certificate_type=%s', certificate_type)
         raise Exception('Invalid option for certificate_type=' + certificate_type)
 
     if years < 1 or years > 5:
-        salt.utils.namecheap.log.error('Invalid option for years=' + str(years))
-        raise Exception('Invalid option for years=' + str(years))
+        log.error('Invalid option for years=%s', years)
+        raise Exception('Invalid option for years=' + six.text_type(years))
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.renew')
-    opts['Years'] = str(years)
-    opts['CertificateID'] = str(certificate_id)
+    opts['Years'] = six.text_type(years)
+    opts['CertificateID'] = six.text_type(certificate_id)
     opts['SSLType'] = certificate_type
     if promotion_code is not None:
         opts['PromotionCode'] = promotion_code
@@ -359,104 +409,120 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
 
 def create(years, certificate_type, promotion_code=None, sans_to_add=None):
     '''
-    Creates a new SSL certificate
+    Creates a new SSL certificate. Returns the following information:
 
-    returns a dictionary with the following values:
-        issuccess Indicates whether SSL order was successful
-        orderid A unique integer value that represents the order
-        transactionid A unique integer value that represents the transaction
-        chargedamount The amount charged for the order
-        certificateid A unique integer value that represents the SSL
-        created The date on which the certificate is created
-        expires The date on which the certificate expires
-        ssltype Type of SSL cerificate
-        years Number of years for which the certificate is purchased
-        status The current status of SSL certificate
+    - Whether or not the SSL order was successful
+    - The certificate ID
+    - The order ID
+    - The transaction ID
+    - The amount charged for the order
+    - The date on which the certificate was created
+    - The date on which the certificate will expire
+    - The type of SSL certificate
+    - The number of years for which the certificate was purchased
+    - The current status of the SSL certificate
 
-    Required parameters:
-        years
-            integer  Number of years to register
-                     Default: 1
+    years : 1
+        Number of years to register
 
-        certificate_type
-            string  Type of SSL Certificate,
-                    Possible Values: QuickSSL Premium, RapidSSL, RapidSSL Wildcard,
-                                     PremiumSSL, InstantSSL, PositiveSSL, PositiveSSL Wildcard,
-                                     True BusinessID with EV, True BusinessID,
-                                     True BusinessID Wildcard, True BusinessID Multi Domain,
-                                     True BusinessID with EV Multi Domain, Secure Site,
-                                     Secure Site Pro, Secure Site with EV,
-                                     Secure Site Pro with EV, EssentialSSL, EssentialSSL Wildcard,
-                                     InstantSSL Pro, PremiumSSL Wildcard, EV SSL, EV SSL SGC,
-                                     SSL123, SSL Web Server, SGC Supercert, SSL Webserver EV,
-                                     EV Multi Domain SSL, Multi Domain SSL,
-                                     PositiveSSL Multi Domain, Unified Communications
+    certificate_type
+        Type of SSL Certificate. Possible values include:
 
-    Optional parameters:
-        promotional_code
-            string  Promotional (coupon) code for the certificate
+        - EV Multi Domain SSL
+        - EV SSL
+        - EV SSL SGC
+        - EssentialSSL
+        - EssentialSSL Wildcard
+        - InstantSSL
+        - InstantSSL Pro
+        - Multi Domain SSL
+        - PositiveSSL
+        - PositiveSSL Multi Domain
+        - PositiveSSL Wildcard
+        - PremiumSSL
+        - PremiumSSL Wildcard
+        - QuickSSL Premium
+        - RapidSSL
+        - RapidSSL Wildcard
+        - SGC Supercert
+        - SSL Web Server
+        - SSL Webserver EV
+        - SSL123
+        - Secure Site
+        - Secure Site Pro
+        - Secure Site Pro with EV
+        - Secure Site with EV
+        - True BusinessID
+        - True BusinessID Multi Domain
+        - True BusinessID Wildcard
+        - True BusinessID with EV
+        - True BusinessID with EV Multi Domain
+        - Unified Communications
 
-        sans_to_add
-            integer  This parameter defines the number of add-on domains to be purchased in
-                     addition to the default number of domains included with a multi-domain
-                     certificate. Each certificate that supports SANs has the default number
-                     of domains included. You may check the default number of domains
-                     included and the maximum number of domains that can be added to it
-                     in the table below.
-                     Default: 0
---------------------------------------------------------------------------------
-Provider  Product name  Default number of     Maximum number of  Maximum number
-                        domains (domain from  total domains      of domains
-                        CSR is counted here)                     that can be
-                                                                 passed in
-                                                                 SANStoADD
-                                                                 parameter
---------------------------------------------------------------------------------
-Comodo    PositiveSSL                      3                100              97
-          Multi-Domain
---------------------------------------------------------------------------------
-Comodo    Multi-Domain                     3                100              97
-          SSL
---------------------------------------------------------------------------------
-Comodo    EV Multi-                        3                100              97
-          Domain SSL
---------------------------------------------------------------------------------
-Comodo    Unified                          3                100              97
-          Communications
---------------------------------------------------------------------------------
-GeoTrust  QuickSSL                         1         1 domain +        The only
-          Premium                                  4 subdomains       supported
-                                                                     value is 4
---------------------------------------------------------------------------------
-GeoTrust  True                             5                 25              20
-          BusinessID
-          with EV
-          Multi-Domain
---------------------------------------------------------------------------------
-GeoTrust  True Business                    5                 25              20
-          ID Multi-
-          Domain
---------------------------------------------------------------------------------
-Thawte    SSL Web                          1                 25              24
-          Server
---------------------------------------------------------------------------------
-Thawte    SSL Web                          1                 25              24
-          Server with
-          EV
---------------------------------------------------------------------------------
-Thawte    SGC Supercerts                   1                 25              24
---------------------------------------------------------------------------------
-Symantec  Secure Site                      1                 25              24
-          Pro with EV
---------------------------------------------------------------------------------
-Symantec  Secure Site                      1                 25              24
-          with EV
---------------------------------------------------------------------------------
-Symantec  Secure Site                      1                 25              24
---------------------------------------------------------------------------------
-Symantec  Secure Site                      1                 25              24
-          Pro
---------------------------------------------------------------------------------
+    promotional_code
+        An optional promo code to use when creating the certificate
+
+    sans_to_add : 0
+        This parameter defines the number of add-on domains to be purchased in
+        addition to the default number of domains included with a multi-domain
+        certificate. Each certificate that supports SANs has the default number
+        of domains included. You may check the default number of domains
+        included and the maximum number of domains that can be added to it in
+        the table below.
+
+    +----------+----------------+----------------------+-------------------+----------------+
+    | Provider | Product name   | Default number of    | Maximum number of | Maximum number |
+    |          |                | domains (domain from | total domains     | of domains     |
+    |          |                | CSR is counted here) |                   | that can be    |
+    |          |                |                      |                   | passed in      |
+    |          |                |                      |                   | sans_to_add    |
+    |          |                |                      |                   | parameter      |
+    +----------+----------------+----------------------+-------------------+----------------+
+    | Comodo   | PositiveSSL    | 3                    | 100               | 97             |
+    |          | Multi-Domain   |		       |                   |                |
+    +----------+----------------+----------------------+-------------------+----------------+
+    | Comodo   | Multi-Domain   | 3                    | 100               | 97   	    |
+    |          | SSL            |		       |                   |		    |
+    +----------+----------------+----------------------+-------------------+----------------+
+    | Comodo   | EV Multi-      | 3                    | 100               | 97             |
+    |          | Domain SSL     |		       |                   |                |
+    +----------+----------------+----------------------+-------------------+----------------+
+    | Comodo   | Unified        | 3                    | 100               | 97             |
+    |          | Communications |                      |  		   |                |
+    +----------+----------------+----------------------+-------------------+----------------+
+    | GeoTrust | QuickSSL       | 1                    | 1 domain +        | The only       |
+    |          | Premium        |                      | 4 subdomains      | supported      |
+    |          |                |                      |                   | value is 4     |
+    +----------+----------------+----------------------+-------------------+----------------+
+    | GeoTrust | True           | 5                    | 25                | 20             |
+    |          | BusinessID     |                      |		   |                |
+    |          | with EV        |                      |                   |                |
+    |          | Multi-Domain   |                      |                   |                |
+    +----------+----------------+----------------------+-------------------+----------------+
+    | GeoTrust | True Business  | 5                    | 25                | 20             |
+    |          | ID Multi-      |                      |                   |                |
+    |          | Domain         |                      |                   |                |
+    +----------+----------------+----------------------+-------------------+----------------+
+    | Thawte   | SSL Web        | 1                    | 25                | 24             |
+    |          | Server         |                      |                   |                |
+    +----------+----------------+----------------------+-------------------+----------------+
+    | Thawte   | SSL Web        | 1                    | 25                | 24             |
+    |          | Server with    |                      |                   |                |
+    |          | EV             |                      |                   |                |
+    +----------+----------------+----------------------+-------------------+----------------+
+    | Thawte   | SGC Supercerts | 1                    | 25                | 24             |
+    +----------+----------------+----------------------+-------------------+----------------+
+    | Symantec | Secure Site    | 1                    | 25                | 24             |
+    |          | Pro with EV    |                      |                   |                |
+    +----------+----------------+----------------------+-------------------+----------------+
+    | Symantec | Secure Site    | 1                    | 25                | 24             |
+    |          | with EV        |                      |                   |                |
+    +----------+----------------+----------------------+-------------------+----------------+
+    | Symantec | Secure Site    | 1                    | 25                | 24             |
+    +----------+----------------+----------------------+-------------------+----------------+
+    | Symantec | Secure Site    | 1                    | 25                | 24             |
+    |          | Pro            |                      |                   |                |
+    +----------+----------------+----------------------+-------------------+----------------+
 
     CLI Example:
 
@@ -464,44 +530,45 @@ Symantec  Secure Site                      1                 25              24
 
         salt 'my-minion' namecheap_ssl.create 2 RapidSSL
     '''
-    valid_certs = set(['QuickSSL Premium',
-                       'RapidSSL',
-                       'RapidSSL Wildcard',
-                       'PremiumSSL',
-                       'InstantSSL',
-                       'PositiveSSL',
-                       'PositiveSSL Wildcard',
-                       'True BusinessID with EV',
-                       'True BusinessID',
-                       'True BusinessID Wildcard',
-                       'True BusinessID Multi Domain',
-                       'True BusinessID with EV Multi Domain',
-                       'Secure Site',
-                       'Secure Site Pro',
-                       'Secure Site with EV',
-                       'Secure Site Pro with EV',
-                       'EssentialSSL',
-                       'EssentialSSL Wildcard',
-                       'InstantSSL Pro',
-                       'PremiumSSL Wildcard',
-                       'EV SSL',
-                       'EV SSL SGC',
-                       'SSL123',
-                       'SSL Web Server',
-                       'SGC Supercert',
-                       'SSL Webserver EV',
-                       'EV Multi Domain SSL',
-                       'Multi Domain SSL',
-                       'PositiveSSL Multi Domain',
-                       'Unified Communications'])
+    valid_certs = ('QuickSSL Premium',
+                   'RapidSSL',
+                   'RapidSSL Wildcard',
+                   'PremiumSSL',
+                   'InstantSSL',
+                   'PositiveSSL',
+                   'PositiveSSL Wildcard',
+                   'True BusinessID with EV',
+                   'True BusinessID',
+                   'True BusinessID Wildcard',
+                   'True BusinessID Multi Domain',
+                   'True BusinessID with EV Multi Domain',
+                   'Secure Site',
+                   'Secure Site Pro',
+                   'Secure Site with EV',
+                   'Secure Site Pro with EV',
+                   'EssentialSSL',
+                   'EssentialSSL Wildcard',
+                   'InstantSSL Pro',
+                   'PremiumSSL Wildcard',
+                   'EV SSL',
+                   'EV SSL SGC',
+                   'SSL123',
+                   'SSL Web Server',
+                   'SGC Supercert',
+                   'SSL Webserver EV',
+                   'EV Multi Domain SSL',
+                   'Multi Domain SSL',
+                   'PositiveSSL Multi Domain',
+                   'Unified Communications',
+                   )
 
     if certificate_type not in valid_certs:
-        salt.utils.namecheap.log.error('Invalid option for certificate_type=' + certificate_type)
+        log.error('Invalid option for certificate_type=%s', certificate_type)
         raise Exception('Invalid option for certificate_type=' + certificate_type)
 
     if years < 1 or years > 5:
-        salt.utils.namecheap.log.error('Invalid option for years=' + str(years))
-        raise Exception('Invalid option for years=' + str(years))
+        log.error('Invalid option for years=%s', years)
+        raise Exception('Invalid option for years=' + six.text_type(years))
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.create')
 
@@ -526,34 +593,48 @@ Symantec  Secure Site                      1                 25              24
 
 def parse_csr(csr_file, certificate_type, http_dc_validation=False):
     '''
-    Parses the CSR
+    Parses the CSR. Returns a dictionary of result values.
 
-    returns a dictionary of result values
+    csr_file
+        Path to Certificate Signing Request file
 
-    Required parameters:
+    certificate_type
+        Type of SSL Certificate. Possible values include:
 
-        csr_file
-            string  Certificate Signing Request File
+        - EV Multi Domain SSL
+        - EV SSL
+        - EV SSL SGC
+        - EssentialSSL
+        - EssentialSSL Wildcard
+        - InstantSSL
+        - InstantSSL Pro
+        - Multi Domain SSL
+        - PositiveSSL
+        - PositiveSSL Multi Domain
+        - PositiveSSL Wildcard
+        - PremiumSSL
+        - PremiumSSL Wildcard
+        - QuickSSL Premium
+        - RapidSSL
+        - RapidSSL Wildcard
+        - SGC Supercert
+        - SSL Web Server
+        - SSL Webserver EV
+        - SSL123
+        - Secure Site
+        - Secure Site Pro
+        - Secure Site Pro with EV
+        - Secure Site with EV
+        - True BusinessID
+        - True BusinessID Multi Domain
+        - True BusinessID Wildcard
+        - True BusinessID with EV
+        - True BusinessID with EV Multi Domain
+        - Unified Communications
 
-        certificate_type
-            string  Type of SSL Certificate,
-                    Possible Values: QuickSSL Premium, RapidSSL, RapidSSL Wildcard,
-                                     PremiumSSL, InstantSSL, PositiveSSL, PositiveSSL Wildcard,
-                                     True BusinessID with EV, True BusinessID,
-                                     True BusinessID Wildcard, True BusinessID Multi Domain,
-                                     True BusinessID with EV Multi Domain, Secure Site,
-                                     Secure Site Pro, Secure Site with EV,
-                                     Secure Site Pro with EV, EssentialSSL, EssentialSSL Wildcard,
-                                     InstantSSL Pro, PremiumSSL Wildcard, EV SSL, EV SSL SGC,
-                                     SSL123, SSL Web Server, SGC Supercert, SSL Webserver EV,
-                                     EV Multi Domain SSL, Multi Domain SSL,
-                                     PositiveSSL Multi Domain, Unified Communications
-
-    Optional parameter:
-
-        http_dc_validation
-            bool  True if a Comodo certificate and validation should be done with files
-                  instead of emails and to return the info to do so
+    http_dc_validation : False
+        Set to ``True`` if a Comodo certificate and validation should be
+        done with files instead of emails and to return the info to do so
 
     CLI Example:
 
@@ -561,44 +642,48 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
 
         salt 'my-minion' namecheap_ssl.parse_csr my-csr-file PremiumSSL
     '''
-    valid_certs = set(['QuickSSL Premium',
-                       'RapidSSL',
-                       'RapidSSL Wildcard',
-                       'PremiumSSL',
-                       'InstantSSL',
-                       'PositiveSSL',
-                       'PositiveSSL Wildcard',
-                       'True BusinessID with EV',
-                       'True BusinessID',
-                       'True BusinessID Wildcard',
-                       'True BusinessID Multi Domain',
-                       'True BusinessID with EV Multi Domain', 'Secure Site',
-                       'Secure Site Pro',
-                       'Secure Site with EV',
-                       'Secure Site Pro with EV',
-                       'EssentialSSL',
-                       'EssentialSSL Wildcard',
-                       'InstantSSL Pro',
-                       'PremiumSSL Wildcard',
-                       'EV SSL',
-                       'EV SSL SGC',
-                       'SSL123',
-                       'SSL Web Server',
-                       'SGC Supercert',
-                       'SSL Webserver EV',
-                       'EV Multi Domain SSL',
-                       'Multi Domain SSL',
-                       'PositiveSSL Multi Domain',
-                       'Unified Communications'])
+    valid_certs = ('QuickSSL Premium',
+                   'RapidSSL',
+                   'RapidSSL Wildcard',
+                   'PremiumSSL',
+                   'InstantSSL',
+                   'PositiveSSL',
+                   'PositiveSSL Wildcard',
+                   'True BusinessID with EV',
+                   'True BusinessID',
+                   'True BusinessID Wildcard',
+                   'True BusinessID Multi Domain',
+                   'True BusinessID with EV Multi Domain',
+                   'Secure Site',
+                   'Secure Site Pro',
+                   'Secure Site with EV',
+                   'Secure Site Pro with EV',
+                   'EssentialSSL',
+                   'EssentialSSL Wildcard',
+                   'InstantSSL Pro',
+                   'PremiumSSL Wildcard',
+                   'EV SSL',
+                   'EV SSL SGC',
+                   'SSL123',
+                   'SSL Web Server',
+                   'SGC Supercert',
+                   'SSL Webserver EV',
+                   'EV Multi Domain SSL',
+                   'Multi Domain SSL',
+                   'PositiveSSL Multi Domain',
+                   'Unified Communications',
+                   )
 
     if certificate_type not in valid_certs:
-        salt.utils.namecheap.log.error('Invalid option for certificate_type=' + certificate_type)
+        log.error('Invalid option for certificate_type=%s', certificate_type)
         raise Exception('Invalid option for certificate_type=' + certificate_type)
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.parseCSR')
 
     with salt.utils.files.fopen(csr_file, 'rb') as csr_handle:
-        opts['csr'] = csr_handle.read()
+        opts['csr'] = salt.utils.stringutils.to_unicode(
+            csr_handle.read()
+        )
 
     opts['CertificateType'] = certificate_type
     if http_dc_validation:
@@ -615,32 +700,35 @@ def get_list(**kwargs):
     '''
     Returns a list of SSL certificates for a particular user
 
-    Optional parameters:
+    ListType : All
+        Possible values:
 
-        ListType
-            string  Possible values: All,Processing,EmailSent,
-                                     TechnicalProblem,InProgress,Completed,
-                                     Deactivated,Active,Cancelled,NewPurchase,
-                                     NewRenewal
-                    Default: All
+        - All
+        - Processing
+        - EmailSent
+        - TechnicalProblem
+        - InProgress
+        - Completed
+        - Deactivated
+        - Active
+        - Cancelled
+        - NewPurchase
+        - NewRenewal
 
         SearchTerm
-            string  Keyword to look for on the SSL list
+            Keyword to look for on the SSL list
 
-        Page
-            integer  Page to return
-                     Default: 1
+        Page : 1
+            Page number to return
 
-        PageSize
-            integer  Total number of SSL certificates to display in a page
-                     Minimum value is 10 and maximum value is 100
-                     Default: 20
+        PageSize : 20
+            Total number of SSL certificates to display per page (minimum:
+            ``10``, maximum: ``100``)
 
         SoryBy
-            string  Possible values are PURCHASEDATE,PURCHASEDATE_DESC,
-                                        SSLTYPE,SSLTYPE_DESC,
-                                        EXPIREDATETIME,EXPIREDATETIME_DESC,
-                                        Host_Name,Host_Name_DESC
+            One of ``PURCHASEDATE``, ``PURCHASEDATE_DESC``, ``SSLTYPE``,
+            ``SSLTYPE_DESC``, ``EXPIREDATETIME``, ``EXPIREDATETIME_DESC``,
+            ``Host_Name``, or ``Host_Name_DESC``
 
     CLI Example:
 
@@ -669,22 +757,25 @@ def get_list(**kwargs):
 
 def get_info(certificate_id, returncertificate=False, returntype=None):
     '''
-    Retrieves information about the requested SSL certificate
+    Retrieves information about the requested SSL certificate. Returns a
+    dictionary of information about the SSL certificate with two keys:
 
-    returns a dictionary of information about the SSL certificate with two keys
-            "ssl" contains the metadata information
-            "certificate" contains the details for the certificate like
-                          the CSR, Approver, and certificate data
+    - **ssl** - Contains the metadata information
+    - **certificate** - Contains the details for the certificate such as the
+      CSR, Approver, and certificate data
 
     certificate_id
-        integer  Unique ID of the SSL certificate
+        Unique ID of the SSL certificate
 
-    returncertificate
-        bool  True to ask for the certificate in response
+    returncertificate : False
+        Set to ``True`` to ask for the certificate in response
 
     returntype
-        string  Type of returned certificate.  Parameter takes "Individual (for X.509 format) or PKCS7"
-                Required if returncertificate is True
+        Optional type for the returned certificate. Can be either "Individual"
+        (for X.509 format) or "PKCS7"
+
+        .. note::
+            Required if ``returncertificate`` is ``True``
 
     CLI Example:
 
@@ -698,10 +789,10 @@ def get_info(certificate_id, returncertificate=False, returntype=None):
     if returncertificate:
         opts['returncertificate'] = "true"
         if returntype is None:
-            salt.utils.namecheap.log.error('returntype must be specified when returncertificate is set to True')
+            log.error('returntype must be specified when returncertificate is set to True')
             raise Exception('returntype must be specified when returncertificate is set to True')
         if returntype not in ["Individual", "PKCS7"]:
-            salt.utils.namecheap.log.error('returntype must be specified as Individual or PKCS7, not ' + returntype)
+            log.error('returntype must be specified as Individual or PKCS7, not %s', returntype)
             raise Exception('returntype must be specified as Individual or PKCS7, not ' + returntype)
         opts['returntype'] = returntype
 

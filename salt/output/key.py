@@ -9,8 +9,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.output
-from salt.utils.locales import sdecode
 import salt.utils.color
+import salt.utils.data
 
 
 def output(data, **kwargs):  # pylint: disable=unused-argument
@@ -89,7 +89,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     for status in sorted(data):
         ret += u'{0}\n'.format(trans[status])
         for key in sorted(data[status]):
-            key = sdecode(key)
+            key = salt.utils.data.decode(key)
             skey = salt.output.strip_esc_sequence(key) if strip_colors else key
             if isinstance(data[status], list):
                 ret += u'{0}{1}{2}{3}\n'.format(

@@ -4,10 +4,14 @@ Lazily-evaluated data structures, primarily used by Salt's loader
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
-import collections
 import salt.exceptions
+
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +30,7 @@ def verify_fun(lazy_obj, fun):
         raise salt.exceptions.CommandExecutionError(lazy_obj.missing_fun_string(fun))
 
 
-class LazyDict(collections.MutableMapping):
+class LazyDict(MutableMapping):
     '''
     A base class of dict which will lazily load keys once they are needed
 

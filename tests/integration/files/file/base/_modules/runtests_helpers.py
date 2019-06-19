@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     runtests_helpers.py
@@ -12,6 +12,7 @@ from __future__ import absolute_import
 import fnmatch
 import os
 import re
+import sys
 import fnmatch
 import tempfile
 
@@ -66,11 +67,14 @@ def get_invalid_docs():
         'log.warning',
         'lowpkg.bin_pkg_info',
         'lxc.run_cmd',
+        'mantest.install',
+        'mantest.search',
         'nspawn.restart',
         'nspawn.stop',
         'pkg.expand_repo_def',
         'pip.iteritems',
         'pip.parse_version',
+        'peeringdb.clean_kwargs',
         'runtests_decorators.depends',
         'runtests_decorators.depends_will_fallback',
         'runtests_decorators.missing_depends',
@@ -89,6 +93,7 @@ def get_invalid_docs():
         'vsphere.wraps',
     )
     allow_failure_glob = (
+        'runtests_decorators.*',
         'runtests_helpers.*',
         'vsphere.*',
     )
@@ -149,3 +154,23 @@ def fail_function(*args, **kwargs):  # pylint: disable=unused-argument
     Return False no matter what is passed to it
     '''
     return False
+
+
+def get_python_executable():
+    '''
+    Return the path to the python executable.
+
+    This is particularly important when running the test suite within a virtualenv, while trying
+    to create virtualenvs on windows.
+    '''
+    try:
+        if salt.utils.is_windows():
+            python_binary = os.path.join(sys.real_prefix, os.path.basename(sys.executable))
+        else:
+            python_binary = os.path.join(sys.real_prefix, 'bin', os.path.basename(sys.executable))
+        if not os.path.exists(python_binary):
+            python_binary = None
+    except AttributeError:
+        # We're not running inside a virtualenv
+        python_binary = sys.executable
+    return python_binary

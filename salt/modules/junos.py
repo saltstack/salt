@@ -13,11 +13,16 @@ Module to interact with Junos devices.
 Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos proxy.
 
 '''
-from __future__ import absolute_import
 
-# Import python libraries
+# Import Python libraries
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
+from functools import wraps
+import traceback
+import json
+import glob
+import yaml
 
 try:
     from lxml import etree
@@ -25,8 +30,10 @@ except ImportError:
     from salt._compat import ElementTree as etree
 
 # Import Salt libs
+import salt.utils.args
 import salt.utils.files
 import salt.utils.json
+import salt.utils.stringutils
 from salt.ext import six
 
 # Juniper interface libraries
@@ -40,6 +47,11 @@ try:
     import jnpr.junos.utils
     import jnpr.junos.cfg
     import jxmlease
+    from jnpr.junos.factory.optable import OpTable
+    import jnpr.junos.op as tables_dir
+    from jnpr.junos.factory.factory_loader import FactoryLoader
+    import yamlordereddictloader
+    from jnpr.junos.exception import ConnectClosedError
     # pylint: enable=W0611
     HAS_JUNOS = True
 except ImportError:
@@ -63,8 +75,32 @@ def __virtual__():
     if HAS_JUNOS and 'proxy' in __opts__:
         return __virtualname__
     else:
-        return (False, 'The junos module could not be loaded: '
-                       'junos-eznc or jxmlease or proxy could not be loaded.')
+        return (False, 'The junos or dependent module could not be loaded: '
+                       'junos-eznc or jxmlease or or yamlordereddictloader or '
+                       'proxy could not be loaded.')
+
+
+def timeoutDecorator(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        if 'dev_timeout' in kwargs:
+            conn = __proxy__['junos.conn']()
+            restore_timeout = conn.timeout
+            conn.timeout = kwargs.pop('dev_timeout', None)
+            try:
+                result = function(*args, **kwargs)
+                conn.timeout = restore_timeout
+                return result
+            except Exception:
+                conn.timeout = restore_timeout
+                raise
+        else:
+            try:
+                return function(*args, **kwargs)
+            except Exception:
+                raise
+
+    return wrapper
 
 
 def facts_refresh():
@@ -73,15 +109,14 @@ def facts_refresh():
     the device configuration is changed by some other actor.
     This function will also refresh the facts stored in the salt grains.
 
-    Usage:
+    CLI Example:
 
     .. code-block:: bash
 
         salt 'device_name' junos.facts_refresh
-
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.facts_refresh()
@@ -95,7 +130,7 @@ def facts_refresh():
     try:
         __salt__['saltutil.sync_grains']()
     except Exception as exception:
-        log.error('Grains could not be updated due to "{0}"'.format(exception))
+        log.error('Grains could not be updated due to "%s"', exception)
     return ret
 
 
@@ -104,14 +139,13 @@ def facts():
     Displays the facts gathered during the connection.
     These facts are also stored in Salt grains.
 
-    Usage:
+    CLI Example:
 
     .. code-block:: bash
 
         salt 'device_name' junos.facts
-
     '''
-    ret = dict()
+    ret = {}
     try:
         ret['facts'] = __proxy__['junos.get_serialized_facts']()
         ret['out'] = True
@@ -122,55 +156,56 @@ def facts():
     return ret
 
 
-def rpc(cmd=None, dest=None, format='xml', **kwargs):
+@timeoutDecorator
+def rpc(cmd=None, dest=None, **kwargs):
     '''
-    This function executes the rpc provided as arguments on the junos device.
+    This function executes the RPC provided as arguments on the junos device.
     The returned data can be stored in a file.
 
-    Usage:
+    cmd
+        The RPC to be executed
+
+    dest
+        Destination file where the RPC output is stored. Note that the file
+        will be stored on the proxy minion. To push the files to the master use
+        :py:func:`cp.push <salt.modules.cp.push>`.
+
+    format : xml
+        The format in which the RPC reply is received from the device
+
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds)
+
+    filter
+        Used with the ``get-config`` RPC to get specific configuration
+
+    terse : False
+        Amount of information you want
+
+    interface_name
+      Name of the interface to query
+
+    CLI Example:
 
     .. code-block:: bash
 
-        salt 'device' junos.rpc 'get_config' '/var/log/config.txt' 'text' filter='<configuration><system/></configuration>'
-
-        salt 'device' junos.rpc 'get-interface-information' '/home/user/interface.xml' interface_name='lo0' terse=True
-
-        salt 'device' junos.rpc 'get-chassis-inventory'
-
-    Parameters:
-      Required
-        * cmd:
-          The rpc to be executed. (default = None)
-      Optional
-        * dest:
-          Destination file where the rpc ouput is stored. (default = None)
-          Note that the file will be stored on the proxy minion. To push the
-          files to the master use the salt's following execution module:
-          :py:func:`cp.push <salt.modules.cp.push>`
-        * format:
-          The format in which the rpc reply is received from the device.
-          (default = xml)
-        * kwargs: keyworded arguments taken by rpc call like-
-            * dev_timeout:
-              Set NETCONF RPC timeout. Can be used for commands which
-              take a while to execute. (default= 30 seconds)
-            * filter:
-              Only to be used with 'get-config' rpc to get specific configuration.
-            * terse:
-              Amount of information you want.
-            * interface_name:
-              Name of the interface whose information you want.
-
+        salt 'device' junos.rpc get_config /var/log/config.txt format=text filter='<configuration><system/></configuration>'
+        salt 'device' junos.rpc get-interface-information /home/user/interface.xml interface_name='lo0' terse=True
+        salt 'device' junos.rpc get-chassis-inventory
     '''
 
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
     if cmd is None:
         ret['message'] = 'Please provide the rpc to execute.'
         ret['out'] = False
         return ret
+
+    format_ = kwargs.pop('format', 'xml')
+    if not format_:
+        format_ = 'xml'
 
     op = dict()
     if '__pub_arg' in kwargs:
@@ -183,7 +218,6 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
                 op[key] = value
     else:
         op.update(kwargs)
-    op['dev_timeout'] = str(op.pop('timeout', conn.timeout))
 
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
@@ -191,7 +225,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
             filter_reply = etree.XML(op['filter'])
             del op['filter']
 
-        op.update({'format': format})
+        op.update({'format': format_})
         try:
             reply = getattr(
                 conn.rpc,
@@ -204,7 +238,6 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
             ret['out'] = False
             return ret
     else:
-        op['dev_timeout'] = int(op['dev_timeout'])
         if 'filter' in op:
             log.warning(
                 'Filter ignored as it is only used with "get-config" rpc')
@@ -212,7 +245,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
             reply = getattr(
                 conn.rpc,
                 cmd.replace('-',
-                            '_'))({'format': format},
+                            '_'))({'format': format_},
                                   **op)
         except Exception as exception:
             ret['message'] = 'RPC execution failed due to "{0}"'.format(
@@ -220,10 +253,10 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
             ret['out'] = False
             return ret
 
-    if format == 'text':
+    if format_ == 'text':
         # Earlier it was ret['message']
         ret['rpc_reply'] = reply.text
-    elif format == 'json':
+    elif format_ == 'json':
         # Earlier it was ret['message']
         ret['rpc_reply'] = reply
     else:
@@ -231,45 +264,44 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
         ret['rpc_reply'] = jxmlease.parse(etree.tostring(reply))
 
     if dest:
-        if format == 'text':
+        if format_ == 'text':
             write_response = reply.text
-        elif format == 'json':
+        elif format_ == 'json':
             write_response = salt.utils.json.dumps(reply, indent=1)
         else:
             write_response = etree.tostring(reply)
         with salt.utils.files.fopen(dest, 'w') as fp:
-            fp.write(write_response)
+            fp.write(salt.utils.stringutils.to_str(write_response))
     return ret
 
 
+@timeoutDecorator
 def set_hostname(hostname=None, **kwargs):
     '''
-    To set the name of the device.
+    Set the device's hostname
 
-    Usage:
+    hostname
+        The name to be set
+
+    comment
+        Provide a comment to the commit
+
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds)
+
+    confirm
+      Provide time in minutes for commit confirmation. If this option is
+      specified, the commit will be rolled back in the specified amount of time
+      unless the commit is confirmed.
+
+    CLI Example:
 
     .. code-block:: bash
 
         salt 'device_name' junos.set_hostname salt-device
-
-    Parameters:
-     Required
-        * hostname: The name to be set. (default = None)
-     Optional
-        * kwargs: Keyworded arguments which can be provided like-
-            * dev_timeout:
-              Set NETCONF RPC timeout. Can be used for commands
-              which take a while to execute. (default = 30 seconds)
-            * comment:
-              Provide a comment to the commit. (default = None)
-            * confirm:
-              Provide time in minutes for commit confirmation. \
-              If this option is specified, the commit will be rollbacked in \
-              the given time unless the commit is confirmed.
-
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     if hostname is None:
         ret['message'] = 'Please provide the hostname.'
         ret['out'] = False
@@ -317,50 +349,50 @@ def set_hostname(hostname=None, **kwargs):
         ret[
             'message'] = 'Successfully loaded host-name but pre-commit check failed.'
         conn.cu.rollback()
+
     return ret
 
 
+@timeoutDecorator
 def commit(**kwargs):
     '''
     To commit the changes loaded in the candidate configuration.
 
-    Usage:
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds)
+
+    comment
+      Provide a comment for the commit
+
+    confirm
+      Provide time in minutes for commit confirmation. If this option is
+      specified, the commit will be rolled back in the specified amount of time
+      unless the commit is confirmed.
+
+    sync : False
+      When ``True``, on dual control plane systems, requests that the candidate
+      configuration on one control plane be copied to the other control plane,
+      checked for correct syntax, and committed on both Routing Engines.
+
+    force_sync : False
+      When ``True``, on dual control plane systems, force the candidate
+      configuration on one control plane to be copied to the other control
+      plane.
+
+    full
+      When ``True``, requires all the daemons to check and evaluate the new
+      configuration.
+
+    detail
+      When ``True``, return commit detail
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt 'device_name' junos.commit comment='Commiting via saltstack' detail=True
-
         salt 'device_name' junos.commit dev_timeout=60 confirm=10
-
         salt 'device_name' junos.commit sync=True dev_timeout=90
-
-
-    Parameters:
-      Optional
-        * kwargs: Keyworded arguments which can be provided like-
-            * dev_timeout:
-              Set NETCONF RPC timeout. Can be used for commands which take a \
-              while to execute. (default = 30 seconds)
-            * comment:
-              Provide a comment to the commit. (default = None)
-            * confirm:
-              Provide time in minutes for commit confirmation. If this option \
-              is specified, the commit will be rollbacked in the given time \
-              unless the commit is confirmed.
-            * sync:
-              On dual control plane systems, requests that the candidate\
-              configuration on one control plane be copied to the other \
-              control plane,checked for correct syntax, and committed on \
-              both Routing Engines. (default = False)
-            * force_sync:
-              On dual control plane systems, force the candidate configuration
-              on one control plane to be copied to the other control plane.
-            * full:
-              When set to True requires all the daemons to check and evaluate \
-              the new configuration.
-            * detail:
-              When true return commit detail.
-
     '''
 
     conn = __proxy__['junos.conn']()
@@ -404,39 +436,44 @@ def commit(**kwargs):
         ret['out'] = False
         ret['message'] = 'Pre-commit check failed.'
         conn.cu.rollback()
+
     return ret
 
 
-def rollback(id=0, **kwargs):
+@timeoutDecorator
+def rollback(**kwargs):
     '''
-    To rollback the last committed configuration changes and commit the same.
+    Roll back the last committed configuration changes and commit
 
-    Usage:
+    id : 0
+        The rollback ID value (0-49)
+
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds)
+
+    comment
+      Provide a comment for the commit
+
+    confirm
+      Provide time in minutes for commit confirmation. If this option is
+      specified, the commit will be rolled back in the specified amount of time
+      unless the commit is confirmed.
+
+    diffs_file
+      Path to the file where the diff (difference in old configuration and the
+      committed configuration) will be stored. Note that the file will be
+      stored on the proxy minion. To push the files to the master use
+      :py:func:`cp.push <salt.modules.cp.push>`.
+
+    CLI Example:
 
     .. code-block:: bash
 
         salt 'device_name' junos.rollback 10
-
-    Parameters:
-      Optional
-        * id:
-          The rollback id value [0-49]. (default = 0)
-        * kwargs: Keyworded arguments which can be provided like-
-            * dev_timeout:
-              Set NETCONF RPC timeout. Can be used for commands which
-              take a while to execute. (default = 30 seconds)
-            * comment:
-              Provide a comment to the commit. (default = None)
-            * confirm:
-              Provide time in minutes for commit confirmation. If this option \
-              is specified, the commit will be rollbacked in the given time \
-              unless the commit is confirmed.
-            * diffs_file:
-              Path to the file where any diffs will be written. (default = None)
-
     '''
+    id_ = kwargs.pop('id', 0)
 
-    ret = dict()
+    ret = {}
     conn = __proxy__['junos.conn']()
 
     op = dict()
@@ -448,7 +485,7 @@ def rollback(id=0, **kwargs):
         op.update(kwargs)
 
     try:
-        ret['out'] = conn.cu.rollback(id)
+        ret['out'] = conn.cu.rollback(id_)
     except Exception as exception:
         ret['message'] = 'Rollback failed due to "{0}"'.format(exception)
         ret['out'] = False
@@ -464,7 +501,7 @@ def rollback(id=0, **kwargs):
         diff = conn.cu.diff()
         if diff is not None:
             with salt.utils.files.fopen(op['diffs_file'], 'w') as fp:
-                fp.write(diff)
+                fp.write(salt.utils.stringutils.to_str(diff))
         else:
             log.info(
                 'No diff between current configuration and \
@@ -494,28 +531,29 @@ def rollback(id=0, **kwargs):
     return ret
 
 
-def diff(id=0):
+def diff(**kwargs):
     '''
-    Gives the difference between the candidate and the current configuration.
+    Returns the difference between the candidate and the current configuration
 
-    Usage:
+    id : 0
+        The rollback ID value (0-49)
+
+    CLI Example:
 
     .. code-block:: bash
 
         salt 'device_name' junos.diff 3
-
-
-    Parameters:
-      Optional
-        * id:
-          The rollback id value [0-49]. (default = 0)
-
     '''
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    id_ = kwargs.pop('id', 0)
+    if kwargs:
+        salt.utils.args.invalid_kwargs(kwargs)
+
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
-        ret['message'] = conn.cu.diff(rb_id=id)
+        ret['message'] = conn.cu.diff(rb_id=id_)
     except Exception as exception:
         ret['message'] = 'Could not get diff with error "{0}"'.format(
             exception)
@@ -524,44 +562,42 @@ def diff(id=0):
     return ret
 
 
+@timeoutDecorator
 def ping(dest_ip=None, **kwargs):
     '''
-    To send ping RPC to a device.
+    Send a ping RPC to a device
 
-    Usage:
+    dest_ip
+      The IP of the device to ping
+
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds)
+
+    rapid : False
+        When ``True``, executes ping at 100pps instead of 1pps
+
+    ttl
+        Maximum number of IP routers (IP hops) allowed between source and
+        destination
+
+    routing_instance
+      Name of the routing instance to use to send the ping
+
+    interface
+      Interface used to send traffic
+
+    count : 5
+      Number of packets to send
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt 'device_name' junos.ping '8.8.8.8' count=5
-
         salt 'device_name' junos.ping '8.8.8.8' ttl=1 rapid=True
-
-
-    Parameters:
-      Required
-        * dest_ip:
-          The IP which is to be pinged. (default = None)
-      Optional
-        * kwargs: Keyworded arguments which can be provided like-
-            * dev_timeout:
-              Set NETCONF RPC timeout. Can be used for commands which
-              take a while to execute. (default = 30 seconds)
-            * rapid:
-              Setting this to True executes ping at 100pps instead of 1pps. \
-              (default = False)
-            * ttl:
-              Maximum number of IP routers (IP hops) allowed between source \
-              and destination.
-            * routing_instance:
-              Name of the routing instance to use to send the ping.
-            * interface:
-              Interface used to send traffic out.
-            * count:
-              Number of packets to send. (default = 5)
-
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
 
     if dest_ip is None:
         ret['message'] = 'Please specify the destination ip to ping.'
@@ -576,9 +612,9 @@ def ping(dest_ip=None, **kwargs):
     else:
         op.update(kwargs)
 
-    op['count'] = str(op.pop('count', 5))
+    op['count'] = six.text_type(op.pop('count', 5))
     if 'ttl' in op:
-        op['ttl'] = str(op['ttl'])
+        op['ttl'] = six.text_type(op['ttl'])
 
     ret['out'] = True
     try:
@@ -589,48 +625,40 @@ def ping(dest_ip=None, **kwargs):
     return ret
 
 
-def cli(command=None, format='text', **kwargs):
+@timeoutDecorator
+def cli(command=None, **kwargs):
     '''
     Executes the CLI commands and returns the output in specified format. \
-    (default is text) The ouput can also be stored in a file.
+    (default is text) The output can also be stored in a file.
 
-    Usage:
+    command (required)
+        The command to execute on the Junos CLI
+
+    format : text
+        Format in which to get the CLI output (either ``text`` or ``xml``)
+
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds)
+
+    dest
+        Destination file where the RPC output is stored. Note that the file
+        will be stored on the proxy minion. To push the files to the master use
+        :py:func:`cp.push <salt.modules.cp.push>`.
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt 'device_name' junos.cli 'show system commit'
-
-        salt 'device_name' junos.cli 'show version' dev_timeout=40
-
-        salt 'device_name' junos.cli 'show system alarms' 'xml' dest=/home/user/cli_output.txt
-
-
-    Parameters:
-      Required
-        * command:
-          The command that need to be executed on Junos CLI. (default = None)
-      Optional
-        * format:
-          Format in which to get the CLI output. (text or xml, \
-            default = 'text')
-        * kwargs: Keyworded arguments which can be provided like-
-            * dev_timeout:
-              Set NETCONF RPC timeout. Can be used for commands which
-              take a while to execute. (default = 30 seconds)
-            * dest:
-              The destination file where the CLI output can be stored.\
-               (default = None)
-
+        salt 'device_name' junos.cli 'show system alarms' format=xml dest=/home/user/cli_output.txt
     '''
     conn = __proxy__['junos.conn']()
 
-    # Cases like salt 'device_name' junos.cli 'show system alarms' ''
-    # In this case the format becomes '' (empty string). And reply is sent in xml
-    # We want the format to default to text.
-    if not format:
-        format = 'text'
+    format_ = kwargs.pop('format', 'text')
+    if not format_:
+        format_ = 'text'
 
-    ret = dict()
+    ret = {}
     if command is None:
         ret['message'] = 'Please provide the CLI command to be executed.'
         ret['out'] = False
@@ -645,13 +673,13 @@ def cli(command=None, format='text', **kwargs):
         op.update(kwargs)
 
     try:
-        result = conn.cli(command, format, warning=False)
+        result = conn.cli(command, format_, warning=False)
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
         return ret
 
-    if format == 'text':
+    if format_ == 'text':
         ret['message'] = result
     else:
         result = etree.tostring(result)
@@ -659,7 +687,7 @@ def cli(command=None, format='text', **kwargs):
 
     if 'dest' in op and op['dest'] is not None:
         with salt.utils.files.fopen(op['dest'], 'w') as fp:
-            fp.write(result)
+            fp.write(salt.utils.stringutils.to_str(result))
 
     ret['out'] = True
     return ret
@@ -667,45 +695,42 @@ def cli(command=None, format='text', **kwargs):
 
 def shutdown(**kwargs):
     '''
-    Shut down (power off) or reboot a device running Junos OS.
-    This includes all Routing Engines in a Virtual Chassis or a dual Routing \
-    Engine system.
+    Shut down (power off) or reboot a device running Junos OS. This includes
+    all Routing Engines in a Virtual Chassis or a dual Routing Engine system.
 
-    Usage:
+      .. note::
+          One of ``shutdown`` or ``reboot`` must be set to ``True`` or no
+          action will be taken.
+
+    shutdown : False
+      Set this to ``True`` if you want to shutdown the machine. This is a
+      safety mechanism so that the user does not accidentally shutdown the
+      junos device.
+
+    reboot : False
+      If ``True``, reboot instead of shutting down
+
+    at
+      Used when rebooting, to specify the date and time the reboot should take
+      place. The value of this option must match the JunOS CLI reboot syntax.
+
+    in_min
+        Used when shutting down. Specify the delay (in minutes) before the
+        device will be shut down.
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt 'device_name' junos.shutdown reboot=True
-
         salt 'device_name' junos.shutdown shutdown=True in_min=10
-
         salt 'device_name' junos.shutdown shutdown=True
-
-
-    Parameters:
-      Optional
-        * kwargs:
-            * shutdown:
-              Set this to true if you want to shutdown the machine.
-              (default=False, this is a safety mechanism so that the user does
-              not accidentally shutdown the junos device.)
-            * reboot:
-              Whether to reboot instead of shutdown. (default=False)
-              Note that either one of the above arguments has to be specified
-              (shutdown or reboot) for this function to work.
-            * at:
-              Date and time the reboot should take place. The
-              string must match the junos cli reboot syntax
-              (To be used only if reboot=True)
-            * in_min:
-              Specify delay in minutes for shutdown
-
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     sw = SW(conn)
 
-    op = dict()
+    op = {}
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
             if isinstance(kwargs['__pub_arg'][-1], dict):
@@ -743,79 +768,82 @@ def shutdown(**kwargs):
     return ret
 
 
+@timeoutDecorator
 def install_config(path=None, **kwargs):
     '''
     Installs the given configuration file into the candidate configuration.
     Commits the changes if the commit checks or throws an error.
 
-    Usage:
+    path (required)
+        Path where the configuration/template file is present. If the file has
+        a ``.conf`` extension, the content is treated as text format. If the
+        file has a ``.xml`` extension, the content is treated as XML format. If
+        the file has a ``.set`` extension, the content is treated as Junos OS
+        ``set`` commands.
+
+    mode : exclusive
+        The mode in which the configuration is locked. Can be one of
+        ``private``, ``dynamic``, ``batch``, ``exclusive``.
+
+    dev_timeout : 30
+        Set NETCONF RPC timeout. Can be used for commands which take a while to
+        execute.
+
+    overwrite : False
+        Set to ``True`` if you want this file is to completely replace the
+        configuration file.
+
+    replace : False
+        Specify whether the configuration file uses ``replace:`` statements. If
+        ``True``, only those statements under the ``replace`` tag will be
+        changed.
+
+    format
+        Determines the format of the contents
+
+    update : False
+        Compare a complete loaded configuration against the candidate
+        configuration. For each hierarchy level or configuration object that is
+        different in the two configurations, the version in the loaded
+        configuration replaces the version in the candidate configuration. When
+        the configuration is later committed, only system processes that are
+        affected by the changed configuration elements parse the new
+        configuration. This action is supported from PyEZ 2.1.
+
+    comment
+      Provide a comment for the commit
+
+    confirm
+      Provide time in minutes for commit confirmation. If this option is
+      specified, the commit will be rolled back in the specified amount of time
+      unless the commit is confirmed.
+
+    diffs_file
+      Path to the file where the diff (difference in old configuration and the
+      committed configuration) will be stored. Note that the file will be
+      stored on the proxy minion. To push the files to the master use
+      :py:func:`cp.push <salt.modules.cp.push>`.
+
+    template_vars
+      Variables to be passed into the template processing engine in addition to
+      those present in pillar, the minion configuration, grains, etc.  You may
+      reference these variables in your template like so:
+
+      .. code-block:: jinja
+
+          {{ template_vars["var_name"] }}
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt 'device_name' junos.install_config 'salt://production/network/routers/config.set'
-
         salt 'device_name' junos.install_config 'salt://templates/replace_config.conf' replace=True comment='Committed via SaltStack'
-
         salt 'device_name' junos.install_config 'salt://my_new_configuration.conf' dev_timeout=300 diffs_file='/salt/confs/old_config.conf' overwrite=True
-
         salt 'device_name' junos.install_config 'salt://syslog_template.conf' template_vars='{"syslog_host": "10.180.222.7"}'
-
-    Parameters:
-      Required
-        * path:
-          Path where the configuration/template file is present. If the file has a \
-          '*.conf' extension,
-          the content is treated as text format. If the file has a '*.xml' \
-          extension,
-          the content is treated as XML format. If the file has a '*.set' \
-          extension,
-          the content is treated as Junos OS 'set' commands.(default = None)
-      Optional
-        * kwargs: Keyworded arguments which can be provided like-
-            * mode: The mode in which the configuration is locked.
-              (Options: private, dynamic, batch, exclusive; default= exclusive)
-            * dev_timeout:
-              Set NETCONF RPC timeout. Can be used for commands which
-              take a while to execute. (default = 30 seconds)
-            * overwrite:
-              Set to True if you want this file is to completely replace the\
-               configuration file. (default = False)
-            * replace:
-              Specify whether the configuration file uses "replace:" statements.
-              Those statements under the 'replace' tag will only be changed.\
-               (default = False)
-            * format:
-              Determines the format of the contents.
-            * update:
-              Compare a complete loaded configuration against
-              the candidate configuration. For each hierarchy level or
-              configuration object that is different in the two configurations,
-              the version in the loaded configuration replaces the version in the
-              candidate configuration. When the configuration is later committed,
-              only system processes that are affected by the changed configuration
-              elements parse the new configuration. This action is supported from
-              PyEZ 2.1 (default = False)
-            * comment:
-              Provide a comment to the commit. (default = None)
-            * confirm:
-              Provide time in minutes for commit confirmation.
-              If this option is specified, the commit will be rollbacked in \
-              the given time unless the commit is confirmed.
-            * diffs_file:
-              Path to the file where the diff (difference in old configuration
-              and the committed configuration) will be stored.(default = None)
-              Note that the file will be stored on the proxy minion. To push the
-              files to the master use the salt's following execution module: \
-              :py:func:`cp.push <salt.modules.cp.push>`
-            * template_vars:
-              Variables to be passed into the template processing engine in addition
-              to those present in __pillar__, __opts__, __grains__, etc.
-              You may reference these variables in your template like so:
-              {{ template_vars["var_name"] }}
-
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
     if path is None:
@@ -824,7 +852,7 @@ def install_config(path=None, **kwargs):
         ret['out'] = False
         return ret
 
-    op = dict()
+    op = {}
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
             if isinstance(kwargs['__pub_arg'][-1], dict):
@@ -832,7 +860,8 @@ def install_config(path=None, **kwargs):
     else:
         op.update(kwargs)
 
-    template_vars = dict()
+    test = op.pop('test', False)
+    template_vars = {}
     if "template_vars" in op:
         template_vars = op["template_vars"]
 
@@ -886,7 +915,7 @@ def install_config(path=None, **kwargs):
         except Exception as exception:
             ret['message'] = 'Could not load configuration due to : "{0}"'.format(
                 exception)
-            ret['format'] = template_format
+            ret['format'] = op['format']
             ret['out'] = False
             return ret
 
@@ -915,7 +944,7 @@ def install_config(path=None, **kwargs):
             ret['out'] = False
             return ret
 
-        if check:
+        if check and not test:
             try:
                 cu.commit(**commit_params)
                 ret['message'] = 'Successfully loaded and committed!'
@@ -925,15 +954,19 @@ def install_config(path=None, **kwargs):
                     .format(exception)
                 ret['out'] = False
                 return ret
-        else:
-            ret['message'] = 'Loaded configuration but commit check failed.'
-            ret['out'] = False
+        elif not check:
             cu.rollback()
+            ret['message'] = 'Loaded configuration but commit check failed, hence rolling back configuration.'
+            ret['out'] = False
+        else:
+            cu.rollback()
+            ret['message'] = 'Commit check passed, but skipping commit for dry-run and rolling back configuration.'
+            ret['out'] = True
 
         try:
             if write_diff and config_diff is not None:
                 with salt.utils.files.fopen(write_diff, 'w') as fp:
-                    fp.write(config_diff)
+                    fp.write(salt.utils.stringutils.to_str(config_diff))
         except Exception as exception:
             ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
                 exception)
@@ -946,15 +979,14 @@ def zeroize():
     '''
     Resets the device to default factory settings
 
-    Usage:
+    CLI Example:
 
     .. code-block:: bash
 
         salt 'device_name' junos.zeroize
-
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.cli('request system zeroize')
@@ -966,62 +998,65 @@ def zeroize():
     return ret
 
 
+@timeoutDecorator
 def install_os(path=None, **kwargs):
     '''
     Installs the given image on the device. After the installation is complete\
      the device is rebooted,
     if reboot=True is given as a keyworded argument.
 
-    Usage:
+    path (required)
+        Path where the image file is present on the proxy minion
+
+    remote_path :
+        If the value of path  is a file path on the local
+        (Salt host's) filesystem, then the image is copied from the local
+        filesystem to the :remote_path: directory on the target Junos
+        device. The default is ``/var/tmp``. If the value of :path: or
+        is a URL, then the value of :remote_path: is unused.
+
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds). This argument was added since most of
+        the time the "package add" RPC takes a significant amount of time.  The default
+        RPC timeout is 30 seconds.  So this :timeout: value will be
+        used in the context of the SW installation process.  Defaults to
+        30 minutes (30*60=1800)
+
+    reboot : False
+        Whether to reboot after installation
+
+    no_copy : False
+        If ``True`` the software package will not be SCP’d to the device
+
+    bool validate:
+        When ``True`` this method will perform a config validation against
+        the new image
+
+    bool issu:
+        When ``True`` allows unified in-service software upgrade
+        (ISSU) feature enables you to upgrade between two different Junos OS
+        releases with no disruption on the control plane and with minimal
+        disruption of traffic.
+
+    bool nssu:
+        When ``True`` allows nonstop software upgrade (NSSU)
+        enables you to upgrade the software running on a Juniper Networks
+        EX Series Virtual Chassis or a Juniper Networks EX Series Ethernet
+        Switch with redundant Routing Engines with a single command and
+        minimal disruption to network traffic.
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt 'device_name' junos.install_os 'salt://images/junos_image.tgz' reboot=True
-
         salt 'device_name' junos.install_os 'salt://junos_16_1.tgz' dev_timeout=300
-
-
-    Parameters:
-      Required
-        * path:
-          Path where the image file is present on the proxy minion.
-      Optional
-        * kwargs: keyworded arguments to be given such as dev_timeout, reboot etc
-            * dev_timeout:
-              Set NETCONF RPC timeout. Can be used to RPCs which
-              take a while to execute. (default = 30 seconds)
-            * reboot:
-              Whether to reboot after installation (default = False)
-            * no_copy:
-              When True the software package will not be SCP’d to the device. \
-              (default = False)
-
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
-    if path is None:
-        ret['message'] = \
-            'Please provide the salt path where the junos image is present.'
-        ret['out'] = False
-        return ret
-
-    image_cached_path = salt.utils.files.mkstemp()
-    __salt__['cp.get_file'](path, image_cached_path)
-
-    if not os.path.isfile(image_cached_path):
-        ret['message'] = 'Invalid image path.'
-        ret['out'] = False
-        return ret
-
-    if os.path.getsize(image_cached_path) == 0:
-        ret['message'] = 'Failed to copy image'
-        ret['out'] = False
-        return ret
-    path = image_cached_path
-
-    op = dict()
+    op = {}
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
             if isinstance(kwargs['__pub_arg'][-1], dict):
@@ -1029,15 +1064,39 @@ def install_os(path=None, **kwargs):
     else:
         op.update(kwargs)
 
+    no_copy_ = op.get('no_copy', False)
+
+    if path is None:
+        ret['message'] = \
+            'Please provide the salt path where the junos image is present.'
+        ret['out'] = False
+        return ret
+
+    if not no_copy_:
+        image_cached_path = salt.utils.files.mkstemp()
+        __salt__['cp.get_file'](path, image_cached_path)
+
+        if not os.path.isfile(image_cached_path):
+            ret['message'] = 'Invalid image path.'
+            ret['out'] = False
+            return ret
+
+        if os.path.getsize(image_cached_path) == 0:
+            ret['message'] = 'Failed to copy image'
+            ret['out'] = False
+            return ret
+        path = image_cached_path
+
     try:
-        conn.sw.install(path, progress=True)
+        conn.sw.install(path, progress=True, **op)
         ret['message'] = 'Installed the os.'
     except Exception as exception:
         ret['message'] = 'Installation failed due to: "{0}"'.format(exception)
         ret['out'] = False
         return ret
     finally:
-        salt.utils.files.safe_rm(image_cached_path)
+        if not no_copy_:
+            salt.utils.files.safe_rm(image_cached_path)
 
     if 'reboot' in op and op['reboot'] is True:
         try:
@@ -1049,30 +1108,28 @@ def install_os(path=None, **kwargs):
             ret['out'] = False
             return ret
         ret['message'] = 'Successfully installed and rebooted!'
+
     return ret
 
 
 def file_copy(src=None, dest=None):
     '''
-    Copies the file from the local device to the junos device.
+    Copies the file from the local device to the junos device
 
-    Usage:
+    src
+        The source path where the file is kept.
+
+    dest
+        The destination path on the where the file will be copied
+
+    CLI Example:
 
     .. code-block:: bash
 
         salt 'device_name' junos.file_copy /home/m2/info.txt info_copy.txt
-
-
-    Parameters:
-      Required
-        * src:
-          The sorce path where the file is kept.
-        * dest:
-          The destination path where the file will be copied.
-
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
     if src is None:
@@ -1099,28 +1156,29 @@ def file_copy(src=None, dest=None):
     except Exception as exception:
         ret['message'] = 'Could not copy file : "{0}"'.format(exception)
         ret['out'] = False
+
     return ret
 
 
 def lock():
-    """
+    '''
     Attempts an exclusive lock on the candidate configuration. This
     is a non-blocking call.
 
     .. note::
-        Any user who wishes to use lock, must necessarily unlock the
-        configuration too. Ensure :py:func:`unlock <salt.modules.junos.unlock>`
-        is called in the same orchestration run in which the lock is called.
+        When locking, it is important to remember to call
+        :py:func:`junos.unlock <salt.modules.junos.unlock>` once finished. If
+        locking during orchestration, remember to include a step in the
+        orchestration job to unlock.
 
-    Usage:
+    CLI Example:
 
     .. code-block:: bash
 
         salt 'device_name' junos.lock
-
-    """
+    '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.cu.lock()
@@ -1133,18 +1191,17 @@ def lock():
 
 
 def unlock():
-    """
+    '''
     Unlocks the candidate configuration.
 
-    Usage:
+    CLI Example:
 
     .. code-block:: bash
 
         salt 'device_name' junos.unlock
-
-    """
+    '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.cu.unlock()
@@ -1158,11 +1215,47 @@ def unlock():
 
 
 def load(path=None, **kwargs):
-    """
-
+    '''
     Loads the configuration from the file provided onto the device.
 
-    Usage:
+    path (required)
+        Path where the configuration/template file is present. If the file has
+        a ``.conf`` extension, the content is treated as text format. If the
+        file has a ``.xml`` extension, the content is treated as XML format. If
+        the file has a ``.set`` extension, the content is treated as Junos OS
+        ``set`` commands.
+
+    overwrite : False
+        Set to ``True`` if you want this file is to completely replace the
+        configuration file.
+
+    replace : False
+        Specify whether the configuration file uses ``replace:`` statements. If
+        ``True``, only those statements under the ``replace`` tag will be
+        changed.
+
+    format
+        Determines the format of the contents
+
+    update : False
+        Compare a complete loaded configuration against the candidate
+        configuration. For each hierarchy level or configuration object that is
+        different in the two configurations, the version in the loaded
+        configuration replaces the version in the candidate configuration. When
+        the configuration is later committed, only system processes that are
+        affected by the changed configuration elements parse the new
+        configuration. This action is supported from PyEZ 2.1.
+
+    template_vars
+      Variables to be passed into the template processing engine in addition to
+      those present in pillar, the minion configuration, grains, etc.  You may
+      reference these variables in your template like so:
+
+      .. code-block:: jinja
+
+          {{ template_vars["var_name"] }}
+
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -1173,47 +1266,9 @@ def load(path=None, **kwargs):
         salt 'device_name' junos.load 'salt://my_new_configuration.conf' overwrite=True
 
         salt 'device_name' junos.load 'salt://syslog_template.conf' template_vars='{"syslog_host": "10.180.222.7"}'
-
-    Parameters:
-      Required
-        * path:
-          Path where the configuration/template file is present. If the file has a \
-          '*.conf' extension,
-          the content is treated as text format. If the file has a '*.xml' \
-          extension,
-          the content is treated as XML format. If the file has a '*.set' \
-          extension,
-          the content is treated as Junos OS 'set' commands.(default = None)
-      Optional
-        * kwargs: Keyworded arguments which can be provided like-
-            * overwrite:
-              Set to True if you want this file is to completely replace the\
-              configuration file. (default = False)
-            * replace:
-              Specify whether the configuration file uses "replace:" statements.
-              Those statements under the 'replace' tag will only be changed.\
-               (default = False)
-            * format:
-              Determines the format of the contents.
-            * update:
-              Compare a complete loaded configuration against
-              the candidate configuration. For each hierarchy level or
-              configuration object that is different in the two configurations,
-              the version in the loaded configuration replaces the version in the
-              candidate configuration. When the configuration is later committed,
-              only system processes that are affected by the changed configuration
-              elements parse the new configuration. This action is supported from
-              PyEZ 2.1 (default = False)
-            * template_vars:
-              Variables to be passed into the template processing engine in addition
-              to those present in __pillar__, __opts__, __grains__, etc.
-              You may reference these variables in your template like so:
-              {{ template_vars["var_name"] }}
-
-
-    """
+    '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
     if path is None:
@@ -1222,7 +1277,7 @@ def load(path=None, **kwargs):
         ret['out'] = False
         return ret
 
-    op = dict()
+    op = {}
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
             if isinstance(kwargs['__pub_arg'][-1], dict):
@@ -1230,7 +1285,7 @@ def load(path=None, **kwargs):
     else:
         op.update(kwargs)
 
-    template_vars = dict()
+    template_vars = {}
     if "template_vars" in op:
         template_vars = op["template_vars"]
 
@@ -1277,7 +1332,7 @@ def load(path=None, **kwargs):
     except Exception as exception:
         ret['message'] = 'Could not load configuration due to : "{0}"'.format(
             exception)
-        ret['format'] = template_format
+        ret['format'] = op['format']
         ret['out'] = False
         return ret
     finally:
@@ -1287,19 +1342,17 @@ def load(path=None, **kwargs):
 
 
 def commit_check():
-    """
+    '''
+    Perform a commit check on the configuration
 
-    Perform a commit check on the configuration.
-
-    Usage:
+    CLI Example:
 
     .. code-block:: bash
 
         salt 'device_name' junos.commit_check
-
-    """
+    '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.cu.commit_check()
@@ -1308,4 +1361,118 @@ def commit_check():
         ret['message'] = 'Commit check failed with {0}'.format(exception)
         ret['out'] = False
 
+    return ret
+
+
+def get_table(table, table_file, path=None, target=None, key=None, key_items=None,
+              filters=None, template_args=None):
+    '''
+    Retrieve data from a Junos device using Tables/Views
+
+    table (required)
+        Name of PyEZ Table
+
+    table_file (required)
+        YAML file that has the table specified in table parameter
+
+    path:
+        Path of location of the YAML file.
+        defaults to op directory in jnpr.junos.op
+
+    target:
+        if command need to run on FPC, can specify fpc target
+
+    key:
+        To overwrite key provided in YAML
+
+    key_items:
+        To select only given key items
+
+    filters:
+        To select only filter for the dictionary from columns
+
+    template_args:
+        key/value pair which should render Jinja template command
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'device_name' junos.get_table
+    '''
+    conn = __proxy__['junos.conn']()
+    ret = {}
+    ret['out'] = True
+    ret['hostname'] = conn._hostname
+    ret['tablename'] = table
+    get_kvargs = {}
+    if target is not None:
+        get_kvargs['target'] = target
+    if key is not None:
+        get_kvargs['key'] = key
+    if key_items is not None:
+        get_kvargs['key_items'] = key_items
+    if filters is not None:
+        get_kvargs['filters'] = filters
+    if template_args is not None and isinstance(template_args, dict):
+        get_kvargs['args'] = template_args
+    pyez_tables_path = os.path.dirname(os.path.abspath(tables_dir.__file__))
+    try:
+        if path is not None:
+            file_loc = glob.glob(os.path.join(path, '{}'.format(table_file)))
+        else:
+            file_loc = glob.glob(os.path.join(pyez_tables_path, '{}'.format(table_file)))
+        if len(file_loc) == 1:
+            file_name = file_loc[0]
+        else:
+            ret['message'] = 'Given table file {} cannot be located'.format(table_file)
+            ret['out'] = False
+            return ret
+        try:
+            with salt.utils.files.fopen(file_name) as fp:
+                ret['table'] = yaml.load(fp.read(),
+                                         Loader=yamlordereddictloader.Loader)
+                globals().update(FactoryLoader().load(ret['table']))
+        except IOError as err:
+            ret['message'] = 'Uncaught exception during YAML Load - please ' \
+                             'report: {0}'.format(six.text_type(err))
+            ret['out'] = False
+            return ret
+        try:
+            data = globals()[table](conn)
+            data.get(**get_kvargs)
+        except KeyError as err:
+            ret['message'] = 'Uncaught exception during get API call - please ' \
+                             'report: {0}'.format(six.text_type(err))
+            ret['out'] = False
+            return ret
+        except ConnectClosedError:
+            ret['message'] = 'Got ConnectClosedError exception. Connection lost ' \
+                             'with {}'.format(conn)
+            ret['out'] = False
+            return ret
+        ret['reply'] = json.loads(data.to_json())
+        if data.__class__.__bases__[0] == OpTable:
+            # Sets key value if not present in YAML. To be used by returner
+            if ret['table'][table].get('key') is None:
+                ret['table'][table]['key'] = data.ITEM_NAME_XPATH
+            # If key is provided from salt state file.
+            if key is not None:
+                ret['table'][table]['key'] = data.KEY
+        else:
+            if target is not None:
+                ret['table'][table]['target'] = data.TARGET
+            if key is not None:
+                ret['table'][table]['key'] = data.KEY
+            if key_items is not None:
+                ret['table'][table]['key_items'] = data.KEY_ITEMS
+            if template_args is not None:
+                ret['table'][table]['args'] = data.CMD_ARGS
+                ret['table'][table]['command'] = data.GET_CMD
+    except Exception as err:
+        ret['message'] = 'Uncaught exception - please report: {0}'.format(
+            str(err))
+        traceback.print_exc()
+        ret['out'] = False
+        return ret
     return ret

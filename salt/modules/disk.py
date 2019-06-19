@@ -2,7 +2,7 @@
 '''
 Module for managing disks and blockdevices
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -85,6 +85,10 @@ def usage(args=None):
     '''
     Return usage information for volumes mounted on this minion
 
+    .. versionchanged:: 2019.2.0
+
+        Default for SunOS changed to 1 kilobyte blocks
+
     CLI Example:
 
     .. code-block:: bash
@@ -103,6 +107,8 @@ def usage(args=None):
         cmd = 'df -P'
     elif __grains__['kernel'] == 'OpenBSD' or __grains__['kernel'] == 'AIX':
         cmd = 'df -kP'
+    elif __grains__['kernel'] == 'SunOS':
+        cmd = 'df -k'
     else:
         cmd = 'df'
     if flags:
@@ -250,7 +256,10 @@ def percent(args=None):
             log.error('Problem parsing disk usage information')
             ret = {}
     if args and args not in ret:
-        log.error('Problem parsing disk usage information: Partition \'{0}\' does not exist!'.format(args))
+        log.error(
+            'Problem parsing disk usage information: Partition \'%s\' '
+            'does not exist!', args
+        )
         ret = {}
     elif args:
         return ret[args]
@@ -259,10 +268,16 @@ def percent(args=None):
 
 
 @salt.utils.decorators.path.which('blkid')
-def blkid(device=None):
+def blkid(device=None, token=None):
     '''
     Return block device attributes: UUID, LABEL, etc. This function only works
     on systems where blkid is available.
+
+    device
+        Device name from the system
+
+    token
+        Any valid token used for the search
 
     CLI Example:
 
@@ -270,13 +285,17 @@ def blkid(device=None):
 
         salt '*' disk.blkid
         salt '*' disk.blkid /dev/sda
+        salt '*' disk.blkid token='UUID=6a38ee5-7235-44e7-8b22-816a403bad5d'
+        salt '*' disk.blkid token='TYPE=ext4'
     '''
-    args = ""
+    cmd = ['blkid']
     if device:
-        args = " " + device
+        cmd.append(device)
+    elif token:
+        cmd.extend(['-t', token])
 
     ret = {}
-    blkid_result = __salt__['cmd.run_all']('blkid' + args, python_shell=False)
+    blkid_result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if blkid_result['retcode'] > 0:
         return ret
@@ -354,7 +373,7 @@ def wipe(device):
     if out['retcode'] == 0:
         return True
     else:
-        log.error('Error wiping device {0}: {1}'.format(device, out['stderr']))
+        log.error('Error wiping device %s: %s', device, out['stderr'])
         return False
 
 
@@ -413,6 +432,7 @@ def format_(device,
             fs_type='ext4',
             inode_size=None,
             lazy_itable_init=None,
+            fat=None,
             force=False):
     '''
     Format a filesystem onto a device
@@ -440,6 +460,10 @@ def format_(device,
 
         This option is only enabled for ext filesystems
 
+    fat
+        FAT size option. Can be 12, 16 or 32, and can only be used on
+        fat or vfat filesystems.
+
     force
         Force mke2fs to create a filesystem, even if the specified device is
         not a partition on a block special device. This option is only enabled
@@ -453,21 +477,24 @@ def format_(device,
 
         salt '*' disk.format /dev/sdX1
     '''
-    cmd = ['mkfs', '-t', str(fs_type)]
+    cmd = ['mkfs', '-t', six.text_type(fs_type)]
     if inode_size is not None:
         if fs_type[:3] == 'ext':
-            cmd.extend(['-i', str(inode_size)])
+            cmd.extend(['-i', six.text_type(inode_size)])
         elif fs_type == 'xfs':
             cmd.extend(['-i', 'size={0}'.format(inode_size)])
     if lazy_itable_init is not None:
         if fs_type[:3] == 'ext':
             cmd.extend(['-E', 'lazy_itable_init={0}'.format(lazy_itable_init)])
+    if fat is not None and fat in (12, 16, 32):
+        if fs_type[-3:] == 'fat':
+            cmd.extend(['-F', fat])
     if force:
         if fs_type[:3] == 'ext':
             cmd.append('-F')
         elif fs_type == 'xfs':
             cmd.append('-f')
-    cmd.append(str(device))
+    cmd.append(six.text_type(device))
 
     mkfs_success = __salt__['cmd.retcode'](cmd, ignore_retcode=True) == 0
     sync_success = __salt__['cmd.retcode']('sync', ignore_retcode=True) == 0
@@ -566,7 +593,7 @@ def hdparms(disks, args=None):
         disk_data = {}
         for line in _hdparm('-{0} {1}'.format(args, disk), False).splitlines():
             line = line.strip()
-            if len(line) == 0 or line == disk + ':':
+            if not line or line == disk + ':':
                 continue
 
             if ':' in line:
@@ -591,18 +618,18 @@ def hdparms(disks, args=None):
                     try:
                         val = int(val)
                         rvals.append(val)
-                    except:  # pylint: disable=bare-except
+                    except Exception:
                         if '=' in val:
                             deep_key, val = val.split('=', 1)
                             deep_key = deep_key.strip()
                             val = val.strip()
-                            if len(val):
+                            if val:
                                 valdict[deep_key] = val
-                        elif len(val):
+                        elif val:
                             rvals.append(val)
-                if len(valdict):
+                if valdict:
                     rvals.append(valdict)
-                if len(rvals) == 0:
+                if not rvals:
                     continue
                 elif len(rvals) == 1:
                     rvals = rvals[0]
@@ -658,7 +685,7 @@ def hpa(disks, size=None):
     for disk, data in hpa_data.items():
         try:
             size = data['total'] - int(size)
-        except:  # pylint: disable=bare-except
+        except Exception:
             if '%' in size:
                 size = int(size.strip('%'))
                 size = (100 - size) * data['total']
@@ -723,17 +750,17 @@ def smart_attributes(dev, attributes=None, values=None):
         data = dict(zip(fields, line[1:]))
         try:
             del data['_']
-        except:  # pylint: disable=bare-except
+        except Exception:
             pass
 
         for field in data:
             val = data[field]
             try:
                 val = int(val)
-            except:  # pylint: disable=bare-except
+            except Exception:
                 try:
                     val = [int(value) for value in val.split(' ')]
-                except:  # pylint: disable=bare-except
+                except Exception:
                     pass
             data[field] = val
 
@@ -798,7 +825,7 @@ def _iostat_fbsd(interval, count, disks):
     for line in ret:
         if not line.startswith('device'):
             continue
-        elif not len(dev_header):
+        elif not dev_header:
             dev_header = line.split()[1:]
         while line is not False:
             line = next(ret, False)
@@ -849,12 +876,12 @@ def _iostat_linux(interval, count, disks):
     ret = iter(__salt__['cmd.run_stdout'](iostat_cmd, output_loglevel='quiet').splitlines())
     for line in ret:
         if line.startswith('avg-cpu:'):
-            if not len(sys_header):
+            if not sys_header:
                 sys_header = tuple(line.split()[1:])
             line = [decimal.Decimal(x) for x in next(ret).split()]
             sys_stats.append(line)
         elif line.startswith('Device:'):
-            if not len(dev_header):
+            if not dev_header:
                 dev_header = tuple(line.split()[1:])
             while line is not False:
                 line = next(ret, False)
@@ -867,7 +894,7 @@ def _iostat_linux(interval, count, disks):
 
     iostats = {}
 
-    if len(sys_header):
+    if sys_header:
         iostats['sys'] = _iostats_dict(sys_header, sys_stats)
 
     for disk, stats in dev_stats.items():

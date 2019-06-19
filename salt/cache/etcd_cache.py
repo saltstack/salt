@@ -48,8 +48,9 @@ value to ``etcd``:
 .. _`python-etcd documentation`: http://python-etcd.readthedocs.io/en/latest/
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import base64
 try:
     import etcd
     HAS_ETCD = True
@@ -112,7 +113,7 @@ def _init_client():
     log.info("etcd: Setting up client with params: %r", etcd_kwargs)
     client = etcd.Client(**etcd_kwargs)
     try:
-        client.get(path_prefix)
+        client.read(path_prefix)
     except etcd.EtcdKeyNotFound:
         log.info("etcd: Creating dir %r", path_prefix)
         client.write(path_prefix, None, dir=True)
@@ -126,7 +127,7 @@ def store(bank, key, data):
     etcd_key = '{0}/{1}/{2}'.format(path_prefix, bank, key)
     try:
         value = __context__['serial'].dumps(data)
-        client.set(etcd_key, value)
+        client.write(etcd_key, base64.b64encode(value))
     except Exception as exc:
         raise SaltCacheError(
             'There was an error writing the key, {0}: {1}'.format(etcd_key, exc)
@@ -140,10 +141,10 @@ def fetch(bank, key):
     _init_client()
     etcd_key = '{0}/{1}/{2}'.format(path_prefix, bank, key)
     try:
-        value = client.get(etcd_key).value
-        if value is None:
-            return {}
-        return __context__['serial'].loads(value)
+        value = client.read(etcd_key).value
+        return __context__['serial'].loads(base64.b64decode(value))
+    except etcd.EtcdKeyNotFound:
+        return {}
     except Exception as exc:
         raise SaltCacheError(
             'There was an error reading the key, {0}: {1}'.format(
@@ -162,7 +163,7 @@ def flush(bank, key=None):
     else:
         etcd_key = '{0}/{1}/{2}'.format(path_prefix, bank, key)
     try:
-        client.get(etcd_key)
+        client.read(etcd_key)
     except etcd.EtcdKeyNotFound:
         return  # nothing to flush
     try:
@@ -184,7 +185,7 @@ def _walk(r):
         return [r.key.split('/', 3)[3]]
 
     keys = []
-    for c in client.get(r.key).children:
+    for c in client.read(r.key).children:
         keys.extend(_walk(c))
     return keys
 
@@ -197,7 +198,7 @@ def ls(bank):
     _init_client()
     path = '{0}/{1}'.format(path_prefix, bank)
     try:
-        return _walk(client.get(path))
+        return _walk(client.read(path))
     except Exception as exc:
         raise SaltCacheError(
             'There was an error getting the key "{0}": {1}'.format(
@@ -213,7 +214,7 @@ def contains(bank, key):
     _init_client()
     etcd_key = '{0}/{1}/{2}'.format(path_prefix, bank, key)
     try:
-        r = client.get(etcd_key)
+        r = client.read(etcd_key)
         # return True for keys, not dirs
         return r.dir is False
     except etcd.EtcdKeyNotFound:

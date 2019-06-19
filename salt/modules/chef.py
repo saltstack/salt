@@ -4,7 +4,7 @@ Execute chef in server or solo mode
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import tempfile
@@ -215,6 +215,6 @@ def _exec_cmd(*args, **kwargs):
          for k, v in six.iteritems(kwargs) if not k.startswith('__')
     ])
     cmd_exec = '{0}{1}'.format(cmd_args, cmd_kwargs)
-    log.debug('Chef command: {0}'.format(cmd_exec))
+    log.debug('Chef command: %s', cmd_exec)
 
     return __salt__['cmd.run_all'](cmd_exec, python_shell=False)

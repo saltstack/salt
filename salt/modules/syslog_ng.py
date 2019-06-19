@@ -26,7 +26,8 @@ configuration file.
 '''
 
 # Import Python libs
-from __future__ import absolute_import, generators, with_statement
+from __future__ import absolute_import, generators, with_statement, \
+    unicode_literals, print_function
 import time
 import logging
 import salt
@@ -734,14 +735,14 @@ def get_config_file():
     return __SYSLOG_NG_CONFIG_FILE
 
 
-def _run_command(cmd, options=()):
+def _run_command(cmd, options=(), env=None):
     '''
     Runs the command cmd with options as its CLI parameters and returns the
     result as a dictionary.
     '''
     params = [cmd]
     params.extend(options)
-    return __salt__['cmd.run_all'](params, python_shell=False)
+    return __salt__['cmd.run_all'](params, env=env, python_shell=False)
 
 
 def _determine_config_version(syslog_ng_sbin_dir):
@@ -784,49 +785,26 @@ def set_parameters(version=None,
     return _format_return_data(0)
 
 
-def _add_to_path_envvar(directory):
-    '''
-    Adds directory to the PATH environment variable and returns the original
-    one.
-    '''
-    orig_path = os.environ.get('PATH', '')
-    if directory:
-        if not os.path.isdir(directory):
-            log.error('The given parameter is not a directory')
-
-        os.environ['PATH'] = '{0}{1}{2}'.format(orig_path,
-                                                os.pathsep,
-                                                directory)
-    return orig_path
-
-
-def _restore_path_envvar(original):
-    '''
-    Sets the PATH environment variable to the parameter.
-    '''
-    if original:
-        os.environ['PATH'] = original
-
-
 def _run_command_in_extended_path(syslog_ng_sbin_dir, command, params):
     '''
-    Runs the given command in an environment, where the syslog_ng_sbin_dir is
-    added then removed from the PATH.
+    Runs the specified command with the syslog_ng_sbin_dir in the PATH
     '''
-    orig_path = _add_to_path_envvar(syslog_ng_sbin_dir)
-
-    if not salt.utils.path.which(command):
-        error_message = (
-            'Unable to execute the command \'{0}\'. It is not in the PATH.'
-            .format(command)
-        )
-        log.error(error_message)
-        _restore_path_envvar(orig_path)
-        raise CommandExecutionError(error_message)
-
-    ret = _run_command(command, options=params)
-    _restore_path_envvar(orig_path)
-    return ret
+    orig_path = os.environ.get('PATH', '')
+    env = None
+    if syslog_ng_sbin_dir:
+        # Custom environment variables should be str types. This code
+        # normalizes the paths to unicode to join them together, and then
+        # converts back to a str type.
+        env = {
+            str('PATH'): salt.utils.stringutils.to_str(  # future lint: disable=blacklisted-function
+                os.pathsep.join(
+                    salt.utils.data.decode(
+                        (orig_path, syslog_ng_sbin_dir)
+                    )
+                )
+            )
+        }
+    return _run_command(command, options=params, env=env)
 
 
 def _format_return_data(retcode, stdout=None, stderr=None):
@@ -864,7 +842,7 @@ def config_test(syslog_ng_sbin_dir=None, cfgfile=None):
                                             'syslog-ng',
                                             params)
     except CommandExecutionError as err:
-        return _format_return_data(retcode=-1, stderr=str(err))
+        return _format_return_data(retcode=-1, stderr=six.text_type(err))
 
     retcode = ret.get('retcode', -1)
     stderr = ret.get('stderr', None)
@@ -890,7 +868,7 @@ def version(syslog_ng_sbin_dir=None):
                                             'syslog-ng',
                                             ('-V',))
     except CommandExecutionError as err:
-        return _format_return_data(retcode=-1, stderr=str(err))
+        return _format_return_data(retcode=-1, stderr=six.text_type(err))
 
     if ret['retcode'] != 0:
         return _format_return_data(ret['retcode'],
@@ -923,7 +901,7 @@ def modules(syslog_ng_sbin_dir=None):
                                             'syslog-ng',
                                             ('-V',))
     except CommandExecutionError as err:
-        return _format_return_data(retcode=-1, stderr=str(err))
+        return _format_return_data(retcode=-1, stderr=six.text_type(err))
 
     if ret['retcode'] != 0:
         return _format_return_data(ret['retcode'],
@@ -957,7 +935,7 @@ def stats(syslog_ng_sbin_dir=None):
                                             'syslog-ng-ctl',
                                             ('stats',))
     except CommandExecutionError as err:
-        return _format_return_data(retcode=-1, stderr=str(err))
+        return _format_return_data(retcode=-1, stderr=six.text_type(err))
 
     return _format_return_data(ret['retcode'],
                                ret.get('stdout'),
@@ -1012,7 +990,7 @@ def stop(name=None):
     '''
     pids = __salt__['ps.pgrep'](pattern='syslog-ng')
 
-    if pids is None or len(pids) == 0:
+    if not pids:
         return _format_state_result(name,
                                     result=False,
                                     comment='Syslog-ng is not running')
@@ -1176,13 +1154,13 @@ def _write_config(config, newlines=2):
 
     try:
         with salt.utils.files.fopen(__SYSLOG_NG_CONFIG_FILE, 'a') as fha:
-            fha.write(text)
+            fha.write(salt.utils.stringutils.to_str(text))
 
             for _ in range(0, newlines):
-                fha.write(os.linesep)
+                fha.write(salt.utils.stringutils.to_str(os.linesep))
         return True
     except Exception as err:
-        log.error(str(err))
+        log.error(six.text_type(err))
         return False
 
 
@@ -1206,9 +1184,8 @@ def write_version(name):
     try:
         if os.path.exists(__SYSLOG_NG_CONFIG_FILE):
             log.debug(
-                'Removing previous configuration file: {0}'.format(
-                    __SYSLOG_NG_CONFIG_FILE
-                )
+                'Removing previous configuration file: %s',
+                __SYSLOG_NG_CONFIG_FILE
             )
             os.remove(__SYSLOG_NG_CONFIG_FILE)
             log.debug('Configuration file successfully removed')
@@ -1220,7 +1197,7 @@ def write_version(name):
         return _format_state_result(name, result=True)
     except OSError as err:
         log.error(
-            'Failed to remove previous configuration file \'{0}\': {1}'
-            .format(__SYSLOG_NG_CONFIG_FILE, str(err))
+            'Failed to remove previous configuration file \'%s\': %s',
+            __SYSLOG_NG_CONFIG_FILE, err
         )
         return _format_state_result(name, result=False)

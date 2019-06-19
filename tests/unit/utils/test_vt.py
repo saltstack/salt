@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.unit.utils.vt_test
@@ -10,7 +10,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import random
@@ -26,6 +26,7 @@ import salt.utils.platform
 import salt.utils.vt
 
 # Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
@@ -96,7 +97,7 @@ class VTTestCase(TestCase):
                 except (ValueError, OSError, IOError):
                     self.fail('Unable to find out how many PTY\'s are open')
             except Exception as exc:
-                if 'out of pty devices' in exc:
+                if 'out of pty devices' in six.text_type(exc):
                     # We're not cleaning up
                     raise
                 # We're pushing the system resources, let's keep going

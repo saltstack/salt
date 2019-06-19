@@ -12,7 +12,7 @@ Manage Chocolatey package installs
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.data
@@ -29,7 +29,7 @@ def __virtual__():
 
 def installed(name, version=None, source=None, force=False, pre_versions=False,
               install_args=None, override_args=False, force_x86=False,
-              package_args=None, allow_multiple=False):
+              package_args=None, allow_multiple=False, execution_timeout=None):
     '''
     Installs a package if not already installed
 
@@ -76,6 +76,10 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
 
             .. versionadded:: 2017.7.0
 
+        execution_timeout (str):
+            Chocolatey execution timeout value you want to pass to the
+            installation process. Default is None.
+
     .. code-block:: yaml
 
         Installsomepackage:
@@ -101,14 +105,15 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
     # Package not installed
     if name.lower() not in [package.lower() for package in pre_install.keys()]:
         if version:
-            ret['changes'] = {name: 'Version {0} will be installed'
-                                    ''.format(version)}
+            ret['changes'] = {name: 'Version {0} will be installed'.format(version)}
         else:
             ret['changes'] = {name: 'Latest version will be installed'}
 
     # Package installed
     else:
-        version_info = __salt__['chocolatey.version'](name, check_remote=True)
+        version_info = __salt__['chocolatey.version'](name=name,
+                                                      check_remote=True,
+                                                      source=source)
 
         full_name = name
         for pkg in version_info:
@@ -123,11 +128,9 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
                 if force:
                     ret['changes'] = {
                         name: 'Version {0} will be reinstalled'.format(version)}
-                    ret['comment'] = 'Reinstall {0} {1}' \
-                                     ''.format(full_name, version)
+                    ret['comment'] = 'Reinstall {0} {1}'.format(full_name, version)
                 else:
-                    ret['comment'] = '{0} {1} is already installed' \
-                                     ''.format(name, version)
+                    ret['comment'] = '{0} {1} is already installed'.format(name, version)
                     if __opts__['test']:
                         ret['result'] = None
                     return ret
@@ -135,27 +138,29 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
                 if allow_multiple:
                     ret['changes'] = {
                         name: 'Version {0} will be installed side by side with '
-                              'Version {1} if supported'
-                              ''.format(version, installed_version)}
-                    ret['comment'] = 'Install {0} {1} side-by-side with {0} {2}' \
-                                     ''.format(full_name, version, installed_version)
+                              'Version {1} if supported'.format(version, installed_version)
+                    }
+                    ret['comment'] = (
+                        'Install {0} {1} side-by-side with {0} {2}'.format(
+                            full_name, version, installed_version
+                        )
+                    )
                 else:
                     ret['changes'] = {
-                        name: 'Version {0} will be installed over Version {1} '
-                              ''.format(version, installed_version)}
-                    ret['comment'] = 'Install {0} {1} over {0} {2}' \
-                                     ''.format(full_name, version, installed_version)
+                        name: 'Version {0} will be installed over Version {1}'.format(version, installed_version)
+                    }
+                    ret['comment'] = 'Install {0} {1} over {0} {2}'.format(
+                        full_name, version, installed_version
+                    )
                     force = True
         else:
             version = installed_version
             if force:
                 ret['changes'] = {
                     name: 'Version {0} will be reinstalled'.format(version)}
-                ret['comment'] = 'Reinstall {0} {1}' \
-                                 ''.format(full_name, version)
+                ret['comment'] = 'Reinstall {0} {1}'.format(full_name, version)
             else:
-                ret['comment'] = '{0} {1} is already installed' \
-                                 ''.format(name, version)
+                ret['comment'] = '{0} {1} is already installed'.format(name, version)
                 if __opts__['test']:
                     ret['result'] = None
                 return ret
@@ -175,7 +180,8 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
                                             override_args=override_args,
                                             force_x86=force_x86,
                                             package_args=package_args,
-                                            allow_multiple=allow_multiple)
+                                            allow_multiple=allow_multiple,
+                                            execution_timeout=execution_timeout)
 
     if 'Running chocolatey failed' not in result:
         ret['result'] = True
@@ -234,11 +240,13 @@ def uninstalled(name, version=None, uninstall_args=None, override_args=False):
     # Determine if package is installed
     if name.lower() in [package.lower() for package in pre_uninstall.keys()]:
         try:
-            ret['changes'] = {name: '{0} version {1} will be removed'
-                                    ''.format(name, pre_uninstall[name][0])}
+            ret['changes'] = {
+                name: '{0} version {1} will be removed'.format(
+                    name, pre_uninstall[name][0]
+                )
+            }
         except KeyError:
-            ret['changes'] = {name: '{0} will be removed'
-                                    ''.format(name)}
+            ret['changes'] = {name: '{0} will be removed'.format(name)}
     else:
         ret['comment'] = 'The package {0} is not installed'.format(name)
         return ret
@@ -282,7 +290,7 @@ def upgraded(name,
     '''
     Upgrades a package. Will install the package if not installed.
 
-    .. versionadded: Oxygen
+    .. versionadded:: 2018.3.0
 
     Args:
 
@@ -333,7 +341,6 @@ def upgraded(name,
     ret = {'name': name,
            'result': True,
            'changes': {},
-           'pchanges': {},
            'comment': ''}
 
     # Get list of currently installed packages
@@ -343,11 +350,10 @@ def upgraded(name,
     # Package not installed
     if name.lower() not in [package.lower() for package in pre_install.keys()]:
         if version:
-            ret['pchanges'] = {name: 'Version {0} will be installed'
-                                     ''.format(version)}
+            ret['changes'][name] = 'Version {0} will be installed'.format(version)
             ret['comment'] = 'Install version {0}'.format(version)
         else:
-            ret['pchanges'] = {name: 'Latest version will be installed'}
+            ret['changes'][name] = 'Latest version will be installed'
             ret['comment'] = 'Install latest version'
 
     # Package installed
@@ -374,38 +380,41 @@ def upgraded(name,
                     oper="==",
                     ver2=version):
                 if force:
-                    ret['pchanges'] = {
-                        name: 'Version {0} will be reinstalled'.format(version)}
-                    ret['comment'] = 'Reinstall {0} {1}' \
-                                     ''.format(full_name, version)
+                    ret['changes'][name] = 'Version {0} will be reinstalled'.format(version)
+                    ret['comment'] = 'Reinstall {0} {1}'.format(full_name, version)
                 else:
-                    ret['comment'] = '{0} {1} is already installed' \
-                                     ''.format(name, installed_version)
+                    ret['comment'] = '{0} {1} is already installed'.format(
+                        name, installed_version
+                    )
             else:
                 # If installed version is older than new version
                 if salt.utils.versions.compare(
                         ver1=installed_version, oper="<", ver2=version):
-                    ret['pchanges'] = {
-                        name: 'Version {0} will be upgraded to Version {1} '
-                              ''.format(installed_version, version)}
-                    ret['comment'] = 'Upgrade {0} {1} to {2}' \
-                                     ''.format(full_name, installed_version, version)
+                    ret['changes'][name] = 'Version {0} will be upgraded to Version {1}'.format(
+                        installed_version, version
+                    )
+                    ret['comment'] = 'Upgrade {0} {1} to {2}'.format(
+                        full_name, installed_version, version
+                    )
                 # If installed version is newer than new version
                 else:
-                    ret['comment'] = '{0} {1} (newer) is already installed' \
-                                     ''.format(name, installed_version)
+                    ret['comment'] = (
+                        '{0} {1} (newer) is already installed'.format(
+                            name, installed_version
+                        )
+                    )
         # Catch all for a condition where version is not passed and there is no
         # available version
         else:
             ret['comment'] = 'No version found to install'
 
-    # Return if `test=True`
-    if __opts__['test']:
-        ret['result'] = None
+    # Return if there are no changes to be made
+    if not ret['changes']:
         return ret
 
-    # Return if there are no changes to be made
-    if not ret['pchanges']:
+    # Return if running in test mode
+    if __opts__['test']:
+        ret['result'] = None
         return ret
 
     # Install the package
@@ -429,6 +438,9 @@ def upgraded(name,
     # Get list of installed packages after 'chocolatey.install'
     post_install = __salt__['chocolatey.list'](local_only=True)
 
+    # Prior to this, ret['changes'] would have contained expected changes,
+    # replace them with the actual changes now that we have completed the
+    # installation.
     ret['changes'] = salt.utils.data.compare_dicts(pre_install, post_install)
 
     return ret

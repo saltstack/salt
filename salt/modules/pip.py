@@ -74,16 +74,20 @@ of the 2015.5 branch:
    back slash is an escape character.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
+import logging
 import os
+
+try:
+    import pkg_resources
+except ImportError:
+    pkg_resources = None
 import re
 import shutil
-import logging
 import sys
 import tempfile
-from pkg_resources import parse_version
 
 # Import Salt libs
 import salt.utils.data
@@ -91,12 +95,13 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.locales
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 from salt.ext import six
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
-
+# This needs to be named logger so we don't shadow it in pip.install
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 # Don't shadow built-in's.
@@ -115,7 +120,22 @@ def __virtual__():
     entire filesystem.  If it's not installed in a conventional location, the
     user is required to provide the location of pip each time it is used.
     '''
-    return 'pip'
+    if pkg_resources is None:
+        ret = False, 'Package dependency "pkg_resource" is missing'
+    else:
+        ret = 'pip'
+
+    return ret
+
+
+def _clear_context(bin_env=None):
+    '''
+    Remove the cached pip version
+    '''
+    contextkey = 'pip.version'
+    if bin_env is not None:
+        contextkey = '{0}.{1}'.format(contextkey, bin_env)
+    __context__.pop(contextkey, None)
 
 
 def _get_pip_bin(bin_env):
@@ -124,37 +144,53 @@ def _get_pip_bin(bin_env):
     executable itself, or from searching conventional filesystem locations
     '''
     if not bin_env:
-        which_result = __salt__['cmd.which_bin'](
-            ['pip{0}.{1}'.format(*sys.version_info[:2]),
-             'pip{0}'.format(sys.version_info[0]),
-             'pip', 'pip-python']
-        )
-        if salt.utils.platform.is_windows() and six.PY2:
-            which_result.encode('string-escape')
-        if which_result is None:
-            raise CommandNotFoundError('Could not find a `pip` binary')
-        return which_result
+        logger.debug('pip: Using pip from currently-running Python')
+        return [os.path.normpath(sys.executable), '-m', 'pip']
 
-    # try to get pip bin from virtualenv, bin_env
+    python_bin = 'python.exe' if salt.utils.platform.is_windows() else 'python'
+
+    def _search_paths(*basedirs):
+        ret = []
+        for path in basedirs:
+            ret.extend([
+                os.path.join(path, python_bin),
+                os.path.join(path, 'bin', python_bin),
+                os.path.join(path, 'Scripts', python_bin)
+            ])
+        return ret
+
+    # try to get python bin from virtualenv (i.e. bin_env)
     if os.path.isdir(bin_env):
-        if salt.utils.platform.is_windows():
-            if six.PY2:
-                pip_bin = os.path.join(
-                    bin_env, 'Scripts', 'pip.exe').encode('string-escape')
-            else:
-                pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe')
-        else:
-            pip_bin = os.path.join(bin_env, 'bin', 'pip')
-        if os.path.isfile(pip_bin):
-            return pip_bin
-        msg = 'Could not find a `pip` binary in virtualenv {0}'.format(bin_env)
-        raise CommandNotFoundError(msg)
-    # bin_env is the pip binary
+        for bin_path in _search_paths(bin_env):
+            if os.path.isfile(bin_path):
+                if os.access(bin_path, os.X_OK):
+                    logger.debug('pip: Found python binary: %s', bin_path)
+                    return [os.path.normpath(bin_path), '-m', 'pip']
+                else:
+                    logger.debug(
+                        'pip: Found python binary by name but it is not '
+                        'executable: %s', bin_path
+                    )
+        raise CommandNotFoundError(
+            'Could not find a pip binary in virtualenv {0}'.format(bin_env)
+        )
+
+    # bin_env is the python or pip binary
     elif os.access(bin_env, os.X_OK):
-        if os.path.isfile(bin_env) or os.path.islink(bin_env):
-            return bin_env
+        if os.path.isfile(bin_env):
+            # If the python binary was passed, return it
+            if 'python' in os.path.basename(bin_env):
+                return [os.path.normpath(bin_env), '-m', 'pip']
+            # We have been passed a pip binary, use the pip binary.
+            return [os.path.normpath(bin_env)]
+
+        raise CommandExecutionError(
+            'Could not find a pip binary within {0}'.format(bin_env)
+        )
     else:
-        raise CommandNotFoundError('Could not find a `pip` binary')
+        raise CommandNotFoundError(
+            'Access denied to {0}, could not find a pip binary'.format(bin_env)
+        )
 
 
 def _get_cached_requirements(requirements, saltenv):
@@ -207,10 +243,12 @@ def _get_env_activate(bin_env):
 
 def _find_req(link):
 
-    logger.info('_find_req -- link = %s', str(link))
+    logger.info('_find_req -- link = %s', link)
 
     with salt.utils.files.fopen(link) as fh_link:
-        child_links = rex_pip_chain_read.findall(fh_link.read())
+        child_links = rex_pip_chain_read.findall(
+            salt.utils.stringutils.to_unicode(fh_link.read())
+        )
 
     base_path = os.path.dirname(link)
     child_links = [os.path.join(base_path, d) for d in child_links]
@@ -251,7 +289,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
         treq = None
 
         for requirement in requirements:
-            logger.debug('TREQ IS: %s', str(treq))
+            logger.debug('TREQ IS: %s', treq)
             if requirement.startswith('salt://'):
                 cached_requirements = _get_cached_requirements(
                     requirement, saltenv
@@ -271,15 +309,21 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                     treq = tempfile.mkdtemp()
 
                 __salt__['file.chown'](treq, user, None)
+                # In Windows, just being owner of a file isn't enough. You also
+                # need permissions
+                if salt.utils.platform.is_windows():
+                    __utils__['dacl.set_permissions'](
+                        obj_name=treq,
+                        principal=user,
+                        permissions='read_execute')
 
                 current_directory = None
 
                 if not current_directory:
                     current_directory = os.path.abspath(os.curdir)
 
-                logger.info('_process_requirements from directory,' +
-                            '%s -- requirement: %s', cwd, requirement
-                            )
+                logger.info('_process_requirements from directory, '
+                            '%s -- requirement: %s', cwd, requirement)
 
                 if cwd is None:
                     r = requirement
@@ -299,13 +343,13 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
 
                 os.chdir(current_directory)
 
-                logger.info('request files: {0}'.format(str(reqs)))
+                logger.info('request files: %s', reqs)
 
                 for req_file in reqs:
                     if not os.path.isabs(req_file):
                         req_file = os.path.join(cwd, req_file)
 
-                    logger.debug('TREQ N CWD: %s -- %s -- for %s', str(treq), str(cwd), str(req_file))
+                    logger.debug('TREQ N CWD: %s -- %s -- for %s', treq, cwd, req_file)
                     target_path = os.path.join(treq, os.path.basename(req_file))
 
                     logger.debug('S: %s', req_file)
@@ -324,8 +368,8 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                         __salt__['file.copy'](req_file, target_path)
 
                     logger.debug(
-                        'Changing ownership of requirements file \'{0}\' to '
-                        'user \'{1}\''.format(target_path, user)
+                        'Changing ownership of requirements file \'%s\' to '
+                        'user \'%s\'', target_path, user
                     )
 
                     __salt__['file.chown'](target_path, user, None)
@@ -335,8 +379,24 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
 
         cleanup_requirements.append(treq)
 
-    logger.debug('CLEANUP_REQUIREMENTS: %s', str(cleanup_requirements))
+    logger.debug('CLEANUP_REQUIREMENTS: %s', cleanup_requirements)
     return cleanup_requirements, None
+
+
+def _format_env_vars(env_vars):
+    ret = {}
+    if env_vars:
+        if isinstance(env_vars, dict):
+            for key, val in six.iteritems(env_vars):
+                if not isinstance(key, six.string_types):
+                    key = str(key)  # future lint: disable=blacklisted-function
+                if not isinstance(val, six.string_types):
+                    val = str(val)  # future lint: disable=blacklisted-function
+                ret[key] = val
+        else:
+            raise CommandExecutionError(
+                'env_vars {0} is not a dictionary'.format(env_vars))
+    return ret
 
 
 def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
@@ -368,7 +428,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             global_options=None,
             install_options=None,
             user=None,
-            no_chown=False,
             cwd=None,
             pre_releases=False,
             cert=None,
@@ -381,8 +440,12 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             use_vt=False,
             trusted_host=None,
             no_cache_dir=False,
-            cache_dir=None):
-    '''
+            cache_dir=None,
+            no_binary=None,
+            user_install=False,
+            extra_args=None,
+            **kwargs):
+    r'''
     Install packages with pip
 
     Install packages individually or from a pip requirements file. Install
@@ -395,19 +458,28 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         Path to requirements
 
     bin_env
-        Path to pip bin or path to virtualenv. If doing a system install,
-        and want to use a specific pip bin (pip-2.7, pip-2.6, etc..) just
-        specify the pip bin you want.
+        Path to pip (or to a virtualenv). This can be used to specify the path
+        to the pip to use when more than one Python release is installed (e.g.
+        ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
+        specified, it is assumed to be a virtualenv.
 
         .. note::
-            If installing into a virtualenv, just use the path to the
-            virtualenv (e.g. ``/home/code/path/to/virtualenv/``)
+
+            For Windows, if the pip module is being used to upgrade the pip
+            package, bin_env should be the path to the virtualenv or to the
+            python binary that should be used.  The pip command is unable to
+            upgrade itself in Windows.
 
     use_wheel
         Prefer wheel archives (requires pip>=1.4)
 
     no_use_wheel
-        Force to not use wheel archives (requires pip>=1.4)
+        Force to not use wheel archives (requires pip>=1.4,<10.0.0)
+
+    no_binary
+        Force to not use binary packages (requires pip >= 7.0.0)
+        Accepts either :all: to disable all binary packages, :none: to empty the set,
+        or one or more package names with commas between them
 
     log
         Log file where a complete (maximum verbosity) record will be kept
@@ -498,12 +570,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     user
         The user under which to run pip
 
-    no_chown
-        When user is given, do not attempt to copy and chown a requirements
-        file
-
     cwd
-        Current working directory to run pip from
+        Directory from which to run pip
 
     pre_releases
         Include pre-releases in the available versions
@@ -547,6 +615,28 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     no_cache_dir
         Disable the cache.
 
+    user_install
+        Enable install to occur inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
+
+    extra_args
+        pip keyword and positional arguments not yet implemented in salt
+
+        .. code-block:: yaml
+
+            salt '*' pip.install pandas extra_args="[{'--latest-pip-kwarg':'param'}, '--latest-pip-arg']"
+
+        .. warning::
+
+            If unsupported options are passed here that are not supported in a
+            minion's version of pip, a `No such option error` will be thrown.
+
+    Will be translated into the following pip command:
+
+    .. code-block:: bash
+
+        pip install pandas --latest-pip-kwarg param --latest-pip-arg
+
     CLI Example:
 
     .. code-block:: bash
@@ -562,9 +652,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
-    pip_bin = _get_pip_bin(bin_env)
-
-    cmd = [pip_bin, 'install']
+    cmd = _get_pip_bin(bin_env)
+    cmd.append('install')
 
     cleanup_requirements, error = _process_requirements(
         requirements=requirements,
@@ -577,31 +666,49 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if error:
         return error
 
+    cur_version = version(bin_env)
+
     if use_wheel:
         min_version = '1.4'
-        cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
-                                           ver2=min_version):
+        max_version = '9.0.3'
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
+        if too_low or too_high:
             logger.error(
-                ('The --use-wheel option is only supported in pip {0} and '
-                 'newer. The version of pip detected is {1}. This option '
-                 'will be ignored.'.format(min_version, cur_version))
+                'The --use-wheel option is only supported in pip between %s and '
+                '%s. The version of pip detected is %s. This option '
+                'will be ignored.', min_version, max_version, cur_version
             )
         else:
             cmd.append('--use-wheel')
 
     if no_use_wheel:
         min_version = '1.4'
-        cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
-                                           ver2=min_version):
+        max_version = '9.0.3'
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
+        if too_low or too_high:
             logger.error(
-                ('The --no-use-wheel option is only supported in pip {0} and '
-                 'newer. The version of pip detected is {1}. This option '
-                 'will be ignored.'.format(min_version, cur_version))
+                'The --no-use-wheel option is only supported in pip between %s and '
+                '%s. The version of pip detected is %s. This option '
+                'will be ignored.', min_version, max_version, cur_version
             )
         else:
             cmd.append('--no-use-wheel')
+
+    if no_binary:
+        min_version = '7.0.0'
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        if too_low:
+            logger.error(
+                'The --no-binary option is only supported in pip %s and '
+                'newer. The version of pip detected is %s. This option '
+                'will be ignored.', min_version, cur_version
+            )
+        else:
+            if isinstance(no_binary, list):
+                no_binary = ','.join(no_binary)
+            cmd.extend(['--no-binary', no_binary])
 
     if log:
         if os.path.isdir(log):
@@ -665,8 +772,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if mirrors:
         # https://github.com/pypa/pip/pull/2641/files#diff-3ef137fb9ffdd400f117a565cd94c188L216
-        pip_version = version(pip_bin)
-        if salt.utils.versions.compare(ver1=pip_version, oper='>=', ver2='7.0.0'):
+        if salt.utils.versions.compare(ver1=cur_version, oper='>=', ver2='7.0.0'):
             raise CommandExecutionError(
                     'pip >= 7.0.0 does not support mirror argument:'
                     ' use index_url and/or extra_index_url instead'
@@ -694,11 +800,14 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if download_cache or cache_dir:
         cmd.extend(['--cache-dir' if salt.utils.versions.compare(
-            ver1=version(bin_env), oper='>=', ver2='6.0'
+            ver1=cur_version, oper='>=', ver2='6.0'
         ) else '--download-cache', download_cache or cache_dir])
 
     if source:
         cmd.extend(['--source', source])
+
+    if user_install:
+        cmd.append('--user')
 
     if upgrade:
         cmd.append('--upgrade')
@@ -731,7 +840,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if pre_releases:
         # Check the locally installed pip version
-        pip_version = version(pip_bin)
+        pip_version = cur_version
 
         # From pip v1.4 the --pre flag is available
         if salt.utils.versions.compare(ver1=pip_version, oper='>=', ver2='1.4'):
@@ -755,14 +864,23 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             cmd.extend(['--install-option', opt])
 
     if pkgs:
-        if isinstance(pkgs, six.string_types):
-            pkgs = [p.strip() for p in pkgs.split(',')]
+        if not isinstance(pkgs, list):
+            try:
+                pkgs = [p.strip() for p in pkgs.split(',')]
+            except AttributeError:
+                pkgs = [p.strip() for p in six.text_type(pkgs).split(',')]
+        pkgs = salt.utils.data.stringify(salt.utils.data.decode_list(pkgs))
 
         # It's possible we replaced version-range commas with semicolons so
         # they would survive the previous line (in the pip.installed state).
         # Put the commas back in while making sure the names are contained in
         # quotes, this allows for proper version spec passing salt>=0.17.0
-        cmd.extend(['{0}'.format(p.replace(';', ',')) for p in pkgs])
+        cmd.extend([p.replace(';', ',') for p in pkgs])
+    elif not any([requirements, editable]):
+        # Starting with pip 10.0.0, if no packages are specified in the
+        # command, it returns a retcode 1.  So instead of running the command,
+        # just return the output without running pip.
+        return {'retcode': 0, 'stdout': 'No packages to install.'}
 
     if editable:
         egg_match = re.compile(r'(?:#|#.*?&)egg=([^&]*)')
@@ -805,17 +923,31 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if trusted_host:
         cmd.extend(['--trusted-host', trusted_host])
 
+    if extra_args:
+        # These are arguments from the latest version of pip that
+        # have not yet been implemented in salt
+        for arg in extra_args:
+            # It is a keyword argument
+            if isinstance(arg, dict):
+                # There will only ever be one item in this dictionary
+                key, val = arg.popitem()
+                # Don't allow any recursion into keyword arg definitions
+                # Don't allow multiple definitions of a keyword
+                if isinstance(val, (dict, list)):
+                    raise TypeError("Too many levels in: {}".format(key))
+                # This is a a normal one-to-one keyword argument
+                cmd.extend([key, val])
+            # It is a positional argument, append it to the list
+            else:
+                cmd.append(arg)
+
     cmd_kwargs = dict(saltenv=saltenv, use_vt=use_vt, runas=user)
 
+    if kwargs:
+        cmd_kwargs.update(kwargs)
+
     if env_vars:
-        if isinstance(env_vars, dict):
-            for key, val in six.iteritems(env_vars):
-                if not isinstance(val, six.string_types):
-                    val = str(val)
-                cmd_kwargs.setdefault('env', {})[key] = val
-        else:
-            raise CommandExecutionError(
-                'env_vars {0} is not a dictionary'.format(env_vars))
+        cmd_kwargs.setdefault('env', {}).update(_format_env_vars(env_vars))
 
     try:
         if cwd:
@@ -826,13 +958,12 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
         logger.debug(
             'TRY BLOCK: end of pip.install -- cmd: %s, cmd_kwargs: %s',
-            str(cmd), str(cmd_kwargs)
+            cmd, cmd_kwargs
         )
 
-        return __salt__['cmd.run_all'](cmd,
-                                       python_shell=False,
-                                       **cmd_kwargs)
+        return __salt__['cmd.run_all'](cmd, python_shell=False, **cmd_kwargs)
     finally:
+        _clear_context(bin_env)
         for tempdir in [cr for cr in cleanup_requirements if cr is not None]:
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
@@ -845,46 +976,42 @@ def uninstall(pkgs=None,
               proxy=None,
               timeout=None,
               user=None,
-              no_chown=False,
               cwd=None,
               saltenv='base',
               use_vt=False):
     '''
-    Uninstall packages with pip
-
-    Uninstall packages individually or from a pip requirements file. Uninstall
-    packages globally or from a virtualenv.
+    Uninstall packages individually or from a pip requirements file
 
     pkgs
         comma separated list of packages to install
+
     requirements
-        path to requirements.
+        Path to requirements file
+
     bin_env
-        path to pip bin or path to virtualenv. If doing an uninstall from
-        the system python and want to use a specific pip bin (pip-2.7,
-        pip-2.6, etc..) just specify the pip bin you want.
-        If uninstalling from a virtualenv, just use the path to the virtualenv
-        (/home/code/path/to/virtualenv/)
+        Path to pip (or to a virtualenv). This can be used to specify the path
+        to the pip to use when more than one Python release is installed (e.g.
+        ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
+        specified, it is assumed to be a virtualenv.
+
     log
         Log file where a complete (maximum verbosity) record will be kept
+
     proxy
-        Specify a proxy in the form
-        user:passwd@proxy.server:port. Note that the
-        user:password@ is optional and required only if you
-        are behind an authenticated proxy.  If you provide
-        user@proxy.server:port then you will be prompted for a
-        password.
+        Specify a proxy in the format ``user:passwd@proxy.server:port``. Note
+        that the ``user:password@`` is optional and required only if you are
+        behind an authenticated proxy.  If you provide
+        ``user@proxy.server:port`` then you will be prompted for a password.
+
     timeout
         Set the socket timeout (default 15 seconds)
+
     user
         The user under which to run pip
-    no_chown
-        When user is given, do not attempt to copy and chown
-        a requirements file (needed if the requirements file refers to other
-        files via relative paths, as the copy-and-chown procedure does not
-        account for such files)
+
     cwd
-        Current working directory to run pip from
+        Directory from which to run pip
+
     use_vt
         Use VT terminal emulation (see output while installing)
 
@@ -896,11 +1023,9 @@ def uninstall(pkgs=None,
         salt '*' pip.uninstall requirements=/path/to/requirements.txt
         salt '*' pip.uninstall <package name> bin_env=/path/to/virtualenv
         salt '*' pip.uninstall <package name> bin_env=/path/to/pip_bin
-
     '''
-    pip_bin = _get_pip_bin(bin_env)
-
-    cmd = [pip_bin, 'uninstall', '-y']
+    cmd = _get_pip_bin(bin_env)
+    cmd.extend(['uninstall', '-y'])
 
     cleanup_requirements, error = _process_requirements(
         requirements=requirements, cmd=cmd, saltenv=saltenv, user=user,
@@ -943,6 +1068,7 @@ def uninstall(pkgs=None,
             for requirement in requirements:
                 with salt.utils.files.fopen(requirement) as rq_:
                     for req in rq_:
+                        req = salt.utils.stringutils.to_unicode(req)
                         try:
                             req_pkg, _ = req.split('==')
                             if req_pkg in pkgs:
@@ -959,6 +1085,7 @@ def uninstall(pkgs=None,
     try:
         return __salt__['cmd.run_all'](cmd, **cmd_kwargs)
     finally:
+        _clear_context(bin_env)
         for requirement in cleanup_requirements:
             if requirement:
                 try:
@@ -970,63 +1097,70 @@ def uninstall(pkgs=None,
 def freeze(bin_env=None,
            user=None,
            cwd=None,
-           use_vt=False):
-    '''
+           use_vt=False,
+           env_vars=None,
+           user_install=False,
+           **kwargs):
+    r'''
     Return a list of installed packages either globally or in the specified
     virtualenv
 
     bin_env
-        path to pip bin or path to virtualenv. If doing an uninstall from
-        the system python and want to use a specific pip bin (pip-2.7,
-        pip-2.6, etc..) just specify the pip bin you want.
-        If uninstalling from a virtualenv, just use the path to the virtualenv
-        (/home/code/path/to/virtualenv/)
+        Path to pip (or to a virtualenv). This can be used to specify the path
+        to the pip to use when more than one Python release is installed (e.g.
+        ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
+        specified, it is assumed to be a virtualenv.
+
     user
         The user under which to run pip
+
     cwd
-        Current working directory to run pip from
+        Directory from which to run pip
+
+    user_install
+        Enable output to show inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
 
     .. note::
-
         If the version of pip available is older than 8.0.3, the list will not
-        include the packages pip, wheel, setuptools, or distribute even if they
-        are installed.
+        include the packages ``pip``, ``wheel``, ``setuptools``, or
+        ``distribute`` even if they are installed.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pip.freeze /home/code/path/to/virtualenv/
-
-    .. versionchanged:: 2016.11.2
-
-        The packages pip, wheel, setuptools, and distribute are included if the
-        installed pip is new enough.
+        salt '*' pip.freeze bin_env=/home/code/path/to/virtualenv
     '''
-    pip_bin = _get_pip_bin(bin_env)
-
-    cmd = [pip_bin, 'freeze']
+    cmd = _get_pip_bin(bin_env)
+    cmd.append('freeze')
 
     # Include pip, setuptools, distribute, wheel
     min_version = '8.0.3'
     cur_version = version(bin_env)
-    if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
-                                       ver2=min_version):
+    if salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version):
         logger.warning(
-            ('The version of pip installed is {0}, which is older than {1}. '
-             'The packages pip, wheel, setuptools, and distribute will not be '
-             'included in the output of pip.freeze').format(cur_version,
-                                                            min_version))
+            'The version of pip installed is %s, which is older than %s. '
+            'The packages pip, wheel, setuptools, and distribute will not be '
+            'included in the output of pip.freeze', cur_version, min_version
+        )
     else:
         cmd.append('--all')
 
+    if user_install:
+        cmd.append('--user')
+
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
+    if kwargs:
+        cmd_kwargs.update(**kwargs)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+    if env_vars:
+        cmd_kwargs.setdefault('env', {}).update(_format_env_vars(env_vars))
     result = __salt__['cmd.run_all'](cmd, **cmd_kwargs)
 
-    if result['retcode'] > 0:
-        raise CommandExecutionError(result['stderr'])
+    if result['retcode']:
+        raise CommandExecutionError(result['stderr'], info=result)
 
     return result['stdout'].splitlines()
 
@@ -1034,36 +1168,44 @@ def freeze(bin_env=None,
 def list_(prefix=None,
           bin_env=None,
           user=None,
-          cwd=None):
-    '''
+          cwd=None,
+          env_vars=None,
+          user_install=False,
+          **kwargs):
+    r'''
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
 
     .. note::
 
         If the version of pip available is older than 8.0.3, the packages
-        wheel, setuptools, and distribute will not be reported by this function
-        even if they are installed. Unlike
-        :py:func:`pip.freeze <salt.modules.pip.freeze>`, this function always
-        reports the version of pip which is installed.
+        ``wheel``, ``setuptools``, and ``distribute`` will not be reported by
+        this function even if they are installed. Unlike :py:func:`pip.freeze
+        <salt.modules.pip.freeze>`, this function always reports the version of
+        pip which is installed.
+
+
+    user_install
+        Enable output to show inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pip.list salt
-
-    .. versionchanged:: 2016.11.2
-
-        The packages wheel, setuptools, and distribute are included if the
-        installed pip is new enough.
     '''
     packages = {}
 
     if prefix is None or 'pip'.startswith(prefix):
         packages['pip'] = version(bin_env)
 
-    for line in freeze(bin_env=bin_env, user=user, cwd=cwd):
+    for line in freeze(bin_env=bin_env,
+                       user=user,
+                       cwd=cwd,
+                       env_vars=env_vars,
+                       user_install=user_install,
+                       **kwargs):
         if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory
             # ignore comment lines
@@ -1073,7 +1215,15 @@ def list_(prefix=None,
             continue
         elif line.startswith('-e'):
             line = line.split('-e ')[1]
-            version_, name = line.split('#egg=')
+            if '#egg=' in line:
+                version_, name = line.split('#egg=')
+            else:
+                if len(line.split('===')) >= 2:
+                    name = line.split('===')[0]
+                    version_ = line.split('===')[1]
+                elif len(line.split('==')) >= 2:
+                    name = line.split('==')[0]
+                    version_ = line.split('==')[1]
         elif len(line.split('===')) >= 2:
             name = line.split('===')[0]
             version_ = line.split('===')[1]
@@ -1081,7 +1231,7 @@ def list_(prefix=None,
             name = line.split('==')[0]
             version_ = line.split('==')[1]
         else:
-            logger.error('Can\'t parse line \'{0}\''.format(line))
+            logger.error('Can\'t parse line \'%s\'', line)
             continue
 
         if prefix:
@@ -1108,14 +1258,27 @@ def version(bin_env=None):
 
         salt '*' pip.version
     '''
-    pip_bin = _get_pip_bin(bin_env)
+    contextkey = 'pip.version'
+    if bin_env is not None:
+        contextkey = '{0}.{1}'.format(contextkey, bin_env)
 
-    output = __salt__['cmd.run_stdout'](
-        '{0} --version'.format(pip_bin), python_shell=False)
+    if contextkey in __context__:
+        return __context__[contextkey]
+
+    cmd = _get_pip_bin(bin_env)[:]
+    cmd.append('--version')
+
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if ret['retcode']:
+        raise CommandNotFoundError('Could not find a `pip` binary')
+
     try:
-        return re.match(r'^pip (\S+)', output).group(1)
+        pip_version = re.match(r'^pip (\S+)', ret['stdout']).group(1)
     except AttributeError:
-        return None
+        pip_version = None
+
+    __context__[contextkey] = pip_version
+    return pip_version
 
 
 def list_upgrades(bin_env=None,
@@ -1130,15 +1293,15 @@ def list_upgrades(bin_env=None,
 
         salt '*' pip.list_upgrades
     '''
-    pip_bin = _get_pip_bin(bin_env)
+    cmd = _get_pip_bin(bin_env)
+    cmd.extend(['list', '--outdated'])
 
-    cmd = [pip_bin, 'list', '--outdated']
-
-    # If pip >= 9.0 use --format=json
+    pip_version = version(bin_env)
+    # Pip started supporting the ability to output json starting with 9.0.0
     min_version = '9.0'
-    cur_version = version(pip_bin)
-    if salt.utils.versions.compare(ver1=cur_version, oper='>=',
-                                       ver2=min_version):
+    if salt.utils.versions.compare(ver1=pip_version,
+                                   oper='>=',
+                                   ver2=min_version):
         cmd.append('--format=json')
 
     cmd_kwargs = dict(cwd=cwd, runas=user)
@@ -1146,54 +1309,78 @@ def list_upgrades(bin_env=None,
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
     result = __salt__['cmd.run_all'](cmd, **cmd_kwargs)
-    if result['retcode'] > 0:
-        logger.error(result['stderr'])
-        raise CommandExecutionError(result['stderr'])
+    if result['retcode']:
+        raise CommandExecutionError(result['stderr'], info=result)
 
     packages = {}
-    try:
-        json_results = salt.utils.json.loads(result['stdout'])
-        for json_result in json_results:
-            packages[json_result['name']] = json_result['latest_version']
-    except ValueError:
+    # Pip started supporting the ability to output json starting with 9.0.0
+    # Older versions will have to parse stdout
+    if salt.utils.versions.compare(ver1=pip_version, oper='<', ver2='9.0.0'):
+        # Pip versions < 8.0.0 had a different output format
+        # Sample data:
+        # pip (Current: 7.1.2 Latest: 10.0.1 [wheel])
+        # psutil (Current: 5.2.2 Latest: 5.4.5 [wheel])
+        # pyasn1 (Current: 0.2.3 Latest: 0.4.2 [wheel])
+        # pycparser (Current: 2.17 Latest: 2.18 [sdist])
+        if salt.utils.versions.compare(ver1=pip_version, oper='<', ver2='8.0.0'):
+            logger.debug('pip module: Old output format')
+            pat = re.compile(r'(\S*)\s+\(.*Latest:\s+(.*)\)')
+
+        # New output format for version 8.0.0+
+        # Sample data:
+        # pip (8.0.0) - Latest: 10.0.1 [wheel]
+        # psutil (5.2.2) - Latest: 5.4.5 [wheel]
+        # pyasn1 (0.2.3) - Latest: 0.4.2 [wheel]
+        # pycparser (2.17) - Latest: 2.18 [sdist]
+        else:
+            logger.debug('pip module: New output format')
+            pat = re.compile(r'(\S*)\s+\(.*\)\s+-\s+Latest:\s+(.*)')
+
         for line in result['stdout'].splitlines():
-            match = re.search(r'(\S*)\s+.*Latest:\s+(.*)', line)
+            match = pat.search(line)
             if match:
                 name, version_ = match.groups()
             else:
-                logger.error('Can\'t parse line \'{0}\''.format(line))
+                logger.error('Can\'t parse line \'%s\'', line)
                 continue
             packages[name] = version_
+
+    else:
+        logger.debug('pip module: JSON output format')
+        try:
+            pkgs = salt.utils.json.loads(result['stdout'], strict=False)
+        except ValueError:
+            raise CommandExecutionError('Invalid JSON', info=result)
+
+        for pkg in pkgs:
+            packages[pkg['name']] = '{0} [{1}]'.format(pkg['latest_version'],
+                                                       pkg['latest_filetype'])
 
     return packages
 
 
 def is_installed(pkgname=None,
-          bin_env=None,
-          user=None,
-          cwd=None):
+                 bin_env=None,
+                 user=None,
+                 cwd=None):
     '''
+    .. versionadded:: 2018.3.0
+
     Filter list of installed apps from ``freeze`` and return True or False  if
     ``pkgname`` exists in the list of packages installed.
 
     .. note::
-
         If the version of pip available is older than 8.0.3, the packages
         wheel, setuptools, and distribute will not be reported by this function
-        even if they are installed. Unlike
-        :py:func:`pip.freeze <salt.modules.pip.freeze>`, this function always
-        reports the version of pip which is installed.
+        even if they are installed. Unlike :py:func:`pip.freeze
+        <salt.modules.pip.freeze>`, this function always reports the version of
+        pip which is installed.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pip.is_installed salt
-
-    .. versionadded:: Oxygen
-
-        The packages wheel, setuptools, and distribute are included if the
-        installed pip is new enough.
     '''
     for line in freeze(bin_env=bin_env, user=user, cwd=cwd):
         if line.startswith('-f') or line.startswith('#'):
@@ -1213,7 +1400,7 @@ def is_installed(pkgname=None,
             name = line.split('==')[0]
             version_ = line.split('==')[1]
         else:
-            logger.error('Can\'t parse line \'{0}\''.format(line))
+            logger.error('Can\'t parse line \'%s\'', line)
             continue
 
         if pkgname:
@@ -1248,7 +1435,11 @@ def upgrade(bin_env=None,
     '''
     .. versionadded:: 2015.5.0
 
-    Upgrades outdated pip packages
+    Upgrades outdated pip packages.
+
+    .. note::
+        On Windows you can't update salt from pip using salt, so salt will be
+        skipped
 
     Returns a dict containing the changes.
 
@@ -1266,16 +1457,19 @@ def upgrade(bin_env=None,
            'result': True,
            'comment': '',
            }
-    pip_bin = _get_pip_bin(bin_env)
+    cmd = _get_pip_bin(bin_env)
+    cmd.extend(['install', '-U'])
 
     old = list_(bin_env=bin_env, user=user, cwd=cwd)
 
-    cmd = [pip_bin, 'install', '-U']
     cmd_kwargs = dict(cwd=cwd, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     errors = False
     for pkg in list_upgrades(bin_env=bin_env, user=user, cwd=cwd):
+        if pkg == 'salt':
+            if salt.utils.platform.is_windows():
+                continue
         result = __salt__['cmd.run_all'](cmd + [pkg], **cmd_kwargs)
         if result['retcode'] != 0:
             errors = True
@@ -1284,6 +1478,7 @@ def upgrade(bin_env=None,
     if errors:
         ret['result'] = False
 
+    _clear_context(bin_env)
     new = list_(bin_env=bin_env, user=user, cwd=cwd)
 
     ret['changes'] = salt.utils.data.compare_dicts(old, new)
@@ -1297,7 +1492,9 @@ def list_all_versions(pkg,
                       include_beta=False,
                       include_rc=False,
                       user=None,
-                      cwd=None):
+                      cwd=None,
+                      index_url=None,
+                      extra_index_url=None):
     '''
     .. versionadded:: 2017.7.3
 
@@ -1307,9 +1504,10 @@ def list_all_versions(pkg,
         The package to check
 
     bin_env
-        Path to pip bin or path to virtualenv. If doing a system install,
-        and want to use a specific pip bin (pip-2.7, pip-2.6, etc..) just
-        specify the pip bin you want.
+        Path to pip (or to a virtualenv). This can be used to specify the path
+        to the pip to use when more than one Python release is installed (e.g.
+        ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
+        specified, it is assumed to be a virtualenv.
 
     include_alpha
         Include alpha versions in the list
@@ -1324,7 +1522,15 @@ def list_all_versions(pkg,
         The user under which to run pip
 
     cwd
-        Current working directory to run pip from
+        Directory from which to run pip
+
+    index_url
+        Base URL of Python Package Index
+        .. versionadded:: 2019.2.0
+
+    extra_index_url
+        Additional URL of Python Package Index
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -1332,9 +1538,22 @@ def list_all_versions(pkg,
 
        salt '*' pip.list_all_versions <package name>
     '''
-    pip_bin = _get_pip_bin(bin_env)
+    cmd = _get_pip_bin(bin_env)
+    cmd.extend(['install', '{0}==versions'.format(pkg)])
 
-    cmd = [pip_bin, 'install', '{0}==versions'.format(pkg)]
+    if index_url:
+        if not salt.utils.url.validate(index_url, VALID_PROTOS):
+            raise CommandExecutionError(
+                '\'{0}\' is not a valid URL'.format(index_url)
+            )
+        cmd.extend(['--index-url', index_url])
+
+    if extra_index_url:
+        if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
+            raise CommandExecutionError(
+                '\'{0}\' is not a valid URL'.format(extra_index_url)
+            )
+        cmd.extend(['--extra-index-url', extra_index_url])
 
     cmd_kwargs = dict(cwd=cwd, runas=user, output_loglevel='quiet', redirect_stderr=True)
     if bin_env and os.path.isdir(bin_env):
@@ -1359,7 +1578,7 @@ def list_all_versions(pkg,
         match = re.search(r'\s*Could not find a version.* \(from versions: (.*)\)', line)
         if match:
             versions = [v for v in match.group(1).split(', ') if v and excludes.match(v)]
-            versions.sort(key=parse_version)
+            versions.sort(key=pkg_resources.parse_version)
             break
     if not versions:
         return None

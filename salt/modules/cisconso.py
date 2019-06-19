@@ -7,7 +7,7 @@ Execution module for Cisco Network Services Orchestrator Proxy minions
 For documentation on setting up the cisconso proxy minion look in the documentation
 for :mod:`salt.proxy.cisconso<salt.proxy.cisconso>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.platform
 from salt.ext import six
@@ -60,7 +60,7 @@ def get_data(datastore, path):
 
 def set_data_value(datastore, path, data):
     '''
-    Get a data entry in a datastore
+    Set a data entry in a datastore
 
     :param datastore: The datastore, e.g. running, operational.
         One of the NETCONF store IETF types

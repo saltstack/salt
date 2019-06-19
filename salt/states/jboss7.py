@@ -37,7 +37,7 @@ For the sake of brevity, examples for each state assume that jboss_config is con
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 import logging
 import re
@@ -151,22 +151,22 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False,
             raise CommandExecutionError('Unable to handle error: {0}'.format(ds_result['failure-description']))
 
     if ret['result']:
-        log.debug("ds_new_properties=%s", str(ds_new_properties))
-        log.debug("ds_current_properties=%s", str(ds_current_properties))
+        log.debug("ds_new_properties=%s", ds_new_properties)
+        log.debug("ds_current_properties=%s", ds_current_properties)
         diff = dictdiffer.diff(ds_new_properties, ds_current_properties)
 
         added = diff.added()
-        if len(added) > 0:
+        if added:
             has_changed = True
             ret['changes']['added'] = __format_ds_changes(added, ds_current_properties, ds_new_properties)
 
         removed = diff.removed()
-        if len(removed) > 0:
+        if removed:
             has_changed = True
             ret['changes']['removed'] = __format_ds_changes(removed, ds_current_properties, ds_new_properties)
 
         changed = diff.changed()
-        if len(changed) > 0:
+        if changed:
             has_changed = True
             ret['changes']['changed'] = __format_ds_changes(changed, ds_current_properties, ds_new_properties)
 
@@ -177,10 +177,10 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False,
 
 
 def __format_ds_changes(keys, old_dict, new_dict):
-    log.debug("__format_ds_changes(keys=%s, old_dict=%s, new_dict=%s)", str(keys), str(old_dict), str(new_dict))
+    log.debug("__format_ds_changes(keys=%s, old_dict=%s, new_dict=%s)", keys, old_dict, new_dict)
     changes = ''
     for key in keys:
-        log.debug("key=%s", str(key))
+        log.debug("key=%s", key)
         if key in old_dict and key in new_dict:
             changes += key+':'+__get_ds_value(old_dict, key)+'->'+__get_ds_value(new_dict, key)+'\n'
         elif key in old_dict:
@@ -197,7 +197,7 @@ def __get_ds_value(dct, key):
     elif dct[key] is None:
         return 'undefined'
     else:
-        return str(dct[key])
+        return six.text_type(dct[key])
 
 
 def bindings_exist(name, jboss_config, bindings, profile=None):
@@ -226,7 +226,7 @@ def bindings_exist(name, jboss_config, bindings, profile=None):
 
     '''
     log.debug(" ======================== STATE: jboss7.bindings_exist (name: %s) (profile: %s) ", name, profile)
-    log.debug('bindings='+str(bindings))
+    log.debug('bindings=%s', bindings)
     ret = {'name': name,
            'result': True,
            'changes': {},
@@ -234,7 +234,7 @@ def bindings_exist(name, jboss_config, bindings, profile=None):
 
     has_changed = False
     for key in bindings:
-        value = str(bindings[key])
+        value = six.text_type(bindings[key])
         query_result = __salt__['jboss7.read_simple_binding'](binding_name=key, jboss_config=jboss_config, profile=profile)
         if query_result['success']:
             current_value = query_result['result']['value']
@@ -283,6 +283,8 @@ def deployed(name, jboss_config, salt_source=None):
                 (optional) File on salt master (e.g. salt://application-web-0.39.war).  If absent, no files will be retrieved and the artifact in target_file will be used for the deployment.
             undeploy:
                 (optional) Regular expression to match against existing deployments.  When present, if there is a deployment that matches the regular expression, it will be undeployed before the new artifact is deployed.
+            undeploy_force:
+                (optional) If True, the artifact will be undeployed although it has not changed.
 
     Examples:
 
@@ -335,7 +337,7 @@ def deployed(name, jboss_config, salt_source=None):
     if not validate_success:
         return _error(ret, validate_comment)
 
-    resolved_source, get_artifact_comment = __get_artifact(salt_source)
+    resolved_source, get_artifact_comment, changed = __get_artifact(salt_source)
     log.debug('resolved_source=%s', resolved_source)
     log.debug('get_artifact_comment=%s', get_artifact_comment)
 
@@ -347,22 +349,40 @@ def deployed(name, jboss_config, salt_source=None):
     if not find_success:
         return _error(ret, find_comment)
 
+    require_deployment = True
+
     log.debug('deployment=%s', deployment)
     if deployment is not None:
-        __salt__['jboss7.undeploy'](jboss_config, deployment)
-        ret['changes']['undeployed'] = deployment
+        if 'undeploy_force' in salt_source:
+            if salt_source['undeploy_force']:
+                ret['changes']['undeployed'] = __undeploy(jboss_config, deployment)
+            else:
+                if changed:
+                    ret['changes']['undeployed'] = __undeploy(jboss_config, deployment)
+                else:
+                    require_deployment = False
+                    comment = __append_comment(new_comment='The artifact {} was already deployed'.format(deployment), current_comment=comment)
+        else:
+            ret['changes']['undeployed'] = __undeploy(jboss_config, deployment)
 
-    deploy_result = __salt__['jboss7.deploy'](jboss_config=jboss_config, source_file=resolved_source)
-    log.debug('deploy_result=%s', str(deploy_result))
-    if deploy_result['success']:
-        comment = __append_comment(new_comment='Deployment completed.', current_comment=comment)
-        ret['comment'] = comment
-        ret['changes']['deployed'] = resolved_source
-    else:
-        comment = __append_comment(new_comment='''Deployment failed\nreturn code={retcode}\nstdout='{stdout}'\nstderr='{stderr}'''.format(**deploy_result), current_comment=comment)
-        return _error(ret, comment)
+    if require_deployment:
+        deploy_result = __salt__['jboss7.deploy'](jboss_config=jboss_config, source_file=resolved_source)
+        log.debug('deploy_result=%s', str(deploy_result))
+        if deploy_result['success']:
+            comment = __append_comment(new_comment='Deployment completed.', current_comment=comment)
+            ret['changes']['deployed'] = resolved_source
+        else:
+            comment = __append_comment(new_comment='''Deployment failed\nreturn code={retcode}\nstdout='{stdout}'\nstderr='{stderr}'''.format(**deploy_result), current_comment=comment)
+            _error(ret, comment)
+
+    ret['comment'] = comment
 
     return ret
+
+
+def __undeploy(jboss_config, deployment):
+    __salt__['jboss7.undeploy'](jboss_config, deployment)
+    return deployment
 
 
 def __validate_arguments(jboss_config, salt_source):
@@ -397,6 +417,7 @@ def __find_deployment(jboss_config, salt_source=None):
 def __get_artifact(salt_source):
     resolved_source = None
     comment = None
+    changed = False
 
     if salt_source is None:
         log.debug('salt_source == None')
@@ -416,6 +437,7 @@ def __get_artifact(salt_source):
                     user=None,
                     group=None,
                     mode=None,
+                    attrs=None,
                     saltenv=__env__,
                     context=None,
                     defaults=None,
@@ -431,6 +453,7 @@ def __get_artifact(salt_source):
                     user=None,
                     group=None,
                     mode=None,
+                    attrs=None,
                     saltenv=__env__,
                     backup=None,
                     makedirs=False,
@@ -444,6 +467,9 @@ def __get_artifact(salt_source):
                 else:
                     comment = manage_result['comment']
 
+                if manage_result['changes']:
+                    changed = True
+
             except Exception as e:
                 log.debug(traceback.format_exc())
                 comment = 'Unable to manage file: {0}'.format(e)
@@ -452,7 +478,7 @@ def __get_artifact(salt_source):
             resolved_source = salt_source['target_file']
             comment = ''
 
-    return resolved_source, comment
+    return resolved_source, comment, changed
 
 
 def reloaded(name, jboss_config, timeout=60, interval=5):

@@ -2,17 +2,19 @@
 '''
 A collection of hashing and encoding utils.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import base64
 import hashlib
 import hmac
 import random
+import os
 
 # Import Salt libs
 from salt.ext import six
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.stringutils
 
 from salt.utils.decorators.jinja import jinja_filter
@@ -26,11 +28,10 @@ def base64_b64encode(instr):
     Among other possible differences, the "modern" encoder does not include
     newline ('\\n') characters in the encoded output.
     '''
-    if six.PY3:
-        b = salt.utils.stringutils.to_bytes(instr)
-        b64 = base64.b64encode(b)
-        return salt.utils.stringutils.to_str(b64)
-    return base64.b64encode(instr)
+    return salt.utils.stringutils.to_unicode(
+        base64.b64encode(salt.utils.stringutils.to_bytes(instr)),
+        encoding='utf8' if salt.utils.platform.is_windows() else None
+    )
 
 
 @jinja_filter('base64_decode')
@@ -38,14 +39,14 @@ def base64_b64decode(instr):
     '''
     Decode a base64-encoded string using the "modern" Python interface.
     '''
-    if six.PY3:
-        b = salt.utils.stringutils.to_bytes(instr)
-        data = base64.b64decode(b)
-        try:
-            return salt.utils.stringutils.to_str(data)
-        except UnicodeDecodeError:
-            return data
-    return base64.b64decode(instr)
+    decoded = base64.b64decode(salt.utils.stringutils.to_bytes(instr))
+    try:
+        return salt.utils.stringutils.to_unicode(
+            decoded,
+            encoding='utf8' if salt.utils.platform.is_windows() else None
+        )
+    except UnicodeDecodeError:
+        return decoded
 
 
 def base64_encodestring(instr):
@@ -56,26 +57,30 @@ def base64_encodestring(instr):
     a newline ('\\n') character after every 76 characters and always
     at the end of the encoded string.
     '''
-    if six.PY3:
-        b = salt.utils.stringutils.to_bytes(instr)
-        b64 = base64.encodebytes(b)
-        return salt.utils.stringutils.to_str(b64)
-    return base64.encodestring(instr)
+    return salt.utils.stringutils.to_unicode(
+        base64.encodestring(salt.utils.stringutils.to_bytes(instr)),
+        encoding='utf8' if salt.utils.platform.is_windows() else None
+    )
 
 
 def base64_decodestring(instr):
     '''
     Decode a base64-encoded string using the "legacy" Python interface.
-
     '''
-    if six.PY3:
-        b = salt.utils.stringutils.to_bytes(instr)
-        data = base64.decodebytes(b)
-        try:
-            return salt.utils.stringutils.to_str(data)
-        except UnicodeDecodeError:
-            return data
-    return base64.decodestring(instr)
+    b = salt.utils.stringutils.to_bytes(instr)
+    try:
+        # PY3
+        decoded = base64.decodebytes(b)
+    except AttributeError:
+        # PY2
+        decoded = base64.decodestring(b)
+    try:
+        return salt.utils.stringutils.to_unicode(
+            decoded,
+            encoding='utf8' if salt.utils.platform.is_windows() else None
+        )
+    except UnicodeDecodeError:
+        return decoded
 
 
 @jinja_filter('md5')
@@ -83,32 +88,40 @@ def md5_digest(instr):
     '''
     Generate an md5 hash of a given string.
     '''
+    return salt.utils.stringutils.to_unicode(
+        hashlib.md5(salt.utils.stringutils.to_bytes(instr)).hexdigest()
+    )
+
+
+@jinja_filter('sha1')
+def sha1_digest(instr):
+    '''
+    Generate an sha1 hash of a given string.
+    '''
     if six.PY3:
         b = salt.utils.stringutils.to_bytes(instr)
-        return hashlib.md5(b).hexdigest()
-    return hashlib.md5(instr).hexdigest()
+        return hashlib.sha1(b).hexdigest()
+    return hashlib.sha1(instr).hexdigest()
 
 
 @jinja_filter('sha256')
 def sha256_digest(instr):
     '''
-    Generate an sha256 hash of a given string.
+    Generate a sha256 hash of a given string.
     '''
-    if six.PY3:
-        b = salt.utils.stringutils.to_bytes(instr)
-        return hashlib.sha256(b).hexdigest()
-    return hashlib.sha256(instr).hexdigest()
+    return salt.utils.stringutils.to_unicode(
+        hashlib.sha256(salt.utils.stringutils.to_bytes(instr)).hexdigest()
+    )
 
 
 @jinja_filter('sha512')
 def sha512_digest(instr):
     '''
-    Generate an sha512 hash of a given string
+    Generate a sha512 hash of a given string
     '''
-    if six.PY3:
-        b = salt.utils.stringutils.to_bytes(instr)
-        return hashlib.sha512(b).hexdigest()
-    return hashlib.sha512(instr).hexdigest()
+    return salt.utils.stringutils.to_unicode(
+        hashlib.sha512(salt.utils.stringutils.to_bytes(instr)).hexdigest()
+    )
 
 
 @jinja_filter('hmac')
@@ -117,20 +130,14 @@ def hmac_signature(string, shared_secret, challenge_hmac):
     Verify a challenging hmac signature against a string / shared-secret
     Returns a boolean if the verification succeeded or failed.
     '''
-    if six.PY3:
-        msg = salt.utils.stringutils.to_bytes(string)
-        key = salt.utils.stringutils.to_bytes(shared_secret)
-        challenge = salt.utils.stringutils.to_bytes(challenge_hmac)
-    else:
-        msg = string
-        key = shared_secret
-        challenge = challenge_hmac
+    msg = salt.utils.stringutils.to_bytes(string)
+    key = salt.utils.stringutils.to_bytes(shared_secret)
+    challenge = salt.utils.stringutils.to_bytes(challenge_hmac)
     hmac_hash = hmac.new(key, msg, hashlib.sha256)
     valid_hmac = base64.b64encode(hmac_hash.digest())
     return valid_hmac == challenge
 
 
-@jinja_filter('rand_str')  # Remove this for Neon
 @jinja_filter('random_hash')
 def random_hash(size=9999999999, hash_type=None):
     '''
@@ -139,7 +146,7 @@ def random_hash(size=9999999999, hash_type=None):
     if not hash_type:
         hash_type = 'md5'
     hasher = getattr(hashlib, hash_type)
-    return hasher(salt.utils.stringutils.to_bytes(str(random.SystemRandom().randint(0, size)))).hexdigest()
+    return hasher(salt.utils.stringutils.to_bytes(six.text_type(random.SystemRandom().randint(0, size)))).hexdigest()
 
 
 @jinja_filter('file_hashsum')
@@ -163,3 +170,39 @@ def get_hash(path, form='sha256', chunk_size=65536):
         for chunk in iter(lambda: ifile.read(chunk_size), b''):
             hash_obj.update(chunk)
         return hash_obj.hexdigest()
+
+
+class DigestCollector(object):
+    '''
+    Class to collect digest of the file tree.
+    '''
+
+    def __init__(self, form='sha256', buff=0x10000):
+        '''
+        Constructor of the class.
+        :param form:
+        '''
+        self.__digest = hasattr(hashlib, form) and getattr(hashlib, form)() or None
+        if self.__digest is None:
+            raise ValueError('Invalid hash type: {0}'.format(form))
+        self.__buff = buff
+
+    def add(self, path):
+        '''
+        Update digest with the file content by path.
+
+        :param path:
+        :return:
+        '''
+        with salt.utils.files.fopen(path, 'rb') as ifile:
+            for chunk in iter(lambda: ifile.read(self.__buff), b''):
+                self.__digest.update(chunk)
+
+    def digest(self):
+        '''
+        Get digest.
+
+        :return:
+        '''
+
+        return salt.utils.stringutils.to_str(self.__digest.hexdigest() + os.linesep)

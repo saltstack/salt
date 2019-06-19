@@ -4,7 +4,7 @@ Configuration of the alternatives system
 
 Control the alternatives system
 
-.. code-block:: yaml
+.. code-block:: jinja
 
   {% set my_hadoop_conf = '/opt/hadoop/conf' %}
 
@@ -26,6 +26,7 @@ Control the alternatives system
       - path: {{ my_hadoop_conf }}
 
 '''
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Define a function alias in order not to shadow built-in's
 __func_alias__ = {
@@ -69,9 +70,8 @@ def install(name, link, path, priority):
            'changes': {},
            'comment': ''}
 
-    isinstalled = __salt__['alternatives.check_installed'](name, path)
-    if isinstalled:
-        ret['comment'] = 'Alternatives for {0} is already set to {1}'.format(name, path)
+    if __salt__['alternatives.check_exists'](name, path):
+        ret['comment'] = 'Alternative {0} for {1} is already registered'.format(path, name)
     else:
         if __opts__['test']:
             ret['comment'] = (
@@ -81,12 +81,15 @@ def install(name, link, path, priority):
             return ret
 
         out = __salt__['alternatives.install'](name, link, path, priority)
-        current = __salt__['alternatives.show_current'](name)
-        master_link = __salt__['alternatives.show_link'](name)
-        if current == path and master_link == link:
-            ret['comment'] = (
-                'Alternative for {0} set to path {1} with priority {2}'
-            ).format(name, current, priority)
+        if __salt__['alternatives.check_exists'](name, path):
+            if __salt__['alternatives.check_installed'](name, path):
+                ret['comment'] = (
+                    'Alternative for {0} set to path {1} with priority {2}'
+                ).format(name, path, priority)
+            else:
+                ret['comment'] = (
+                    'Alternative {0} for {1} registered with priority {2} and not set to default'
+                ).format(path, name, priority)
             ret['changes'] = {'name': name,
                               'link': link,
                               'path': path,
@@ -201,6 +204,12 @@ def set_(name, path):
     path
         is the location of one of the alternative target files.
         (e.g. /usr/bin/less)
+
+    .. code-block:: yaml
+
+        foo:
+          alternatives.set:
+            - path: /usr/bin/foo-2.0
     '''
     ret = {'name': name,
            'path': path,

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -18,6 +18,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.deb_apache as deb_apache
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -92,7 +93,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(side_effect=Exception('error'))
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
-            self.assertEqual(str(deb_apache.a2ensite('saltstack.com')),
+            self.assertEqual(six.text_type(deb_apache.a2ensite('saltstack.com')),
                              'error')
 
     # 'a2dissite' function tests: 4
@@ -136,7 +137,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(side_effect=Exception('error'))
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
-            self.assertEqual(str(deb_apache.a2dissite('saltstack.com')),
+            self.assertEqual(six.text_type(deb_apache.a2dissite('saltstack.com')),
                              'error')
 
     # 'check_mod_enabled' function tests: 2
@@ -196,7 +197,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(side_effect=Exception('error'))
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
-            self.assertEqual(str(deb_apache.a2enmod('vhost_alias')),
+            self.assertEqual(six.text_type(deb_apache.a2enmod('vhost_alias')),
                              'error')
 
     # 'a2dismod' function tests: 4
@@ -240,7 +241,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(side_effect=Exception('error'))
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
-            self.assertEqual(str(deb_apache.a2dismod('vhost_alias')),
+            self.assertEqual(six.text_type(deb_apache.a2dismod('vhost_alias')),
                              'error')
 
     # 'check_conf_enabled' function tests: 2
@@ -304,7 +305,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.path.which', MagicMock(return_value='a2enconf')):
             mock = MagicMock(side_effect=Exception('error'))
             with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
-                self.assertEqual(str(deb_apache.a2enconf('security')),
+                self.assertEqual(six.text_type(deb_apache.a2enconf('security')),
                     'error')
 
     # 'a2disconf' function tests: 4
@@ -352,5 +353,5 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.path.which', MagicMock(return_value='a2disconf')):
             mock = MagicMock(side_effect=Exception('error'))
             with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
-                self.assertEqual(str(deb_apache.a2disconf('security')),
+                self.assertEqual(six.text_type(deb_apache.a2disconf('security')),
                     'error')

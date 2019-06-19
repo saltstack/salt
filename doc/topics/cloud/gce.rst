@@ -116,6 +116,12 @@ Set up the provider cloud config at ``/etc/salt/cloud.providers`` or
 
 .. note::
 
+    Empty strings as values for ``service_account_private_key`` and ``service_account_email_address``
+    can be used on GCE instances. This will result in the service account assigned to the GCE instance
+    being used.
+
+.. note::
+
     The value provided for ``project`` must not contain underscores or spaces and
     is labeled as "Project ID" on the Google Developers Console.
 
@@ -164,7 +170,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    salt gce-instance test.ping
+    salt gce-instance test.version
 
 
 GCE Specific Settings

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Management of OpenStack Neutron Security Group Rules
-=========================================
+====================================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.neutronng` for setup instructions
@@ -29,7 +29,7 @@ Example States
         - project_id: 1dcac318a83b4610b7a7f7ba01465548
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = 'neutron_secgroup_rule'
 
@@ -77,6 +77,8 @@ def present(name, auth=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+
     __salt__['neutronng.setup_clouds'](auth)
 
     if 'project_name' in kwargs:
@@ -112,7 +114,6 @@ def present(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = kwargs
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Security Group rule will be created.'
             return ret
 
@@ -166,10 +167,9 @@ def absent(name, auth=None, **kwargs):
             rule_exists = True
 
     if rule_exists:
-        if __opts__['test'] is True:
+        if __opts__['test']:
             ret['result'] = None
             ret['changes'] = {'id': kwargs['rule_id']}
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Security group rule will be deleted.'
             return ret
 

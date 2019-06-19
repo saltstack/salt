@@ -6,7 +6,7 @@ IRC Bot engine
 
 Example Configuration
 
-.. code:: yaml
+.. code-block:: yaml
 
     engines:
       - ircbot:
@@ -26,7 +26,7 @@ Example Configuration
           allow_nicks:
             - gtmanfred
 
-Available commands on irc are
+Available commands on irc are:
 
 ping
     return pong
@@ -40,18 +40,18 @@ event <tag> [<extra>, <data>]
 
 Example of usage
 
-.. code-block:: txt
+.. code-block:: text
 
     08:33:57 @gtmanfred > !ping
     08:33:57   gtmanbot > gtmanfred: pong
     08:34:02 @gtmanfred > !echo ping
     08:34:02   gtmanbot > ping
-    08:34:17 @gtmanfred > !event test/tag/ircbot irc is usefull
+    08:34:17 @gtmanfred > !event test/tag/ircbot irc is useful
     08:34:17   gtmanbot > gtmanfred: TaDa!
 
-.. code-block:: txt
+.. code-block:: text
 
-    [DEBUG   ] Sending event: tag = salt/engines/ircbot/test/tag/ircbot; data = {'_stamp': '2016-11-28T14:34:16.633623', 'data': [u'irc', u'is', u'usefull']}
+    [DEBUG   ] Sending event: tag = salt/engines/ircbot/test/tag/ircbot; data = {'_stamp': '2016-11-28T14:34:16.633623', 'data': ['irc', 'is', 'useful']}
 
 '''
 from __future__ import absolute_import, print_function, unicode_literals
@@ -97,14 +97,15 @@ class IRCClient(object):
         self.allow_nicks = allow_nicks
         self.disable_query = disable_query
         self.io_loop = tornado.ioloop.IOLoop(make_current=False)
+        self.io_loop.make_current()
         self._connect()
 
     def _connect(self):
         _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         if self.ssl is True:
-            self._stream = tornado.iostream.SSLIOStream(_sock, ssl_options={'cert_reqs': ssl.CERT_NONE}, io_loop=self.io_loop)
+            self._stream = tornado.iostream.SSLIOStream(_sock, ssl_options={'cert_reqs': ssl.CERT_NONE})
         else:
-            self._stream = tornado.iostream.IOStream(_sock, io_loop=self.io_loop)
+            self._stream = tornado.iostream.IOStream(_sock)
         self._stream.set_close_callback(self.on_closed)
         self._stream.connect((self.host, self.port), self.on_connect)
 

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Management of OpenStack Neutron Security Groups
-=========================================
+===============================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.neutronng` for setup instructions
@@ -35,7 +35,7 @@ Example States
         - project_name: Project1
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = 'neutron_secgroup'
 
@@ -74,6 +74,8 @@ def present(name, auth=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+
     __salt__['neutronng.setup_clouds'](auth)
 
     if 'project_name' in kwargs:
@@ -95,7 +97,6 @@ def present(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = kwargs
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Security Group will be created.'
             return ret
 
@@ -109,7 +110,6 @@ def present(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = changes
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Security Group will be updated.'
             return ret
 
@@ -133,6 +133,8 @@ def absent(name, auth=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+
     __salt__['neutronng.setup_clouds'](auth)
 
     kwargs['project_id'] = __salt__['keystoneng.project_get'](
@@ -147,7 +149,6 @@ def absent(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = {'id': secgroup.id}
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Security group will be deleted.'
             return ret
 

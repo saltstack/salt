@@ -4,7 +4,7 @@ Managing Images in OpenStack Glance
 ===================================
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
@@ -53,14 +53,14 @@ def _find_image(name):
         return False, 'keystoneclient: Unauthorized'
     except glance_Unauthorized:
         return False, 'glanceclient: Unauthorized'
-    log.debug('Got images: {0}'.format(images))
+    log.debug('Got images: %s', images)
 
     if type(images) is dict and len(images) == 1 and 'images' in images:
         images = images['images']
 
     images_list = images.values() if type(images) is dict else images
 
-    if len(images_list) == 0:
+    if not images_list:
         return None, 'No image with name "{0}"'.format(name)
     elif len(images_list) == 1:
         return images_list[0], 'Found image {0}'.format(name)
@@ -132,7 +132,7 @@ def image_present(name, visibility='public', protected=None,
         image = __salt__['glance.image_create'](name=name,
             protected=protected, visibility=visibility,
             location=location, disk_format=disk_format)
-        log.debug('Created new image:\n{0}'.format(image))
+        log.debug('Created new image:\n%s', image)
         ret['changes'] = {
             name:
                 {
@@ -149,8 +149,8 @@ def image_present(name, visibility='public', protected=None,
         while timer > 0:
             if 'status' in image and \
                     image['status'] in acceptable:
-                log.debug('Image {0} has reached status {1}'.format(
-                    image['name'], image['status']))
+                log.debug('Image %s has reached status %s',
+                          image['name'], image['status'])
                 break
             else:
                 timer -= 5
@@ -246,5 +246,5 @@ def image_present(name, visibility='public', protected=None,
         elif image['status'] in ['saving', 'queued']:
             ret['comment'] += 'Checksum won\'t be verified as image ' +\
                 'hasn\'t reached\n\t "status=active" yet.\n'
-    log.debug('glance.image_present will return: {0}'.format(ret))
+    log.debug('glance.image_present will return: %s', ret)
     return ret

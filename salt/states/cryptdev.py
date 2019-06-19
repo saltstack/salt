@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Opening of Encrypted Devices
-=======================
+============================
 
 Ensure that an encrypted device is mapped with the `mapped` function:
 
@@ -26,9 +26,9 @@ Ensure that an encrypted device is mapped with the `mapped` function:
         - keyfile: /etc/keyfile.key
         - config: /etc/alternate-crypttab
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 log = logging.getLogger(__name__)
@@ -100,7 +100,7 @@ def mapped(name,
         if name not in active.keys():
             # Open the map using cryptsetup. This does not pass any options.
             if opts:
-                log.warn('passed cryptdev options are ignored when mapping immediately')
+                log.warning('Ignore cryptdev configuration when mapping immediately')
 
             if __opts__['test']:
                 ret['result'] = None

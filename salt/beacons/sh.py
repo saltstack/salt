@@ -4,16 +4,18 @@ Watch the shell commands being executed actively. This beacon requires strace.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
+
+import logging
 import time
 
 # Import salt libs
 import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.vt
 
 __virtualname__ = 'sh'
 
-import logging
 log = logging.getLogger(__name__)
 
 
@@ -80,14 +82,14 @@ def beacon(config):
                     stream_stdout=False,
                     stream_stderr=False)
             __context__[pkey][pid]['user'] = ps_out[pid].get('user')
-    for pid in __context__[pkey]:
+    for pid in list(__context__[pkey]):
         out = ''
         err = ''
         while __context__[pkey][pid]['vt'].has_unread_data:
             tout, terr = __context__[pkey][pid]['vt'].recv()
             if not terr:
                 break
-            out += tout
+            out += salt.utils.stringutils.to_unicode(tout or '')
             err += terr
         for line in err.split('\n'):
             event = {'args': [],

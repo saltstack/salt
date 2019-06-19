@@ -6,9 +6,8 @@ Utilities for accessing storage container blobs on Azure
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
-import inspect
 
 # Import azure libs
 HAS_LIBS = False
@@ -19,7 +18,6 @@ except ImportError:
     pass
 
 # Import salt libs
-from salt.ext import six
 from salt.exceptions import SaltSystemExit
 
 log = logging.getLogger(__name__)
@@ -178,25 +176,13 @@ def object_to_dict(obj):
     if isinstance(obj, list) or isinstance(obj, tuple):
         ret = []
         for item in obj:
-            #ret.append(obj.__dict__[item])
-            ret.append(object_to_dict(obj))
-    elif isinstance(obj, six.text_type):
-        ret = obj.encode('ascii', 'replace'),
-    elif isinstance(obj, six.string_types):
-        ret = obj
-    else:
+            ret.append(object_to_dict(item))
+    elif hasattr(obj, '__dict__'):
         ret = {}
         for item in obj.__dict__:
             if item.startswith('_'):
                 continue
-            # This is ugly, but inspect.isclass() doesn't seem to work
-            try:
-                if inspect.isclass(obj) or 'class' in str(type(obj.__dict__.get(item))):
-                    ret[item] = object_to_dict(obj.__dict__[item])
-                elif isinstance(obj.__dict__[item], six.text_type):
-                    ret[item] = obj.__dict__[item].encode('ascii', 'replace')
-                else:
-                    ret[item] = obj.__dict__[item]
-            except AttributeError:
-                ret[item] = obj.get(item)
+            ret[item] = object_to_dict(obj.__dict__[item])
+    else:
+        ret = obj
     return ret

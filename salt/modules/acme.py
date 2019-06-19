@@ -23,9 +23,19 @@ eventually falls back to /opt/letsencrypt/letsencrypt-auto
 
 Most parameters will fall back to cli.ini defaults if None is given.
 
+DNS plugins
+-----------
+
+This module currently supports the CloudFlare certbot DNS plugin.  The DNS
+plugin credentials file needs to be passed in using the
+``dns_plugin_credentials`` argument.
+
+Make sure the appropriate certbot plugin for the wanted DNS provider is
+installed before using this module.
+
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import datetime
 import os
@@ -36,9 +46,12 @@ import salt.utils.path
 log = logging.getLogger(__name__)
 
 LEA = salt.utils.path.which_bin(['certbot', 'letsencrypt',
-                            'certbot-auto', 'letsencrypt-auto',
-                            '/opt/letsencrypt/letsencrypt-auto'])
+                                 'certbot-auto', 'letsencrypt-auto',
+                                 '/opt/letsencrypt/letsencrypt-auto'])
 LE_LIVE = '/etc/letsencrypt/live/'
+
+if salt.utils.platform.is_freebsd():
+    LE_LIVE = '/usr/local' + LE_LIVE
 
 
 def __virtual__():
@@ -101,7 +114,16 @@ def cert(name,
          server=None,
          owner='root',
          group='root',
-         certname=None):
+         mode='0640',
+         certname=None,
+         preferred_challenges=None,
+         tls_sni_01_port=None,
+         tls_sni_01_address=None,
+         http_01_port=None,
+         http_01_address=None,
+         dns_plugin=None,
+         dns_plugin_credentials=None,
+         dns_plugin_propagate_seconds=10):
     '''
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
 
@@ -113,9 +135,26 @@ def cert(name,
     :param renew: True/'force' to force a renewal, or a window of renewal before expiry in days
     :param keysize: RSA key bits
     :param server: API endpoint to talk to
-    :param owner: owner of private key
-    :param group: group of private key
+    :param owner: owner of the private key file
+    :param group: group of the private key file
+    :param mode: mode of the private key file
     :param certname: Name of the certificate to save
+    :param preferred_challenges: A sorted, comma delimited list of the preferred
+                                 challenge to use during authorization with the
+                                 most preferred challenge listed first.
+    :param tls_sni_01_port: Port used during tls-sni-01 challenge. This only affects
+                            the port Certbot listens on. A conforming ACME server
+                            will still attempt to connect on port 443.
+    :param tls_sni_01_address: The address the server listens to during tls-sni-01
+                               challenge.
+    :param http_01_port: Port used in the http-01 challenge. This only affects
+                         the port Certbot listens on. A conforming ACME server
+                         will still attempt to connect on port 80.
+    :param https_01_address: The address the server listens to during http-01 challenge.
+    :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare' or 'digitalocean')
+    :param dns_plugin_credentials: Path to the credentials file if required by the specified DNS plugin
+    :param dns_plugin_propagate_seconds: Number of seconds to wait for DNS propogations before
+                                asking ACME servers to verify the DNS record. (default 10)
     :return: dict with 'result' True/False/None, 'comment' and certificate's expiry date ('not_after')
 
     CLI example:
@@ -125,14 +164,16 @@ def cert(name,
         salt 'gitlab.example.com' acme.cert dev.example.com "[gitlab.example.com]" test_cert=True renew=14 webroot=/opt/gitlab/embedded/service/gitlab-rails/public
     '''
 
-    cmd = [LEA, 'certonly', '--non-interactive']
+    cmd = [LEA, 'certonly', '--non-interactive', '--agree-tos']
+
+    supported_dns_plugins = ['cloudflare', 'digitalocean']
 
     cert_file = _cert_file(name, 'cert')
     if not __salt__['file.file_exists'](cert_file):
-        log.debug('Certificate {0} does not exist (yet)'.format(cert_file))
+        log.debug('Certificate %s does not exist (yet)', cert_file)
         renew = False
     elif needs_renewal(name, renew):
-        log.debug('Certificate {0} will be renewed'.format(cert_file))
+        log.debug('Certificate %s will be renewed', cert_file)
         cmd.append('--renew-by-default')
         renew = True
     if server:
@@ -150,6 +191,17 @@ def cert(name,
         cmd.append('--authenticator webroot')
         if webroot is not True:
             cmd.append('--webroot-path {0}'.format(webroot))
+    elif dns_plugin in supported_dns_plugins:
+        if dns_plugin == 'cloudflare':
+            cmd.append('--dns-cloudflare')
+            cmd.append('--dns-cloudflare-credentials {0}'.format(dns_plugin_credentials))
+            cmd.append('--dns-cloudflare-propagation-seconds {0}'.format(dns_plugin_propagate_seconds))
+        elif dns_plugin == 'digitalocean':
+            cmd.append('--dns-digitalocean')
+            cmd.append('--dns-digitalocean-credentials {0}'.format(dns_plugin_credentials))
+            cmd.append('--dns-digitalocean-propagation-seconds {0}'.format(dns_plugin_propagate_seconds))
+        else:
+            return {'result': False, 'comment': 'DNS plugin \'{0}\' is not supported'.format(dns_plugin)}
     else:
         cmd.append('--authenticator standalone')
 
@@ -164,33 +216,44 @@ def cert(name,
         for dns in aliases:
             cmd.append('--domains {0}'.format(dns))
 
+    if preferred_challenges:
+        cmd.append('--preferred-challenges {}'.format(preferred_challenges))
+
+    if tls_sni_01_port:
+        cmd.append('--tls-sni-01-port {}'.format(tls_sni_01_port))
+    if tls_sni_01_address:
+        cmd.append('--tls-sni-01-address {}'.format(tls_sni_01_address))
+    if http_01_port:
+        cmd.append('--http-01-port {}'.format(http_01_port))
+    if http_01_address:
+        cmd.append('--http-01-address {}'.format(http_01_address))
+
     res = __salt__['cmd.run_all'](' '.join(cmd))
 
     if res['retcode'] != 0:
-        return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
+        if 'expand' in res['stderr']:
+            cmd.append('--expand')
+            res = __salt__['cmd.run_all'](' '.join(cmd))
+            if res['retcode'] != 0:
+                return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
+        else:
+            return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
 
     if 'no action taken' in res['stdout']:
-        return {'result': None,
-                'comment': 'No action taken on certificate {0}'.format(cert_file),
-                'not_after': expires(name)}
-
-    if renew:
+        comment = 'Certificate {0} unchanged'.format(cert_file)
+        result = None
+    elif renew:
         comment = 'Certificate {0} renewed'.format(name)
+        result = True
     else:
         comment = 'Certificate {0} obtained'.format(name)
-    ret = {'comment': comment, 'not_after': expires(name)}
+        result = True
 
-    res = __salt__['file.check_perms'](_cert_file(name, 'privkey'), {}, owner, group, '0600', follow_symlinks=True)
-
-    if res is None:
-        ret['result'] = False
-        ret['comment'] += ', but setting permissions failed.'
-    elif not res[0].get('result', False):
-        ret['result'] = False
-        ret['comment'] += ', but setting permissions failed with \n{0}'.format(res[0]['comment'])
-    else:
-        ret['result'] = True
-        ret['comment'] += '.'
+    ret = {'comment': comment, 'not_after': expires(name), 'changes': {}, 'result': result}
+    ret, _ = __salt__['file.check_perms'](_cert_file(name, 'privkey'),
+                                          ret,
+                                          owner, group, mode,
+                                          follow_symlinks=True)
 
     return ret
 
@@ -226,16 +289,15 @@ def info(name):
     cert_file = _cert_file(name, 'cert')
     # Use the salt module if available
     if 'tls.cert_info' in __salt__:
-        info = __salt__['tls.cert_info'](cert_file)
+        cert_info = __salt__['tls.cert_info'](cert_file)
         # Strip out the extensions object contents;
         # these trip over our poor state output
         # and they serve no real purpose here anyway
-        info['extensions'] = info['extensions'].keys()
-        return info
+        cert_info['extensions'] = cert_info['extensions'].keys()
+        return cert_info
     # Cobble it together using the openssl binary
-    else:
-        openssl_cmd = 'openssl x509 -in {0} -noout -text'.format(cert_file)
-        return __salt__['cmd.run'](openssl_cmd, output_loglevel='quiet')
+    openssl_cmd = 'openssl x509 -in {0} -noout -text'.format(cert_file)
+    return __salt__['cmd.run'](openssl_cmd, output_loglevel='quiet')
 
 
 def expires(name):

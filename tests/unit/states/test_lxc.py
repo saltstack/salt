@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -64,7 +64,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(lxc.present(name, running=True,
                                                  clone_from=True), ret)
 
-                comt = ('Container \'{0}\' would be stopped'.format(name))
+                comt = ("Container '{0}' would be stopped".format(name))
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(lxc.present(name, running=False,
                                                  clone_from=True), ret)
@@ -96,17 +96,17 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
         mock_des = MagicMock(return_value={'state': True})
         with patch.dict(lxc.__salt__, {'lxc.exists': mock,
                                        'lxc.destroy': mock_des}):
-            comt = ('Container \'{0}\' does not exist'.format(name))
+            comt = ("Container '{0}' does not exist".format(name))
             ret.update({'comment': comt})
             self.assertDictEqual(lxc.absent(name), ret)
 
             with patch.dict(lxc.__opts__, {'test': True}):
-                comt = ('Container \'{0}\' would be destroyed'.format(name))
+                comt = ("Container '{0}' would be destroyed".format(name))
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(lxc.absent(name), ret)
 
             with patch.dict(lxc.__opts__, {'test': False}):
-                comt = ('Container \'{0}\' was destroyed'.format(name))
+                comt = ("Container '{0}' was destroyed".format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'state': True}})
                 self.assertDictEqual(lxc.absent(name), ret)
@@ -129,7 +129,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(lxc.__salt__, {'lxc.exists': mock,
                                        'lxc.state': mock_t,
                                        'lxc.start': mock}):
-            comt = ('Container \'{0}\' does not exist'.format(name))
+            comt = ("Container '{0}' does not exist".format(name))
             ret.update({'comment': comt})
             self.assertDictEqual(lxc.running(name), ret)
 
@@ -165,7 +165,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
         mock_t = MagicMock(side_effect=['frozen', 'stopped', 'stopped'])
         with patch.dict(lxc.__salt__, {'lxc.freeze': mock,
                                        'lxc.state': mock_t}):
-            comt = ('Container \'{0}\' is already frozen'.format(name))
+            comt = ("Container '{0}' is already frozen".format(name))
             ret.update({'comment': comt})
             self.assertDictEqual(lxc.frozen(name), ret)
 
@@ -197,11 +197,11 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
         mock_t = MagicMock(side_effect=[None, 'stopped', 'frozen', 'frozen'])
         with patch.dict(lxc.__salt__, {'lxc.stop': mock,
                                        'lxc.state': mock_t}):
-            comt = ('Container \'{0}\' does not exist'.format(name))
+            comt = ("Container '{0}' does not exist".format(name))
             ret.update({'comment': comt})
             self.assertDictEqual(lxc.stopped(name), ret)
 
-            comt = ('Container \'{0}\' is already stopped'.format(name))
+            comt = ("Container '{0}' is already stopped".format(name))
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(lxc.stopped(name), ret)
 

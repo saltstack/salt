@@ -32,15 +32,19 @@ API documents can be found on your infoblox server at:
             api_key=passs
 
 '''
-from __future__ import absolute_import
-
-
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import time
+
+# Import Salt libs
+from salt.ext import six
+
+
 IMPORT_ERR = None
 try:
     import libinfoblox
-except Exception as ex:
-    IMPORT_ERR = str(ex)
+except Exception as exc:
+    IMPORT_ERR = six.text_type(exc)
 __virtualname__ = 'infoblox'
 
 
@@ -93,7 +97,8 @@ def diff_objects(obja, objb):
     Diff two complex infoblox objects.
     This is used from salt states to detect changes in objects.
 
-    Using `func:nextavailableip` will not cause a diff if the ipaddres is in range
+    Using ``func:nextavailableip`` will not cause a diff if the ipaddress is in
+    range
     '''
     return libinfoblox.diff_obj(obja, objb)
 
@@ -103,6 +108,8 @@ def is_ipaddr_in_ipfunc_range(ipaddr, ipfunc):
     Return true if the ipaddress is in the range of the nextavailableip function
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call infoblox.is_ipaddr_in_ipfunc_range \
             ipaddr="10.0.2.2" ipfunc="func:nextavailableip:10.0.0.0/8"
@@ -114,9 +121,11 @@ def update_host(name, data, **api_opts):
     '''
     Update host record. This is a helper call to update_object.
 
-    Find a hosts `_ref` then call update_object with the record data.
+    Find a hosts ``_ref`` then call update_object with the record data.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call infoblox.update_host name=fqdn data={}
     '''
@@ -126,8 +135,7 @@ def update_host(name, data, **api_opts):
 
 def update_object(objref, data, **api_opts):
     '''
-    Update raw infoblox object.
-    This is a low level api call.
+    Update raw infoblox object. This is a low level api call.
 
     CLI Example:
 
@@ -143,10 +151,11 @@ def update_object(objref, data, **api_opts):
 
 def delete_object(objref, **api_opts):
     '''
-    Delete infoblox object.
-    This is a low level api call.
+    Delete infoblox object. This is a low level api call.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call infoblox.delete_object objref=[ref_of_object]
     '''
@@ -158,10 +167,11 @@ def delete_object(objref, **api_opts):
 
 def create_object(object_type, data, **api_opts):
     '''
-    Create raw infoblox object
-    This is a low level api call.
+    Create raw infoblox object. This is a low level api call.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call infoblox.update_object object_type=record:host  data={}
     '''
@@ -174,10 +184,11 @@ def create_object(object_type, data, **api_opts):
 def get_object(objref, data=None, return_fields=None, max_results=None,
                ensure_none_or_one_result=False, **api_opts):
     '''
-    Get raw infoblox object.
-    This is a low level api call.
+    Get raw infoblox object. This is a low level api call.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call infoblox.get_object objref=[_ref of object]
     '''
@@ -193,6 +204,8 @@ def create_cname(data, **api_opts):
     Create a cname record.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call infoblox.create_cname data={ \
             "comment": "cname to example server", \
@@ -211,7 +224,9 @@ def get_cname(name=None, canonical=None, return_fields=None, **api_opts):
     '''
     Get CNAME information.
 
-    CLI Example:
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-call infoblox.get_cname name=example.example.com
         salt-call infoblox.get_cname canonical=example-ha-0.example.com
@@ -225,9 +240,11 @@ def update_cname(name, data, **api_opts):
     '''
     Update CNAME. This is a helper call to update_object.
 
-    Find a CNAME `_ref` then call update_object with the record data.
+    Find a CNAME ``_ref`` then call update_object with the record data.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call infoblox.update_cname name=example.example.com data="{
                 'canonical':'example-ha-0.example.com',
@@ -247,7 +264,9 @@ def delete_cname(name=None, canonical=None, **api_opts):
 
     If record is not found, return True
 
-    CLI Example:
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-call infoblox.delete_cname name=example.example.com
         salt-call infoblox.delete_cname canonical=example-ha-0.example.com
@@ -262,16 +281,13 @@ def get_host(name=None, ipv4addr=None, mac=None, return_fields=None, **api_opts)
     '''
     Get host information
 
-    CLI Example:
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-call infoblox.get_host hostname.domain.ca
         salt-call infoblox.get_host ipv4addr=123.123.122.12
         salt-call infoblox.get_host mac=00:50:56:84:6e:ae
-
-        return_fields=
-        https://INFOBLOX/wapidoc/objects/record.host.html#fields-list
-
-        return_fields='ipv4addrs,aliases,name,configure_for_dns,extattrs,disable,view,comment,zone'
     '''
     infoblox = _get_infoblox(**api_opts)
     host = infoblox.get_host(name=name, mac=mac, ipv4addr=ipv4addr, return_fields=return_fields)
@@ -284,6 +300,8 @@ def get_host_advanced(name=None, ipv4addr=None, mac=None, **api_opts):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-call infoblox.get_host_advanced hostname.domain.ca
     '''
     infoblox = _get_infoblox(**api_opts)
@@ -295,7 +313,8 @@ def get_host_domainname(name, domains=None, **api_opts):
     '''
     Get host domain name
 
-    If no domains are passed, the hostname is checked for a zone in infoblox, if no zone split on first dot.
+    If no domains are passed, the hostname is checked for a zone in infoblox,
+    if no zone split on first dot.
 
     If domains are provided, the best match out of the list is returned.
 
@@ -304,6 +323,8 @@ def get_host_domainname(name, domains=None, **api_opts):
     dots at end of names are ignored.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call uwl.get_host_domainname name=localhost.t.domain.com \
             domains=['domain.com', 't.domain.com.']
@@ -324,24 +345,26 @@ def get_host_domainname(name, domains=None, **api_opts):
         d = d.lower().rstrip('.')
         if name.endswith(d) and len(d) > len(match):
             match = d
-    if len(match) > 0:
-        return match
-    return None
+    return match if match else None
 
 
 def get_host_hostname(name, domains=None, **api_opts):
     '''
     Get hostname
 
-    If no domains are passed, the hostname is checked for a zone in infoblox, if no zone split on first dot.
+    If no domains are passed, the hostname is checked for a zone in infoblox,
+    if no zone split on first dot.
 
-    If domains are provided, the best match out of the list is truncated from the fqdn leaving the hostname.
+    If domains are provided, the best match out of the list is truncated from
+    the fqdn leaving the hostname.
 
     If no matching domains are found the fqdn is returned.
 
     dots at end of names are ignored.
 
-    CLI Example:
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-call infoblox.get_host_hostname fqdn=localhost.xxx.t.domain.com \
             domains="['domain.com', 't.domain.com']"
@@ -363,9 +386,11 @@ def get_host_mac(name=None, allow_array=False, **api_opts):
     '''
     Get mac address from host record.
 
-    Use `allow_array` to return possible mutiple values.
+    Use `allow_array` to return possible multiple values.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call infoblox.get_host_mac host=localhost.domain.com
     '''
@@ -386,9 +411,11 @@ def get_host_ipv4(name=None, mac=None, allow_array=False, **api_opts):
     '''
     Get ipv4 address from host record.
 
-    Use `allow_array` to return possible mutiple values.
+    Use `allow_array` to return possible multiple values.
 
-    CLI Example:
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-call infoblox.get_host_ipv4 host=localhost.domain.com
         salt-call infoblox.get_host_ipv4 mac=00:50:56:84:6e:ae
@@ -412,14 +439,13 @@ def get_host_ipv4addr_info(ipv4addr=None, mac=None,
     '''
     Get host ipv4addr information
 
-    return_fields='mac,host,configure_for_dhcp,ipv4addr'
+    CLI Examples:
 
-    CLI Example:
+    .. code-block:: bash
 
         salt-call infoblox.get_ipv4addr ipv4addr=123.123.122.12
         salt-call infoblox.get_ipv4addr mac=00:50:56:84:6e:ae
-        salt-call infoblox.get_ipv4addr mac=00:50:56:84:6e:ae return_fields=host
-        return_fields='mac,host,configure_for_dhcp,ipv4addr'
+        salt-call infoblox.get_ipv4addr mac=00:50:56:84:6e:ae return_fields=host return_fields='mac,host,configure_for_dhcp,ipv4addr'
     '''
     infoblox = _get_infoblox(**api_opts)
     return infoblox.get_host_ipv4addr_object(ipv4addr, mac, discovered_data, return_fields)
@@ -433,6 +459,8 @@ def get_host_ipv6addr_info(ipv6addr=None, mac=None,
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-call infoblox.get_host_ipv6addr_info ipv6addr=2001:db8:85a3:8d3:1349:8a2e:370:7348
     '''
     infoblox = _get_infoblox(**api_opts)
@@ -441,9 +469,8 @@ def get_host_ipv6addr_info(ipv6addr=None, mac=None,
 
 def get_network(ipv4addr=None, network=None, return_fields=None, **api_opts):
     '''
-    Get list of all networks.
-    This is helpfull when looking up subnets to
-    use with func:nextavailableip
+    Get list of all networks. This is helpful when looking up subnets to use
+    with func:nextavailableip
 
     This call is offen slow and not cached!
 
@@ -451,6 +478,8 @@ def get_network(ipv4addr=None, network=None, return_fields=None, **api_opts):
     comment,network,network_view,ddns_domainname,disable,enable_ddns
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call infoblox.get_network
     '''
@@ -463,6 +492,8 @@ def delete_host(name=None, mac=None, ipv4addr=None, **api_opts):
     Delete host
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call infoblox.delete_host name=example.domain.com
         salt-call infoblox.delete_host ipv4addr=123.123.122.12
@@ -479,14 +510,17 @@ def create_host(data, **api_opts):
     Add host record
 
     Avoid race conditions, use func:nextavailableip for ipv[4,6]addrs:
-        - func:nextavailableip:network/ZG54dfgsrDFEFfsfsLzA:10.0.0.0/8/default
-        - func:nextavailableip:10.0.0.0/8
-        - func:nextavailableip:10.0.0.0/8,external
-        - func:nextavailableip:10.0.0.3-10.0.0.10
+
+    - func:nextavailableip:network/ZG54dfgsrDFEFfsfsLzA:10.0.0.0/8/default
+    - func:nextavailableip:10.0.0.0/8
+    - func:nextavailableip:10.0.0.0/8,external
+    - func:nextavailableip:10.0.0.3-10.0.0.10
 
     See your infoblox API for full `data` format.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call infoblox.create_host \
             data =
@@ -510,6 +544,8 @@ def get_ipv4_range(start_addr=None, end_addr=None, return_fields=None, **api_opt
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-call infoblox.get_ipv4_range start_addr=123.123.122.12
     '''
     infoblox = _get_infoblox(**api_opts)
@@ -522,7 +558,9 @@ def delete_ipv4_range(start_addr=None, end_addr=None, **api_opts):
 
     CLI Example:
 
-            salt-call infoblox.delete_ipv4_range start_addr=123.123.122.12
+    .. code-block:: bash
+
+        salt-call infoblox.delete_ipv4_range start_addr=123.123.122.12
     '''
     r = get_ipv4_range(start_addr, end_addr, **api_opts)
     if r:
@@ -540,6 +578,8 @@ def create_ipv4_range(data, **api_opts):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-call infoblox.create_ipv4_range data={
             start_addr: '129.97.150.160',
             end_addr: '129.97.150.170'}
@@ -556,6 +596,8 @@ def create_a(data, **api_opts):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-call infoblox.create_a \
                     data =
                     name: 'fastlinux.math.example.ca'
@@ -569,7 +611,9 @@ def get_a(name=None, ipv4addr=None, allow_array=True, **api_opts):
     '''
     Get A record
 
-    CLI Example:
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-call infoblox.get_a name=abc.example.com
         salt-call infoblox.get_a ipv4addr=192.168.3.5
@@ -589,19 +633,19 @@ def delete_a(name=None, ipv4addr=None, allow_array=False, **api_opts):
     '''
     Delete A record
 
-    If the A record is used as a round robin you can set
-    `allow_array=true to delete all records for the hostname.
+    If the A record is used as a round robin you can set ``allow_array=True`` to
+    delete all records for the hostname.
 
-    CLI Example:
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-call infoblox.delete_a name=abc.example.com
         salt-call infoblox.delete_a ipv4addr=192.168.3.5
-        salt-call infoblox.delete_a name=acname.example.com allow_array=true
+        salt-call infoblox.delete_a name=acname.example.com allow_array=True
     '''
     r = get_a(name, ipv4addr, allow_array=False, **api_opts)
     if not r:
-        return True
-    if len(r) == 0:
         return True
     if len(r) > 1 and not allow_array:
         raise Exception('More than one result, use allow_array to override')

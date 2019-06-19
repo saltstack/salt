@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Gareth J. Greenaway <gareth@saltstack.com>`
+    :codeauthor: Gareth J. Greenaway <gareth@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -32,25 +32,25 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test the version returned from OSQuery
         '''
-        _table_attrs_results = [u'pid',
-                                u'uuid',
-                                u'instance_id',
-                                u'version',
-                                u'config_hash',
-                                u'config_valid',
-                                u'extensions',
-                                u'build_platform',
-                                u'build_distro',
-                                u'start_time',
-                                u'watcher']
+        _table_attrs_results = ['pid',
+                                'uuid',
+                                'instance_id',
+                                'version',
+                                'config_hash',
+                                'config_valid',
+                                'extensions',
+                                'build_platform',
+                                'build_distro',
+                                'start_time',
+                                'watcher']
 
-        _os_query_results = {'data': [{u'version': u'2.6.1'}], 'result': True}
+        _os_query_results = {'data': [{'version': '2.6.1'}], 'result': True}
 
         with patch.object(osquery, '_table_attrs',
                           MagicMock(return_value=_table_attrs_results)):
             with patch.object(osquery, '_osquery',
                               MagicMock(return_value=_os_query_results)):
-                self.assertEqual(osquery.version(), u'2.6.1')
+                self.assertEqual(osquery.version(), '2.6.1')
 
     def test_deb_packages(self):
         '''
@@ -80,12 +80,12 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
         Test the results returned from the deb_packages function
         with attributes
         '''
-        _table_attrs_results = [u'name',
-                                u'version',
-                                u'source',
-                                u'size',
-                                u'arch',
-                                u'revision']
+        _table_attrs_results = ['name',
+                                'version',
+                                'source',
+                                'size',
+                                'arch',
+                                'revision']
 
         _os_query_results = {'data': [
             {'name': 'accountsservice', 'version': '0.6.45-1'},
@@ -127,11 +127,11 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
         Test the results returned from the kernel_modules function
         with attributes
         '''
-        _table_attrs_results = [u'address',
-                                u'name',
-                                u'size',
-                                u'status',
-                                u'used_by']
+        _table_attrs_results = ['address',
+                                'name',
+                                'size',
+                                'status',
+                                'used_by']
 
         _os_query_results = {'data': [
             {'name': 'nls_utf8', 'status': 'Live'},
@@ -153,29 +153,29 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
         Test the results returned from the kernel_modules function
         with attributes
         '''
-        _table_attrs_results = [u'pid',
-                                u'uuid',
-                                u'instance_id',
-                                u'version',
-                                u'config_hash',
-                                u'config_valid',
-                                u'extensions',
-                                u'build_platform',
-                                u'build_distro',
-                                u'start_time',
-                                u'watcher']
+        _table_attrs_results = ['pid',
+                                'uuid',
+                                'instance_id',
+                                'version',
+                                'config_hash',
+                                'config_valid',
+                                'extensions',
+                                'build_platform',
+                                'build_distro',
+                                'start_time',
+                                'watcher']
 
         _os_query_results = {'data': [
-            {u'build_platform': u'ubuntu', u'start_time': u'1514484833',
-             u'uuid': u'D31FD400-7277-11E3-ABA6-B8AEED7E173B',
-             u'build_distro': u'xenial',
-             u'pid': u'24288',
-             u'watcher': u'-1',
-             u'instance_id': u'dff196b0-5c91-4105-962b-28660d7aa282',
-             u'version': u'2.6.1',
-             u'extensions': u'inactive',
-             u'config_valid': u'0',
-             u'config_hash': u''}],
+            {'build_platform': 'ubuntu', 'start_time': '1514484833',
+             'uuid': 'D31FD400-7277-11E3-ABA6-B8AEED7E173B',
+             'build_distro': 'xenial',
+             'pid': '24288',
+             'watcher': '-1',
+             'instance_id': 'dff196b0-5c91-4105-962b-28660d7aa282',
+             'version': '2.6.1',
+             'extensions': 'inactive',
+             'config_valid': '0',
+             'config_hash': ''}],
             'result': True}
 
         with patch.object(osquery, '_table_attrs',
@@ -191,20 +191,20 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
         Test the results returned from the kernel_modules function
         with attributes
         '''
-        _table_attrs_results = [u'pid',
-                                u'uuid',
-                                u'instance_id',
-                                u'version',
-                                u'config_hash',
-                                u'config_valid',
-                                u'extensions',
-                                u'build_platform',
-                                u'build_distro',
-                                u'start_time',
-                                u'watcher']
+        _table_attrs_results = ['pid',
+                                'uuid',
+                                'instance_id',
+                                'version',
+                                'config_hash',
+                                'config_valid',
+                                'extensions',
+                                'build_platform',
+                                'build_distro',
+                                'start_time',
+                                'watcher']
 
         _os_query_results = {'data': [
-            {u'build_platform': u'ubuntu', u'start_time': u'1514484833'}],
+            {'build_platform': 'ubuntu', 'start_time': '1514484833'}],
             'result': True}
 
         with patch.object(osquery, '_table_attrs',
@@ -212,6 +212,5 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(osquery, '_osquery',
                               MagicMock(return_value=_os_query_results)):
                 with patch.dict(osquery.__grains__, {'os_family': 'Debian'}):
-                    self.assertEqual(osquery.osquery_info(attrs=['build_platform',
-                                                                 'start_time']),
+                    self.assertEqual(osquery.osquery_info(attrs=['build_platform', 'start_time']),
                                      _os_query_results)

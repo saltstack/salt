@@ -4,9 +4,10 @@ Support for modifying make.conf under Gentoo
 
 '''
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
+import salt.utils.data
 import salt.utils.files
 
 
@@ -14,7 +15,7 @@ def __virtual__():
     '''
     Only work on Gentoo
     '''
-    if __grains__['os'] == 'Gentoo':
+    if __grains__['os_family'] == 'Gentoo':
         return 'makeconf'
     return (False, 'The makeconf execution module cannot be loaded: only available on Gentoo systems.')
 
@@ -185,7 +186,7 @@ def get_var(var):
     makeconf = _get_makeconf()
     # Open makeconf
     with salt.utils.files.fopen(makeconf) as fn_:
-        conf_file = fn_.readlines()
+        conf_file = salt.utils.data.decode(fn_.readlines())
     for line in conf_file:
         if line.startswith(var):
             ret = line.split('=', 1)[1]

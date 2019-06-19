@@ -8,7 +8,7 @@ Manage the password database on Solaris systems
     *'shadow.info' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -59,7 +59,7 @@ def default_hash():
     return '!'
 
 
-def info(name):
+def info(name, **kwargs):
     '''
     Return information for the specified user
 
@@ -290,6 +290,7 @@ def set_password(name, password):
             line = ':'.join(comps)
             lines.append('{0}\n'.format(line))
     with salt.utils.files.fopen(s_file, 'w+') as ofile:
+        lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
         ofile.writelines(lines)
     uinfo = info(name)
     return uinfo['passwd'] == password

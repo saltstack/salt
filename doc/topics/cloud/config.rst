@@ -28,9 +28,9 @@ Minion Configuration
 ====================
 
 The default minion configuration is set up in this file. Minions created by
-salt-cloud derive their configuration from this file.  Almost all parameters
-found in :ref:`Configuring the Salt Minion <configuration-salt-minion>` can
-be used here.
+salt-cloud derive their configuration from this file. Almost all parameters
+found in :ref:`Configuring the Salt Minion <configuration-salt-minion>` can be
+used here.
 
 .. code-block:: yaml
 
@@ -44,7 +44,7 @@ and its listening port, if the port is not set to the default.
 Similar to most other settings, Minion configuration settings are inherited
 across configuration files. For example, the master setting might be contained
 in the main ``cloud`` configuration file as demonstrated above, but additional
-settings can be placed in the provider or profile:
+settings can be placed in the provider, profile or map configuration files:
 
 .. code-block:: yaml
 
@@ -71,7 +71,7 @@ The generated grain information will appear similar to:
         provider: my_ec2:ec2
         profile: ec2-web
 
-The generation of the salt-cloud grain can be surpressed by the
+The generation of the salt-cloud grain can be suppressed by the
 option ``enable_cloud_grains: 'False'`` in the cloud configuration file.
 
 Cloud Configuration Syntax
@@ -173,8 +173,8 @@ Pillar Configuration
 ====================
 
 It is possible to configure cloud providers using pillars. This is only used when inside the cloud
-module. You can setup a variable called ``cloud`` that contains your profile and provider to pass
-that information to the cloud servers instead of having to copy the full configuration to every
+module. You can setup a variable called ``cloud`` that contains your profile, provider, and map to
+pass that information to the cloud servers instead of having to copy the full configuration to every
 minion. In your pillar file, you would use something like this:
 
 .. code-block:: yaml
@@ -197,6 +197,26 @@ minion. In your pillar file, you would use something like this:
           size: ds512M
           image: CentOS 7
           script_args: git develop
+
+      maps:
+        my-dev-map:
+          ubuntu-openstack:
+            - dev-test01
+            - dev-test02
+            - dev-test03
+            - dev-test04
+        my-prd-map:
+          ubuntu-openstack:
+            - prd-web01
+            - prd-web02
+                minion:
+                  id: custom-minion-id-app1-stack1-frontend
+                grains:
+                  roles:
+                    - webserver
+                  deployment: datacenter4-openstack
+            - prod-db01
+            - prod-db02
 
 
 Cloud Configurations
@@ -344,7 +364,37 @@ be set in the configuration file to enable interfacing with GoGrid:
 OpenStack
 ---------
 
-.. automodule:: salt.cloud.clouds.openstack
+Using Salt for OpenStack uses the `shade <https://docs.openstack.org/shade/latest/>` driver managed by the
+openstack-infra team.
+
+This driver can be configured using the ``/etc/openstack/clouds.yml`` file with
+`os-client-config <https://docs.openstack.org/os-client-config/latest/>`
+
+.. code-block:: yaml
+
+    myopenstack:
+      driver: openstack
+      region_name: RegionOne
+      cloud: mycloud
+
+Or by just configuring the same auth block directly in the cloud provider config.
+
+.. code-block:: yaml
+
+    myopenstack:
+      driver: openstack
+      region_name: RegionOne
+      auth:
+        username: 'demo'
+        password: secret
+        project_name: 'demo'
+        auth_url: 'http://openstack/identity'
+
+Both of these methods support using the
+`vendor <https://docs.openstack.org/os-client-config/latest/user/vendor-support.html>`
+options.
+
+For more information, look at :mod:`Openstack Cloud Driver Docs <salt.cloud.clouds.openstack>`
 
 DigitalOcean
 ------------

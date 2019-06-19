@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Libs
 import salt.utils.platform
 import salt.modules.status as status
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -84,7 +85,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(['1', '2', '3']))}), \
                 patch('time.time', MagicMock(return_value=m.now)), \
                 patch('os.path.exists', MagicMock(return_value=True)):
-            proc_uptime = '{0} {1}'.format(m.ut, m.idle)
+            proc_uptime = salt.utils.stringutils.to_str('{0} {1}'.format(m.ut, m.idle))
 
             with patch('salt.utils.files.fopen', mock_open(read_data=proc_uptime)):
                 ret = status.uptime()
@@ -120,7 +121,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         m = self._set_up_test_uptime()
 
         kern_boottime = ('{{ sec = {0}, usec = {1:0<6} }} Mon Oct 03 03:09:18.23 2016'
-                         ''.format(*str(m.now - m.ut).split('.')))
+                         ''.format(*six.text_type(m.now - m.ut).split('.')))
         with patch.multiple(salt.utils.platform,
                             is_linux=MagicMock(return_value=False),
                             is_sunos=MagicMock(return_value=False),

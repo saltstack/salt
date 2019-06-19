@@ -11,15 +11,17 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import sys
+import copy
 import logging
 import threading
+import collections
 import logging.handlers
 
 # Import salt libs
 from salt.log.mixins import NewStyleClassMixIn, ExcInfoOnLogLevelFormatMixIn
+from salt.ext.six.moves import queue
 
 log = logging.getLogger(__name__)
-
 
 if sys.version_info < (2, 7):
     # Since the NullHandler is only available on python >= 2.7, here's a copy
@@ -56,16 +58,12 @@ class TemporaryLoggingHandler(logging.NullHandler):
     .. versionadded:: 0.17.0
     '''
 
-    def __init__(self, level=logging.NOTSET, max_queue_size=10000):
-        self.__max_queue_size = max_queue_size
+    def __init__(self, level=logging.NOTSET, max_queue_size=100000):
         super(TemporaryLoggingHandler, self).__init__(level=level)
-        self.__messages = []
+        self.__messages = collections.deque(maxlen=max_queue_size)
 
     def handle(self, record):
         self.acquire()
-        if len(self.__messages) >= self.__max_queue_size:
-            # Loose the initial log records
-            self.__messages.pop(0)
         self.__messages.append(record)
         self.release()
 
@@ -77,7 +75,7 @@ class TemporaryLoggingHandler(logging.NullHandler):
             return
 
         while self.__messages:
-            record = self.__messages.pop(0)
+            record = self.__messages.popleft()
             for handler in handlers:
                 if handler.level > record.levelno:
                     # If the handler's level is higher than the log record one,
@@ -102,6 +100,20 @@ class SysLogHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.SysLogHandler
     '''
     Syslog handler which properly handles exc_info on a per handler basis
     '''
+    def handleError(self, record):
+        '''
+        Override the default error handling mechanism for py3
+        Deal with syslog os errors when the log file does not exist
+        '''
+        handled = False
+        if sys.stderr and sys.version_info >= (3, 5, 4):
+            t, v, tb = sys.exc_info()
+            if t.__name__ in 'FileNotFoundError':
+                sys.stderr.write('[WARNING ] The log_file does not exist. Logging not setup correctly or syslog service not started.\n')
+                handled = True
+
+        if not handled:
+            super(SysLogHandler, self).handleError(record)
 
 
 class RotatingFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.RotatingFileHandler, NewStyleClassMixIn):
@@ -174,31 +186,37 @@ if sys.version_info < (3, 2):
             this method if you want to use blocking, timeouts or custom queue
             implementations.
             '''
-            self.queue.put_nowait(record)
+            try:
+                self.queue.put_nowait(record)
+            except queue.Full:
+                sys.stderr.write('[WARNING ] Message queue is full, '
+                                 'unable to write "{0}" to log'.format(record))
 
         def prepare(self, record):
             '''
             Prepares a record for queuing. The object returned by this method is
             enqueued.
-
             The base implementation formats the record to merge the message
             and arguments, and removes unpickleable items from the record
             in-place.
-
             You might want to override this method if you want to convert
             the record to a dict or JSON string, or send a modified copy
             of the record while leaving the original intact.
             '''
             # The format operation gets traceback text into record.exc_text
-            # (if there's exception data), and also puts the message into
-            # record.message. We can then use this to replace the original
+            # (if there's exception data), and also returns the formatted
+            # message. We can then use this to replace the original
             # msg + args, as these might be unpickleable. We also zap the
-            # exc_info attribute, as it's no longer needed and, if not None,
-            # will typically not be pickleable.
-            self.format(record)
-            record.msg = record.getMessage()
+            # exc_info and exc_text attributes, as they are no longer
+            # needed and, if not None, will typically not be pickleable.
+            msg = self.format(record)
+            # bpo-35726: make copy of record to avoid affecting other handlers in the chain.
+            record = copy.copy(record)
+            record.message = msg
+            record.msg = msg
             record.args = None
             record.exc_info = None
+            record.exc_text = None
             return record
 
         def emit(self, record):
@@ -211,6 +229,64 @@ if sys.version_info < (3, 2):
                 self.enqueue(self.prepare(record))
             except Exception:
                 self.handleError(record)
+elif sys.version_info < (3, 7):
+    # On python versions lower than 3.7, we sill subclass and overwrite prepare to include the fix for:
+    #  https://bugs.python.org/issue35726
+    class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.QueueHandler):  # pylint: disable=no-member,E0240
+
+        def enqueue(self, record):
+            '''
+            Enqueue a record.
+
+            The base implementation uses put_nowait. You may want to override
+            this method if you want to use blocking, timeouts or custom queue
+            implementations.
+            '''
+            try:
+                self.queue.put_nowait(record)
+            except queue.Full:
+                sys.stderr.write('[WARNING ] Message queue is full, '
+                                 'unable to write "{0}" to log'.format(record))
+
+        def prepare(self, record):
+            '''
+            Prepares a record for queuing. The object returned by this method is
+            enqueued.
+            The base implementation formats the record to merge the message
+            and arguments, and removes unpickleable items from the record
+            in-place.
+            You might want to override this method if you want to convert
+            the record to a dict or JSON string, or send a modified copy
+            of the record while leaving the original intact.
+            '''
+            # The format operation gets traceback text into record.exc_text
+            # (if there's exception data), and also returns the formatted
+            # message. We can then use this to replace the original
+            # msg + args, as these might be unpickleable. We also zap the
+            # exc_info and exc_text attributes, as they are no longer
+            # needed and, if not None, will typically not be pickleable.
+            msg = self.format(record)
+            # bpo-35726: make copy of record to avoid affecting other handlers in the chain.
+            record = copy.copy(record)
+            record.message = msg
+            record.msg = msg
+            record.args = None
+            record.exc_info = None
+            record.exc_text = None
+            return record
 else:
     class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.QueueHandler):  # pylint: disable=no-member,E0240
-        pass
+
+        def enqueue(self, record):
+            '''
+            Enqueue a record.
+
+            The base implementation uses put_nowait. You may want to override
+            this method if you want to use blocking, timeouts or custom queue
+            implementations.
+            '''
+            try:
+                self.queue.put_nowait(record)
+            except queue.Full:
+                sys.stderr.write('[WARNING ] Message queue is full, '
+                                 'unable to write "{0}" to log'.format(record))

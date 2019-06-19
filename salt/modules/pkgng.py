@@ -36,12 +36,13 @@ file, in order to use this module to manage packages, like so:
       pkg: pkgng
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
 import logging
 import os
+import re
 
 # Import salt libs
 import salt.utils.data
@@ -49,6 +50,7 @@ import salt.utils.files
 import salt.utils.functools
 import salt.utils.itertools
 import salt.utils.pkg
+import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.ext import six
@@ -74,10 +76,10 @@ def __virtual__():
         providers = {}
         if 'providers' in __opts__:
             providers = __opts__['providers']
-        log.debug('__opts__.providers: {0}'.format(providers))
+        log.debug('__opts__.providers: %s', providers)
         if providers and 'pkg' in providers and providers['pkg'] == 'pkgng':
             log.debug('Configuration option \'providers:pkg\' is set to '
-                '\'pkgng\', using \'pkgng\' in favor of \'freebsdpkg\'.')
+                      '\'pkgng\', using \'pkgng\' in favor of \'freebsdpkg\'.')
             return __virtualname__
     return (False,
             'The pkgng execution module cannot be loaded: only available '
@@ -131,11 +133,11 @@ def _contextkey(jail=None, chroot=None, root=None, prefix='pkg.list_pkgs'):
     unique to that jail/chroot is used.
     '''
     if jail:
-        return str(prefix) + '.jail_{0}'.format(jail)
+        return six.text_type(prefix) + '.jail_{0}'.format(jail)
     elif chroot:
-        return str(prefix) + '.chroot_{0}'.format(chroot)
+        return six.text_type(prefix) + '.chroot_{0}'.format(chroot)
     elif root:
-        return str(prefix) + '.root_{0}'.format(root)
+        return six.text_type(prefix) + '.root_{0}'.format(root)
     return prefix
 
 
@@ -157,6 +159,7 @@ def parse_config(file_name='/usr/local/etc/pkg.conf'):
 
     with salt.utils.files.fopen(file_name) as ifile:
         for line in ifile:
+            line = salt.utils.stringutils.to_unicode(line)
             if line.startswith('#') or line.startswith('\n'):
                 pass
             else:
@@ -216,11 +219,12 @@ def version(*names, **kwargs):
         for x, y in six.iteritems(ret)
     ])
 
+
 # Support pkg.info get version info, since this is the CLI usage
 info = salt.utils.functools.alias_function(version, 'info')
 
 
-def refresh_db(jail=None, chroot=None, root=None, force=False):
+def refresh_db(jail=None, chroot=None, root=None, force=False, **kwargs):
     '''
     Refresh PACKAGESITE contents
 
@@ -286,7 +290,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name> jail=<jail name or id>
         salt '*' pkg.latest_version <package name> chroot=/path/to/chroot
     '''
-    if len(names) == 0:
+    if not names:
         return ''
     ret = {}
 
@@ -304,7 +308,6 @@ def latest_version(*names, **kwargs):
     else:
         quiet = False
 
-    cmd_prefix = _pkg(jail, chroot, root) + ['search']
     for name in names:
         # FreeBSD supports packages in format java/openjdk7
         if '/' in name:
@@ -675,6 +678,7 @@ def install(name=None,
             reinstall_requires=False,
             regex=False,
             pcre=False,
+            batch=False,
             **kwargs):
     '''
     Install package(s) from a repository
@@ -798,7 +802,16 @@ def install(name=None,
 
         .. code-block:: bash
 
-            salt '*' pkg.install <extended regular expression> pcre=True
+
+    batch
+        Use BATCH=true for pkg install, skipping all questions.
+        Be careful when using in production.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install <package name> batch=True
     '''
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
@@ -807,9 +820,10 @@ def install(name=None,
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
+    env = {}
     opts = 'y'
     if salt.utils.data.is_true(orphan):
         opts += 'A'
@@ -829,6 +843,11 @@ def install(name=None,
         opts += 'x'
     if salt.utils.data.is_true(pcre):
         opts += 'X'
+    if salt.utils.data.is_true(batch):
+        env = {
+                "BATCH": "true",
+                "ASSUME_ALWAYS_YES": "YES"
+              }
 
     old = list_pkgs(jail=jail, chroot=chroot, root=root)
 
@@ -849,6 +868,8 @@ def install(name=None,
                 targets.append(param)
             else:
                 targets.append('{0}-{1}'.format(param, version_num))
+    else:
+        raise CommandExecutionError('Problem encountered installing package(s)')
 
     cmd = _pkg(jail, chroot, root)
     cmd.append(pkg_cmd)
@@ -859,13 +880,14 @@ def install(name=None,
     cmd.extend(targets)
 
     if pkg_cmd == 'add' and salt.utils.data.is_true(dryrun):
-        # pkg add doesn't have a dryrun mode, so echo out what will be run
+        # pkg add doesn't have a dry-run mode, so echo out what will be run
         return ' '.join(cmd)
 
     out = __salt__['cmd.run_all'](
         cmd,
         output_loglevel='trace',
-        python_shell=False
+        python_shell=False,
+        env=env
     )
 
     if out['retcode'] != 0 and out['stderr']:
@@ -994,6 +1016,8 @@ def remove(name=None,
 
             salt '*' pkg.remove <extended regular expression> pcre=True
     '''
+    del kwargs  # Unused parameter
+
     try:
         pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
     except MinionError as exc:
@@ -1060,6 +1084,7 @@ def remove(name=None,
         )
 
     return ret
+
 
 # Support pkg.delete to remove packages, since this is the CLI usage
 delete = salt.utils.functools.alias_function(remove, 'delete')
@@ -1149,6 +1174,7 @@ def upgrade(*names, **kwargs):
     force = kwargs.pop('force', False)
     local = kwargs.pop('local', False)
     dryrun = kwargs.pop('dryrun', False)
+    pkgs = kwargs.pop('pkgs', [])
     opts = ''
     if force:
         opts += 'f'
@@ -1163,7 +1189,10 @@ def upgrade(*names, **kwargs):
     cmd.append('upgrade')
     if opts:
         cmd.append('-' + opts)
-    cmd.extend(names)
+    if names:
+        cmd.extend(names)
+    if pkgs:
+        cmd.extend(pkgs)
 
     old = list_pkgs()
     result = __salt__['cmd.run_all'](cmd,
@@ -1867,7 +1896,552 @@ def updating(name,
     )
 
 
-def version_cmp(pkg1, pkg2, ignore_epoch=False):
+def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
+    '''
+    Version-lock packages
+
+    .. note::
+        This function is provided primarily for compatibilty with some
+        parts of :py:mod:`states.pkg <salt.states.pkg>`.
+        Consider using Consider using :py:func:`pkg.lock <salt.modules.pkgng.lock>` instead. instead.
+
+    name
+        The name of the package to be held.
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to hold. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    Returns a dict containing the changes.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.hold <package name>
+        salt '*' pkg.hold pkgs='["foo", "bar"]'
+    '''
+    targets = []
+    if pkgs:
+        targets.extend(pkgs)
+    else:
+        targets.append(name)
+
+    ret = {}
+    for target in targets:
+        if isinstance(target, dict):
+            target = next(six.iterkeys(target))
+
+        ret[target] = {'name': target,
+                       'changes': {},
+                       'result': False,
+                       'comment': ''}
+
+        if not locked(target, **kwargs):
+            if 'test' in __opts__ and __opts__['test']:
+                ret[target].update(result=None)
+                ret[target]['comment'] = ('Package {0} is set to be held.'
+                                          .format(target))
+            else:
+                if lock(target, **kwargs):
+                    ret[target].update(result=True)
+                    ret[target]['comment'] = ('Package {0} is now being held.'
+                                              .format(target))
+                    ret[target]['changes']['new'] = 'hold'
+                    ret[target]['changes']['old'] = ''
+                else:
+                    ret[target]['comment'] = ('Package {0} was unable to be held.'
+                                              .format(target))
+        else:
+            ret[target].update(result=True)
+            ret[target]['comment'] = ('Package {0} is already set to be held.'
+                                      .format(target))
+    return ret
+
+
+def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
+    '''
+    Remove version locks
+
+    .. note::
+        This function is provided primarily for compatibilty with some parts of
+        :py:mod:`states.pkg <salt.states.pkg>`.  Consider using
+        :py:func:`pkg.unlock <salt.modules.pkgng.unlock>` instead.
+
+    name
+        The name of the package to be unheld
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to unhold. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    Returns a dict containing the changes.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.unhold <package name>
+        salt '*' pkg.unhold pkgs='["foo", "bar"]'
+    '''
+    targets = []
+    if pkgs:
+        targets.extend(pkgs)
+    else:
+        targets.append(name)
+
+    ret = {}
+    for target in targets:
+        if isinstance(target, dict):
+            target = next(six.iterkeys(target))
+
+        ret[target] = {'name': target,
+                       'changes': {},
+                       'result': False,
+                       'comment': ''}
+
+        if locked(target, **kwargs):
+            if __opts__['test']:
+                ret[target].update(result=None)
+                ret[target]['comment'] = ('Package {0} is set to be unheld.'
+                                          .format(target))
+            else:
+                if unlock(target, **kwargs):
+                    ret[target].update(result=True)
+                    ret[target]['comment'] = ('Package {0} is no longer held.'
+                                              .format(target))
+                    ret[target]['changes']['new'] = ''
+                    ret[target]['changes']['old'] = 'hold'
+                else:
+                    ret[target]['comment'] = ('Package {0} was unable to be '
+                                              'unheld.'.format(target))
+        else:
+            ret[target].update(result=True)
+            ret[target]['comment'] = ('Package {0} is not being held.'
+                                      .format(target))
+    return ret
+
+
+def list_locked(**kwargs):
+    '''
+    Query the package database those packages which are
+    locked against reinstallation, modification or deletion.
+
+    Returns returns a list of package names with version strings
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_locked
+
+    jail
+        List locked packages within the specified jail
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.list_locked jail=<jail name or id>
+
+    chroot
+        List locked packages within the specified chroot (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.list_locked chroot=/path/to/chroot
+
+    root
+        List locked packages within the specified root (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.list_locked root=/path/to/chroot
+
+    '''
+    return ['{0}-{1}'.format(pkgname, version(pkgname, **kwargs))
+            for pkgname in _lockcmd('lock', name=None, **kwargs)]
+
+
+def locked(name, **kwargs):
+    '''
+    Query the package database to determine if the named package
+    is locked against reinstallation, modification or deletion.
+
+    Returns True if the named package is locked, False otherwise.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.locked <package name>
+
+    jail
+        Test if a package is locked within the specified jail
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.locked <package name> jail=<jail name or id>
+
+    chroot
+        Test if a package is locked within the specified chroot (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.locked <package name> chroot=/path/to/chroot
+
+    root
+        Test if a package is locked within the specified root (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.locked <package name> root=/path/to/chroot
+
+    '''
+    if name in _lockcmd('lock', name=None, **kwargs):
+        return True
+
+    return False
+
+
+def lock(name, **kwargs):
+    '''
+    Lock the named package against reinstallation, modification or deletion.
+
+    Returns True if the named package was successfully locked.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.lock <package name>
+
+    jail
+        Lock packages within the specified jail
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.lock <package name> jail=<jail name or id>
+
+    chroot
+        Lock packages within the specified chroot (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.lock <package name> chroot=/path/to/chroot
+
+    root
+        Lock packages within the specified root (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.lock <package name> root=/path/to/chroot
+
+    '''
+    if name in _lockcmd('lock', name, **kwargs):
+        return True
+
+    return False
+
+
+def unlock(name, **kwargs):
+    '''
+    Unlock the named package against reinstallation, modification or deletion.
+
+    Returns True if the named package was successfully unlocked.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.unlock <package name>
+
+    jail
+        Unlock packages within the specified jail
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.unlock <package name> jail=<jail name or id>
+
+    chroot
+        Unlock packages within the specified chroot (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.unlock <package name> chroot=/path/to/chroot
+
+    root
+        Unlock packages within the specified root (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.unlock <package name> root=/path/to/chroot
+
+    '''
+    if name in _lockcmd('unlock', name, **kwargs):
+        return False
+
+    return True
+
+
+def _lockcmd(subcmd, pkgname=None, **kwargs):
+    '''
+    Helper function for lock and unlock commands, because their syntax is identical.
+
+    Run the lock/unlock command, and return a list of locked packages
+    '''
+
+    jail = kwargs.pop('jail', None)
+    chroot = kwargs.pop('chroot', None)
+    root = kwargs.pop('root', None)
+
+    locked_pkgs = []
+
+    cmd = _pkg(jail, chroot, root)
+    cmd.append(subcmd)
+    cmd.append('-y')
+    cmd.append('--quiet')
+    cmd.append('--show-locked')
+
+    if pkgname:
+        cmd.append(pkgname)
+
+    out = __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
+
+    if out['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered {0}ing packages'.format(subcmd),
+            info={'result': out}
+        )
+
+    for line in salt.utils.itertools.split(out['stdout'], '\n'):
+        if not line:
+            continue
+        try:
+            pkgname = line.rsplit('-', 1)[0]
+        except ValueError:
+            continue
+        locked_pkgs.append(pkgname)
+
+    log.debug('Locked packages: %s', ', '.join(locked_pkgs))
+    return locked_pkgs
+
+
+def list_upgrades(refresh=True, **kwargs):
+    '''
+    List those packages for which an upgrade is available
+
+    The ``fromrepo`` argument is also supported, as used in pkg states.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_upgrades
+
+    jail
+        List upgrades within the specified jail
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.list_upgrades jail=<jail name or id>
+
+    chroot
+        List upgrades within the specified chroot (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.list_upgrades chroot=/path/to/chroot
+
+    root
+        List upgrades within the specified root (ignored if ``jail`` is
+        specified)
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.list_upgrades root=/path/to/chroot
+
+    '''
+    jail = kwargs.pop('jail', None)
+    chroot = kwargs.pop('chroot', None)
+    root = kwargs.pop('root', None)
+    fromrepo = kwargs.pop('fromrepo', None)
+
+    cmd = _pkg(jail, chroot, root)
+    cmd.extend(['upgrade', '--dry-run', '--quiet'])
+
+    if not refresh:
+        cmd.append('--no-repo-update')
+    if fromrepo:
+        cmd.extend(['--repository', fromrepo])
+
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace', python_shell=False, ignore_retcode=True)
+
+    return {pkgname: pkgstat['version']['new'] for pkgname, pkgstat
+            in six.iteritems(_parse_upgrade(out)['upgrade'])}
+
+
+def _parse_upgrade(stdout):
+    '''
+    Parse the output from the ``pkg upgrade --dry-run`` command
+
+    Returns a dictionary of the expected actions:
+
+    .. code-block:: yaml
+
+        'upgrade':
+          pkgname:
+            'repo': repository
+            'reason': reason
+            'version':
+              'current': n.n.n
+              'new': n.n.n
+        'install':
+          pkgname:
+            'repo': repository
+            'reason': reason
+            'version':
+              'current': n.n.n
+        'reinstall':
+          pkgname:
+            'repo': repository
+            'reason': reason
+            'version':
+              'current': n.n.n
+        'downgrade':
+          pkgname:
+            'repo': repository
+            'reason': reason
+            'version':
+              'current': n.n.n
+              'new': n.n.n
+        'remove':
+          pkgname:
+            'repo': repository
+            'reason': reason
+            'version':
+              'current': n.n.n
+    '''
+    # Match strings like 'python36: 3.6.3 -> 3.6.4 [FreeBSD]'
+    upgrade_regex = re.compile(r'^\s+([^:]+):\s([0-9a-z_,.]+)\s+->\s+([0-9a-z_,.]+)\s*(\[([^]]+)\])?\s*(\(([^)]+)\))?')
+    # Match strings like 'rubygem-bcrypt_pbkdf: 1.0.0 [FreeBSD]'
+    install_regex = re.compile(r'^\s+([^:]+):\s+([0-9a-z_,.]+)\s*(\[([^]]+)\])?\s*(\(([^)]+)\))?')
+    # Match strings like 'py27-yaml-3.11_2 [FreeBSD] (direct dependency changed: py27-setuptools)'
+    reinstall_regex = re.compile(r'^\s+(\S+)-(?<=-)([0-9a-z_,.]+)\s*(\[([^]]+)\])?\s*(\(([^)]+)\))?')
+
+    result = {'upgrade': {}, 'install': {}, 'reinstall': {}, 'remove': {}, 'downgrade': {}}
+    action = None
+    for line in salt.utils.itertools.split(stdout, '\n'):
+
+        if not line:
+            action = None
+            continue
+
+        if line == 'Installed packages to be UPGRADED:':
+            action = 'upgrade'
+            continue
+
+        if line == 'New packages to be INSTALLED:':
+            action = 'install'
+            continue
+
+        if line == 'Installed packages to be REINSTALLED:':
+            action = 'reinstall'
+            continue
+
+        if line == 'Installed packages to be REMOVED:':
+            action = 'remove'
+            continue
+
+        if line == 'Installed packages to be DOWNGRADED:':
+            action = 'downgrade'
+            continue
+
+        if action == 'upgrade' or action == 'downgrade':
+            match = upgrade_regex.match(line)
+            if match:
+                result[action][match.group(1)] = {
+                    'version': {
+                        'current': match.group(2),
+                        'new': match.group(3)
+                    },
+                    'repo': match.group(5),
+                    'reason': match.group(7)
+                }
+            else:
+                log.error('Unable to parse %s: \'%s\'', action, line)
+
+        if action == 'install':
+            match = install_regex.match(line)
+            if match:
+                result[action][match.group(1)] = {
+                    'version': {
+                        'current': match.group(2)
+                    },
+                    'repo': match.group(4),
+                    'reason': match.group(6)
+                }
+            else:
+                log.error('Unable to parse %s: \'%s\'', action, line)
+
+        if (action == 'reinstall') or (action == 'remove'):
+            match = reinstall_regex.match(line)
+            if match:
+                result[action][match.group(1)] = {
+                    'version': {
+                        'current': match.group(2)
+                    },
+                    'repo': match.group(4),
+                    'reason': match.group(6)
+                }
+            else:
+                log.error('Unable to parse %s: \'%s\'', action, line)
+
+    return result
+
+
+def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
@@ -1879,6 +2453,8 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
 
         salt '*' pkg.version_cmp '2.1.11' '2.1.12'
     '''
+    del ignore_epoch  # Unused parameter
+
     # Don't worry about ignore_epoch since we're shelling out to pkg.
     sym = {
         '<': -1,
@@ -1888,12 +2464,13 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
     try:
         cmd = ['pkg', 'version', '--test-version', pkg1, pkg2]
         ret = __salt__['cmd.run_all'](cmd,
-                                            output_loglevel='trace',
-                                            python_shell=False,
-                                            ignore_retcode=True)
+                                      output_loglevel='trace',
+                                      python_shell=False,
+                                      ignore_retcode=True)
+        if ret['stdout'] in sym:
+            return sym[ret['stdout']]
+
     except Exception as exc:
         log.error(exc)
 
-    if ret['stdout'] in sym:
-        return sym[ret['stdout']]
     return None

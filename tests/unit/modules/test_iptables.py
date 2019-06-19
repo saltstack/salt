@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import uuid
 
 # Import Salt Testing Libs
@@ -60,38 +60,38 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(iptables.build_rule(**{'if': 'not eth0'}),
                              '! -i eth0')
 
-            self.assertEqual(iptables.build_rule(**{'proto': 'tcp', 'syn': '!'}),
+            self.assertEqual(iptables.build_rule(**{'protocol': 'tcp', 'syn': '!'}),
                             '-p tcp ! --syn')
 
-            self.assertEqual(iptables.build_rule(dports=[80, 443], proto='tcp'),
+            self.assertEqual(iptables.build_rule(dports=[80, 443], protocol='tcp'),
                              '-p tcp -m multiport --dports 80,443')
 
-            self.assertEqual(iptables.build_rule(dports='80,443', proto='tcp'),
+            self.assertEqual(iptables.build_rule(dports='80,443', protocol='tcp'),
                              '-p tcp -m multiport --dports 80,443')
 
             # Should it really behave this way?
             self.assertEqual(iptables.build_rule(dports=['!80', 443],
-                                                 proto='tcp'),
+                                                 protocol='tcp'),
                              '-p tcp -m multiport ! --dports 80,443')
 
-            self.assertEqual(iptables.build_rule(dports='!80,443', proto='tcp'),
+            self.assertEqual(iptables.build_rule(dports='!80,443', protocol='tcp'),
                              '-p tcp -m multiport ! --dports 80,443')
 
-            self.assertEqual(iptables.build_rule(sports=[80, 443], proto='tcp'),
+            self.assertEqual(iptables.build_rule(sports=[80, 443], protocol='tcp'),
                              '-p tcp -m multiport --sports 80,443')
 
-            self.assertEqual(iptables.build_rule(sports='80,443', proto='tcp'),
+            self.assertEqual(iptables.build_rule(sports='80,443', protocol='tcp'),
                              '-p tcp -m multiport --sports 80,443')
 
             self.assertEqual(iptables.build_rule('filter', 'INPUT', command='I',
                                                  position='3', full=True,
-                                                 dports='proto', jump='ACCEPT'),
-                             'Error: proto must be specified')
+                                                 dports='protocol', jump='ACCEPT'),
+                             'Error: protocol must be specified')
 
             self.assertEqual(iptables.build_rule('filter', 'INPUT', command='I',
                                                  position='3', full=True,
-                                                 sports='proto', jump='ACCEPT'),
-                             'Error: proto must be specified')
+                                                 sports='protocol', jump='ACCEPT'),
+                             'Error: protocol must be specified')
 
             self.assertEqual(iptables.build_rule('', 'INPUT', command='I',
                                                  position='3', full='True',

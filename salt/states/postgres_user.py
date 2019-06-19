@@ -10,7 +10,7 @@ The postgres_users module is used to create and manage Postgres users.
     frank:
       postgres_user.present
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import datetime
@@ -37,7 +37,6 @@ def __virtual__():
 def present(name,
             createdb=None,
             createroles=None,
-            createuser=None,
             encrypted=None,
             superuser=None,
             replication=None,
@@ -68,9 +67,6 @@ def present(name,
 
     createroles
         Is the user allowed to create other users?
-
-    createuser
-        Alias to create roles
 
     encrypted
         Should the password be encrypted in the system catalog?
@@ -142,8 +138,6 @@ def present(name,
            'result': True,
            'comment': 'User {0} is already present'.format(name)}
 
-    if createuser:
-        createroles = True
     # default to encrypted passwords
     if encrypted is not False:
         encrypted = postgres._DEFAULT_PASSWORDS_ENCRYPTION

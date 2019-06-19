@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-.. _`saltify-module`:
+.. _saltify-module:
 
 Saltify Module
 ==============
@@ -9,7 +9,7 @@ The Saltify module is designed to install Salt on a remote machine, virtual or
 bare metal, using SSH. This module is useful for provisioning machines which
 are already installed, but not Salted.
 
-.. versionchanged:: Oxygen
+.. versionchanged:: 2018.3.0
     The wake_on_lan capability, and actions destroy, reboot, and query functions were added.
 
 Use of this module requires some configuration in cloud profile and provider
@@ -27,11 +27,7 @@ import salt.utils.cloud
 import salt.config as config
 import salt.client
 import salt.ext.six as six
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
-
+from salt._compat import ipaddress
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Get logging started
@@ -88,7 +84,7 @@ def avail_images(call=None):
 
     returns a list of available profiles.
 
-    ..versionadded:: Oxygen
+    ..versionadded:: 2018.3.0
 
     '''
     vm_ = get_configured_provider()
@@ -118,7 +114,7 @@ def list_nodes(call=None):
 
     returns a list of dictionaries of defined standard fields.
 
-    ..versionadded:: Oxygen
+    ..versionadded:: 2018.3.0
 
     '''
     nodes = _list_nodes_full(call)
@@ -164,7 +160,7 @@ def list_nodes_full(call=None):
 
     for 'saltify' minions, returns dict of grains (enhanced).
 
-    ..versionadded:: Oxygen
+    ..versionadded:: 2018.3.0
     '''
 
     ret = _list_nodes_full(call)
@@ -252,6 +248,10 @@ def create(vm_):
     deploy_config = config.get_cloud_config_value(
         'deploy', vm_, __opts__, default=False)
 
+    # If ssh_host is not set, default to the minion name
+    if not config.get_cloud_config_value('ssh_host', vm_, __opts__, default=''):
+        vm_['ssh_host'] = vm_['name']
+
     if deploy_config:
         wol_mac = config.get_cloud_config_value(
             'wake_on_lan_mac', vm_, __opts__, default='')
@@ -304,7 +304,7 @@ def get_configured_provider():
 
 def _verify(vm_):
     '''
-    Verify credentials for an exsiting system
+    Verify credentials for an existing system
     '''
     log.info('Verifying credentials for %s', vm_['name'])
 
@@ -399,7 +399,7 @@ def _verify(vm_):
 def destroy(name, call=None):
     ''' Destroy a node.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     Disconnect a minion from the master, and remove its keys.
 
@@ -489,7 +489,7 @@ def reboot(name, call=None):
     '''
     Reboot a saltify minion.
 
-    ..versionadded:: Oxygen
+    ..versionadded:: 2018.3.0
 
     name
         The name of the VM to reboot.

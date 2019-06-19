@@ -5,7 +5,7 @@ Neutron class
 
 
 # Import python libs
-from __future__ import absolute_import, with_statement
+from __future__ import absolute_import, with_statement, unicode_literals, print_function
 import logging
 
 # Import third party libs
@@ -81,6 +81,13 @@ class SaltNeutron(NeutronShell):
         '''
         Set up neutron credentials
         '''
+        __utils__['versions.warn_until'](
+            'Neon',
+            (
+                'The neutron module has been deprecated and will be removed in {version}.  '
+                'Please update to using the neutronng module'
+            ),
+        )
         if not HAS_NEUTRON:
             return None
 
@@ -151,7 +158,7 @@ class SaltNeutron(NeutronShell):
                 return resource
             if resource.get('name') == name_or_id:
                 ret.append(resource)
-        if len(ret) == 0:
+        if not ret:
             raise exceptions.MinionError("Resource not found.")
         elif len(ret) >= 2:
             raise exceptions.MinionError("Multiple resource matches found.")

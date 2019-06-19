@@ -97,7 +97,7 @@ def calc(name, num, oper, minimum=0, maximum=0, ref=None):
     if minimum > 0 and answer < minimum:
         ret['result'] = False
 
-    if maximum > 0 and answer > maximum:
+    if 0 < maximum < answer:
         ret['result'] = False
 
     ret['changes'] = {

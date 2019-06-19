@@ -238,7 +238,7 @@ presence of the instance will be managed statefully.
 
     my-instance-name:
       cloud.present:
-        - provider: my-ec2-config
+        - cloud_provider: my-ec2-config
         - image: ami-1624987f
         - size: 't1.micro'
         - ssh_username: ec2-user

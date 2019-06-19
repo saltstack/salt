@@ -40,7 +40,7 @@ This state is not able to grant permissions for the user. See
 :py:mod:`salt.states.mysql_grants` for further instructions.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import sys

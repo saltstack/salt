@@ -4,15 +4,17 @@ Common functions for working with RPM packages
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 import datetime
 import logging
 import subprocess
+import platform
+import salt.utils.stringutils
+import salt.utils.path
 
 # Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -37,18 +39,25 @@ ARCHES = ARCHES_64 + ARCHES_32 + ARCHES_PPC + ARCHES_S390 + \
 # EPOCHNUM can't be used until RHEL5 is EOL as it is not present
 QUERYFORMAT = '%{NAME}_|-%{EPOCH}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}_|-%{INSTALLTIME}'
 
+# on some archs, the rpm _host_cpu macro doesn't match the pkg name arch
+ARCHMAP = {'powerpc64le': 'ppc64le'}
+
 
 def get_osarch():
     '''
     Get the os architecture using rpm --eval
     '''
-    ret = subprocess.Popen(
-        'rpm --eval "%{_host_cpu}"',
-        shell=True,
-        close_fds=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE).communicate()[0]
-    return ret or 'unknown'
+    if salt.utils.path.which('rpm'):
+        ret = subprocess.Popen(
+            'rpm --eval "%{_host_cpu}"',
+            shell=True,
+            close_fds=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE).communicate()[0]
+    else:
+        ret = ''.join([x for x in platform.uname()[-2:] if x][-1:])
+
+    return salt.utils.stringutils.to_str(ret).strip() or 'unknown'
 
 
 def check_32(arch, osarch=None):
@@ -81,7 +90,7 @@ def resolve_name(name, arch, osarch=None):
     if osarch is None:
         osarch = get_osarch()
 
-    if not check_32(arch, osarch) and arch not in (osarch, 'noarch'):
+    if not check_32(arch, osarch) and arch not in (ARCHMAP.get(osarch, osarch), 'noarch'):
         name += '.{0}'.format(arch)
     return name
 
@@ -122,13 +131,13 @@ def combine_comments(comments):
     '''
     if not isinstance(comments, list):
         comments = [comments]
-    for idx in range(len(comments)):
-        if not isinstance(comments[idx], six.string_types):
-            comments[idx] = str(comments[idx])
-        comments[idx] = comments[idx].strip()
-        if not comments[idx].startswith('#'):
-            comments[idx] = '#' + comments[idx]
-    return '\n'.join(comments)
+    ret = []
+    for comment in comments:
+        if not isinstance(comment, six.string_types):
+            comment = str(comment)
+        # Normalize for any spaces (or lack thereof) after the #
+        ret.append('# {0}\n'.format(comment.lstrip('#').lstrip()))
+    return ''.join(ret)
 
 
 def version_to_evr(verstring):
@@ -149,7 +158,7 @@ def version_to_evr(verstring):
     idx_e = verstring.find(':')
     if idx_e != -1:
         try:
-            epoch = str(int(verstring[:idx_e]))
+            epoch = six.text_type(int(verstring[:idx_e]))
         except ValueError:
             # look, garbage in the epoch field, how fun, kill it
             epoch = '0'  # this is our fallback, deal

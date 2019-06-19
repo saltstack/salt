@@ -7,4 +7,6 @@
 {%- if route.gateway %} via {{route.gateway}}
 {%- else %} dev {{iface}}
 {%- endif %}
+{%- if route.metric %} metric {{route.metric}}
+{%- endif %}
 {% endfor -%}

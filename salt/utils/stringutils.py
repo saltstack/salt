@@ -5,6 +5,8 @@ Functions for manipulating or otherwise processing strings
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import base64
+import difflib
 import errno
 import fnmatch
 import logging
@@ -12,6 +14,7 @@ import os
 import shlex
 import re
 import time
+import unicodedata
 
 # Import Salt libs
 from salt.utils.decorators.jinja import jinja_filter
@@ -24,61 +27,138 @@ log = logging.getLogger(__name__)
 
 
 @jinja_filter('to_bytes')
-def to_bytes(s, encoding=None):
+def to_bytes(s, encoding=None, errors='strict'):
     '''
     Given bytes, bytearray, str, or unicode (python 2), return bytes (str for
     python 2)
     '''
+    if encoding is None:
+        # Try utf-8 first, and fall back to detected encoding
+        encoding = ('utf-8', __salt_system_encoding__)
+    if not isinstance(encoding, (tuple, list)):
+        encoding = (encoding,)
+
+    if not encoding:
+        raise ValueError('encoding cannot be empty')
+
+    exc = None
     if six.PY3:
         if isinstance(s, bytes):
             return s
         if isinstance(s, bytearray):
             return bytes(s)
         if isinstance(s, six.string_types):
-            return s.encode(encoding or __salt_system_encoding__)
-        raise TypeError('expected bytes, bytearray, or str')
+            for enc in encoding:
+                try:
+                    return s.encode(enc, errors)
+                except UnicodeEncodeError as err:
+                    exc = err
+                    continue
+            # The only way we get this far is if a UnicodeEncodeError was
+            # raised, otherwise we would have already returned (or raised some
+            # other exception).
+            raise exc  # pylint: disable=raising-bad-type
+        raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
-        return to_str(s, encoding)
+        return to_str(s, encoding, errors)
 
 
-def to_str(s, encoding=None):
+def to_str(s, encoding=None, errors='strict', normalize=False):
     '''
     Given str, bytes, bytearray, or unicode (py2), return str
     '''
+    def _normalize(s):
+        try:
+            return unicodedata.normalize('NFC', s) if normalize else s
+        except TypeError:
+            return s
+
+    if encoding is None:
+        # Try utf-8 first, and fall back to detected encoding
+        encoding = ('utf-8', __salt_system_encoding__)
+    if not isinstance(encoding, (tuple, list)):
+        encoding = (encoding,)
+
+    if not encoding:
+        raise ValueError('encoding cannot be empty')
+
     # This shouldn't be six.string_types because if we're on PY2 and we already
     # have a string, we should just return it.
     if isinstance(s, str):
-        return s
+        return _normalize(s)
+
+    exc = None
     if six.PY3:
         if isinstance(s, (bytes, bytearray)):
-            # https://docs.python.org/3/howto/unicode.html#the-unicode-type
-            # replace error with U+FFFD, REPLACEMENT CHARACTER
-            return s.decode(encoding or __salt_system_encoding__, "replace")
+            for enc in encoding:
+                try:
+                    return _normalize(s.decode(enc, errors))
+                except UnicodeDecodeError as err:
+                    exc = err
+                    continue
+            # The only way we get this far is if a UnicodeDecodeError was
+            # raised, otherwise we would have already returned (or raised some
+            # other exception).
+            raise exc  # pylint: disable=raising-bad-type
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
-            return str(s)
+            return str(s)  # future lint: disable=blacklisted-function
         if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
-            return s.encode(encoding or __salt_system_encoding__)
-        raise TypeError('expected str, bytearray, or unicode')
+            for enc in encoding:
+                try:
+                    return _normalize(s).encode(enc, errors)
+                except UnicodeEncodeError as err:
+                    exc = err
+                    continue
+            # The only way we get this far is if a UnicodeDecodeError was
+            # raised, otherwise we would have already returned (or raised some
+            # other exception).
+            raise exc  # pylint: disable=raising-bad-type
+        raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
 
 
-def to_unicode(s, encoding=None):
+def to_unicode(s, encoding=None, errors='strict', normalize=False):
     '''
     Given str or unicode, return unicode (str for python 3)
     '''
-    if not isinstance(s, (bytes, bytearray, six.string_types)):
-        return s
+    def _normalize(s):
+        return unicodedata.normalize('NFC', s) if normalize else s
+
+    if encoding is None:
+        # Try utf-8 first, and fall back to detected encoding
+        encoding = ('utf-8', __salt_system_encoding__)
+    if not isinstance(encoding, (tuple, list)):
+        encoding = (encoding,)
+
+    if not encoding:
+        raise ValueError('encoding cannot be empty')
+
+    exc = None
     if six.PY3:
-        if isinstance(s, (bytes, bytearray)):
-            return to_str(s, encoding)
+        if isinstance(s, str):
+            return _normalize(s)
+        elif isinstance(s, (bytes, bytearray)):
+            return _normalize(to_str(s, encoding, errors))
+        raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         # This needs to be str and not six.string_types, since if the string is
         # already a unicode type, it does not need to be decoded (and doing so
         # will raise an exception).
-        if isinstance(s, str):
-            return s.decode(encoding or __salt_system_encoding__)
-    return s
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
+            return _normalize(s)
+        elif isinstance(s, (str, bytearray)):
+            for enc in encoding:
+                try:
+                    return _normalize(s.decode(enc, errors))
+                except UnicodeDecodeError as err:
+                    exc = err
+                    continue
+            # The only way we get this far is if a UnicodeDecodeError was
+            # raised, otherwise we would have already returned (or raised some
+            # other exception).
+            raise exc  # pylint: disable=raising-bad-type
+        raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
 
 
 @jinja_filter('str_to_num')  # Remove this for Neon
@@ -99,11 +179,24 @@ def to_num(text):
             return text
 
 
+def to_bool(text):
+    '''
+    Convert the string name of a boolean to that boolean value.
+    '''
+    downcased_text = six.text_type(text).strip().lower()
+
+    if downcased_text == 'false':
+        return False
+    elif downcased_text == 'true':
+        return True
+    return text
+
+
 def to_none(text):
     '''
     Convert a string to None if the string is empty or contains only spaces.
     '''
-    if str(text).strip():
+    if six.text_type(text).strip():
         return text
     return None
 
@@ -146,19 +239,27 @@ def is_binary(data):
     '''
     Detects if the passed string of data is binary or text
     '''
-    if not data or not isinstance(data, six.string_types):
+    if not data or not isinstance(data, (six.string_types, six.binary_type)):
         return False
-    if '\0' in data:
+
+    if isinstance(data, six.binary_type):
+        if b'\0' in data:
+            return True
+    elif str('\0') in data:
         return True
 
     text_characters = ''.join([chr(x) for x in range(32, 127)] + list('\n\r\t\b'))
     # Get the non-text characters (map each character to itself then use the
     # 'remove' option to get rid of the text characters.)
     if six.PY3:
-        trans = ''.maketrans('', '', text_characters)
-        nontext = data.translate(trans)
+        if isinstance(data, six.binary_type):
+            import salt.utils.data
+            nontext = data.translate(None, salt.utils.data.encode(text_characters))
+        else:
+            trans = ''.maketrans('', '', text_characters)
+            nontext = data.translate(trans)
     else:
-        if isinstance(data, unicode):  # pylint: disable=incompatible-py3-code
+        if isinstance(data, six.text_type):
             trans_args = ({ord(x): None for x in text_characters},)
         else:
             trans_args = (None, str(text_characters))  # future lint: blacklisted-function
@@ -174,7 +275,7 @@ def is_binary(data):
 @jinja_filter('random_str')
 def random(size=32):
     key = os.urandom(size)
-    return key.encode('base64').replace('\n', '')[:size]
+    return to_unicode(base64.b64encode(key).replace(b'\n', b'')[:size])
 
 
 @jinja_filter('contains_whitespace')
@@ -191,7 +292,7 @@ def human_to_bytes(size):
     return the number of bytes.  Will return 0 if the argument has
     unexpected form.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
     '''
     sbytes = size[:-1]
     unit = size[-1]
@@ -245,7 +346,9 @@ def build_whitespace_split_regex(text):
         lexer = shlex.shlex(text)
         lexer.whitespace_split = True
         lexer.commenters = ''
-        if '\'' in text:
+        if r"'\"" in text:
+            lexer.quotes = ''
+        elif '\'' in text:
             lexer.quotes = '"'
         elif '"' in text:
             lexer.quotes = '\''
@@ -260,20 +363,29 @@ def build_whitespace_split_regex(text):
 
 def expr_match(line, expr):
     '''
-    Evaluate a line of text against an expression. First try a full-string
-    match, next try globbing, and then try to match assuming expr is a regular
-    expression. Originally designed to match minion IDs for
-    whitelists/blacklists.
+    Checks whether or not the passed value matches the specified expression.
+    Tries to match expr first as a glob using fnmatch.fnmatch(), and then tries
+    to match expr as a regular expression. Originally designed to match minion
+    IDs for whitelists/blacklists.
+
+    Note that this also does exact matches, as fnmatch.fnmatch() will return
+    ``True`` when no glob characters are used and the string is an exact match:
+
+    .. code-block:: python
+
+        >>> fnmatch.fnmatch('foo', 'foo')
+        True
     '''
-    if line == expr:
-        return True
-    if fnmatch.fnmatch(line, expr):
-        return True
     try:
-        if re.match(r'\A{0}\Z'.format(expr), line):
+        if fnmatch.fnmatch(line, expr):
             return True
-    except re.error:
-        pass
+        try:
+            if re.match(r'\A{0}\Z'.format(expr), line):
+                return True
+        except re.error:
+            pass
+    except TypeError:
+        log.exception('Value %r or expression %r is not a string', line, expr)
     return False
 
 
@@ -300,29 +412,46 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     in the blacklist, then the whitelist is checked. If the value isn't
     found in the whitelist, the function returns ``False``.
     '''
-    if blacklist is not None:
-        if not hasattr(blacklist, '__iter__'):
+    # Normalize the input so that we have a list
+    if blacklist:
+        if isinstance(blacklist, six.string_types):
             blacklist = [blacklist]
-        try:
-            for expr in blacklist:
-                if expr_match(value, expr):
-                    return False
-        except TypeError:
-            log.error('Non-iterable blacklist %s', blacklist)
+        if not hasattr(blacklist, '__iter__'):
+            raise TypeError(
+                'Expecting iterable blacklist, but got {0} ({1})'.format(
+                    type(blacklist).__name__, blacklist
+                )
+            )
+    else:
+        blacklist = []
 
     if whitelist:
-        if not hasattr(whitelist, '__iter__'):
+        if isinstance(whitelist, six.string_types):
             whitelist = [whitelist]
-        try:
-            for expr in whitelist:
-                if expr_match(value, expr):
-                    return True
-        except TypeError:
-            log.error('Non-iterable whitelist %s', whitelist)
+        if not hasattr(whitelist, '__iter__'):
+            raise TypeError(
+                'Expecting iterable whitelist, but got {0} ({1})'.format(
+                    type(whitelist).__name__, whitelist
+                )
+            )
     else:
-        return True
+        whitelist = []
 
-    return False
+    _blacklist_match = any(expr_match(value, expr) for expr in blacklist)
+    _whitelist_match = any(expr_match(value, expr) for expr in whitelist)
+
+    if blacklist and not whitelist:
+        # Blacklist but no whitelist
+        return not _blacklist_match
+    elif whitelist and not blacklist:
+        # Whitelist but no blacklist
+        return _whitelist_match
+    elif blacklist and whitelist:
+        # Both whitelist and blacklist
+        return not _blacklist_match and _whitelist_match
+    else:
+        # No blacklist or whitelist passed
+        return True
 
 
 def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
@@ -336,31 +465,37 @@ def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
       - If both include_pat and exclude_pat are supplied: return 'True' if
         include_pat matches AND exclude_pat does not match
     '''
+    def _pat_check(path_str, check_pat):
+        if re.match('E@', check_pat):
+            return True if re.search(
+                check_pat[2:],
+                path_str
+            ) else False
+        else:
+            return True if fnmatch.fnmatch(
+                path_str,
+                check_pat
+            ) else False
+
     ret = True  # -- default true
     # Before pattern match, check if it is regexp (E@'') or glob(default)
     if include_pat:
-        if re.match('E@', include_pat):
-            retchk_include = True if re.search(
-                include_pat[2:],
-                path_str
-            ) else False
+        if isinstance(include_pat, list):
+            for include_line in include_pat:
+                retchk_include = _pat_check(path_str, include_line)
+                if retchk_include:
+                    break
         else:
-            retchk_include = True if fnmatch.fnmatch(
-                path_str,
-                include_pat
-            ) else False
+            retchk_include = _pat_check(path_str, include_pat)
 
     if exclude_pat:
-        if re.match('E@', exclude_pat):
-            retchk_exclude = False if re.search(
-                exclude_pat[2:],
-                path_str
-            ) else True
+        if isinstance(exclude_pat, list):
+            for exclude_line in exclude_pat:
+                retchk_exclude = not _pat_check(path_str, exclude_line)
+                if not retchk_exclude:
+                    break
         else:
-            retchk_exclude = False if fnmatch.fnmatch(
-                path_str,
-                exclude_pat
-            ) else True
+            retchk_exclude = not _pat_check(path_str, exclude_pat)
 
     # Now apply include/exclude conditions
     if include_pat and not exclude_pat:
@@ -400,3 +535,92 @@ def print_cli(msg, retries=10, step=0.01):
                 else:
                     raise
         break
+
+
+def get_context(template, line, num_lines=5, marker=None):
+    '''
+    Returns debugging context around a line in a given string
+
+    Returns:: string
+    '''
+    template_lines = template.splitlines()
+    num_template_lines = len(template_lines)
+
+    # In test mode, a single line template would return a crazy line number like,
+    # 357. Do this sanity check and if the given line is obviously wrong, just
+    # return the entire template
+    if line > num_template_lines:
+        return template
+
+    context_start = max(0, line - num_lines - 1)  # subt 1 for 0-based indexing
+    context_end = min(num_template_lines, line + num_lines)
+    error_line_in_context = line - context_start - 1  # subtr 1 for 0-based idx
+
+    buf = []
+    if context_start > 0:
+        buf.append('[...]')
+        error_line_in_context += 1
+
+    buf.extend(template_lines[context_start:context_end])
+
+    if context_end < num_template_lines:
+        buf.append('[...]')
+
+    if marker:
+        buf[error_line_in_context] += marker
+
+    return '---\n{0}\n---'.format('\n'.join(buf))
+
+
+def get_diff(a, b, *args, **kwargs):
+    '''
+    Perform diff on two iterables containing lines from two files, and return
+    the diff as as string. Lines are normalized to str types to avoid issues
+    with unicode on PY2.
+    '''
+    encoding = ('utf-8', 'latin-1', __salt_system_encoding__)
+    # Late import to avoid circular import
+    import salt.utils.data
+    return ''.join(
+        difflib.unified_diff(
+            salt.utils.data.decode_list(a, encoding=encoding),
+            salt.utils.data.decode_list(b, encoding=encoding),
+            *args, **kwargs
+        )
+    )
+
+
+@jinja_filter('to_snake_case')
+def camel_to_snake_case(camel_input):
+    '''
+    Converts camelCase (or CamelCase) to snake_case.
+    From https://codereview.stackexchange.com/questions/185966/functions-to-convert-camelcase-strings-to-snake-case
+
+    :param str camel_input: The camelcase or CamelCase string to convert to snake_case
+
+    :return str
+    '''
+    res = camel_input[0].lower()
+    for i, letter in enumerate(camel_input[1:], 1):
+        if letter.isupper():
+            if camel_input[i-1].islower() or (i != len(camel_input)-1 and camel_input[i+1].islower()):
+                res += '_'
+        res += letter.lower()
+    return res
+
+
+@jinja_filter('to_camelcase')
+def snake_to_camel_case(snake_input, uppercamel=False):
+    '''
+    Converts snake_case to camelCase (or CamelCase if uppercamel is ``True``).
+    Inspired by https://codereview.stackexchange.com/questions/85311/transform-snake-case-to-camelcase
+
+    :param str snake_input: The input snake_case string to convert to camelCase
+    :param bool uppercamel: Whether or not to convert to CamelCase instead
+
+    :return str
+    '''
+    words = snake_input.split('_')
+    if uppercamel:
+        words[0] = words[0].capitalize()
+    return words[0] + ''.join(word.capitalize() for word in words[1:])

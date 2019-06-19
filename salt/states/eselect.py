@@ -5,15 +5,10 @@ Management of Gentoo configuration using eselect
 
 A state module to manage Gentoo configuration via eselect
 
-.. code-block:: yaml
-
-    profile:
-        eselect.set:
-            target: hardened/linux/amd64
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Define a function alias in order not to shadow built-in's
 __func_alias__ = {
@@ -44,6 +39,11 @@ def set_(name, target, module_parameter=None, action_parameter=None):
     action_parameter
         additional params passed to the defined action
 
+    .. code-block:: yaml
+
+        profile:
+          eselect.set:
+            - target: hardened/linux/amd64
     '''
     ret = {'changes': {},
            'comment': '',

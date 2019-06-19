@@ -4,7 +4,7 @@ Test the verification routines
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import getpass
 import os
 import sys
@@ -20,8 +20,8 @@ else:
     import resource
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf, TestCase
-from tests.support.paths import TMP
 from tests.support.helpers import (
     requires_network,
     TestsLoggingHandler
@@ -47,6 +47,7 @@ from salt.utils.verify import (
 )
 
 # Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
@@ -109,23 +110,16 @@ class TestVerify(TestCase):
 
     @skipIf(sys.platform.startswith('win'), 'No verify_env Windows')
     def test_verify_env(self):
-        root_dir = tempfile.mkdtemp(dir=TMP)
+        root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
         key_dir = os.path.join(root_dir, 'key_dir')
-        verify_env([var_dir, key_dir], getpass.getuser(), root_dir=root_dir, sensitive_dirs=[key_dir])
+        verify_env([var_dir], getpass.getuser(), root_dir=root_dir)
         self.assertTrue(os.path.exists(var_dir))
-        self.assertTrue(os.path.exists(key_dir))
-
-        var_dir_stat = os.stat(var_dir)
-        self.assertEqual(var_dir_stat.st_uid, os.getuid())
-        self.assertEqual(var_dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
-        self.assertEqual(var_dir_stat.st_mode & stat.S_IRWXG, 40)
-        self.assertEqual(var_dir_stat.st_mode & stat.S_IRWXO, 5)
-
-        key_dir_stat = os.stat(key_dir)
-        self.assertEqual(key_dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
-        self.assertEqual(key_dir_stat.st_mode & stat.S_IRWXG, 0)
-        self.assertEqual(key_dir_stat.st_mode & stat.S_IRWXO, 0)
+        dir_stat = os.stat(var_dir)
+        self.assertEqual(dir_stat.st_uid, os.getuid())
+        self.assertEqual(dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
+        self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
+        self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
 
     @requires_network(only_local_network=True)
     def test_verify_socket(self):
@@ -196,9 +190,9 @@ class TestVerify(TestCase):
                                       (127, 'WARNING'), (196, 'CRITICAL')):
 
                     for n in range(prev, newmax):
-                        kpath = os.path.join(keys_dir, str(n))
+                        kpath = os.path.join(keys_dir, six.text_type(n))
                         with salt.utils.files.fopen(kpath, 'w') as fp_:
-                            fp_.write(str(n))
+                            fp_.write(str(n))  # future lint: disable=blacklisted-function
 
                     opts = {
                         'max_open_files': newmax,
@@ -231,9 +225,9 @@ class TestVerify(TestCase):
 
                 newmax = mof_test
                 for n in range(prev, newmax):
-                    kpath = os.path.join(keys_dir, str(n))
+                    kpath = os.path.join(keys_dir, six.text_type(n))
                     with salt.utils.files.fopen(kpath, 'w') as fp_:
-                        fp_.write(str(n))
+                        fp_.write(str(n))  # future lint: disable=blacklisted-function
 
                 opts = {
                     'max_open_files': newmax,

@@ -6,13 +6,13 @@ This module renders highstate configuration into a more human readable format.
 
 How it works:
 
- `highstate or lowstate` data is parsed with a `proccesser` this defaults to `highstate_doc.proccesser_markdown`.
- The proccessed data is passed to a `jinja` template that builds up the document content.
+`highstate or lowstate` data is parsed with a `proccesser` this defaults to `highstate_doc.proccesser_markdown`.
+The proccessed data is passed to a `jinja` template that builds up the document content.
 
 
 configuration: Pillar
 
-.. code-block:: yaml
+.. code-block:: none
 
     # the following defaults can be overrided
     highstate_doc.config:
@@ -145,7 +145,7 @@ Other hints
 
 If you wish to customize the document format:
 
-.. code-block:: yaml
+.. code-block:: none
 
     # you could also create a new `proccesser` for perhaps reStructuredText
     # highstate_doc.config:
@@ -178,49 +178,62 @@ If you wish to customize the document format:
             - mode: '0640'
 
 
-Some `replace_text_regex` values that might be helpfull.
+Some `replace_text_regex` values that might be helpful::
 
-    ## CERTS
-    '-----BEGIN RSA PRIVATE KEY-----[\r\n\t\f\S]{0,2200}': 'XXXXXXX'
-    '-----BEGIN CERTIFICATE-----[\r\n\t\f\S]{0,2200}': 'XXXXXXX'
-    '-----BEGIN DH PARAMETERS-----[\r\n\t\f\S]{0,2200}': 'XXXXXXX'
-    '-----BEGIN PRIVATE KEY-----[\r\n\t\f\S]{0,2200}': 'XXXXXXX'
-    '-----BEGIN OPENSSH PRIVATE KEY-----[\r\n\t\f\S]{0,2200}': 'XXXXXXX'
-    'ssh-rsa .* ': 'ssh-rsa XXXXXXX '
-    'ssh-dss .* ': 'ssh-dss XXXXXXX '
-    ## DB
-    'DB_PASS.*': 'DB_PASS = XXXXXXX'
-    '5432:*:*:.*': '5432:*:XXXXXXX'
-    "'PASSWORD': .*": "'PASSWORD': 'XXXXXXX',"
-    " PASSWORD '.*'": " PASSWORD 'XXXXXXX'"
-    'PGPASSWORD=.* ': 'PGPASSWORD=XXXXXXX'
-    "_replication password '.*'":  "_replication password 'XXXXXXX'"
-    ## OTHER
-    'EMAIL_HOST_PASSWORD =.*': 'EMAIL_HOST_PASSWORD =XXXXXXX'
-    "net ads join -U '.*@MFCFADS.MATH.EXAMPLE.CA.* ": "net ads join -U '.*@MFCFADS.MATH.EXAMPLE.CA%XXXXXXX "
-    "net ads join -U '.*@NEXUS.EXAMPLE.CA.* ": "net ads join -U '.*@NEXUS.EXAMPLE.CA%XXXXXXX "
-    'install-uptrack .* --autoinstall': 'install-uptrack XXXXXXX --autoinstall'
-    'accesskey = .*': 'accesskey = XXXXXXX'
-    'auth_pass .*': 'auth_pass XXXXXXX'
-    'PSK "0x.*': 'PSK "0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-    'SECRET_KEY.*': 'SECRET_KEY = XXXXXXX'
-    "password=.*": "password=XXXXXXX"
-    '<password>.*</password>': '<password>XXXXXXX</password>'
-    '<salt>.*</salt>': '<salt>XXXXXXX</salt>'
-    'application.secret = ".*"': 'application.secret = "XXXXXXX"'
-    'url = "postgres://.*"': 'url = "postgres://XXXXXXX"'
-    'PASS_.*_PASS': 'PASS_XXXXXXX_PASS'
-    ## HTACCESS
-    ':{PLAIN}.*': ':{PLAIN}XXXXXXX'
+    CERTS
+    -----
+
+    ``'-----BEGIN RSA PRIVATE KEY-----[\\r\\n\\t\\f\\S]{0,2200}': 'XXXXXXX'``
+    ``'-----BEGIN CERTIFICATE-----[\\r\\n\\t\\f\\S]{0,2200}': 'XXXXXXX'``
+    ``'-----BEGIN DH PARAMETERS-----[\\r\\n\\t\\f\\S]{0,2200}': 'XXXXXXX'``
+    ``'-----BEGIN PRIVATE KEY-----[\\r\\n\\t\\f\\S]{0,2200}': 'XXXXXXX'``
+    ``'-----BEGIN OPENSSH PRIVATE KEY-----[\\r\\n\\t\\f\\S]{0,2200}': 'XXXXXXX'``
+    ``'ssh-rsa .* ': 'ssh-rsa XXXXXXX '``
+    ``'ssh-dss .* ': 'ssh-dss XXXXXXX '``
+
+    DB
+    --
+
+    ``'DB_PASS.*': 'DB_PASS = XXXXXXX'``
+    ``'5432:*:*:.*': '5432:*:XXXXXXX'``
+    ``"'PASSWORD': .*": "'PASSWORD': 'XXXXXXX',"``
+    ``" PASSWORD '.*'": " PASSWORD 'XXXXXXX'"``
+    ``'PGPASSWORD=.* ': 'PGPASSWORD=XXXXXXX'``
+    ``"_replication password '.*'":  "_replication password 'XXXXXXX'"``
+
+    OTHER
+    -----
+
+    ``'EMAIL_HOST_PASSWORD =.*': 'EMAIL_HOST_PASSWORD =XXXXXXX'``
+    ``"net ads join -U '.*@MFCFADS.MATH.EXAMPLE.CA.* ": "net ads join -U '.*@MFCFADS.MATH.EXAMPLE.CA%XXXXXXX "``
+    ``"net ads join -U '.*@NEXUS.EXAMPLE.CA.* ": "net ads join -U '.*@NEXUS.EXAMPLE.CA%XXXXXXX "``
+    ``'install-uptrack .* --autoinstall': 'install-uptrack XXXXXXX --autoinstall'``
+    ``'accesskey = .*': 'accesskey = XXXXXXX'``
+    ``'auth_pass .*': 'auth_pass XXXXXXX'``
+    ``'PSK "0x.*': 'PSK "0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'``
+    ``'SECRET_KEY.*': 'SECRET_KEY = XXXXXXX'``
+    ``"password=.*": "password=XXXXXXX"``
+    ``'<password>.*</password>': '<password>XXXXXXX</password>'``
+    ``'<salt>.*</salt>': '<salt>XXXXXXX</salt>'``
+    ``'application.secret = ".*"': 'application.secret = "XXXXXXX"'``
+    ``'url = "postgres://.*"': 'url = "postgres://XXXXXXX"'``
+    ``'PASS_.*_PASS': 'PASS_XXXXXXX_PASS'``
+
+    HTACCESS
+    --------
+
+    ``':{PLAIN}.*': ':{PLAIN}XXXXXXX'``
 
 '''
 
-from __future__ import absolute_import
-
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 import logging
 
+# Import Salt libs
 import salt.utils.files
+import salt.utils.stringutils
 import salt.utils.templates as tpl
 import salt.utils.yaml
 
@@ -412,7 +425,7 @@ def read_file(name):
     out = ''
     try:
         with salt.utils.files.fopen(name, 'r') as f:
-            out = f.read()
+            out = salt.utils.stringutils.to_unicode(f.read())
     except Exception as ex:
         log.error(ex)
         return None
@@ -427,16 +440,16 @@ def render(jinja_template_text=None, jinja_template_function='highstate_doc.mark
 
     jinja_template_text: jinja text that the render uses to create the document.
     jinja_template_function: a salt module call that returns template text.
-        options:
-            highstate_doc.markdown_basic_jinja_template
-            highstate_doc.markdown_default_jinja_template
-            highstate_doc.markdown_full_jinja_template
+
+    :options:
+        highstate_doc.markdown_basic_jinja_template
+        highstate_doc.markdown_default_jinja_template
+        highstate_doc.markdown_full_jinja_template
+
     '''
     config = _get_config(**kwargs)
     lowstates = proccess_lowstates(**kwargs)
-    #saltenv = __env__
-    #__opts__['enviroment']
-    #TODO: __env__,
+    # TODO: __env__,
     context = {
         'saltenv': None,
         'config': config,
@@ -489,7 +502,7 @@ def proccess_lowstates(**kwargs):
     if not isinstance(ls, list):
         raise Exception('ERROR: to see details run: [salt-call state.show_lowstate] <-----***-SEE-***')
     else:
-        if len(ls) > 0:
+        if ls:
             if not isinstance(ls[0], dict):
                 raise Exception('ERROR: to see details run: [salt-call state.show_lowstate] <-----***-SEE-***')
 
@@ -516,7 +529,7 @@ def _state_data_to_yaml_string(data, whitelist=None, blacklist=None):
         kset &= set(whitelist)
     for k in kset:
         y[k] = data[k]
-    if len(y) == 0:
+    if not y:
         return None
     return salt.utils.yaml.safe_dump(y, default_flow_style=False)
 
@@ -538,19 +551,18 @@ def _format_markdown_system_file(filename, config):
     if file_size <= config.get('max_render_file_size'):
         is_binary = True
         try:
-            ## TODO: this is linux only should find somthing portable
+            # TODO: this is linux only should find somthing portable
             file_type = __salt__['cmd.shell']('\\file -i \'{0}\''.format(filename))
             if 'charset=binary' not in file_type:
                 is_binary = False
         except Exception as ex:
-            # likly on a windows system, set as not binary for now.
+            # likely on a windows system, set as not binary for now.
             is_binary = False
         if is_binary:
             file_data = '[[skipped binary data]]'
         else:
             with salt.utils.files.fopen(filename, 'r') as f:
-                file_data = f.read()
-        #file_data = __salt__['cmd.shell']('\\file -i \'{0}\' | \\grep -q \'charset=binary\' && echo [[binary data]] || cat \'{0}\''.format(filename))
+                file_data = salt.utils.stringutils.to_unicode(f.read())
         file_data = _md_fix(file_data)
         ret += 'file data {1}\n```\n{0}\n```\n'.format(file_data, filename)
     else:
@@ -585,7 +597,7 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
 
     This `lowstate_item_markdown` given a lowstate item, returns a dict like:
 
-    .. code-block:: yaml
+    .. code-block:: none
 
         vars:       # the raw lowstate_item that was proccessed
         id:         # the 'id' of the state.
@@ -599,13 +611,11 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
             details:       # state name, parameters and other details like file contents
 
     '''
-    ## TODO: switch or ... ext call.
+    # TODO: switch or ... ext call.
     s = lowstate_item
     state_function = '{0}.{1}'.format(s['state'], s['fun'])
     id_full = '{0}: {1}'.format(s['state'], s['__id__'])
 
-    # requisites
-    # ------------
     # TODO: use salt defined STATE_REQUISITE_IN_KEYWORDS
     requisites = ''
     if s.get('watch'):
@@ -618,7 +628,7 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
         for w in s.get('watch_in', []):
             requisites += _format_markdown_requisite(w.items()[0][0], w.items()[0][1])
         requisites += '\n'
-    if s.get('require') and len(s.get('require')) > 0:
+    if s.get('require') and s.get('require'):
         requisites += 'require:\n'
         for w in s.get('require', []):
             requisites += _format_markdown_requisite(w.items()[0][0], w.items()[0][1])
@@ -629,8 +639,6 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
             requisites += _format_markdown_requisite(w.items()[0][0], w.items()[0][1])
         requisites += '\n'
 
-    # details
-    # ------------
     details = ''
 
     if state_function == 'highstate_doc.note':
@@ -639,25 +647,13 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
         if 'source' in s:
             text = __salt__['cp.get_file_str'](s['source'])
             if text:
-                #details += '\n`file: {0}`\n{1}\n'.format(s['source'], text)
                 details += '\n{0}\n'.format(text)
             else:
                 details += '\n{0}\n'.format('ERROR: opening {0}'.format(s['source']))
 
     if state_function == 'pkg.installed':
         pkgs = s.get('pkgs', s.get('name'))
-        #if isinstance(pkgs, list):
-        #    pkgs = ' '.join(pkgs)
         details += '\n```\ninstall: {0}\n```\n'.format(pkgs)
-
-    #if state_function == 'cmd.run':
-    #    details += 'run raw shell command\n```\n{0}\n```\n'.format(s['name'])
-
-    #if state_function == 'cmd.wait':
-    #    details += 'run raw shell command\n```\n{0}\n```\n'.format(s['name'])
-
-    #if state_function == 'service.running':
-        #d['txt'] += 'name: {0}\n'.format(s['name'])
 
     if state_function == 'file.recurse':
         details += '''recurse copy of files\n'''
@@ -688,12 +684,11 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
         details += _format_markdown_system_file(s['name'], config)
 
     # if no state doc is created use default state as yaml
-    if len(details) == 0:
+    if not details:
         y = _state_data_to_yaml_string(s)
         if y:
             details += '```\n{0}```\n'.format(y)
 
-    # ------------
     r = {
         'vars': lowstate_item,
         'state': s['state'],

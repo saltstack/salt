@@ -5,7 +5,7 @@ Support for Linux File Access Control Lists
 The Linux ACL module requires the `getfacl` and `setfacl` binaries.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.utils.path
@@ -41,7 +41,7 @@ def version():
 
 
 def _raise_on_no_files(*args):
-    if len(args) == 0:
+    if not args:
         raise CommandExecutionError('You need to specify at least one file or directory to work with!')
 
 

@@ -50,7 +50,7 @@ Module for handling openstack keystone calls.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt Libs
@@ -86,6 +86,7 @@ def __virtual__():
     if HAS_KEYSTONE:
         return 'keystone'
     return (False, 'keystone execution module cannot be loaded: keystoneclient python library not available.')
+
 
 __opts__ = {}
 
@@ -163,6 +164,13 @@ def auth(profile=None, **connection_args):
 
         salt '*' keystone.auth
     '''
+    __utils__['versions.warn_until'](
+        'Neon',
+        (
+            'The keystone module has been deprecated and will be removed in {version}.  '
+            'Please update to using the keystoneng module'
+        ),
+    )
     kwargs = _get_kwargs(profile=profile, **connection_args)
 
     disc = discover.Discover(auth_url=kwargs['auth_url'])
@@ -1072,7 +1080,7 @@ def user_update(user_id=None, name=None, email=None, enabled=None,
         if description is None:
             description = getattr(user, 'description', None)
         else:
-            description = str(description)
+            description = six.text_type(description)
 
         project_id = None
         if project:
@@ -1117,11 +1125,15 @@ def user_verify_password(user_id=None, name=None, password=None,
     if 'connection_endpoint' in connection_args:
         auth_url = connection_args.get('connection_endpoint')
     else:
+        auth_url_opt = 'keystone.auth_url'
+        if __salt__['config.option']('keystone.token'):
+            auth_url_opt = 'keystone.endpoint'
+
         if _OS_IDENTITY_API_VERSION > 2:
-            auth_url = __salt__['config.option']('keystone.endpoint',
+            auth_url = __salt__['config.option'](auth_url_opt,
                                                  'http://127.0.0.1:35357/v3')
         else:
-            auth_url = __salt__['config.option']('keystone.endpoint',
+            auth_url = __salt__['config.option'](auth_url_opt,
                                                  'http://127.0.0.1:35357/v2.0')
 
     if user_id:

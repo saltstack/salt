@@ -6,6 +6,8 @@ Kapacitor state module.
     parameters or as configuration settings in /etc/salt/minion on the relevant
     minions::
 
+        kapacitor.unsafe_ssl: 'false'
+        kapacitor.protocol: 'http'
         kapacitor.host: 'localhost'
         kapacitor.port: 9092
 
@@ -15,14 +17,12 @@ Kapacitor state module.
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
 
+from __future__ import absolute_import, print_function, unicode_literals
 import difflib
-import logging
 
 import salt.utils.files
-
-LOG = logging.getLogger(__name__)
+import salt.utils.stringutils
 
 
 def __virtual__():
@@ -34,7 +34,8 @@ def task_present(name,
                  task_type='stream',
                  database=None,
                  retention_policy='default',
-                 enable=True):
+                 enable=True,
+                 dbrps=None):
     '''
     Ensure that a task is present and up-to-date in Kapacitor.
 
@@ -46,6 +47,13 @@ def task_present(name,
 
     task_type
         Task type. Defaults to 'stream'
+
+    dbrps
+        A list of databases and retention policies in "dbname"."rpname" format
+        to fetch data from. For backward compatibility, the value of
+        'database' and 'retention_policy' will be merged as part of dbrps.
+
+        .. versionadded:: 2019.2.0
 
     database
         Which database to fetch data from. Defaults to None, which will use the
@@ -63,6 +71,12 @@ def task_present(name,
 
     task = __salt__['kapacitor.get_task'](name)
     old_script = task['script'] if task else ''
+    if not dbrps:
+        dbrps = []
+    if database and retention_policy:
+        dbrp = '{0}.{1}'.format(database, retention_policy)
+        dbrps.append(dbrp)
+    task_dbrps = [{'db': dbrp[0], 'rp': dbrp[1]} for dbrp in (dbrp.split('.') for dbrp in dbrps)]
 
     if tick_script.startswith('salt://'):
         script_path = __salt__['cp.cache_file'](tick_script, __env__)
@@ -70,12 +84,12 @@ def task_present(name,
         script_path = tick_script
 
     with salt.utils.files.fopen(script_path, 'r') as file:
-        new_script = file.read().replace('\t', '    ')
+        new_script = salt.utils.stringutils.to_unicode(file.read()).replace('\t', '    ')
 
     is_up_to_date = task and (
         old_script == new_script and
         task_type == task['type'] and
-        task['dbrps'] == [{'db': database, 'rp': retention_policy}]
+        task['dbrps'] == task_dbrps
     )
 
     if is_up_to_date:
@@ -90,7 +104,8 @@ def task_present(name,
                 script_path,
                 task_type=task_type,
                 database=database,
-                retention_policy=retention_policy
+                retention_policy=retention_policy,
+                dbrps=dbrps
             )
             ret['result'] = result['success']
             if not ret['result']:
@@ -111,13 +126,9 @@ def task_present(name,
             ret['changes']['type'] = task_type
             comments.append('Task type updated')
 
-        if not task or task['dbrps'][0]['db'] != database:
-            ret['changes']['db'] = database
-            comments.append('Task database updated')
-
-        if not task or task['dbrps'][0]['rp'] != retention_policy:
-            ret['changes']['rp'] = retention_policy
-            comments.append('Task retention policy updated')
+        if not task or task['dbrps'] != task_dbrps:
+            ret['changes']['dbrps'] = task_dbrps
+            comments.append('Task dbrps updated')
 
     if enable:
         if task and task['enabled']:

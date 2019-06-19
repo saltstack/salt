@@ -25,6 +25,10 @@ The following options can be included in the acl dictionary:
     :param all: All permissions.
     :type all: bool
 '''
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 __virtualname__ = 'zookeeper'
 
 
@@ -129,19 +133,19 @@ def present(name, value, acls=None, ephemeral=False, sequence=False, makepath=Fa
     if __salt__['zookeeper.exists'](name, **connkwargs):
         cur_value = __salt__['zookeeper.get'](name, **connkwargs)
         cur_acls = __salt__['zookeeper.get_acls'](name, **connkwargs)
-        if cur_value == value and _check_acls(cur_acls, chk_acls):
+        if cur_value == value and (not chk_acls or _check_acls(cur_acls, chk_acls)):
             ret['result'] = True
             ret['comment'] = 'Znode {0} is already set to the correct value with the correct acls'.format(name)
             return ret
         elif __opts__['test'] is True:
             ret['result'] = None
-            ret['comment'] = 'Znode {0} is will be updated'.format(name)
+            ret['comment'] = 'Znode {0} will be updated'.format(name)
             ret['changes']['old'] = {}
             ret['changes']['new'] = {}
             if value != cur_value:
                 ret['changes']['old']['value'] = cur_value
                 ret['changes']['new']['value'] = value
-            if not _check_acls(chk_acls, cur_acls):
+            if chk_acls and not _check_acls(chk_acls, cur_acls):
                 ret['changes']['old']['acls'] = cur_acls
                 ret['changes']['new']['acls'] = chk_acls
             return ret
@@ -154,7 +158,7 @@ def present(name, value, acls=None, ephemeral=False, sequence=False, makepath=Fa
                 value_result = new_value == value
                 changes.setdefault('new', {}).setdefault('value', new_value)
                 changes.setdefault('old', {}).setdefault('value', cur_value)
-            if not _check_acls(chk_acls, cur_acls):
+            if chk_acls and not _check_acls(chk_acls, cur_acls):
                 __salt__['zookeeper.set_acls'](name, acls, version, **connkwargs)
                 new_acls = __salt__['zookeeper.get_acls'](name, **connkwargs)
                 acl_result = _check_acls(new_acls, chk_acls)

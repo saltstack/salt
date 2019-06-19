@@ -33,8 +33,7 @@ Known Issue: install_date may not match Control Panel\Programs\Programs and Feat
 
 # Import _future_ python libs first & before any other code
 # pylint: disable=incompatible-py3-code
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 __version__ = '0.1'
 # Import Standard libs
 import sys
@@ -196,8 +195,9 @@ class RegSoftwareInfo(object):
         except pywintypes.error as exc:  # pylint: disable=no-member
             if exc.winerror == winerror.ERROR_FILE_NOT_FOUND:
                 log.error(
-                    ('Software/Component Not Found  key_guid: \'{0}\', sid: \'{1}\''
-                     ', use_32bit: \'{2}\''.format(key_guid, sid, use_32bit))
+                    'Software/Component Not Found  key_guid: \'%s\', '
+                    'sid: \'%s\' , use_32bit: \'%s\'',
+                    key_guid, sid, use_32bit
                 )
             raise  # This must exist or have no errors
 
@@ -213,9 +213,9 @@ class RegSoftwareInfo(object):
             except pywintypes.error as exc:  # pylint: disable=no-member
                 if exc.winerror == winerror.ERROR_FILE_NOT_FOUND:
                     log.debug(
-                        ('Software/Component Not Found in Products section of registry '
-                         'key_guid: \'{0}\', sid: \'{1}\', use_32bit: \'{2}\''
-                         .format(key_guid, sid, use_32bit))
+                        'Software/Component Not Found in Products section of registry '
+                        'key_guid: \'%s\', sid: \'%s\', use_32bit: \'%s\'',
+                        key_guid, sid, use_32bit
                     )
                     self.__squid = None  # mark it as not a SQUID
                 else:
@@ -275,7 +275,7 @@ class RegSoftwareInfo(object):
             return True
         elif (isinstance(value, six.string_types) and
               re.match(r'\d+', value, flags=re.IGNORECASE + re.UNICODE) is not None and
-              str(value) == 1):
+              six.text_type(value) == '1'):
             return True
         return False
 
@@ -445,9 +445,12 @@ class RegSoftwareInfo(object):
             except pywintypes.error as exc:  # pylint: disable=no-member
                 if exc.winerror == winerror.ERROR_FILE_NOT_FOUND:
                     # Not Found
-                    log.warning('Not Found {0}\\{1} 32bit {2}'.format(self.__reg_hive,
-                                                                      self.__reg_upgradecode_path,
-                                                                      self.__reg_32bit))
+                    log.warning(
+                        'Not Found %s\\%s 32bit %s',
+                        self.__reg_hive,
+                        self.__reg_upgradecode_path,
+                        self.__reg_32bit
+                    )
                     return ''
                 raise
             squid_upgrade_code_all, _, _, suc_pytime = zip(*win32api.RegEnumKeyEx(uc_handle))  # pylint: disable=no-member
@@ -503,9 +506,12 @@ class RegSoftwareInfo(object):
             except pywintypes.error as exc:  # pylint: disable=no-member
                 if exc.winerror == winerror.ERROR_FILE_NOT_FOUND:
                     # Not Found
-                    log.warning('Not Found {0}\\{1} 32bit {2}'.format(self.__reg_hive,
-                                                                      self.__reg_patches_path,
-                                                                      self.__reg_32bit))
+                    log.warning(
+                        'Not Found %s\\%s 32bit %s',
+                        self.__reg_hive,
+                        self.__reg_patches_path,
+                        self.__reg_32bit
+                    )
                     return []
                 raise
 
@@ -535,7 +541,7 @@ class RegSoftwareInfo(object):
                     ret.append(patch_display_name)
                 except pywintypes.error as exc:  # pylint: disable=no-member
                     if exc.winerror == winerror.ERROR_FILE_NOT_FOUND:
-                        log.debug('skipped patch, not found {}'.format(patch_squid))
+                        log.debug('skipped patch, not found %s', patch_squid)
                         continue
                     raise
 
@@ -967,7 +973,7 @@ class WinSoftware(object):
                 raise ValueError(
                     'version capture within object \'{0}\' failed '
                     'for pkg id: \'{1}\' it returned \'{2}\' \'{3}\' '
-                    '\'{4}\''.format(str(self.__pkg_obj), pkg_id, version_str, src, version_user_str)
+                    '\'{4}\''.format(six.text_type(self.__pkg_obj), pkg_id, version_str, src, version_user_str)
                     )
 
         # If self.__pkg_obj.version_capture() not defined defaults to using
@@ -1007,7 +1013,7 @@ class WinSoftware(object):
         if (re.match(r'^{.*\}\.KB\d{6,}$', key_software, flags=re.IGNORECASE + re.UNICODE) is not None or
                 (default_value and default_value.startswith(('KB', 'kb', 'Kb'))) or
                 (release_type and release_type in ('Hotfix', 'Update Rollup', 'Security Update', 'ServicePack'))):
-            log.debug('skipping hotfix/update/service pack {0}'.format(key_software))
+            log.debug('skipping hotfix/update/service pack %s', key_software)
             return
 
         # if NoRemove exists we would expect their to be no UninstallString
@@ -1071,10 +1077,11 @@ class WinSoftware(object):
                 else:
                     # This code is here as it can happen, especially if the
                     # package id provided by pkg_obj is simple.
-                    log.debug((
-                               'Found extra entries for \'{0}\' with same version \'{1}\' '
-                               'skipping entry \'{2}\''.format(dict_key, version_text, key_software)
-                               ))
+                    log.debug(
+                        'Found extra entries for \'%s\' with same version '
+                        '\'%s\', skipping entry \'%s\'',
+                        dict_key, version_text, key_software
+                    )
             else:
                 self.__reg_software[dict_key] = [version_text]
 
@@ -1231,7 +1238,7 @@ class WinSoftware(object):
         # Process software installed for the machine i.e. all users.
         for arch_flag in arch_list:
             key_search = 'Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'
-            log.debug('SYSTEM processing 32bit:{0}'.format(arch_flag))
+            log.debug('SYSTEM processing 32bit:%s', arch_flag)
             handle = win32api.RegOpenKeyEx(  # pylint: disable=no-member
                         win32con.HKEY_LOCAL_MACHINE,
                         key_search,
@@ -1269,14 +1276,14 @@ class WinSoftware(object):
                 except pywintypes.error as exc:  # pylint: disable=no-member
                     if exc.winerror == winerror.ERROR_FILE_NOT_FOUND:
                         # Not Found Uninstall under SID
-                        log.debug('Not Found {}'.format(user_uninstall_path))
+                        log.debug('Not Found %s', user_uninstall_path)
                         continue
                     else:
                         raise
                 try:
                     reg_key_all, _, _, _ = zip(*win32api.RegEnumKeyEx(handle))  # pylint: disable=no-member
                 except ValueError:
-                    log.debug(('No Entries Found {}').format(user_uninstall_path))
+                    log.debug('No Entries Found %s', user_uninstall_path)
                     reg_key_all = []
                 win32api.RegCloseKey(handle)  # pylint: disable=no-member
                 for reg_key in reg_key_all:
@@ -1296,9 +1303,9 @@ def __main():
         sys.exit(64)
     user_pkgs = False
     version_only = False
-    if str(sys.argv[1]) == 'list':
+    if six.text_type(sys.argv[1]) == 'list':
         version_only = True
-    if str(sys.argv[2]) == 'system+user':
+    if six.text_type(sys.argv[2]) == 'system+user':
         user_pkgs = True
     import salt.utils.json
     import timeit

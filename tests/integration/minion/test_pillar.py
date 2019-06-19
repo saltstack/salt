@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
+    :codeauthor: Erik Johnson <erik@saltstack.com>
 '''
 
 # Import Python libs
@@ -14,48 +14,20 @@ import textwrap
 import subprocess
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.unit import skipIf
 from tests.support.helpers import requires_system_grains
-
-# Import 3rd-party libs
-from salt.ext import six
 
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.yaml
 import salt.pillar as pillar
 
 log = logging.getLogger(__name__)
 
-
-GPG_HOMEDIR = os.path.join(TMP_CONF_DIR, 'gpgkeys')
-PILLAR_BASE = os.path.join(TMP, 'test-decrypt-pillar', 'pillar')
-TOP_SLS = os.path.join(PILLAR_BASE, 'top.sls')
-GPG_SLS = os.path.join(PILLAR_BASE, 'gpg.sls')
-DEFAULT_OPTS = {
-    'cachedir': os.path.join(TMP, 'rootdir', 'cache'),
-    'config_dir': TMP_CONF_DIR,
-    'extension_modules': os.path.join(TMP,
-                                      'test-decrypt-pillar',
-                                      'extmods'),
-    'pillar_roots': {'base': [PILLAR_BASE]},
-    'ext_pillar_first': False,
-    'ext_pillar': [],
-    'decrypt_pillar_default': 'gpg',
-    'decrypt_pillar_delimiter': ':',
-    'decrypt_pillar_renderers': ['gpg'],
-}
-ADDITIONAL_OPTS = (
-    'conf_file',
-    'file_roots',
-    'state_top',
-    'renderer',
-    'renderer_whitelist',
-    'renderer_blacklist',
-)
 
 TEST_KEY = '''\
 -----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -191,8 +163,101 @@ GPG_PILLAR_DECRYPTED = {
 }
 
 
+class _CommonBase(ModuleCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.pillar_base = os.path.join(RUNTIME_VARS.TMP, 'test-decrypt-pillar', 'pillar')
+        cls.top_sls = os.path.join(cls.pillar_base, 'top.sls')
+        cls.gpg_sls = os.path.join(cls.pillar_base, 'gpg.sls')
+        cls.default_opts = {
+            'cachedir': os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache'),
+            'optimization_order': [0, 1, 2],
+            'extension_modules': os.path.join(RUNTIME_VARS.TMP,
+                                              'test-decrypt-pillar',
+                                              'extmods'),
+            'pillar_roots': {'base': [cls.pillar_base]},
+            'ext_pillar_first': False,
+            'ext_pillar': [],
+            'decrypt_pillar_default': 'gpg',
+            'decrypt_pillar_delimiter': ':',
+            'decrypt_pillar_renderers': ['gpg'],
+        }
+        cls.additional_opts = (
+            'conf_file',
+            'file_roots',
+            'state_top',
+            'renderer',
+            'renderer_whitelist',
+            'renderer_blacklist',
+        )
+        cls.gpg_homedir = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'gpgkeys')
+
+    def _build_opts(self, opts):
+        ret = copy.deepcopy(self.default_opts)
+        for item in self.additional_opts:
+            ret[item] = self.master_opts[item]
+        ret.update(opts)
+        return ret
+
+
+class BasePillarTest(_CommonBase):
+    '''
+    Tests for pillar decryption
+    '''
+    @classmethod
+    def setUpClass(cls):
+        super(BasePillarTest, cls).setUpClass()
+        os.makedirs(cls.pillar_base)
+        with salt.utils.files.fopen(cls.top_sls, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+            base:
+              'N@mins not L@minion':
+                - ng1
+              'N@missing_minion':
+                - ng2
+            '''))
+
+        with salt.utils.files.fopen(os.path.join(cls.pillar_base, 'ng1.sls'), 'w') as fp_:
+            fp_.write('pillar_from_nodegroup: True')
+
+        with salt.utils.files.fopen(os.path.join(cls.pillar_base, 'ng2.sls'), 'w') as fp_:
+            fp_.write('pillar_from_nodegroup_with_ghost: True')
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.pillar_base)
+
+    def test_pillar_top_compound_match(self, grains=None):
+        '''
+        Test that a compound match topfile that refers to a nodegroup via N@ works
+        as expected.
+        '''
+        if not grains:
+            grains = {}
+        grains['os'] = 'Fedora'
+        nodegroup_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
+            nodegroups:
+              min: minion
+              sub_min: sub_minion
+              mins: N@min or N@sub_min
+              missing_minion: L@minion,ghostminion
+        '''))
+
+        opts = self._build_opts(nodegroup_opts)
+        pillar_obj = pillar.Pillar(opts, grains, 'minion', 'base')
+        ret = pillar_obj.compile_pillar()
+        self.assertEqual(ret.get('pillar_from_nodegroup_with_ghost'), True)
+        self.assertEqual(ret.get('pillar_from_nodegroup'), None)
+
+        sub_pillar_obj = pillar.Pillar(opts, grains, 'sub_minion', 'base')
+        sub_ret = sub_pillar_obj.compile_pillar()
+        self.assertEqual(sub_ret.get('pillar_from_nodegroup_with_ghost'), None)
+        self.assertEqual(sub_ret.get('pillar_from_nodegroup'), True)
+
+
 @skipIf(not salt.utils.path.which('gpg'), 'GPG is not installed')
-class DecryptGPGPillarTest(ModuleCase):
+class DecryptGPGPillarTest(_CommonBase):
     '''
     Tests for pillar decryption
     '''
@@ -200,14 +265,15 @@ class DecryptGPGPillarTest(ModuleCase):
 
     @classmethod
     def setUpClass(cls):
+        super(DecryptGPGPillarTest, cls).setUpClass()
         try:
-            os.makedirs(GPG_HOMEDIR, mode=0o700)
+            os.makedirs(cls.gpg_homedir, mode=0o700)
         except Exception:
             cls.created_gpg_homedir = False
             raise
         else:
             cls.created_gpg_homedir = True
-            cmd_prefix = ['gpg', '--homedir', GPG_HOMEDIR]
+            cmd_prefix = ['gpg', '--homedir', cls.gpg_homedir]
 
             cmd = cmd_prefix + ['--list-keys']
             log.debug('Instantiating gpg keyring using: %s', cmd)
@@ -223,48 +289,41 @@ class DecryptGPGPillarTest(ModuleCase):
                                       stdin=subprocess.PIPE,
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,
-                                      shell=False).communicate(input=six.b(TEST_KEY))[0]
+                                      shell=False).communicate(input=salt.utils.stringutils.to_bytes(TEST_KEY))[0]
             log.debug('Result:\n%s', output)
 
-            os.makedirs(PILLAR_BASE)
-            with salt.utils.files.fopen(TOP_SLS, 'w') as fp_:
+            os.makedirs(cls.pillar_base)
+            with salt.utils.files.fopen(cls.top_sls, 'w') as fp_:
                 fp_.write(textwrap.dedent('''\
                 base:
                   '*':
                     - gpg
                 '''))
-            with salt.utils.files.fopen(GPG_SLS, 'w') as fp_:
+            with salt.utils.files.fopen(cls.gpg_sls, 'w') as fp_:
                 fp_.write(GPG_PILLAR_YAML)
 
     @classmethod
     def tearDownClass(cls):
-        cmd = ['gpg-connect-agent', '--homedir', GPG_HOMEDIR]
+        cmd = ['gpg-connect-agent', '--homedir', cls.gpg_homedir]
         try:
             log.debug('Killing gpg-agent using: %s', cmd)
             output = subprocess.Popen(cmd,
                                       stdin=subprocess.PIPE,
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,
-                                      shell=False).communicate(input=six.b('KILLAGENT'))[0]
+                                      shell=False).communicate(input=b'KILLAGENT')[0]
             log.debug('Result:\n%s', output)
         except OSError:
             log.debug('No need to kill: old gnupg doesn\'t start the agent.')
 
         if cls.created_gpg_homedir:
             try:
-                shutil.rmtree(GPG_HOMEDIR)
+                shutil.rmtree(cls.gpg_homedir)
             except OSError as exc:
                 # GPG socket can disappear before rmtree gets to this point
                 if exc.errno != errno.ENOENT:
                     raise
-        shutil.rmtree(PILLAR_BASE)
-
-    def _build_opts(self, opts):
-        ret = copy.deepcopy(DEFAULT_OPTS)
-        for item in ADDITIONAL_OPTS:
-            ret[item] = self.master_opts[item]
-        ret.update(opts)
-        return ret
+        shutil.rmtree(cls.pillar_base)
 
     @requires_system_grains
     def test_decrypt_pillar_default_renderer(self, grains=None):

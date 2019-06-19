@@ -2,7 +2,7 @@
 '''
 Module to integrate with the returner system and retrieve data sent to a salt returner
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import salt libs
 import salt.loader

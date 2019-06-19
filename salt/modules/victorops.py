@@ -13,7 +13,7 @@ Requires an ``api_key`` in ``/etc/salt/minion``:
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import logging
 import time
@@ -61,7 +61,7 @@ def _query(action=None,
     if routing_key:
         path += routing_key
 
-    log.debug('VictorOps URL: {0}'.format(path))
+    log.debug('VictorOps URL: %s', path)
 
     if not isinstance(args, dict):
         args = {}
@@ -201,7 +201,7 @@ def create_event(message_type=None, routing_key='everybody', **kwargs):
                 data[kwarg] = kwargs[kwarg]
             else:
                 # Should this faile on the wrong type.
-                log.error('Wrong type, skipping {0}'.format(kwarg))
+                log.error('Wrong type, skipping %s', kwarg)
 
     status, result = _query(action='alert',
                             routing_key=routing_key,

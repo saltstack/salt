@@ -4,7 +4,7 @@ Return config information
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import re
 import os
@@ -42,7 +42,6 @@ __proxyenabled__ = ['*']
 
 # Set up the default values for all systems
 DEFAULTS = {'mongo.db': 'salt',
-            'mongo.host': 'salt',
             'mongo.password': '',
             'mongo.port': 27017,
             'mongo.user': '',
@@ -76,8 +75,8 @@ DEFAULTS = {'mongo.db': 'salt',
             'ldap.bindpw': '',
             'hosts.file': _HOSTS_FILE,
             'aliases.file': '/etc/aliases',
-            'virt.images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images'),
-            'virt.tunnel': False,
+            'virt': {'tunnel': False,
+                     'images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images')},
             }
 
 
@@ -390,15 +389,25 @@ def get(key, default='', delimiter=':', merge=None, omit_opts=False,
                 delimiter=delimiter)
             if ret != '_|-':
                 return sdb.sdb_get(ret, __opts__)
+
+        ret = salt.utils.data.traverse_dict_and_list(
+            DEFAULTS,
+            key,
+            '_|-',
+            delimiter=delimiter)
+        log.debug("key: %s, ret: %s", key, ret)
+        if ret != '_|-':
+            return sdb.sdb_get(ret, __opts__)
     else:
         if merge not in ('recurse', 'overwrite'):
-            log.warning('Unsupported merge strategy \'{0}\'. Falling back '
-                        'to \'recurse\'.'.format(merge))
+            log.warning('Unsupported merge strategy \'%s\'. Falling back '
+                        'to \'recurse\'.', merge)
             merge = 'recurse'
 
         merge_lists = salt.config.master_config('/etc/salt/master').get('pillar_merge_lists')
 
-        data = copy.copy(__pillar__.get('master', {}))
+        data = copy.copy(DEFAULTS)
+        data = salt.utils.dictupdate.merge(data, __pillar__.get('master', {}), strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __pillar__, strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __grains__, strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __opts__, strategy=merge, merge_lists=merge_lists)
@@ -450,5 +459,19 @@ def gather_bootstrap_script(bootstrap=None):
     if not HAS_CLOUD:
         return False, 'config.gather_bootstrap_script is unavailable'
     ret = salt.utils.cloud.update_bootstrap(__opts__, url=bootstrap)
-    if 'Success' in ret and len(ret['Success']['Files updated']) > 0:
+    if 'Success' in ret and ret['Success']['Files updated']:
         return ret['Success']['Files updated'][0]
+
+
+def items():
+    '''
+    Return the complete config from the currently running minion process.
+    This includes defaults for values not set in the config file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' config.items
+    '''
+    return __opts__

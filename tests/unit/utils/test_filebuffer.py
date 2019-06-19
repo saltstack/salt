@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.unit.utils.filebuffer_test
@@ -8,10 +8,12 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
+import os
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
+from tests.support.paths import BASE_FILES
 
 # Import salt libs
 from salt.utils.filebuffer import BufferedReader, InvalidFileMode
@@ -30,3 +32,22 @@ class TestFileBuffer(TestCase):
 
         with self.assertRaises(InvalidFileMode):
             BufferedReader('/tmp/foo', mode='wb')
+
+    def test_issue_51309(self):
+        '''
+        https://github.com/saltstack/salt/issues/51309
+        '''
+        file_name = os.path.join(BASE_FILES, 'grail', 'scene33')
+
+        def find_value(text):
+            stripped_text = text.strip()
+            try:
+                with BufferedReader(file_name) as breader:
+                    for chunk in breader:
+                        if stripped_text in chunk:
+                            return True
+                return False
+            except (IOError, OSError):
+                return False
+
+        self.assertTrue(find_value('We have the Holy Hand Grenade'))

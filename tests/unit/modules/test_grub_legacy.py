@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
+    :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import errno
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -19,6 +20,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.grub_legacy as grub_legacy
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 
@@ -42,15 +44,13 @@ class GrublegacyTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test for Parse GRUB conf file
         '''
-        mock = MagicMock(side_effect=IOError('foo'))
-        with patch('salt.utils.files.fopen', mock):
-            with patch.object(grub_legacy, '_detect_conf', return_value='A'):
-                self.assertRaises(CommandExecutionError, grub_legacy.conf)
+        file_data = IOError(errno.EACCES, 'Permission denied')
+        with patch('salt.utils.files.fopen', mock_open(read_data=file_data)), \
+                patch.object(grub_legacy, '_detect_conf', return_value='A'):
+            self.assertRaises(CommandExecutionError, grub_legacy.conf)
 
-        file_data = '\n'.join(['#', 'A B C D,E,F G H'])
-        with patch('salt.utils.files.fopen',
-                   mock_open(read_data=file_data), create=True) as f_mock:
-            f_mock.return_value.__iter__.return_value = file_data.splitlines()
-            with patch.object(grub_legacy, '_detect_conf', return_value='A'):
-                self.assertEqual(grub_legacy.conf(),
-                                 {'A': 'B C D,E,F G H', 'stanzas': []})
+        file_data = salt.utils.stringutils.to_str('\n'.join(['#', 'A B C D,E,F G H']))
+        with patch('salt.utils.files.fopen', mock_open(read_data=file_data)), \
+                patch.object(grub_legacy, '_detect_conf', return_value='A'):
+            conf = grub_legacy.conf()
+            assert conf == {'A': 'B C D,E,F G H', 'stanzas': []}, conf

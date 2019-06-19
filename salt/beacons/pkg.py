@@ -6,11 +6,12 @@ Watch for pkgs that have upgrades, then fire an event.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
+
+import logging
 
 __virtualname__ = 'pkg'
 
-import logging
 log = logging.getLogger(__name__)
 
 

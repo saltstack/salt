@@ -13,7 +13,7 @@ Install, enable and disable assistive access on macOS minions
             - com.file.attr=test
             - com.apple.quarantine=0x00001111
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
@@ -79,7 +79,7 @@ def exists(name, attributes):
             ret['changes'][attr_id] = attr_val
             __salt__['xattr.write'](name, attr_id, attr_val, attr_hex)
 
-    if len(ret['changes'].keys()) == 0:
+    if not ret['changes']:
         ret['comment'] = 'All values existed correctly.'
 
     return ret
@@ -115,7 +115,7 @@ def delete(name, attributes):
             __salt__['xattr.delete'](name, attr)
             ret['changes'][attr] = 'delete'
 
-    if len(ret['changes'].keys()) == 0:
+    if not ret['changes']:
         ret['comment'] = 'All attributes were already deleted.'
 
     return ret

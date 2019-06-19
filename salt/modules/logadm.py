@@ -2,7 +2,7 @@
 '''
 Module for managing Solaris logadm based log rotations.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -13,9 +13,11 @@ except ImportError:
     from pipes import quote as _quote_args
 
 # Import salt libs
+from salt.ext import six
 import salt.utils.args
 import salt.utils.decorators as decorators
 import salt.utils.files
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 default_conf = '/etc/logadm.conf'
@@ -62,7 +64,7 @@ def _arg2opt(arg):
     '''
     res = [o for o, a in option_toggles.items() if a == arg]
     res += [o for o, a in option_flags.items() if a == arg]
-    return res[0] if len(res) else None
+    return res[0] if res else None
 
 
 def _parse_conf(conf_file=default_conf):
@@ -72,7 +74,7 @@ def _parse_conf(conf_file=default_conf):
     ret = {}
     with salt.utils.files.fopen(conf_file, 'r') as ifile:
         for line in ifile:
-            line = line.strip()
+            line = salt.utils.stringutils.to_unicode(line).strip()
             if not line:
                 continue
             if line.startswith('#'):
@@ -88,7 +90,7 @@ def _parse_options(entry, options, include_unset=True):
     '''
     log_cfg = {}
     options = shlex.split(options)
-    if len(options) == 0:
+    if not options:
         return None
 
     ## identifier is entry or log?
@@ -181,7 +183,7 @@ def list_conf(conf_file=default_conf, log_file=None, include_unset=False):
     '''
     Show parsed configuration
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     conf_file : string
         path to logadm.conf, defaults to /etc/logadm.conf
@@ -220,7 +222,7 @@ def show_args():
     '''
     Show which arguments map to which flags and options.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -247,14 +249,14 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
         alias for log_file
     conf_file : string
         optional path to alternative configuration file
-    **kwargs : boolean|string|int
+    kwargs : boolean|string|int
         optional additional flags and parameters
 
     .. note::
         ``name`` and ``pattern`` were kept for backwards compatibility reasons.
 
         ``name`` is an alias for the ``entryname`` argument, ``pattern`` is an alias
-        for ``log_file``. These aliasses wil only be used if the ``entryname`` and
+        for ``log_file``. These aliases will only be used if the ``entryname`` and
         ``log_file`` arguments are not passed.
 
         For a full list of arguments see ```logadm.show_args```.
@@ -283,7 +285,7 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
             kwargs['log_file'] = name
 
     ## build command
-    log.debug("logadm.rotate - kwargs: {}".format(kwargs))
+    log.debug("logadm.rotate - kwargs: %s", kwargs)
     command = "logadm -f {}".format(conf_file)
     for arg, val in kwargs.items():
         if arg in option_toggles.values() and val:
@@ -295,10 +297,10 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
             command = "{} {} {}".format(
                 command,
                 _arg2opt(arg),
-                _quote_args(str(val))
+                _quote_args(six.text_type(val))
             )
         elif arg != 'log_file':
-            log.warning("Unknown argument {}, don't know how to map this!".format(arg))
+            log.warning("Unknown argument %s, don't know how to map this!", arg)
     if 'log_file' in kwargs:
         # NOTE: except from ```man logadm```
         #   If no log file name is provided on a logadm command line, the entry
@@ -313,7 +315,7 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
         else:
             command = "{} {}".format(command, _quote_args(kwargs['log_file']))
 
-    log.debug("logadm.rotate - command: {}".format(command))
+    log.debug("logadm.rotate - command: %s", command)
     result = __salt__['cmd.run_all'](command, python_shell=False)
     if result['retcode'] != 0:
         return dict(Error='Failed in adding log', Output=result['stderr'])

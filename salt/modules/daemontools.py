@@ -12,7 +12,7 @@ so it can be used to maintain services using the ``provider`` argument:
       service.running:
         - provider: daemontools
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -237,7 +237,7 @@ def enabled(name, **kwargs):
         salt '*' daemontools.enabled <service name>
     '''
     if not available(name):
-        log.error('Service {0} not found'.format(name))
+        log.error('Service %s not found', name)
         return False
 
     run_file = os.path.join(SERVICE_DIR, name, 'run')

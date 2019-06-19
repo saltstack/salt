@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
@@ -174,17 +174,33 @@ class EtcdUtilTestCase(TestCase):
             self.assertEqual(client.write('/some-dir', 'salt', ttl=0, directory=True), True)
             etcd_client.write.assert_called_with('/some-dir', None, ttl=0, dir=True)
 
+            # Check when a file is attempted to be written to a read-only root
             etcd_client.write.side_effect = etcd.EtcdRootReadOnly()
-            self.assertEqual(client.write('/', 'some-val'), None)
+            self.assertEqual(client.write('/', 'some-val', directory=False), None)
 
-            etcd_client.write.side_effect = etcd.EtcdNotFile()
-            self.assertEqual(client.write('/some-key', 'some-val'), None)
+            # Check when a directory is attempted to be written to a read-only root
+            etcd_client.write.side_effect = etcd.EtcdRootReadOnly()
+            self.assertEqual(client.write('/', None, directory=True), None)
 
-            etcd_client.write.side_effect = etcd.EtcdNotDir()
-            self.assertEqual(client.write('/some-dir', 'some-val'), None)
-
+            # Check when a file is attempted to be written when unable to connect to the service
             etcd_client.write.side_effect = MaxRetryError(None, None)
-            self.assertEqual(client.write('/some-key', 'some-val'), None)
+            self.assertEqual(client.write('/some-key', 'some-val', directory=False), None)
+
+            # Check when a directory is attempted to be written when unable to connect to the service
+            etcd_client.write.side_effect = MaxRetryError(None, None)
+            self.assertEqual(client.write('/some-dir', None, directory=True), None)
+
+            # Check when a file is attempted to be written to a directory that already exists (name-collision)
+            etcd_client.write.side_effect = etcd.EtcdNotFile()
+            self.assertEqual(client.write('/some-dir', 'some-val', directory=False), None)
+
+            # Check when a directory is attempted to be written to a file that already exists (name-collision)
+            etcd_client.write.side_effect = etcd.EtcdNotDir()
+            self.assertEqual(client.write('/some-key', None, directory=True), None)
+
+            # Check when a directory is attempted to be written to a directory that already exists (update-ttl)
+            etcd_client.write.side_effect = etcd.EtcdNotFile()
+            self.assertEqual(client.write('/some-dir', None, directory=True), True)
 
             etcd_client.write.side_effect = ValueError
             self.assertEqual(client.write('/some-key', 'some-val'), None)

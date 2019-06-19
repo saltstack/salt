@@ -3,9 +3,10 @@
 Functions for working with files
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
+import codecs
 import contextlib
 import errno
 import logging
@@ -16,7 +17,6 @@ import stat
 import subprocess
 import tempfile
 import time
-import urllib
 
 # Import Salt libs
 import salt.utils.path
@@ -29,6 +29,7 @@ from salt.utils.decorators.jinja import jinja_filter
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range
+from salt.ext.six.moves.urllib.parse import quote  # pylint: disable=no-name-in-module
 try:
     import fcntl
     HAS_FCNTL = True
@@ -204,10 +205,22 @@ def rename(src, dst):
         os.rename(src, dst)
 
 
-def process_read_exception(exc, path):
+def process_read_exception(exc, path, ignore=None):
     '''
     Common code for raising exceptions when reading a file fails
+
+    The ignore argument can be an iterable of integer error codes (or a single
+    integer error code) that should be ignored.
     '''
+    if ignore is not None:
+        if isinstance(ignore, six.integer_types):
+            ignore = (ignore,)
+    else:
+        ignore = ()
+
+    if exc.errno in ignore:
+        return
+
     if exc.errno == errno.ENOENT:
         raise CommandExecutionError('{0} does not exist'.format(path))
     elif exc.errno == errno.EACCES:
@@ -299,20 +312,29 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
             log.trace('Write lock for %s (%s) released', path, lock_fn)
 
 
+def get_umask():
+    '''
+    Returns the current umask
+    '''
+    ret = os.umask(0)  # pylint: disable=blacklisted-function
+    os.umask(ret)  # pylint: disable=blacklisted-function
+    return ret
+
+
 @contextlib.contextmanager
 def set_umask(mask):
     '''
     Temporarily set the umask and restore once the contextmanager exits
     '''
-    if salt.utils.platform.is_windows():
-        # Don't attempt on Windows
+    if mask is None or salt.utils.platform.is_windows():
+        # Don't attempt on Windows, or if no mask was passed
         yield
     else:
         try:
-            orig_mask = os.umask(mask)
+            orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
             yield
         finally:
-            os.umask(orig_mask)
+            os.umask(orig_mask)  # pylint: disable=blacklisted-function
 
 
 def fopen(*args, **kwargs):
@@ -328,6 +350,17 @@ def fopen(*args, **kwargs):
 
     NB! We still have small race condition between open and fcntl.
     '''
+    if six.PY3:
+        try:
+            # Don't permit stdin/stdout/stderr to be opened. The boolean False
+            # and True are treated by Python 3's open() as file descriptors 0
+            # and 1, respectively.
+            if args[0] in (0, 1, 2):
+                raise TypeError(
+                    '{0} is not a permitted file descriptor'.format(args[0])
+                )
+        except IndexError:
+            pass
     binary = None
     # ensure 'binary' mode is always used on Windows in Python 2
     if ((six.PY2 and salt.utils.platform.is_windows() and 'binary' not in kwargs) or
@@ -383,10 +416,15 @@ def flopen(*args, **kwargs):
     '''
     Shortcut for fopen with lock and context manager.
     '''
-    with fopen(*args, **kwargs) as f_handle:
+    filename, args = args[0], args[1:]
+    writing = 'wa'
+    with fopen(filename, *args, **kwargs) as f_handle:
         try:
             if is_fcntl_available(check_sunos=True):
-                fcntl.flock(f_handle.fileno(), fcntl.LOCK_SH)
+                lock_type = fcntl.LOCK_SH
+                if args and any([write in args[0] for write in writing]):
+                    lock_type = fcntl.LOCK_EX
+                fcntl.flock(f_handle.fileno(), lock_type)
             yield f_handle
         finally:
             if is_fcntl_available(check_sunos=True):
@@ -523,6 +561,11 @@ def rm_rf(path):
     if os.path.islink(path) or not os.path.isdir(path):
         os.remove(path)
     else:
+        if salt.utils.platform.is_windows():
+            try:
+                path = salt.utils.stringutils.to_unicode(path)
+            except TypeError:
+                pass
         shutil.rmtree(path, onerror=_onerror)
 
 
@@ -563,7 +606,7 @@ def safe_filename_leaf(file_basename):
     :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
     def _replace(re_obj):
-        return urllib.quote(re_obj.group(0), safe='')
+        return quote(re_obj.group(0), safe='')
     if not isinstance(file_basename, six.text_type):
         # the following string is not prefixed with u
         return re.sub('[\\\\:/*?"<>|]',
@@ -705,7 +748,7 @@ def normalize_mode(mode):
     if mode is None:
         return None
     if not isinstance(mode, six.string_types):
-        mode = str(mode)
+        mode = six.text_type(mode)
     if six.PY3:
         mode = mode.replace('0o', '0')
     # Strip any quotes any initial zeroes, then though zero-pad it up to 4.
@@ -718,7 +761,7 @@ def human_size_to_bytes(human_size):
     Convert human-readable units to bytes
     '''
     size_exp_map = {'K': 1, 'M': 2, 'G': 3, 'T': 4, 'P': 5}
-    human_size_str = str(human_size)
+    human_size_str = six.text_type(human_size)
     match = re.match(r'^(\d+)([KMGTP])?$', human_size_str)
     if not match:
         raise ValueError(
@@ -741,7 +784,7 @@ def backup_minion(path, bkroot):
         src_dir = dname[1:]
     if not salt.utils.platform.is_windows():
         fstat = os.stat(path)
-    msecs = str(int(time.time() * 1000000))[-6:]
+    msecs = six.text_type(int(time.time() * 1000000))[-6:]
     if salt.utils.platform.is_windows():
         # ':' is an illegal filesystem path character on Windows
         stamp = time.strftime('%a_%b_%d_%H-%M-%S_%Y')
@@ -757,3 +800,102 @@ def backup_minion(path, bkroot):
     if not salt.utils.platform.is_windows():
         os.chown(bkpath, fstat.st_uid, fstat.st_gid)
         os.chmod(bkpath, fstat.st_mode)
+
+
+def get_encoding(path):
+    '''
+    Detect a file's encoding using the following:
+    - Check for Byte Order Marks (BOM)
+    - Check for UTF-8 Markers
+    - Check System Encoding
+    - Check for ascii
+
+    Args:
+
+        path (str): The path to the file to check
+
+    Returns:
+        str: The encoding of the file
+
+    Raises:
+        CommandExecutionError: If the encoding cannot be detected
+    '''
+    def check_ascii(_data):
+        # If all characters can be decoded to ASCII, then it's ASCII
+        try:
+            _data.decode('ASCII')
+            log.debug('Found ASCII')
+        except UnicodeDecodeError:
+            return False
+        else:
+            return True
+
+    def check_bom(_data):
+        # Supported Python Codecs
+        # https://docs.python.org/2/library/codecs.html
+        # https://docs.python.org/3/library/codecs.html
+        boms = [
+            ('UTF-32-BE', salt.utils.stringutils.to_bytes(codecs.BOM_UTF32_BE)),
+            ('UTF-32-LE', salt.utils.stringutils.to_bytes(codecs.BOM_UTF32_LE)),
+            ('UTF-16-BE', salt.utils.stringutils.to_bytes(codecs.BOM_UTF16_BE)),
+            ('UTF-16-LE', salt.utils.stringutils.to_bytes(codecs.BOM_UTF16_LE)),
+            ('UTF-8', salt.utils.stringutils.to_bytes(codecs.BOM_UTF8)),
+            ('UTF-7', salt.utils.stringutils.to_bytes('\x2b\x2f\x76\x38\x2D')),
+            ('UTF-7', salt.utils.stringutils.to_bytes('\x2b\x2f\x76\x38')),
+            ('UTF-7', salt.utils.stringutils.to_bytes('\x2b\x2f\x76\x39')),
+            ('UTF-7', salt.utils.stringutils.to_bytes('\x2b\x2f\x76\x2b')),
+            ('UTF-7', salt.utils.stringutils.to_bytes('\x2b\x2f\x76\x2f')),
+        ]
+        for _encoding, bom in boms:
+            if _data.startswith(bom):
+                log.debug('Found BOM for %s', _encoding)
+                return _encoding
+        return False
+
+    def check_utf8_markers(_data):
+        try:
+            decoded = _data.decode('UTF-8')
+        except UnicodeDecodeError:
+            return False
+        else:
+            # Reject surrogate characters in Py2 (Py3 behavior)
+            if six.PY2:
+                for char in decoded:
+                    if 0xD800 <= ord(char) <= 0xDFFF:
+                        return False
+            return True
+
+    def check_system_encoding(_data):
+        try:
+            _data.decode(__salt_system_encoding__)
+        except UnicodeDecodeError:
+            return False
+        else:
+            return True
+
+    if not os.path.isfile(path):
+        raise CommandExecutionError('Not a file')
+    try:
+        with fopen(path, 'rb') as fp_:
+            data = fp_.read(2048)
+    except os.error:
+        raise CommandExecutionError('Failed to open file')
+
+    # Check for Unicode BOM
+    encoding = check_bom(data)
+    if encoding:
+        return encoding
+
+    # Check for UTF-8 markers
+    if check_utf8_markers(data):
+        return 'UTF-8'
+
+    # Check system encoding
+    if check_system_encoding(data):
+        return __salt_system_encoding__
+
+    # Check for ASCII first
+    if check_ascii(data):
+        return 'ASCII'
+
+    raise CommandExecutionError('Could not detect file encoding')

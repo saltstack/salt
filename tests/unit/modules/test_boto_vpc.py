@@ -4,9 +4,11 @@
 #       module functions.
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import random
 import string
+import os.path
+import sys
 # pylint: disable=3rd-party-module-not-gated
 import pkg_resources
 from pkg_resources import DistributionNotFound
@@ -16,6 +18,7 @@ from pkg_resources import DistributionNotFound
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.config
@@ -32,6 +35,7 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 # pylint: disable=no-name-in-module,unused-import
 try:
     import boto
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     import boto3
     from boto.exception import BotoServerError
     HAS_BOTO = True
@@ -103,7 +107,7 @@ def _get_moto_version():
     Returns the moto version
     '''
     try:
-        return LooseVersion(moto.__version__)
+        return LooseVersion(six.text_type(moto.__version__))
     except AttributeError:
         try:
             return LooseVersion(pkg_resources.get_distribution('moto').version)
@@ -129,14 +133,17 @@ def _has_required_moto():
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {}. Installed: {}'
-        .format(required_boto_version, _get_boto_version()))
-@skipIf(_has_required_moto() is False, 'The moto version must be >= to version {}. Installed: {}'.format(required_moto_version, _get_moto_version()))
+        .format(required_boto_version, _get_boto_version() if HAS_BOTO else 'None'))
+@skipIf(_has_required_moto() is False, 'The moto version must be >= to version {}. Installed: {}'
+        .format(required_moto_version, _get_moto_version() if HAS_MOTO else 'None'))
 class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn3 = None
 
     def setup_loader_modules(self):
-        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
-        utils = salt.loader.utils(opts, whitelist=['boto', 'boto3'])
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform'])
         return {boto_vpc: {'__utils__': utils}}
 
     # Set up MagicMock to replace the boto3 session
@@ -267,6 +274,7 @@ class BotoVpcTestCaseMixin(object):
         return rtbl
 
 
+@skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
 class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     '''
     TestCase for salt.modules.boto_vpc module
@@ -365,7 +373,6 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(vpc_exists_result['exists'])
 
     @mock_ec2_deprecated
-    @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_that_when_checking_if_a_vpc_exists_but_providing_no_filters_the_vpc_exists_method_raises_a_salt_invocation_error(self):
         '''
         Tests checking vpc existence when no filters are provided
@@ -442,7 +449,6 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(get_id_result['id'], None)
 
     @mock_ec2_deprecated
-    @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_get_vpc_id_method_when_not_providing_filters_raises_a_salt_invocation_error(self):
         '''
         Tests getting vpc id but providing no filters
@@ -587,6 +593,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                        ' or equal to version {}. Installed: {}'
         .format(required_boto_version, _get_boto_version()))
 @skipIf(_has_required_moto() is False, 'The moto version must be >= to version {0}'.format(required_moto_version))
+@skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
 class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
     def test_get_subnet_association_single_subnet(self):
@@ -889,6 +896,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {}. Installed: {}'
         .format(required_boto_version, _get_boto_version()))
+@skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
 class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
     def test_that_when_creating_an_internet_gateway_the_create_internet_gateway_method_returns_true(self):
@@ -950,6 +958,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {}. Installed: {}'
         .format(required_boto_version, _get_boto_version()))
+@skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
 class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
     def test_that_when_creating_an_nat_gateway_the_create_nat_gateway_method_returns_true(self):
@@ -1038,6 +1047,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                        ' or equal to version {}. Installed: {}'
         .format(required_boto_version, _get_boto_version()))
 @skipIf(_has_required_moto() is False, 'The moto version must be >= to version {0}'.format(required_moto_version))
+@skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
 class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
     def test_that_when_creating_dhcp_options_succeeds_the_create_dhcp_options_method_returns_true(self):
@@ -1205,6 +1215,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {}. Installed: {}'
         .format(required_boto_version, _get_boto_version()))
+@skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
 class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
     def test_that_when_creating_network_acl_for_an_existing_vpc_the_create_network_acl_method_returns_true(self):
@@ -1788,6 +1799,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                        ' or equal to version {}. Installed: {}'
         .format(required_boto_version, _get_boto_version()))
 @skipIf(_has_required_moto() is False, 'The moto version must be >= to version {0}'.format(required_moto_version))
+@skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
 class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
     @mock_ec2_deprecated

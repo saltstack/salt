@@ -26,11 +26,14 @@ from salt.utils.cache import CacheCli
 from salt.ext import six
 import tornado.gen
 try:
-    from Cryptodome.Cipher import PKCS1_OAEP
-    from Cryptodome.PublicKey import RSA
+    from M2Crypto import RSA
+    HAS_M2 = True
 except ImportError:
-    from Crypto.Cipher import PKCS1_OAEP
-    from Crypto.PublicKey import RSA
+    HAS_M2 = False
+    try:
+        from Cryptodome.Cipher import PKCS1_OAEP
+    except ImportError:
+        from Crypto.Cipher import PKCS1_OAEP
 
 
 log = logging.getLogger(__name__)
@@ -78,8 +81,10 @@ class AESReqServerMixin(object):
             # 'tcp_test.py' and 'zeromq_test.py'. Fix that. In normal
             # cases, 'aes' is already set in the secrets.
             salt.master.SMaster.secrets['aes'] = {
-                'secret': multiprocessing.Array(ctypes.c_char,
-                              six.b(salt.crypt.Crypticle.generate_key_string())),
+                'secret': multiprocessing.Array(
+                    ctypes.c_char,
+                    salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string())
+                ),
                 'reload': salt.crypt.Crypticle.generate_key_string
             }
 
@@ -115,8 +120,7 @@ class AESReqServerMixin(object):
             self.opts,
             key)
         try:
-            with salt.utils.files.fopen(pubfn) as f:
-                pub = RSA.importKey(f.read())
+            pub = salt.crypt.get_rsa_pub_key(pubfn)
         except (ValueError, IndexError, TypeError):
             return self.crypticle.dumps({})
         except IOError:
@@ -124,11 +128,13 @@ class AESReqServerMixin(object):
             return {'error': 'AES key not found'}
 
         pret = {}
-        cipher = PKCS1_OAEP.new(pub)
-        if six.PY2:
-            pret['key'] = cipher.encrypt(key)
+        if not six.PY2:
+            key = salt.utils.stringutils.to_bytes(key)
+        if HAS_M2:
+            pret['key'] = pub.public_encrypt(key, RSA.pkcs1_oaep_padding)
         else:
-            pret['key'] = cipher.encrypt(salt.utils.stringutils.to_bytes(key))
+            cipher = PKCS1_OAEP.new(pub)
+            pret['key'] = cipher.encrypt(key)
         pret[dictkey] = pcrypt.dumps(
             ret if ret is not False else {}
         )
@@ -203,7 +209,8 @@ class AESReqServerMixin(object):
                              'id': load['id'],
                              'pub': load['pub']}
 
-                    self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                    if self.opts.get('auth_events') is True:
+                        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                     return {'enc': 'clear',
                             'load': {'ret': 'full'}}
 
@@ -234,7 +241,8 @@ class AESReqServerMixin(object):
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
-            self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+            if self.opts.get('auth_events') is True:
+                self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
@@ -254,7 +262,8 @@ class AESReqServerMixin(object):
                              'id': load['id'],
                              'act': 'denied',
                              'pub': load['pub']}
-                    self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                    if self.opts.get('auth_events') is True:
+                        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                     return {'enc': 'clear',
                             'load': {'ret': False}}
 
@@ -266,7 +275,8 @@ class AESReqServerMixin(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                if self.opts.get('auth_events') is True:
+                    self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                 return {'enc': 'clear',
                         'load': {'ret': False}}
 
@@ -295,7 +305,8 @@ class AESReqServerMixin(object):
                          'act': key_act,
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                if self.opts.get('auth_events') is True:
+                    self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                 return ret
 
         elif os.path.isfile(pubfn_pend):
@@ -316,7 +327,8 @@ class AESReqServerMixin(object):
                          'act': 'reject',
                          'id': load['id'],
                          'pub': load['pub']}
-                self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                if self.opts.get('auth_events') is True:
+                    self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                 return ret
 
             elif not auto_sign:
@@ -338,7 +350,8 @@ class AESReqServerMixin(object):
                                  'id': load['id'],
                                  'act': 'denied',
                                  'pub': load['pub']}
-                        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                        if self.opts.get('auth_events') is True:
+                            self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                         return {'enc': 'clear',
                                 'load': {'ret': False}}
                     else:
@@ -351,7 +364,8 @@ class AESReqServerMixin(object):
                                  'act': 'pend',
                                  'id': load['id'],
                                  'pub': load['pub']}
-                        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                        if self.opts.get('auth_events') is True:
+                            self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                         return {'enc': 'clear',
                                 'load': {'ret': True}}
             else:
@@ -372,7 +386,8 @@ class AESReqServerMixin(object):
                         eload = {'result': False,
                                  'id': load['id'],
                                  'pub': load['pub']}
-                        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+                        if self.opts.get('auth_events') is True:
+                            self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
                         return {'enc': 'clear',
                                 'load': {'ret': False}}
                     else:
@@ -384,7 +399,8 @@ class AESReqServerMixin(object):
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
-            self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+            if self.opts.get('auth_events') is True:
+                self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
@@ -403,6 +419,10 @@ class AESReqServerMixin(object):
                 log.debug('Host key change detected in open mode.')
                 with salt.utils.files.fopen(pubfn, 'w+') as fp_:
                     fp_.write(load['pub'])
+            elif not load['pub']:
+                log.error('Public key is empty: %s', load['id'])
+                return {'enc': 'clear',
+                        'load': {'ret': False}}
 
         pub = None
 
@@ -413,14 +433,14 @@ class AESReqServerMixin(object):
         # The key payload may sometimes be corrupt when using auto-accept
         # and an empty request comes in
         try:
-            with salt.utils.files.fopen(pubfn) as f:
-                pub = RSA.importKey(f.read())
+            pub = salt.crypt.get_rsa_pub_key(pubfn)
         except (ValueError, IndexError, TypeError) as err:
             log.error('Corrupt public key "%s": %s', pubfn, err)
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
-        cipher = PKCS1_OAEP.new(pub)
+        if not HAS_M2:
+            cipher = PKCS1_OAEP.new(pub)
         ret = {'enc': 'pub',
                'pub_key': self.master_key.get_pub_str(),
                'publish_port': self.opts['publish_port']}
@@ -445,11 +465,16 @@ class AESReqServerMixin(object):
                                                    ret['pub_key'], key_pass)
                 ret.update({'pub_sig': binascii.b2a_base64(pub_sign)})
 
-        mcipher = PKCS1_OAEP.new(self.master_key.key)
+        if not HAS_M2:
+            mcipher = PKCS1_OAEP.new(self.master_key.key)
         if self.opts['auth_mode'] >= 2:
             if 'token' in load:
                 try:
-                    mtoken = mcipher.decrypt(load['token'])
+                    if HAS_M2:
+                        mtoken = self.master_key.key.private_decrypt(load['token'],
+                                                                     RSA.pkcs1_oaep_padding)
+                    else:
+                        mtoken = mcipher.decrypt(load['token'])
                     aes = '{0}_|-{1}'.format(salt.master.SMaster.secrets['aes']['secret'].value, mtoken)
                 except Exception:
                     # Token failed to decrypt, send back the salty bacon to
@@ -458,25 +483,38 @@ class AESReqServerMixin(object):
             else:
                 aes = salt.master.SMaster.secrets['aes']['secret'].value
 
-            ret['aes'] = cipher.encrypt(aes)
+            if HAS_M2:
+                ret['aes'] = pub.public_encrypt(aes, RSA.pkcs1_oaep_padding)
+            else:
+                ret['aes'] = cipher.encrypt(aes)
         else:
             if 'token' in load:
                 try:
-                    mtoken = mcipher.decrypt(load['token'])
-                    ret['token'] = cipher.encrypt(mtoken)
+                    if HAS_M2:
+                        mtoken = self.master_key.key.private_decrypt(load['token'],
+                                                                     RSA.pkcs1_oaep_padding)
+                        ret['token'] = pub.public_encrypt(mtoken, RSA.pkcs1_oaep_padding)
+                    else:
+                        mtoken = mcipher.decrypt(load['token'])
+                        ret['token'] = cipher.encrypt(mtoken)
                 except Exception:
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
                     pass
 
             aes = salt.master.SMaster.secrets['aes']['secret'].value
-            ret['aes'] = cipher.encrypt(salt.master.SMaster.secrets['aes']['secret'].value)
+            if HAS_M2:
+                ret['aes'] = pub.public_encrypt(aes,
+                                                RSA.pkcs1_oaep_padding)
+            else:
+                ret['aes'] = cipher.encrypt(aes)
         # Be aggressive about the signature
-        digest = hashlib.sha256(aes).hexdigest()
+        digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())
         ret['sig'] = salt.crypt.private_encrypt(self.master_key.key, digest)
         eload = {'result': True,
                  'act': 'accept',
                  'id': load['id'],
                  'pub': load['pub']}
-        self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
+        if self.opts.get('auth_events') is True:
+            self.event.fire_event(eload, salt.utils.event.tagify(prefix='auth'))
         return ret

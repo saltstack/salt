@@ -40,7 +40,7 @@ Connection module for Amazon ALB
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -48,13 +48,12 @@ import logging
 log = logging.getLogger(__name__)
 
 # Import Salt libs
-
-# Import third party libs
 from salt.ext import six
+import salt.utils.versions
 
+# Import third-party libs
 try:
     # pylint: disable=unused-import
-    import salt.utils.boto3
     import boto3
     import botocore
     # pylint: enable=unused-import
@@ -71,10 +70,10 @@ def __virtual__():
     '''
     Only load if boto3 libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, "The boto_elbv2 module cannot be loaded: boto3 library not found")
-    __utils__['boto3.assign_funcs'](__name__, 'elbv2')
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs()
+    if has_boto_reqs is True:
+        __utils__['boto3.assign_funcs'](__name__, 'elbv2')
+    return has_boto_reqs
 
 
 def create_target_group(name,
@@ -150,17 +149,18 @@ def create_target_group(name,
                                        HealthyThresholdCount=healthy_threshold_count,
                                        UnhealthyThresholdCount=unhealthy_threshold_count)
         if alb:
-            log.info('Created ALB {0}: {1}'.format(name,
-                                                   alb['TargetGroups'][0]['TargetGroupArn']))
+            log.info('Created ALB %s: %s', name, alb['TargetGroups'][0]['TargetGroupArn'])
             return True
         else:
-            log.error('Failed to create ALB {0}'.format(name))
+            log.error('Failed to create ALB %s', name)
             return False
     except ClientError as error:
-        log.debug(error)
-        log.error('Failed to create ALB {0}: {1}: {2}'.format(name,
-                                                              error.response['Error']['Code'],
-                                                              error.response['Error']['Message']))
+        log.error(
+            'Failed to create ALB %s: %s: %s',
+            name, error.response['Error']['Code'],
+            error.response['Error']['Message'],
+            exc_info_on_loglevel=logging.DEBUG
+        )
 
 
 def delete_target_group(name,
@@ -191,18 +191,18 @@ def delete_target_group(name,
     try:
         if name.startswith('arn:aws:elasticloadbalancing'):
             conn.delete_target_group(TargetGroupArn=name)
-            log.info('Deleted target group {0}'.format(name))
+            log.info('Deleted target group %s', name)
         else:
             tg_info = conn.describe_target_groups(Names=[name])
             if len(tg_info['TargetGroups']) != 1:
                 return False
             arn = tg_info['TargetGroups'][0]['TargetGroupArn']
             conn.delete_target_group(TargetGroupArn=arn)
-            log.info('Deleted target group {0} ARN {1}'.format(name, arn))
+            log.info('Deleted target group %s ARN %s', name, arn)
         return True
     except ClientError as error:
-        log.debug(error)
-        log.error('Failed to delete target group {0}'.format(name))
+        log.error('Failed to delete target group %s', name,
+                  exc_info_on_loglevel=logging.DEBUG)
         return False
 
 
@@ -230,10 +230,10 @@ def target_group_exists(name,
         if alb:
             return True
         else:
-            log.warning('The target group does not exist in region {0}'.format(region))
+            log.warning('The target group does not exist in region %s', region)
             return False
     except ClientError as error:
-        log.warning('target_group_exists check for {0} returned: {1}'.format(name, error))
+        log.warning('target_group_exists check for %s returned: %s', name, error)
         return False
 
 
@@ -347,6 +347,136 @@ def deregister_targets(name,
         if registered_targets:
             return True
         return False
+    except ClientError as error:
+        log.warning(error)
+        return False
+
+
+def describe_load_balancers(names=None,
+                            load_balancer_arns=None,
+                            region=None,
+                            key=None,
+                            keyid=None,
+                            profile=None):
+    '''
+    Describes the specified load balancer or all of your load balancers.
+
+    Returns: list
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt myminion boto_elbv2.describe_load_balancers
+        salt myminion boto_elbv2.describe_load_balancers alb_name
+        salt myminion boto_elbv2.describe_load_balancers "[alb_name,alb_name]"
+    '''
+    if names and load_balancer_arns:
+        raise SaltInvocationError('At most one of names or load_balancer_arns may '
+                                  'be provided')
+    if names:
+        albs = names
+    elif load_balancer_arns:
+        albs = load_balancer_arns
+    else:
+        albs = None
+
+    albs_list = []
+    if albs:
+        if isinstance(albs, str) or isinstance(albs, six.text_type):
+            albs_list.append(albs)
+        else:
+            for alb in albs:
+                albs_list.append(alb)
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    try:
+        if names:
+            ret = conn.describe_load_balancers(Names=albs_list)['LoadBalancers']
+        elif load_balancer_arns:
+            ret = conn.describe_load_balancers(LoadBalancerArns=albs_list)['LoadBalancers']
+        else:
+            ret = []
+            next_marker = ''
+            while True:
+                r = conn.describe_load_balancers(Marker=next_marker)
+                for alb in r['LoadBalancers']:
+                    ret.append(alb)
+                if 'NextMarker' in r:
+                    next_marker = r['NextMarker']
+                else:
+                    break
+        return ret if ret else []
+
+    except ClientError as error:
+        log.warning(error)
+        return False
+
+
+def describe_target_groups(names=None,
+                           target_group_arns=None,
+                           load_balancer_arn=None,
+                           region=None,
+                           key=None,
+                           keyid=None,
+                           profile=None):
+    '''
+    Describes the specified target groups or all of your target groups. By default,
+    all target groups are described. Alternatively, you can specify one of the
+    following to filter the results: the ARN of the load balancer, the names of
+    one or more target groups, or the ARNs of one or more target groups.
+
+    Returns: list
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt myminion boto_elbv2.describe_target_groups
+        salt myminion boto_elbv2.describe_target_groups target_group_name
+        salt myminion boto_elbv2.describe_target_groups "[tg_name,tg_name]"
+    '''
+    if names and target_group_arns:
+        raise SaltInvocationError('At most one of names or target_group_arns may '
+                                  'be provided')
+    if names:
+        target_groups = names
+    elif target_group_arns:
+        target_groups = target_group_arns
+    else:
+        target_groups = None
+
+    tg_list = []
+    if target_groups:
+        if isinstance(target_groups, str) or isinstance(target_groups, six.text_type):
+            tg_list.append(target_groups)
+        else:
+            for group in target_groups:
+                tg_list.append(group)
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    try:
+        if names:
+            ret = conn.describe_target_groups(Names=tg_list)['TargetGroups']
+        elif target_group_arns:
+            ret = conn.describe_target_groups(TargetGroupArns=tg_list)['TargetGroups']
+        elif load_balancer_arn:
+            ret = conn.describe_target_groups(LoadBalancerArn=load_balancer_arn)['TargetGroups']
+        else:
+            ret = []
+            next_marker = ''
+            while True:
+                r = conn.describe_target_groups(Marker=next_marker)
+                for alb in r['TargetGroups']:
+                    ret.append(alb)
+                if 'NextMarker' in r:
+                    next_marker = r['NextMarker']
+                else:
+                    break
+        return ret if ret else []
+
     except ClientError as error:
         log.warning(error)
         return False

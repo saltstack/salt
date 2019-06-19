@@ -9,7 +9,6 @@ on a single system to test scale capabilities
 # Import Python Libs
 from __future__ import absolute_import, print_function
 import os
-import pwd
 import time
 import signal
 import optparse
@@ -29,6 +28,7 @@ import salt.utils.yaml
 # Import third party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+import tests.support.helpers
 
 
 OSES = [
@@ -148,7 +148,7 @@ def parse():
         '-c', '--config-dir', default='',
         help=('Pass in a configuration directory containing base configuration.')
         )
-    parser.add_option('-u', '--user', default=pwd.getpwuid(os.getuid()).pw_name)
+    parser.add_option('-u', '--user', default=tests.support.helpers.this_user())
 
     options, _args = parser.parse_args()
 
@@ -166,7 +166,6 @@ class Swarm(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.raet_port = 4550
 
         # If given a temp_dir, use it for temporary files
         if opts['temp_dir']:
@@ -273,9 +272,6 @@ class MinionSwarm(Swarm):
     '''
     Create minions
     '''
-    def __init__(self, opts):
-        super(MinionSwarm, self).__init__(opts)
-
     def start_minions(self):
         '''
         Iterate over the config files and start up the minions
@@ -329,12 +325,6 @@ class MinionSwarm(Swarm):
                 shutil.copy(minion_pem, minion_pkidir)
                 shutil.copy(minion_pub, minion_pkidir)
             data['pki_dir'] = minion_pkidir
-        elif self.opts['transport'] == 'raet':
-            data['transport'] = 'raet'
-            data['sock_dir'] = os.path.join(dpath, 'sock')
-            data['raet_port'] = self.raet_port
-            data['pki_dir'] = os.path.join(dpath, 'pki')
-            self.raet_port += 1
         elif self.opts['transport'] == 'tcp':
             data['transport'] = 'tcp'
 
@@ -433,6 +423,7 @@ class MasterSwarm(Swarm):
                 shell=True
         )
         print('Master killed')
+
 
 # pylint: disable=C0103
 if __name__ == '__main__':

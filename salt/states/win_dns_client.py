@@ -2,6 +2,7 @@
 '''
 Module for configuring DNS Client on Windows systems
 '''
+from __future__ import absolute_import, unicode_literals, print_function
 
 
 def __virtual__():
@@ -188,12 +189,12 @@ def primary_suffix(name,
             }
     }
 
-    reg_data['suffix']['old'] = __salt__['reg.read_value'](
+    reg_data['suffix']['old'] = __utils__['reg.read_value'](
             reg_data['suffix']['hive'],
             reg_data['suffix']['key'],
             reg_data['suffix']['vname'],)['vdata']
 
-    reg_data['updates']['old'] = bool(__salt__['reg.read_value'](
+    reg_data['updates']['old'] = bool(__utils__['reg.read_value'](
             reg_data['updates']['hive'],
             reg_data['updates']['key'],
             reg_data['updates']['vname'],)['vdata'])
@@ -234,14 +235,14 @@ def primary_suffix(name,
                     'new': {
                         'suffix': reg_data['suffix']['new']}}
 
-    suffix_result = __salt__['reg.set_value'](
+    suffix_result = __utils__['reg.set_value'](
             reg_data['suffix']['hive'],
             reg_data['suffix']['key'],
             reg_data['suffix']['vname'],
             reg_data['suffix']['new'],
             reg_data['suffix']['vtype'])
 
-    updates_result = __salt__['reg.set_value'](
+    updates_result = __utils__['reg.set_value'](
             reg_data['updates']['hive'],
             reg_data['updates']['key'],
             reg_data['updates']['vname'],

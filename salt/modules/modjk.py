@@ -30,7 +30,7 @@ this module.
         realm: authentication realm2 for digest passwords
         timeout: 600
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module
@@ -112,11 +112,6 @@ def _worker_ctl(worker, lbn, vwa, profile='default'):
     return _do_http(cmd, profile)['worker.result.type'] == 'OK'
 
 
-###############
-### General ###
-###############
-
-
 def version(profile='default'):
     '''
     Return the modjk version
@@ -172,11 +167,6 @@ def dump_config(profile='default'):
         'mime': 'prop',
     }
     return _do_http(cmd, profile)
-
-
-####################
-### LB Functions ###
-####################
 
 
 def list_configured_members(lbn, profile='default'):
@@ -307,11 +297,6 @@ def lb_edit(lbn, settings, profile='default'):
     settings['w'] = lbn
 
     return _do_http(settings, profile)['worker.result.type'] == 'OK'
-
-
-########################
-### Worker Functions ###
-########################
 
 
 def bulk_stop(workers, lbn, profile='default'):

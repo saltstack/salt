@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+
+import glob
 import os
 import re
 import logging
@@ -11,7 +13,7 @@ import salt.utils.path
 import salt.utils.yaml
 
 # Import 3rd-party libs
-from salt.ext.six import iteritems
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -40,15 +42,11 @@ def get_class(_class, salt_data):
     l_files = []
     saltclass_path = salt_data['path']
 
-    straight = '{0}/classes/{1}.yml'.format(saltclass_path, _class)
-    sub_straight = '{0}/classes/{1}.yml'.format(saltclass_path,
-                                                _class.replace('.', '/'))
-    sub_init = '{0}/classes/{1}/init.yml'.format(saltclass_path,
-                                                 _class.replace('.', '/'))
+    straight, sub_init, sub_straight = get_class_paths(_class, saltclass_path)
 
-    for root, dirs, files in salt.utils.path.os_walk('{0}/classes'.format(saltclass_path), followlinks=True):
+    for root, dirs, files in salt.utils.path.os_walk(os.path.join(saltclass_path, 'classes'), followlinks=True):
         for l_file in files:
-            l_files.append('{0}/{1}'.format(root, l_file))
+            l_files.append(os.path.join(root, l_file))
 
     if straight in l_files:
         return render_yaml(straight, salt_data)
@@ -59,8 +57,56 @@ def get_class(_class, salt_data):
     if sub_init in l_files:
         return render_yaml(sub_init, salt_data)
 
-    log.warning('{0}: Class definition not found'.format(_class))
+    log.warning('%s: Class definition not found', _class)
     return {}
+
+
+def get_class_paths(_class, saltclass_path):
+    '''
+    Converts the dotted notation of a saltclass class to its possible file counterparts.
+
+    :param str _class: Dotted notation of the class
+    :param str saltclass_path: Root to saltclass storage
+    :return: 3-tuple of possible file counterparts
+    :rtype: tuple(str)
+    '''
+    straight = os.path.join(saltclass_path,
+                            'classes',
+                            '{0}.yml'.format(_class))
+    sub_straight = os.path.join(saltclass_path,
+                                'classes',
+                                '{0}.yml'.format(_class.replace('.', os.sep)))
+    sub_init = os.path.join(saltclass_path,
+                            'classes',
+                            _class.replace('.', os.sep),
+                            'init.yml')
+    return straight, sub_init, sub_straight
+
+
+def get_class_from_file(_file, saltclass_path):
+    '''
+    Converts the absolute path to a saltclass file back to the dotted notation.
+
+    .. code-block:: python
+
+       print(get_class_from_file('/srv/saltclass/classes/services/nginx/init.yml', '/srv/saltclass'))
+       # services.nginx
+
+    :param str _file: Absolute path to file
+    :param str saltclass_path: Root to saltclass storage
+    :return: class name in dotted notation
+    :rtype: str
+    '''
+    # remove classes path prefix
+    _file = _file[len(os.path.join(saltclass_path, 'classes')) + len(os.sep):]
+    # remove .yml extension
+    _file = _file[:-4]
+    # revert to dotted notation
+    _file = _file.replace(os.sep, '.')
+    # remove tailing init
+    if _file.endswith('.init'):
+        _file = _file[:-5]
+    return _file
 
 
 # Return environment
@@ -86,7 +132,7 @@ def dict_merge(a, b, path=None):
                 else:
                     a[key].extend(b[key])
             elif isinstance(a[key], dict) and isinstance(b[key], dict):
-                dict_merge(a[key], b[key], path + [str(key)])
+                dict_merge(a[key], b[key], path + [six.text_type(key)])
             elif a[key] == b[key]:
                 pass
             else:
@@ -98,11 +144,23 @@ def dict_merge(a, b, path=None):
 
 # Recursive search and replace in a dict
 def dict_search_and_replace(d, old, new, expanded):
-    for (k, v) in iteritems(d):
+    for (k, v) in six.iteritems(d):
         if isinstance(v, dict):
             dict_search_and_replace(d[k], old, new, expanded)
+
+        if isinstance(v, list):
+            x = 0
+            for i in v:
+                if isinstance(i, dict):
+                    dict_search_and_replace(v[x], old, new, expanded)
+                if isinstance(i, six.string_types):
+                    if i == old:
+                        v[x] = new
+                x = x + 1
+
         if v == old:
             d[k] = new
+
     return d
 
 
@@ -119,34 +177,110 @@ def find_value_to_expand(x, v):
     return a
 
 
+# Look for regexes and expand them
+def find_and_process_re(_str, v, k, b, expanded):
+    vre = re.finditer(r'(^|.)\$\{.*?\}', _str)
+    if vre:
+        for re_v in vre:
+            re_str = str(re_v.group())
+            if re_str.startswith('\\'):
+                v_new = _str.replace(re_str, re_str.lstrip('\\'))
+                b = dict_search_and_replace(b, _str, v_new, expanded)
+                expanded.append(k)
+            elif not re_str.startswith('$'):
+                v_expanded = find_value_to_expand(b, re_str[1:])
+                v_new = _str.replace(re_str[1:], v_expanded)
+                b = dict_search_and_replace(b, _str, v_new, expanded)
+                _str = v_new
+                expanded.append(k)
+            else:
+                v_expanded = find_value_to_expand(b, re_str)
+                if isinstance(v, six.string_types):
+                    v_new = v.replace(re_str, v_expanded)
+                else:
+                    v_new = _str.replace(re_str, v_expanded)
+                b = dict_search_and_replace(b, _str, v_new, expanded)
+                _str = v_new
+                v = v_new
+                expanded.append(k)
+    return b
+
+
 # Return a dict that contains expanded variables if found
 def expand_variables(a, b, expanded, path=None):
     if path is None:
         b = a.copy()
         path = []
 
-    for (k, v) in iteritems(a):
+    for (k, v) in six.iteritems(a):
         if isinstance(v, dict):
-            expand_variables(v, b, expanded, path + [str(k)])
+            expand_variables(v, b, expanded, path + [six.text_type(k)])
         else:
-            if isinstance(v, str):
-                vre = re.search(r'(^|.)\$\{.*?\}', v)
-                if vre:
-                    re_v = vre.group(0)
-                    if re_v.startswith('\\'):
-                        v_new = v.replace(re_v, re_v.lstrip('\\'))
-                        b = dict_search_and_replace(b, v, v_new, expanded)
-                        expanded.append(k)
-                    elif not re_v.startswith('$'):
-                        v_expanded = find_value_to_expand(b, re_v[1:])
-                        v_new = v.replace(re_v[1:], v_expanded)
-                        b = dict_search_and_replace(b, v, v_new, expanded)
-                        expanded.append(k)
-                    else:
-                        v_expanded = find_value_to_expand(b, re_v)
-                        b = dict_search_and_replace(b, v, v_expanded, expanded)
-                        expanded.append(k)
+            if isinstance(v, list):
+                for i in v:
+                    if isinstance(i, dict):
+                        expand_variables(i, b, expanded, path + [str(k)])
+                    if isinstance(i, six.string_types):
+                        b = find_and_process_re(i, v, k, b, expanded)
+
+            if isinstance(v, six.string_types):
+                b = find_and_process_re(v, v, k, b, expanded)
     return b
+
+
+def match_class_glob(_class, saltclass_path):
+    '''
+    Takes a class name possibly including `*` or `?` wildcards (or any other wildcards supportet by `glob.glob`) and
+    returns a list of expanded class names without wildcards.
+
+    .. code-block:: python
+
+       classes = match_class_glob('services.*', '/srv/saltclass')
+       print(classes)
+       # services.mariadb
+       # services.nginx...
+
+
+    :param str _class: dotted class name, globbing allowed.
+    :param str saltclass_path: path to the saltclass root directory.
+
+    :return: The list of expanded class matches.
+    :rtype: list(str)
+    '''
+    straight, sub_init, sub_straight = get_class_paths(_class, saltclass_path)
+    classes = []
+    matches = []
+    matches.extend(glob.glob(straight))
+    matches.extend(glob.glob(sub_straight))
+    matches.extend(glob.glob(sub_init))
+    if not matches:
+        log.warning('%s: Class globbing did not yield any results', _class)
+    for match in matches:
+        classes.append(get_class_from_file(match, saltclass_path))
+    return classes
+
+
+def expand_classes_glob(classes, salt_data):
+    '''
+    Expand the list of `classes` to no longer include any globbing.
+
+    :param iterable(str) classes: Iterable of classes
+    :param dict salt_data: configuration data
+    :return: Expanded list of classes with resolved globbing
+    :rtype: list(str)
+    '''
+    all_classes = []
+    expanded_classes = []
+    saltclass_path = salt_data['path']
+
+    for _class in classes:
+        all_classes.extend(match_class_glob(_class, saltclass_path))
+
+    for _class in all_classes:
+        if _class not in expanded_classes:
+            expanded_classes.append(_class)
+
+    return expanded_classes
 
 
 def expand_classes_in_order(minion_dict,
@@ -154,9 +288,11 @@ def expand_classes_in_order(minion_dict,
                             seen_classes,
                             expanded_classes,
                             classes_to_expand):
-    # Get classes to expand from minion dictionnary
+    # Get classes to expand from minion dictionary
     if not classes_to_expand and 'classes' in minion_dict:
         classes_to_expand = minion_dict['classes']
+
+    classes_to_expand = expand_classes_glob(classes_to_expand, salt_data)
 
     # Now loop on list to recursively expand them
     for klass in classes_to_expand:
@@ -166,8 +302,14 @@ def expand_classes_in_order(minion_dict,
             # Fix corner case where class is loaded but doesn't contain anything
             if expanded_classes[klass] is None:
                 expanded_classes[klass] = {}
+
+            # Merge newly found pillars into existing ones
+            new_pillars = expanded_classes[klass].get('pillars', {})
+            if new_pillars:
+                dict_merge(salt_data['__pillar__'], new_pillars)
+
             # Now replace class element in classes_to_expand by expansion
-            if 'classes' in expanded_classes[klass]:
+            if expanded_classes[klass].get('classes'):
                 l_id = classes_to_expand.index(klass)
                 classes_to_expand[l_id:l_id] = expanded_classes[klass]['classes']
                 expand_classes_in_order(minion_dict,
@@ -220,18 +362,21 @@ def expanded_dict_from_minion(minion_id, salt_data):
     _file = ''
     saltclass_path = salt_data['path']
     # Start
-    for root, dirs, files in salt.utils.path.os_walk('{0}/nodes'.format(saltclass_path), followlinks=True):
+    for root, dirs, files in salt.utils.path.os_walk(os.path.join(saltclass_path, 'nodes'), followlinks=True):
         for minion_file in files:
             if minion_file == '{0}.yml'.format(minion_id):
                 _file = os.path.join(root, minion_file)
 
-    # Load the minion_id definition if existing, else an exmpty dict
+    # Load the minion_id definition if existing, else an empty dict
     node_dict = {}
     if _file:
         node_dict[minion_id] = render_yaml(_file, salt_data)
     else:
-        log.warning('{0}: Node definition not found'.format(minion_id))
+        log.warning('%s: Node definition not found', minion_id)
         node_dict[minion_id] = {}
+
+    # Merge newly found pillars into existing ones
+    dict_merge(salt_data['__pillar__'], node_dict[minion_id].get('pillars', {}))
 
     # Get 2 ordered lists:
     # expanded_classes: A list of all the dicts

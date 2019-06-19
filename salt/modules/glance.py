@@ -36,7 +36,7 @@ Module for handling openstack glance calls.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 # Import salt libs
@@ -48,6 +48,9 @@ from salt.version import (
     __version__,
     SaltStackVersion
     )
+
+from salt.ext import six
+
 # is there not SaltStackVersion.current() to get
 # the version of the salt running this code??
 _version_ary = __version__.split('.')
@@ -100,6 +103,13 @@ def _auth(profile=None, api_version=2, **connection_args):
 
     Only intended to be used within glance-enabled modules
     '''
+    __utils__['versions.warn_until'](
+        'Neon',
+        (
+            'The glance module has been deprecated and will be removed in {version}.  '
+            'Please update to using the glanceng module'
+        ),
+    )
 
     if profile:
         prefix = profile + ":keystone."
@@ -154,17 +164,16 @@ def _auth(profile=None, api_version=2, **connection_args):
         raise SaltInvocationError('No credentials to authenticate with.')
 
     if HAS_KEYSTONE:
-        log.debug('Calling keystoneclient.v2_0.client.Client(' +
-            '{0}, **{1})'.format(ks_endpoint, kwargs))
+        log.debug('Calling keystoneclient.v2_0.client.Client(%s, **%s)',
+                  ks_endpoint, kwargs)
         keystone = kstone.Client(**kwargs)
         kwargs['token'] = keystone.get_token(keystone.session)
         # This doesn't realy prevent the password to show up
         # in the minion log as keystoneclient.session is
         # logging it anyway when in debug-mode
         kwargs.pop('password')
-        log.debug('Calling glanceclient.client.Client(' +
-            '{0}, {1}, **{2})'.format(api_version,
-                g_endpoint_url, kwargs))
+        log.debug('Calling glanceclient.client.Client(%s, %s, **%s)',
+                  api_version, g_endpoint_url, kwargs)
         # may raise exc.HTTPUnauthorized, exc.HTTPNotFound
         # but we deal with those elsewhere
         return client.Client(api_version, g_endpoint_url, **kwargs)
@@ -309,10 +318,10 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
             'comment': 'No image with ID {0}'.format(id)
             }
     except exc.HTTPForbidden as forbidden:
-        log.error(str(forbidden))
+        log.error(six.text_type(forbidden))
         return {
             'result': False,
-            'comment': str(forbidden)
+            'comment': six.text_type(forbidden)
             }
     return {
         'result': True,
@@ -351,9 +360,10 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
             'result': False,
             'comment': 'No image with ID {0}'.format(id)
             }
-    pformat = pprint.PrettyPrinter(indent=4).pformat
-    log.debug('Properties of image {0}:\n{1}'.format(
-        image.name, pformat(image)))
+    log.debug(
+        'Properties of image %s:\n%s',
+        image.name, pprint.PrettyPrinter(indent=4).pformat(image)
+    )
 
     schema = image_schema(profile=profile)
     if len(schema.keys()) == 1:
@@ -393,7 +403,7 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
                             'name "{0}"'.format(name)
                         }
                 _add_image(ret, image)
-    log.debug('Returning images: {0}'.format(ret))
+    log.debug('Returning images: %s', ret)
     return ret
 
 
@@ -436,7 +446,7 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
         img_list = image_list(name=name, profile=profile)
         if img_list is dict and 'result' in img_list:
             return img_list
-        elif len(img_list) == 0:
+        elif not img_list:
             return {
                 'result': False,
                 'comment':
@@ -450,13 +460,13 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
                 image = img_list[name]
     else:
         raise SaltInvocationError
-    log.debug('Found image:\n{0}'.format(image))
+    log.debug('Found image:\n%s', image)
     to_update = {}
     for key, value in kwargs.items():
         if key.startswith('_'):
             continue
         if key not in image or image[key] != value:
-            log.debug('add <{0}={1}> to to_update'.format(key, value))
+            log.debug('add <%s=%s> to to_update', key, value)
             to_update[key] = value
     g_client = _auth(profile)
     updated = g_client.images.update(image['id'], **to_update)
@@ -478,12 +488,13 @@ def schema_get(name, profile=None):
         salt '*' glance.schema_get name=f16-jeos
     '''
     g_client = _auth(profile)
-    pformat = pprint.PrettyPrinter(indent=4).pformat
     schema_props = {}
     for prop in g_client.schemas.get(name).properties:
         schema_props[prop.name] = prop.description
-    log.debug('Properties of schema {0}:\n{1}'.format(
-        name, pformat(schema_props)))
+    log.debug(
+        'Properties of schema %s:\n%s',
+        name, pprint.PrettyPrinter(indent=4).pformat(schema_props)
+    )
     return {name: schema_props}
 
 

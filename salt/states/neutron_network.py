@@ -3,7 +3,7 @@
 Management of OpenStack Neutron Networks
 =========================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 :depends: shade
 :configuration: see :py:mod:`salt.modules.neutronng` for setup instructions
@@ -29,7 +29,7 @@ Example States
         - project: project1
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = 'neutron_network'
 
@@ -61,17 +61,18 @@ def present(name, auth=None, **kwargs):
          Set the network administrative state to up.
 
     vlan
-        Vlan ID. Alias for
-        provider:
-          - physical_network: provider
-          - network_type: vlan
-          - segmentation_id: (vlan id)
+        Vlan ID. Alias for provider
 
+        - physical_network: provider
+        - network_type: vlan
+        - segmentation_id: (vlan id)
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
+
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
 
     __salt__['neutronng.setup_clouds'](auth)
 
@@ -82,7 +83,6 @@ def present(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = kwargs
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Network will be created.'
             return ret
 
@@ -116,7 +116,6 @@ def present(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = changes
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Project will be updated.'
             return ret
 
@@ -141,6 +140,8 @@ def absent(name, auth=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+
     __salt__['neutronng.setup_clouds'](auth)
 
     kwargs['name'] = name
@@ -150,7 +151,6 @@ def absent(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = {'id': network.id}
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Network will be deleted.'
             return ret
 

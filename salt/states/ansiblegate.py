@@ -16,8 +16,6 @@
 # limitations under the License.
 
 r'''
-:codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
-
 Execution of Ansible modules from within states
 ===============================================
 
@@ -35,17 +33,22 @@ state:
           - state: installed
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
+import os
 import sys
-try:
-    import ansible
-except ImportError as err:
-    ansible = None
 
+# Import salt modules
+import salt.fileclient
+import salt.ext.six as six
+from salt.utils.decorators import depends
+import salt.utils.decorators.path
 
+log = logging.getLogger(__name__)
 __virtualname__ = 'ansible'
 
 
+@depends('ansible')
 class AnsibleState(object):
     '''
     Ansible state caller.
@@ -98,4 +101,96 @@ def __virtual__():
     Disable, if Ansible is not available around on the Minion.
     '''
     setattr(sys.modules[__name__], 'call', lambda **kwargs: AnsibleState()(**kwargs))   # pylint: disable=W0108
-    return ansible is not None
+    return __virtualname__
+
+
+def _client():
+    '''
+    Get a fileclient
+    '''
+    return salt.fileclient.get_file_client(__opts__)
+
+
+def _changes(plays):
+    '''
+    Find changes in ansible return data
+    '''
+    changes = {}
+    for play in plays['plays']:
+        task_changes = {}
+        for task in play['tasks']:
+            host_changes = {}
+            for host, data in six.iteritems(task['hosts']):
+                if data['changed'] is True:
+                    host_changes[host] = data.get('diff', data.get('changes', {}))
+            if host_changes:
+                task_changes[task['task']['name']] = host_changes
+        if task_changes:
+            changes[play['play']['name']] = task_changes
+    return changes
+
+
+@salt.utils.decorators.path.which('ansible-playbook')
+def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=None):
+    '''
+    Run Ansible Playbooks
+
+    :param name: path to playbook. This can be relative to rundir or the git repo
+    :param rundir: location to run ansible-playbook from.
+    :param git_repo: git repository to clone for ansible playbooks.  This is cloned
+                     using the `git.latest` state, and is cloned to the `rundir`
+                     if specified, otherwise it is clone to the `cache_dir`
+    :param git_kwargs: extra kwargs to pass to `git.latest` state module besides
+                       the `name` and `target`
+    :param ansible_kwargs: extra kwargs to pass to `ansible.playbooks` execution
+                           module besides the `name` and `target`
+
+    :return: Ansible playbook output.
+
+    .. code-block:: yaml
+
+        run nginx install:
+          ansible.playbooks:
+            - name: install.yml
+            - git_repo: git://github.com/gituser/playbook.git
+            - git_kwargs:
+                rev: master
+    '''
+    ret = {
+        'result': False,
+        'changes': {},
+        'comment': 'Running playbook {0}'.format(name),
+        'name': name,
+    }
+    if git_repo:
+        if not isinstance(rundir, six.text_type) or not os.path.isdir(rundir):
+            rundir = _client()._extrn_path(git_repo, 'base')
+            log.trace('rundir set to %s', rundir)
+        if not isinstance(git_kwargs, dict):
+            log.debug('Setting git_kwargs to empty dict: %s', git_kwargs)
+            git_kwargs = {}
+        __states__['git.latest'](
+            name=git_repo,
+            target=rundir,
+            **git_kwargs
+        )
+    if not isinstance(ansible_kwargs, dict):
+        log.debug('Setting ansible_kwargs to empty dict: %s', ansible_kwargs)
+        ansible_kwargs = {}
+    checks = __salt__['ansible.playbooks'](name, rundir=rundir, check=True, diff=True, **ansible_kwargs)
+    if all(not check['changed'] for check in six.itervalues(checks['stats'])):
+        ret['comment'] = 'No changes to be made from playbook {0}'.format(name)
+        ret['result'] = True
+    elif __opts__['test']:
+        ret['comment'] = 'Changes will be made from playbook {0}'.format(name)
+        ret['result'] = None
+        ret['changes'] = _changes(checks)
+    else:
+        results = __salt__['ansible.playbooks'](name, rundir=rundir, diff=True, **ansible_kwargs)
+        ret['comment'] = 'Changes were made by playbook {0}'.format(name)
+        ret['changes'] = _changes(results)
+        ret['result'] = all(
+            not check['failures'] and not check['unreachable']
+            for check in six.itervalues(checks['stats'])
+        )
+    return ret

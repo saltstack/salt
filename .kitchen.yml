@@ -1,6 +1,6 @@
 ---
-<% vagrant = system('which vagrant 2>/dev/null >/dev/null') %>
-<% version = '2017.7.1' %>
+<% vagrant = system('gem list -i kitchen-vagrant 2>/dev/null >/dev/null') %>
+<% version = '2018.3.3' %>
 <% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
 <% verifierfile = ENV['SALT_KITCHEN_VERIFIER'] || '.kitchen/verifier.yml' %>
@@ -30,32 +30,48 @@ provisioner:
   salt_install: bootstrap
   salt_version: latest
   salt_bootstrap_url: https://bootstrap.saltstack.com
-  salt_bootstrap_options: -X -p rsync stable <%= version %>
+  salt_bootstrap_options: -X -p rsync git v<%= version %>
   log_level: info
   sudo: true
   require_chef: false
+  retry_on_exit_code:
+    - 139
+  max_retries: 2
   remote_states:
     name: git://github.com/saltstack/salt-jenkins.git
-    branch: oxygen
+    branch: develop
     repo: git
     testingdir: /testing
   salt_copy_filter:
+    - __pycache__
+    - '*.pyc'
     - .bundle
-    - .git
-    - .gitignore
+    - .tox
+    - .nox
     - .kitchen
-    - .kitchen.yml
-    - Gemfile
+    - artifacts
     - Gemfile.lock
-    - README.rst
-    - .travis.yml
   state_top:
     base:
       "os:Windows":
         - match: grain
-        - prep_windows
+        - windows
       "*":
-        - git.salt
+        - <%= ENV['KITCHEN_STATE'] || 'git.salt' %>
+  pillars:
+    top.sls:
+      base:
+        "*":
+          - jenkins
+        "os:Windows":
+          - match: grain
+          - windows
+    jenkins.sls:
+      testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
+      clone_repo: false
+      salttesting_namespec: salttesting==2017.6.1
+    windows.sls:
+      virtualenv_path: 'c:\Python27\Scripts\pip.exe'
 <% if File.exists?(platformsfile) %>
 <%= ERB.new(File.read(platformsfile)).result %>
 <% else %>
@@ -76,12 +92,9 @@ platforms:
         - yum install -y upstart
     provisioner:
       salt_bootstrap_options: -P -p rsync -y -x python2.7 -X git v<%= version %> >/dev/null
-  - name: ubuntu-rolling
+  - name: ubuntu-18.04
     driver_config:
-      image: ubuntu:rolling
       run_command: /lib/systemd/systemd
-    provisioner:
-      salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh
   - name: ubuntu-16.04
     driver_config:
       run_command: /lib/systemd/systemd
@@ -102,7 +115,7 @@ platforms:
       run_command: /lib/systemd/systemd
   - name: arch
     driver_config:
-      image: base/archlinux
+      image: archlinux/base
       run_command: /usr/lib/systemd/systemd
       provision_command:
         - pacman -Syu --noconfirm systemd
@@ -110,30 +123,46 @@ platforms:
         - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
     provisioner:
       salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
-  - name: opensuse
+  - name: opensuse-15
     driver_config:
+      image: opensuse/leap:15.0
       run_command: /usr/lib/systemd/systemd
       provision_command:
+        - zypper --non-interactive install --auto-agree-with-licenses dbus-1
         - systemctl enable sshd.service
         - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
     provisioner:
-      salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
+      salt_bootstrap_options: -qXU -x python2 git v<%= @version %>
+  - name: opensuse-42.3
+    driver_config:
+      image: opensuse/leap:42.3
+      run_command: /usr/lib/systemd/systemd
+      provision_command:
+        - zypper --non-interactive install --auto-agree-with-licenses dbus-1
+        - systemctl enable sshd.service
+        - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
 <% if vagrant != false %>
   - name: windows-2012r2
     driver:
       box: mwrock/Windows2012R2
       name: vagrant
       gui: true
-      customize:
-        cpus: 4
-        memory: 8192
     transport:
       name: winrm
-      username: Vagrant
-      password: vagrant
+      username: Administrator
+      password: Pass@word1
     provisioner:
+      init_environment: |
+        Clear-Host
+        $AddedLocation ="c:\salt;c:\salt\bin\Scripts"
+        $Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
+        $OldPath = (Get-ItemProperty -Path $Reg -Name PATH).Path
+        $NewPath= $OldPath + ";" + $AddedLocation
+        Set-ItemProperty -Path $Reg -Value $NewPath -Name PATH
+        reg add "hklm\system\currentcontrolset\control\session manager\memory management" /v pagingfiles /t reg_multi_sz /d "d:\pagefile.sys 4096 8192" /f
+        winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="5000"}'
       salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
-      salt_bootstrap_options: -version <%= version %>
+      salt_bootstrap_options: ''
     verifier:
       windows: true
       types:
@@ -157,12 +186,25 @@ platforms:
     provisioner:
       salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
       salt_bootstrap_options: -version <%= version %>
+      init_environment: |
+        Clear-Host
+        $AddedLocation ="c:\salt;c:\salt\bin\Scripts"
+        $Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
+        $OldPath = (Get-ItemProperty -Path $Reg -Name PATH).Path
+        $NewPath= $OldPath + ";" + $AddedLocation
+        Set-ItemProperty -Path $Reg -Value $NewPath -Name PATH
+        reg add "hklm\system\currentcontrolset\control\session manager\memory management" /v pagingfiles /t reg_multi_sz /d "d:\pagefile.sys 4096 8192" /f
+        winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="5000"}'
+      salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
+      salt_bootstrap_options: ''
     verifier:
       windows: true
       types:
         - unit
       coverage_xml: false
+      xml: /tmp/xml-unittests-output/
       save:
+        /tmp/xml-unittests-output/: artifacts/
         $env:TEMP/salt-runtests.log: artifacts/logs/salt-runtests.log
         /salt/var/log/salt/minion: artifacts/logs/minion
 <% end %>
@@ -171,21 +213,6 @@ suites:
   - name: py2
     verifier:
       python_bin: python2.7
-    provisioner:
-      pillars:
-        top.sls:
-          base:
-            "*":
-              - jenkins
-            "os:Windows":
-              - match: grain
-              - windows
-        jenkins.sls:
-          testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
-          clone_repo: false
-          salttesting_namespec: salttesting==2017.6.1
-        windows.sls:
-          virtualenv_path: 'c:\Python27\Scripts\pip.exe'
   - name: py3
     excludes:
       - centos-6
@@ -194,18 +221,8 @@ suites:
       python_bin: python3
     provisioner:
       pillars:
-        top.sls:
-          base:
-            "*":
-              - jenkins
-            "os:Windows":
-              - match: grain
-              - windows
         jenkins.sls:
-          testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
-          clone_repo: false
           py3: true
-          salttesting_namespec: salttesting==2017.6.1
         windows.sls:
           virtualenv_path: 'c:\Python35\Scripts\pip.exe'
 
@@ -215,9 +232,9 @@ suites:
 verifier:
   name: runtests
   sudo: true
-  verbose: true
   run_destructive: true
   transport: zeromq
+  enable_filenames: true
   types:
     - ssh
   xml: /tmp/xml-unittests-output/
@@ -225,6 +242,6 @@ verifier:
   save:
     /tmp/xml-unittests-output: artifacts/
     /tmp/coverage.xml: artifacts/coverage/coverage.xml
-    /var/log/salt/minion: artifacts/logs/minion
+    /tmp/kitchen/var/log/salt/minion: artifacts/logs/minion
     /tmp/salt-runtests.log: artifacts/logs/salt-runtests.log
 <% end %>

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import Salt Testing Libs
@@ -21,6 +21,7 @@ import salt.modules.rh_ip as rh_ip
 
 # Import 3rd-party libs
 import jinja2.exceptions
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -30,6 +31,18 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
     '''
     def setup_loader_modules(self):
         return {rh_ip: {}}
+
+    def test_error_message_iface_should_process_non_str_expected(self):
+        values = [1, True, False, 'no-kaboom']
+        iface = 'ethtest'
+        option = 'test'
+        msg = rh_ip._error_msg_iface(iface, option, values)
+        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
+
+    def test_error_message_network_should_process_non_str_expected(self):
+        values = [1, True, False, 'no-kaboom']
+        msg = rh_ip._error_msg_network('fnord', values)
+        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
 
     def test_build_bond(self):
         '''
@@ -80,7 +93,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                                       test=True)
 
         for osrelease in range(5, 8):
-            with patch.dict(rh_ip.__grains__, {'os': 'RedHat', 'osrelease': str(osrelease)}):
+            with patch.dict(rh_ip.__grains__, {'os': 'RedHat', 'osrelease': six.text_type(osrelease)}):
                 with patch.object(rh_ip, '_raise_error_iface', return_value=None):
                     with patch.object(rh_ip, '_parse_settings_bond', MagicMock()):
                         mock = jinja2.exceptions.TemplateNotFound('foo')

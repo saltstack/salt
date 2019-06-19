@@ -10,7 +10,7 @@ Manage users on Mac OS 10.7+
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 try:
     import pwd
 except ImportError:
@@ -24,12 +24,13 @@ from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils.args
+import salt.utils.data
 import salt.utils.decorators.path
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.user
-from salt.utils.locales import sdecode as _sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -307,13 +308,11 @@ def chfullname(name, fullname):
 
         salt '*' user.chfullname foo 'Foo Bar'
     '''
-    if isinstance(fullname, string_types):
-        fullname = _sdecode(fullname)
+    fullname = salt.utils.data.decode(fullname)
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
-    if isinstance(pre_info['fullname'], string_types):
-        pre_info['fullname'] = _sdecode(pre_info['fullname'])
+    pre_info['fullname'] = salt.utils.data.decode(pre_info['fullname'])
     if fullname == pre_info['fullname']:
         return True
     _dscl(
@@ -327,9 +326,7 @@ def chfullname(name, fullname):
     # matches desired value
     time.sleep(1)
 
-    current = info(name).get('fullname')
-    if isinstance(current, string_types):
-        current = _sdecode(current)
+    current = salt.utils.data.decode(info(name).get('fullname'))
     return current == fullname
 
 
@@ -367,7 +364,7 @@ def chgroups(name, groups, append=False):
             'Invalid group name(s): {0}'.format(', '.join(bad_groups))
         )
     ugrps = set(list_groups(name))
-    desired = set(str(x) for x in groups if bool(str(x)))
+    desired = set(six.text_type(x) for x in groups if bool(six.text_type(x)))
     primary_group = __salt__['file.gid_to_group'](uinfo['gid'])
     if primary_group:
         desired.add(primary_group)
@@ -469,7 +466,8 @@ def list_users():
 
         salt '*' user.list_users
     '''
-    return sorted([user.pw_name for user in pwd.getpwall()])
+    users = _dscl(['/users'], 'list')['stdout']
+    return users.split()
 
 
 def rename(name, new_name):
@@ -570,7 +568,7 @@ def _kcpassword(password):
 
     # Convert each byte back to a character
     password = list(map(chr, password))
-    return ''.join(password)
+    return b''.join(salt.utils.data.encode(password))
 
 
 def enable_auto_login(name, password):
@@ -608,7 +606,7 @@ def enable_auto_login(name, password):
     # Create/Update the kcpassword file with an obfuscated password
     o_password = _kcpassword(password=password)
     with salt.utils.files.set_umask(0o077):
-        with salt.utils.files.fopen('/etc/kcpassword', 'w') as fd:
+        with salt.utils.files.fopen('/etc/kcpassword', 'w' if six.PY2 else 'wb') as fd:
             fd.write(o_password)
 
     return current if isinstance(current, bool) else current.lower() == name.lower()

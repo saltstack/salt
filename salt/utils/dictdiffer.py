@@ -11,9 +11,10 @@
 
   Added the ability to recursively compare dictionaries
 '''
-from __future__ import absolute_import
-from copy import deepcopy
+from __future__ import absolute_import, print_function, unicode_literals
+import copy
 from collections import Mapping
+from salt.ext import six
 
 
 def diff(current_dict, past_dict):
@@ -21,15 +22,13 @@ def diff(current_dict, past_dict):
 
 
 class DictDiffer(object):
-    """
+    '''
     Calculate the difference between two dictionaries as:
     (1) items added
     (2) items removed
     (3) keys same in both but changed values
     (4) keys same in both and unchanged values
-
-
-    """
+    '''
     def __init__(self, current_dict, past_dict):
         self.current_dict, self.past_dict = current_dict, past_dict
         self.set_current, self.set_past = set(list(current_dict)), set(list(past_dict))
@@ -51,11 +50,11 @@ class DictDiffer(object):
 def deep_diff(old, new, ignore=None):
     ignore = ignore or []
     res = {}
-    old = deepcopy(old)
-    new = deepcopy(new)
+    old = copy.deepcopy(old)
+    new = copy.deepcopy(new)
     stack = [(old, new, False)]
 
-    while len(stack) > 0:
+    while stack:
         tmps = []
         tmp_old, tmp_new, reentrant = stack.pop()
         for key in set(list(tmp_old) + list(tmp_new)):
@@ -223,7 +222,7 @@ class RecursiveDictDiffer(DictDiffer):
                 old_value = diff_dict[p]['old']
                 if diff_dict[p]['old'] == cls.NONE_VALUE:
                     old_value = 'nothing'
-                elif isinstance(diff_dict[p]['old'], str):
+                elif isinstance(diff_dict[p]['old'], six.string_types):
                     old_value = '\'{0}\''.format(diff_dict[p]['old'])
                 elif isinstance(diff_dict[p]['old'], list):
                     old_value = '\'{0}\''.format(
@@ -231,7 +230,7 @@ class RecursiveDictDiffer(DictDiffer):
                 new_value = diff_dict[p]['new']
                 if diff_dict[p]['new'] == cls.NONE_VALUE:
                     new_value = 'nothing'
-                elif isinstance(diff_dict[p]['new'], str):
+                elif isinstance(diff_dict[p]['new'], six.string_types):
                     new_value = '\'{0}\''.format(diff_dict[p]['new'])
                 elif isinstance(diff_dict[p]['new'], list):
                     new_value = '\'{0}\''.format(', '.join(diff_dict[p]['new']))

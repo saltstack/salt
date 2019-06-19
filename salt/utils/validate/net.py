@@ -2,7 +2,7 @@
 '''
 Various network validation utilities
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import re
@@ -79,6 +79,14 @@ def ipv6_addr(addr):
     returns False.
     '''
     return __ip_addr(addr, socket.AF_INET6)
+
+
+def ip_addr(addr):
+    '''
+    Returns True if the IPv4 or IPv6 address (and optional subnet) are valid,
+    otherwise returns False.
+    '''
+    return ipv4_addr(addr) or ipv6_addr(addr)
 
 
 def netmask(mask):

@@ -184,10 +184,11 @@ example.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import logging
 
+# Import Salt libs
 import salt.exceptions
 import salt.ext.six as six
 from salt.config.schemas.esxvm import ESXVirtualMachineConfigSchema
@@ -240,7 +241,7 @@ def vm_configured(name, vm_name, cpu, memory, image, version, interfaces,
 
     log.trace('Validating virtual machine configuration')
     schema = ESXVirtualMachineConfigSchema.serialize()
-    log.trace('schema = {0}'.format(schema))
+    log.trace('schema = %s', schema)
     try:
         jsonschema.validate({'vm_name': vm_name,
                              'cpu': cpu,
@@ -388,24 +389,24 @@ def vm_updated(name, vm_name, cpu, memory, image, version, interfaces,
                                                 advanced_configs=advanced_configs,
                                                 service_instance=service_instance)
     except salt.exceptions.CommandExecutionError as exc:
-        log.error('Error: {}'.format(str(exc)))
+        log.error('Error: %s', exc)
         if service_instance:
             __salt__['vsphere.disconnect'](service_instance)
         result.update({
             'result': False,
-            'comment': str(exc)})
+            'comment': six.text_type(exc)})
         return result
 
     if power_on:
         try:
             __salt__['vsphere.power_on_vm'](vm_name, datacenter)
         except salt.exceptions.VMwarePowerOnError as exc:
-            log.error('Error: {}'.format(exc))
+            log.error('Error: %s', exc)
             if service_instance:
                 __salt__['vsphere.disconnect'](service_instance)
             result.update({
                 'result': False,
-                'comment': str(exc)})
+                'comment': six.text_type(exc)})
             return result
         changes.update({'power_on': True})
 
@@ -433,10 +434,8 @@ def vm_created(name, vm_name, cpu, memory, image, version, interfaces,
               'comment': ''}
 
     if __opts__['test']:
-        result.update({'result': None,
-                       'changes': None,
-                       'comment': 'Virtual machine '
-                                  '{0} will be created'.format(vm_name)})
+        result['comment'] = 'Virtual machine {0} will be created'.format(
+                vm_name)
         return result
 
     service_instance = __salt__['vsphere.get_service_instance_via_proxy']()
@@ -452,12 +451,12 @@ def vm_created(name, vm_name, cpu, memory, image, version, interfaces,
                                              advanced_configs=advanced_configs,
                                              service_instance=service_instance)
     except salt.exceptions.CommandExecutionError as exc:
-        log.error('Error: {0}'.format(str(exc)))
+        log.error('Error: %s', exc)
         if service_instance:
             __salt__['vsphere.disconnect'](service_instance)
         result.update({
             'result': False,
-            'comment': str(exc)})
+            'comment': six.text_type(exc)})
         return result
 
     if power_on:
@@ -465,12 +464,12 @@ def vm_created(name, vm_name, cpu, memory, image, version, interfaces,
             __salt__['vsphere.power_on_vm'](vm_name, datacenter,
                                             service_instance=service_instance)
         except salt.exceptions.VMwarePowerOnError as exc:
-            log.error('Error: {0}'.format(exc))
+            log.error('Error: %s', exc)
             if service_instance:
                 __salt__['vsphere.disconnect'](service_instance)
             result.update({
                 'result': False,
-                'comment': str(exc)})
+                'comment': six.text_type(exc)})
             return result
         info['power_on'] = power_on
 
@@ -496,25 +495,25 @@ def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
               'comment': ''}
 
     vmx_path = '{0}{1}'.format(vm_file.folderPath, vm_file.file[0].path)
-    log.trace('Registering virtual machine with vmx file: {0}'.format(vmx_path))
+    log.trace('Registering virtual machine with vmx file: %s', vmx_path)
     service_instance = __salt__['vsphere.get_service_instance_via_proxy']()
     try:
         __salt__['vsphere.register_vm'](vm_name, datacenter,
                                         placement, vmx_path,
                                         service_instance=service_instance)
     except salt.exceptions.VMwareMultipleObjectsError as exc:
-        log.error('Error: {0}'.format(str(exc)))
+        log.error('Error: %s', exc)
         if service_instance:
             __salt__['vsphere.disconnect'](service_instance)
         result.update({'result': False,
-                       'comment': str(exc)})
+                       'comment': six.text_type(exc)})
         return result
     except salt.exceptions.VMwareVmRegisterError as exc:
-        log.error('Error: {0}'.format(exc))
+        log.error('Error: %s', exc)
         if service_instance:
             __salt__['vsphere.disconnect'](service_instance)
         result.update({'result': False,
-                       'comment': str(exc)})
+                       'comment': six.text_type(exc)})
         return result
 
     if power_on:
@@ -522,12 +521,12 @@ def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
             __salt__['vsphere.power_on_vm'](vm_name, datacenter,
                                             service_instance=service_instance)
         except salt.exceptions.VMwarePowerOnError as exc:
-            log.error('Error: {0}'.format(exc))
+            log.error('Error: %s', exc)
             if service_instance:
                 __salt__['vsphere.disconnect'](service_instance)
             result.update({
                 'result': False,
-                'comment': str(exc)})
+                'comment': six.text_type(exc)})
             return result
     __salt__['vsphere.disconnect'](service_instance)
     result.update({'result': True,

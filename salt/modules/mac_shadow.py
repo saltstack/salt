@@ -10,7 +10,7 @@ of a configuration profile.
 # Authentication concepts reference:
 # https://developer.apple.com/library/mac/documentation/Networking/Conceptual/Open_Directory/openDirectoryConcepts/openDirectoryConcepts.html#//apple_ref/doc/uid/TP40000917-CH3-CIFCAIBB
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 from datetime import datetime
 
 
@@ -105,7 +105,7 @@ def _get_account_policy_data_value(name, key):
     :param str name: The username
     :param str key: The accountPolicy key
 
-    :return: the value contained within the key
+    :return: The value contained within the key
     :rtype: str
 
     :raises: CommandExecutionError on user not found or any other unknown error
@@ -137,11 +137,11 @@ def _convert_to_datetime(unix_timestamp):
         return 'Invalid Timestamp'
 
 
-def info(name):
+def info(name, **kwargs):
     '''
     Return information for the specified user
 
-    :param str name: the username
+    :param str name: The username
 
     :return: A dictionary containing the user's shadow information
     :rtype: dict
@@ -168,7 +168,7 @@ def info(name):
                 'inact': 'Unavailable'}
 
     except KeyError:
-        log.debug('User not found: {0}'.format(name))
+        log.debug('User not found: %s', name)
         return {'name': '',
                 'passwd': '',
                 'account_created': '',
@@ -187,9 +187,9 @@ def get_account_created(name):
     '''
     Get the date/time the account was created
 
-    :param str name: the username of the account
+    :param str name: The username of the account
 
-    :return: the date/time the account was created (yyyy-mm-dd hh:mm:ss)
+    :return: The date/time the account was created (yyyy-mm-dd hh:mm:ss)
     :rtype: str
 
     :raises: CommandExecutionError on user not found or any other unknown error
@@ -213,9 +213,9 @@ def get_last_change(name):
     '''
     Get the date/time the account was changed
 
-    :param str name: the username of the account
+    :param str name: The username of the account
 
-    :return: the date/time the account was modified (yyyy-mm-dd hh:mm:ss)
+    :return: The date/time the account was modified (yyyy-mm-dd hh:mm:ss)
     :rtype: str
 
     :raises: CommandExecutionError on user not found or any other unknown error
@@ -239,7 +239,7 @@ def get_login_failed_count(name):
     '''
     Get the the number of failed login attempts
 
-    :param str name: the username of the account
+    :param str name: The username of the account
 
     :return: The number of failed login attempts
     :rtype: int
@@ -261,10 +261,10 @@ def get_login_failed_last(name):
     '''
     Get the date/time of the last failed login attempt
 
-    :param str name: the username of the account
+    :param str name: The username of the account
 
-    :return: the date/time of the last failed login attempt on this account
-    (yyyy-mm-dd hh:mm:ss)
+    :return: The date/time of the last failed login attempt on this account
+        (yyyy-mm-dd hh:mm:ss)
     :rtype: str
 
     :raises: CommandExecutionError on user not found or any other unknown error
@@ -288,9 +288,9 @@ def set_maxdays(name, days):
     '''
     Set the maximum age of the password in days
 
-    :param str name: the username of the account
+    :param str name: The username of the account
 
-    :param int days: the maximum age of the account in days
+    :param int days: The maximum age of the account in days
 
     :return: True if successful, False if not
     :rtype: bool
@@ -315,9 +315,9 @@ def get_maxdays(name):
     '''
     Get the maximum age of the password
 
-    :param str name: the username of the account
+    :param str name: The username of the account
 
-    :return: the maximum age of the password in days
+    :return: The maximum age of the password in days
     :rtype: int
 
     :raises: CommandExecutionError on user not found or any other unknown error
@@ -404,10 +404,10 @@ def set_change(name, date):
     Sets the date on which the password expires. The user will be required to
     change their password. Format is mm/dd/yyyy
 
-    :param str name: the name of the user account
+    :param str name: The name of the user account
 
-    :param date date: the date the password will expire. Must be in mm/dd/yyyy
-    format.
+    :param date date: The date the password will expire. Must be in mm/dd/yyyy
+        format.
 
     :return: True if successful, otherwise False
     :rtype: bool
@@ -430,7 +430,7 @@ def get_change(name):
     '''
     Gets the date on which the password expires
 
-    :param str name: the name of the user account
+    :param str name: The name of the user account
 
     :return: The date the password will expire
     :rtype: str
@@ -456,10 +456,10 @@ def set_expire(name, date):
     Sets the date on which the account expires. The user will not be able to
     login after this date. Date format is mm/dd/yyyy
 
-    :param str name: the name of the user account
+    :param str name: The name of the user account
 
-    :param datetime date: the date the account will expire. Format must be
-    mm/dd/yyyy
+    :param datetime date: The date the account will expire. Format must be
+        mm/dd/yyyy.
 
     :return: True if successful, False if not
     :rtype: bool
@@ -482,9 +482,9 @@ def get_expire(name):
     '''
     Gets the date on which the account expires
 
-    :param str name: the name of the user account
+    :param str name: The name of the user account
 
-    :return: the date the account expires
+    :return: The date the account expires
     :rtype: str
 
     :raises: CommandExecutionError on user not found or any other unknown error
@@ -542,7 +542,7 @@ def set_password(name, password):
     process list while the command is running)
 
     :param str name: The name of the local user, which is assumed to be in the
-    local directory service
+        local directory service
 
     :param str password: The plaintext password to set
 

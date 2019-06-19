@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Elasticsearch Domains
-=================
+============================
 
 .. versionadded:: 2016.11.0
 
@@ -31,9 +31,9 @@ config:
 .. code-block:: yaml
 
     myprofile:
-        keyid: GKTADJGHEIQSXMKKRBJ08H
-        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+      keyid: GKTADJGHEIQSXMKKRBJ08H
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      region: us-east-1
 
 .. code-block:: yaml
 
@@ -60,12 +60,12 @@ config:
                       AWS: "*"
                   - Action:
                     - "es:*"
-                  - Resource: "arn:aws:es:*:111111111111:domain/mydomain/*
+                  - Resource: "arn:aws:es:*:111111111111:domain/mydomain/*"
                   - Condition:
                       IpAddress:
                         "aws:SourceIp":
-                          - "127.0.0.1",
-                          - "127.0.0.2",
+                          - "127.0.0.1"
+                          - "127.0.0.2"
             - SnapshotOptions:
                 AutomatedSnapshotStartHour: 0
             - AdvancedOptions:
@@ -79,7 +79,7 @@ config:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
@@ -249,7 +249,7 @@ def present(name, DomainName,
                                                      AccessPolicies=AccessPolicies,
                                                      SnapshotOptions=SnapshotOptions,
                                                      AdvancedOptions=AdvancedOptions,
-                                                     ElasticsearchVersion=str(ElasticsearchVersion),
+                                                     ElasticsearchVersion=str(ElasticsearchVersion),  # future lint: disable=blacklisted-function
                                                region=region, key=key,
                                                keyid=keyid, profile=profile)
         if not r.get('created'):
@@ -269,9 +269,15 @@ def present(name, DomainName,
     _status = __salt__['boto_elasticsearch_domain.status'](DomainName=DomainName,
                                   region=region, key=key, keyid=keyid,
                                   profile=profile)['domain']
-    if _status.get('ElasticsearchVersion') != str(ElasticsearchVersion):
+    if _status.get('ElasticsearchVersion') != str(ElasticsearchVersion):  # future lint: disable=blacklisted-function
         ret['result'] = False
-        ret['comment'] = 'Failed to update domain: version cannot be modified from {0} to {1}.'.format(_status.get('ElasticsearchVersion'), str(ElasticsearchVersion))
+        ret['comment'] = (
+            'Failed to update domain: version cannot be modified '
+            'from {0} to {1}.'.format(
+                _status.get('ElasticsearchVersion'),
+                str(ElasticsearchVersion)  # future lint: disable=blacklisted-function
+            )
+        )
         return ret
     _describe = __salt__['boto_elasticsearch_domain.describe'](DomainName=DomainName,
                                   region=region, key=key, keyid=keyid,

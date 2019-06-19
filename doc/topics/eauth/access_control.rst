@@ -28,6 +28,13 @@ case of the peer system.
     index
     ../../ref/peer
 
+.. The two paragraphs below (in the "When to use each authentication system"
+   heading) are copied in the doc/ref/publisheracl.rst and doc/topics/eauth/index.rst
+   topics as a note, at the top of the document. If you update the below
+   content, update it in the other two files as well.
+
+.. _acl_types:
+
 When to Use Each Authentication System
 ======================================
 ``publisher_acl`` is useful for allowing local system users to run Salt
@@ -67,7 +74,7 @@ other minions based on standard targets (all matchers are supported except the c
     external_auth:
       pam:
         dave:
-          - test.ping
+          - test.version
           - mongo\*:
             - network.*
           - log\*:
@@ -78,7 +85,7 @@ other minions based on standard targets (all matchers are supported except the c
         steve:
           - .*
 
-The above allows for all minions to be hit by test.ping by dave, and adds a
+The above allows for all minions to be hit by test.version by dave, and adds a
 few functions that dave can execute on other minions. It also allows steve
 unrestricted access to salt commands.
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import codecs
 import glob
 import logging
@@ -9,6 +9,7 @@ import textwrap
 
 import salt.loader
 import salt.utils.data
+import salt.utils.files
 import salt.utils.reactor as reactor
 import salt.utils.yaml
 
@@ -441,7 +442,7 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
                             os.path, 'isfile',
                             MagicMock(return_value=True)):
                         with patch.object(
-                                salt.utils, 'is_empty',
+                                salt.utils.files, 'is_empty',
                                 MagicMock(return_value=False)):
                             with patch.object(
                                     codecs, 'open',

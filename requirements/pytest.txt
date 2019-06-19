@@ -1,3 +1,7 @@
-pytest
-pytest-helpers-namespace
-pytest-tempdir
+# PyTest
+pytest >= 4.4.2
+pytest-salt >= 2019.5.10.post1
+pytest-timeout >= 1.3.3
+pytest-tempdir >= 2018.8.11
+pytest-helpers-namespace >= 2019.1.8
+pytest-salt-runtests-bridge >= 2019.1.30

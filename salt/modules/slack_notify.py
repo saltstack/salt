@@ -17,7 +17,7 @@ Module for sending messages to Slack
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt libs
@@ -203,7 +203,10 @@ def post_message(channel,
 
     # channel must start with a hash or an @ (direct-message channels)
     if not channel.startswith('#') and not channel.startswith('@'):
-        log.warning('Channel name must start with a hash or @. Prepending a hash and using "#{0}" as channel name instead of {1}'.format(channel, channel))
+        log.warning('Channel name must start with a hash or @. '
+                    'Prepending a hash and using "#%s" as '
+                    'channel name instead of %s',
+                    channel, channel)
         channel = '#{0}'.format(channel)
 
     if not from_name:

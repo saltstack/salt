@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
+    :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import textwrap
 
@@ -63,6 +63,14 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                    'opts': ['D', 'E', 'F'],
                                                    'fstype': 'C'}})
 
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}):
+            mock = MagicMock(return_value='A * B * C D/E/F')
+            with patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
+                self.assertEqual(mount.active(),
+                                 {'B': {'node': 'A',
+                                        'device': '*',
+                                        'fstype': '*'}})
+
         with patch.dict(mount.__grains__, {'os': 'OpenBSD', 'kernel': 'OpenBSD'}):
             mock = MagicMock(return_value={})
             with patch.object(mount, '_active_mounts_openbsd', mock):
@@ -79,6 +87,11 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(mount, '_active_mounts_darwin', mock):
                     self.assertEqual(mount.active(extended=True), {})
 
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}):
+            mock = MagicMock(return_value={})
+            with patch.object(mount, '_active_mounts_aix', mock):
+                self.assertEqual(mount.active(), {})
+
     def test_fstab(self):
         '''
         List the content of the fstab
@@ -87,20 +100,19 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(os.path, 'isfile', mock):
             self.assertEqual(mount.fstab(), {})
 
+        file_data = '\n'.join(['#', 'A B C D,E,F G H'])
         mock = MagicMock(return_value=True)
-        with patch.dict(mount.__grains__, {'kernel': ''}):
-            with patch.object(os.path, 'isfile', mock):
-                file_data = '\n'.join(['#',
-                                       'A B C D,E,F G H'])
-                with patch('salt.utils.files.fopen',
-                           mock_open(read_data=file_data),
-                           create=True) as m:
-                    m.return_value.__iter__.return_value = file_data.splitlines()
-                    self.assertEqual(mount.fstab(), {'B': {'device': 'A',
-                                                           'dump': 'G',
-                                                           'fstype': 'C',
-                                                           'opts': ['D', 'E', 'F'],
-                                                           'pass': 'H'}})
+        with patch.dict(mount.__grains__, {'kernel': ''}), \
+                patch.object(os.path, 'isfile', mock), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
+            fstab = mount.fstab()
+            assert fstab == {
+                'B': {'device': 'A',
+                      'dump': 'G',
+                      'fstype': 'C',
+                      'opts': ['D', 'E', 'F'],
+                      'pass': 'H'}
+            }, fstab
 
     def test_vfstab(self):
         '''
@@ -110,21 +122,65 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(os.path, 'isfile', mock):
             self.assertEqual(mount.vfstab(), {})
 
+        file_data = textwrap.dedent('''\
+            #
+            swap        -   /tmp                tmpfs    -   yes    size=2048m
+            ''')
         mock = MagicMock(return_value=True)
-        with patch.dict(mount.__grains__, {'kernel': 'SunOS'}):
-            with patch.object(os.path, 'isfile', mock):
-                file_data = '\n'.join(['#',
-                                       'swap        -   /tmp                tmpfs    -   yes    size=2048m'])
-                with patch('salt.utils.files.fopen',
-                           mock_open(read_data=file_data),
-                           create=True) as m:
-                    m.return_value.__iter__.return_value = file_data.splitlines()
-                    self.assertEqual(mount.fstab(), {'/tmp': {'device': 'swap',
-                                                              'device_fsck': '-',
-                                                              'fstype': 'tmpfs',
-                                                              'mount_at_boot': 'yes',
-                                                              'opts': ['size=2048m'],
-                                                              'pass_fsck': '-'}})
+        with patch.dict(mount.__grains__, {'kernel': 'SunOS'}), \
+                patch.object(os.path, 'isfile', mock), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
+            vfstab = mount.vfstab()
+            assert vfstab == {
+                '/tmp': {'device': 'swap',
+                         'device_fsck': '-',
+                         'fstype': 'tmpfs',
+                         'mount_at_boot': 'yes',
+                         'opts': ['size=2048m'],
+                         'pass_fsck': '-'}
+            }, vfstab
+
+    def test_filesystems(self):
+        '''
+        List the content of the filesystems
+        '''
+        file_data = textwrap.dedent('''\
+            #
+
+            ''')
+        mock = MagicMock(return_value=True)
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}), \
+                patch.object(os.path, 'isfile', mock), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
+            self.assertEqual(mount.filesystems(), {})
+
+        file_data = textwrap.dedent('''\
+            #
+            /home:
+                    dev             = /dev/hd1
+                    vfs             = jfs2
+                    log             = /dev/hd8
+                    mount           = true
+                    check           = true
+                    vol             = /home
+                    free            = false
+                    quota           = no
+
+            ''')
+        mock = MagicMock(return_value=True)
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}), \
+                patch.object(os.path, 'isfile', mock), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
+            fsyst = mount.filesystems()
+            test_fsyst = {'/home': {'dev': '/dev/hd1',
+                            'vfs': 'jfs2',
+                            'log': '/dev/hd8',
+                            'mount': 'true',
+                            'check': 'true',
+                            'vol': '/home',
+                            'free': 'false',
+                            'quota': 'no'}}
+            self.assertEqual(test_fsyst, fsyst)
 
     def test_rm_fstab(self):
         '''
@@ -160,6 +216,21 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                        mock_open(read_data=MOCK_SHELL_FILE)):
                 self.assertEqual(mount.set_fstab('A', 'B', 'C'), 'new')
 
+        mock = MagicMock(return_value=True)
+        with patch.object(os.path, 'isfile', mock):
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data=MOCK_SHELL_FILE)):
+                self.assertEqual(mount.set_fstab('B', 'A', 'C', 'D', 'F', 'G'),
+                                 'present')
+
+        mock = MagicMock(return_value=True)
+        with patch.object(os.path, 'isfile', mock):
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data=MOCK_SHELL_FILE)):
+                self.assertEqual(mount.set_fstab('B', 'A', 'C',
+                                                 not_change=True),
+                                 'present')
+
     def test_rm_automaster(self):
         '''
         Remove the mount point from the auto_master
@@ -183,11 +254,86 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                               mount.set_automaster,
                               'A', 'B', 'C')
 
+        mock = MagicMock(return_value=True)
+        mock_read = MagicMock(side_effect=OSError)
+        with patch.object(os.path, 'isfile', mock):
+            with patch.object(salt.utils.files, 'fopen', mock_read):
+                self.assertRaises(CommandExecutionError,
+                                  mount.set_automaster, 'A', 'B', 'C')
+
+        mock = MagicMock(return_value=True)
+        with patch.object(os.path, 'isfile', mock):
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data=MOCK_SHELL_FILE)):
+                self.assertEqual(mount.set_automaster('A', 'B', 'C'), 'new')
+
+        mock = MagicMock(return_value=True)
+        with patch.object(os.path, 'isfile', mock):
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data='/..A -fstype=C,D C:B')):
+                self.assertEqual(mount.set_automaster('A', 'B', 'C', 'D'),
+                                 'present')
+
+        mock = MagicMock(return_value=True)
+        with patch.object(os.path, 'isfile', mock):
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data='/..A -fstype=XX C:B')):
+                self.assertEqual(mount.set_automaster('A', 'B', 'C', 'D',
+                                                      not_change=True),
+                                 'present')
+
     def test_automaster(self):
         '''
         Test the list the contents of the fstab
         '''
         self.assertDictEqual(mount.automaster(), {})
+
+    def test_rm_filesystems(self):
+        '''
+        Remove the mount point from the filesystems
+        '''
+        file_data = textwrap.dedent('''\
+            #
+
+            ''')
+        mock = MagicMock(return_value=True)
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}), \
+                patch.object(os.path, 'isfile', mock), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
+            self.assertFalse(mount.rm_filesystems('name', 'device'))
+
+        file_data = textwrap.dedent('''\
+            #
+            /name:
+                    dev             = device
+                    vol             = /name
+
+            ''')
+
+        mock = MagicMock(return_value=True)
+        mock_fsyst = MagicMock(return_value=True)
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}), \
+                patch.object(os.path, 'isfile', mock), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
+            self.assertTrue(mount.rm_filesystems('/name', 'device'))
+
+    def test_set_filesystems(self):
+        '''
+        Tests to verify that this mount is represented in the filesystems,
+        change the mount to match the data passed, or add the mount
+        if it is not present.
+        '''
+        mock = MagicMock(return_value=False)
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}):
+            with patch.object(os.path, 'isfile', mock):
+                self.assertRaises(CommandExecutionError,
+                                  mount.set_filesystems, 'A', 'B', 'C')
+
+            mock_read = MagicMock(side_effect=OSError)
+            with patch.object(os.path, 'isfile', mock):
+                with patch.object(salt.utils.files, 'fopen', mock_read):
+                    self.assertRaises(CommandExecutionError,
+                                      mount.set_filesystems, 'A', 'B', 'C')
 
     def test_mount(self):
         '''
@@ -202,13 +348,64 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                    'stderr': True})
                     with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
                         self.assertTrue(mount.mount('name', 'device'))
+                        mock.assert_called_with('mount  device name ',
+                                                python_shell=False, runas=None)
+
+                    with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                        self.assertTrue(mount.mount('name', 'device', fstype='fstype'))
+                        mock.assert_called_with('mount  -t fstype device name ',
+                                                python_shell=False, runas=None)
 
                     mock = MagicMock(return_value={'retcode': False,
                                                    'stderr': False})
                     with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
                         self.assertTrue(mount.mount('name', 'device'))
 
-    def test_remount(self):
+        with patch.dict(mount.__grains__, {'os': 'AIX'}):
+            mock = MagicMock(return_value=True)
+            with patch.object(os.path, 'exists', mock):
+                mock = MagicMock(return_value=None)
+                with patch.dict(mount.__salt__, {'file.mkdir': None}):
+                    mock = MagicMock(return_value={'retcode': True,
+                                                   'stderr': True})
+                    with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                        self.assertTrue(mount.mount('name', 'device'))
+                        mock.assert_called_with('mount  device name ',
+                                                python_shell=False, runas=None)
+
+                    with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                        self.assertTrue(mount.mount('name', 'device', fstype='fstype'))
+                        mock.assert_called_with('mount  -v fstype device name ',
+                                                python_shell=False, runas=None)
+
+                    mock = MagicMock(return_value={'retcode': False,
+                                                   'stderr': False})
+                    with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                        self.assertTrue(mount.mount('name', 'device'))
+
+        with patch.dict(mount.__grains__, {'os': 'Linux'}):
+            mock = MagicMock(return_value=True)
+            with patch.object(os.path, 'exists', mock):
+                mock = MagicMock(return_value=None)
+                with patch.dict(mount.__salt__, {'file.mkdir': None}):
+                    mock = MagicMock(return_value={'retcode': True,
+                                                   'stderr': True})
+                    with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                        self.assertTrue(mount.mount('name', 'device'))
+                        mock.assert_called_with('mount -o defaults device name ',
+                                                python_shell=False, runas=None)
+
+                    with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                        self.assertTrue(mount.mount('name', 'device', fstype='fstype'))
+                        mock.assert_called_with('mount -o defaults -t fstype device name ',
+                                                python_shell=False, runas=None)
+
+                    mock = MagicMock(return_value={'retcode': False,
+                                                   'stderr': False})
+                    with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                        self.assertTrue(mount.mount('name', 'device'))
+
+    def test_remount_non_mounted(self):
         '''
         Attempt to remount a device, if the device is not already mounted, mount
         is called
@@ -219,6 +416,84 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 mock = MagicMock(return_value=True)
                 with patch.object(mount, 'mount', mock):
                     self.assertTrue(mount.remount('name', 'device'))
+
+        with patch.dict(mount.__grains__, {'os': 'AIX'}):
+            mock = MagicMock(return_value=[])
+            with patch.object(mount, 'active', mock):
+                mock = MagicMock(return_value=True)
+                with patch.object(mount, 'mount', mock):
+                    self.assertTrue(mount.remount('name', 'device'))
+
+        with patch.dict(mount.__grains__, {'os': 'Linux'}):
+            mock = MagicMock(return_value=[])
+            with patch.object(mount, 'active', mock):
+                mock = MagicMock(return_value=True)
+                with patch.object(mount, 'mount', mock):
+                    self.assertTrue(mount.remount('name', 'device'))
+
+    def test_remount_already_mounted_no_fstype(self):
+        '''
+        Attempt to remount a device already mounted that do not provides
+        fstype
+        '''
+        with patch.dict(mount.__grains__, {'os': 'MacOS'}):
+            mock = MagicMock(return_value=['name'])
+            with patch.object(mount, 'active', mock):
+                mock = MagicMock(return_value={'retcode': 0})
+                with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                    self.assertTrue(mount.remount('name', 'device'))
+                    mock.assert_called_with('mount -u -o noowners device name ',
+                                            python_shell=False, runas=None)
+
+        with patch.dict(mount.__grains__, {'os': 'AIX'}):
+            mock = MagicMock(return_value=['name'])
+            with patch.object(mount, 'active', mock):
+                mock = MagicMock(return_value={'retcode': 0})
+                with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                    self.assertTrue(mount.remount('name', 'device'))
+                    mock.assert_called_with('mount -o remount device name ',
+                                            python_shell=False, runas=None)
+
+        with patch.dict(mount.__grains__, {'os': 'Linux'}):
+            mock = MagicMock(return_value=['name'])
+            with patch.object(mount, 'active', mock):
+                mock = MagicMock(return_value={'retcode': 0})
+                with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                    self.assertTrue(mount.remount('name', 'device'))
+                    mock.assert_called_with('mount -o defaults,remount device name ',
+                                            python_shell=False, runas=None)
+
+    def test_remount_already_mounted_with_fstype(self):
+        '''
+        Attempt to remount a device already mounted that do not provides
+        fstype
+        '''
+        with patch.dict(mount.__grains__, {'os': 'MacOS'}):
+            mock = MagicMock(return_value=['name'])
+            with patch.object(mount, 'active', mock):
+                mock = MagicMock(return_value={'retcode': 0})
+                with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                    self.assertTrue(mount.remount('name', 'device', fstype='type'))
+                    mock.assert_called_with('mount -u -o noowners -t type device name ',
+                                            python_shell=False, runas=None)
+
+        with patch.dict(mount.__grains__, {'os': 'AIX'}):
+            mock = MagicMock(return_value=['name'])
+            with patch.object(mount, 'active', mock):
+                mock = MagicMock(return_value={'retcode': 0})
+                with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                    self.assertTrue(mount.remount('name', 'device', fstype='type'))
+                    mock.assert_called_with('mount -o remount -v type device name ',
+                                            python_shell=False, runas=None)
+
+        with patch.dict(mount.__grains__, {'os': 'Linux'}):
+            mock = MagicMock(return_value=['name'])
+            with patch.object(mount, 'active', mock):
+                mock = MagicMock(return_value={'retcode': 0})
+                with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                    self.assertTrue(mount.remount('name', 'device', fstype='type'))
+                    mock.assert_called_with('mount -o defaults,remount -t type device name ',
+                                            python_shell=False, runas=None)
 
     def test_umount(self):
         '''
@@ -273,31 +548,52 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Return a dict containing information on active swap
         '''
-
-        file_data = '\n'.join(['Filename Type Size Used Priority',
-                               '/dev/sda1 partition 31249404 4100 -1'])
+        file_data = textwrap.dedent('''\
+            Filename Type Size Used Priority
+            /dev/sda1 partition 31249404 4100 -1
+            ''')
         with patch.dict(mount.__grains__, {'os': '', 'kernel': ''}):
-            with patch('salt.utils.files.fopen',
-                       mock_open(read_data=file_data),
-                       create=True) as m:
-                m.return_value.__iter__.return_value = file_data.splitlines()
+            with patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
+                swaps = mount.swaps()
+                assert swaps == {
+                    '/dev/sda1': {
+                        'priority': '-1',
+                        'size': '31249404',
+                        'type': 'partition',
+                        'used': '4100'}
+                }, swaps
 
-                self.assertDictEqual(mount.swaps(), {'/dev/sda1':
-                                                     {'priority': '-1',
-                                                      'size': '31249404',
-                                                      'type': 'partition',
-                                                      'used': '4100'}})
-
-        file_data = '\n'.join(['Device Size Used Unknown Unknown Priority',
-                               '/dev/sda1 31249404 4100 unknown unknown -1'])
+        file_data = textwrap.dedent('''\
+            Device Size Used Unknown Unknown Priority
+            /dev/sda1 31249404 4100 unknown unknown -1
+            ''')
         mock = MagicMock(return_value=file_data)
-        with patch.dict(mount.__grains__, {'os': 'OpenBSD', 'kernel': 'OpenBSD'}):
-            with patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
-                self.assertDictEqual(mount.swaps(), {'/dev/sda1':
-                                                     {'priority': '-1',
-                                                      'size': '31249404',
-                                                      'type': 'partition',
-                                                      'used': '4100'}})
+        with patch.dict(mount.__grains__, {'os': 'OpenBSD', 'kernel': 'OpenBSD'}), \
+                patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
+            swaps = mount.swaps()
+            assert swaps == {
+                '/dev/sda1': {
+                    'priority': '-1',
+                    'size': '31249404',
+                    'type': 'partition',
+                    'used': '4100'}
+            }, swaps
+
+        file_data = textwrap.dedent('''\
+            device              maj,min        total       free
+            /dev/hd6              10,  2     11776MB     11765MB
+            ''')
+        mock = MagicMock(return_value=file_data)
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}), \
+                patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
+            swaps = mount.swaps()
+            assert swaps == {
+                '/dev/hd6': {
+                    'priority': '-',
+                    'size': 12058624,
+                    'type': 'device',
+                    'used': 11264}
+            }, swaps
 
     def test_swapon(self):
         '''
@@ -318,6 +614,27 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(side_effect=[{}, {'name': 'name'}])
         with patch.dict(mount.__grains__, {'kernel': ''}):
+            with patch.object(mount, 'swaps', mock):
+                mock = MagicMock(return_value=None)
+                with patch.dict(mount.__salt__, {'cmd.run': mock}):
+                    self.assertEqual(mount.swapon('name'), {'stats': 'name',
+                                                            'new': True})
+        ## effects of AIX
+        mock = MagicMock(return_value={'name': 'name'})
+        with patch.dict(mount.__grains__, {'kernel': 'AIX'}):
+            with patch.object(mount, 'swaps', mock):
+                self.assertEqual(mount.swapon('name'),
+                                 {'stats': 'name', 'new': False})
+
+        mock = MagicMock(return_value={})
+        with patch.dict(mount.__grains__, {'kernel': 'AIX'}):
+            with patch.object(mount, 'swaps', mock):
+                mock = MagicMock(return_value=None)
+                with patch.dict(mount.__salt__, {'cmd.run': mock}):
+                    self.assertEqual(mount.swapon('name', False), {})
+
+        mock = MagicMock(side_effect=[{}, {'name': 'name'}])
+        with patch.dict(mount.__grains__, {'kernel': 'AIX'}):
             with patch.object(mount, 'swaps', mock):
                 mock = MagicMock(return_value=None)
                 with patch.dict(mount.__salt__, {'cmd.run': mock}):
@@ -349,14 +666,38 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(mount.__salt__, {'cmd.run': mock}):
                         self.assertTrue(mount.swapoff('name'))
 
+        # check on AIX
+        mock = MagicMock(return_value={})
+        with patch.dict(mount.__grains__, {'kernel': 'AIX'}):
+            with patch.object(mount, 'swaps', mock):
+                self.assertEqual(mount.swapoff('name'), None)
+
+        mock = MagicMock(return_value={'name': 'name'})
+        with patch.dict(mount.__grains__, {'kernel': 'AIX'}):
+            with patch.object(mount, 'swaps', mock):
+                with patch.dict(mount.__grains__, {'os': 'test'}):
+                    mock = MagicMock(return_value=None)
+                    with patch.dict(mount.__salt__, {'cmd.run': mock}):
+                        self.assertFalse(mount.swapoff('name'))
+
+        mock = MagicMock(side_effect=[{'name': 'name'}, {}])
+        with patch.dict(mount.__grains__, {'kernel': 'AIX'}):
+            with patch.object(mount, 'swaps', mock):
+                with patch.dict(mount.__grains__, {'os': 'test'}):
+                    mock = MagicMock(return_value=None)
+                    with patch.dict(mount.__salt__, {'cmd.run': mock}):
+                        self.assertTrue(mount.swapoff('name'))
+
     def test_is_mounted(self):
         '''
         Provide information if the path is mounted
         '''
         mock = MagicMock(return_value={})
-        with patch.object(mount, 'active', mock):
+        with patch.object(mount, 'active', mock), \
+                patch.dict(mount.__grains__, {'kernel': ''}):
             self.assertFalse(mount.is_mounted('name'))
 
         mock = MagicMock(return_value={'name': 'name'})
-        with patch.object(mount, 'active', mock):
+        with patch.object(mount, 'active', mock), \
+                patch.dict(mount.__grains__, {'kernel': ''}):
             self.assertTrue(mount.is_mounted('name'))

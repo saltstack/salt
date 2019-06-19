@@ -2,7 +2,7 @@
 '''
 Subversion SCM
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import re
@@ -11,6 +11,7 @@ import re
 import salt.utils.args
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 _INI_RE = re.compile(r"^([^:]+):\s+(\S.*)$", re.M)
 
@@ -435,13 +436,13 @@ def status(cwd, targets=None, user=None, username=None, password=None, *opts):
 
 
 def export(cwd,
-             remote,
-             target=None,
-             user=None,
-             username=None,
-             password=None,
-             revision='HEAD',
-             *opts):
+           remote,
+           target=None,
+           user=None,
+           username=None,
+           password=None,
+           revision='HEAD',
+           *opts):
     '''
     Create an unversioned copy of a tree.
 
@@ -476,5 +477,5 @@ def export(cwd,
     if target:
         opts += (target,)
     revision_args = '-r'
-    opts += (revision_args, str(revision),)
+    opts += (revision_args, six.text_type(revision),)
     return _run_svn('export', cwd, user, username, password, opts)

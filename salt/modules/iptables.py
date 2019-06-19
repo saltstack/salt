@@ -5,28 +5,27 @@ Support for iptables
 Configuration Options
 ---------------------
 
-The following options can be set in the :ref:`minion config
-<configuration-salt-minion>`, :ref:`minion grains<configuration-minion-grains>`
-, :ref:`minion pillar<configuration-minion-pillar>`, or
-`master config<configuration-salt-master>`.
+The following options can be set in the minion config, grains, pillar, or
+master config. The configuration is read using :py:func:`config.get
+<salt.modules.config.get>`.
 
 - ``iptables.save_filters``: List of REGEX strings to FILTER OUT matching lines
 
-    This is useful for filtering out chains, rules, etc that you do not
-    wish to persist, such as ephemeral Docker rules.
+  This is useful for filtering out chains, rules, etc that you do not wish to
+  persist, such as ephemeral Docker rules.
 
-    The default is to not filter out anything.
+  The default is to not filter out anything.
 
-    .. code-block:: yaml
+  .. code-block:: yaml
 
-        iptables.save_filters:
-           - "-j CATTLE_PREROUTING"
-           - "-j DOCKER"
-           - "-A POSTROUTING"
-           - "-A CATTLE_POSTROUTING"
-           - "-A FORWARD"
+      iptables.save_filters:
+        - "-j CATTLE_PREROUTING"
+        - "-j DOCKER"
+        - "-A POSTROUTING"
+        - "-A CATTLE_POSTROUTING"
+        - "-A FORWARD"
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -101,7 +100,7 @@ def _conf(family='ipv4'):
             return '/etc/iptables/rules.v6'
         else:
             return '/etc/iptables/rules.v4'
-    elif __grains__['os'] == 'Gentoo':
+    elif __grains__['os_family'] == 'Gentoo':
         if family == 'ipv6':
             return '/var/lib/ip6tables/rules-save'
         else:
@@ -160,11 +159,11 @@ def _regex_iptables_save(cmd_output, filters=None):
                 __context__['iptables.save_filters']\
                     .append(re.compile(pattern))
             except re.error as e:
-                log.warning('Skipping regex rule: \'{0}\': {1}'
-                            .format(pattern, e))
+                log.warning('Skipping regex rule: \'%s\': %s',
+                            pattern, e)
                 continue
 
-    if len(__context__['iptables.save_filters']) > 0:
+    if __context__['iptables.save_filters']:
         # line by line get rid of any regex matches
         _filtered_cmd_output = \
             [line for line in cmd_output.splitlines(True)
@@ -213,6 +212,14 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     To pass in jump options that doesn't take arguments, pass in an empty
     string.
 
+    .. note::
+
+        Whereas iptables will accept ``-p``, ``--proto[c[o[l]]]`` as synonyms
+        of ``--protocol``, if ``--proto`` appears in an iptables command after
+        the appearance of ``-m policy``, it is interpreted as the ``--proto``
+        option of the policy extension (see the iptables-extensions(8) man
+        page).
+
     CLI Examples:
 
     .. code-block:: bash
@@ -243,7 +250,6 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
         salt '*' iptables.build_rule filter INPUT command=I position=3 \\
             full=True match=state connstate=RELATED,ESTABLISHED jump=ACCEPT \\
             family=ipv6
-
     '''
     if 'target' in kwargs:
         kwargs['jump'] = kwargs.pop('target')
@@ -257,7 +263,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             del kwargs[ignore]
 
     rule = []
-    proto = False
+    protocol = False
     bang_not_pat = re.compile(r'(!|not)\s?')
 
     def maybe_add_negation(arg):
@@ -281,12 +287,15 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
         rule.append('{0}-o {1}'.format(maybe_add_negation('of'), kwargs['of']))
         del kwargs['of']
 
-    for proto_arg in ('protocol', 'proto'):
-        if proto_arg in kwargs:
-            if not proto:
-                rule.append('{0}-p {1}'.format(maybe_add_negation(proto_arg), kwargs[proto_arg]))
-                proto = True
-            del kwargs[proto_arg]
+    if 'proto' in kwargs and kwargs.get('match') != 'policy':
+        kwargs['protocol'] = kwargs['proto']
+        del kwargs['proto']
+        # Handle the case 'proto' in kwargs and kwargs.get('match') == 'policy' below
+    if 'protocol' in kwargs:
+        if not protocol:
+            rule.append('{0}-p {1}'.format(maybe_add_negation('protocol'), kwargs['protocol']))
+            protocol = True
+        del kwargs['protocol']
 
     if 'match' in kwargs:
         match_value = kwargs['match']
@@ -297,6 +306,9 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             if 'name_' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
                 rule.append('--name {0}'.format(kwargs['name_']))
                 del kwargs['name_']
+        if 'proto' in kwargs and kwargs.get('match') == 'policy':
+            rule.append('{0}--proto {1}'.format(maybe_add_negation('proto'), kwargs['proto']))
+            del kwargs['proto']
         del kwargs['match']
 
     if 'match-set' in kwargs:
@@ -330,8 +342,8 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
         if multiport_arg in kwargs:
             if '-m multiport' not in rule:
                 rule.append('-m multiport')
-                if not proto:
-                    return 'Error: proto must be specified'
+                if not protocol:
+                    return 'Error: protocol must be specified'
 
             mp_value = kwargs[multiport_arg]
             if isinstance(mp_value, list):
@@ -658,7 +670,7 @@ def save(filename=None, family='ipv4'):
     if _conf() and not filename:
         filename = _conf(family)
 
-    log.debug('Saving rules to {0}'.format(filename))
+    log.debug('Saving rules to %s', filename)
 
     parent_dir = os.path.dirname(filename)
     if not os.path.isdir(parent_dir):
@@ -667,7 +679,7 @@ def save(filename=None, family='ipv4'):
     ipt = __salt__['cmd.run'](cmd)
 
     # regex out the output if configured with filters
-    if len(_conf_save_filters()) > 0:
+    if _conf_save_filters():
         ipt = _regex_iptables_save(ipt)
 
     out = __salt__['file.write'](filename, ipt)
@@ -850,10 +862,7 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
     cmd = '{0} {1} -t {2} -A {3} {4}'.format(
             _iptables_cmd(family), wait, table, chain, rule)
     out = __salt__['cmd.run'](cmd)
-    if len(out) == 0:
-        return True
-    else:
-        return False
+    return not out
 
 
 def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
@@ -987,6 +996,7 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
     table = ''
     parser = _parser()
     for line in rules.splitlines():
+        line = salt.utils.stringutils.to_unicode(line)
         if line.startswith('*'):
             table = line.replace('*', '')
             ret[table] = {}
@@ -1022,11 +1032,8 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
             if args[-1].startswith('-'):
                 args.append('')
             parsed_args = []
-            if sys.version.startswith('2.6'):
-                (opts, leftover_args) = parser.parse_args(args)
-                parsed_args = vars(opts)
-            else:
-                parsed_args = vars(parser.parse_args(args))
+            opts, _ = parser.parse_known_args(args)
+            parsed_args = vars(opts)
             ret_args = {}
             chain = parsed_args['append']
             for arg in parsed_args:
@@ -1041,9 +1048,9 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
 
 def _parser():
     '''
-    This function contains _all_ the options I could find in man 8 iptables,
-    listed in the first section that I found them in. They will not all be used
-    by all parts of the module; use them intelligently and appropriately.
+    This function attempts to list all the options documented in the
+    iptables(8) and iptables-extensions(8) man pages.  They will not all be
+    used by all parts of the module; use them intelligently and appropriately.
     '''
     add_arg = None
     if sys.version.startswith('2.6'):
@@ -1092,6 +1099,8 @@ def _parser():
     add_arg('--ahres', dest='ahres', action='append')
     ## bpf
     add_arg('--bytecode', dest='bytecode', action='append')
+    ## cgroup
+    add_arg('--cgroup', dest='cgroup', action='append')
     ## cluster
     add_arg('--cluster-total-nodes',
             dest='cluster-total-nodes',

@@ -2,7 +2,7 @@
 '''
 Support for pam
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -32,9 +32,9 @@ def _parse(contents=None, file_name=None):
         pass
     elif file_name and os.path.exists(file_name):
         with salt.utils.files.fopen(file_name, 'r') as ifile:
-            contents = ifile.read()
+            contents = salt.utils.stringutils.to_unicode(ifile.read())
     else:
-        log.error('File "{0}" does not exist'.format(file_name))
+        log.error('File "%s" does not exist', file_name)
         return False
 
     rules = []

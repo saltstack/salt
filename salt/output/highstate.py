@@ -11,35 +11,46 @@ Two configurations can be set to modify the highstate outputter. These values
 can be set in the master config to change the output of the ``salt`` command or
 set in the minion config to change the output of the ``salt-call`` command.
 
-state_verbose:
+state_verbose
     By default `state_verbose` is set to `True`, setting this to `False` will
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
 state_output:
     The highstate outputter has six output modes,
     ``full``, ``terse``, ``mixed``, ``changes`` and ``filter``
+
     * The default is set to ``full``, which will display many lines of detailed
       information for each executed chunk.
+
     * If ``terse`` is used, then the output is greatly simplified and shown in
       only one line.
+
     * If ``mixed`` is used, then terse output will be used unless a state
       failed, in which case full output will be used.
+
     * If ``changes`` is used, then terse output will be used if there was no
       error and no changes, otherwise full output will be used.
+
     * If ``filter`` is used, then either or both of two different filters can be
       used: ``exclude`` or ``terse``.
+
         * for ``exclude``, state.highstate expects a list of states to be excluded (or ``None``)
           followed by ``True`` for terse output or ``False`` for regular output.
           Because of parsing nuances, if only one of these is used, it must still
           contain a comma. For instance: `exclude=True,`.
+
         * for ``terse``, state.highstate expects simply ``True`` or ``False``.
+
       These can be set as such from the command line, or in the Salt config as
       `state_output_exclude` or `state_output_terse`, respectively.
+
     The output modes have one modifier:
+
     ``full_id``, ``terse_id``, ``mixed_id``, ``changes_id`` and ``filter_id``
     If ``_id`` is used, then the corresponding form will be used, but the value for ``name``
     will be drawn from the state ID. This is useful for cases where the name
     value might be very long and hard to read.
+
 state_tabular:
     If `state_output` uses the terse output, set this to `True` for an aligned
     output format.  If you wish to use a custom format, this can be set to a
@@ -105,13 +116,14 @@ Example output with no special settings in configuration files:
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import pprint
+import re
 import textwrap
 
 # Import salt libs
 import salt.utils.color
+import salt.utils.data
 import salt.utils.stringutils
 import salt.output
-from salt.utils.locales import sdecode
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -126,8 +138,23 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     The HighState Outputter is only meant to be used with the state.highstate
     function, or a function that returns highstate return data.
     '''
+    if len(data.keys()) == 1:
+        # account for nested orchs via saltutil.runner
+        if 'return' in data:
+            data = data['return']
+
+        # account for envelope data if being passed lookup_jid ret
+        if isinstance(data, dict):
+            _data = next(iter(data.values()))
+            if 'jid' in _data and 'fun' in _data:
+                data = _data['return']
+
+    # output() is recursive, if we aren't passed a dict just return it
+    if isinstance(data, int) or isinstance(data, six.string_types):
+        return data
+
     # Discard retcode in dictionary as present in orchestrate data
-    local_masters = [key for key in data.keys() if key.endswith('.local_master')]
+    local_masters = [key for key in data.keys() if key.endswith('_master')]
     orchestrator_output = 'retcode' in data.keys() and len(local_masters) == 1
 
     if orchestrator_output:
@@ -141,8 +168,9 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     if 'data' in data:
         data = data.pop('data')
 
+    indent_level = kwargs.get('indent_level', 1)
     ret = [
-        _format_host(host, hostdata)[0]
+        _format_host(host, hostdata, indent_level=indent_level)[0]
         for host, hostdata in six.iteritems(data)
     ]
     if ret:
@@ -155,8 +183,12 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     return ''
 
 
-def _format_host(host, data):
-    host = sdecode(host)
+def _format_host(host, data, indent_level=1):
+    '''
+    Main highstate formatter. can be called recursively if a nested highstate
+    contains other highstates (ie in an orchestration)
+    '''
+    host = salt.utils.data.decode(host)
 
     colors = salt.utils.color.get_colors(
             __opts__.get('color'),
@@ -183,7 +215,9 @@ def _format_host(host, data):
                       .format(hcolor, colors)))
         for err in data:
             if strip_colors:
-                err = salt.output.strip_esc_sequence(sdecode(err))
+                err = salt.output.strip_esc_sequence(
+                    salt.utils.data.decode(err)
+                )
             hstrs.append(('{0}----------\n    {1}{2[ENDC]}'
                           .format(hcolor, err, colors)))
     if isinstance(data, dict):
@@ -215,15 +249,17 @@ def _format_host(host, data):
                 try:
                     rdurations.append(float(rduration))
                 except ValueError:
-                    log.error('Cannot parse a float from duration {0}'
-                              .format(ret.get('duration', 0)))
+                    log.error('Cannot parse a float from duration %s', ret.get('duration', 0))
 
             tcolor = colors['GREEN']
-            orchestration = ret.get('__orchestration__', False)
-            schanged, ctext = _format_changes(ret['changes'], orchestration)
-            if not ctext and 'pchanges' in ret:
-                schanged, ctext = _format_changes(ret['pchanges'], orchestration)
-            nchanges += 1 if schanged else 0
+            if ret.get('name') in ['state.orch', 'state.orchestrate', 'state.sls']:
+                nested = output(ret['changes']['return'], indent_level=indent_level+1)
+                ctext = re.sub('^', ' ' * 14 * indent_level, '\n'+nested, flags=re.MULTILINE)
+                schanged = True
+                nchanges += 1
+            else:
+                schanged, ctext = _format_changes(ret['changes'])
+                nchanges += 1 if schanged else 0
 
             # Skip this state if it was successful & diff output was requested
             if __opts__.get('state_output_diff', False) and \
@@ -246,7 +282,7 @@ def _format_host(host, data):
                 tcolor = colors['LIGHT_YELLOW']
 
             state_output = __opts__.get('state_output', 'full').lower()
-            comps = [sdecode(comp) for comp in tname.split('_|-')]
+            comps = tname.split('_|-')
 
             if state_output.endswith('_id'):
                 # Swap in the ID for the name. Refs #35137
@@ -315,15 +351,13 @@ def _format_host(host, data):
             # be sure that ret['comment'] is utf-8 friendly
             try:
                 if not isinstance(ret['comment'], six.text_type):
-                    if six.PY2:
-                        ret['comment'] = six.text_type(ret['comment']).decode('utf-8')
-                    else:
-                        ret['comment'] = salt.utils.stringutils.to_str(ret['comment'])
+                    ret['comment'] = six.text_type(ret['comment'])
             except UnicodeDecodeError:
-                # but try to continue on errors
-                pass
+                # If we got here, we're on Python 2 and ret['comment'] somehow
+                # contained a str type with unicode content.
+                ret['comment'] = salt.utils.stringutils.to_unicode(ret['comment'])
             try:
-                comment = sdecode(ret['comment'])
+                comment = salt.utils.data.decode(ret['comment'])
                 comment = comment.strip().replace(
                         '\n',
                         '\n' + ' ' * 14)
@@ -356,7 +390,7 @@ def _format_host(host, data):
                 'tcolor': tcolor,
                 'comps': comps,
                 'ret': ret,
-                'comment': sdecode(comment),
+                'comment': salt.utils.data.decode(comment),
                 # This nukes any trailing \n and indents the others.
                 'colors': colors
             }
@@ -481,20 +515,12 @@ def _nested_changes(changes):
     '''
     Print the changes data using the nested outputter
     '''
-    global __opts__  # pylint: disable=W0601
-
-    opts = __opts__.copy()
-    # Pass the __opts__ dict. The loader will splat this modules __opts__ dict
-    # anyway so have to restore it after the other outputter is done
-    if __opts__['color']:
-        __opts__['color'] = 'CYAN'
     ret = '\n'
     ret += salt.output.out_format(
             changes,
             'nested',
             __opts__,
             nested_indent=14)
-    __opts__ = opts
     return ret
 
 

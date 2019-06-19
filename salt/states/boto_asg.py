@@ -193,13 +193,14 @@ Overriding the alarm values on the resource:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import hashlib
 import logging
 import copy
 
 # Import Salt libs
 import salt.utils.dictupdate as dictupdate
+import salt.utils.stringutils
 from salt.ext import six
 from salt.exceptions import SaltInvocationError
 
@@ -461,17 +462,17 @@ def present(
             profile
         )
         vpc_id = vpc_id.get('vpc_id')
-        log.debug('Auto Scaling Group {0} is associated with VPC ID {1}'
-                  .format(name, vpc_id))
+        log.debug('Auto Scaling Group %s is associated with VPC ID %s',
+                  name, vpc_id)
     else:
         vpc_id = None
-        log.debug('Auto Scaling Group {0} has no VPC Association'
-                  .format(name))
+        log.debug('Auto Scaling Group %s has no VPC Association', name)
     # if launch_config is defined, manage the launch config first.
     # hash the launch_config dict to create a unique name suffix and then
     # ensure it is present
     if launch_config:
-        launch_config_name = launch_config_name + '-' + hashlib.md5(str(launch_config)).hexdigest()
+        launch_config_bytes = salt.utils.stringutils.to_bytes(str(launch_config))  # future lint: disable=blacklisted-function
+        launch_config_name = launch_config_name + '-' + hashlib.md5(launch_config_bytes).hexdigest()
         args = {
             'name': launch_config_name,
             'region': region,
@@ -486,9 +487,10 @@ def present(
                 iargs = {'ami_name': image_name, 'region': region, 'key': key,
                          'keyid': keyid, 'profile': profile}
                 image_ids = __salt__['boto_ec2.find_images'](**iargs)
-                if len(image_ids):
+                if image_ids:  # find_images() returns False on failure
                     launch_config[index]['image_id'] = image_ids[0]
                 else:
+                    log.warning("Couldn't find AMI named `%s`, passing literally.", image_name)
                     launch_config[index]['image_id'] = image_name
                 del launch_config[index]['image_name']
                 break
@@ -628,8 +630,7 @@ def present(
             if asg_property in asg:
                 _value = __utils__['boto3.ordered'](asg[asg_property])
                 if not value == _value:
-                    log_msg = '{0} asg_property differs from {1}'
-                    log.debug(log_msg.format(value, _value))
+                    log.debug('%s asg_property differs from %s', value, _value)
                     proposed.setdefault('old', {}).update({asg_property: _value})
                     proposed.setdefault('new', {}).update({asg_property: value})
                     need_update = True
@@ -715,7 +716,7 @@ def _determine_termination_policies(termination_policies, termination_policies_f
     pillar_termination_policies = copy.deepcopy(
         __salt__['config.option'](termination_policies_from_pillar, [])
     )
-    if not termination_policies and len(pillar_termination_policies) > 0:
+    if not termination_policies and pillar_termination_policies:
         termination_policies = pillar_termination_policies
     return termination_policies
 
@@ -727,7 +728,7 @@ def _determine_scaling_policies(scaling_policies, scaling_policies_from_pillar):
     pillar_scaling_policies = copy.deepcopy(
         __salt__['config.option'](scaling_policies_from_pillar, {})
     )
-    if not scaling_policies and len(pillar_scaling_policies) > 0:
+    if not scaling_policies and pillar_scaling_policies:
         scaling_policies = pillar_scaling_policies
     return scaling_policies
 
@@ -756,7 +757,7 @@ def _determine_notification_info(notification_arn,
         __salt__['config.option'](notification_arn_from_pillar, {})
     )
     pillar_arn = None
-    if len(pillar_arn_list) > 0:
+    if pillar_arn_list:
         pillar_arn = pillar_arn_list[0]
     pillar_notification_types = copy.deepcopy(
         __salt__['config.option'](notification_types_from_pillar, {})

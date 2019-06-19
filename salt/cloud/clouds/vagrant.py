@@ -10,7 +10,7 @@ Use of this module requires some configuration in cloud profile and provider
 files as described in the
 :ref:`Getting Started with Vagrant <getting-started-with-vagrant>` documentation.
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 
 '''
@@ -25,13 +25,8 @@ import tempfile
 import salt.utils
 import salt.config as config
 import salt.client
-import salt.ext.six as six
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
-from salt.exceptions import SaltCloudException, SaltCloudSystemExit, \
-    SaltInvocationError
+from salt._compat import ipaddress
+from salt.exceptions import SaltCloudException, SaltCloudSystemExit, SaltInvocationError
 
 # Get logging started
 log = logging.getLogger(__name__)

@@ -46,10 +46,22 @@ def start_engines(opts, proc_mgr, proxy=None):
             engine, engine_opts = next(iter(engine.items()))
         else:
             engine_opts = None
-        fun = '{0}.start'.format(engine)
+        engine_name = None
+        if engine_opts is not None and 'engine_module' in engine_opts:
+            fun = '{0}.start'.format(engine_opts['engine_module'])
+            engine_name = engine
+            del engine_opts['engine_module']
+        else:
+            fun = '{0}.start'.format(engine)
         if fun in engines:
             start_func = engines[fun]
-            name = '{0}.Engine({1})'.format(__name__, start_func.__module__)
+            if engine_name:
+                name = '{0}.Engine({1}-{2})'.format(__name__,
+                                                    start_func.__module__,
+                                                    engine_name)
+            else:
+                name = '{0}.Engine({1})'.format(__name__,
+                                                start_func.__module__)
             log.info('Starting Engine %s', name)
             proc_mgr.add_process(
                     Engine,
@@ -69,11 +81,11 @@ class Engine(SignalHandlingMultiprocessingProcess):
     '''
     Execute the given engine in a new process
     '''
-    def __init__(self, opts, fun, config, funcs, runners, proxy, log_queue=None):
+    def __init__(self, opts, fun, config, funcs, runners, proxy, **kwargs):
         '''
         Set up the process executor
         '''
-        super(Engine, self).__init__(log_queue=log_queue)
+        super(Engine, self).__init__(**kwargs)
         self.opts = opts
         self.config = config
         self.fun = fun
@@ -93,17 +105,21 @@ class Engine(SignalHandlingMultiprocessingProcess):
             state['funcs'],
             state['runners'],
             state['proxy'],
-            log_queue=state['log_queue']
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
         )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'fun': self.fun,
-                'config': self.config,
-                'funcs': self.funcs,
-                'runners': self.runners,
-                'proxy': self.proxy,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'fun': self.fun,
+            'config': self.config,
+            'funcs': self.funcs,
+            'runners': self.runners,
+            'proxy': self.proxy,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def run(self):
         '''
@@ -127,4 +143,7 @@ class Engine(SignalHandlingMultiprocessingProcess):
         try:
             self.engine[self.fun](**kwargs)
         except Exception as exc:
-            log.critical('Engine %s could not be started! Error: %s', self.engine, exc)
+            log.critical(
+                'Engine \'%s\' could not be started!',
+                self.fun.split('.')[0], exc_info=True
+            )

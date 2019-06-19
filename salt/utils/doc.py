@@ -3,9 +3,14 @@
 Functions for analyzing/parsing docstrings
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import re
+
+import salt.utils.data
 from salt.ext import six
+
+log = logging.getLogger(__name__)
 
 
 def strip_rst(docs):
@@ -13,18 +18,29 @@ def strip_rst(docs):
     Strip/replace reStructuredText directives in docstrings
     '''
     for func, docstring in six.iteritems(docs):
+        log.debug('Stripping docstring for %s', func)
         if not docstring:
             continue
-        docstring_new = re.sub(r' *.. code-block:: \S+\n{1,2}',
-                               '', docstring)
-        docstring_new = re.sub('.. note::',
-                               'Note:', docstring_new)
-        docstring_new = re.sub('.. warning::',
-                               'Warning:', docstring_new)
-        docstring_new = re.sub('.. versionadded::',
-                               'New in version', docstring_new)
-        docstring_new = re.sub('.. versionchanged::',
-                               'Changed in version', docstring_new)
+        docstring_new = docstring if six.PY3 else salt.utils.data.encode(docstring)
+        for regex, repl in (
+                (r' *.. code-block:: \S+\n{1,2}', ''),
+                ('.. note::', 'Note:'),
+                ('.. warning::', 'Warning:'),
+                ('.. versionadded::', 'New in version'),
+                ('.. versionchanged::', 'Changed in version')):
+            if six.PY2:
+                regex = salt.utils.data.encode(regex)
+                repl = salt.utils.data.encode(repl)
+            try:
+                docstring_new = re.sub(regex, repl, docstring_new)
+            except Exception:
+                log.debug(
+                    'Exception encountered while matching regex %r to '
+                    'docstring for function %s', regex, func,
+                    exc_info=True
+                )
+        if six.PY2:
+            docstring_new = salt.utils.data.decode(docstring_new)
         if docstring != docstring_new:
             docs[func] = docstring_new
     return docs

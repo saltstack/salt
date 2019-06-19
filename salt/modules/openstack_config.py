@@ -9,7 +9,7 @@ Modify, retrieve, or delete values from OpenStack configuration files.
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import shlex
 
 try:
@@ -26,6 +26,7 @@ else:
     _quote = None
 
 # Import Salt libs
+from salt.ext import six
 import salt.utils.decorators.path
 import salt.exceptions
 
@@ -72,7 +73,7 @@ def set_(filename, section, parameter, value):
     filename = _quote(filename)
     section = _quote(section)
     parameter = _quote(parameter)
-    value = _quote(str(value))
+    value = _quote(six.text_type(value))
 
     result = __salt__['cmd.run_all'](
             'openstack-config --set {0} {1} {2} {3}'.format(

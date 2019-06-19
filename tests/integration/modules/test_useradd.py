@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import string
 import random
 
@@ -102,7 +102,7 @@ class UseraddModuleTestLinux(ModuleCase):
             uid_info = self.run_function('user.info', [name])
             self.assertIn(primary_group, uid_info['groups'])
 
-        except:
+        except Exception:
             self.run_function('user.delete', [name])
             raise
 
@@ -117,71 +117,133 @@ class UseraddModuleTestWindows(ModuleCase):
             random.choice(string.ascii_uppercase + string.digits)
             for x in range(size))
 
+    def setUp(self):
+        self.user_name = self.__random_string()
+        self.group_name = self.__random_string()
+
+    def tearDown(self):
+        self.run_function('user.delete', [self.user_name, True, True])
+        self.run_function('group.delete', [self.group_name])
+
+    def _add_user(self):
+        '''
+        helper class to add user
+        '''
+        if self.run_function('user.add', [self.user_name]) is False:
+            # Skip because creating is not what we're testing here
+            self.skipTest('Failed to create user')
+
+    def _add_group(self):
+        '''
+        helper class to add group
+        '''
+        if self.run_function('group.add', [self.group_name]) is False:
+            # Skip because creating is not what we're testing here
+            self.skipTest('Failed to create group')
+
     def test_add_user(self):
         '''
         Test adding a user
         '''
-        user_name = self.__random_string()
-
-        try:
-            if self.run_function('user.add', [user_name]) is False:
-                self.run_function('user.delete', [user_name, True, True])
-                self.skipTest('Failed to create user')
-
-            user_list = self.run_function('user.list_users')
-            self.assertIn(user_name, user_list)
-
-        except AssertionError:
-            raise
-
-        finally:
-            self.run_function('user.delete', [user_name, True, True])
+        self._add_user()
+        user_list = self.run_function('user.list_users')
+        self.assertIn(self.user_name, user_list)
 
     def test_add_group(self):
         '''
         Test adding a user
         '''
-        group_name = self.__random_string()
-        try:
-            if self.run_function('group.add', [group_name]) is False:
-                # Skip because creating is not what we're testing here
-                self.run_function('group.delete', [group_name, True, True])
-                self.skipTest('Failed to create group')
-
-            group_list = self.run_function('group.list_groups')
-            self.assertIn(group_name, group_list)
-
-        except AssertionError:
-            raise
-
-        finally:
-            self.run_function('group.delete', [group_name])
+        self._add_group()
+        group_list = self.run_function('group.list_groups')
+        self.assertIn(self.group_name, group_list)
 
     def test_add_user_to_group(self):
         '''
         Test adding a user to a group
         '''
-        group_name = self.__random_string()
-        user_name = self.__random_string()
-        try:
-            # Let's create a group
-            if self.run_function(
-                    'group.add', [group_name])['result'] is not True:
-                self.run_function('group.delete', [group_name, True, True])
-                self.skipTest('Failed to create group')
+        self._add_group()
+        # And create the user as a member of that group
+        self.run_function('user.add', [self.user_name], groups=self.group_name)
+        user_info = self.run_function('user.info', [self.user_name])
+        self.assertIn(self.group_name, user_info['groups'])
 
-            # And create the user as a member of that group
-            if self.run_function(
-                    'user.add', [user_name], groups=group_name) is False:
-                self.run_function('user.delete', [user_name, True, True])
-                self.skipTest('Failed to create user')
+    def test_add_user_addgroup(self):
+        '''
+        Test adding a user to a group with groupadd
+        '''
+        self._add_group()
+        self._add_user()
+        self.run_function('user.addgroup', [self.user_name, self.group_name])
+        info = self.run_function('user.info', [self.user_name])
+        self.assertEqual(info['groups'], [self.group_name])
 
-            user_info = self.run_function('user.info', [user_name])
-            self.assertIn(group_name, user_info['groups'])
+    def test_user_chhome(self):
+        '''
+        Test changing a users home dir
+        '''
+        self._add_user()
+        user_dir = r'c:\salt'
+        self.run_function('user.chhome', [self.user_name, user_dir])
+        info = self.run_function('user.info', [self.user_name])
+        self.assertEqual(info['home'], user_dir)
 
-        except AssertionError:
-            raise
+    def test_user_chprofile(self):
+        '''
+        Test changing a users profile
+        '''
+        self._add_user()
+        config = r'c:\salt\config'
+        self.run_function('user.chprofile', [self.user_name, config])
+        info = self.run_function('user.info', [self.user_name])
+        self.assertEqual(info['profile'], config)
 
-        finally:
-            self.run_function('user.delete', [user_name, True, True])
-            self.run_function('group.delete', [group_name])
+    def test_user_chfullname(self):
+        '''
+        Test changing a users fullname
+        '''
+        self._add_user()
+        name = 'Salt Test'
+        self.run_function('user.chfullname', [self.user_name, name])
+        info = self.run_function('user.info', [self.user_name])
+        self.assertEqual(info['fullname'], name)
+
+    def test_user_delete(self):
+        '''
+        Test deleting a user
+        '''
+        self._add_user()
+        self.assertTrue(self.run_function('user.info', [self.user_name])['active'])
+        self.run_function('user.delete', [self.user_name])
+        self.assertEqual({}, self.run_function('user.info', [self.user_name]))
+
+    def test_user_removegroup(self):
+        '''
+        Test removing a group
+        '''
+        self._add_user()
+        self._add_group()
+        self.run_function('user.addgroup', [self.user_name, self.group_name])
+        self.assertIn(self.group_name, self.run_function('user.list_groups', [self.user_name]))
+        self.run_function('user.removegroup', [self.user_name, self.group_name])
+        self.assertNotIn(self.group_name, self.run_function('user.list_groups', [self.user_name]))
+
+    def test_user_rename(self):
+        '''
+        Test changing a users name
+        '''
+        self._add_user()
+        name = 'newuser'
+        self.run_function('user.rename', [self.user_name, name])
+        info = self.run_function('user.info', [name])
+        self.assertTrue(info['active'])
+
+        #delete new user
+        self.run_function('user.delete', [name, True, True])
+
+    def test_user_setpassword(self):
+        '''
+        Test setting a password
+        '''
+        self._add_user()
+        passwd = 'sup3rs3cr3T!'
+        self.assertTrue(self.run_function('user.setpassword', [self.user_name, passwd]))

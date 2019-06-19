@@ -4,7 +4,8 @@ Use pycrypto to generate random passwords on the fly.
 '''
 
 # Import python libraries
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import re
 import string
 import random
@@ -12,15 +13,19 @@ import random
 # Import 3rd-party libs
 try:
     try:
-        import Cryptodome.Random as CRand  # pylint: disable=E0611
+        from M2Crypto.Rand import rand_bytes as get_random_bytes
     except ImportError:
-        import Crypto.Random as CRand  # pylint: disable=E0611
+        try:
+            from Cryptodome.Random import get_random_bytes  # pylint: disable=E0611
+        except ImportError:
+            from Crypto.Random import get_random_bytes  # pylint: disable=E0611
     HAS_RANDOM = True
 except ImportError:
     HAS_RANDOM = False
 
 try:
     # Windows does not have the crypt module
+    # consider using passlib.hash instead
     import crypt
     HAS_CRYPT = True
 except ImportError:
@@ -28,25 +33,38 @@ except ImportError:
 
 # Import salt libs
 import salt.utils.stringutils
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext import six
+
+log = logging.getLogger(__name__)
 
 
 def secure_password(length=20, use_random=True):
     '''
     Generate a secure password.
     '''
-    length = int(length)
-    pw = ''
-    while len(pw) < length:
-        if HAS_RANDOM and use_random:
-            pw += re.sub(
-                r'\W',
-                '',
-                salt.utils.stringutils.to_str(CRand.get_random_bytes(1))
-            )
-        else:
-            pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
-    return pw
+    try:
+        length = int(length)
+        pw = ''
+        while len(pw) < length:
+            if HAS_RANDOM and use_random:
+                while True:
+                    try:
+                        char = salt.utils.stringutils.to_str(get_random_bytes(1))
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                pw += re.sub(
+                    salt.utils.stringutils.to_str(r'[\W_]'),
+                    str(),  # future lint: disable=blacklisted-function
+                    char
+                )
+            else:
+                pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
+        return pw
+    except Exception as exc:
+        log.exception('Failed to generate secure passsword')
+        raise CommandExecutionError(six.text_type(exc))
 
 
 def gen_hash(crypt_salt=None, password=None, algorithm='sha512'):

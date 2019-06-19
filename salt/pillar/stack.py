@@ -413,7 +413,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         stack_config_files += cfgs
     for cfg in stack_config_files:
         if not os.path.isfile(cfg):
-            log.warning(
+            log.info(
                 'Ignoring pillar stack cfg "%s": file does not exist', cfg)
             continue
         stack = _process_stack_cfg(cfg, stack, minion_id, pillar)
@@ -422,10 +422,6 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
 
 def _to_unix_slashes(path):
     return posixpath.join(*path.split(os.sep))
-
-
-def _construct_unicode(loader, node):
-    return node.value
 
 
 def _process_stack_cfg(cfg, stack, minion_id, pillar):
@@ -437,7 +433,8 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
         "__salt__": __salt__,
         "__grains__": __grains__,
         "__stack__": {
-            'traverse': salt.utils.data.traverse_dict_and_list
+            'traverse': salt.utils.data.traverse_dict_and_list,
+            'cfg_path': cfg,
             },
         "minion_id": minion_id,
         "pillar": pillar,
@@ -448,7 +445,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             continue  # silently ignore whitespace or empty lines
         paths = glob.glob(os.path.join(basedir, item))
         if not paths:
-            log.warning(
+            log.info(
                 'Ignoring pillar stack template "%s": can\'t find from root '
                 'dir "%s"', item, basedir
             )
@@ -457,7 +454,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             log.debug('YAML: basedir=%s, path=%s', basedir, path)
             # FileSystemLoader always expects unix-style paths
             unix_path = _to_unix_slashes(os.path.relpath(path, basedir))
-            obj = salt.utils.yaml.safe_load(jenv.get_template(unix_path).render(stack=stack))
+            obj = salt.utils.yaml.safe_load(jenv.get_template(unix_path).render(stack=stack, ymlpath=path))
             if not isinstance(obj, dict):
                 log.info('Ignoring pillar stack template "%s": Can\'t parse '
                          'as a valid yaml dictionary', path)

@@ -1,0 +1,22 @@
+all-users:
+  {%for uname in salt('user.list_users') %}
+  - user.info:
+      info: Information about "{{uname}}"
+      args:
+        - {{uname}}
+  - user.list_groups:
+      info: List groups for user "{{uname}}"
+      args:
+        - {{uname}}
+  - shadow.info:
+      info: Shadow information about user "{{uname}}"
+      args:
+        - {{uname}}
+  - cron.raw_cron:
+      info: Cron for user "{{uname}}"
+      args:
+        - {{uname}}
+  {%endfor%}
+  - group.getent:
+      info: List of all available groups
+      output: table

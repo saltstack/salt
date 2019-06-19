@@ -100,7 +100,7 @@ def present(name,
             reconnect=True,
             **kwargs):
     '''
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         Support added for network configuration options other than ``driver``
         and ``driver_opts``, as well as IPAM configuration.
 
@@ -145,7 +145,7 @@ def present(name,
         - `docker-py Low-level API`_
         - `Docker Engine API`_
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     .. _`docker-py Low-level API`: http://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.create_container
     .. _`Docker Engine API`: https://docs.docker.com/engine/api/v1.33/#operation/ContainerCreate
@@ -159,19 +159,19 @@ def present(name,
         will be raised. Set this argument to ``True`` to suppress these errors
         and keep the docker-py version of the argument.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     validate_ip_addrs : True
         For parameters which accept IP addresses/subnets as input, validation
         will be performed. To disable, set this to ``False``.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     containers
         A list of containers which should be connected to this network.
 
         .. note::
-            As of the Oxygen release, this is not the recommended way of
+            As of the 2018.3.0 release, this is not the recommended way of
             managing a container's membership in a network, for a couple
             reasons:
 
@@ -214,7 +214,7 @@ def present(name,
         IP. Disabling the reconnect behavior in these cases would prevent the
         unnecessary extra reconnection.
 
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
     .. _salt-states-docker-network-present-netconf:
 
@@ -299,7 +299,7 @@ def present(name,
     labels
         Add metadata to the network. Labels can be set both with and without
         values, and labels with values can be passed either as ``key=value`` or
-        ``key: value `` pairs. For example, while the below would be very
+        ``key: value`` pairs. For example, while the below would be very
         confusing to read, it is technically valid, and demonstrates the
         different ways in which labels can be passed:
 
@@ -325,7 +325,7 @@ def present(name,
                     bar: baz
                     hello: world
 
-        .. versionchanged:: Oxygen
+        .. versionchanged:: 2018.3.0
             Methods for specifying labels can now be mixed. Earlier releases
             required either labels with or without values.
 
@@ -346,7 +346,7 @@ def present(name,
             get an error unless you have set up a fixed IPv6 subnet. Consult
             the `Docker IPv6 docs`_ for information on how to do this.
 
-        .. _`Doocker IPv6 docs`: https://docs.docker.com/engine/userguide/networking/default_network/ipv6/
+            .. _`Docker IPv6 docs`: https://docs.docker.com/v17.09/engine/userguide/networking/default_network/ipv6/
 
     attachable : False
         If ``True``, and the network is in the global scope, non-service
@@ -392,7 +392,7 @@ def present(name,
 
     This state supports networks with either IPv4, or both IPv4 and IPv6. If
     configuring IPv4, then you can pass the :ref:`IPAM pool arguments
-    `<salt-states-docker-network-present-ipam-pool-arguments>` below as
+    <salt-states-docker-network-present-ipam-pool-arguments>` below as
     individual arguments. However, if configuring IPv4 and IPv6, the arguments
     must be passed as a list of dictionaries, in the ``ipam_pools`` argument
     (click :ref:`here <salt-states-docker-network-present-ipam-examples>` for
@@ -890,7 +890,7 @@ def present(name,
     return ret
 
 
-def absent(name, driver=None):
+def absent(name):
     '''
     Ensure that a network is absent.
 
@@ -908,12 +908,6 @@ def absent(name, driver=None):
            'changes': {},
            'result': False,
            'comment': ''}
-
-    if driver is not None:
-        ret.setdefault('warnings', []).append(
-            'The \'driver\' argument has no function and will be removed in '
-            'the Fluorine release.'
-        )
 
     try:
         network = __salt__['docker.inspect_network'](name)

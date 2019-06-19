@@ -3,18 +3,21 @@
 Get Version information from Windows
 '''
 # http://stackoverflow.com/questions/32300004/python-ctypes-getting-0-with-getversionex-function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Third Party Libs
 import ctypes
+HAS_WIN32 = True
 try:
     from ctypes.wintypes import BYTE, WORD, DWORD, WCHAR
-    HAS_WIN32 = True
+    import win32net
+    import win32netcon
 except (ImportError, ValueError):
     HAS_WIN32 = False
 
 if HAS_WIN32:
-    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel32 = ctypes.WinDLL(str('kernel32'),  # future lint: disable=blacklisted-function
+                             use_last_error=True)
 
 
 # Although utils are often directly imported, it is also possible to use the
@@ -75,3 +78,22 @@ def get_os_version_info():
            'ProductType': info.wProductType}
 
     return ret
+
+
+def get_join_info():
+    '''
+    Gets information about the domain/workgroup. This will tell you if the
+    system is joined to a domain or a workgroup
+
+    .. version-added:: 2018.3.4
+
+    Returns:
+        dict: A dictionary containing the domain/workgroup and it's status
+    '''
+    info = win32net.NetGetJoinInformation()
+    status = {win32netcon.NetSetupUnknown: 'Unknown',
+              win32netcon.NetSetupUnjoined: 'Unjoined',
+              win32netcon.NetSetupWorkgroupName: 'Workgroup',
+              win32netcon.NetSetupDomainName: 'Domain'}
+    return {'Domain': info[0],
+            'DomainType': status[info[1]]}

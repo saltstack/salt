@@ -6,7 +6,7 @@ This module allows you to manage extended attributes on files or directories
 
     salt '*' xattr.list /path/to/file
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python Libs
 import logging
@@ -42,7 +42,7 @@ def list_(path, **kwargs):
     :param bool hex: Return the values with forced hexadecimal values
 
     :return: A dictionary containing extended attributes and values for the
-    given file
+        given file
     :rtype: dict
 
     :raises: CommandExecutionError on file not found or any other unknown error
@@ -93,7 +93,7 @@ def read(path, attribute, **kwargs):
     :rtype: str
 
     :raises: CommandExecutionError on file not found, attribute not found, and
-    any other unknown error
+        any other unknown error
 
     CLI Example:
 
@@ -175,13 +175,13 @@ def delete(path, attribute):
     :param str path: The file(s) to get attributes from
 
     :param str attribute: The attribute name to be deleted from the
-    file/directory
+        file/directory
 
     :return: True if successful, otherwise False
     :rtype: bool
 
     :raises: CommandExecutionError on file not found, attribute not found, and
-    any other unknown error
+        any other unknown error
 
     CLI Example:
 

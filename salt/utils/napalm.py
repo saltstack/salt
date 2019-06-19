@@ -16,16 +16,18 @@ Utils for the NAPALM modules and proxy.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
+import copy
 import traceback
 import logging
 import importlib
 from functools import wraps
 
 # Import Salt libs
-from salt.ext import six as six
+from salt.ext import six
 import salt.output
 import salt.utils.platform
+import salt.utils.args
 
 # Import third party libs
 try:
@@ -100,7 +102,7 @@ def virtual(opts, virtualname, filename):
             False,
             (
                 '"{vname}"" {filename} cannot be loaded: '
-                'NAPALM is not installed or not running in a (proxy) minion'
+                'NAPALM is not installed: ``pip install napalm``'
             ).format(
                 vname=virtualname,
                 filename='({filename})'.format(filename=filename)
@@ -129,7 +131,7 @@ def call(napalm_device, method, *args, **kwargs):
         * result (True/False): if the operation succeeded
         * out (object): returns the object as-is from the call
         * comment (string): provides more details in case the call failed
-        * traceback (string): complete traceback in case of exeception. \
+        * traceback (string): complete traceback in case of exception. \
         Please submit an issue including this traceback \
         on the `correct driver repo`_ and make sure to read the FAQ_
 
@@ -153,6 +155,15 @@ def call(napalm_device, method, *args, **kwargs):
     out = None
     opts = napalm_device.get('__opts__', {})
     retry = kwargs.pop('__retry', True)  # retry executing the task?
+    force_reconnect = kwargs.get('force_reconnect', False)
+    if force_reconnect:
+        log.debug('Forced reconnection initiated')
+        log.debug('The current opts (under the proxy key):')
+        log.debug(opts['proxy'])
+        opts['proxy'].update(**kwargs)
+        log.debug('Updated to:')
+        log.debug(opts['proxy'])
+        napalm_device = get_device(opts)
     try:
         if not napalm_device.get('UP', False):
             raise Exception('not connected')
@@ -188,14 +199,14 @@ def call(napalm_device, method, *args, **kwargs):
             comment = 'Disconnected from {device}. Trying to reconnect.'.format(device=hostname)
             log.error(err_tb)
             log.error(comment)
-            log.debug('Clearing the connection with {device}'.format(device=hostname))
+            log.debug('Clearing the connection with %s', hostname)
             call(napalm_device, 'close', __retry=False)  # safely close the connection
             # Make sure we don't leave any TCP connection open behind
             #   if we fail to close properly, we might not be able to access the
-            log.debug('Re-opening the connection with {device}'.format(device=hostname))
+            log.debug('Re-opening the connection with %s', hostname)
             call(napalm_device, 'open', __retry=False)
-            log.debug('Connection re-opened with {device}'.format(device=hostname))
-            log.debug('Re-executing {method}'.format(method=method))
+            log.debug('Connection re-opened with %s', hostname)
+            log.debug('Re-executing %s', method)
             return call(napalm_device, method, *args, **kwargs)
             # If still not able to reconnect and execute the task,
             #   the proxy keepalive feature (if enabled) will attempt
@@ -238,7 +249,7 @@ def call(napalm_device, method, *args, **kwargs):
             # either running in a not-always-alive proxy
             # either running in a regular minion
             # close the connection when the call is over
-            # unless the CLOSE is explicitely set as False
+            # unless the CLOSE is explicitly set as False
             napalm_device['DRIVER'].close()
     return {
         'out': out,
@@ -255,15 +266,12 @@ def get_device_opts(opts, salt_obj=None):
     '''
     network_device = {}
     # by default, look in the proxy config details
-    device_dict = opts.get('proxy', {}) or opts.get('napalm', {})
+    device_dict = opts.get('proxy', {}) if is_proxy(opts) else opts.get('napalm', {})
     if opts.get('proxy') or opts.get('napalm'):
         opts['multiprocessing'] = device_dict.get('multiprocessing', False)
         # Most NAPALM drivers are SSH-based, so multiprocessing should default to False.
-        # But the user can be allows to have a different value for the multiprocessing, which will
+        # But the user can be allows one to have a different value for the multiprocessing, which will
         #   override the opts.
-    if salt_obj and not device_dict:
-        # get the connection details from the opts
-        device_dict = salt_obj['config.merge']('napalm')
     if not device_dict:
         # still not able to setup
         log.error('Incorrect minion config. Please specify at least the napalm driver name!')
@@ -316,7 +324,9 @@ def get_device(opts, salt_obj=None):
         try:
             provider_lib = importlib.import_module(network_device.get('PROVIDER'))
         except ImportError as ierr:
-            log.error('Unable to import {0}'.format(network_device.get('PROVIDER')), exc_info=True)
+            log.error('Unable to import %s',
+                      network_device.get('PROVIDER'),
+                      exc_info=True)
             log.error('Falling back to napalm-base')
     _driver_ = provider_lib.get_network_driver(network_device.get('DRIVER_NAME'))
     try:
@@ -339,9 +349,7 @@ def get_device(opts, salt_obj=None):
         )
         log.error(base_err_msg)
         log.error(
-            "Please check error: {error}".format(
-                error=error
-            )
+            "Please check error: %s", error
         )
         raise napalm_base.exceptions.ConnectionException(base_err_msg)
     return network_device
@@ -362,16 +370,32 @@ def proxy_napalm_wrap(func):
         wrapped_global_namespace = func.__globals__
         # get __opts__ and __proxy__ from func_globals
         proxy = wrapped_global_namespace.get('__proxy__')
-        opts = wrapped_global_namespace.get('__opts__')
+        opts = copy.deepcopy(wrapped_global_namespace.get('__opts__'))
         # in any case, will inject the `napalm_device` global
         # the execution modules will make use of this variable from now on
         # previously they were accessing the device properties through the __proxy__ object
         always_alive = opts.get('proxy', {}).get('always_alive', True)
-        if salt.utils.platform.is_proxy() and always_alive:
-            # if it is running in a proxy and it's using the default always alive behaviour,
-            # will get the cached copy of the network device
-            wrapped_global_namespace['napalm_device'] = proxy['napalm.get_device']()
-        elif salt.utils.platform.is_proxy() and not always_alive:
+        # force_reconnect is a magic keyword arg that allows one to establish
+        # a separate connection to the network device running under an always
+        # alive Proxy Minion, using new credentials (overriding the ones
+        # configured in the opts / pillar.
+        force_reconnect = kwargs.get('force_reconnect', False)
+        if force_reconnect:
+            log.debug('Usage of reconnect force detected')
+            log.debug('Opts before merging')
+            log.debug(opts['proxy'])
+            opts['proxy'].update(**kwargs)
+            log.debug('Opts after merging')
+            log.debug(opts['proxy'])
+        if is_proxy(opts) and always_alive:
+            # if it is running in a NAPALM Proxy and it's using the default
+            # always alive behaviour, will get the cached copy of the network
+            # device object which should preserve the connection.
+            if force_reconnect:
+                wrapped_global_namespace['napalm_device'] = get_device(opts)
+            else:
+                wrapped_global_namespace['napalm_device'] = proxy['napalm.get_device']()
+        elif is_proxy(opts) and not always_alive:
             # if still proxy, but the user does not want the SSH session always alive
             # get a new device instance
             # which establishes a new connection
@@ -387,21 +411,47 @@ def proxy_napalm_wrap(func):
                 except napalm_base.exceptions.ConnectionException as nce:
                     log.error(nce)
                     return '{base_msg}. See log for details.'.format(
-                        base_msg=str(nce.msg)
+                        base_msg=six.text_type(nce.msg)
                     )
             else:
                 # in case the `inherit_napalm_device` is set
                 # and it also has a non-empty value,
-                # the global var `napalm_device` will be overriden.
+                # the global var `napalm_device` will be overridden.
                 # this is extremely important for configuration-related features
                 # as all actions must be issued within the same configuration session
                 # otherwise we risk to open multiple sessions
                 wrapped_global_namespace['napalm_device'] = kwargs['inherit_napalm_device']
         else:
-            # if no proxy
+            # if not a NAPLAM proxy
             # thus it is running on a regular minion, directly on the network device
+            # or another flavour of Minion from where we can invoke arbitrary
+            # NAPALM commands
             # get __salt__ from func_globals
+            log.debug('Not running in a NAPALM Proxy Minion')
             _salt_obj = wrapped_global_namespace.get('__salt__')
+            napalm_opts = _salt_obj['config.get']('napalm', {})
+            napalm_inventory = _salt_obj['config.get']('napalm_inventory', {})
+            log.debug('NAPALM opts found in the Minion config')
+            log.debug(napalm_opts)
+            clean_kwargs = salt.utils.args.clean_kwargs(**kwargs)
+            napalm_opts.update(clean_kwargs)  # no need for deeper merge
+            log.debug('Merging the found opts with the CLI args')
+            log.debug(napalm_opts)
+            host = napalm_opts.get('host') or napalm_opts.get('hostname') or\
+                   napalm_opts.get('fqdn') or napalm_opts.get('ip')
+            if host and napalm_inventory and isinstance(napalm_inventory, dict) and\
+               host in napalm_inventory:
+                inventory_opts = napalm_inventory[host]
+                log.debug('Found %s in the NAPALM inventory:', host)
+                log.debug(inventory_opts)
+                napalm_opts.update(inventory_opts)
+                log.debug('Merging the config for %s with the details found in the napalm inventory:', host)
+                log.debug(napalm_opts)
+            opts = copy.deepcopy(opts)  # make sure we don't override the original
+            # opts, but just inject the CLI args from the kwargs to into the
+            # object manipulated by ``get_device_opts`` to extract the
+            # connection details, then use then to establish the connection.
+            opts['napalm'] = napalm_opts
             if 'inherit_napalm_device' not in kwargs or ('inherit_napalm_device' in kwargs and
                                                          not kwargs['inherit_napalm_device']):
                 # try to open a new connection
@@ -413,12 +463,12 @@ def proxy_napalm_wrap(func):
                 except napalm_base.exceptions.ConnectionException as nce:
                     log.error(nce)
                     return '{base_msg}. See log for details.'.format(
-                        base_msg=str(nce.msg)
+                        base_msg=six.text_type(nce.msg)
                     )
             else:
                 # in case the `inherit_napalm_device` is set
                 # and it also has a non-empty value,
-                # the global var `napalm_device` will be overriden.
+                # the global var `napalm_device` will be overridden.
                 # this is extremely important for configuration-related features
                 # as all actions must be issued within the same configuration session
                 # otherwise we risk to open multiple sessions
@@ -427,7 +477,12 @@ def proxy_napalm_wrap(func):
             # inject the __opts__ only when not always alive
             # otherwise, we don't want to overload the always-alive proxies
             wrapped_global_namespace['napalm_device']['__opts__'] = opts
-        return func(*args, **kwargs)
+        ret = func(*args, **kwargs)
+        if force_reconnect:
+            log.debug('That was a forced reconnect, gracefully clearing up')
+            device = wrapped_global_namespace['napalm_device']
+            closing = call(device, 'close', __retry=False)
+        return ret
     return func_wrapper
 
 
@@ -437,7 +492,6 @@ def default_ret(name):
     '''
     ret = {
         'name': name,
-        'pchanges': {},
         'changes': {},
         'result': False,
         'comment': ''
@@ -455,19 +509,16 @@ def loaded_ret(ret, loaded, test, debug, compliance_report=False, opts=None):
     '''
     # Always get the comment
     changes = {}
-    pchanges = {}
     ret['comment'] = loaded['comment']
     if 'diff' in loaded:
         changes['diff'] = loaded['diff']
-        pchanges['diff'] = loaded['diff']
+    if 'commit_id' in loaded:
+        changes['commit_id'] = loaded['commit_id']
     if 'compliance_report' in loaded:
         if compliance_report:
             changes['compliance_report'] = loaded['compliance_report']
-        pchanges['compliance_report'] = loaded['compliance_report']
     if debug and 'loaded_config' in loaded:
         changes['loaded_config'] = loaded['loaded_config']
-        pchanges['loaded_config'] = loaded['loaded_config']
-    ret['pchanges'] = pchanges
     if changes.get('diff'):
         ret['comment'] = '{comment_base}\n\nConfiguration diff:\n\n{diff}'.format(comment_base=ret['comment'],
                                                                                   diff=changes['diff'])

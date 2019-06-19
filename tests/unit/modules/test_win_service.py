@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
+    :codeauthor: Rahul Handay <rahulha@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -23,6 +23,7 @@ import salt.modules.win_service as win_service
 try:
     WINAPI = True
     import win32serviceutil
+    import pywintypes
 except ImportError:
     WINAPI = False
 
@@ -119,18 +120,38 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_true = MagicMock(return_value=True)
         mock_false = MagicMock(return_value=False)
-        mock_info = MagicMock(side_effect=[{'Status': 'Stopped'},
-                                           {'Status': 'Start Pending'},
-                                           {'Status': 'Running'}])
+        mock_info = MagicMock(side_effect=[{'Status': 'Running'}])
 
-        with patch.object(win_service, 'status', mock_true):
+        with patch.object(win32serviceutil, 'StartService', mock_true), \
+                patch.object(win_service, 'disabled', mock_false), \
+                patch.object(win_service, 'info', mock_info):
             self.assertTrue(win_service.start('spongebob'))
 
-        with patch.object(win_service, 'status', mock_false):
-            with patch.object(win32serviceutil, 'StartService', mock_true):
-                with patch.object(win_service, 'info', mock_info):
-                    with patch.object(win_service, 'status', mock_true):
-                        self.assertTrue(win_service.start('spongebob'))
+        mock_info = MagicMock(side_effect=[{'Status': 'Stopped', 'Status_WaitHint': 0},
+                                           {'Status': 'Start Pending', 'Status_WaitHint': 0},
+                                           {'Status': 'Running'}])
+
+        with patch.object(win32serviceutil, 'StartService', mock_true), \
+                patch.object(win_service, 'disabled', mock_false), \
+                patch.object(win_service, 'info', mock_info), \
+                patch.object(win_service, 'status', mock_true):
+            self.assertTrue(win_service.start('spongebob'))
+
+    @skipIf(not WINAPI, 'pywintypes not available')
+    def test_start_already_running(self):
+        '''
+        Test starting a service that is already running
+        '''
+        mock_false = MagicMock(return_value=False)
+        mock_error = MagicMock(
+            side_effect=pywintypes.error(1056,
+                                         'StartService',
+                                         'Service is running'))
+        mock_info = MagicMock(side_effect=[{'Status': 'Running'}])
+        with patch.object(win32serviceutil, 'StartService', mock_error), \
+                 patch.object(win_service, 'disabled', mock_false), \
+                 patch.object(win_service, '_status_wait', mock_info):
+            self.assertTrue(win_service.start('spongebob'))
 
     @skipIf(not WINAPI, 'win32serviceutil not available')
     def test_stop(self):
@@ -139,17 +160,33 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_true = MagicMock(return_value=True)
         mock_false = MagicMock(return_value=False)
-        mock_info = MagicMock(side_effect=[{'Status': 'Running'},
-                                           {'Status': 'Stop Pending'},
-                                           {'Status': 'Stopped'}])
+        mock_info = MagicMock(side_effect=[{'Status': 'Stopped'}])
 
-        with patch.dict(win_service.__salt__, {'cmd.run': MagicMock(return_value="service was stopped")}):
+        with patch.object(win32serviceutil, 'StopService', mock_true), \
+                patch.object(win_service, '_status_wait', mock_info):
             self.assertTrue(win_service.stop('spongebob'))
 
-        with patch.dict(win_service.__salt__, {'cmd.run': MagicMock(return_value="service was stopped")}), \
-                patch.object(win32serviceutil, 'StopService', mock_true), \
+        mock_info = MagicMock(side_effect=[{'Status': 'Running', 'Status_WaitHint': 0},
+                                           {'Status': 'Stop Pending', 'Status_WaitHint': 0},
+                                           {'Status': 'Stopped'}])
+
+        with patch.object(win32serviceutil, 'StopService', mock_true), \
                 patch.object(win_service, 'info', mock_info), \
                 patch.object(win_service, 'status', mock_false):
+            self.assertTrue(win_service.stop('spongebob'))
+
+    @skipIf(not WINAPI, 'pywintypes not available')
+    def test_stop_not_running(self):
+        '''
+        Test stopping a service that is already stopped
+        '''
+        mock_error = MagicMock(
+            side_effect=pywintypes.error(1062,
+                                         'StopService',
+                                         'Service is not running'))
+        mock_info = MagicMock(side_effect=[{'Status': 'Stopped'}])
+        with patch.object(win32serviceutil, 'StopService', mock_error), \
+                patch.object(win_service, '_status_wait', mock_info):
             self.assertTrue(win_service.stop('spongebob'))
 
     def test_restart(self):
@@ -241,6 +278,18 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_service.enabled('spongebob'))
             self.assertFalse(win_service.enabled('squarepants'))
 
+    def test_enabled_with_space_in_name(self):
+        '''
+            Test to check to see if the named
+            service is enabled to start on boot
+            when have space in service name
+        '''
+        mock = MagicMock(side_effect=[{'StartType': 'Auto'},
+                                      {'StartType': 'Disabled'}])
+        with patch.object(win_service, 'info', mock):
+            self.assertTrue(win_service.enabled('spongebob test'))
+            self.assertFalse(win_service.enabled('squarepants test'))
+
     def test_disabled(self):
         '''
             Test to check to see if the named
@@ -250,3 +299,99 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(win_service, 'enabled', mock):
             self.assertTrue(win_service.disabled('spongebob'))
             self.assertFalse(win_service.disabled('squarepants'))
+
+    def test_cmd_quote(self):
+        '''
+        Make sure the command gets quoted correctly
+        '''
+        # Should always return command wrapped in double quotes
+        expected = r'"C:\Program Files\salt\test.exe"'
+
+        # test no quotes
+        bin_path = r'C:\Program Files\salt\test.exe'
+        self.assertEqual(win_service._cmd_quote(bin_path), expected)
+
+        # test single quotes
+        bin_path = r"'C:\Program Files\salt\test.exe'"
+        self.assertEqual(win_service._cmd_quote(bin_path), expected)
+
+        # test double quoted single quotes
+        bin_path = '"\'C:\\Program Files\\salt\\test.exe\'"'
+        self.assertEqual(win_service._cmd_quote(bin_path), expected)
+
+        # test single quoted, double quoted, single quotes
+        bin_path = "\'\"\'C:\\Program Files\\salt\\test.exe\'\"\'"
+        self.assertEqual(win_service._cmd_quote(bin_path), expected)
+
+    def test_service_dependencies(self):
+        def _all():
+            return ['Spongebob', 'Sandy', 'Patrick', 'Garry', 'Rocko', 'Heffer', 'Beverly']
+
+        def _info(name):
+            data = {}
+            data['Spongebob'] = {'Dependencies': ['GaRrY']}
+            data['Sandy'] = {'Dependencies': ['Spongebob']}
+            data['Patrick'] = {'Dependencies': ['Sandy', 'gARRY']}
+            data['Garry'] = {'Dependencies': []}
+
+            data['Rocko'] = {'Dependencies': []}
+            data['Heffer'] = {'Dependencies': ['Rocko']}
+            data['Beverly'] = {'Dependencies': []}
+            return data[name]
+
+        spongebob = win_service.ServiceDependencies('spongebob', _all, _info)
+        self.assertListEqual(['Garry'], spongebob.dependencies(with_indirect=False))
+        self.assertListEqual(['Garry'], spongebob.dependencies(with_indirect=True))
+        self.assertListEqual(['Sandy'], spongebob.parents(with_indirect=False))
+        self.assertListEqual(['Sandy', 'Patrick'], spongebob.parents(with_indirect=True))
+        self.assertListEqual(['Garry', 'Spongebob', 'Sandy', 'Patrick'], spongebob.start_order(with_deps=True, with_parents=True))
+        self.assertListEqual(['Patrick', 'Sandy', 'Spongebob', 'Garry'], spongebob.stop_order(with_deps=True, with_parents=True))
+
+        sandy = win_service.ServiceDependencies('SANDY', _all, _info)
+        self.assertListEqual(sandy.dependencies(with_indirect=False), ['Spongebob'])
+        self.assertListEqual(sandy.dependencies(with_indirect=True), ['Garry', 'Spongebob'])
+        self.assertListEqual(sandy.parents(with_indirect=False), ['Patrick'])
+        self.assertListEqual(sandy.parents(with_indirect=True), ['Patrick'])
+        self.assertListEqual(['Garry', 'Spongebob', 'Sandy', 'Patrick'], spongebob.start_order(with_deps=True, with_parents=True))
+        self.assertListEqual(['Patrick', 'Sandy', 'Spongebob', 'Garry'], spongebob.stop_order(with_deps=True, with_parents=True))
+        self.assertListEqual(['Spongebob'], spongebob.start_order(with_deps=False, with_parents=False))
+        self.assertListEqual(['Spongebob'], spongebob.stop_order(with_deps=False, with_parents=False))
+
+        patrick = win_service.ServiceDependencies('Patrick', _all, _info)
+        self.assertListEqual(['Garry', 'Sandy'], patrick.dependencies(with_indirect=False))
+        self.assertListEqual(['Garry', 'Spongebob', 'Sandy'], patrick.dependencies(with_indirect=True))
+        self.assertListEqual([], patrick.parents(with_indirect=False))
+        self.assertListEqual([], patrick.parents(with_indirect=True))
+        self.assertListEqual(['Garry', 'Spongebob', 'Sandy', 'Patrick'], spongebob.start_order(with_deps=True, with_parents=True))
+        self.assertListEqual(['Patrick', 'Sandy', 'Spongebob', 'Garry'], spongebob.stop_order(with_deps=True, with_parents=True))
+
+        garry = win_service.ServiceDependencies('gARRy', _all, _info)
+        self.assertListEqual([], garry.dependencies(with_indirect=False))
+        self.assertListEqual([], garry.dependencies(with_indirect=True))
+        self.assertListEqual(['Patrick', 'Spongebob'], garry.parents(with_indirect=False))
+        self.assertListEqual(['Spongebob', 'Sandy', 'Patrick'], garry.parents(with_indirect=True))
+        self.assertListEqual(['Garry', 'Spongebob', 'Sandy', 'Patrick'], spongebob.start_order(with_deps=True, with_parents=True))
+        self.assertListEqual(['Patrick', 'Sandy', 'Spongebob', 'Garry'], spongebob.stop_order(with_deps=True, with_parents=True))
+
+        rocko = win_service.ServiceDependencies('Rocko', _all, _info)
+        self.assertListEqual([], rocko.dependencies(with_indirect=False))
+        self.assertListEqual([], rocko.dependencies(with_indirect=True))
+        self.assertListEqual(['Heffer'], rocko.parents(with_indirect=False))
+        self.assertListEqual(['Heffer'], rocko.parents(with_indirect=True))
+
+        heffer = win_service.ServiceDependencies('Heffer', _all, _info)
+        self.assertListEqual(['Rocko'], heffer.dependencies(with_indirect=False))
+        self.assertListEqual(['Rocko'], heffer.dependencies(with_indirect=True))
+        self.assertListEqual([], heffer.parents(with_indirect=False))
+        self.assertListEqual([], heffer.parents(with_indirect=True))
+
+        beverly = win_service.ServiceDependencies('beverly', _all, _info)
+        self.assertListEqual([], beverly.dependencies(with_indirect=False))
+        self.assertListEqual([], beverly.dependencies(with_indirect=True))
+        self.assertListEqual([], beverly.parents(with_indirect=False))
+        self.assertListEqual([], beverly.parents(with_indirect=True))
+
+        with self.assertRaises(ValueError):
+            spunky = win_service.ServiceDependencies('Spunky', _all, _info)
+            spunky.dependencies()
+            spunky.parents()

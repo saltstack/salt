@@ -4,7 +4,7 @@ Unit Tests for functions located in salt.utils.state.py.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import textwrap
 
@@ -145,13 +145,13 @@ class StateUtilTestCase(TestCase):
                 {
                     'test_vstate0': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 'run',
                                 {'order': 10002}]},
                     'test_vstate1': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 salt.utils.odict.OrderedDict([
                                     ('onfail_stop', True),
@@ -177,7 +177,7 @@ class StateUtilTestCase(TestCase):
                 {
                     'test_ivstate0': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 'run',
                                 {'order': 10002}],
@@ -186,7 +186,7 @@ class StateUtilTestCase(TestCase):
                               {'order': 10002}]},
                     'test_ivstate1': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 salt.utils.odict.OrderedDict([
                                     ('onfail_stop', False),
@@ -212,7 +212,7 @@ class StateUtilTestCase(TestCase):
                 {
                     'test_ivstate0': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 'run',
                                 {'order': 10002}],
@@ -221,7 +221,7 @@ class StateUtilTestCase(TestCase):
                               {'order': 10002}]},
                     'test_ivstate1': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 salt.utils.odict.OrderedDict([
                                     ('onfail_stop', False),
@@ -247,7 +247,7 @@ class StateUtilTestCase(TestCase):
                 {
                     'test_ivstate0': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 'run',
                                 {'order': 10002}],
@@ -256,7 +256,7 @@ class StateUtilTestCase(TestCase):
                               {'order': 10002}]},
                     'test_ivstate1': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 salt.utils.odict.OrderedDict([
                                     ('onfail_stop', False),
@@ -267,7 +267,7 @@ class StateUtilTestCase(TestCase):
                                 {'order': 10004}]},
                     'test_ivstate2': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 salt.utils.odict.OrderedDict([
                                     ('onfail_stop', True),
@@ -324,13 +324,13 @@ class StateUtilTestCase(TestCase):
                 {
                     'test_ivstate0': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 'run',
                                 {'order': 10002}]},
                     'test_ivstate1': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 salt.utils.odict.OrderedDict([
                                     ('onfail_stop', False),
@@ -356,7 +356,7 @@ class StateUtilTestCase(TestCase):
                 {
                     'test_ivstate0': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 'run',
                                 {'order': 10002}],
@@ -365,7 +365,7 @@ class StateUtilTestCase(TestCase):
                               {'order': 10002}]},
                     'test_ivstate1': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 salt.utils.odict.OrderedDict([
                                     ('onfail_stop', False),
@@ -387,13 +387,13 @@ class StateUtilTestCase(TestCase):
                 {
                     'test_vstate0': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 'run',
                                 {'order': 10002}]},
                     'test_vstate1': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 salt.utils.odict.OrderedDict([
                                     ('onfail_stop', False),
@@ -415,13 +415,13 @@ class StateUtilTestCase(TestCase):
                 {
                     'test_vstate0': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 'run',
                                 {'order': 10002}]},
                     'test_vstate1': {
                         '__env__': 'base',
-                        '__sls__': u'a',
+                        '__sls__': 'a',
                         'cmd': [salt.utils.odict.OrderedDict([('name', '/bin/true')]),
                                 salt.utils.odict.OrderedDict([
                                     ('onfail',
@@ -482,7 +482,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
             res = salt.utils.state.merge_subreturn(m, s)
             self.assertFalse(res['result'])
 
-        # False result cannot be overriden
+        # False result cannot be overridden
         for any_result in [True, None, False]:
             m = copy.deepcopy(self.main_ret)
             m['result'] = False
@@ -527,56 +527,6 @@ class UtilStateMergeSubreturnTestcase(TestCase):
             'alarms': secondary_changes,
         })
 
-    def test_merge_pchanges(self):
-        primary_pchanges = {'old': None, 'new': 'my_resource'}
-        secondary_pchanges = {'old': None, 'new': ['alarm-1', 'alarm-2']}
-
-        # Neither main nor sub pchanges case
-        m = copy.deepcopy(self.main_ret)
-        s = copy.deepcopy(self.sub_ret)
-        res = salt.utils.state.merge_subreturn(m, s)
-        self.assertNotIn('pchanges', res)
-
-        # No main pchanges, sub pchanges
-        m = copy.deepcopy(self.main_ret)
-        s = copy.deepcopy(self.sub_ret)
-        s['pchanges'] = copy.deepcopy(secondary_pchanges)
-        res = salt.utils.state.merge_subreturn(m, s)
-        self.assertDictEqual(res['pchanges'], {
-            'secondary': secondary_pchanges
-        })
-
-        # Main pchanges, no sub pchanges
-        m = copy.deepcopy(self.main_ret)
-        m['pchanges'] = copy.deepcopy(primary_pchanges)
-        s = copy.deepcopy(self.sub_ret)
-        res = salt.utils.state.merge_subreturn(m, s)
-        self.assertDictEqual(res['pchanges'], primary_pchanges)
-
-        # Both main and sub pchanges, new pchanges don't affect existing ones
-        m = copy.deepcopy(self.main_ret)
-        m['pchanges'] = copy.deepcopy(primary_pchanges)
-        s = copy.deepcopy(self.sub_ret)
-        s['pchanges'] = copy.deepcopy(secondary_pchanges)
-        res = salt.utils.state.merge_subreturn(m, s)
-        self.assertDictEqual(res['pchanges'], {
-            'old': None,
-            'new': 'my_resource',
-            'secondary': secondary_pchanges,
-        })
-
-        # The subkey parameter is respected
-        m = copy.deepcopy(self.main_ret)
-        m['pchanges'] = copy.deepcopy(primary_pchanges)
-        s = copy.deepcopy(self.sub_ret)
-        s['pchanges'] = copy.deepcopy(secondary_pchanges)
-        res = salt.utils.state.merge_subreturn(m, s, subkey='alarms')
-        self.assertDictEqual(res['pchanges'], {
-            'old': None,
-            'new': 'my_resource',
-            'alarms': secondary_pchanges,
-        })
-
     def test_merge_comments(self):
         main_comment_1 = 'First primary comment.'
         main_comment_2 = 'Second primary comment.'
@@ -595,15 +545,15 @@ class UtilStateMergeSubreturnTestcase(TestCase):
 
         # Joining two strings
         m = copy.deepcopy(self.main_ret)
-        m['comment'] = main_comment_1 + u'\n' + main_comment_2
+        m['comment'] = main_comment_1 + '\n' + main_comment_2
         s = copy.deepcopy(self.sub_ret)
-        s['comment'] = sub_comment_1 + u'\n' + sub_comment_2
+        s['comment'] = sub_comment_1 + '\n' + sub_comment_2
         res = salt.utils.state.merge_subreturn(m, s)
         self.assertMultiLineEqual(res['comment'], final_comment)
 
         # Joining string and a list
         m = copy.deepcopy(self.main_ret)
-        m['comment'] = main_comment_1 + u'\n' + main_comment_2
+        m['comment'] = main_comment_1 + '\n' + main_comment_2
         s = copy.deepcopy(self.sub_ret)
         s['comment'] = [sub_comment_1, sub_comment_2]
         res = salt.utils.state.merge_subreturn(m, s)
@@ -615,14 +565,14 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         m = copy.deepcopy(self.main_ret)
         m['comment'] = [main_comment_1, main_comment_2]
         s = copy.deepcopy(self.sub_ret)
-        s['comment'] = sub_comment_1 + u'\n' + sub_comment_2
+        s['comment'] = sub_comment_1 + '\n' + sub_comment_2
         res = salt.utils.state.merge_subreturn(m, s)
         self.assertEqual(res['comment'], [
             main_comment_1,
             main_comment_2,
-            sub_comment_1 + u'\n' + sub_comment_2,
+            sub_comment_1 + '\n' + sub_comment_2,
         ])
-        self.assertMultiLineEqual(u'\n'.join(res['comment']), final_comment)
+        self.assertMultiLineEqual('\n'.join(res['comment']), final_comment)
 
         # Joining two lists
         m = copy.deepcopy(self.main_ret)
@@ -636,7 +586,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
             sub_comment_1,
             sub_comment_2,
         ])
-        self.assertMultiLineEqual(u'\n'.join(res['comment']), final_comment)
+        self.assertMultiLineEqual('\n'.join(res['comment']), final_comment)
 
     def test_merge_empty_comments(self):
         # Since the primarysalt.utils.state is in progress,
@@ -649,13 +599,13 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         sub_comment_1 = 'Secondary comment about changes:'
         sub_comment_2 = 'A diff that goes with the previous comment'
         # No contributions from primary
-        final_comment = sub_comment_1 + u'\n' + sub_comment_2
+        final_comment = sub_comment_1 + '\n' + sub_comment_2
 
         # Joining empty string and a string
         m = copy.deepcopy(self.main_ret)
         m['comment'] = ''
         s = copy.deepcopy(self.sub_ret)
-        s['comment'] = sub_comment_1 + u'\n' + sub_comment_2
+        s['comment'] = sub_comment_1 + '\n' + sub_comment_2
         res = salt.utils.state.merge_subreturn(m, s)
         self.assertEqual(res['comment'], final_comment)
 
@@ -673,10 +623,10 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         m = copy.deepcopy(self.main_ret)
         m['comment'] = []
         s = copy.deepcopy(self.sub_ret)
-        s['comment'] = sub_comment_1 + u'\n' + sub_comment_2
+        s['comment'] = sub_comment_1 + '\n' + sub_comment_2
         res = salt.utils.state.merge_subreturn(m, s)
         self.assertEqual(res['comment'], [final_comment])
-        self.assertEqual(u'\n'.join(res['comment']), final_comment)
+        self.assertEqual('\n'.join(res['comment']), final_comment)
 
         # Joining empty list and a list
         m = copy.deepcopy(self.main_ret)
@@ -685,4 +635,4 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         s['comment'] = [sub_comment_1, sub_comment_2]
         res = salt.utils.state.merge_subreturn(m, s)
         self.assertEqual(res['comment'], [sub_comment_1, sub_comment_2])
-        self.assertEqual(u'\n'.join(res['comment']), final_comment)
+        self.assertEqual('\n'.join(res['comment']), final_comment)

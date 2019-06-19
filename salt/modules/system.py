@@ -12,7 +12,7 @@ Support for reboot, shutdown, etc on POSIX-like systems.
     ``salt`` will work as expected.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 from datetime import datetime, timedelta, tzinfo
@@ -24,9 +24,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
+from salt.utils.decorators import depends
 
 __virtualname__ = 'system'
 
@@ -258,10 +256,10 @@ def get_system_time(utc_offset=None):
     Get the system time.
 
     :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-    optional sign (+/-).  Will default to None which will use the local
-    timezone. To set the time based off of UTC use "'+0000'". Note: if being
-    passed through the command line will need to be quoted twice to allow
-    negative offsets.
+        optional sign (+/-).  Will default to None which will use the local
+        timezone. To set the time based off of UTC use "'+0000'". Note: if
+        being passed through the command line will need to be quoted twice to
+        allow negative offsets.
     :return: Returns the system time in HH:MM:SS AM/PM format.
     :rtype: str
 
@@ -292,10 +290,10 @@ def set_system_time(newtime, utc_offset=None):
         Meaning you may have to quote the text twice from the command line.
 
     :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-    optional sign (+/-).  Will default to None which will use the local
-    timezone. To set the time based off of UTC use "'+0000'". Note: if being
-    passed through the command line will need to be quoted twice to allow
-    negative offsets.
+        optional sign (+/-).  Will default to None which will use the local
+        timezone. To set the time based off of UTC use "'+0000'". Note: if
+        being passed through the command line will need to be quoted twice to
+        allow negative offsets.
     :return: Returns True if successful. Otherwise False.
     :rtype: bool
 
@@ -319,10 +317,10 @@ def get_system_date_time(utc_offset=None):
     Get the system date/time.
 
     :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-    optional sign (+/-).  Will default to None which will use the local
-    timezone. To set the time based off of UTC use "'+0000'". Note: if being
-    passed through the command line will need to be quoted twice to allow
-    negative offsets.
+        optional sign (+/-).  Will default to None which will use the local
+        timezone. To set the time based off of UTC use "'+0000'". Note: if
+        being passed through the command line will need to be quoted twice to
+        allow negative offsets.
     :return: Returns the system time in YYYY-MM-DD hh:mm:ss format.
     :rtype: str
 
@@ -360,10 +358,10 @@ def set_system_date_time(years=None,
     :param int minutes: Minutes digit: 0 - 59
     :param int seconds: Seconds digit: 0 - 59
     :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-    optional sign (+/-).  Will default to None which will use the local
-    timezone. To set the time based off of UTC use "'+0000'". Note: if being
-    passed through the command line will need to be quoted twice to allow
-    negative offsets.
+        optional sign (+/-).  Will default to None which will use the local
+        timezone. To set the time based off of UTC use "'+0000'". Note: if
+        being passed through the command line will need to be quoted twice to
+        allow negative offsets.
     :return: True if successful. Otherwise False.
     :rtype: bool
 
@@ -412,10 +410,10 @@ def get_system_date(utc_offset=None):
     Get the system date
 
     :param str utc_offset: The utc offset in 4 digit (+0600) format with an
-    optional sign (+/-).  Will default to None which will use the local
-    timezone. To set the time based off of UTC use "'+0000'". Note: if being
-    passed through the command line will need to be quoted twice to allow
-    negative offsets.
+        optional sign (+/-).  Will default to None which will use the local
+        timezone. To set the time based off of UTC use "'+0000'". Note: if
+        being passed through the command line will need to be quoted twice to
+        allow negative offsets.
     :return: Returns the system date.
     :rtype: str
 
@@ -434,7 +432,8 @@ def set_system_date(newdate, utc_offset=None):
     Set the system date. Use <mm-dd-yy> format for the date.
 
     :param str newdate:
-        The date to set. Can be any of the following formats
+        The date to set. Can be any of the following formats:
+
         - YYYY-MM-DD
         - MM-DD-YYYY
         - MM-DD-YY
@@ -467,12 +466,12 @@ def set_system_date(newdate, utc_offset=None):
 # Note that _FixedOffset(0) is a way to build a UTC tzinfo object.
 
 class _FixedOffset(tzinfo):
-    """
+    '''
     Fixed offset in minutes east from UTC.
-    """
+    '''
 
     def __init__(self, offset):
-        super(self.__class__, self).__init__()
+        super(_FixedOffset, self).__init__()
         self.__offset = timedelta(minutes=offset)
 
     def utcoffset(self, dt):  # pylint: disable=W0613
@@ -509,7 +508,6 @@ def get_computer_desc():
 
         salt '*' system.get_computer_desc
     '''
-    desc = None
     hostname_cmd = salt.utils.path.which('hostnamectl')
     if hostname_cmd:
         desc = __salt__['cmd.run'](
@@ -517,22 +515,24 @@ def get_computer_desc():
             python_shell=False
         )
     else:
+        desc = None
         pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
         try:
             with salt.utils.files.fopen('/etc/machine-info', 'r') as mach_info:
                 for line in mach_info.readlines():
+                    line = salt.utils.stringutils.to_unicode(line)
                     match = pattern.match(line)
                     if match:
                         # get rid of whitespace then strip off quotes
                         desc = _strip_quotes(match.group(1).strip())
                         # no break so we get the last occurance
         except IOError:
+            pass
+
+        if desc is None:
             return False
-    if six.PY3:
-        desc = desc.replace('\\"', '"')
-    else:
-        desc = desc.replace('\\"', '"').decode('string_escape')
-    return desc
+
+    return desc.replace(r'\"', r'"').replace(r'\n', '\n').replace(r'\t', '\t')
 
 
 def set_computer_desc(desc):
@@ -550,10 +550,9 @@ def set_computer_desc(desc):
 
         salt '*' system.set_computer_desc "Michael's laptop"
     '''
-    if six.PY3:
-        desc = desc.replace('"', '\\"')
-    else:
-        desc = desc.encode('string_escape').replace('"', '\\"')
+    desc = salt.utils.stringutils.to_unicode(
+        desc).replace('"', r'\"').replace('\n', r'\n').replace('\t', r'\t')
+
     hostname_cmd = salt.utils.path.which('hostnamectl')
     if hostname_cmd:
         result = __salt__['cmd.retcode'](
@@ -566,23 +565,22 @@ def set_computer_desc(desc):
         with salt.utils.files.fopen('/etc/machine-info', 'w'):
             pass
 
-    is_pretty_hostname_found = False
     pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
-    new_line = 'PRETTY_HOSTNAME="{0}"'.format(desc)
+    new_line = salt.utils.stringutils.to_str('PRETTY_HOSTNAME="{0}"'.format(desc))
     try:
         with salt.utils.files.fopen('/etc/machine-info', 'r+') as mach_info:
             lines = mach_info.readlines()
             for i, line in enumerate(lines):
-                if pattern.match(line):
-                    is_pretty_hostname_found = True
+                if pattern.match(salt.utils.stringutils.to_unicode(line)):
                     lines[i] = new_line
-            if not is_pretty_hostname_found:
+                    break
+            else:
+                # PRETTY_HOSTNAME line was not found, add it to the end
                 lines.append(new_line)
             # time to write our changes to the file
             mach_info.seek(0, 0)
             mach_info.truncate()
-            mach_info.write(''.join(lines))
-            mach_info.write('\n')
+            mach_info.writelines(lines)
             return True
     except IOError:
         return False
@@ -612,3 +610,60 @@ def get_computer_name():
         salt '*' network.get_hostname
     '''
     return __salt__['network.get_hostname']()
+
+
+def _is_nilrt_family():
+    '''
+    Determine whether the minion is running on NI Linux RT
+    '''
+    return __grains__.get('os_family') == 'NILinuxRT'
+
+
+NILRT_REBOOT_WITNESS_PATH = '/var/volatile/tmp/salt/reboot_witnessed'
+
+
+@depends('_is_nilrt_family')
+def set_reboot_required_witnessed():
+    '''
+    This function is used to remember that an event indicating that a reboot is
+    required was witnessed. This function writes to a temporary filesystem so
+    the event gets cleared upon reboot.
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+
+    .. code-block:: bash
+
+        salt '*' system.set_reboot_required_witnessed
+    '''
+    errcode = -1
+    dir_path = os.path.dirname(NILRT_REBOOT_WITNESS_PATH)
+    if not os.path.exists(dir_path):
+        try:
+            os.makedirs(dir_path)
+        except OSError as ex:
+            raise SaltInvocationError('Error creating {0} (-{1}): {2}'
+                                      .format(dir_path, ex.errno, ex.strerror))
+
+        rdict = __salt__['cmd.run_all']('touch {0}'.format(NILRT_REBOOT_WITNESS_PATH))
+        errcode = rdict['retcode']
+
+    return errcode == 0
+
+
+@depends('_is_nilrt_family')
+def get_reboot_required_witnessed():
+    '''
+    Determine if at any time during the current boot session the salt minion
+    witnessed an event indicating that a reboot is required.
+
+    Returns:
+        bool: ``True`` if the a reboot request was witnessed, ``False`` otherwise
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_reboot_required_witnessed
+    '''
+    return os.path.exists(NILRT_REBOOT_WITNESS_PATH)

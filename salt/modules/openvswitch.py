@@ -6,12 +6,15 @@ Suitable for setting up Openstack Neutron.
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 
 # Import salt libs
+from salt.ext import six
+from salt.exceptions import ArgumentValueError, CommandExecutionError
+from salt.utils import json
 import salt.utils.path
 
 log = logging.getLogger(__name__)
@@ -93,6 +96,54 @@ def _stdout_list_split(retcode, stdout='', splitstring='\n'):
         return False
 
 
+def _convert_json(obj):
+    '''
+    Converts from the JSON output provided by ovs-vsctl into a usable Python
+    object tree. In particular, sets and maps are converted from lists to
+    actual sets or maps.
+
+    Args:
+        obj: Object that shall be recursively converted.
+
+    Returns:
+        Converted version of object.
+    '''
+    if isinstance(obj, dict):
+        return {_convert_json(key): _convert_json(val)
+                for (key, val) in six.iteritems(obj)}
+    elif isinstance(obj, list) and len(obj) == 2:
+        first = obj[0]
+        second = obj[1]
+        if first == 'set' and isinstance(second, list):
+            return [_convert_json(elem) for elem in second]
+        elif first == 'map' and isinstance(second, list):
+            for elem in second:
+                if not isinstance(elem, list) or len(elem) != 2:
+                    return obj
+            return {elem[0]: _convert_json(elem[1]) for elem in second}
+        else:
+            return obj
+    elif isinstance(obj, list):
+        return [_convert_json(elem) for elem in obj]
+    else:
+        return obj
+
+
+def _stdout_parse_json(stdout):
+    '''
+    Parses JSON output from ovs-vsctl and returns the corresponding object
+    tree.
+
+    Args:
+        stdout: Output that shall be parsed.
+
+    Returns:
+        Object represented by the output.
+    '''
+    obj = json.loads(stdout)
+    return _convert_json(obj)
+
+
 def bridge_list():
     '''
     Lists all existing real and fake bridges.
@@ -134,13 +185,18 @@ def bridge_exists(br):
     return _retcode_to_bool(retcode)
 
 
-def bridge_create(br, may_exist=True):
+def bridge_create(br, may_exist=True, parent=None, vlan=None):
     '''
     Creates a new bridge.
 
     Args:
         br: A string - bridge name
         may_exist: Bool, if False - attempting to create a bridge that exists returns False.
+        parent: String, the name of the parent bridge (if the bridge shall be
+            created as a fake bridge). If specified, vlan must also be
+            specified.
+        vlan: Int, the VLAN ID of the bridge (if the bridge shall be created as
+            a fake bridge). If specified, parent must also be specified.
 
     Returns:
         True on success, else False.
@@ -153,7 +209,16 @@ def bridge_create(br, may_exist=True):
         salt '*' openvswitch.bridge_create br0
     '''
     param_may_exist = _param_may_exist(may_exist)
-    cmd = 'ovs-vsctl {1}add-br {0}'.format(br, param_may_exist)
+    if parent is not None and vlan is None:
+        raise ArgumentValueError(
+            'If parent is specified, vlan must also be specified.')
+    if vlan is not None and parent is None:
+        raise ArgumentValueError(
+            'If vlan is specified, parent must also be specified.')
+    param_parent = '' if parent is None else ' {0}'.format(parent)
+    param_vlan = '' if vlan is None else ' {0}'.format(vlan)
+    cmd = 'ovs-vsctl {1}add-br {0}{2}{3}'.format(br, param_may_exist, param_parent,
+                                           param_vlan)
     result = __salt__['cmd.run_all'](cmd)
     return _retcode_to_bool(result['retcode'])
 
@@ -183,7 +248,57 @@ def bridge_delete(br, if_exists=True):
     return _retcode_to_bool(retcode)
 
 
-def port_add(br, port, may_exist=False):
+def bridge_to_parent(br):
+    '''
+    Returns the parent bridge of a bridge.
+
+    Args:
+        br: A string - bridge name
+
+    Returns:
+        Name of the parent bridge. This is the same as the bridge name if the
+        bridge is not a fake bridge. If the bridge does not exist, False is
+        returned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' openvswitch.bridge_to_parent br0
+
+    '''
+    cmd = 'ovs-vsctl br-to-parent {0}'.format(br)
+    result = __salt__['cmd.run_all'](cmd)
+    if result['retcode'] != 0:
+        return False
+    return result['stdout']
+
+
+def bridge_to_vlan(br):
+    '''
+    Returns the VLAN ID of a bridge.
+
+    Args:
+        br: A string - bridge name
+
+    Returns:
+        VLAN ID of the bridge. The VLAN ID is 0 if the bridge is not a fake
+        bridge.  If the bridge does not exist, False is returned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' openvswitch.bridge_to_parent br0
+    '''
+    cmd = 'ovs-vsctl br-to-vlan {0}'.format(br)
+    result = __salt__['cmd.run_all'](cmd)
+    if result['retcode'] != 0:
+        return False
+    return int(result['stdout'])
+
+
+def port_add(br, port, may_exist=False, internal=False):
     '''
     Creates on bridge a new port named port.
 
@@ -194,6 +309,7 @@ def port_add(br, port, may_exist=False):
         br: A string - bridge name
         port: A string - port name
         may_exist: Bool, if False - attempting to create a port that exists returns False.
+        internal: A boolean to create an internal interface if one does not exist.
 
     .. versionadded:: 2016.3.0
 
@@ -204,6 +320,8 @@ def port_add(br, port, may_exist=False):
     '''
     param_may_exist = _param_may_exist(may_exist)
     cmd = 'ovs-vsctl {2}add-port {0} {1}'.format(br, port, param_may_exist)
+    if internal:
+        cmd += ' -- set interface {0} type=internal'.format(port)
     result = __salt__['cmd.run_all'](cmd)
     retcode = result['retcode']
     return _retcode_to_bool(retcode)
@@ -434,7 +552,7 @@ def port_create_vxlan(br, port, id, remote, dst_port=None):
 
        salt '*' openvswitch.port_create_vxlan br0 vx1 5001 192.168.1.10 8472
     '''
-    dst_port = ' options:dst_port=' + str(dst_port) if 0 < dst_port <= 65535 else ''
+    dst_port = ' options:dst_port=' + six.text_type(dst_port) if 0 < dst_port <= 65535 else ''
     if not 0 <= id < 2**64:
         return False
     elif not __salt__['dig.check_ip'](remote):
@@ -451,3 +569,67 @@ def port_create_vxlan(br, port, id, remote, dst_port=None):
               'options:key={3}{4}'.format(br, port, remote, id, dst_port)
         result = __salt__['cmd.run_all'](cmd)
         return _retcode_to_bool(result['retcode'])
+
+
+def db_get(table, record, column, if_exists=False):
+    '''
+    Gets a column's value for a specific record.
+
+    Args:
+        table: A string - name of the database table.
+        record: A string - identifier of the record.
+        column: A string - name of the column.
+        if_exists: A boolean - if True, it is not an error if the record does
+            not exist.
+
+    Returns:
+        The column's value.
+
+    CLI Example:
+    .. code-block:: bash
+
+       salt '*' openvswitch.db_get Port br0 vlan_mode
+    '''
+    cmd = ['ovs-vsctl', '--format=json', '--columns={0}'.format(column)]
+    if if_exists:
+        cmd += ['--if-exists']
+    cmd += ['list', table, record]
+    result = __salt__['cmd.run_all'](cmd)
+    if result['retcode'] != 0:
+        raise CommandExecutionError(result['stderr'])
+    output = _stdout_parse_json(result['stdout'])
+    if output['data'] and output['data'][0]:
+        return output['data'][0][0]
+    else:
+        return None
+
+
+def db_set(table, record, column, value, if_exists=False):
+    '''
+    Sets a column's value for a specific record.
+
+    Args:
+        table: A string - name of the database table.
+        record: A string - identifier of the record.
+        column: A string - name of the column.
+        value: A string - the value to be set
+        if_exists: A boolean - if True, it is not an error if the record does
+            not exist.
+
+    Returns:
+        None on success and an error message on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+       salt '*' openvswitch.db_set Interface br0 mac 02:03:04:05:06:07
+    '''
+    cmd = ['ovs-vsctl']
+    if if_exists:
+        cmd += ['--if-exists']
+    cmd += ['set', table, record, '{0}={1}'.format(column, json.dumps(value))]
+    result = __salt__['cmd.run_all'](cmd)
+    if result['retcode'] != 0:
+        return result['stderr']
+    else:
+        return None

@@ -52,9 +52,9 @@ in IPTables Firewalls.
       ipset.flush:
 
 '''
-from __future__ import absolute_import
-
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+
 log = logging.getLogger(__name__)
 
 
@@ -276,7 +276,7 @@ def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
             entry_opts = '{0} comment "{1}"'.format(entry_opts, kwargs['comment'])
         _entry = ' '.join([entry, entry_opts]).strip()
 
-        log.debug('_entry {0}'.format(_entry))
+        log.debug('_entry %s', _entry)
         if not __salt__['ipset.check'](kwargs['set_name'],
                                       _entry,
                                       family) is True:

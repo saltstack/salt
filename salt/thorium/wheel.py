@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-React by calling async runners
+React by calling asynchronous runners
 '''
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -14,7 +14,7 @@ def cmd(
         arg=(),
         **kwargs):
     '''
-    Execute a runner async:
+    Execute a runner asynchronous:
 
     USAGE:
 

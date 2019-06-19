@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -44,8 +44,8 @@ class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {},
                'comment': ''}
 
-        comt1 = ("Dashboard myservice is set to be updated. The following rows "
-                 "set to be updated: ['systemhealth']")
+        comt1 = ('Dashboard myservice is set to be updated. The following rows '
+                 'set to be updated: {0}'.format(['systemhealth']))
         self.assertRaises(SaltInvocationError, grafana.dashboard_present, name,
                           profile=False)
 

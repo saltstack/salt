@@ -7,14 +7,14 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import os
 import shutil
 from datetime import date
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch
 
 # Import salt libs
@@ -35,6 +35,8 @@ class ExtendTestCase(TestCase):
                 shutil.rmtree(self.out, True)
         os.chdir(self.starting_dir)
 
+    @skipIf(not os.path.exists(os.path.join(integration.CODE_DIR, 'templates')),
+            "Test template directory 'templates/' missing.")
     def test_run(self):
         with patch('sys.exit', MagicMock):
             out = salt.utils.extend.run('test', 'test', 'this description', integration.CODE_DIR, False)

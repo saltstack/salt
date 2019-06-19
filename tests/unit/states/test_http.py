@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
+    :codeauthor: Rahul Handay <rahulha@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.states.http as http
@@ -44,3 +44,27 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(http.__salt__, {'http.query': mock}):
                 self.assertDictEqual(http.query("salt", "Dude", "stack"),
                                      ret[1])
+
+    def test_query_statustype(self):
+        '''
+            Test to perform an HTTP query and statefully return the result
+        '''
+        testurl = "salturl"
+        http_result = {
+                        "text": "This page returned a 201 status code",
+                        "status": "201"
+                      }
+        state_return = {'changes': {},
+                        'comment': 'Match text "This page returned" was found. Status pattern "200|201" was found.',
+                        'data': {'status': '201', 'text': 'This page returned a 201 status code'},
+                        'name': testurl,
+                        'result': True}
+
+        with patch.dict(http.__opts__, {'test': False}):
+            mock = MagicMock(return_value=http_result)
+            with patch.dict(http.__salt__, {'http.query': mock}):
+                self.assertDictEqual(http.query(testurl,
+                                                match="This page returned",
+                                                status="200|201",
+                                                status_type='pcre'
+                                                ), state_return)

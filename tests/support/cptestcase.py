@@ -119,7 +119,7 @@ class BaseCherryPyTestCase(TestCase):
                 fd.close()
                 fd = None
 
-        if response.output_status.startswith(six.b('500')):
+        if response.output_status.startswith(b'500'):
             response_body = response.collapse_body()
             if six.PY3:
                 response_body = response_body.decode(__salt_system_encoding__)

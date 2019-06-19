@@ -6,12 +6,12 @@ and the set of routes for a particular VM is called its routing table.
 For each packet leaving a virtual machine, the system searches that machine's
 routing table for a single best matching route.
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 This module will create a route to send traffic destined to the Internet
 through your gateway instance.
 
-:codeauthor: :email:`Pratik Bandarkar <pratik.bandarkar@gmail.com>`
+:codeauthor: `Pratik Bandarkar <pratik.bandarkar@gmail.com>`
 :maturity:   new
 :depends:    google-api-python-client
 :platform:   Linux
@@ -19,8 +19,11 @@ through your gateway instance.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
+
+# Import salt libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -119,10 +122,10 @@ def route_create(credential_file=None,
     routes = service.routes()
 
     routes_config = {
-        'name': str(name),
-        'network': _get_network(project_id, str(network),
+        'name': six.text_type(name),
+        'network': _get_network(project_id, six.text_type(network),
                                 service=service)['selfLink'],
-        'destRange': str(dest_range),
+        'destRange': six.text_type(dest_range),
         'nextHopInstance': _get_instance(project_id, instance_zone,
                                          next_hop_instance,
                                          service=service)['selfLink'],

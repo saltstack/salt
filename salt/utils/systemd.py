@@ -3,9 +3,10 @@
 Contains systemd related help files
 '''
 # import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
+import re
 import subprocess
 
 # Import Salt libs
@@ -65,11 +66,11 @@ def version(context=None):
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0]
     outstr = salt.utils.stringutils.to_str(stdout)
     try:
-        ret = int(outstr.splitlines()[0].split()[-1])
-    except (IndexError, ValueError):
+        ret = int(re.search(r'\w+ ([0-9]+)', outstr.splitlines()[0]).group(1))
+    except (AttributeError, IndexError, ValueError):
         log.error(
             'Unable to determine systemd version from systemctl '
-            '--version, output follows:\n{0}'.format(outstr)
+            '--version, output follows:\n%s', outstr
         )
         return None
     else:

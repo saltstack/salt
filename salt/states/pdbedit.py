@@ -21,7 +21,7 @@ Manage accounts in Samba's passdb using pdbedit
         - drive: 'X:'
         - homedir: '\\\\serenity\\mechanic\\profile'
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -62,7 +62,7 @@ def absent(name):
            'result': True,
            'comment': ''}
 
-    ## remove if needed
+    # remove if needed
     if name in __salt__['pdbedit.list'](False):
         res = __salt__['pdbedit.delete'](name)
         if res[name] in ['deleted']:  # check if we need to update changes
@@ -107,7 +107,7 @@ def managed(name, **kwargs):
         specify user account control properties
 
         .. note::
-            Only the follwing can be set:
+            Only the following can be set:
             - N: No password required
             - D: Account disabled
             - H: Home directory required
@@ -123,15 +123,15 @@ def managed(name, **kwargs):
            'result': True,
            'comment': ''}
 
-    ## save state
+    # save state
     saved = __salt__['pdbedit.list'](hashes=True)
     saved = saved[name] if name in saved else {}
 
-    ## call pdbedit.modify
+    # call pdbedit.modify
     kwargs['login'] = name
     res = __salt__['pdbedit.modify'](**kwargs)
 
-    ## calculate changes
+    # calculate changes
     if res[name] in ['created']:
         ret['changes'] = res
     elif res[name] in ['updated']:

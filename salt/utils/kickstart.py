@@ -4,7 +4,7 @@ Utilities for managing kickstart
 
 .. versionadded:: Beryllium
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import shlex
 import argparse  # pylint: disable=minimum-python-version
 import salt.utils.files
@@ -742,10 +742,7 @@ def parse_updates(rule):
     '''
     rules = shlex.split(rule)
     rules.pop(0)
-    if len(rules) > 0:
-        return {'url': rules[0]}
-    else:
-        return True
+    return {'url': rules[0]} if rules else True
 
 
 def parse_upgrade(rule):

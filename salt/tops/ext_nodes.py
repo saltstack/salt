@@ -80,7 +80,7 @@ def top(**kwargs):
         subprocess.Popen(
             cmd,
             shell=True,
-            stdout=subprocess.PIPE.communicate()[0])
+            stdout=subprocess.PIPE).communicate()[0]
     )
     if not ndata:
         log.info('master_tops ext_nodes call did not return any data')

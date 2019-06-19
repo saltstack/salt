@@ -11,7 +11,7 @@ The design of this module is such that when files are edited, a minimum of
 changes are made to them. Each file should look as if it has been edited by
 hand; order, comments and whitespace are all preserved.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import re
@@ -20,6 +20,7 @@ import logging
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -55,7 +56,7 @@ def _parse_master(path=MASTER_CF):
     in order. These compliment each other.
     '''
     with salt.utils.files.fopen(path, 'r') as fh_:
-        full_conf = fh_.read()
+        full_conf = salt.utils.stringutils.to_unicode(fh_.read())
 
     # Condense the file based on line continuations, but keep order, comments
     # and whitespace
@@ -197,7 +198,7 @@ def _format_master(service,
     if wakeup == 'n':
         wakeup = '-'
 
-    maxproc = str(maxproc)
+    maxproc = six.text_type(maxproc)
     if maxproc == '100':
         maxproc = '-'
 
@@ -228,7 +229,7 @@ def _parse_main(path=MAIN_CF):
         the file.
     '''
     with salt.utils.files.fopen(path, 'r') as fh_:
-        full_conf = fh_.read()
+        full_conf = salt.utils.stringutils.to_unicode(fh_.read())
 
     # Condense the file based on line continuations, but keep order, comments
     # and whitespace
@@ -292,9 +293,10 @@ def set_main(key, value, path=MAIN_CF):
     pairs, conf_list = _parse_main(path)
 
     new_conf = []
+    key_line_match = re.compile("^{0}([\\s=]|$)".format(re.escape(key)))
     if key in pairs:
         for line in conf_list:
-            if line.startswith(key):
+            if re.match(key_line_match, line):
                 new_conf.append('{0} = {1}'.format(key, value))
             else:
                 new_conf.append(line)
@@ -312,6 +314,7 @@ def _write_conf(conf, path=MAIN_CF):
     '''
     with salt.utils.files.fopen(path, 'w') as fh_:
         for line in conf:
+            line = salt.utils.stringutils.to_str(line)
             if isinstance(line, dict):
                 fh_.write(' '.join(line))
             else:

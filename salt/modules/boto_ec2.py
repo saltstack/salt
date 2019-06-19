@@ -7,37 +7,35 @@ Connection module for Amazon EC2
 :configuration: This module accepts explicit EC2 credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
-    further configuration is necessary. More Information available at:
+    further configuration is necessary. More Information available here__.
 
-    .. code-block:: text
+.. __: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
-        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+If IAM roles are not used you need to specify them either in a pillar or
+in the minion's config file:
 
-    If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file:
+.. code-block:: yaml
 
-    .. code-block:: yaml
+    ec2.keyid: GKTADJGHEIQSXMKKRBJ08H
+    ec2.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-        ec2.keyid: GKTADJGHEIQSXMKKRBJ08H
-        ec2.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+A region may also be specified in the configuration:
 
-    A region may also be specified in the configuration:
+.. code-block:: yaml
 
-    .. code-block:: yaml
+    ec2.region: us-east-1
 
-        ec2.region: us-east-1
+If a region is not specified, the default is us-east-1.
 
-    If a region is not specified, the default is us-east-1.
+It's also possible to specify key, keyid, and region via a profile, either
+as a passed in dict, or as a string to pull from pillars or minion config:
 
-    It's also possible to specify key, keyid, and region via a profile, either
-    as a passed in dict, or as a string to pull from pillars or minion config:
+.. code-block:: yaml
 
-    .. code-block:: yaml
-
-        myprofile:
-          keyid: GKTADJGHEIQSXMKKRBJ08H
-          key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-          region: us-east-1
+    myprofile:
+      keyid: GKTADJGHEIQSXMKKRBJ08H
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      region: us-east-1
 
 :depends: boto
 
@@ -46,7 +44,7 @@ Connection module for Amazon EC2
 #pylint: disable=E0602
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
@@ -54,9 +52,10 @@ import time
 import salt.utils.compat
 import salt.utils.data
 import salt.utils.json
+import salt.utils.versions
 from salt.ext import six
+from salt.ext.six.moves import map
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import third party libs
 try:
@@ -65,6 +64,7 @@ try:
     import boto.ec2
     # pylint: enable=unused-import
     from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
+    from boto.ec2.networkinterface import NetworkInterfaceSpecification, NetworkInterfaceCollection
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -78,17 +78,16 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto_version = '2.8.0'
     # the boto_ec2 execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    if not HAS_BOTO:
-        return (False, "The boto_ec2 module cannot be loaded: boto library not found")
-    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return (False, "The boto_ec2 module cannot be loaded: boto library version incorrect ")
-    else:
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(
+        boto_ver='2.8.0',
+        check_boto3=False
+    )
+    if has_boto_reqs is True:
         __utils__['boto.assign_funcs'](__name__, 'ec2', pack=__salt__)
-        return True
+    return has_boto_reqs
 
 
 def __init__(opts):
@@ -172,18 +171,20 @@ def get_unassociated_eip_address(domain='standard', region=None, key=None,
                                             key=key, keyid=keyid,
                                             profile=profile)[0]
         if address_info['instance_id']:
-            log.debug('{0} is already associated with the instance {1}'.format(
-                address, address_info['instance_id']))
+            log.debug('%s is already associated with the instance %s',
+                      address, address_info['instance_id'])
             continue
 
         if address_info['network_interface_id']:
-            log.debug('{0} is already associated with the network interface {1}'
-                      .format(address, address_info['network_interface_id']))
+            log.debug('%s is already associated with the network interface %s',
+                      address, address_info['network_interface_id'])
             continue
 
         if address_info['domain'] == domain:
-            log.debug("The first unassociated EIP address in the domain '{0}' "
-                      "is {1}".format(domain, address))
+            log.debug(
+                "The first unassociated EIP address in the domain '%s' is %s",
+                domain, address
+            )
             eip = address
             break
 
@@ -361,8 +362,10 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
             log.error(e)
             return False
         if not instance_id:
-            log.error("Given instance_name '{0}' cannot be mapped to an "
-                      "instance_id".format(instance_name))
+            log.error(
+                "Given instance_name '%s' cannot be mapped to an instance_id",
+                instance_name
+            )
             return False
 
     if network_interface_name:
@@ -374,8 +377,8 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
             log.error(e)
             return False
         if not network_interface_id:
-            log.error("Given network_interface_name '{0}' cannot be mapped to "
-                      "an network_interface_id".format(network_interface_name))
+            log.error("Given network_interface_name '%s' cannot be mapped to "
+                      "an network_interface_id", network_interface_name)
             return False
 
     try:
@@ -468,8 +471,8 @@ def assign_private_ip_addresses(network_interface_name=None, network_interface_i
             log.error(e)
             return False
         if not network_interface_id:
-            log.error("Given network_interface_name '{0}' cannot be mapped to "
-                      "an network_interface_id".format(network_interface_name))
+            log.error("Given network_interface_name '%s' cannot be mapped to "
+                      "an network_interface_id", network_interface_name)
             return False
 
     try:
@@ -522,8 +525,8 @@ def unassign_private_ip_addresses(network_interface_name=None, network_interface
             log.error(e)
             return False
         if not network_interface_id:
-            log.error("Given network_interface_name '{0}' cannot be mapped to "
-                      "an network_interface_id".format(network_interface_name))
+            log.error("Given network_interface_name '%s' cannot be mapped to "
+                      "an network_interface_id", network_interface_name)
             return False
 
     try:
@@ -586,13 +589,15 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
 
         reservations = conn.get_all_reservations(**filter_parameters)
         instances = [i for r in reservations for i in r.instances]
-        log.debug('The filters criteria {0} matched the following '
-                  'instances:{1}'.format(filter_parameters, instances))
+        log.debug('The filters criteria %s matched the following '
+                  'instances:%s', filter_parameters, instances)
 
         if in_states:
             instances = [i for i in instances if i.state in in_states]
-            log.debug('Limiting instance matches to those in the requested '
-                      'states: {0}'.format(instances))
+            log.debug(
+                'Limiting instance matches to those in the requested states: %s',
+                instances
+            )
         if instances:
             if return_objs:
                 return instances
@@ -652,40 +657,40 @@ def find_images(ami_name=None, executable_by=None, owners=None, image_ids=None, 
         salt myminion boto_ec2.find_images tags='{"mytag": "value"}'
 
     '''
+    retries = 30
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    try:
-        filter_parameters = {'filters': {}}
-
-        if image_ids:
-            filter_parameters['image_ids'] = [image_ids]
-
-        if executable_by:
-            filter_parameters['executable_by'] = [executable_by]
-
-        if owners:
-            filter_parameters['owners'] = [owners]
-
-        if ami_name:
-            filter_parameters['filters']['name'] = ami_name
-
-        if tags:
-            for tag_name, tag_value in six.iteritems(tags):
-                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
-
-        images = conn.get_all_images(**filter_parameters)
-        log.debug('The filters criteria {0} matched the following '
-                  'images:{1}'.format(filter_parameters, images))
-
-        if images:
-            if return_objs:
-                return images
-            return [image.id for image in images]
-        else:
+    while retries:
+        try:
+            filter_parameters = {'filters': {}}
+            if image_ids:
+                filter_parameters['image_ids'] = [image_ids]
+            if executable_by:
+                filter_parameters['executable_by'] = [executable_by]
+            if owners:
+                filter_parameters['owners'] = [owners]
+            if ami_name:
+                filter_parameters['filters']['name'] = ami_name
+            if tags:
+                for tag_name, tag_value in six.iteritems(tags):
+                    filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+            images = conn.get_all_images(**filter_parameters)
+            log.debug('The filters criteria %s matched the following '
+                      'images:%s', filter_parameters, images)
+            if images:
+                if return_objs:
+                    return images
+                return [image.id for image in images]
+            else:
+                return False
+        except boto.exception.BotoServerError as exc:
+            if exc.error_code == 'Throttling':
+                log.debug("Throttled by AWS API, will retry in 5 seconds...")
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error('Failed to convert AMI name `%s` to an AMI ID: %s', ami_name, exc)
             return False
-    except boto.exception.BotoServerError as exc:
-        log.error(exc)
-        return False
+    return False
 
 
 def terminate(instance_id=None, name=None, region=None,
@@ -732,7 +737,7 @@ def get_id(name=None, tags=None, region=None, key=None,
                                   keyid=keyid, profile=profile, in_states=in_states,
                                   filters=filters)
     if instance_ids:
-        log.info("Instance ids: {0}".format(" ".join(instance_ids)))
+        log.info("Instance ids: %s", " ".join(instance_ids))
         if len(instance_ids) == 1:
             return instance_ids[0]
         else:
@@ -760,11 +765,11 @@ def get_tags(instance_id=None, keyid=None, key=None, profile=None,
     tags = []
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
     result = client.get_all_tags(filters={"resource-id": instance_id})
-    if len(result) > 0:
+    if result:
         for tag in result:
             tags.append({tag.name: tag.value})
     else:
-        log.info("No tags found for instance_id {}".format(instance_id))
+        log.info("No tags found for instance_id %s", instance_id)
     return tags
 
 
@@ -824,8 +829,8 @@ def _to_blockdev_map(thing):
     if isinstance(thing, six.string_types):
         thing = salt.utils.json.loads(thing)
     if not isinstance(thing, dict):
-        log.error("Can't convert '{0}' of type {1} to a "
-                  "boto.ec2.blockdevicemapping.BlockDeviceMapping".format(thing, type(thing)))
+        log.error("Can't convert '%s' of type %s to a "
+                  "boto.ec2.blockdevicemapping.BlockDeviceMapping", thing, type(thing))
         return None
 
     bdm = BlockDeviceMapping()
@@ -911,8 +916,11 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
         data structure describing the EBS volumes associated with the Image.
         (string) - A string representation of a BlockDeviceMapping structure
         (dict) - A dict describing a BlockDeviceMapping structure
+
         YAML example:
+
         .. code-block:: yaml
+
             device-maps:
                 /dev/sdb:
                     ephemeral_name: ephemeral0
@@ -925,6 +933,7 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                 /dev/sdf:
                     size: 20
                     volume_type: gp2
+
     disable_api_termination
         (bool) – If True, the instances will be locked and will not be able to
         be terminated via the API.
@@ -980,7 +989,7 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                                                  region=region, key=key,
                                                  keyid=keyid, profile=profile)
         if 'id' not in r:
-            log.warning('Couldn\'t resolve subnet name {0}.').format(subnet_name)
+            log.warning('Couldn\'t resolve subnet name %s.', subnet_name)
             return False
         subnet_id = r['id']
 
@@ -994,37 +1003,45 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                                                        region=region, key=key,
                                                        keyid=keyid, profile=profile)
             if not r:
-                log.warning('Couldn\'t resolve security group name ' + str(sgn))
+                log.warning('Couldn\'t resolve security group name %s', sgn)
                 return False
             security_group_ids += [r]
 
-    if all((network_interface_id, network_interface_name)):
-        raise SaltInvocationError('Only one of network_interface_id or '
-                                  'network_interface_name may be provided.')
+    network_interface_args = list(map(int, [network_interface_id is not None,
+                                            network_interface_name is not None,
+                                            network_interfaces is not None]))
+
+    if sum(network_interface_args) > 1:
+        raise SaltInvocationError('Only one of network_interface_id, '
+                                  'network_interface_name or '
+                                  'network_interfaces may be provided.')
     if network_interface_name:
         result = get_network_interface_id(network_interface_name,
-                                                        region=region, key=key,
-                                                        keyid=keyid,
-                                                        profile=profile)
+                                          region=region, key=key,
+                                          keyid=keyid,
+                                          profile=profile)
         network_interface_id = result['result']
         if not network_interface_id:
             log.warning(
-                "Given network_interface_name '{0}' cannot be mapped to an "
-                "network_interface_id".format(network_interface_name)
+                "Given network_interface_name '%s' cannot be mapped to an "
+                "network_interface_id", network_interface_name
             )
 
     if network_interface_id:
-        interface = boto.ec2.networkinterface.NetworkInterfaceSpecification(
+        interface = NetworkInterfaceSpecification(
             network_interface_id=network_interface_id,
-            device_index=0
-        )
+            device_index=0)
     else:
-        interface = boto.ec2.networkinterface.NetworkInterfaceSpecification(
+        interface = NetworkInterfaceSpecification(
             subnet_id=subnet_id,
             groups=security_group_ids,
-            device_index=0
-        )
-    interfaces = boto.ec2.networkinterface.NetworkInterfaceCollection(interface)
+            device_index=0)
+
+    if network_interfaces:
+        interfaces_specs = [NetworkInterfaceSpecification(**x) for x in network_interfaces]
+        interfaces = NetworkInterfaceCollection(*interfaces_specs)
+    else:
+        interfaces = NetworkInterfaceCollection(interface)
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -1058,8 +1075,10 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
             instance.add_tags(tags)
         return {'instance_id': instance.id}
     else:
-        log.warning('Instance could not be started -- '
-                    'status is "{0}"'.format(status))
+        log.warning(
+            'Instance could not be started -- status is "%s"',
+            status
+        )
 
 
 def get_key(key_name, region=None, key=None, keyid=None, profile=None):
@@ -1076,7 +1095,7 @@ def get_key(key_name, region=None, key=None, keyid=None, profile=None):
 
     try:
         key = conn.get_key_pair(key_name)
-        log.debug("the key to return is : {0}".format(key))
+        log.debug("the key to return is : %s", key)
         if key is None:
             return False
         return key.name, key.fingerprint
@@ -1101,7 +1120,7 @@ def create_key(key_name, save_path, region=None, key=None, keyid=None,
 
     try:
         key = conn.create_key_pair(key_name)
-        log.debug("the key to return is : {0}".format(key))
+        log.debug("the key to return is : %s", key)
         key.save(save_path)
         return key.material
     except boto.exception.BotoServerError as e:
@@ -1130,7 +1149,7 @@ def import_key(key_name, public_key_material, region=None, key=None,
 
     try:
         key = conn.import_key_pair(key_name, public_key_material)
-        log.debug("the key to return is : {0}".format(key))
+        log.debug("the key to return is : %s", key)
         return key.fingerprint
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -1151,7 +1170,7 @@ def delete_key(key_name, region=None, key=None, keyid=None, profile=None):
 
     try:
         key = conn.delete_key_pair(key_name)
-        log.debug("the key to return is : {0}".format(key))
+        log.debug("the key to return is : %s", key)
         return key
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -1180,7 +1199,7 @@ def get_keys(keynames=None, filters=None, region=None, key=None,
 
     try:
         keys = conn.get_all_key_pairs(keynames, filters)
-        log.debug("the key to return is : {0}".format(keys))
+        log.debug("the key to return is : %s", keys)
         key_values = []
         if keys:
             for key in keys:
@@ -1236,7 +1255,7 @@ def get_attribute(attribute, instance_name=None, instance_id=None, region=None, 
             if len(instances) > 1:
                 log.error('Found more than one EC2 instance matching the criteria.')
                 return False
-            elif len(instances) < 1:
+            elif not instances:
                 log.error('Found no EC2 instance matching the criteria.')
                 return False
             instance_id = instances[0]
@@ -1435,8 +1454,7 @@ def create_network_interface(name, subnet_id=None, subnet_name=None,
                                                         keyid=keyid,
                                                         profile=profile)
         if 'id' not in resource:
-            log.warning('Couldn\'t resolve subnet name {0}.').format(
-                subnet_name)
+            log.warning('Couldn\'t resolve subnet name %s.', subnet_name)
             return False
         subnet_id = resource['id']
 
@@ -1688,28 +1706,31 @@ def get_all_volumes(volume_ids=None, filters=None, return_objs=False,
         associated with those in the list will be returned.
     filters
         (dict) - Additional constraints on which volumes to return.  Valid filters are:
-            attachment.attach-time - The time stamp when the attachment initiated.
-            attachment.delete-on-termination - Whether the volume is deleted on instance termination.
-            attachment.device - The device name that is exposed to the instance (for example, /dev/sda1).
-            attachment.instance-id - The ID of the instance the volume is attached to.
-            attachment.status - The attachment state (attaching | attached | detaching | detached).
-            availability-zone - The Availability Zone in which the volume was created.
-            create-time - The time stamp when the volume was created.
-            encrypted - The encryption status of the volume.
-            size - The size of the volume, in GiB.
-            snapshot-id - The snapshot from which the volume was created.
-            status - The status of the volume (creating | available | in-use | deleting | deleted | error).
-            tag:key=value - The key/value combination of a tag assigned to the resource.
-            volume-id - The volume ID.
-            volume-type - The Amazon EBS volume type. This can be gp2 for General Purpose SSD, io1 for
-                          Provisioned IOPS SSD, st1 for Throughput Optimized HDD, sc1 for Cold HDD, or
-                          standard for Magnetic volumes.
+
+    - attachment.attach-time - The time stamp when the attachment initiated.
+    - attachment.delete-on-termination - Whether the volume is deleted on instance termination.
+    - attachment.device - The device name that is exposed to the instance (for example, /dev/sda1).
+    - attachment.instance-id - The ID of the instance the volume is attached to.
+    - attachment.status - The attachment state (attaching | attached | detaching | detached).
+    - availability-zone - The Availability Zone in which the volume was created.
+    - create-time - The time stamp when the volume was created.
+    - encrypted - The encryption status of the volume.
+    - size - The size of the volume, in GiB.
+    - snapshot-id - The snapshot from which the volume was created.
+    - status - The status of the volume (creating | available | in-use | deleting | deleted | error).
+    - tag:key=value - The key/value combination of a tag assigned to the resource.
+    - volume-id - The volume ID.
+    - volume-type - The Amazon EBS volume type. This can be ``gp2`` for General
+      Purpose SSD, ``io1`` for Provisioned IOPS SSD, ``st1`` for Throughput
+      Optimized HDD, ``sc1`` for Cold HDD, or ``standard`` for Magnetic volumes.
+
     return_objs
-        (bool) - Changes the return type from list of volume IDs to list of boto.ec2.volume.Volume objects
+        (bool) - Changes the return type from list of volume IDs to list of
+        boto.ec2.volume.Volume objects
 
     returns
-        (list) - A list of the requested values:  Either the volume IDs; or, if return_objs is true,
-                 boto.ec2.volume.Volume objects.
+        (list) - A list of the requested values: Either the volume IDs or, if
+        return_objs is ``True``, boto.ec2.volume.Volume objects.
 
     CLI Example:
 
@@ -1791,7 +1812,7 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
         tags = dict(tm.get('tags', {}))
         args = {'return_objs': True, 'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
         new_filters = {}
-        log.debug('got filters: {0}'.format(filters))
+        log.debug('got filters: %s', filters)
         instance_id = None
         in_states = tm.get('in_states', running_states)
         try:
@@ -1812,18 +1833,18 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
             continue  # Hmme, abort or do what we can...?  Guess the latter for now.
         args['filters'] = new_filters
         volumes = get_all_volumes(**args)
-        log.debug('got volume list: {0}'.format(volumes))
+        log.debug('got volume list: %s', volumes)
         for vol in volumes:
             tag_sets.setdefault(vol.id.replace('-', '_'), {'vol': vol, 'tags': tags.copy()})['tags'].update(tags.copy())
-    log.debug('tag_sets after munging: {0}'.format(tag_sets))
+    log.debug('tag_sets after munging: %s', tag_sets)
 
     ### ...then loop through all those volume->tag pairs and apply them.
     changes = {'old': {}, 'new': {}}
     for volume in tag_sets.values():
         vol, tags = volume['vol'], volume['tags']
-        log.debug('current tags on vol.id {0}: {1}'.format(vol.id, dict(getattr(vol, 'tags', {}))))
+        log.debug('current tags on vol.id %s: %s', vol.id, dict(getattr(vol, 'tags', {})))
         curr = set(dict(getattr(vol, 'tags', {})).keys())
-        log.debug('requested tags on vol.id {0}: {1}'.format(vol.id, tags))
+        log.debug('requested tags on vol.id %s: %s', vol.id, tags)
         req = set(tags.keys())
         add = list(req - curr)
         update = [r for r in (req & curr) if vol.tags[r] != tags[r]]
@@ -1832,21 +1853,21 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
             changes['old'][vol.id] = dict(getattr(vol, 'tags', {}))
             changes['new'][vol.id] = tags
         else:
-            log.debug('No changes needed for vol.id {0}'.format(vol.id))
-        if len(add):
+            log.debug('No changes needed for vol.id %s', vol.id)
+        if add:
             d = dict((k, tags[k]) for k in add)
-            log.debug('New tags for vol.id {0}: {1}'.format(vol.id, d))
-        if len(update):
+            log.debug('New tags for vol.id %s: %s', vol.id, d)
+        if update:
             d = dict((k, tags[k]) for k in update)
-            log.debug('Updated tags for vol.id {0}: {1}'.format(vol.id, d))
+            log.debug('Updated tags for vol.id %s: %s', vol.id, d)
         if not dry_run:
             if not create_tags(vol.id, tags, region=region, key=key, keyid=keyid, profile=profile):
                 ret['success'] = False
                 ret['comment'] = "Failed to set tags on vol.id {0}: {1}".format(vol.id, tags)
                 return ret
             if authoritative:
-                if len(remove):
-                    log.debug('Removed tags for vol.id {0}: {1}'.format(vol.id, remove))
+                if remove:
+                    log.debug('Removed tags for vol.id %s: %s', vol.id, remove)
                     if not delete_tags(vol.id, remove, region=region, key=key, keyid=keyid, profile=profile):
                         ret['success'] = False
                         ret['comment'] = "Failed to remove tags on vol.id {0}: {1}".format(vol.id, remove)
@@ -1859,7 +1880,7 @@ def get_all_tags(filters=None, region=None, key=None, keyid=None, profile=None):
     '''
     Describe all tags matching the filter criteria, or all tags in the account otherwise.
 
-    .. versionadded:: Oxygen
+    .. versionadded:: 2018.3.0
 
     filters
         (dict) - Additional constraints on which volumes to return.  Note that valid filters vary

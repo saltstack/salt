@@ -2,7 +2,7 @@
 '''
 Module for gathering and managing bridging information
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 import re

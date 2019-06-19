@@ -1,0 +1,2 @@
+{% from './rmacro' import rmacro with context -%}
+{{ rmacro('Hey') ~ rmacro(a|default('a'), b|default('b')) }}

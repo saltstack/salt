@@ -4,13 +4,15 @@ Module for OpenSCAP Management
 
 '''
 
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import tempfile
 import shlex
 import shutil
 from subprocess import Popen, PIPE
 
-from salt.client import Caller
+# Import Salt libs
+from salt.ext import six
 
 
 ArgumentParser = object
@@ -91,7 +93,7 @@ def xccdf(params):
         args, argv = _ArgumentParser(action=action).parse_known_args(args=params)
     except Exception as err:
         success = False
-        error = str(err)
+        error = six.text_type(err)
 
     if success:
         cmd = _XCCDF_MAP[action]['cmd_pattern'].format(args.profile, policy)
@@ -102,8 +104,7 @@ def xccdf(params):
         success = _OSCAP_EXIT_CODES_MAP[proc.returncode]
         returncode = proc.returncode
         if success:
-            caller = Caller()
-            caller.cmd('cp.push_dir', tempdir)
+            __salt__['cp.push_dir'](tempdir)
             shutil.rmtree(tempdir, ignore_errors=True)
             upload_dir = tempdir
 

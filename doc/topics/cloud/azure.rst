@@ -21,18 +21,6 @@ Dependencies
 * `Salt <https://github.com/saltstack/salt>`_
 
 
-.. note::
-
-    The Azure driver is currently being updated to work with the new version of
-    the Python Azure SDK, 1.0.0. However until that process is complete, this
-    driver will not work with Azure 1.0.0. Please be sure you're running on a
-    minimum version of 0.10.2 and less than version 1.0.0.
-
-    See `Issue #27980`_ for more information.
-
-.. _Issue #27980: https://github.com/saltstack/salt/issues/27980
-
-
 Configuration
 =============
 
@@ -120,7 +108,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    salt newinstance test.ping
+    salt newinstance test.version
 
 
 Profile Options
@@ -532,7 +520,7 @@ services. For more information on service certificates, see the following link:
 
 * `Manage Certificates`__
 
-.. __: https://msdn.microsoft.com/en-us/library/azure/gg981929.aspx
+.. __: https://docs.microsoft.com/en-us/azure/cloud-services/cloud-services-certs-create
 
 The following functions are available.
 

@@ -7,12 +7,32 @@ Publisher ACL system
 The salt publisher ACL system is a means to allow system users other than root
 to have access to execute select salt commands on minions from the master.
 
+.. note::
+
+    ``publisher_acl`` is useful for allowing local system users to run Salt
+    commands without giving them root access. If you can log into the Salt
+    master directly, then ``publisher_acl`` allows you to use Salt without
+    root privileges. If the local system is configured to authenticate against
+    a remote system, like LDAP or Active Directory, then ``publisher_acl`` will
+    interact with the remote system transparently.
+
+    ``external_auth`` is useful for ``salt-api`` or for making your own scripts
+    that use Salt's Python API. It can be used at the CLI (with the ``-a``
+    flag) but it is more cumbersome as there are more steps involved.  The only
+    time it is useful at the CLI is when the local system is *not* configured
+    to authenticate against an external service *but* you still want Salt to
+    authenticate against an external service.
+
+    For more information and examples, see :ref:`this Access Control System
+    <acl_types>` section.
+
 The publisher ACL system is configured in the master configuration file via the
 ``publisher_acl`` configuration option. Under the ``publisher_acl``
 configuration option the users open to send commands are specified and then a
-list of regular expressions which specify the minion functions which will be
-made available to specified user. This configuration is much like the ``peer``
-configuration:
+list of the minion functions which will be made available to specified user.
+Both users and functions could be specified by exact match, shell glob or
+regular expression. This configuration is much like the :ref:`external_auth
+<acl-eauth>` configuration:
 
 .. code-block:: yaml
 
@@ -25,9 +45,19 @@ configuration:
         - web*:
           - test.*
           - pkg.*
-      # Allow managers to use saltutil module functions
-      manager_.*:
+      # Allow admin and managers to use saltutil module functions
+      admin|manager_.*:
         - saltutil.*
+      # Allow users to use only my_mod functions on "web*" minions with specific arguments.
+      user_.*:
+        - web*:
+          - 'my_mod.*':
+              args:
+                - 'a.*'
+                - 'b.*'
+              kwargs:
+                'kwa': 'kwa.*'
+                'kwb': 'kwb'
 
 Permission Issues
 -----------------

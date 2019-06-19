@@ -68,11 +68,11 @@ If not Exist "%PyDir%\python.exe" (
 )
 
 Set "CurDir=%~dp0"
-Set "BldDir=%CurDir%\buildenv"
-Set "BinDir=%CurDir%\buildenv\bin"
-Set "CnfDir=%CurDir%\buildenv\conf"
-Set "InsDir=%CurDir%\installer"
-Set "PreDir=%CurDir%\prereqs"
+Set "BldDir=%CurDir%buildenv"
+Set "BinDir=%CurDir%buildenv\bin"
+Set "CnfDir=%CurDir%buildenv\conf"
+Set "InsDir=%CurDir%installer"
+Set "PreDir=%CurDir%prereqs"
 for /f "delims=" %%a in ('git rev-parse --show-toplevel') do @set "SrcDir=%%a"
 
 :: Find the NSIS Installer
@@ -113,20 +113,83 @@ xcopy /Q /Y "%SrcDir%\conf\master" "%CnfDir%\"
 xcopy /Q /Y "%SrcDir%\conf\minion" "%CnfDir%\"
 @echo.
 
+@echo Copying SSM to buildenv
+@echo ----------------------------------------------------------------------
+
+:: Set the location of the ssm to download
+Set Url64="https://repo.saltstack.com/windows/dependencies/64/ssm-2.24-103-gdee49fc.exe"
+Set Url32="https://repo.saltstack.com/windows/dependencies/32/ssm-2.24-103-gdee49fc.exe"
+
+:: Check for 64 bit by finding the Program Files (x86) directory
+If Defined ProgramFiles(x86) (
+    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%BinDir%\ssm.exe"
+) Else (
+    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%BinDir%\ssm.exe"
+)
+@echo.
+
+:: Make sure the "prereq" directory exists and is empty
+If Exist "%PreDir%" rd /s /q "%PreDir%"
+mkdir "%PreDir%"
+
+:: Skip KB2999226 if on Py3
+If %Python%==2 goto get_vcredist
+
+:: For PY 3, include KB2999226
+@echo Copying KB2999226 to Prerequisites
+@echo ----------------------------------------------------------------------
+:: 64 bit binaries required for AMD64 and x86
+:: Copy down the 64 bit binaries
+set Url60=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows6.0-KB2999226-x64.msu
+set Name60=Windows6.0-KB2999226-x64.msu
+set Url61=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows6.1-KB2999226-x64.msu
+set Name61=Windows6.1-KB2999226-x64.msu
+set Url80=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows8-RT-KB2999226-x64.msu
+set Name80=Windows8-RT-KB2999226-x64.msu
+set Url81=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows8.1-KB2999226-x64.msu
+set Name81=Windows8.1-KB2999226-x64.msu
+@echo - Downloading %Name60%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url60% -file "%PreDir%\%Name60%"
+@echo - Downloading %Name61%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url61% -file "%PreDir%\%Name61%"
+@echo - Downloading %Name80%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url80% -file "%PreDir%\%Name80%"
+@echo - Downloading %Name81%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url81% -file "%PreDir%\%Name81%"
+
+:: 32 bit binaries only needed for x86 installer
+:: ProgramFiles(x86) is defined on AMD64 systems
+:: If it's defined, skip the x86 binaries
+If Defined ProgramFiles(x86) goto prereq_end
+
+:: Copy down the 32 bit binaries
+set Url60=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows6.0-KB2999226-x86.msu
+set Name60=Windows6.0-KB2999226-x86.msu
+set Url61=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows6.1-KB2999226-x86.msu
+set Name61=Windows6.1-KB2999226-x86.msu
+set Url80=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows8-RT-KB2999226-x86.msu
+set Name80=Windows8-RT-KB2999226-x86.msu
+set Url81=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows8.1-KB2999226-x86.msu
+set Name81=Windows8.1-KB2999226-x86.msu
+@echo - Downloading %Name60%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url60% -file "%PreDir%\%Name60%"
+@echo - Downloading %Name61%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url61% -file "%PreDir%\%Name61%"
+@echo - Downloading %Name80%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url80% -file "%PreDir%\%Name80%"
+@echo - Downloading %Name81%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url81% -file "%PreDir%\%Name81%"
+
+goto prereq_end
+
+:: For PY 2, include VCRedist
+:get_vcredist
 @echo Copying VCRedist to Prerequisites
 @echo ----------------------------------------------------------------------
-:: Make sure the "prereq" directory exists
-If NOT Exist "%PreDir%" mkdir "%PreDir%"
 
 :: Set the location of the vcredist to download
-If %Python%==3 (
-    Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2015.exe"
-    Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2015.exe"
-
-) Else (
-    Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
-    Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
-)
+Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
+Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
 
 :: Check for 64 bit by finding the Program Files (x86) directory
 If Defined ProgramFiles(x86) (
@@ -135,6 +198,8 @@ If Defined ProgramFiles(x86) (
     powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%PreDir%\vcredist.exe"
 )
 @echo.
+
+:prereq_end
 
 :: Remove the fixed path in .exe files
 @echo Removing fixed path from .exe files
@@ -386,8 +451,8 @@ If Exist "%BinDir%\Lib\site-packages\salt\modules\solaris*"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\solaris*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\solr.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\solr.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\modules\ssh*"^
-    del /Q "%BinDir%\Lib\site-packages\salt\modules\ssh*" 1>nul
+If Exist "%BinDir%\Lib\site-packages\salt\modules\ssh_*"^
+    del /Q "%BinDir%\Lib\site-packages\salt\modules\ssh_*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\supervisord.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\supervisord.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\sysbench.py"^
@@ -430,8 +495,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\modules\xfs.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\xfs.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\yumpkg.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\yum.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\modules\zabbix.py"^
-    del /Q "%BinDir%\Lib\site-packages\salt\modules\zabbix.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\zfs.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\zfs.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\znc.py"^
@@ -522,8 +585,8 @@ If Exist "%BinDir%\Lib\site-packages\salt\states\smartos.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\smartos.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\snapper.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\snapper.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\states\ssh*"^
-    del /Q "%BinDir%\Lib\site-packages\salt\states\ssh*" 1>nul
+If Exist "%BinDir%\Lib\site-packages\salt\states\ssh_*"^
+    del /Q "%BinDir%\Lib\site-packages\salt\states\ssh_*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\supervisord.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\supervisord.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\sysrc.py"^
@@ -536,8 +599,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\states\vbox_guest.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\vbox_guest.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\virt.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\virt.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\states\zabbix*"^
-    del /Q "%BinDir%\Lib\site-packages\salt\states\zabbix*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\zfs.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\zfs.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\zpool.py"^

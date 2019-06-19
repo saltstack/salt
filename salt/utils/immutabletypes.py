@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     salt.utils.immutabletypes
@@ -8,13 +8,17 @@
 
     Immutable types
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
+import copy
 
 # Import python libs
-import collections
+try:
+    from collections.abc import Mapping, Sequence, Set
+except ImportError:
+    from collections import Mapping, Sequence, Set
 
 
-class ImmutableDict(collections.Mapping):
+class ImmutableDict(Mapping):
     '''
     An immutable dictionary implementation
     '''
@@ -34,8 +38,17 @@ class ImmutableDict(collections.Mapping):
     def __repr__(self):
         return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
 
+    def __deepcopy__(self, memo):
+        return copy.deepcopy(self.__obj)
 
-class ImmutableList(collections.Sequence):
+    def copy(self):
+        '''
+        Return an un-frozen copy of self
+        '''
+        return copy.deepcopy(self.__obj)
+
+
+class ImmutableList(Sequence):
     '''
     An immutable list implementation
     '''
@@ -61,8 +74,11 @@ class ImmutableList(collections.Sequence):
     def __repr__(self):
         return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
 
+    def __deepcopy__(self, memo):
+        return copy.deepcopy(self.__obj)
 
-class ImmutableSet(collections.Set):
+
+class ImmutableSet(Set):
     '''
     An immutable set implementation
     '''
@@ -81,6 +97,9 @@ class ImmutableSet(collections.Set):
 
     def __repr__(self):
         return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
+
+    def __deepcopy__(self, memo):
+        return copy.deepcopy(self.__obj)
 
 
 def freeze(obj):

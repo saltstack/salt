@@ -13,8 +13,8 @@ Master config file.
       - svnfs
 
 .. note::
-    ``svn`` also works here. Prior to the Oxygen release, *only* ``svn`` would
-    work.
+    ``svn`` also works here. Prior to the 2018.3.0 release, *only* ``svn``
+    would work.
 
 This backend assumes a standard svn layout with directories for ``branches``,
 ``tags``, and ``trunk``, at the repository root.
@@ -32,7 +32,7 @@ This backend assumes a standard svn layout with directories for ``branches``,
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import errno
 import fnmatch
@@ -109,9 +109,9 @@ def _rev(repo):
     except (pysvn._pysvn.ClientError, TypeError,
             KeyError, AttributeError) as exc:
         log.error(
-            'Error retrieving revision ID for svnfs remote {0} '
-            '(cachedir: {1}): {2}'
-            .format(repo['url'], repo['repo'], exc)
+            'Error retrieving revision ID for svnfs remote %s '
+            '(cachedir: %s): %s',
+            repo['url'], repo['repo'], exc
         )
     else:
         return repo_info['revision'].number
@@ -150,10 +150,10 @@ def init():
             )
             if not per_remote_conf:
                 log.error(
-                    'Invalid per-remote configuration for remote {0}. If no '
+                    'Invalid per-remote configuration for remote %s. If no '
                     'per-remote parameters are being specified, there may be '
                     'a trailing colon after the URL, which should be removed. '
-                    'Check the master configuration file.'.format(repo_url)
+                    'Check the master configuration file.', repo_url
                 )
                 _failhard()
 
@@ -161,11 +161,10 @@ def init():
             for param in (x for x in per_remote_conf
                           if x not in PER_REMOTE_OVERRIDES):
                 log.error(
-                    'Invalid configuration parameter \'{0}\' for remote {1}. '
-                    'Valid parameters are: {2}. See the documentation for '
-                    'further information.'.format(
-                        param, repo_url, ', '.join(PER_REMOTE_OVERRIDES)
-                    )
+                    'Invalid configuration parameter \'%s\' for remote %s. '
+                    'Valid parameters are: %s. See the documentation for '
+                    'further information.',
+                    param, repo_url, ', '.join(PER_REMOTE_OVERRIDES)
                 )
                 per_remote_errors = True
             if per_remote_errors:
@@ -177,8 +176,8 @@ def init():
 
         if not isinstance(repo_url, six.string_types):
             log.error(
-                'Invalid svnfs remote {0}. Remotes must be strings, you may '
-                'need to enclose the URL in quotes'.format(repo_url)
+                'Invalid svnfs remote %s. Remotes must be strings, you may '
+                'need to enclose the URL in quotes', repo_url
             )
             _failhard()
 
@@ -204,8 +203,8 @@ def init():
                 new_remote = True
             except pysvn._pysvn.ClientError as exc:
                 log.error(
-                    'Failed to initialize svnfs remote \'{0}\': {1}'
-                    .format(repo_url, exc)
+                    'Failed to initialize svnfs remote \'%s\': %s',
+                    repo_url, exc
                 )
                 _failhard()
         else:
@@ -215,10 +214,10 @@ def init():
                 CLIENT.status(rp_)
             except pysvn._pysvn.ClientError as exc:
                 log.error(
-                    'Cache path {0} (corresponding remote: {1}) exists but is '
+                    'Cache path %s (corresponding remote: %s) exists but is '
                     'not a valid subversion checkout. You will need to '
                     'manually delete this directory on the master to continue '
-                    'to use this svnfs remote.'.format(rp_, repo_url)
+                    'to use this svnfs remote.', rp_, repo_url
                 )
                 _failhard()
 
@@ -239,14 +238,16 @@ def init():
                 fp_.write('# svnfs_remote map as of {0}\n'.format(timestamp))
                 for repo_conf in repos:
                     fp_.write(
-                        '{0} = {1}\n'.format(
-                            repo_conf['hash'], repo_conf['url']
+                        salt.utils.stringutils.to_str(
+                            '{0} = {1}\n'.format(
+                                repo_conf['hash'], repo_conf['url']
+                            )
                         )
                     )
         except OSError:
             pass
         else:
-            log.info('Wrote new svnfs_remote map to {0}'.format(remote_map))
+            log.info('Wrote new svnfs_remote map to %s', remote_map)
 
     return repos
 
@@ -281,12 +282,12 @@ def _clear_old_remotes():
                 shutil.rmtree(rdir)
             except OSError as exc:
                 log.error(
-                    'Unable to remove old svnfs remote cachedir {0}: {1}'
-                    .format(rdir, exc)
+                    'Unable to remove old svnfs remote cachedir %s: %s',
+                    rdir, exc
                 )
                 failed.append(rdir)
             else:
-                log.debug('svnfs removed old cachedir {0}'.format(rdir))
+                log.debug('svnfs removed old cachedir %s', rdir)
     for fdir in failed:
         to_remove.remove(fdir)
     return bool(to_remove), repos
@@ -424,27 +425,28 @@ def update():
     for repo in repos:
         if os.path.exists(repo['lockfile']):
             log.warning(
-                'Update lockfile is present for svnfs remote {0}, skipping. '
+                'Update lockfile is present for svnfs remote %s, skipping. '
                 'If this warning persists, it is possible that the update '
-                'process was interrupted. Removing {1} or running '
+                'process was interrupted. Removing %s or running '
                 '\'salt-run fileserver.clear_lock svnfs\' will allow updates '
-                'to continue for this remote.'
-                .format(repo['url'], repo['lockfile'])
+                'to continue for this remote.', repo['url'], repo['lockfile']
             )
             continue
         _, errors = lock(repo)
         if errors:
-            log.error('Unable to set update lock for svnfs remote {0}, '
-                      'skipping.'.format(repo['url']))
+            log.error(
+                'Unable to set update lock for svnfs remote %s, skipping.',
+                repo['url']
+            )
             continue
-        log.debug('svnfs is fetching from {0}'.format(repo['url']))
+        log.debug('svnfs is fetching from %s', repo['url'])
         old_rev = _rev(repo)
         try:
             CLIENT.update(repo['repo'])
         except pysvn._pysvn.ClientError as exc:
             log.error(
-                'Error updating svnfs remote {0} (cachedir: {1}): {2}'
-                .format(repo['url'], repo['cachedir'], exc)
+                'Error updating svnfs remote %s (cachedir: %s): %s',
+                repo['url'], repo['cachedir'], exc
             )
 
         new_rev = _rev(repo)
@@ -465,17 +467,17 @@ def update():
         serial = salt.payload.Serial(__opts__)
         with salt.utils.files.fopen(env_cache, 'wb+') as fp_:
             fp_.write(serial.dumps(new_envs))
-            log.trace('Wrote env cache data to {0}'.format(env_cache))
+            log.trace('Wrote env cache data to %s', env_cache)
 
     # if there is a change, fire an event
     if __opts__.get('fileserver_events', False):
-        event = salt.utils.event.get_event(
+        with salt.utils.event.get_event(
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
                 opts=__opts__,
-                listen=False)
-        event.fire_event(data, tagify(['svnfs', 'update'], prefix='fileserver'))
+                listen=False) as event:
+            event.fire_event(data, tagify(['svnfs', 'update'], prefix='fileserver'))
     try:
         salt.fileserver.reap_fileserver_cache_dir(
             os.path.join(__opts__['cachedir'], 'svnfs/hash'),
@@ -535,9 +537,9 @@ def envs(ignore_cache=False):
             ret.add('base')
         else:
             log.error(
-                'svnfs trunk path \'{0}\' does not exist in repo {1}, no base '
-                'environment will be provided by this remote'
-                .format(repo['trunk'], repo['url'])
+                'svnfs trunk path \'%s\' does not exist in repo %s, no base '
+                'environment will be provided by this remote',
+                repo['trunk'], repo['url']
             )
 
         branches = os.path.join(repo['repo'], repo['branches'])
@@ -545,8 +547,8 @@ def envs(ignore_cache=False):
             ret.update(os.listdir(branches))
         else:
             log.error(
-                'svnfs branches path \'{0}\' does not exist in repo {1}'
-                .format(repo['branches'], repo['url'])
+                'svnfs branches path \'%s\' does not exist in repo %s',
+                repo['branches'], repo['url']
             )
 
         tags = os.path.join(repo['repo'], repo['tags'])
@@ -554,8 +556,8 @@ def envs(ignore_cache=False):
             ret.update(os.listdir(tags))
         else:
             log.error(
-                'svnfs tags path \'{0}\' does not exist in repo {1}'
-                .format(repo['tags'], repo['url'])
+                'svnfs tags path \'%s\' does not exist in repo %s',
+                repo['tags'], repo['url']
             )
     return [x for x in sorted(ret) if _env_is_exposed(x)]
 
@@ -689,7 +691,8 @@ def file_hash(load, fnd):
     # Check if the hash is cached
     # Cache file's contents should be "hash:mtime"
     cache_path = os.path.join(__opts__['cachedir'],
-                              'svnfs/hash',
+                              'svnfs',
+                              'hash',
                               saltenv,
                               '{0}.hash.{1}'.format(relpath,
                                                     __opts__['hash_type']))
@@ -731,7 +734,7 @@ def _file_lists(load, form):
         try:
             os.makedirs(list_cachedir)
         except os.error:
-            log.critical('Unable to make cachedir {0}'.format(list_cachedir))
+            log.critical('Unable to make cachedir %s', list_cachedir)
             return []
     list_cache = os.path.join(list_cachedir, '{0}.p'.format(load['saltenv']))
     w_lock = os.path.join(list_cachedir, '.{0}.w'.format(load['saltenv']))
@@ -764,7 +767,7 @@ def _file_lists(load, form):
                 dir_rel_fn = os.path.join(repo['mountpoint'], relpath)
                 if relpath != '.':
                     ret['dirs'].add(dir_rel_fn)
-                    if len(dirs) == 0 and len(files) == 0:
+                    if not dirs and not files:
                         ret['empty_dirs'].add(dir_rel_fn)
                 for fname in files:
                     rel_fn = os.path.relpath(

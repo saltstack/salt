@@ -4,7 +4,7 @@ Functions for querying and modifying a user account and the groups to which it
 belongs.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import ctypes
@@ -16,6 +16,7 @@ import sys
 # Import Salt libs
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 from salt.utils.decorators.jinja import jinja_filter
 
@@ -55,12 +56,13 @@ def get_user():
     Get the current user
     '''
     if HAS_PWD:
-        return pwd.getpwuid(os.geteuid()).pw_name
+        ret = pwd.getpwuid(os.geteuid()).pw_name
     elif HAS_WIN_FUNCTIONS and salt.utils.win_functions.HAS_WIN32:
-        return salt.utils.win_functions.get_current_user()
+        ret = salt.utils.win_functions.get_current_user()
     else:
         raise CommandExecutionError(
             'Required external library (pwd or win32api) not installed')
+    return salt.utils.stringutils.to_unicode(ret)
 
 
 @jinja_filter('get_uid')
@@ -252,7 +254,7 @@ def chugid_and_umask(runas, umask, group=None):
     if set_runas or set_grp:
         chugid(runas_user, runas_grp)
     if umask is not None:
-        os.umask(umask)
+        os.umask(umask)  # pylint: disable=blacklisted-function
 
 
 def get_default_group(user):

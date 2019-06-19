@@ -20,7 +20,7 @@ Management of Solaris RBAC
         - authorizations:
             - solaris.audit.*
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -90,9 +90,9 @@ def managed(name, roles=None, profiles=None, authorizations=None):
         ret['result'] = False
         ret['comment'] = 'Property authorizations is not None or list!'
         return ret
-    log.debug('rbac.managed - roles={0}, profiles={1}, authorizations={2}'.format(
-        roles, profiles, authorizations
-    ))
+    log.debug('rbac.managed - roles=%s, profiles=%s, authorizations=%s',
+              roles, profiles, authorizations
+    )
 
     ## update roles
     if isinstance(roles, (list)):
@@ -102,7 +102,7 @@ def managed(name, roles=None, profiles=None, authorizations=None):
         roles_rm = [r for r in roles_current if r not in roles]
 
         # execute and verify changes
-        if len(roles_add):
+        if roles_add:
             res_roles_add = __salt__['rbac.role_add'](name, ','.join(roles_add).strip())
             roles_current = __salt__['rbac.role_get'](name)
             for role in roles_add:
@@ -112,7 +112,7 @@ def managed(name, roles=None, profiles=None, authorizations=None):
                 if ret['changes']['roles'][role] == 'Failed':
                     ret['result'] = False
 
-        if len(roles_rm):
+        if roles_rm:
             res_roles_rm = __salt__['rbac.role_rm'](name, ','.join(roles_rm).strip())
 
             roles_current = __salt__['rbac.role_get'](name)
@@ -131,7 +131,7 @@ def managed(name, roles=None, profiles=None, authorizations=None):
         profiles_rm = [r for r in profiles_current if r not in profiles]
 
         # execute and verify changes
-        if len(profiles_add):
+        if profiles_add:
             res_profiles_add = __salt__['rbac.profile_add'](name, ','.join(profiles_add).strip())
             profiles_current = __salt__['rbac.profile_get'](name)
             for profile in profiles_add:
@@ -141,7 +141,7 @@ def managed(name, roles=None, profiles=None, authorizations=None):
                 if ret['changes']['profiles'][profile] == 'Failed':
                     ret['result'] = False
 
-        if len(profiles_rm):
+        if profiles_rm:
             res_profiles_rm = __salt__['rbac.profile_rm'](name, ','.join(profiles_rm).strip())
 
             profiles_current = __salt__['rbac.profile_get'](name)
@@ -160,7 +160,7 @@ def managed(name, roles=None, profiles=None, authorizations=None):
         auths_rm = [r for r in auths_current if r not in authorizations]
 
         # execute and verify changes
-        if len(auths_add):
+        if auths_add:
             res_auths_add = __salt__['rbac.auth_add'](name, ','.join(auths_add).strip())
             auths_current = __salt__['rbac.auth_get'](name)
             for auth in auths_add:
@@ -170,7 +170,7 @@ def managed(name, roles=None, profiles=None, authorizations=None):
                 if ret['changes']['authorizations'][auth] == 'Failed':
                     ret['result'] = False
 
-        if len(auths_rm):
+        if auths_rm:
             res_auths_rm = __salt__['rbac.auth_rm'](name, ','.join(auths_rm).strip())
 
             auths_current = __salt__['rbac.auth_get'](name)

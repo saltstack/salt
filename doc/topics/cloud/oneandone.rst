@@ -142,5 +142,29 @@ wait_for_timeout
     The timeout to wait in seconds for provisioning resources such as servers.
     The default wait_for_timeout is 15 minutes.
 
+public_key_ids
+    List of public key IDs (ssh key).
+
+Functions
+=========
+
+* Create an SSH key
+
+.. code-block:: bash
+
+    sudo salt-cloud -f create_ssh_key my-oneandone-config name='SaltTest' description='SaltTestDescription'
+
+* Create a block storage
+
+.. code-block:: bash
+
+    sudo salt-cloud -f create_block_storage my-oneandone-config name='SaltTest2' description='SaltTestDescription' size=50 datacenter_id='5091F6D8CBFEF9C26ACE957C652D5D49'
+
+* Create a firewall policy
+
+.. code-block:: bash
+
+    sudo salt-cloud -f create_firewall_policy oneandone name='1salt_test' description='salt_test_desc' rules='[{"protocol":"TCP", "port":"80", "description":"salt_fw_rule_descr"}]'
+
 For more information concerning cloud profiles, see :ref:`here
 <salt-cloud-profiles>`.

@@ -4,7 +4,7 @@ Various XML utilities
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def _conv_name(x):
@@ -27,7 +27,7 @@ def _to_dict(xmltree):
     '''
     # If this object has no children, the for..loop below will return nothing
     # for it, so just return a single dict representing it.
-    if len(xmltree.getchildren()) < 1:
+    if not xmltree.getchildren():
         name = _conv_name(xmltree.tag)
         return {name: xmltree.text}
 
@@ -36,7 +36,7 @@ def _to_dict(xmltree):
         name = _conv_name(item.tag)
 
         if name not in xmldict:
-            if len(item.getchildren()) > 0:
+            if item.getchildren():
                 xmldict[name] = _to_dict(item)
             else:
                 xmldict[name] = item.text
@@ -59,8 +59,8 @@ def _to_full_dict(xmltree):
     for attrName, attrValue in xmltree.attrib.items():
         xmldict[attrName] = attrValue
 
-    if len(xmltree.getchildren()) < 1:
-        if len(xmldict) == 0:
+    if not xmltree.getchildren():
+        if not xmldict:
             # If we don't have attributes, we should return the value as a string
             # ex: <entry>test</entry>
             return xmltree.text

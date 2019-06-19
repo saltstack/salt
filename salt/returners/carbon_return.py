@@ -166,7 +166,7 @@ def _send_picklemetrics(metrics):
                for (metric_name, value, timestamp) in metrics]
 
     data = cPickle.dumps(metrics, -1)
-    payload = struct.pack('!L', len(data)) + data
+    payload = struct.pack(b'!L', len(data)) + data
 
     return payload
 
@@ -200,7 +200,7 @@ def _walk(path, value, metrics, timestamp, skip):
         to a float. Defaults to `False`.
     '''
     log.trace(
-        'Carbon return walking path: %s, value: %s, metrics: %s, ',
+        'Carbon return walking path: %s, value: %s, metrics: %s, '
         'timestamp: %s', path, value, metrics, timestamp
     )
     if isinstance(value, collections.Mapping):

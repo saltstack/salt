@@ -4,7 +4,7 @@ Connection library for Amazon S3
 
 :depends: requests
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -23,6 +23,8 @@ import salt.utils.hashutils
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError
+from salt.ext.six.moves.urllib.parse import quote as _quote   # pylint: disable=import-error,no-name-in-module
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -116,6 +118,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
         location = salt.utils.aws.get_location()
 
     data = ''
+    fh = None
     payload_hash = None
     if method == 'PUT':
         if local_file:
@@ -123,6 +126,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
 
     if path is None:
         path = ''
+    path = _quote(path)
 
     if not requesturl:
         requesturl = (('https' if https_enable else 'http')+'://{0}/{1}').format(endpoint, path)
@@ -141,9 +145,9 @@ def query(key, keyid, method='GET', params=None, headers=None,
             payload_hash=payload_hash,
         )
 
-    log.debug('S3 Request: {0}'.format(requesturl))
+    log.debug('S3 Request: %s', requesturl)
     log.debug('S3 Headers::')
-    log.debug('    Authorization: {0}'.format(headers['Authorization']))
+    log.debug('    Authorization: %s', headers['Authorization'])
 
     if not data:
         data = None
@@ -151,36 +155,40 @@ def query(key, keyid, method='GET', params=None, headers=None,
     try:
         if method == 'PUT':
             if local_file:
-                data = salt.utils.files.fopen(local_file, 'r')  # pylint: disable=resource-leakage
+                fh = salt.utils.files.fopen(local_file, 'rb')  # pylint: disable=resource-leakage
+                data = fh.read()  # pylint: disable=resource-leakage
             result = requests.request(method,
                                       requesturl,
                                       headers=headers,
                                       data=data,
                                       verify=verify_ssl,
-                                      stream=True)
+                                      stream=True,
+                                      timeout=300)
         elif method == 'GET' and local_file and not return_bin:
             result = requests.request(method,
                                       requesturl,
                                       headers=headers,
                                       data=data,
                                       verify=verify_ssl,
-                                      stream=True)
+                                      stream=True,
+                                      timeout=300)
         else:
             result = requests.request(method,
                                       requesturl,
                                       headers=headers,
                                       data=data,
-                                      verify=verify_ssl)
+                                      verify=verify_ssl,
+                                      timeout=300)
     finally:
-        if data is not None:
-            data.close()
+        if fh is not None:
+            fh.close()
 
     err_code = None
     err_msg = None
     if result.status_code >= 400:
         # On error the S3 API response should contain error message
         err_text = result.content or 'Unknown error'
-        log.debug('    Response content: {0}'.format(err_text))
+        log.debug('    Response content: %s', err_text)
 
         # Try to get err info from response xml
         try:
@@ -188,12 +196,14 @@ def query(key, keyid, method='GET', params=None, headers=None,
             err_code = err_data['Code']
             err_msg = err_data['Message']
         except (KeyError, ET.ParseError) as err:
-            log.debug('Failed to parse s3 err response. {0}: {1}'.format(
-                type(err).__name__, err))
+            log.debug(
+                'Failed to parse s3 err response. %s: %s',
+                type(err).__name__, err
+            )
             err_code = 'http-{0}'.format(result.status_code)
             err_msg = err_text
 
-    log.debug('S3 Response Status Code: {0}'.format(result.status_code))
+    log.debug('S3 Response Status Code: %s', result.status_code)
 
     if method == 'PUT':
         if result.status_code != 200:
@@ -206,13 +216,13 @@ def query(key, keyid, method='GET', params=None, headers=None,
                     bucket, err_code, err_msg))
 
         if local_file:
-            log.debug('Uploaded from {0} to {1}'.format(local_file, path))
+            log.debug('Uploaded from %s to %s', local_file, path)
         else:
-            log.debug('Created bucket {0}'.format(bucket))
+            log.debug('Created bucket %s', bucket)
         return
 
     if method == 'DELETE':
-        if not str(result.status_code).startswith('2'):
+        if not six.text_type(result.status_code).startswith('2'):
             if path:
                 raise CommandExecutionError(
                     'Failed to delete {0} from bucket {1}. {2}: {3}'.format(
@@ -222,9 +232,9 @@ def query(key, keyid, method='GET', params=None, headers=None,
                     bucket, err_code, err_msg))
 
         if path:
-            log.debug('Deleted {0} from bucket {1}'.format(path, bucket))
+            log.debug('Deleted %s from bucket %s', path, bucket)
         else:
-            log.debug('Deleted bucket {0}'.format(bucket))
+            log.debug('Deleted bucket %s', bucket)
         return
 
     # This can be used to save a binary object to disk
@@ -233,7 +243,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
             raise CommandExecutionError(
                 'Failed to get file. {0}: {1}'.format(err_code, err_msg))
 
-        log.debug('Saving to local file: {0}'.format(local_file))
+        log.debug('Saving to local file: %s', local_file)
         with salt.utils.files.fopen(local_file, 'wb') as out:
             for chunk in result.iter_content(chunk_size=chunk_size):
                 out.write(chunk)

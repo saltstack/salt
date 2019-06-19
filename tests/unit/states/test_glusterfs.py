@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -26,6 +26,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.glusterfs
     '''
+
     def setup_loader_modules(self):
         return {
             glusterfs: {
@@ -124,10 +125,10 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_start = MagicMock(return_value=True)
 
         with patch.dict(glusterfs.__salt__, {
-                        'glusterfs.info': mock_info,
-                        'glusterfs.list_volumes': mock_list,
-                        'glusterfs.create_volume': mock_create,
-                        'glusterfs.start_volume': mock_start}):
+            'glusterfs.info': mock_info,
+            'glusterfs.list_volumes': mock_list,
+            'glusterfs.create_volume': mock_create,
+            'glusterfs.start_volume': mock_start}):
             with patch.dict(glusterfs.__opts__, {'test': False}):
                 mock_list.return_value = [name]
                 mock_info.return_value = started_info
@@ -307,3 +308,113 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
             ret['changes']['new'] = sorted(ret['changes']['new'])
             result['changes']['new'] = sorted(result['changes']['new'])
             self.assertDictEqual(result, ret)
+
+    # 'op_version' function tests: 1
+
+    def test_op_version(self):
+        '''
+        Test setting the Glusterfs op-version
+        '''
+        name = 'salt'
+        current = 30707
+        new = 31200
+
+        ret = {'name': name,
+               'result': False,
+               'comment': '',
+               'changes': {}}
+
+        mock_get_version = MagicMock(return_value={})
+        mock_set_version = MagicMock(return_value={})
+
+        with patch.dict(glusterfs.__salt__,
+                        {'glusterfs.get_op_version': mock_get_version,
+                         'glusterfs.set_op_version': mock_set_version}):
+            mock_get_version.return_value = [False, 'some error message']
+            ret.update({'result': False})
+            ret.update({'comment': 'some error message'})
+            self.assertDictEqual(glusterfs.op_version(name, current), ret)
+
+            mock_get_version.return_value = current
+            ret.update({'result': True})
+            ret.update({'comment': 'Glusterfs cluster.op-version for {0} already set to {1}'.format(name, current)})
+            self.assertDictEqual(glusterfs.op_version(name, current), ret)
+
+            with patch.dict(glusterfs.__opts__, {'test': True}):
+                mock_set_version.return_value = [False, 'Failed to set version']
+                ret.update({'result': None})
+                ret.update({'comment': 'An attempt would be made to set the cluster.op-version for {0} to {1}.'.
+                           format(name, new)})
+                self.assertDictEqual(glusterfs.op_version(name, new), ret)
+
+            with patch.dict(glusterfs.__opts__, {'test': False}):
+                mock_set_version.return_value = [False, 'Failed to set version']
+                ret.update({'result': False})
+                ret.update({'comment': 'Failed to set version'})
+                self.assertDictEqual(glusterfs.op_version(name, new), ret)
+
+                mock_set_version.return_value = 'some success message'
+                ret.update({'comment': 'some success message'})
+                ret.update({'changes': {'old': current, 'new': new}})
+                ret.update({'result': True})
+                self.assertDictEqual(glusterfs.op_version(name, new), ret)
+
+    # 'max_op_version' function tests: 1
+
+    def test_max_op_version(self):
+        '''
+        Test setting the Glusterfs to its self reported max-op-version
+        '''
+        name = 'salt'
+        current = 30707
+        new = 31200
+
+        ret = {'name': name,
+               'result': False,
+               'comment': '',
+               'changes': {}}
+
+        mock_get_version = MagicMock(return_value={})
+        mock_get_max_op_version = MagicMock(return_value={})
+        mock_set_version = MagicMock(return_value={})
+
+        with patch.dict(glusterfs.__salt__,
+                        {'glusterfs.get_op_version': mock_get_version,
+                         'glusterfs.set_op_version': mock_set_version,
+                         'glusterfs.get_max_op_version': mock_get_max_op_version}):
+            mock_get_version.return_value = [False, 'some error message']
+            ret.update({'result': False})
+            ret.update({'comment': 'some error message'})
+            self.assertDictEqual(glusterfs.max_op_version(name), ret)
+
+            mock_get_version.return_value = current
+            mock_get_max_op_version.return_value = [False, 'some error message']
+            ret.update({'result': False})
+            ret.update({'comment': 'some error message'})
+            self.assertDictEqual(glusterfs.max_op_version(name), ret)
+
+            mock_get_version.return_value = current
+            mock_get_max_op_version.return_value = current
+            ret.update({'result': True})
+            ret.update({'comment': 'The cluster.op-version is already set to the cluster.max-op-version of {0}'.
+                       format(current)})
+            self.assertDictEqual(glusterfs.max_op_version(name), ret)
+
+            with patch.dict(glusterfs.__opts__, {'test': True}):
+                mock_get_max_op_version.return_value = new
+                ret.update({'result': None})
+                ret.update({'comment': 'An attempt would be made to set the cluster.op-version to {0}.'.
+                           format(new)})
+                self.assertDictEqual(glusterfs.max_op_version(name), ret)
+
+            with patch.dict(glusterfs.__opts__, {'test': False}):
+                mock_set_version.return_value = [False, 'Failed to set version']
+                ret.update({'result': False})
+                ret.update({'comment': 'Failed to set version'})
+                self.assertDictEqual(glusterfs.max_op_version(name), ret)
+
+                mock_set_version.return_value = 'some success message'
+                ret.update({'comment': 'some success message'})
+                ret.update({'changes': {'old': current, 'new': new}})
+                ret.update({'result': True})
+                self.assertDictEqual(glusterfs.max_op_version(name), ret)

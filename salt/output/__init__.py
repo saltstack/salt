@@ -6,8 +6,10 @@ for managing outputters.
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import errno
 import logging
+import io
 import os
 import re
 import sys
@@ -94,7 +96,7 @@ def display_output(data, out=None, opts=None, **kwargs):
     display_data = try_printout(data, out, opts, **kwargs)
 
     output_filename = opts.get('output_file', None)
-    log.trace('data = {0}'.format(data))
+    log.trace('data = %s', data)
     try:
         # output filename can be either '' or None
         if output_filename:
@@ -127,7 +129,7 @@ def display_output(data, out=None, opts=None, **kwargs):
     except IOError as exc:
         # Only raise if it's NOT a broken pipe
         if exc.errno != errno.EPIPE:
-            raise exc
+            six.reraise(*sys.exc_info())
 
 
 def get_printout(out, opts=None, **kwargs):
@@ -168,7 +170,7 @@ def get_printout(out, opts=None, **kwargs):
             '''
             try:
                 fileno = sys.stdout.fileno()
-            except AttributeError:
+            except (AttributeError, io.UnsupportedOperation):
                 fileno = -1  # sys.stdout is StringIO or fake
             return not os.isatty(fileno)
 
@@ -191,7 +193,10 @@ def get_printout(out, opts=None, **kwargs):
         # Since the grains outputter was removed we don't need to fire this
         # error when old minions are asking for it
         if out != 'grains':
-            log.error('Invalid outputter {0} specified, fall back to nested'.format(out))
+            log.error(
+                'Invalid outputter %s specified, fall back to nested',
+                out,
+            )
         return outputters['nested']
     return outputters[out]
 
@@ -226,6 +231,9 @@ def strip_esc_sequence(txt):
     from writing their own terminal manipulation commands
     '''
     if isinstance(txt, six.string_types):
-        return txt.replace('\033', '?')
+        try:
+            return txt.replace('\033', '?')
+        except UnicodeDecodeError:
+            return txt.replace(str('\033'), str('?'))  # future lint: disable=blacklisted-function
     else:
         return txt

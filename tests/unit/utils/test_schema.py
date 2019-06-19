@@ -4,7 +4,7 @@
 # pylint: disable=abstract-method
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 
 # Import Salt Testing Libs
@@ -12,8 +12,10 @@ from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
 import salt.utils.json
+import salt.utils.stringutils
 import salt.utils.yaml
 import salt.utils.schema as schema
+from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
@@ -504,7 +506,10 @@ class ConfigTestCase(TestCase):
                 {'personal_access_token': 'foo'},
                 Requirements.serialize()
             )
-        self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+        if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
+            self.assertIn('\'ssh_key_file\' is a required property', excinfo.exception.message)
+        else:
+            self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
 
     def test_boolean_config(self):
         item = schema.BooleanItem(title='Hungry', description='Are you hungry?')
@@ -776,8 +781,10 @@ class ConfigTestCase(TestCase):
             item = schema.IPv6Item(title='Item', description='Item description')
 
         try:
-            jsonschema.validate({'item': '::1'}, TestConf.serialize(),
-                                format_checker=jsonschema.FormatChecker())
+            jsonschema.validate(
+                {'item': salt.utils.stringutils.to_str('::1')},
+                TestConf.serialize(),
+                format_checker=jsonschema.FormatChecker())
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
@@ -1726,7 +1733,10 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': {'sides': '4', 'color': 'blue'}}, TestConf.serialize())
-        self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+        if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
+            self.assertIn('\'4\' is not of type \'boolean\'', excinfo.exception.message)
+        else:
+            self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
 
         class TestConf(schema.Schema):
             item = schema.DictItem(
@@ -1829,7 +1839,10 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['maybe']}, TestConf.serialize())
-        self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+        if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
+            self.assertIn('\'maybe\' is not one of [\'yes\']', excinfo.exception.message)
+        else:
+            self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 2}, TestConf.serialize())
@@ -1881,7 +1894,10 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['maybe']}, TestConf.serialize())
-        self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+        if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
+            self.assertIn('\'maybe\' is not one of [\'yes\']', excinfo.exception.message)
+        else:
+            self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 2}, TestConf.serialize())
@@ -2262,8 +2278,9 @@ class ComplexSchemaTestCase(TestCase):
                 as excinfo:
             jsonschema.validate({'complex_item': {'thirsty': 'Foo'}},
                                 serialized)
-        self.assertIn('\'Foo\' is not of type \'boolean\'',
-                      excinfo.exception.message)
+        expected = "u'Foo' is not of type u'boolean'" if six.PY2 \
+            else "'Foo' is not of type 'boolean'"
+        self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_complex_schema_item_hungry_valid(self):
@@ -2293,8 +2310,9 @@ class ComplexSchemaTestCase(TestCase):
                 as excinfo:
             jsonschema.validate({'complex_complex_item': {'hungry': 'Foo'}},
                                 serialized)
-        self.assertIn('\'Foo\' is not of type \'boolean\'',
-                      excinfo.exception.message)
+        expected = "u'Foo' is not of type u'boolean'" if six.PY2 \
+            else "'Foo' is not of type 'boolean'"
+        self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_complex_schema_item_inner_thirsty_invalid(self):
@@ -2306,8 +2324,9 @@ class ComplexSchemaTestCase(TestCase):
                 {'complex_complex_item': {'hungry': True,
                                           'complex_item': {'thirsty': 'Bar'}}},
                 serialized)
-        self.assertIn('\'Bar\' is not of type \'boolean\'',
-                      excinfo.exception.message)
+        expected = "u'Bar' is not of type u'boolean'" if six.PY2 \
+            else "'Bar' is not of type 'boolean'"
+        self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_complex_schema_item_missing_required_hungry(self):

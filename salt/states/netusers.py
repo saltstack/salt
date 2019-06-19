@@ -5,7 +5,7 @@ Network Users
 
 Manage the users configuration on network devices via the NAPALM proxy.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -18,16 +18,16 @@ Dependencies
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 log = logging.getLogger(__name__)
 
 # Python std lib
 from copy import deepcopy
-from json import loads, dumps
 
 # salt lib
+from salt.utils.json import loads, dumps
 from salt.ext import six
 # import NAPALM utils
 import salt.utils.napalm

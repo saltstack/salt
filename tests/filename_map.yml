@@ -1,0 +1,249 @@
+'*':
+  - unit.test_module_names
+  - unit.test_doc
+  - unit.test_virtualname
+  - integration.modules.test_sysmod
+
+salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_ports_pkg|openbsdpkg|opkg|pacmanpkg|pkgin|pkgng|pkg_resource|rpm_lowpkg|solarisipspkg|solarispkg|win_pkg|xbpspkg|yumpkg|zypperpkg)\.py:
+  - unit.states.test_pkg
+  - integration.modules.test_pkg
+  - integration.states.test_pkg
+  - integration.states.test_pkgrepo
+
+salt/modules/(mac_user|useradd|pw_user|solaris_user|win_useradd)\.py:
+  - unit.states.test_user
+  - integration.states.test_user
+
+salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\.py:
+  - unit.states.test_group
+
+salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|service|smf_service|systemd_service|upstart_service|win_service)\.py:
+  - unit.states.test_service
+  - integration.states.test_service
+
+salt/modules/*apache.py:
+  - unit.states.test_apache
+  - unit.states.test_apache_conf
+  - unit.states.test_apache_module
+  - unit.states.test_apache_site
+
+salt/modules/augeas_cfg.py:
+  - unit.states.test_augeas
+
+salt/modules/cp.py:
+  - unit.modules.test_file
+  - unit.states.test_file
+  - integration.modules.test_file
+  - integration.states.test_file
+
+salt/modules/dockermod.py:
+  - unit.states.test_docker_image
+  - unit.states.test_docker_volume
+  - unit.utils.test_docker
+  - integration.states.test_docker_container
+  - integration.states.test_docker_network
+
+salt/modules/file.py:
+  - integration.states.test_cron
+
+salt/modules/influxdb08mod.py:
+  - unit.states.test_influxdb08_database
+  - unit.states.test_influxdb08_user
+
+salt/modules/mysql.py:
+  - unit.states.test_mysql_user
+  - unit.states.test_mysql_query
+  - unit.states.test_mysql_grants
+
+salt/modules/openvswitch.py:
+  - unit.states.test_openvswitch_port
+
+salt/(states|modules)/.*postgres.py:
+  - unit.states.test_postgres
+  - unit.states.test_postgres_cluster
+  - unit.states.test_postgres_database
+  - unit.states.test_postgres_extension
+  - unit.states.test_postgres_group
+  - unit.states.test_postgres_initdb
+  - unit.states.test_postgres_language
+  - unit.states.test_postgres_privileges
+  - unit.states.test_postgres_default_privileges
+  - unit.states.test_postgres_schema
+  - unit.states.test_postgres_user
+
+salt/modules/rabbitmq.py:
+  - unit.states.test_rabbitmq_cluster
+  - unit.states.test_rabbitmq_plugin
+  - unit.states.test_rabbitmq_policy
+  - unit.states.test_rabbitmq_vhost
+  - integration.states.test_rabbitmq_user
+  - integration.states.test_rabbitmq_vhost
+
+salt/modules/ssh.py:
+  - unit.states.test_ssh_auth
+  - unit.states.test_ssh_known_hosts
+
+salt/auth/*:
+  - integration.shell.test_auth
+
+salt/cache/*:
+  - unit.cache.test_cache
+
+salt/cli/*:
+  - integration.shell.test_arguments
+
+salt/cli/call.py:
+  - integration.shell.test_call
+
+salt/cli/cp.py:
+  - integration.shell.test_cp
+
+salt/cli/key.py:
+  - integration.shell.test_key
+
+salt/cli/salt.py:
+  - integration.cli.test_grains
+  - integration.shell.test_enabled
+  - integration.shell.test_matcher
+  - integration.shell.test_saltcli
+
+salt/client/*:
+  - integration.client.test_kwarg
+  - integration.client.test_runner
+  - integration.client.test_standard
+
+salt/cloud/*:
+  - integration.shell.test_cloud
+
+salt/cloud/__init__.py:
+  - integration.cloud.test_cloud
+
+salt/grains/*:
+  - integration.grains.test_custom
+
+salt/proxy/*:
+  - integration.proxy.test_shell
+  - integration.proxy.test_simple
+
+salt/state.py:
+  - integration.modules.test_state_jinja_filters
+  - integration.states.test_compiler
+  - integration.states.test_handle_error
+  - integration.states.test_handle_iorder
+  - integration.states.test_match
+  - integration.states.test_renderers
+
+salt/utils/decorators/*:
+  - integration.modules.test_decorators
+
+salt/(utils|renderers)/jinja\.py:
+  - integration.modules.test_state_jinja_filters
+  - integration.states.test_renderers
+
+salt/utils/minions.py:
+  - integration.shell.test_matcher
+
+salt/utils/reactor.py:
+  - integration.reactor.test_reactor
+
+salt/cli/daemons.py:
+  - integration.shell.test_master
+  - integration.shell.test_minion
+  - integration.shell.test_proxy
+  - integration.shell.test_syndic
+
+salt/(client/ssh/.+|cli/ssh\.py):
+  - integration.cli.test_custom_module
+  - integration.ssh.test_deploy
+  - integration.ssh.test_grains
+  - integration.ssh.test_jinja_filters
+  - integration.ssh.test_master
+  - integration.ssh.test_mine
+  - integration.ssh.test_pillar
+  - integration.ssh.test_raw
+  - integration.ssh.test_state
+
+salt/config/*:
+  - unit.test_config
+
+salt/loader.py:
+  - integration.loader.test_ext_grains
+  - integration.loader.test_ext_modules
+
+salt/minion.py:
+  - integration.client.test_syndic
+  - integration.minion.test_blackout
+  - integration.minion.test_pillar
+  - integration.minion.test_timeout
+  - integration.shell.test_matcher
+
+salt/modules/*_sysctl.py:
+  - unit.states.test_sysctl
+  - integration.modules.test_sysctl
+
+salt/netapi/rest_cherrypy/*:
+  - unit.netapi.test_rest_cherrypy
+  - integration.netapi.rest_cherrypy.test_app_pam
+  - integration.netapi.test_client
+
+salt/netapi/rest_tornado/*:
+  - unit.netapi.test_rest_tornado
+  - integration.netapi.rest_tornado.test_app
+  - integration.netapi.test_client
+
+salt/output/*:
+  - integration.output.test_output
+
+salt/pillar/__init__.py:
+  - integration.minion.test_pillar
+  - integration.pillar.test_pillar_include
+
+salt/(cli/run\.py|runner\.py):
+  - integration.shell.test_runner
+  - integration.runners.test_runner_returns
+
+salt/runners/venafiapi.py:
+  - integration.externalapi.test_venafiapi
+
+salt/serializers/*:
+  - unit.serializers.test_serializers
+
+salt/(cli/spm\.py|spm/.+):
+  - unit.test_spm
+  - integration.shell.test_spm
+  - integration.spm.test_build
+  - integration.spm.test_files
+  - integration.spm.test_info
+  - integration.spm.test_install
+  - integration.spm.test_remove
+  - integration.spm.test_repo
+
+salt/transport/*:
+  - unit.test_transport
+
+salt/utils/docker/*:
+  - unit.utils.test_docker
+
+salt/utils/schedule.py:
+  - integration.scheduler.test_error
+  - integration.scheduler.test_eval
+  - integration.scheduler.test_postpone
+  - integration.scheduler.test_skip
+  - integration.scheduler.test_maxrunning
+  - integration.scheduler.test_helpers
+
+salt/utils/vt.py:
+  - integration.cli.test_custom_module
+  - integration.cli.test_grains
+  - integration.ssh.test_grains
+  - integration.ssh.test_jinja_filters
+  - integration.ssh.test_mine
+  - integration.ssh.test_pillar
+  - integration.ssh.test_raw
+  - integration.ssh.test_state
+
+salt/wheel/*:
+  - integration.wheel.test_client
+
+tests/support/mock.py:
+  - unit.test_mock

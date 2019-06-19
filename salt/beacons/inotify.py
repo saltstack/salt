@@ -10,14 +10,15 @@ Watch files and translate the changes into salt events
             setting the `disable_during_state_run` flag to `True` in
             the beacon configuration.
 
-:note: The `inotify` beacon only works on OSes that have `inotify` kernel support.
-       Currently this excludes FreeBSD, macOS, and Windows.
+:note: The `inotify` beacon only works on OSes that have `inotify`
+       kernel support.
 
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import collections
 import fnmatch
+import logging
 import os
 import re
 
@@ -43,7 +44,6 @@ except ImportError:
 
 __virtualname__ = 'inotify'
 
-import logging
 log = logging.getLogger(__name__)
 
 
@@ -117,6 +117,10 @@ def validate(config):
         if 'files' not in _config:
             return False, 'Configuration for inotify beacon must include files.'
         else:
+            if not isinstance(_config['files'], dict):
+                return False, ('Configuration for inotify beacon invalid, '
+                               'files must be a dict.')
+
             for path in _config.get('files'):
 
                 if not isinstance(_config['files'][path], dict):
@@ -238,20 +242,21 @@ def beacon(config):
                     break
                 path = os.path.dirname(path)
 
-            for path in _config.get('files', {}):
-                excludes = _config['files'][path].get('exclude', '')
+            excludes = _config['files'][path].get('exclude', '')
 
             if excludes and isinstance(excludes, list):
                 for exclude in excludes:
                     if isinstance(exclude, dict):
-                        if exclude.values()[0].get('regex', False):
+                        _exclude = next(iter(exclude))
+                        if exclude[_exclude].get('regex', False):
                             try:
-                                if re.search(exclude.keys()[0], event.pathname):
+                                if re.search(_exclude, event.pathname):
                                     _append = False
                             except Exception:
-                                log.warning('Failed to compile regex: {0}'.format(exclude.keys()[0]))
+                                log.warning('Failed to compile regex: %s',
+                                            _exclude)
                         else:
-                            exclude = exclude.keys()[0]
+                            exclude = _exclude
                     elif '*' in exclude:
                         if fnmatch.fnmatch(event.pathname, exclude):
                             _append = False
@@ -265,7 +270,7 @@ def beacon(config):
                        'change': event.maskname}
                 ret.append(sub)
             else:
-                log.info('Excluding {0} from event for {1}'.format(event.pathname, path))
+                log.info('Excluding %s from event for %s', event.pathname, path)
 
     # Get paths currently being watched
     current = set()
@@ -311,7 +316,7 @@ def beacon(config):
                 excl = []
                 for exclude in excludes:
                     if isinstance(exclude, dict):
-                        excl.append(exclude.keys()[0])
+                        excl.append(list(exclude)[0])
                     else:
                         excl.append(exclude)
                 excl = pyinotify.ExcludeFilter(excl)

@@ -27,7 +27,7 @@ This has also been tested to work with pipes, if needed:
 
 .. code-block:: yaml
 
-    script_args: | head
+    script_args: '| head'
 
 
 Selecting the File Transport
@@ -129,17 +129,6 @@ By default ssh port is set to port 22. If you want to use a custom port in
 provider, profile, or map blocks use ssh_port option.
 
 .. versionadded:: 2015.5.0
-
-.. code-block:: yaml
-
-    ssh_port: 2222
-
-
-SSH Port
-========
-
-By default ssh port is set to port 22. If you want to use a custom port in
-provider, profile, or map blocks use ssh_port option.
 
 .. code-block:: yaml
 
@@ -392,7 +381,7 @@ script, a cloud profile using ``file_map`` might look like:
 Running Pre-Flight Commands
 ===========================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 To execute specified preflight shell commands on a VM before the deploy script is
 run, use the ``preflight_cmds`` option. These must be defined as a list in a cloud
@@ -413,7 +402,7 @@ These commands will run in sequence **before** the bootstrap script is executed.
 Force Minion Config
 ===================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The ``force_minion_config`` option requests the bootstrap process to overwrite
 an existing minion configuration file and public/private key files.

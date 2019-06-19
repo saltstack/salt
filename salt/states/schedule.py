@@ -97,6 +97,7 @@ Management of the Salt scheduler
     python-dateutil is installed on the minion.
 
 '''
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def present(name,

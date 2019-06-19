@@ -48,7 +48,7 @@ Example:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt libs
@@ -85,8 +85,8 @@ def _get_salt_params():
             sd_os = {'code': all_grains['kernel'].lower(), 'name': all_grains['kernel']}
         params['os'] = salt.utils.json.dumps(sd_os)
         params['cpuCores'] = all_stats['cpuinfo']['cpu cores']
-        params['installedRAM'] = str(int(all_stats['meminfo']['MemTotal']['value']) / 1024)
-        params['swapSpace'] = str(int(all_stats['meminfo']['SwapTotal']['value']) / 1024)
+        params['installedRAM'] = six.text_type(int(all_stats['meminfo']['MemTotal']['value']) / 1024)
+        params['swapSpace'] = six.text_type(int(all_stats['meminfo']['SwapTotal']['value']) / 1024)
         params['privateIPs'] = salt.utils.json.dumps(all_grains['fqdn_ip4'])
         params['privateDNS'] = salt.utils.json.dumps(all_grains['fqdn'])
     except KeyError:
@@ -181,20 +181,31 @@ def monitored(name, group=None, salt_name=True, salt_params=True, agent_version=
         ret['changes'] = {}
         return ret
 
+    if __opts__['test']:
+        if not device_in_sd or not sd_agent_installed:
+            ret['result'] = None
+            ret['comment'] = 'Server Density agent is set to be installed and/or device created in the Server Density DB'
+            return ret
+        else:
+            ret['result'] = None
+            ret['comment'] = 'Server Density agent is already installed, or device already exists'
+            return ret
+
+    elif device_in_sd:
+        device = __salt__['serverdensity_device.ls'](name=name)[0]
+        agent_key = device['agentKey']
+        ret['comment'] = 'Device was already in Server Density db.'
+
     if not device_in_sd:
         device = __salt__['serverdensity_device.create'](name, **params_from_salt)
         agent_key = device['agentKey']
         ret['comment'] = 'Device created in Server Density db.'
         ret['changes'] = {'device_created': device}
-    elif device_in_sd:
-        device = __salt__['serverdensity_device.ls'](name=name)[0]
-        agent_key = device['agentKey']
-        ret['comment'] = 'Device was already in Server Density db.'
+
     else:
         ret['result'] = False
         ret['comment'] = 'Failed to create device in Server Density DB and this device does not exist in db either.'
         ret['changes'] = {}
-        return ret
 
     installed_agent = __salt__['serverdensity_device.install_agent'](agent_key, agent_version)
 
