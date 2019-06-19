@@ -315,12 +315,10 @@ def managed(name, ppa=None, **kwargs):
             'removed in the Neon release of Salt.'
         )
         kwargs['refresh'] = kwargs.pop('refresh_db')
-
     ret = {'name': name,
            'changes': {},
            'result': None,
            'comment': ''}
-
     if 'pkg.get_repo' not in __salt__:
         ret['result'] = False
         ret['comment'] = 'Repo management not implemented on this platform'
@@ -431,6 +429,9 @@ def managed(name, ppa=None, **kwargs):
                 else:
                     break
             elif kwarg == 'comps':
+                if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
+                    break
+            elif kwarg == 'key_url':
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
             elif kwarg == 'line' and __grains__['os_family'] == 'Debian':

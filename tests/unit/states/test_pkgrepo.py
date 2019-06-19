@@ -34,7 +34,6 @@ class PkgrepoTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test when only the key_url is changed that a change is triggered
         '''
-        from pprint import pprint
         kwargs = {
             'humanname': 'Mocked Repo',
             'name': 'deb http://mock/ stretch main',
