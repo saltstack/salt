@@ -9,7 +9,6 @@ from __future__ import absolute_import
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
-    Mock,
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,

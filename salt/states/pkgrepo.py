@@ -315,10 +315,12 @@ def managed(name, ppa=None, **kwargs):
             'removed in the Neon release of Salt.'
         )
         kwargs['refresh'] = kwargs.pop('refresh_db')
+
     ret = {'name': name,
            'changes': {},
            'result': None,
            'comment': ''}
+
     if 'pkg.get_repo' not in __salt__:
         ret['result'] = False
         ret['comment'] = 'Repo management not implemented on this platform'
