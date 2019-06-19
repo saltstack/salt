@@ -852,7 +852,7 @@ def create_network_interface(call=None, kwargs=None):
                     ]
                     break
             except CloudError as exc:
-                log.error('There was a cloud error: {0}'.format(exc))
+                log.error('There was a cloud error: %s', exc)
             count += 1
             if count > 120:
                 raise ValueError('Timed out waiting for public IP Address.')
