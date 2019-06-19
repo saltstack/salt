@@ -27,9 +27,8 @@ Execution Module                       Used for
                                        systems.
 :py:mod:`~salt.modules.service`        Fallback which simply wraps sysvinit
                                        scripts
-:py:mod:`~salt.modules.smf`            Solaris-based OSes which use SMF
-:py:mod:`~salt.modules.systemd`        Linux distros which use systemd
-:py:mod:`~salt.modules.upstart`        Ubuntu-based distros using upstart
+:py:mod:`~salt.modules.smf_service`            Solaris-based OSes which use SMF
+:py:mod:`~salt.modules.systemd_service`        Linux distros which use systemd
+:py:mod:`~salt.modules.upstart_service`        Ubuntu-based distros using upstart
 :py:mod:`~salt.modules.win_service`    Windows
 ====================================== ========================================
-
