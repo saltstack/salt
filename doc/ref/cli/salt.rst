@@ -11,9 +11,9 @@ Synopsis
 
     salt -E '.*' [ options ] sys.doc cmd
 
-    salt -G 'os:Arch.*' [ options ] test.ping
+    salt -G 'os:Arch.*' [ options ] test.version
 
-    salt -C 'G@os:Arch.* and webserv* or G@kernel:FreeBSD' [ options ] test.ping
+    salt -C 'G@os:Arch.* and webserv* or G@kernel:FreeBSD' [ options ] test.version
 
 Description
 ===========

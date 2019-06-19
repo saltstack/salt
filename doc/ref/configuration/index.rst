@@ -199,30 +199,31 @@ Sending Commands
 ================
 
 Communication between the Master and a Minion may be verified by running
-the ``test.ping`` command:
+the ``test.version`` command:
 
 .. code-block:: bash
 
-   [root@master ~]# salt alpha test.ping
+   [root@master ~]# salt alpha test.version
    alpha:
-       True
+       2018.3.4
 
 Communication between the Master and all Minions may be tested in a
 similar way:
 
 .. code-block:: bash
 
-   [root@master ~]# salt '*' test.ping
+   [root@master ~]# salt '*' test.version
    alpha:
-       True
+       2018.3.4
    bravo:
-       True
+       2018.3.4
    charlie:
-       True
+       2018.3.4
    delta:
-       True
+       2018.3.4
 
-Each of the Minions should send a ``True`` response as shown above.
+Each of the Minions should send a ``2018.3.4`` response as shown above, 
+or any other salt version installed.
 
 What's Next?
 ============
