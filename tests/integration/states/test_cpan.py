@@ -33,8 +33,10 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         if 'cpan' not in __testcontext__:
             self.run_state('pkg.installed', name='cpan')
             self.run_state('pkg.installed', name='perl')
-            # CentOS based distros
+            # CentOS 7
             self.run_state('pkg.installed', name='perl-cpan')
+            # CentOS 6
+            self.run_state('pkg.installed', name='perl-CPAN')
             self.run_state('pkg.installed', name='perl-doc')
             self.assertTrue(salt.utils.path.which('cpan').endswith('cpan'), "cpan not installed")
             __testcontext__['cpan'] = True
