@@ -13,7 +13,7 @@ properties([
         $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
     ],
     parameters([
-        booleanParam(defaultValue: false, description: 'Run full test suite', name: 'runFull')
+        booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
     ])
 ])
 timeout(time: global_timeout, unit: 'HOURS') {
