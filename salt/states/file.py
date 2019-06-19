@@ -6343,7 +6343,14 @@ def copy_(name,
         # the filesystem we're copying to is squashed or doesn't support chown
         # then we shouldn't be checking anything.
         if not preserve:
-            __salt__['file.check_perms'](name, ret, user, group, mode)
+            if salt.utils.platform.is_windows():
+                # TODO: Add the other win_* parameters to this function
+                ret = __salt__['file.check_perms'](
+                    path=name,
+                    ret=ret,
+                    owner=user)
+            else:
+                __salt__['file.check_perms'](name, ret, user, group, mode)
     except (IOError, OSError):
         return _error(
             ret, 'Failed to copy "{0}" to "{1}"'.format(source, name))
