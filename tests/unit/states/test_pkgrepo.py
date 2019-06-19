@@ -27,7 +27,7 @@ class PkgrepoTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             pkgrepo: {
-                '__opts__': {'test': None},
+                '__opts__': {'test': True},
                 '__grains__': {'os': '', 'os_family': ''}
             }
         }
@@ -42,10 +42,9 @@ class PkgrepoTestCase(TestCase, LoaderModuleMockMixin):
         }
         key_url = 'http://mock/changed_gpg.key'
 
-        with patch.dict(pkgrepo.__opts__, {'test': True}):
-            with patch.dict(pkgrepo.__salt__, {'pkg.get_repo': MagicMock(return_value=kwargs)}):
-                ret = pkgrepo.managed(key_url=key_url, **kwargs)
-                self.assertDictEqual({
+        with patch.dict(pkgrepo.__salt__, {'pkg.get_repo': MagicMock(return_value=kwargs)}):
+            ret = pkgrepo.managed(key_url=key_url, **kwargs)
+            self.assertDictEqual({
                     'key_url': {
                         'old': None,
                         'new': key_url
@@ -65,13 +64,12 @@ class PkgrepoTestCase(TestCase, LoaderModuleMockMixin):
         changed_kwargs = kwargs.copy()
         changed_kwargs['key_url'] = 'http://mock/gpg2.key'
 
-        with patch.dict(pkgrepo.__opts__, {'test': True}):
-            with patch.dict(pkgrepo.__salt__, {'pkg.get_repo': MagicMock(return_value=kwargs)}):
-                ret = pkgrepo.managed(**changed_kwargs)
-                self.assertIn('key_url', ret['changes'], 'Expected a change to key_url')
-                self.assertDictEqual({
-                    'key_url': {
-                        'old': kwargs['key_url'],
-                        'new': changed_kwargs['key_url']
-                    }
-                }, ret['changes'])
+        with patch.dict(pkgrepo.__salt__, {'pkg.get_repo': MagicMock(return_value=kwargs)}):
+            ret = pkgrepo.managed(**changed_kwargs)
+            self.assertIn('key_url', ret['changes'], 'Expected a change to key_url')
+            self.assertDictEqual({
+                'key_url': {
+                    'old': kwargs['key_url'],
+                    'new': changed_kwargs['key_url']
+                }
+            }, ret['changes'])
