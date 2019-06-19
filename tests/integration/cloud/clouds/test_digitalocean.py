@@ -130,9 +130,9 @@ class DigitalOceanTest(ShellCase):
             # Delete the public key if the above assertions fail
             self.run_cloud('-f remove_key {0} id={1}'.format(PROVIDER_NAME, finger_print))
             raise
-
-        # Delete public key
-        self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(PROVIDER_NAME, finger_print)))
+        finally:
+            # Delete public key
+            self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(PROVIDER_NAME, finger_print)))
 
     def test_instance(self):
         '''
