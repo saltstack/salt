@@ -355,13 +355,16 @@ class ContiguousUnicode(ctypes.Structure):
             return buf[:length]
         return None
 
-    def _set_unicode_buffer(self, value):
+    def _set_unicode_buffer(self, values):
         cls = type(self)
         wchar_size = ctypes.sizeof(WCHAR)
-        bufsize = (len(value) + 1) * wchar_size
+        bufsize = (len('\x00'.join(values)) + 1) * wchar_size
         ctypes.resize(self, ctypes.sizeof(cls) + bufsize)
         addr = ctypes.addressof(self) + ctypes.sizeof(cls)
-        ctypes.memmove(addr, value, bufsize)
+        for value in values:
+            bufsize = (len(value) + 1) * wchar_size
+            ctypes.memmove(addr, value, bufsize)
+            addr += bufsize
 
     def _set_unicode_string(self, name, value):
         values = []
@@ -370,7 +373,7 @@ class ContiguousUnicode(ctypes.Structure):
                 values.append(value or '')
             else:
                 values.append(getattr(self, n) or '')
-        self._set_unicode_buffer('\x00'.join(values))
+        self._set_unicode_buffer(values)
 
         cls = type(self)
         wchar_size = ctypes.sizeof(WCHAR)
@@ -1143,7 +1146,7 @@ def dup_token(th):
 
 def elevate_token(th):
     '''
-    Set all token priviledges to enabled
+    Set all token privileges to enabled
     '''
     # Get list of privileges this token contains
     privileges = win32security.GetTokenInformation(

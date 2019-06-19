@@ -5,6 +5,7 @@ Tests for existence of manpages
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import pprint
 import shutil
 
 # Import Salt libs
@@ -17,8 +18,8 @@ from tests.support.unit import skipIf
 
 
 @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
+@skipIf(salt.utils.platform.is_aix(), 'minion is AIX')
 class ManTest(ModuleCase):
-    rootdir = os.path.join(RUNTIME_VARS.TMP, 'mantest')
     # Map filenames to search strings which should be in the manpage
     manpages = {
         'salt-cp.1': [
@@ -82,15 +83,22 @@ class ManTest(ModuleCase):
     }
 
     def setUp(self):
-        if not self.run_function('mantest.install', [self.rootdir]):
-            self.fail('Failed to install salt to {0}'.format(self.rootdir))
-
-    @classmethod
-    def tearDownClass(cls):
-        try:
-            shutil.rmtree(cls.rootdir)
-        except OSError:
-            pass
+        self.rootdir = os.path.join(RUNTIME_VARS.TMP, 'mantest')
+        self.addCleanup(shutil.rmtree, self.rootdir, ignore_errors=True)
+        if not os.path.exists(self.rootdir):
+            ret = self.run_function('mantest.install', [self.rootdir])
+            if not isinstance(ret, dict):
+                self.fail(
+                    'The \'mantest.install\' command did not return the excepted dictionary. Output:\n{}'.format(
+                        ret
+                    )
+                )
+            if ret['retcode'] != 0:
+                self.fail(
+                    'Failed to install. Full return dictionary:\n{}'.format(
+                        pprint.pformat(ret)
+                    )
+                )
 
     def test_man(self):
         '''

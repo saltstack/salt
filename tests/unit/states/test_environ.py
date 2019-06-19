@@ -24,10 +24,8 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         loader_globals = {
             '__env__': 'base',
             '__opts__': {'test': False},
-            '__salt__': {
-                'environ.setenv': envmodule.setenv,
-                'reg.read_value': salt.modules.reg.read_value,
-            }
+            '__salt__': {'environ.setenv': envmodule.setenv},
+            '__utils__': {'reg.read_value': salt.modules.reg.read_value}
         }
         return {envstate: loader_globals, envmodule: loader_globals}
 
@@ -59,14 +57,14 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         '''
         test that we can set perminent environment variables (requires pywin32)
         '''
-        with patch.dict(envmodule.__salt__, {'reg.set_value': MagicMock(), 'reg.delete_value': MagicMock()}):
+        with patch.dict(envmodule.__utils__, {'reg.set_value': MagicMock(), 'reg.delete_value': MagicMock()}):
             ret = envstate.setenv('test', 'value', permanent=True)
             self.assertEqual(ret['changes'], {'test': 'value'})
-            envmodule.__salt__['reg.set_value'].assert_called_with("HKCU", "Environment", 'test', 'value')
+            envmodule.__utils__['reg.set_value'].assert_called_with("HKCU", "Environment", 'test', 'value')
 
             ret = envstate.setenv('test', False, false_unsets=True, permanent=True)
             self.assertEqual(ret['changes'], {'test': None})
-            envmodule.__salt__['reg.delete_value'].assert_called_with("HKCU", "Environment", 'test')
+            envmodule.__utils__['reg.delete_value'].assert_called_with("HKCU", "Environment", 'test')
 
     def test_setenv_dict(self):
         '''
@@ -124,7 +122,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         ret = envstate.setenv('notimportant', {'foo': 'bar'})
         self.assertEqual(ret['changes'], {'foo': 'bar'})
 
-        with patch.dict(envstate.__salt__, {'reg.read_value': MagicMock()}):
+        with patch.dict(envstate.__utils__, {'reg.read_value': MagicMock()}):
             ret = envstate.setenv(
                 'notimportant', {'test': False, 'foo': 'baz'}, false_unsets=True)
         self.assertEqual(ret['changes'], {'test': None, 'foo': 'baz'})
@@ -133,7 +131,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         else:
             self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'foo': 'baz'})
 
-        with patch.dict(envstate.__salt__, {'reg.read_value': MagicMock()}):
+        with patch.dict(envstate.__utils__, {'reg.read_value': MagicMock()}):
             ret = envstate.setenv('notimportant', {'test': False, 'foo': 'bax'})
         self.assertEqual(ret['changes'], {'test': '', 'foo': 'bax'})
         if salt.utils.platform.is_windows():

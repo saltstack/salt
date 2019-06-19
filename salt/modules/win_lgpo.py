@@ -133,7 +133,7 @@ try:
     # Default to `en-US` (1033)
     windll = ctypes.windll.kernel32
     INSTALL_LANGUAGE = locale.windows_locale.get(
-        windll.GetSystemDefaultUILanguage(), 1033).replace('_', '-')
+        windll.GetSystemDefaultUILanguage(), 'en_US').replace('_', '-')
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
@@ -4970,7 +4970,7 @@ def _buildElementNsmap(using_elements):
     return thisMap
 
 
-def _get_audit_defaults(option=None):
+def _get_advaudit_defaults(option=None):
     '''
     Loads audit.csv defaults into a dict in __context__ called
     'lgpo.audit_defaults'. The dictionary includes fieldnames and all
@@ -5056,7 +5056,7 @@ def _get_audit_defaults(option=None):
         return __context__['lgpo.audit_defaults']
 
 
-def _findOptionValueAdvAudit(option):
+def _get_advaudit_value(option):
     '''
     Get the Advanced Auditing policy as configured in
     ``C:\\Windows\\Security\\Audit\\audit.csv``
@@ -5080,11 +5080,11 @@ def _findOptionValueAdvAudit(option):
                 # If the GPO audit.csv exists, we'll use that one
                 __salt__['file.copy'](f_audit_gpo, f_audit)
             else:
-                field_names = _get_audit_defaults('fieldnames')
+                field_names = _get_advaudit_defaults('fieldnames')
                 # If the file doesn't exist anywhere, create it with default
                 # fieldnames
-                __salt__['file.touch'](f_audit)
-                __salt__['file.append'](f_audit, ','.join(field_names))
+                __salt__['file.makedirs'](f_audit)
+                __salt__['file.write'](f_audit, ','.join(field_names))
 
         audit_settings = {}
         with salt.utils.files.fopen(f_audit, mode='r') as csv_file:
@@ -5172,7 +5172,7 @@ def _set_audit_file_data(option, value):
                         # value is not None, write the new value
                         log.debug('LGPO: Setting {0} to {1}'
                                   ''.format(option, value))
-                        defaults = _get_audit_defaults(option)
+                        defaults = _get_advaudit_defaults(option)
                         writer.writerow({
                             'Machine Name': defaults['Machine Name'],
                             'Policy Target': defaults['Policy Target'],
@@ -5187,6 +5187,7 @@ def _set_audit_file_data(option, value):
             # Copy the temporary csv file over the existing audit.csv in both
             # locations if a value was written
             __salt__['file.copy'](f_temp.name, f_audit, remove_existing=True)
+            __salt__['file.makedirs'](f_audit_gpo)
             __salt__['file.copy'](f_temp.name, f_audit_gpo, remove_existing=True)
     finally:
         f_temp.close()
@@ -5195,7 +5196,7 @@ def _set_audit_file_data(option, value):
     return value_written
 
 
-def _set_auditpol_data(option, value):
+def _set_advaudit_pol_data(option, value):
     '''
     Helper function that updates the current applied settings to match what has
     just been set in the audit.csv files. We're doing it this way instead of
@@ -5213,13 +5214,13 @@ def _set_auditpol_data(option, value):
                        '1': 'Success',
                        '2': 'Failure',
                        '3': 'Success and Failure'}
-    defaults = _get_audit_defaults(option)
+    defaults = _get_advaudit_defaults(option)
     return __utils__['auditpol.set_setting'](
         name=defaults['Auditpol Name'],
         value=auditpol_values[value])
 
 
-def _setOptionValueAdvAudit(option, value):
+def _set_advaudit_value(option, value):
     '''
     Helper function to update the Advanced Audit policy on the machine. This
     function modifies the two ``audit.csv`` files in the following locations:
@@ -5243,7 +5244,7 @@ def _setOptionValueAdvAudit(option, value):
         raise CommandExecutionError('Failed to set audit.csv option: {0}'
                                     ''.format(option))
     # Apply the settings locally
-    if not _set_auditpol_data(option=option, value=value):
+    if not _set_advaudit_pol_data(option=option, value=value):
         # Only log this error, it will be in effect the next time the machine
         # updates its policy
         log.debug('Failed to apply audit setting: {0}'.format(option))
@@ -5260,7 +5261,7 @@ def _setOptionValueAdvAudit(option, value):
     return True
 
 
-def _findOptionValueNetSH(profile, option):
+def _get_netsh_value(profile, option):
     if 'lgpo.netsh_data' not in __context__:
         __context__['lgpo.netsh_data'] = {}
 
@@ -5273,7 +5274,7 @@ def _findOptionValueNetSH(profile, option):
     return __context__['lgpo.netsh_data'][profile][option]
 
 
-def _setOptionValueNetSH(profile, section, option, value):
+def _set_netsh_value(profile, section, option, value):
     if section not in ('firewallpolicy', 'settings', 'logging', 'state'):
         raise ValueError('LGPO: Invalid section: {0}'.format(section))
     log.debug('LGPO: Setting the following\n'
@@ -5294,17 +5295,20 @@ def _setOptionValueNetSH(profile, section, option, value):
     if section == 'state':
         salt.utils.win_lgpo_netsh.set_state(
             profile=profile, state=value, store='lgpo')
+        option = 'State'
     if section == 'logging':
         if option in ('FileName', 'MaxFileSize'):
             if value == 'Not configured':
                 value = 'notconfigured'
         # Trim log for the two logging options
+        orig_option = option
         if option.startswith('Log'):
             option = option[3:]
         salt.utils.win_lgpo_netsh.set_logging_settings(
             profile=profile, setting=option, value=value, store='lgpo')
-    log.debug('LGPO: Clearing netsh data for %s profile', profile)
-    __context__['lgpo.netsh_data'].pop(profile)
+        option = orig_option
+    log.debug('LGPO: Setting {0} for {1} profile'.format(option, profile))
+    __context__['lgpo.netsh_data'][profile][option] = value
     return True
 
 
@@ -5338,7 +5342,13 @@ def _get_secedit_data():
     '''
     if 'lgpo.secedit_data' not in __context__:
         log.debug('LGPO: Loading secedit data')
-        __context__['lgpo.secedit_data'] = _load_secedit_data()
+        data = _load_secedit_data()
+        secedit_data = {}
+        for line in data:
+            if '=' in line:
+                key, value = line.split('=')
+                secedit_data[key.strip()] = value.strip()
+        __context__['lgpo.secedit_data'] = secedit_data
     return __context__['lgpo.secedit_data']
 
 
@@ -5346,20 +5356,40 @@ def _get_secedit_value(option):
     '''
     Helper function that looks for the passed option in the secedit data
     '''
-    secedit_data = _get_secedit_data()
-    for _line in secedit_data:
-        if _line.startswith(option):
-            return _line.split('=')[1].strip()
-    return 'Not Defined'
+    return _get_secedit_data().get(option, 'Not Defined')
 
 
-def _write_secedit_data(inf_data):
+def _write_secedit_data(secedit_data):
     '''
     Helper function to write secedit data to the database
     '''
     # Set file names
     f_sdb = os.path.join(__opts__['cachedir'], 'secedit-{0}.sdb'.format(UUID))
     f_inf = os.path.join(__opts__['cachedir'], 'secedit-{0}.inf'.format(UUID))
+
+    # Generate inf data in this format:
+    # [Unicode]
+    # Unicode = yes
+    # [System Access]         <==== Section
+    # EnableGuestAccount = 0  <==== value to set
+    # [Version]
+    # signature = "$CHICAGO$"
+    # Revision = 1
+
+    log.debug(secedit_data)
+    ini_data = ['[Unicode]', 'Unicode=yes']
+    sections = ['System Access',
+                'Event Audit',
+                'Registry Values',
+                'Privilege Rights']
+    for section in sections:
+        if section in secedit_data:
+            ini_data.append('[{0}]'.format(section))
+            ini_data.append(secedit_data[section][0])
+            option, value = secedit_data[section][0].split('=')
+    ini_data.extend(['[Version]', 'signature="$CHICAGO$"', 'Revision=1'])
+    inf_data = os.linesep.join(ini_data)
+    log.debug('inf_data == %s', inf_data)
 
     try:
         # Write the changes to the inf file
@@ -5369,8 +5399,8 @@ def _write_secedit_data(inf_data):
         retcode = __salt__['cmd.retcode'](cmd)
         # Success
         if retcode == 0:
-            # Pop secedit data so it will always be current
-            __context__.pop('lgpo.secedit_data')
+            # Update __context__['lgpo.secedit_data']
+            __context__['lgpo.secedit_data'][option.strip()] = value.strip()
             return True
         # Failure
         return False
@@ -5604,7 +5634,7 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
                                                        )
                                         ].split(encoded_semicolon)
                 if len(pol_entry) >= 2:
-                    valueName = pol_entry[1]
+                    valueName = pol_entry[1].decode('utf-16-le').rstrip(chr(0))
                 if len(pol_entry) >= 5:
                     value = pol_entry[4]
                     if vtype == 'REG_DWORD' or vtype == 'REG_QWORD':
@@ -5856,7 +5886,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                 check_deleted = True
             if not check_deleted:
                 this_vtype = 'REG_DWORD'
-            this_element_value = chr(1).encode('utf-16-le')
+            this_element_value = struct.pack('I', 1)
             standard_element_expected_string = False
         elif etree.QName(element).localname == 'decimal':
             # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
@@ -5922,18 +5952,18 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                          ']'.encode('utf-16-le')])
             if 'expandable' in element.attrib:
                 this_vtype = 'REG_EXPAND_SZ'
-            if 'explicitValue' in element.attrib and element.attrib['explicitValue'].lower() == 'true':
+            if element.attrib.get('explicitValue', 'false').lower() == 'true':
                 if this_element_value is not None:
-                    element_valuenames = this_element_value.keys()
-                    element_values = this_element_value.values()
-            if 'valuePrefix' in element.attrib:
+                    element_valuenames = [str(k) for k in this_element_value.keys()]
+                    element_values = [str(v) for v in this_element_value.values()]
+            elif 'valuePrefix' in element.attrib:
                 # if the valuePrefix attribute exists, the valuenames are <prefix><number>
                 # most prefixes attributes are empty in the admx files, so the valuenames
                 # end up being just numbers
                 if element.attrib['valuePrefix'] != '':
                     if this_element_value is not None:
-                        element_valuenames = ['{0}{1}'.format(element.attrib['valuePrefix'],
-                                                              k) for k in element_valuenames]
+                        element_valuenames = ['{0}{1}'.format(
+                            element.attrib['valuePrefix'], k) for k in element_valuenames]
             else:
                 # if there is no valuePrefix attribute, the valuename is the value
                 if element_values is not None:
@@ -7639,7 +7669,7 @@ def get(policy_class=None, return_full_policy_names=True,
 
     if policy_class is None or policy_class.lower() == 'both':
         policy_class = _policydata.policies.keys()
-    elif policy_class.lower() not in [z.lower() for z in _policydata.policies]:
+    elif policy_class.lower() not in [z.lower() for z in _policydata.policies.keys()]:
         msg = 'The policy_class {0} is not an available policy class, please ' \
               'use one of the following: {1}, Both'
         raise SaltInvocationError(
@@ -7664,7 +7694,7 @@ def get(policy_class=None, return_full_policy_names=True,
                 vals_key_name = policy_name
                 if 'Registry' in _pol:
                     # get value from registry
-                    class_vals[policy_name] = __salt__['reg.read_value'](
+                    class_vals[policy_name] = __utils__['reg.read_value'](
                         _pol['Registry']['Hive'],
                         _pol['Registry']['Path'],
                         _pol['Registry']['Value'])['vdata']
@@ -7678,12 +7708,12 @@ def get(policy_class=None, return_full_policy_names=True,
                     class_vals[policy_name] = _val
                 elif 'NetSH' in _pol:
                     # get value from netsh
-                    class_vals[policy_name] = _findOptionValueNetSH(
+                    class_vals[policy_name] = _get_netsh_value(
                         profile=_pol['NetSH']['Profile'],
                         option=_pol['NetSH']['Option'])
                 elif 'AdvAudit' in _pol:
                     # get value from auditpol
-                    class_vals[policy_name] = _findOptionValueAdvAudit(
+                    class_vals[policy_name] = _get_advaudit_value(
                         option=_pol['AdvAudit']['Option'])
                 elif 'NetUserModal' in _pol:
                     # get value from UserNetMod
@@ -8098,19 +8128,19 @@ def set_(computer_policy=None,
                         log.debug('%s is a Registry policy', regedit)
                         # if the value setting is None or "(value not set)", we will delete the value from the registry
                         if _regedits[regedit]['value'] is not None and _regedits[regedit]['value'] != '(value not set)':
-                            _ret = __salt__['reg.set_value'](
+                            _ret = __utils__['reg.set_value'](
                                     _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'],
                                     _regedits[regedit]['value'],
                                     _regedits[regedit]['policy']['Registry']['Type'])
                         else:
-                            _ret = __salt__['reg.read_value'](
+                            _ret = __utils__['reg.read_value'](
                                     _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'])
                             if _ret['success'] and _ret['vdata'] != '(value not set)':
-                                _ret = __salt__['reg.delete_value'](
+                                _ret = __utils__['reg.delete_value'](
                                         _regedits[regedit]['policy']['Registry']['Hive'],
                                         _regedits[regedit]['policy']['Registry']['Path'],
                                         _regedits[regedit]['policy']['Registry']['Value'])
@@ -8141,18 +8171,7 @@ def set_(computer_policy=None,
                                         raise SaltInvocationError(msg.format(lsaright))
                 if _secedits:
                     # we've got secedits to make
-                    log.debug(_secedits)
-                    ini_data = '\r\n'.join(['[Unicode]', 'Unicode=yes'])
-                    _seceditSections = ['System Access', 'Event Audit', 'Registry Values', 'Privilege Rights']
-                    for _seceditSection in _seceditSections:
-                        if _seceditSection in _secedits:
-                            ini_data = '\r\n'.join([ini_data, ''.join(['[', _seceditSection, ']']),
-                                                   '\r\n'.join(_secedits[_seceditSection])])
-                    ini_data = '\r\n'.join([ini_data, '[Version]',
-                                            'signature="$CHICAGO$"',
-                                            'Revision=1'])
-                    log.debug('ini_data == %s', ini_data)
-                    if not _write_secedit_data(ini_data):
+                    if not _write_secedit_data(_secedits):
                         msg = ('Error while attempting to set policies via '
                                'secedit. Some changes may not be applied as '
                                'expected')
@@ -8162,14 +8181,14 @@ def set_(computer_policy=None,
                     for setting in _netshs:
                         log.debug('Setting firewall policy: %s', setting)
                         log.debug(_netshs[setting])
-                        _setOptionValueNetSH(**_netshs[setting])
+                        _set_netsh_value(**_netshs[setting])
 
                 if _advaudits:
                     # We've got AdvAudit settings to make
                     for setting in _advaudits:
                         log.debug('Setting Advanced Audit policy: {0}'.format(setting))
                         log.debug(_advaudits[setting])
-                        _setOptionValueAdvAudit(**_advaudits[setting])
+                        _set_advaudit_value(**_advaudits[setting])
 
                 if _modal_sets:
                     # we've got modalsets to make

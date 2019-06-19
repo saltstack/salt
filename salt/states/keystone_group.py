@@ -29,7 +29,7 @@ Example States
 
 from __future__ import absolute_import, unicode_literals, print_function
 
-__virtualname__ = 'keystone_endpoint'
+__virtualname__ = 'keystone_group'
 
 
 def __virtual__():

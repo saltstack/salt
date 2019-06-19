@@ -42,6 +42,7 @@ import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.serializers.configparser
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 HAS_PWD = True
@@ -456,6 +457,21 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         changes = next(six.itervalues(ret))['changes']
         self.assertEqual('<show_changes=False>', changes['diff'])
+
+    def test_managed_show_changes_true(self):
+        '''
+        file.managed test interface
+        '''
+        name = os.path.join(RUNTIME_VARS.TMP, 'grail_not_scene33')
+        with salt.utils.files.fopen(name, 'wb') as fp_:
+            fp_.write(b'test_managed_show_changes_false\n')
+
+        ret = self.run_state(
+            'file.managed', name=name, source='salt://grail/scene33',
+        )
+
+        changes = next(six.itervalues(ret))['changes']
+        self.assertIn('diff', changes)
 
     @skipIf(IS_WINDOWS, 'Don\'t know how to fix for Windows')
     def test_managed_escaped_file_path(self):
@@ -1772,16 +1788,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test the serializer_opts and deserializer_opts options
         '''
-        data1 = {'foo': {'bar': 'baz'}}
+        data1 = {'foo': {'bar': '%(x)s'}}
         data2 = {'foo': {'abc': 123}}
-        merged = {'foo': {'bar': 'baz', 'abc': 123}}
+        merged = {'foo': {'y': 'not_used', 'x': 'baz', 'abc': 123, 'bar': u'baz'}}
 
         ret = self.run_state(
             'file.serialize',
             name=name,
             dataset=data1,
-            formatter='json',
-            deserializer_opts=[{'encoding': 'latin-1'}])
+            formatter='configparser',
+            deserializer_opts=[{'defaults': {'y': 'not_used'}}])
         ret = ret[next(iter(ret))]
         assert ret['result'], ret
         # We should have warned about deserializer_opts being used when
@@ -1789,25 +1805,31 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         assert 'warnings' in ret
 
         # Run with merge_if_exists, as well as serializer and deserializer opts
+        # deserializer opts will be used for string interpolation of the %(x)s
+        # that was written to the file with data1 (i.e. bar should become baz)
         ret = self.run_state(
             'file.serialize',
             name=name,
             dataset=data2,
-            formatter='json',
+            formatter='configparser',
             merge_if_exists=True,
-            serializer_opts=[{'indent': 8}],
-            deserializer_opts=[{'encoding': 'latin-1'}])
+            serializer_opts=[{'defaults': {'y': 'not_used'}}],
+            deserializer_opts=[{'defaults': {'x': 'baz'}}])
         ret = ret[next(iter(ret))]
         assert ret['result'], ret
 
         with salt.utils.files.fopen(name) as fp_:
-            serialized_data = salt.utils.json.load(fp_)
+            serialized_data = salt.serializers.configparser.deserialize(fp_)
 
         # If this test fails, this debug logging will help tell us how the
         # serialized data differs from what was serialized.
         log.debug('serialized_data = %r', serialized_data)
         log.debug('merged = %r', merged)
-        assert serialized_data == merged
+        # serializing with a default of 'y' will add y = not_used into foo
+        assert serialized_data['foo']['y'] == merged['foo']['y']
+        # deserializing with default of x = baz will perform interpolation on %(x)s
+        # and bar will then = baz
+        assert serialized_data['foo']['bar'] == merged['foo']['bar']
 
     @with_tempdir()
     def test_replace_issue_18841_omit_backup(self, base_dir):
@@ -2787,6 +2809,42 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertNotIn('#LoginGraceTime 2m', file_contents)
             self.assertIn("LoginGraceTime 1m", file_contents)
 
+        self.assertSaltTrueReturn(ret)
+
+    @with_tempfile()
+    def test_issue_50221(self, name):
+        expected = 'abc{0}{0}{0}'.format(os.linesep)
+        ret = self.run_function(
+            'pillar.get',
+            ['issue-50221']
+        )
+        assert ret == expected
+        ret = self.run_function(
+            'state.apply',
+            ['issue-50221'],
+            pillar={
+                'name': name
+            },
+        )
+        self.assertSaltTrueReturn(ret)
+        with salt.utils.files.fopen(name, 'r') as fp:
+            contents = fp.read()
+        assert contents == expected
+
+    def test_managed_file_issue_51208(self):
+        '''
+        Test to ensure we can handle a file with escaped double-quotes
+        '''
+        name = os.path.join(RUNTIME_VARS.TMP, 'issue_51208.txt')
+        ret = self.run_state(
+            'file.managed', name=name, source='salt://issue-51208/vimrc.stub'
+        )
+        src = os.path.join(RUNTIME_VARS.BASE_FILES, 'issue-51208', 'vimrc.stub')
+        with salt.utils.files.fopen(src, 'r') as fp_:
+            master_data = fp_.read()
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            minion_data = fp_.read()
+        self.assertEqual(master_data, minion_data)
         self.assertSaltTrueReturn(ret)
 
 
@@ -4041,7 +4099,7 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
             os.remove(self.name)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
-                raise exc
+                six.reraise(*sys.exc_info())
 
     def run_state(self, *args, **kwargs):
         ret = super(RemoteFileTest, self).run_state(*args, **kwargs)

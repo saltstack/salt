@@ -88,7 +88,8 @@ class NetapiClient(object):
         :return: job ID
         '''
         local = salt.client.get_local_client(mopts=self.opts)
-        return local.run_job(*args, **kwargs)
+        ret = local.run_job(*args, **kwargs)
+        return ret
 
     def local(self, *args, **kwargs):
         '''

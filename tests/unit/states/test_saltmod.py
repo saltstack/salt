@@ -280,6 +280,24 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(saltmod.__salt__, {'saltutil.wheel': wheel_mock}):
             self.assertDictEqual(saltmod.wheel(name), ret)
 
+    def test_state_ssh(self):
+        '''
+        Test saltmod passes roster to saltutil.cmd
+        '''
+        origcmd = saltmod.__salt__['saltutil.cmd']
+        cmd_kwargs = {}
+        cmd_args = []
+
+        def cmd_mock(*args, **kwargs):
+            cmd_args.extend(args)
+            cmd_kwargs.update(kwargs)
+            return origcmd(*args, **kwargs)
+
+        with patch.dict(saltmod.__salt__, {'saltutil.cmd': cmd_mock}):
+            ret = saltmod.state('state.sls', tgt='*', ssh=True, highstate=True, roster='my_roster')
+        assert 'roster' in cmd_kwargs
+        assert cmd_kwargs['roster'] == 'my_roster'
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class StatemodTests(TestCase, LoaderModuleMockMixin):

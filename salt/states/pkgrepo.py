@@ -454,6 +454,9 @@ def managed(name, ppa=None, **kwargs):
                         sanitizedkwargs[kwarg])
                 if precomments != kwargcomments:
                     break
+            elif kwarg == 'architectures' and sanitizedkwargs[kwarg]:
+                if set(sanitizedkwargs[kwarg]) != set(pre[kwarg]):
+                    break
             else:
                 if __grains__['os_family'] in ('RedHat', 'Suse') \
                         and any(isinstance(x, bool) for x in
@@ -473,11 +476,18 @@ def managed(name, ppa=None, **kwargs):
 
     if __opts__['test']:
         ret['comment'] = (
-            'Package repo \'{0}\' will be configured. This may cause pkg '
+            'Package repo \'{0}\' would be configured. This may cause pkg '
             'states to behave differently than stated if this action is '
             'repeated without test=True, due to the differences in the '
             'configured repositories.'.format(name)
         )
+        if pre:
+            for kwarg in sanitizedkwargs:
+                if sanitizedkwargs.get(kwarg) != pre.get(kwarg):
+                    ret['changes'][kwarg] = {'new': sanitizedkwargs.get(kwarg),
+                                             'old': pre.get(kwarg)}
+        else:
+            ret['changes']['repo'] = name
         return ret
 
     # empty file before configure
@@ -503,9 +513,8 @@ def managed(name, ppa=None, **kwargs):
         if pre:
             for kwarg in sanitizedkwargs:
                 if post.get(kwarg) != pre.get(kwarg):
-                    change = {'new': post[kwarg],
-                              'old': pre.get(kwarg)}
-                    ret['changes'][kwarg] = change
+                    ret['changes'][kwarg] = {'new': post.get(kwarg),
+                                             'old': pre.get(kwarg)}
         else:
             ret['changes'] = {'repo': repo}
 

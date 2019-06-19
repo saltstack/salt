@@ -121,6 +121,23 @@ so either of the following versions for "Extract server package" is correct:
         - onchanges:
           - file: /usr/local/share/myapp.tar.xz
 
+Glob matching in requisites
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 0.9.8
+
+Glob matching is supported in requisites. This is mostly useful for file
+changes. In the example below, a change in ``/etc/apache2/apache2.conf`` or
+``/etc/apache2/sites-available/000-default.conf`` will reload/restart the
+service:
+
+.. code-block:: yaml
+
+    apache2:
+      service.running:
+        - watch:
+          - file: /etc/apache2/*
+
 Omitting state module in requisites
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -138,17 +155,17 @@ module they are using.
 Requisites Types
 ----------------
 
-All requisite types have a corresponding `<requisite>_in <requisites-in>` form:
+All requisite types have a corresponding :ref:`<requisite>_in <requisites-in>` form:
 
-* `require <requisites-require>`: Requires that a list of target states succeed before execution
-* `onchanges <requisites-onchanges>`: Execute if any target states succeed with changes
-* `watch <requisites-watch>`: Similar to ``onchanges``; modifies state behavior using ``mod_watch``
-* `listen <requisites-listen>`: Similar to ``onchanges``; delays execution to end of state run using ``mod_wait``
-* `prereq <requisites-prereq>`: Execute prior to target state if target state expects to produce changes
-* `onfail <requisites-onfail>`: Execute only if a target state fails
-* `use <requisites-use>`: Copy arguments from another state
+* :ref:`require <requisites-require>`: Requires that a list of target states succeed before execution
+* :ref:`onchanges <requisites-onchanges>`: Execute if any target states succeed with changes
+* :ref:`watch <requisites-watch>`: Similar to ``onchanges``; modifies state behavior using ``mod_watch``
+* :ref:`listen <requisites-listen>`: Similar to ``onchanges``; delays execution to end of state run using ``mod_wait``
+* :ref:`prereq <requisites-prereq>`: Execute prior to target state if target state expects to produce changes
+* :ref:`onfail <requisites-onfail>`: Execute only if a target state fails
+* :ref:`use <requisites-use>`: Copy arguments from another state
 
-Several requisite types have a corresponding `requisite_any <requisites-any>` form:
+Several requisite types have a corresponding :ref:`requisite_any <requisites-any>` form:
 
 * ``require_any``
 * ``watch_any``
@@ -160,7 +177,7 @@ logic is desired instead of the default `OR` logic of onfail/onfail_any (which
 are equivalent).
 
 All requisites define specific relationships and always work with the dependency
-logic defined `above <requisites-matching>`.
+logic defined :ref:`above <requisites-matching>`.
 
 .. _requisites-require:
 
@@ -832,6 +849,34 @@ For example:
 In the above case, ``some_check`` will be run prior to _each_ name -- once for
 ``first_deploy_cmd`` and a second time for ``second_deploy_cmd``.
 
+.. versionchanged:: Neon
+    The ``unless`` requisite can take a module as a dictionary field in unless.
+    The dictionary must contain an argument ``fun`` which is the module that is
+    being run, and everything else must be passed in under the args key or will
+    be passed as individual kwargs to the module function.
+
+    .. code-block:: yaml
+
+        install apache on debian based distros:
+          cmd.run:
+            - name: make install
+            - cwd: /path/to/dir/whatever-2.1.5/
+            - unless:
+              - fun: file.file_exists
+                path: /usr/local/bin/whatever
+
+    .. code-block:: yaml
+
+      set mysql root password:
+        debconf.set:
+          - name: mysql-server-5.7
+          - data:
+              'mysql-server/root_password': {'type': 'password', 'value': {{pillar['mysql.pass']}} }
+          - unless:
+            - fun: pkg.version
+              args:
+                - mysql-server-5.7
+
 .. _onlyif-requisite:
 
 onlyif
@@ -871,6 +916,39 @@ concept of ``True`` and ``False``.
 
 The above example ensures that the stop_volume and delete modules only run
 if the gluster commands return a 0 ret value.
+
+.. versionchanged:: Neon
+    The ``onlyif`` requisite can take a module as a dictionary field in onlyif.
+    The dictionary must contain an argument ``fun`` which is the module that is
+    being run, and everything else must be passed in under the args key or will
+    be passed as individual kwargs to the module function.
+
+    .. code-block:: yaml
+
+        install apache on redhat based distros:
+          pkg.latest:
+            - name: httpd
+            - onlyif:
+              - fun: match.grain
+                tgt: 'os_family: RedHat'
+
+        install apache on debian based distros:
+          pkg.latest:
+            - name: apache2
+            - onlyif:
+              - fun: match.grain
+                tgt: 'os_family: Debian'
+
+    .. code-block:: yaml
+
+      arbitrary file example:
+        file.touch:
+          - name: /path/to/file
+          - onlyif:
+            - fun: file.search
+              args:
+                - /etc/crontab
+                - 'entry1'
 
 runas
 ~~~~~

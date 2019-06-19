@@ -46,9 +46,12 @@ AUTH_INTERNAL_KEYWORDS = frozenset([
     'gather_job_timeout',
     'kwarg',
     'match',
+    'metadata',
     'print_event',
     'raw',
-    'yield_pub_data'
+    'yield_pub_data',
+    'batch',
+    'batch_delay'
 ])
 
 
@@ -92,9 +95,14 @@ class LoadAuth(object):
         fstr = '{0}.auth'.format(load['eauth'])
         if fstr not in self.auth:
             return False
+        # When making auth calls, only username, password, auth, and token
+        # are valid, so we strip anything else out.
+        _valid = ['username', 'password', 'eauth', 'token']
+        _load = {key: value for (key, value) in load.items() if key in _valid}
+
         fcall = salt.utils.args.format_call(
             self.auth[fstr],
-            load,
+            _load,
             expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             if 'kwargs' in fcall:

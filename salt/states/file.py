@@ -110,8 +110,23 @@ declarations. Each item in the ``names`` list receives its own individual state
 ``name`` and is converted into its own low-data structure. This is a convenient
 way to manage several files with similar attributes.
 
-There is more documentation about this feature in the :ref:`Names declaration
-<names-declaration>` section of the :ref:`Highstate docs <states-highstate>`.
+.. code-block:: yaml
+
+    salt_master_conf:
+      file.managed:
+        - user: root
+        - group: root
+        - mode: '0644'
+        - names:
+          - /etc/salt/master.d/master.conf:
+            - source: salt://saltmaster/master.conf
+          - /etc/salt/minion.d/minion-99.conf:
+            - source: salt://saltmaster/minion.conf
+
+.. note::
+
+    There is more documentation about this feature in the :ref:`Names declaration
+    <names-declaration>` section of the :ref:`Highstate docs <states-highstate>`.
 
 Special files can be managed via the ``mknod`` function. This function will
 create and enforce the permissions on a special file. The function supports the
@@ -301,6 +316,7 @@ from salt.state import get_accumulator_dir as _get_accumulator_dir
 if salt.utils.platform.is_windows():
     import salt.utils.win_dacl
     import salt.utils.win_functions
+    import salt.utils.winapi
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -631,6 +647,7 @@ def _check_file(name):
 def _find_keep_files(root, keep):
     '''
     Compile a list of valid keep files (and directories).
+    Used by _clean_dir()
     '''
     real_keep = set()
     real_keep.add(root)
@@ -654,6 +671,7 @@ def _clean_dir(root, keep, exclude_pat):
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     '''
+    root = os.path.normcase(root)
     real_keep = _find_keep_files(root, keep)
     removed = set()
 
@@ -693,7 +711,8 @@ def _check_directory(name,
                      require=False,
                      exclude_pat=None,
                      max_depth=None,
-                     follow_symlinks=False):
+                     follow_symlinks=False,
+                     children_only=False):
     '''
     Check what changes need to be made on a directory
     '''
@@ -707,6 +726,8 @@ def _check_directory(name,
         for i in walk_l:
             walk_d[i[0]] = (i[1], i[2])
 
+    # Preserve rootdir_mode before going into recurse
+    rootdir_mode = mode
     if recurse:
         try:
             recurse_set = _get_recurse_set(recurse)
@@ -724,7 +745,7 @@ def _check_directory(name,
             if check_files:
                 for fname in files:
                     fchange = {}
-                    mode = file_mode
+                    mode = file_mode if mode is not None else None
                     path = os.path.join(root, fname)
                     stats = __salt__['file.stats'](
                         path, None, follow_symlinks
@@ -743,10 +764,13 @@ def _check_directory(name,
                     fchange = _check_dir_meta(path, user, group, mode, follow_symlinks)
                     if fchange:
                         changes[path] = fchange
+
     # Recurse skips root (we always do dirs, not root), so always check root:
-    fchange = _check_dir_meta(name, user, group, mode, follow_symlinks)
-    if fchange:
-        changes[name] = fchange
+    if not children_only:
+        fchange = _check_dir_meta(name, user, group, rootdir_mode, follow_symlinks)
+        if fchange:
+            changes[name] = fchange
+
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
 
@@ -1164,12 +1188,12 @@ def _get_template_texts(source_list=None,
     return ret
 
 
-def _validate_str_list(arg):
+def _validate_str_list(arg, encoding=None):
     '''
     ensure ``arg`` is a list of strings
     '''
     if isinstance(arg, six.binary_type):
-        ret = [salt.utils.stringutils.to_unicode(arg)]
+        ret = [salt.utils.stringutils.to_unicode(arg, encoding=encoding)]
     elif isinstance(arg, six.string_types):
         ret = [arg]
     elif isinstance(arg, Iterable) and not isinstance(arg, Mapping):
@@ -1227,7 +1251,8 @@ def _shortcut_check(name,
         ), changes
 
     if os.path.isfile(name):
-        shell = win32com.client.Dispatch("WScript.Shell")
+        with salt.utils.winapi.Com():
+            shell = win32com.client.Dispatch("WScript.Shell")
         scut = shell.CreateShortcut(name)
         state_checks = [scut.TargetPath.lower() == target.lower()]
         if arguments is not None:
@@ -1719,10 +1744,7 @@ def absent(name,
             ret['comment'] = 'File {0} is set for removal'.format(name)
             return ret
         try:
-            if salt.utils.platform.is_windows():
-                __salt__['file.remove'](name, force=True)
-            else:
-                __salt__['file.remove'](name)
+            __salt__['file.remove'](name, force=True)
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
@@ -1736,10 +1758,7 @@ def absent(name,
             ret['comment'] = 'Directory {0} is set for removal'.format(name)
             return ret
         try:
-            if salt.utils.platform.is_windows():
-                __salt__['file.remove'](name, force=True)
-            else:
-                __salt__['file.remove'](name)
+            __salt__['file.remove'](name, force=True)
             ret['comment'] = 'Removed directory {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
@@ -1856,10 +1875,7 @@ def tidied(name,
         # Iterate over collected items
         try:
             for path in todelete:
-                if salt.utils.platform.is_windows():
-                    __salt__['file.remove'](path, force=True)
-                else:
-                    __salt__['file.remove'](path)
+                __salt__['file.remove'](path, force=True)
                 # Remember what we've removed, will appear in the summary
                 ret['changes']['removed'].append(path)
         except CommandExecutionError as exc:
@@ -1987,7 +2003,9 @@ def managed(name,
         (use ~ in YAML), the file will be created as an empty file and
         the content will not be managed. This is also the case when a file
         already exists and the source is undefined; the contents of the file
-        will not be changed or managed.
+        will not be changed or managed. If source is left blank or None, please
+        also set replaced to False to make your intention explicit.
+
 
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required.
@@ -2682,12 +2700,8 @@ def managed(name,
                 .format(contents_id)
             )
 
-        if isinstance(use_contents, six.binary_type) and b'\0' in use_contents:
-            contents = use_contents
-        elif isinstance(use_contents, six.text_type) and str('\0') in use_contents:
-            contents = use_contents
-        else:
-            validated_contents = _validate_str_list(use_contents)
+        try:
+            validated_contents = _validate_str_list(use_contents, encoding=encoding)
             if not validated_contents:
                 return _error(
                     ret,
@@ -2695,11 +2709,23 @@ def managed(name,
                     'contents_grains is not a string or list of strings, and '
                     'is not binary data. SLS is likely malformed.'
                 )
-            contents = os.linesep.join(
-                [line.rstrip('\n').rstrip('\r') for line in validated_contents]
-            )
+            contents = ''
+            for part in validated_contents:
+                for line in part.splitlines():
+                    contents += line.rstrip('\n').rstrip('\r') + os.linesep
             if contents_newline and not contents.endswith(os.linesep):
                 contents += os.linesep
+        except UnicodeDecodeError:
+            # Either something terrible happened, or we have binary data.
+            if template:
+                return _error(
+                    ret,
+                    'Contents specified by contents/contents_pillar/'
+                    'contents_grains appears to be binary data, and'
+                    ' as will not be able to be treated as a Jinja'
+                    ' template.'
+                )
+            contents = use_contents
         if template:
             contents = __salt__['file.apply_template_on_contents'](
                 contents,
@@ -2805,7 +2831,7 @@ def managed(name,
 
     try:
         if __opts__['test']:
-            if 'file.check_managed_changes' in __salt__:
+            try:
                 ret['changes'] = __salt__['file.check_managed_changes'](
                     name,
                     source,
@@ -2828,26 +2854,32 @@ def managed(name,
                     serange=serange,
                     **kwargs
                 )
+            except CommandExecutionError as exc:
+                ret['result'] = False
+                ret['comment'] = six.text_type(exc)
+                return ret
 
-                if salt.utils.platform.is_windows():
-                    try:
-                        ret = __salt__['file.check_perms'](
-                            path=name,
-                            ret=ret,
-                            owner=win_owner,
-                            grant_perms=win_perms,
-                            deny_perms=win_deny_perms,
-                            inheritance=win_inheritance,
-                            reset=win_perms_reset)
-                    except CommandExecutionError as exc:
-                        if exc.strerror.startswith('Path not found'):
-                            ret['comment'] = '{0} will be created'.format(name)
+            if salt.utils.platform.is_windows():
+                try:
+                    ret = __salt__['file.check_perms'](
+                        path=name,
+                        ret=ret,
+                        owner=win_owner,
+                        grant_perms=win_perms,
+                        deny_perms=win_deny_perms,
+                        inheritance=win_inheritance,
+                        reset=win_perms_reset)
+                except CommandExecutionError as exc:
+                    if exc.strerror.startswith('Path not found'):
+                        ret['changes']['newfile'] = name
 
             if isinstance(ret['changes'], tuple):
                 ret['result'], ret['comment'] = ret['changes']
             elif ret['changes']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
+                ret['comment'] += ('\nNote: No changes made, actual changes may\n'
+                                   'be different due to other states.')
                 if 'diff' in ret['changes'] and not show_changes:
                     ret['changes']['diff'] = '<show_changes=False>'
             else:
@@ -3296,7 +3328,7 @@ def directory(name,
                   perms: full_control
             - win_inheritance: False
     '''
-    name = os.path.normcase(os.path.expanduser(name))
+    name = os.path.expanduser(name)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -3410,7 +3442,7 @@ def directory(name,
     else:
         presult, pcomment, pchanges = _check_directory(
             name, user, group, recurse or [], dir_mode, file_mode, clean,
-            require, exclude_pat, max_depth, follow_symlinks)
+            require, exclude_pat, max_depth, follow_symlinks, children_only)
 
     if pchanges:
         ret['changes'].update(pchanges)
@@ -3555,7 +3587,7 @@ def directory(name,
                             ret, _ = __salt__['file.check_perms'](
                                 full, ret, user, group, file_mode, None, follow_symlinks)
                     except CommandExecutionError as exc:
-                        if not exc.strerror.endswith('does not exist'):
+                        if not exc.strerror.startswith('Path not found'):
                             errors.append(exc.strerror)
 
             if check_dirs:
@@ -3844,9 +3876,7 @@ def recurse(name,
         # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
-    name = salt.utils.data.decode(
-        os.path.normcase(os.path.expanduser(name))
-    )
+    name = os.path.expanduser(salt.utils.data.decode(name))
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.platform.is_windows():
@@ -4478,7 +4508,7 @@ def replace(name,
 
     pattern
         A regular expression, to be matched using Python's
-        :py:func:`~re.search`.
+        :py:func:`re.search`.
 
         .. note::
 
@@ -4591,6 +4621,22 @@ def replace(name,
        When using YAML multiline string syntax in ``pattern:``, make sure to
        also use that syntax in the ``repl:`` part, or you might loose line
        feeds.
+
+    When regex capture groups are used in ``pattern:``, their captured value is
+    available for reuse in the ``repl:`` part as a backreference (ex. ``\1``).
+
+    .. code-block:: yaml
+
+        add_login_group_to_winbind_ssh_access_list:
+          file.replace:
+            - name: '/etc/security/pam_winbind.conf'
+            - pattern: '^(require_membership_of = )(.*)$'
+            - repl: '\1\2,append-new-group-to-line'
+
+    .. note::
+
+       The ``file.replace`` state uses Python's ``re`` module.
+       For more advanced options, see https://docs.python.org/2/library/re.html
     '''
     name = os.path.expanduser(name)
 
@@ -5370,15 +5416,9 @@ def comment(name, regex, char='#', backup='.bak'):
 
     comment_regex = char + unanchor_regex
 
-    # Check if the line is already commented
-    if __salt__['file.search'](name, comment_regex, multiline=True):
-        commented = True
-    else:
-        commented = False
-
     # Make sure the pattern appears in the file before continuing
-    if commented or not __salt__['file.search'](name, regex, multiline=True):
-        if __salt__['file.search'](name, unanchor_regex, multiline=True):
+    if not __salt__['file.search'](name, regex, multiline=True):
+        if __salt__['file.search'](name, comment_regex, multiline=True):
             ret['comment'] = 'Pattern already commented'
             ret['result'] = True
             return ret
@@ -5477,17 +5517,17 @@ def uncomment(name, regex, char='#', backup='.bak'):
     # Make sure the pattern appears in the file
     if __salt__['file.search'](
             name,
+            '{0}[ \t]*{1}'.format(char, regex.lstrip('^')),
+            multiline=True):
+        # Line exists and is commented
+        pass
+    elif __salt__['file.search'](
+            name,
             '^[ \t]*{0}'.format(regex.lstrip('^')),
             multiline=True):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
-    elif __salt__['file.search'](
-            name,
-            '{0}[ \t]*{1}'.format(char, regex.lstrip('^')),
-            multiline=True):
-        # Line exists and is commented
-        pass
     else:
         return _error(ret, '{0}: Pattern not found'.format(regex))
 
@@ -5695,19 +5735,23 @@ def append(name,
 
     if makedirs is True:
         dirname = os.path.dirname(name)
-        if not __salt__['file.directory_exists'](dirname):
-            try:
-                _makedirs(name=name)
-            except CommandExecutionError as exc:
-                return _error(ret, 'Drive {0} is not mapped'.format(exc.message))
+        if __opts__['test']:
+            ret['comment'] = 'Directory {0} is set to be updated'.format(dirname)
+            ret['result'] = None
+        else:
+            if not __salt__['file.directory_exists'](dirname):
+                try:
+                    _makedirs(name=name)
+                except CommandExecutionError as exc:
+                    return _error(ret, 'Drive {0} is not mapped'.format(exc.message))
 
-            check_res, check_msg, check_changes = _check_directory_win(dirname) \
-                if salt.utils.platform.is_windows() \
-                else _check_directory(dirname)
+                check_res, check_msg, check_changes = _check_directory_win(dirname) \
+                    if salt.utils.platform.is_windows() \
+                    else _check_directory(dirname)
 
-            if not check_res:
-                ret['changes'] = check_changes
-                return _error(ret, check_msg)
+                if not check_res:
+                    ret['changes'] = check_changes
+                    return _error(ret, check_msg)
 
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -6750,7 +6794,9 @@ def copy_(name,
         elif not __opts__['test'] and changed:
             # Remove the destination to prevent problems later
             try:
-                __salt__['file.remove'](name)
+                # On windows, if a file has the read-only attribute then we are unable
+                # to complete this copy unless force is set to true.
+                __salt__['file.remove'](name, force=force)
             except (IOError, OSError):
                 return _error(
                     ret,
@@ -7295,7 +7341,7 @@ def serialize(name,
                 try:
                     existing_data = __serializers__[deserializer_name](
                         fhr,
-                        **deserializer_options.get(serializer_name, {})
+                        **deserializer_options.get(deserializer_name, {})
                     )
                 except (TypeError, DeserializationError) as exc:
                     ret['result'] = False
@@ -7328,23 +7374,28 @@ def serialize(name,
     mode = salt.utils.files.normalize_mode(mode)
 
     if __opts__['test']:
-        ret['changes'] = __salt__['file.check_managed_changes'](
-            name=name,
-            source=None,
-            source_hash={},
-            source_hash_name=None,
-            user=user,
-            group=group,
-            mode=mode,
-            attrs=None,
-            template=None,
-            context=None,
-            defaults=None,
-            saltenv=__env__,
-            contents=contents,
-            skip_verify=False,
-            **kwargs
-        )
+        try:
+            ret['changes'] = __salt__['file.check_managed_changes'](
+                name=name,
+                source=None,
+                source_hash={},
+                source_hash_name=None,
+                user=user,
+                group=group,
+                mode=mode,
+                attrs=None,
+                template=None,
+                context=None,
+                defaults=None,
+                saltenv=__env__,
+                contents=contents,
+                skip_verify=False,
+                **kwargs
+            )
+        except CommandExecutionError as exc:
+            ret['result'] = False
+            ret['comment'] = six.text_type(exc)
+            return ret
 
         if ret['changes']:
             ret['result'] = None
@@ -7921,7 +7972,8 @@ def shortcut(
 
     # This will just load the shortcut if it already exists
     # It won't create the file until calling scut.Save()
-    shell = win32com.client.Dispatch("WScript.Shell")
+    with salt.utils.winapi.Com():
+        shell = win32com.client.Dispatch("WScript.Shell")
     scut = shell.CreateShortcut(name)
 
     # The shortcut target will automatically be created with its

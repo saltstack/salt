@@ -119,8 +119,11 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     '__orchestration_jid__',
     '__pub_user',
     '__pub_arg',
+    '__pub_id',
     '__pub_jid',
     '__pub_fun',
+    '__pub_fun_args',
+    '__pub_schedule',
     '__pub_tgt',
     '__pub_ret',
     '__pub_pid',
@@ -882,20 +885,43 @@ class State(object):
             low_data_onlyif = [low_data['onlyif']]
         else:
             low_data_onlyif = low_data['onlyif']
-        for entry in low_data_onlyif:
-            if not isinstance(entry, six.string_types):
-                ret.update({'comment': 'onlyif execution failed, bad type passed', 'result': False})
-                return ret
-            cmd = self.functions['cmd.retcode'](
-                entry, ignore_retcode=True, python_shell=True, **cmd_opts)
-            log.debug('Last command return code: %s', cmd)
+
+        def _check_cmd(cmd):
             if cmd != 0 and ret['result'] is False:
                 ret.update({'comment': 'onlyif condition is false',
                             'skip_watch': True,
                             'result': True})
-                return ret
             elif cmd == 0:
                 ret.update({'comment': 'onlyif condition is true', 'result': False})
+
+        for entry in low_data_onlyif:
+            if isinstance(entry, six.string_types):
+                cmd = self.functions['cmd.retcode'](
+                    entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+                log.debug('Last command return code: %s', cmd)
+                _check_cmd(cmd)
+            elif isinstance(entry, dict):
+                if 'fun' not in entry:
+                    ret['comment'] = 'no `fun` argument in onlyif: {0}'.format(entry)
+                    log.warning(ret['comment'])
+                    return ret
+
+                if 'args' in entry:
+                    result = self.functions[entry.pop('fun')](*entry.pop('args'), **entry)
+                else:
+                    result = self.functions[entry.pop('fun')](**entry)
+                if self.state_con.get('retcode', 0):
+                    _check_cmd(self.state_con['retcode'])
+                elif not result:
+                    ret.update({'comment': 'onlyif condition is false',
+                                'skip_watch': True,
+                                'result': True})
+                else:
+                    ret.update({'comment': 'onlyif condition is true',
+                                'result': False})
+
+            else:
+                ret.update({'comment': 'onlyif execution failed, bad type passed', 'result': False})
         return ret
 
     def _run_check_unless(self, low_data, cmd_opts):
@@ -908,20 +934,41 @@ class State(object):
             low_data_unless = [low_data['unless']]
         else:
             low_data_unless = low_data['unless']
-        for entry in low_data_unless:
-            if not isinstance(entry, six.string_types):
-                ret.update({'comment': 'unless condition is false, bad type passed', 'result': False})
-                return ret
-            cmd = self.functions['cmd.retcode'](
-                entry, ignore_retcode=True, python_shell=True, **cmd_opts)
-            log.debug('Last command return code: %s', cmd)
+
+        def _check_cmd(cmd):
             if cmd == 0 and ret['result'] is False:
                 ret.update({'comment': 'unless condition is true',
                             'skip_watch': True,
                             'result': True})
             elif cmd != 0:
                 ret.update({'comment': 'unless condition is false', 'result': False})
-                return ret
+
+        for entry in low_data_unless:
+            if isinstance(entry, six.string_types):
+                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+                log.debug('Last command return code: %s', cmd)
+                _check_cmd(cmd)
+            elif isinstance(entry, dict):
+                if 'fun' not in entry:
+                    ret['comment'] = 'no `fun` argument in unless: {0}'.format(entry)
+                    log.warning(ret['comment'])
+                    return ret
+
+                if 'args' in entry:
+                    result = self.functions[entry.pop('fun')](*entry.pop('args'), **entry)
+                else:
+                    result = self.functions[entry.pop('fun')](**entry)
+                if self.state_con.get('retcode', 0):
+                    _check_cmd(self.state_con['retcode'])
+                elif result:
+                    ret.update({'comment': 'unless condition is true',
+                                'skip_watch': True,
+                                'result': True})
+                else:
+                    ret.update({'comment': 'unless condition is false',
+                                'result': False})
+            else:
+                ret.update({'comment': 'unless condition is false, bad type passed', 'result': False})
 
         # No reason to stop, return ret
         return ret
@@ -959,7 +1006,7 @@ class State(object):
             self.states = salt.loader.thorium(self.opts, self.functions, {})  # TODO: Add runners, proxy?
         else:
             self.states = salt.loader.states(self.opts, self.functions, self.utils,
-                                             self.serializers, proxy=self.proxy)
+                                             self.serializers, context=self.state_con, proxy=self.proxy)
 
     def load_modules(self, data=None, proxy=None):
         '''
@@ -993,7 +1040,7 @@ class State(object):
         self.serializers = salt.loader.serializers(self.opts)
         self._load_states()
         self.rend = salt.loader.render(self.opts, self.functions,
-                                       states=self.states, proxy=self.proxy)
+                                       states=self.states, proxy=self.proxy, context=self.state_con)
 
     def module_refresh(self):
         '''
@@ -2078,24 +2125,96 @@ class State(object):
                         'test.arg(\'arg\', kw=\'kwarg\')')
             return slot
         log.debug('Calling slot: %s(%s, %s)', fun, args, kwargs)
-        return self.functions[fun](*args, **kwargs)
+        slot_return = self.functions[fun](*args, **kwargs)
+
+        # Given input  __slot__:salt:test.arg(somekey="value").not.exist ~ /appended
+        # slot_text should be __slot...).not.exist
+        # append_data should be ~ /appended
+        slot_text = fmt[2].split('~')[0]
+        append_data = fmt[2].split('~', 1)[1:]
+        log.debug('slot_text: %s', slot_text)
+        log.debug('append_data: %s', append_data)
+
+        # Support parsing slot dict response
+        # return_get should result in a kwargs.nested.dict path by getting
+        # everything after first closing paren: )
+        return_get = None
+        try:
+            return_get = slot_text[slot_text.rindex(')')+1:]
+        except ValueError:
+            pass
+        if return_get:
+            #remove first period
+            return_get = return_get.split('.', 1)[1].strip()
+            log.debug('Searching slot result %s for %s', slot_return, return_get)
+            slot_return = salt.utils.data.traverse_dict_and_list(slot_return,
+                                                                 return_get,
+                                                                 default=None,
+                                                                 delimiter='.'
+                                                                )
+
+        if append_data:
+            if isinstance(slot_return, six.string_types):
+                # Append text to slot string result
+                append_data = ' '.join(append_data).strip()
+                log.debug('appending to slot result: %s', append_data)
+                slot_return += append_data
+            else:
+                log.error('Ignoring slot append, slot result is not a string')
+
+        return slot_return
 
     def format_slots(self, cdata):
         '''
         Read in the arguments from the low level slot syntax to make a last
         minute runtime call to gather relevant data for the specific routine
+
+        Will parse strings, first level of dictionary values, and strings and
+        first level dict values inside of lists
         '''
         # __slot__:salt.cmd.run(foo, bar, baz=qux)
+        SLOT_TEXT = '__slot__:'
         ctx = (('args', enumerate(cdata['args'])),
                ('kwargs', cdata['kwargs'].items()))
         for atype, avalues in ctx:
             for ind, arg in avalues:
                 arg = salt.utils.data.decode(arg, keep=True)
-                if not isinstance(arg, six.text_type) \
-                        or not arg.startswith('__slot__:'):
+                if isinstance(arg, dict):
+                    # Search dictionary values for __slot__:
+                    for key, value in arg.items():
+                        try:
+                            if value.startswith(SLOT_TEXT):
+                                log.trace("Slot processsing dict value %s", value)
+                                cdata[atype][ind][key] = self.__eval_slot(value)
+                        except AttributeError:
+                            # Not a string/slot
+                            continue
+                elif isinstance(arg, list):
+                    for idx, listvalue in enumerate(arg):
+                        log.trace("Slot processing list value: %s", listvalue)
+                        if isinstance(listvalue, dict):
+                            # Search dict values in list for __slot__:
+                            for key, value in listvalue.items():
+                                try:
+                                    if value.startswith(SLOT_TEXT):
+                                        log.trace("Slot processsing nested dict value %s", value)
+                                        cdata[atype][ind][idx][key] = self.__eval_slot(value)
+                                except AttributeError:
+                                    # Not a string/slot
+                                    continue
+                        if isinstance(listvalue, six.text_type):
+                            # Search strings in a list for __slot__:
+                            if listvalue.startswith(SLOT_TEXT):
+                                log.trace("Slot processsing nested string %s", listvalue)
+                                cdata[atype][ind][idx] = self.__eval_slot(listvalue)
+                elif isinstance(arg, six.text_type) \
+                        and arg.startswith(SLOT_TEXT):
+                    # Search strings for __slot__:
+                    log.trace("Slot processsing %s", arg)
+                    cdata[atype][ind] = self.__eval_slot(arg)
+                else:
                     # Not a slot, skip it
                     continue
-                cdata[atype][ind] = self.__eval_slot(arg)
 
     def verify_retry_data(self, retry_data):
         '''
@@ -3845,12 +3964,14 @@ class BaseHighState(object):
         statefiles = []
         for saltenv, states in six.iteritems(matches):
             for sls_match in states:
-                try:
+                if saltenv in self.avail:
                     statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
-                except KeyError:
-                    all_errors.extend(
-                        ['No matching salt environment for environment '
-                         '\'{0}\' found'.format(saltenv)]
+                elif '__env__' in self.avail:
+                    statefiles = fnmatch.filter(self.avail['__env__'], sls_match)
+                else:
+                    all_errors.append(
+                        'No matching salt environment for environment '
+                        '\'{0}\' found'.format(saltenv)
                     )
                 # if we did not found any sls in the fileserver listing, this
                 # may be because the sls was generated or added later, we can
@@ -4199,7 +4320,7 @@ class MasterState(State):
         self.utils = salt.loader.utils(self.opts)
         self.serializers = salt.loader.serializers(self.opts)
         self.states = salt.loader.states(self.opts, self.functions, self.utils, self.serializers)
-        self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
+        self.rend = salt.loader.render(self.opts, self.functions, states=self.states, context=self.state_con)
 
 
 class MasterHighState(HighState):

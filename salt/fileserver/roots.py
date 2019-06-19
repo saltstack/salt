@@ -51,7 +51,11 @@ def find_file(path, saltenv='base', **kwargs):
     if os.path.isabs(path):
         return fnd
     if saltenv not in __opts__['file_roots']:
-        return fnd
+        if '__env__' in __opts__['file_roots']:
+            log.debug("salt environment '%s' maps to __env__ file_roots directory", saltenv)
+            saltenv = '__env__'
+        else:
+            return fnd
 
     def _add_file_stat(fnd):
         '''
@@ -199,14 +203,15 @@ def update():
 
     if __opts__.get('fileserver_events', False):
         # if there is a change, fire an event
-        event = salt.utils.event.get_event(
+        with salt.utils.event.get_event(
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
                 opts=__opts__,
-                listen=False)
-        event.fire_event(data,
-                         salt.utils.event.tagify(['roots', 'update'], prefix='fileserver'))
+                listen=False) as event:
+            event.fire_event(
+                data,
+                salt.utils.event.tagify(['roots', 'update'], prefix='fileserver'))
 
 
 def file_hash(load, fnd):
@@ -220,6 +225,9 @@ def file_hash(load, fnd):
     if 'path' not in load or 'saltenv' not in load:
         return ''
     path = fnd['path']
+    saltenv = load['saltenv']
+    if saltenv not in __opts__['file_roots'] and '__env__' in __opts__['file_roots']:
+        saltenv = '__env__'
     ret = {}
 
     # if the file doesn't exist, we can't get a hash
@@ -234,7 +242,7 @@ def file_hash(load, fnd):
     cache_path = os.path.join(__opts__['cachedir'],
                               'roots',
                               'hash',
-                              load['saltenv'],
+                              saltenv,
                               '{0}.hash.{1}'.format(fnd['rel'],
                               __opts__['hash_type']))
     # if we have a cache, serve that if the mtime hasn't changed
@@ -293,8 +301,13 @@ def _file_lists(load, form):
         # "env" is not supported; Use "saltenv".
         load.pop('env')
 
-    if load['saltenv'] not in __opts__['file_roots']:
-        return []
+    saltenv = load['saltenv']
+    if saltenv not in __opts__['file_roots']:
+        if '__env__' in __opts__['file_roots']:
+            log.debug("salt environment '%s' maps to __env__ file_roots directory", saltenv)
+            saltenv = '__env__'
+        else:
+            return []
 
     list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists', 'roots')
     if not os.path.isdir(list_cachedir):
@@ -303,8 +316,8 @@ def _file_lists(load, form):
         except os.error:
             log.critical('Unable to make cachedir %s', list_cachedir)
             return []
-    list_cache = os.path.join(list_cachedir, '{0}.p'.format(salt.utils.files.safe_filename_leaf(load['saltenv'])))
-    w_lock = os.path.join(list_cachedir, '.{0}.w'.format(salt.utils.files.safe_filename_leaf(load['saltenv'])))
+    list_cache = os.path.join(list_cachedir, '{0}.p'.format(salt.utils.files.safe_filename_leaf(saltenv)))
+    w_lock = os.path.join(list_cachedir, '.{0}.w'.format(salt.utils.files.safe_filename_leaf(saltenv)))
     cache_match, refresh_cache, save_cache = \
         salt.fileserver.check_file_list_cache(
             __opts__, form, list_cache, w_lock
@@ -377,7 +390,7 @@ def _file_lists(load, form):
                     rel_dest = _translate_sep(
                         os.path.relpath(
                             os.path.realpath(os.path.normpath(joined)),
-                            fs_root
+                            os.path.realpath(fs_root)
                         )
                     )
                     log.trace(
@@ -390,7 +403,7 @@ def _file_lists(load, form):
                         # (i.e. the "path" variable)
                         ret['links'][rel_path] = link_dest
 
-        for path in __opts__['file_roots'][load['saltenv']]:
+        for path in __opts__['file_roots'][saltenv]:
             for root, dirs, files in salt.utils.path.os_walk(
                     path,
                     followlinks=__opts__['fileserver_followsymlinks']):
@@ -445,7 +458,7 @@ def symlink_list(load):
         load.pop('env')
 
     ret = {}
-    if load['saltenv'] not in __opts__['file_roots']:
+    if load['saltenv'] not in __opts__['file_roots'] and '__env__' not in __opts__['file_roots']:
         return ret
 
     if 'prefix' in load:

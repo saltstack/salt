@@ -20,7 +20,6 @@ from salt.exceptions import (
     CommandExecutionError, MinionError
 )
 import salt.client
-import salt.crypt
 import salt.loader
 import salt.payload
 import salt.transport.client
@@ -340,6 +339,29 @@ class Client(object):
             return extrndest
 
         return ''
+
+    def cache_dest(self, url, saltenv='base', cachedir=None):
+        '''
+        Return the expected cache location for the specified URL and
+        environment.
+        '''
+        proto = urlparse(url).scheme
+
+        if proto == '':
+            # Local file path
+            return url
+
+        if proto == 'salt':
+            url, senv = salt.utils.url.parse(url)
+            if senv:
+                saltenv = senv
+            return salt.utils.path.join(
+                self.opts['cachedir'],
+                'files',
+                saltenv,
+                url.lstrip('|/'))
+
+        return self._extrn_path(url, saltenv, cachedir=cachedir)
 
     def list_states(self, saltenv):
         '''
@@ -735,7 +757,7 @@ class Client(object):
         kwargs['saltenv'] = saltenv
         url_data = urlparse(url)
         sfn = self.cache_file(url, saltenv, cachedir=cachedir)
-        if not os.path.exists(sfn):
+        if not sfn or not os.path.exists(sfn):
             return ''
         if template in salt.utils.templates.TEMPLATE_REGISTRY:
             data = salt.utils.templates.TEMPLATE_REGISTRY[template](
@@ -1030,7 +1052,13 @@ class RemoteClient(Client):
             return
 
         self._closing = True
-        self.channel.close()
+        channel = None
+        try:
+            channel = self.channel
+        except AttributeError:
+            pass
+        if channel is not None:
+            channel.close()
 
     def get_file(self,
                  path,

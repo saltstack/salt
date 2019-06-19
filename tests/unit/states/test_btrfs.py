@@ -38,10 +38,12 @@ from tests.support.mock import (
 )
 
 from salt.exceptions import CommandExecutionError
+import salt.utils.platform
 import salt.states.btrfs as btrfs
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(salt.utils.platform.is_windows(), 'No BTRFS on Windows')
 class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.btrfs

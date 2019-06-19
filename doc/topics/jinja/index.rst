@@ -34,7 +34,7 @@ wrap conditional or redundant state elements:
         {% endif %}
         - source: salt://motd
 
-In this example, the first if block will only be evaluated on minions that
+In this example, the first **if** block will only be evaluated on minions that
 aren't running FreeBSD, and the second block changes the file name based on the
 *os* grain.
 
@@ -87,6 +87,13 @@ the context into the included file is required:
 .. code-block:: jinja
 
     {% from 'lib.sls' import test with context %}
+    
+Includes must use full paths, like so:
+
+.. code-block:: jinja
+   :caption: spam/eggs.jinja
+
+    {% include 'spam/foobar.jinja' %}
 
 Including Context During Include/Import
 ---------------------------------------
@@ -699,7 +706,7 @@ Return of examples #2 and #3:
 
 .. versionadded:: 2017.7.0
 
-Return is an iterable object is already sorted.
+Return ``True`` if an iterable object is already sorted.
 
 Example:
 
@@ -733,7 +740,7 @@ Returns:
 
 .. code-block:: python
 
-  {'new': 4, 'old': 3}
+  {'new': [4], 'old': [3]}
 
 
 .. jinja_ref:: compare_dicts
@@ -749,7 +756,7 @@ Example:
 
 .. code-block:: jinja
 
-  {{ {'a': 'b'} | compare_lists({'a': 'c'}) }}
+  {{ {'a': 'b'} | compare_dicts({'a': 'c'}) }}
 
 Returns:
 
@@ -765,7 +772,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return True if the value is hexazecimal.
+Return ``True`` if the value is hexadecimal.
 
 Example:
 
@@ -789,7 +796,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return True if a text contains whitespaces.
+Return ``True`` if a text contains whitespaces.
 
 Example:
 
@@ -813,7 +820,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return is a substring is found in a list of string values.
+Return ``True`` if a substring is found in a list of string values.
 
 Example:
 
@@ -1062,6 +1069,137 @@ Returns:
   d94a45acd81f8e3107d237dbc0d5d195f6a52a0d188bc0284c0763ece1eac9f9496fb6a531a296074c87b3540398dace1222b42e150e67c9301383fde3d66ae5
 
 
+.. jinja_ref:: set_dict_key_value
+
+``set_dict_key_value``
+----------------------
+
+..versionadded:: Neon
+
+Allows you to set a value in a nested dictionary without having to worry if all the nested keys actually exist.
+Missing keys will be automatically created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {} %}
+  {{ foo | set_dict_key_value('bar:baz', 42) }}
+
+Example 2:
+  {{ {} | set_dict_key_value('bar.baz.qux', 42, delimiter='.') }}
+
+Returns:
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': 42}}
+
+Example 2:
+  {'bar': {'baz': {'qux': 42}}}
+
+
+.. jinja_ref:: append_dict_key_value
+
+``append_dict_key_value``
+-------------------------
+
+..versionadded:: Neon
+
+Allows you to append to a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
+Missing keys will automatically be created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {'bar': {'baz': [1, 2]}} %}
+  {{ foo | append_dict_key_value('bar:baz', 42) }}
+
+Example 2:
+  {%- set foo = {} %}
+  {{ foo | append_dict_key_value('bar:baz:qux', 42) }}
+
+Returns:
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': [1, 2, 42]}}
+
+Example 2:
+  {'bar': {'baz': {'qux': [42]}}}
+
+
+.. jinja_ref:: extend_dict_key_value
+
+``extend_dict_key_value``
+-------------------------
+
+..versionadded:: Neon
+
+Allows you to extend a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
+Missing keys will automatically be created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {'bar': {'baz': [1, 2]}} %}
+  {{ foo | extend_dict_key_value('bar:baz', [42, 42]) }}
+
+Example 2:
+  {{ {} | extend_dict_key_value('bar:baz:qux', [42]) }}
+
+Returns:
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': [1, 2, 42, 42]}}
+
+Example 2:
+  {'bar': {'baz': {'qux': [42]}}}
+
+
+.. jinja_ref:: update_dict_key_value
+
+``update_dict_key_value``
+-------------------------
+
+..versionadded:: Neon
+
+Allows you to update a dictionary nested (deep) in another dictionary without having to worry if all the nested keys actually exist.
+Missing keys will automatically be created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {'bar': {'baz': {'qux': 1}}} %}
+  {{ foo | update_dict_key_value('bar:baz', {'quux': 3}) }}
+
+Example 2:
+  {{ {} | update_dict_key_value('bar:baz:qux', {'quux': 3}) }}
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': {'qux': 1, 'quux': 3}}}
+
+Example 2:
+  {'bar': {'baz': {'qux': {'quux': 3}}}}
+
+
 .. jinja_ref:: md5
 
 ``md5``
@@ -1301,6 +1439,49 @@ Returns:
 .. _`timelib`: https://github.com/pediapress/timelib/
 .. _`JMESPath language`: http://jmespath.org/
 .. _`jmespath`: https://github.com/jmespath/jmespath.py
+
+
+.. jinja_ref:: to_snake_case
+
+``to_snake_case``
+-----------------
+
+.. versionadded:: Neon
+
+Converts a string from camelCase (or CamelCase) to snake_case.
+
+.. code-block:: jinja
+
+  Example: {{ camelsWillLoveThis | to_snake_case }}
+
+Returns:
+
+.. code-block:: text
+
+  Example: camels_will_love_this
+
+
+.. jinja_ref:: to_camelcase
+
+``to_camelcase``
+----------------
+
+.. versionadded:: Neon
+
+Converts a string from snake_case to camelCase (or UpperCamelCase if so indicated).
+
+.. code-block:: jinja
+
+  Example 1: {{ snake_case_for_the_win | to_camelcase }}
+
+  Example 2: {{ snake_case_for_the_win | to_camelcase(uppercamel=True) }}
+
+Returns:
+
+.. code-block:: text
+
+  Example 1: snakeCaseForTheWin
+  Example 2: SnakeCaseForTheWin
 
 Networking Filters
 ------------------

@@ -19,12 +19,6 @@ from string import ascii_letters, digits
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-# Attempt to import wmi
-try:
-    import wmi
-    import salt.utils.winapi
-except ImportError:
-    pass
 
 # Import salt libs
 import salt.utils.args
@@ -37,6 +31,11 @@ from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.versions import LooseVersion
+# Attempt to import win_network
+try:
+    import salt.utils.win_network
+except ImportError:
+    pass
 
 # inet_pton does not exist in Windows, this is a workaround
 if salt.utils.platform.is_windows():
@@ -1006,46 +1005,7 @@ def win_interfaces():
     '''
     Obtain interface information for Windows systems
     '''
-    with salt.utils.winapi.Com():
-        c = wmi.WMI()
-        ifaces = {}
-        for iface in c.Win32_NetworkAdapterConfiguration(IPEnabled=1):
-            ifaces[iface.Description] = dict()
-            if iface.MACAddress:
-                ifaces[iface.Description]['hwaddr'] = iface.MACAddress
-            if iface.IPEnabled:
-                ifaces[iface.Description]['up'] = True
-                for ip in iface.IPAddress:
-                    if '.' in ip:
-                        if 'inet' not in ifaces[iface.Description]:
-                            ifaces[iface.Description]['inet'] = []
-                        item = {'address': ip,
-                                'label': iface.Description}
-                        if iface.DefaultIPGateway:
-                            broadcast = next((i for i in iface.DefaultIPGateway if '.' in i), '')
-                            if broadcast:
-                                item['broadcast'] = broadcast
-                        if iface.IPSubnet:
-                            netmask = next((i for i in iface.IPSubnet if '.' in i), '')
-                            if netmask:
-                                item['netmask'] = netmask
-                        ifaces[iface.Description]['inet'].append(item)
-                    if ':' in ip:
-                        if 'inet6' not in ifaces[iface.Description]:
-                            ifaces[iface.Description]['inet6'] = []
-                        item = {'address': ip}
-                        if iface.DefaultIPGateway:
-                            broadcast = next((i for i in iface.DefaultIPGateway if ':' in i), '')
-                            if broadcast:
-                                item['broadcast'] = broadcast
-                        if iface.IPSubnet:
-                            netmask = next((i for i in iface.IPSubnet if ':' in i), '')
-                            if netmask:
-                                item['netmask'] = netmask
-                        ifaces[iface.Description]['inet6'].append(item)
-            else:
-                ifaces[iface.Description]['up'] = False
-    return ifaces
+    return salt.utils.win_network.get_interface_info()
 
 
 def interfaces():
@@ -1402,8 +1362,12 @@ def _remotes_on(port, which_end):
     Return a set of ip addrs active tcp connections
     '''
     port = int(port)
-    ret = set()
 
+    ret = _netlink_tool_remote_on(port, which_end)
+    if ret is not None:
+        return ret
+
+    ret = set()
     proc_available = False
     for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
         if os.path.isfile(statf):
@@ -1453,6 +1417,51 @@ def _parse_tcp_line(line):
     ret[sl]['remote_port'] = int(r_port, 16)
     ret[sl]['state'] = int(comps[3], 16)
     return ret
+
+
+def _netlink_tool_remote_on(port, which_end):
+    '''
+    Returns set of ipv4 host addresses of remote established connections
+    on local or remote tcp port.
+
+    Parses output of shell 'ss' to get connections
+
+    [root@salt-master ~]# ss -ant
+    State      Recv-Q Send-Q               Local Address:Port                 Peer Address:Port
+    LISTEN     0      511                              *:80                              *:*
+    LISTEN     0      128                              *:22                              *:*
+    ESTAB      0      0                      127.0.0.1:56726                  127.0.0.1:4505
+    '''
+    remotes = set()
+    valid = False
+    try:
+        data = subprocess.check_output(['ss', '-ant'])  # pylint: disable=minimum-python-version
+    except subprocess.CalledProcessError:
+        log.error('Failed ss')
+        raise
+    except OSError:     # not command "No such file or directory"
+        return None
+
+    lines = salt.utils.stringutils.to_str(data).split('\n')
+    for line in lines:
+        if 'Address:Port' in line:    # ss tools may not be valid
+            valid = True
+            continue
+        elif 'ESTAB' not in line:
+            continue
+        chunks = line.split()
+        local_host, local_port = chunks[3].rsplit(':', 1)
+        remote_host, remote_port = chunks[4].rsplit(':', 1)
+
+        if which_end == 'remote_port' and int(remote_port) != port:
+            continue
+        if which_end == 'local_port' and int(local_port) != port:
+            continue
+        remotes.add(remote_host)
+
+    if valid is False:
+        remotes = None
+    return remotes
 
 
 def _sunos_remotes_on(port, which_end):

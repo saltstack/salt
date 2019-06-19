@@ -8,9 +8,18 @@ Python 2.7 Deprecation
 ======================
 
 In light of Python 2.7 reaching its End of Life (EOL) on Jan 1st 2020,
-Python 2 will be deprecated from SaltStack no earlier then the Sodium
+Python 2 will be deprecated from SaltStack no earlier than the Sodium
 release, that is either the Sodium release or a later release.
 This decision is pending further community discussion.
+
+Known Issues
+============
+The following are known issues for the 2019.2.0 release and will be fixed for 2019.2.1:
+
+* `#51699`_
+
+.. _`#51699`: https://github.com/saltstack/salt/issues/51699
+
 
 Non-Backward-Compatible Change to YAML Renderer
 ===============================================
@@ -48,6 +57,24 @@ Jinja filter`_:
         - template: jinja
         - context:
             data: {{ data|tojson }}
+
+Another example where the new filter needs to be used is the following state example:
+
+.. code-block:: jinja
+
+    grafana_packages:
+      pkg.installed:
+      - names: {{ server.pkgs }}
+
+This will fail when pkgs is a list or dictionary. You will need to update the state:
+
+.. code-block:: jinja
+
+    grafana_packages:
+      pkg.installed:
+      - names: {{ server.pkgs|tojson }}
+
+This test case has also been tested with the ``yaml`` and ``json`` filters successfully.
 
 .. note::
     This filter was added in Jinja 2.9. However, fear not! The 2018.3.3 release
@@ -271,7 +298,7 @@ a BGP policy referenced in many places, you can do so by running:
 
 .. code-block:: bash
 
-    salt '*' net.replae_pattern OLD-POLICY-CONFIG new-policy-config
+    salt '*' net.replace_pattern OLD-POLICY-CONFIG new-policy-config
 
 Similarly, you can also replace entire configuration blocks using the
 :mod:`net.blockreplace <salt.modules.napalm_network.blockreplace>` function.
@@ -486,6 +513,18 @@ module.
     proxy:
       proxytype: docker
       name: keen_proskuriakova
+
+
+Terraform Salt-SSH Roster
+=========================
+
+You can now dynamically generate a Salt-SSH roster from the terraform resources
+defined with `terraform-provider-salt <https://github.com/dmacvicar/terraform-provider-salt>`_.
+
+This allows you to combine both terraform and Salt-SSH to provision and
+configure your hosts. See the :py:mod:`terraform roster<salt.roster.terraform>` for
+an example on how to setup and use.
+
 
 Grains Dictionary Passed into Custom Grains
 ===========================================
@@ -1336,6 +1375,7 @@ Execution Modules
 - :mod:`salt.modules.netmiko <salt.modules.netmiko_mod>`
 - :mod:`salt.modules.nxos_api <salt.modules.nxos_api>`
 - :mod:`salt.modules.peeringdb <salt.modules.peeringdb>`
+- :mod:`salt.modules.purefb <salt.modules.purefb>`
 - :mod:`salt.modules.pyeapi <salt.modules.arista_pyeapi>`
 
 Pillar Modules

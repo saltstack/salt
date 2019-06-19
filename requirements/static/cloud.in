@@ -1,0 +1,6 @@
+# This is a compilation of requirements installed on salt-jenkins git.salt state run
+azure
+impacket; python_version < '3.0'
+netaddr
+profitbricks
+pywinrm

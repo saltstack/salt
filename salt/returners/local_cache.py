@@ -77,6 +77,9 @@ def _walk_through(job_dir):
                 except Exception:
                     log.exception('Failed to deserialize %s', load_path)
                     continue
+                if not job:
+                    log.error('Deserialization of job succeded but there is no data in %s', load_path)
+                    continue
                 jid = job['jid']
                 yield jid, job, t_path, final
 

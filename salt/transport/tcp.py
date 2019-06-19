@@ -10,12 +10,13 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
-import socket
 import os
-import weakref
+import socket
+import sys
 import time
 import threading
 import traceback
+import weakref
 
 # Import Salt Libs
 import salt.crypt
@@ -45,6 +46,7 @@ import tornado.gen
 import tornado.concurrent
 import tornado.tcpclient
 import tornado.netutil
+from tornado.iostream import StreamClosedError
 
 # pylint: disable=import-error,no-name-in-module
 if six.PY2:
@@ -404,7 +406,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
                 ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
             else:
                 ret = yield self._crypted_transfer(load, tries=tries, timeout=timeout)
-        except tornado.iostream.StreamClosedError:
+        except StreamClosedError:
             # Convert to 'SaltClientError' so that clients can handle this
             # exception more appropriately.
             raise SaltClientError('Connection to master lost')
@@ -617,7 +619,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                     # Ignore this condition and continue.
                     pass
                 else:
-                    raise exc
+                    six.reraise(*sys.exc_info())
             self._socket.close()
             self._socket = None
         if hasattr(self.req_server, 'stop'):
@@ -737,7 +739,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                 stream.close()
         except tornado.gen.Return:
             raise
-        except tornado.iostream.StreamClosedError:
+        except StreamClosedError:
             # Stream was closed. This could happen if the remote side
             # closed the connection on its end (eg in a timeout or shutdown
             # situation).
@@ -781,7 +783,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
                     header = framed_msg['head']
                     self.io_loop.spawn_callback(self.message_handler, stream, header, framed_msg['body'])
 
-        except tornado.iostream.StreamClosedError:
+        except StreamClosedError:
             log.trace('req client disconnected %s', address)
             self.clients.remove((stream, address))
         except Exception as e:
@@ -1062,7 +1064,7 @@ class SaltMessageClient(object):
                                 self.io_loop.spawn_callback(self._on_recv, header, body)
                             else:
                                 log.error('Got response for message_id %s that we are not tracking', message_id)
-                except tornado.iostream.StreamClosedError as e:
+                except StreamClosedError as e:
                     log.debug('tcp stream to %s:%s closed, unable to recv', self.host, self.port)
                     for future in six.itervalues(self.send_future_map):
                         future.set_exception(e)
@@ -1109,7 +1111,7 @@ class SaltMessageClient(object):
                 del self.send_queue[0]
             # if the connection is dead, lets fail this send, and make sure we
             # attempt to reconnect
-            except tornado.iostream.StreamClosedError as e:
+            except StreamClosedError as e:
                 if message_id in self.send_future_map:
                     self.send_future_map.pop(message_id).set_exception(e)
                 self.remove_message_timeout(message_id)
@@ -1338,7 +1340,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
                         continue
                     client.id_ = load['id']
                     self._add_client_present(client)
-            except tornado.iostream.StreamClosedError as e:
+            except StreamClosedError as e:
                 log.debug('tcp stream to %s closed, unable to recv', client.address)
                 client.close()
                 self._remove_client_present(client)
@@ -1375,7 +1377,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
                             # Write the packed str
                             f = client.stream.write(payload)
                             self.io_loop.add_future(f, lambda f: True)
-                        except tornado.iostream.StreamClosedError:
+                        except StreamClosedError:
                             to_remove.append(client)
                 else:
                     log.debug('Publish target %s not connected', topic)
@@ -1385,7 +1387,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
                     # Write the packed str
                     f = client.stream.write(payload)
                     self.io_loop.add_future(f, lambda f: True)
-                except tornado.iostream.StreamClosedError:
+                except StreamClosedError:
                     to_remove.append(client)
         for client in to_remove:
             log.debug('Subscriber at %s has disconnected from publisher', client.address)

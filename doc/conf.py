@@ -255,9 +255,9 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2018.3.3'  # latest release
-previous_release = '2017.7.8'  # latest release from previous branch
-previous_release_dir = '2017.7'  # path on web server for previous branch
+latest_release = '2019.2.0'  # latest release
+previous_release = '2018.3.4'  # latest release from previous branch
+previous_release_dir = '2018.3'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
@@ -388,7 +388,7 @@ html_short_title = 'Salt'
 html_static_path = ['_static']
 html_logo = None # specified in the theme layout.html
 html_favicon = 'favicon.ico'
-html_use_smartypants = False
+smartquotes = False
 
 # Use Google customized search or use Sphinx built-in JavaScript search
 if on_saltstack:

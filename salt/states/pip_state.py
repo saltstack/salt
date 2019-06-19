@@ -22,7 +22,9 @@ requisite to a pkg.installed state for the package which provides pip
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import re
+import types
 import logging
+
 try:
     import pkg_resources
     HAS_PKG_RESOURCES = True
@@ -30,43 +32,46 @@ except ImportError:
     HAS_PKG_RESOURCES = False
 
 # Import salt libs
+import salt.utils.data
 import salt.utils.versions
-from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
-from salt.ext import six
+import salt.ext.six as six
 # pylint: disable=import-error
 try:
     import pip
     HAS_PIP = True
 except ImportError:
     HAS_PIP = False
+    # Remove references to the loaded pip module above so reloading works
+    import sys
+    pip_related_entries = [
+        (k, v) for (k, v) in sys.modules.items()
+        or getattr(v, '__module__', '').startswith('pip.')
+        or (isinstance(v, types.ModuleType) and v.__name__.startswith('pip.'))
+    ]
+    for name, entry in pip_related_entries:
+        sys.modules.pop(name)
+        del entry
+
+    del pip
+    sys_modules_pip = sys.modules.pop('pip', None)
+    if sys_modules_pip is not None:
+        del sys_modules_pip
 
 if HAS_PIP is True:
-    try:
-        from pip.req import InstallRequirement
-        _from_line = InstallRequirement.from_line
-    except ImportError:
-        # pip 10.0.0 move req module under pip._internal
-        try:
-            try:
-                from pip._internal.req import InstallRequirement
-                _from_line = InstallRequirement.from_line
-            except AttributeError:
-                from pip._internal.req.constructors import install_req_from_line as _from_line
-        except ImportError:
-            HAS_PIP = False
-            # Remove references to the loaded pip module above so reloading works
-            import sys
-            del pip
-            if 'pip' in sys.modules:
-                del sys.modules['pip']
-
-    try:
-        from pip.exceptions import InstallationError
-    except ImportError:
+    if salt.utils.versions.compare(ver1=pip.__version__,
+                                   oper='>=',
+                                   ver2='18.1'):
+        from pip._internal.exceptions import InstallationError  # pylint: disable=E0611,E0401
+    elif salt.utils.versions.compare(ver1=pip.__version__,
+                                     oper='>=',
+                                     ver2='1.0'):
+        from pip.exceptions import InstallationError  # pylint: disable=E0611,E0401
+    else:
         InstallationError = ValueError
+
 
 # pylint: enable=import-error
 
@@ -74,6 +79,23 @@ log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'pip'
+
+
+def _from_line(*args, **kwargs):
+    import pip
+    if salt.utils.versions.compare(ver1=pip.__version__,
+                                   oper='>=',
+                                   ver2='18.1'):
+        import pip._internal.req.constructors  # pylint: disable=E0611,E0401
+        return pip._internal.req.constructors.install_req_from_line(*args, **kwargs)
+    elif salt.utils.versions.compare(ver1=pip.__version__,
+                                     oper='>=',
+                                     ver2='10.0'):
+        import pip._internal.req  # pylint: disable=E0611,E0401
+        return pip._internal.req.InstallRequirement.from_line(*args, **kwargs)
+    else:
+        import pip.req  # pylint: disable=E0611,E0401
+        return pip.req.InstallRequirement.from_line(*args, **kwargs)
 
 
 def __virtual__():
@@ -85,20 +107,6 @@ def __virtual__():
     if 'pip.list' in __salt__:
         return __virtualname__
     return False
-
-
-def _find_key(prefix, pip_list):
-    '''
-    Does a case-insensitive match in the pip_list for the desired package.
-    '''
-    try:
-        match = next(
-            iter(x for x in pip_list if x.lower() == prefix.lower())
-        )
-    except StopIteration:
-        return None
-    else:
-        return match
 
 
 def _fulfills_version_spec(version, version_spec):
@@ -225,23 +233,20 @@ def _check_if_installed(prefix,
     ret = {'result': False, 'comment': None}
 
     # If we are not passed a pip list, get one:
-    if not pip_list:
-        pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
-                                        user=user, cwd=cwd,
-                                        env_vars=env_vars, **kwargs)
-
-    # Check if the requested package is already installed.
-    prefix_realname = _find_key(prefix, pip_list)
+    pip_list = salt.utils.data.CaseInsensitiveDict(
+        pip_list or __salt__['pip.list'](prefix, bin_env=bin_env,
+                                         user=user, cwd=cwd,
+                                         env_vars=env_vars, **kwargs)
+    )
 
     # If the package was already installed, check
     # the ignore_installed and force_reinstall flags
-    if ignore_installed is False and prefix_realname is not None:
+    if ignore_installed is False and prefix in pip_list:
         if force_reinstall is False and not upgrade:
             # Check desired version (if any) against currently-installed
             if (
                 any(version_spec) and
-                _fulfills_version_spec(pip_list[prefix_realname],
-                                       version_spec)
+                _fulfills_version_spec(pip_list[prefix], version_spec)
             ) or (not any(version_spec)):
                 ret['result'] = True
                 ret['comment'] = ('Python package {0} was already '
@@ -261,7 +266,7 @@ def _check_if_installed(prefix,
                     if 'rc' in spec[1]:
                         include_rc = True
             available_versions = __salt__['pip.list_all_versions'](
-                prefix_realname, bin_env=bin_env, include_alpha=include_alpha,
+                prefix, bin_env=bin_env, include_alpha=include_alpha,
                 include_beta=include_beta, include_rc=include_rc, user=user,
                 cwd=cwd, index_url=index_url, extra_index_url=extra_index_url)
             desired_version = ''
@@ -277,9 +282,9 @@ def _check_if_installed(prefix,
                 ret['comment'] = ('Python package {0} was already '
                                   'installed and\nthe available upgrade '
                                   'doesn\'t fulfills the version '
-                                  'requirements'.format(prefix_realname))
+                                  'requirements'.format(prefix))
                 return ret
-            if _pep440_version_cmp(pip_list[prefix_realname], desired_version) == 0:
+            if _pep440_version_cmp(pip_list[prefix], desired_version) == 0:
                 ret['result'] = True
                 ret['comment'] = ('Python package {0} was already '
                                   'installed'.format(state_pkg_name))
@@ -295,8 +300,10 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
     and 1 if version1 > version2. Return None if there was a problem
     making the comparison.
     '''
-    normalize = lambda x: six.text_type(x).split('!', 1)[-1] \
-        if ignore_epoch else six.text_type(x)
+    if HAS_PKG_RESOURCES is False:
+        log.warning('The pkg_resources packages was not loaded. Please install setuptools.')
+        return None
+    normalize = lambda x: six.text_type(x).split('!', 1)[-1] if ignore_epoch else six.text_type(x)
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 
@@ -357,8 +364,10 @@ def installed(name,
               no_cache_dir=False,
               cache_dir=None,
               no_binary=None,
+              extra_args=None,
+              user_install=False,
               **kwargs):
-    '''
+    r'''
     Make sure the package is installed
 
     name
@@ -396,6 +405,10 @@ def installed(name,
         Force to not use binary packages (requires pip >= 7.0.0)
         Accepts either :all: to disable all binary packages, :none: to empty the set,
         or a list of one or more packages
+
+    user_install
+        Enable install to occur inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
 
     Example:
 
@@ -618,6 +631,23 @@ def installed(name,
                 - reload_modules: True
                 - exists_action: i
 
+    extra_args
+        pip keyword and positional arguments not yet implemented in salt
+
+        .. code-block:: yaml
+
+            pandas:
+              pip.installed:
+                - name: pandas
+                - extra_args:
+                  - --latest-pip-kwarg: param
+                  - --latest-pip-arg
+
+        .. warning::
+
+            If unsupported options are passed here that are not supported in a
+            minion's version of pip, a `No such option error` will be thrown.
+
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
@@ -687,20 +717,6 @@ def installed(name,
                               'pip {0} and newer. The version of pip detected '
                               'was {1}.').format(min_version, cur_version)
             return ret
-
-    # Deprecation warning for the repo option
-    if repo is not None:
-        msg = ('The \'repo\' argument to pip.installed is deprecated and will '
-               'be removed in Salt {version}. Please use \'name\' instead. '
-               'The current value for name, \'{0}\' will be replaced by the '
-               'value of repo, \'{1}\''.format(
-                   name,
-                   repo,
-                   version=_SaltStackVersion.from_name('Lithium').formatted_version
-               ))
-        salt.utils.versions.warn_until('Lithium', msg)
-        ret.setdefault('warnings', []).append(msg)
-        name = repo
 
     # Get the packages parsed name and version from the pip library.
     # This only is done when there is no requirements or editable parameter.
@@ -854,6 +870,8 @@ def installed(name,
         use_vt=use_vt,
         trusted_host=trusted_host,
         no_cache_dir=no_cache_dir,
+        user_install=user_install,
+        extra_args=extra_args,
         **kwargs
     )
 
@@ -908,10 +926,12 @@ def installed(name,
 
                 # Case for packages that are not an URL
                 if prefix:
-                    pipsearch = __salt__['pip.list'](prefix, bin_env,
-                                                     user=user, cwd=cwd,
-                                                     env_vars=env_vars,
-                                                     **kwargs)
+                    pipsearch = salt.utils.data.CaseInsensitiveDict(
+                        __salt__['pip.list'](prefix, bin_env,
+                                             user=user, cwd=cwd,
+                                             env_vars=env_vars,
+                                             **kwargs)
+                    )
 
                     # If we didn't find the package in the system after
                     # installing it report it
@@ -922,12 +942,10 @@ def installed(name,
                             '\'pip.freeze\'.'.format(pkg)
                         )
                     else:
-                        pkg_name = _find_key(prefix, pipsearch)
-                        if pkg_name.lower() in already_installed_packages:
-                            continue
-                        ver = pipsearch[pkg_name]
-                        ret['changes']['{0}=={1}'.format(pkg_name,
-                                                         ver)] = 'Installed'
+                        if prefix in pipsearch \
+                                and prefix.lower() not in already_installed_packages:
+                            ver = pipsearch[prefix]
+                            ret['changes']['{0}=={1}'.format(prefix, ver)] = 'Installed'
                 # Case for packages that are an URL
                 else:
                     ret['changes']['{0}==???'.format(state_name)] = 'Installed'
@@ -1081,3 +1099,51 @@ def uptodate(name,
         ret['comment'] = 'Upgrade failed.'
 
     return ret
+
+
+def mod_aggregate(low, chunks, running):
+    '''
+    The mod_aggregate function which looks up all packages in the available
+    low chunks and merges them into a single pkgs ref in the present low data
+    '''
+    pkgs = []
+    pkg_type = None
+    agg_enabled = [
+        'installed',
+        'removed',
+    ]
+    if low.get('fun') not in agg_enabled:
+        return low
+    for chunk in chunks:
+        tag = __utils__['state.gen_tag'](chunk)
+        if tag in running:
+            # Already ran the pkg state, skip aggregation
+            continue
+        if chunk.get('state') == 'pip':
+            if '__agg__' in chunk:
+                continue
+            # Check for the same function
+            if chunk.get('fun') != low.get('fun'):
+                continue
+            # Check first if 'sources' was passed so we don't aggregate pkgs
+            # and sources together.
+            if pkg_type is None:
+                pkg_type = 'pkgs'
+            if pkg_type == 'pkgs':
+                # Pull out the pkg names!
+                if 'pkgs' in chunk:
+                    pkgs.extend(chunk['pkgs'])
+                    chunk['__agg__'] = True
+                elif 'name' in chunk:
+                    version = chunk.pop('version', None)
+                    if version is not None:
+                        pkgs.append({chunk['name']: version})
+                    else:
+                        pkgs.append(chunk['name'])
+                    chunk['__agg__'] = True
+    if pkg_type is not None and pkgs:
+        if pkg_type in low:
+            low[pkg_type].extend(pkgs)
+        else:
+            low[pkg_type] = pkgs
+    return low

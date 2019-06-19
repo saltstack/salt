@@ -184,7 +184,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
                                       authorityKeyIdentifier='keyid,issuer:always',
                                       days_valid=3650,
                                       days_remaining=0)
-        self.assertIn(b'BEGIN CERTIFICATE', ret)
+        self.assertIn('BEGIN CERTIFICATE', ret)
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
     def test_create_crl(self):

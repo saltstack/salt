@@ -3,6 +3,7 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import sys
 import uuid
 import hashlib
 import logging
@@ -15,12 +16,14 @@ import textwrap
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    flaky,
     get_unused_localhost_port,
     skip_if_not_root,
     with_tempfile)
 from tests.support.unit import skipIf
 from tests.support.runtests import RUNTIME_VARS
+
+# Import 3rd party libs
+import salt.ext.six as six
 
 # Import salt libs
 import salt.utils.files
@@ -29,6 +32,9 @@ import salt.utils.platform
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
+
+
+SSL3_SUPPORT = sys.version_info >= (2, 7, 9)
 
 
 class CPModuleTest(ModuleCase):
@@ -78,6 +84,7 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn('bacon', data)
 
     @with_tempfile()
+    @skipIf(salt.utils.platform.is_windows() and six.PY3, 'This test hangs on Windows on Py3')
     def test_get_file_templated_paths(self, tgt):
         '''
         cp.get_file
@@ -278,6 +285,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
         self.assertNotIn('bacon', data)
 
+    @skipIf(not SSL3_SUPPORT, 'Requires python with SSL3 support')
     @with_tempfile()
     def test_get_url_https(self, tgt):
         '''
@@ -296,6 +304,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn('Windows', data)
         self.assertNotIn('AYBABTU', data)
 
+    @skipIf(not SSL3_SUPPORT, 'Requires python with SSL3 support')
     def test_get_url_https_dest_empty(self):
         '''
         cp.get_url with https:// source given and destination omitted.
@@ -305,6 +314,7 @@ class CPModuleTest(ModuleCase):
             [
                 'https://repo.saltstack.com/index.html',
             ])
+
         with salt.utils.files.fopen(ret, 'r') as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
         self.assertIn('Bootstrap', data)
@@ -312,6 +322,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn('Windows', data)
         self.assertNotIn('AYBABTU', data)
 
+    @skipIf(not SSL3_SUPPORT, 'Requires python with SSL3 support')
     def test_get_url_https_no_dest(self):
         '''
         cp.get_url with https:// source given and destination set as None
@@ -386,7 +397,7 @@ class CPModuleTest(ModuleCase):
             ])
         self.assertEqual(ret, False)
 
-    @flaky
+    @skipIf(not SSL3_SUPPORT, 'Requires python with SSL3 support')
     def test_get_file_str_https(self):
         '''
         cp.get_file_str with https:// source given

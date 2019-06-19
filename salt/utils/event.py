@@ -873,6 +873,10 @@ class SaltEvent(object):
                     # Minion fired a bad retcode, fire an event
                     self._fire_ret_load_specific_fun(load)
 
+    def remove_event_handler(self, event_handler):
+        if event_handler in self.subscriber.callbacks:
+            self.subscriber.callbacks.remove(event_handler)
+
     def set_event_handler(self, event_handler):
         '''
         Invoke the event_handler callback each time an event arrives.
@@ -881,8 +885,10 @@ class SaltEvent(object):
 
         if not self.cpub:
             self.connect_pub()
+
+        self.subscriber.callbacks.add(event_handler)
         # This will handle reconnects
-        return self.subscriber.read_async(event_handler)
+        return self.subscriber.read_async()
 
     def __del__(self):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
@@ -891,6 +897,12 @@ class SaltEvent(object):
             self.destroy()
         except Exception:
             pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class MasterEvent(SaltEvent):
@@ -939,6 +951,15 @@ class NamespacedEvent(object):
         self.event.fire_event(data, tagify(tag, base=self.base))
         if self.print_func is not None:
             self.print_func(tag, data)
+
+    def destroy(self):
+        self.event.destroy()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class MinionEvent(SaltEvent):

@@ -979,7 +979,7 @@ def clone(cwd,
             information on securing the keypair from the remote side in the
             ``authorized_keys`` file.
 
-            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE_FORMAT
 
         .. versionchanged:: 2015.8.7
 
@@ -2093,7 +2093,7 @@ def fetch(cwd,
             information on securing the keypair from the remote side in the
             ``authorized_keys`` file.
 
-            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE_FORMAT
 
         .. versionchanged:: 2015.8.7
 
@@ -2905,7 +2905,7 @@ def ls_remote(cwd=None,
             information on securing the keypair from the remote side in the
             ``authorized_keys`` file.
 
-            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE_FORMAT
 
         .. versionchanged:: 2015.8.7
 
@@ -2998,6 +2998,7 @@ def merge(cwd,
           git_opts='',
           user=None,
           password=None,
+          identity=None,
           ignore_retcode=False,
           output_encoding=None,
           **kwargs):
@@ -3041,6 +3042,22 @@ def merge(cwd,
 
       .. versionadded:: 2016.3.4
 
+    identity
+        Path to a private key to use for ssh URLs. Salt will not attempt to use
+        passphrase-protected keys unless invoked from the minion using
+        ``salt-call``, to prevent blocking waiting for user input. Key can also
+        be specified as a SaltStack file server URL, eg.
+        ``salt://location/identity_file``.
+
+        .. note::
+            For greater security with passphraseless private keys, see the
+            `sshd(8)`_ manpage for information on securing the keypair from the
+            remote side in the ``authorized_keys`` file.
+
+            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE_FORMAT
+
+        .. versionadded:: 2018.3.5,2019.2.1,Neon
+
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
@@ -3082,10 +3099,12 @@ def merge(cwd,
     command.extend(_format_opts(opts))
     if rev:
         command.append(rev)
+
     return _git_run(command,
                     cwd=cwd,
                     user=user,
                     password=password,
+                    identity=identity,
                     ignore_retcode=ignore_retcode,
                     output_encoding=output_encoding)['stdout']
 
@@ -3440,7 +3459,7 @@ def pull(cwd,
             information on securing the keypair from the remote side in the
             ``authorized_keys`` file.
 
-            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE_FORMAT
 
         .. versionchanged:: 2015.8.7
 
@@ -3566,7 +3585,7 @@ def push(cwd,
             information on securing the keypair from the remote side in the
             ``authorized_keys`` file.
 
-            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE_FORMAT
 
         .. versionchanged:: 2015.8.7
 
@@ -3858,7 +3877,7 @@ def remote_refs(url,
             information on securing the keypair from the remote side in the
             ``authorized_keys`` file.
 
-            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE_FORMAT
 
         .. versionchanged:: 2015.8.7
 
@@ -4175,6 +4194,7 @@ def reset(cwd,
           git_opts='',
           user=None,
           password=None,
+          identity=None,
           ignore_retcode=False,
           output_encoding=None):
     '''
@@ -4210,6 +4230,22 @@ def reset(cwd,
         ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.4
+
+    identity
+        Path to a private key to use for ssh URLs. Salt will not attempt to use
+        passphrase-protected keys unless invoked from the minion using
+        ``salt-call``, to prevent blocking waiting for user input. Key can also
+        be specified as a SaltStack file server URL, eg.
+        ``salt://location/identity_file``.
+
+        .. note::
+            For greater security with passphraseless private keys, see the
+            `sshd(8)`_ manpage for information on securing the keypair from the
+            remote side in the ``authorized_keys`` file.
+
+            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE_FORMAT
+
+        .. versionadded:: 2018.3.5,2019.2.1,Neon
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -4248,6 +4284,7 @@ def reset(cwd,
                     cwd=cwd,
                     user=user,
                     password=password,
+                    identity=identity,
                     ignore_retcode=ignore_retcode,
                     output_encoding=output_encoding)['stdout']
 
@@ -4736,7 +4773,7 @@ def submodule(cwd,
             information on securing the keypair from the remote side in the
             ``authorized_keys`` file.
 
-            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE_FORMAT
 
         .. versionchanged:: 2015.8.7
 

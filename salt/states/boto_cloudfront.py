@@ -53,7 +53,6 @@ import copy
 import json
 
 # Import Salt conveniences
-import salt.utils.boto3mod
 from salt.ext import six
 from salt.ext.six.moves import range
 
@@ -521,7 +520,7 @@ def distribution_present(name, region=None, key=None, keyid=None, profile=None, 
         copyOne = copy.deepcopy(currentDC)
         copyTwo = copy.deepcopy(currentDC)
         copyTwo.update(kwargs['DistributionConfig'])
-        correct = salt.utils.boto3.json_objs_equal(copyOne, copyTwo)
+        correct = __utils__['boto3.json_objs_equal'](copyOne, copyTwo)
         tags_correct = (currentTags == Tags)
         comments = []
         old = {}
@@ -674,7 +673,7 @@ def oai_bucket_policy_present(name, Bucket, OAI, Policy,
         # Warning: unavoidable hardcoded magic values HO!
         fake_Policy['Statement'][stanza].update({'Principal': {'AWS':
             'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity {}'.format(oai_id)}})
-    if salt.utils.boto3.json_objs_equal(curr_policy, fake_Policy):
+    if __utils__['boto3.json_objs_equal'](curr_policy, fake_Policy):
         msg = 'Policy of S3 bucket `{}` is in the correct state.'.format(Bucket)
         log.info(msg)
         ret['comment'] = msg
