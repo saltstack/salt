@@ -26,7 +26,12 @@ class PkgrepoTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        return {pkgrepo: {'__opts__': {'test': True}}}
+        return {
+            pkgrepo: {
+                '__opts__': {'test': True},
+                '__grains__': {'os': '', 'os_family': ''}
+            }
+        }
 
     # 'update_packaging_site' function tests: 1
 
@@ -48,11 +53,10 @@ class PkgrepoTestCase(TestCase, LoaderModuleMockMixin):
             'disabled': False,
         }
 
-        with patch.dict(pkgrepo.__grains__, {'os': 'Ubuntu', 'os_family': 'Debian'}):
-            with patch.dict(pkgrepo.__salt__, {'pkg.get_repo': MagicMock(return_value=previous_state)}):
-                ret = pkgrepo.managed(**kwargs)
-                # pprint(ret)
-                self.assertDictEqual({
-                    'old': previous_state['key_url'],
-                    'new': kwargs['key_url'],
-                }, ret['changes'].get('key_url', dict()))
+        with patch.dict(pkgrepo.__salt__, {'pkg.get_repo': MagicMock(return_value=previous_state)}):
+            ret = pkgrepo.managed(**kwargs)
+            # pprint(ret)
+            self.assertDictEqual({
+                'old': previous_state['key_url'],
+                'new': kwargs['key_url'],
+            }, ret['changes'].get('key_url', dict()))
