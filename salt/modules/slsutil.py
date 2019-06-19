@@ -170,7 +170,7 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
     renderers = salt.loader.render(__opts__, __salt__)
 
     if path:
-        path_or_string = __salt__['cp.get_url'](path)
+        path_or_string = __salt__['cp.get_url'](path, saltenv=kwargs.get('saltenv', 'base'))
     elif string:
         path_or_string = ':string:'
         kwargs['input_data'] = string
