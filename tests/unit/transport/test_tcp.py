@@ -6,6 +6,8 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import threading
+import socket
+import logging
 
 import tornado.gen
 import tornado.ioloop
@@ -20,7 +22,7 @@ import salt.transport.server
 import salt.transport.client
 import salt.exceptions
 from salt.ext.six.moves import range
-from salt.transport.tcp import SaltMessageClientPool
+from salt.transport.tcp import SaltMessageClientPool, SaltMessageClient
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
@@ -28,6 +30,8 @@ from tests.support.helpers import get_unused_localhost_port, flaky
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin
+
+log = logging.getLogger(__name__)
 
 
 class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -310,3 +314,43 @@ class SaltMessageClientPoolTest(AsyncTestCase):
 
         with self.assertRaises(tornado.ioloop.TimeoutError):
             test_connect(self)
+
+
+class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
+
+    def setUp(self):
+        self.port = get_unused_localhost_port()
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sock.bind(('localhost', self.port))
+        self.sock.listen(1)
+
+    def tearDown(self):
+        self.sock.close()
+        del self.sock
+
+    def test_message_client(self):
+        '''
+        test message client cleanup on close
+        '''
+        opts = self.get_temp_config('master')
+        client = SaltMessageClient(opts, 'localhost', self.port)
+        orig_loop = tornado.ioloop.IOLoop.current()
+        orig_loop.real_stop = orig_loop.stop
+        def stop(*args, **kwargs):
+            orig_loop.stop_called = True
+            orig_loop.real_stop()
+        try:
+            orig_loop.stop = stop
+            assert client.io_loop == orig_loop
+            client.io_loop.run_sync(client.connect)
+            assert client._stream is not None
+            assert client._read_until_future is not None
+            orig_loop.stop_called = False
+            client.close()
+            assert orig_loop.stop_called is True
+            assert client.io_loop is None
+        finally:
+            orig_loop.stop = orig_loop.real_stop
+            del orig_loop.real_stop
+            del orig_loop.stop_called
