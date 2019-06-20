@@ -671,7 +671,7 @@ def read_crl(crl):
     text = get_pem_entry(text, pem_type='X509 CRL')
 
     crltempfile = tempfile.NamedTemporaryFile()
-    crltempfile.write(salt.utils.stringutils.to_str(text))
+    crltempfile.write(salt.utils.stringutils.to_bytes(text, encoding='ascii'))
     crltempfile.flush()
     crlparsed = _parse_openssl_crl(crltempfile.name)
     crltempfile.close()
