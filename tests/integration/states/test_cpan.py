@@ -38,12 +38,15 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
                     self.run_state('pkg.installed', name='perl-cpan')
                 elif grains['osmajorrelease'] == '6':
                     self.run_state('pkg.installed', name='perl-CPAN')
-            elif grains['os_family'] in ('Debian', 'Arch'):
-                # It is part of the perl package for these distrobutionss
+            elif grains['os_family'] == 'Arch':
                 self.run_state('pkg.installed', name='perl')
+                self.run_state('pkg.installed', name='perl-docs')
+            elif grains['os_family'] == 'Debian':
+                self.run_state('pkg.installed', name='perl')
+                self.run_state('pkg.installed', name='perl-doc')
             else:
                 self.run_state('pkg.installed', name='cpan')
-            self.assertTrue(salt.utils.path.which('cpan').endswith('cpan'), "cpan not installed")
+            self.assertTrue(str(salt.utils.path.which('cpan')).endswith('cpan'), "cpan not installed")
             __testcontext__['cpan'] = True
 
     @destructiveTest

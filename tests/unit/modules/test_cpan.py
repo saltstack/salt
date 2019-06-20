@@ -71,7 +71,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it install a module from cpan
         '''
-        module = 'Template::Alloy'
+        module = 'File::Temp'
         mock1 = MagicMock(return_value={'retval': 0})
         with patch.dict(cpan.__salt__, {'cmd.run_all': mock1}):
             mock = MagicMock(side_effect=[{'installed version': None},
@@ -119,7 +119,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         Test if it install a module from cpan
         '''
         mock = MagicMock(return_value={'retval': 1})
-        module = 'Template::Alloy'
+        module = 'File::Temp'
         with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(cpan.install(module), {
                 'error': 'Could not find package {}'.format(module),
@@ -133,7 +133,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('os.listdir', MagicMock(return_value=[''])):
             mock = MagicMock(return_value={})
-            module = 'Template::Alloy'
+            module = 'File::Temp'
             with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
                 mock = MagicMock(return_value={'installed version': '2.1',
                                                'cpan build dirs': [''],
@@ -162,7 +162,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'installed version': None})
         with patch.object(cpan, 'show', mock):
-            self.assertDictEqual(cpan.remove('Template::Alloy'), {
+            self.assertDictEqual(cpan.remove('File::Temp'), {
                 'error': None,
                 'new': None,
                 'old': None})
@@ -176,7 +176,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
                                        'installed file': "",
                                        'cpan build dirs': []})
         with patch.object(cpan, 'show', mock):
-            self.assertDictEqual(cpan.remove('Template::Alloy'), {
+            self.assertDictEqual(cpan.remove('File::Temp'), {
                 'error': None,
                 'new': None,
                 'old': None})
@@ -214,7 +214,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={'Salt': 'salt'})):
             mock = MagicMock(return_value='Salt module installed')
             with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
-                self.assertDictEqual(cpan.show('Template::Alloy'),
+                self.assertDictEqual(cpan.show('File::Temp'),
                                      {'Salt': 'salt'})
 
     # 'show' function tests: 1
