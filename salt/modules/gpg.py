@@ -723,8 +723,7 @@ def import_key(text=None,
     if filename:
         try:
             with salt.utils.files.flopen(filename, 'rb') as _fp:
-                text = ''.join([salt.utils.stringutils.to_unicode(x)
-                    for x in _fp.readlines()])
+                text = salt.utils.stringutils.to_unicode(_fp.read())
         except IOError:
             raise SaltInvocationError('filename does not exist.')
 
