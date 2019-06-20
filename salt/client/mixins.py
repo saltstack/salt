@@ -335,8 +335,7 @@ class SyncClientMixin(object):
             try:
                 salt.utils.lazy.verify_fun(self.functions, fun)
 
-                # Inject some useful globals to *all* the function's global
-                # namespace only once per module-- not per func
+                # Inject some useful globals to *all* the function's globals
                 self.functions.inject_globals.update(func_globals)
 
                 # There are some discrepancies of what a "low" structure is in the
