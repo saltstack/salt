@@ -306,6 +306,7 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn('AYBABTU', data)
 
     @skipIf(not SSL3_SUPPORT, 'Requires python with SSL3 support')
+    @skipIf(salt.utils.platform.is_darwin() and six.PY2, 'This test hangs on OS X on Py2')
     def test_get_url_https_dest_empty(self):
         '''
         cp.get_url with https:// source given and destination omitted.
@@ -323,6 +324,7 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn('AYBABTU', data)
 
     @skipIf(not SSL3_SUPPORT, 'Requires python with SSL3 support')
+    @skipIf(salt.utils.platform.is_darwin() and six.PY2, 'This test hangs on OS X on Py2')
     def test_get_url_https_no_dest(self):
         '''
         cp.get_url with https:// source given and destination set as None
