@@ -24,36 +24,31 @@ log = logging.getLogger(__name__)
 __testcontext__ = {}
 
 
+@destructiveTest
 class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_system_grains
-    def setUp(self):
+    def setUp(self, grains=None):  # pylint: disable=arguments-differ
         '''
         Ensure that cpan is installed through perl
         '''
         super(CpanStateTest, self).setUp()
         if 'cpan' not in __testcontext__:
-            self.assertTrue(self._install_cpan_package(), "cpan not installed")
+            self.run_state('pkg.installed', name='perl')
+            if grains['os'] == 'CentOS':
+                self.run_state('pkg.installed', name='perl-doc')
+                if grains['osmajorrelease'] == '7':
+                    self.run_state('pkg.installed', name='perl-cpan')
+                elif grains['osmajorrelease'] == '6':
+                    self.run_state('pkg.installed', name='perl-CPAN')
+            elif grains['os_family'] == 'Arch':
+                self.run_state('pkg.installed', name='perl-docs')
+            elif grains['os_family'] == 'Debian':
+                self.run_state('pkg.installed', name='perl-doc')
+            else:
+                self.run_state('pkg.installed', name='cpan')
+            self.assertTrue(salt.utils.path.which('cpan').endswith('cpan'), "cpan not installed")
             __testcontext__['cpan'] = True
 
-    @requires_system_grains
-    def _install_cpan_package(self, grains):
-        if grains['os'] == 'CentOS':
-            self.run_state('pkg.installed', name='perl-doc')
-            if grains['osmajorrelease'] == '7':
-                self.run_state('pkg.installed', name='perl-cpan')
-            elif grains['osmajorrelease'] == '6':
-                self.run_state('pkg.installed', name='perl-CPAN')
-        elif grains['os_family'] == 'Arch':
-            self.run_state('pkg.installed', name='perl')
-            self.run_state('pkg.installed', name='perl-docs')
-        elif grains['os_family'] == 'Debian':
-            self.run_state('pkg.installed', name='perl')
-            self.run_state('pkg.installed', name='perl-doc')
-        else:
-            self.run_state('pkg.installed', name='cpan')
-        return str(salt.utils.path.which('cpan')).endswith('cpan')
-
-    @destructiveTest
     def test_cpan_installed_removed(self):
         '''
         Tests installed and removed states
