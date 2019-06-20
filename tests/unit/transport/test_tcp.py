@@ -340,9 +340,11 @@ class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
         orig_loop = tornado.ioloop.IOLoop.current()
         orig_loop.real_stop = orig_loop.stop
         orig_loop.stop_called = False
+
         def stop(*args, **kwargs):
             orig_loop.stop_called = True
             orig_loop.real_stop()
+
         orig_loop.stop = stop
         try:
             assert client.io_loop == orig_loop
