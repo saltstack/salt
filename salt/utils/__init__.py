@@ -918,11 +918,11 @@ def istextfile(fp_, blocksize=512):
     salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.istextfile\' detected. This function has been moved '
-        'to \'salt.utils.files.is_text_file\' as of Salt 2018.3.0. This warning will '
+        'to \'salt.utils.files.is_text\' as of Salt 2018.3.0. This warning will '
         'be removed in Salt Neon.',
         stacklevel=3
     )
-    return salt.utils.files.is_text_file(fp_, blocksize=blocksize)
+    return salt.utils.files.is_text(fp_, blocksize=blocksize)
 
 
 def is_bin_file(path):
