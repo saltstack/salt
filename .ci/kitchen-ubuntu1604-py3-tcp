@@ -39,9 +39,9 @@ timeout(time: global_timeout, unit: 'HOURS') {
                     // Set the GH status even before cloning the repo
                     stage('github-pending') {
                         githubNotify credentialsId: 'test-jenkins-credentials',
-                            description: "running ${TEST_SUITE}-${TEST_PLATFORM}...",
+                            description: "running ${TEST_SUITE}-${TEST_PLATFORM}-tcp...",
                             status: 'PENDING',
-                            context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
+                            context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}-tcp"
                     }
                     // Checkout the repo
                     stage('checkout-scm') {
@@ -103,14 +103,14 @@ timeout(time: global_timeout, unit: 'HOURS') {
                             cleanWs notFailBuild: true
                             if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
                                 githubNotify credentialsId: 'test-jenkins-credentials',
-                                    description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has passed",
+                                    description: "The ${TEST_SUITE}-${TEST_PLATFORM}-tcp job has passed",
                                     status: 'SUCCESS',
-                                    context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
+                                    context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}-tcp"
                             } else {
                                 githubNotify credentialsId: 'test-jenkins-credentials',
-                                    description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has failed",
+                                    description: "The ${TEST_SUITE}-${TEST_PLATFORM}-tcp job has failed",
                                     status: 'FAILURE',
-                                    context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
+                                    context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}-tcp"
                                 try {
                                   slackSend channel: "#jenkins-prod-pr",
                                       color: '#FF0000',
