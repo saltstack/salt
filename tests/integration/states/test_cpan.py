@@ -37,7 +37,7 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
                     self.run_state('pkg.installed', name='perl-cpan')
                 elif __grains__['osrelease'] == '6':
                     self.run_state('pkg.installed', name='perl-CPAN')
-            elif __grains__['os_family'] in ['Debian', 'Arch']
+            elif __grains__['os_family'] in ('Debian', 'Arch'):
                 # It is part of the perl package for these distrobutionss
                 self.run_state('pkg.installed', name='perl')
             else:
