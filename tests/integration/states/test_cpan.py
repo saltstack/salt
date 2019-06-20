@@ -33,20 +33,19 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         super(CpanStateTest, self).setUp()
         if 'cpan' not in __testcontext__:
-            self.run_state('pkg.installed', name='perl')
-            if grains['os'] == 'CentOS':
-                self.run_state('pkg.installed', name='perl-doc')
-                if grains['osmajorrelease'] == '7':
-                    self.run_state('pkg.installed', name='perl-cpan')
-                elif grains['osmajorrelease'] == '6':
-                    self.run_state('pkg.installed', name='perl-CPAN')
+            # Install perl
+            self.assertSaltTrueReturn(self.run_state('pkg.installed', name='perl'))
+            # Install cpan or docs
+            cpan_docs = 'cpan'
+            if grains['os_family'] == 'RedHat':
+                cpan_docs = 'perl-CPAN'
             elif grains['os_family'] == 'Arch':
-                self.run_state('pkg.installed', name='perl-docs')
+                cpan_docs = 'perl-docs'
             elif grains['os_family'] == 'Debian':
-                self.run_state('pkg.installed', name='perl-doc')
-            else:
-                self.run_state('pkg.installed', name='cpan')
-            self.assertTrue(salt.utils.path.which('cpan').endswith('cpan'), "cpan not installed")
+                cpan_docs = 'perl-doc'
+            self.assertSaltTrueReturn(self.run_state('pkg.installed', name=cpan_docs))
+            # Verify that the cpan binary exists on the system
+            self.assertTrue(str(salt.utils.path.which('cpan')).endswith('cpan'), "cpan not installed")
             __testcontext__['cpan'] = True
 
     def test_cpan_installed_removed(self):
