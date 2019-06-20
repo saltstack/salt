@@ -8,6 +8,7 @@ def distro_name = 'debian'
 def distro_version = '9'
 def python_version = 'py2'
 def golden_images_branch = '2018.3'
+def salt_target_branch = '2018.3'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
@@ -34,6 +35,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
                         'SALT_KITCHEN_PLATFORMS=/var/jenkins/workspace/nox-platforms.yml',
                         'SALT_KITCHEN_VERIFIER=/var/jenkins/workspace/nox-verifier.yml',
                         'SALT_KITCHEN_DRIVER=/var/jenkins/workspace/driver.yml',
+                        "SALT_TARGET_BRANCH=${salt_target_branch}",
                         'NOX_ENV_NAME=runtests-zeromq',
                         'NOX_ENABLE_FROM_FILENAMES=true',
                         'NOX_PASSTHROUGH_OPTS=--ssh-tests',
@@ -62,7 +64,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
 
                         // Setup the kitchen required bundle
                         stage('setup-bundle') {
-                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}'
+                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
                             sh 'bundle install --with ec2 windows --without docker macos opennebula vagrant'
                         }
 
