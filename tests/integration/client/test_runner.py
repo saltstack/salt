@@ -9,6 +9,7 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import Salt libs
 import salt.runner
+import salt.utils.jid
 
 
 class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -24,6 +25,16 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         Configure an eauth user to test with
         '''
         self.runner = salt.runner.RunnerClient(self.get_config('client_config'))
+
+        low = {'client': 'runner', 'fun': 'saltutil.sync_all'}
+        low.update(self.eauth_creds)
+        self.runner.cmd_sync(low)
+
+    def teardown(self):
+        '''
+        Configure an eauth user to test with
+        '''
+        del self.runner
 
     def test_eauth(self):
         '''
@@ -144,3 +155,23 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
         ret = self.runner.cmd_sync(low)
         self.assertEqual(ret[0], 'foo')
+
+    def test_globals_are_set_as_expected(self):
+        low = {
+            'client': 'runner',
+            'fun': 'testrunner.return_globals',
+        }
+        low.update(self.eauth_creds)
+        ret = self.runner.cmd_sync(low)
+
+        for key in ['__jid__', '__user__', '__tag__', '__jid_event__']:
+            self.assertIn(key, ret)
+
+    def test_runner_calling_runner_works(self):
+        low = {
+            'client': 'runner',
+            'fun': 'testrunner.call_other_runner',
+        }
+        low.update(self.eauth_creds)
+        ret = self.runner.cmd_sync(low)
+        self.assertTrue(salt.utils.jid.is_jid(ret), msg='got __jid__ from nested runner call')

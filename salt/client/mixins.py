@@ -338,17 +338,11 @@ class SyncClientMixin(object):
 
                 # Inject some useful globals to *all* the function's global
                 # namespace only once per module-- not per func
-                completed_funcs = []
-
-                for mod_name in six.iterkeys(self_functions):
-                    if '.' not in mod_name:
-                        continue
-                    mod, _ = mod_name.split('.', 1)
-                    if mod in completed_funcs:
-                        continue
-                    completed_funcs.append(mod)
-                    for global_key, value in six.iteritems(func_globals):
-                        self.functions[mod_name].__globals__[global_key] = value
+                self_functions.inject_globals.update(func_globals)
+                for loaded_funcs in six.itervalues(self_functions.loaded_modules):
+                    for func in six.itervalues(loaded_funcs):
+                        for global_key, value in six.iteritems(func_globals):
+                            func.__globals__[global_key] = value
 
                 # There are some discrepancies of what a "low" structure is in the
                 # publisher world it is a dict including stuff such as jid, fun,
