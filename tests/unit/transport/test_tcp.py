@@ -335,19 +335,29 @@ class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         opts = self.get_temp_config('master')
         client = SaltMessageClient(opts, 'localhost', self.port)
+
+        # Mock the io_loop's stop method so we know when it has been called.
         orig_loop = tornado.ioloop.IOLoop.current()
         orig_loop.real_stop = orig_loop.stop
+        orig_loop.stop_called = False
         def stop(*args, **kwargs):
             orig_loop.stop_called = True
             orig_loop.real_stop()
+        orig_loop.stop = stop
         try:
-            orig_loop.stop = stop
             assert client.io_loop == orig_loop
             client.io_loop.run_sync(client.connect)
+
+            # Ensure we are testing the _read_until_future and io_loop teardown
             assert client._stream is not None
             assert client._read_until_future is not None
+            assert orig_loop.stop_called is True
+
+            # The run_sync call will set stop_called, reset it
             orig_loop.stop_called = False
             client.close()
+
+            # Stop should be called again, client's io_loop should be None
             assert orig_loop.stop_called is True
             assert client.io_loop is None
         finally:
