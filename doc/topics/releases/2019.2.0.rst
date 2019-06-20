@@ -8,7 +8,7 @@ Python 2.7 Deprecation
 ======================
 
 In light of Python 2.7 reaching its End of Life (EOL) on Jan 1st 2020,
-Python 2 will be deprecated from SaltStack no earlier then the Sodium
+Python 2 will be deprecated from SaltStack no earlier than the Sodium
 release, that is either the Sodium release or a later release.
 This decision is pending further community discussion.
 
@@ -57,6 +57,24 @@ Jinja filter`_:
         - template: jinja
         - context:
             data: {{ data|tojson }}
+
+Another example where the new filter needs to be used is the following state example:
+
+.. code-block:: jinja
+
+    grafana_packages:
+      pkg.installed:
+      - names: {{ server.pkgs }}
+
+This will fail when pkgs is a list or dictionary. You will need to update the state:
+
+.. code-block:: jinja
+
+    grafana_packages:
+      pkg.installed:
+      - names: {{ server.pkgs|tojson }}
+
+This test case has also been tested with the ``yaml`` and ``json`` filters successfully.
 
 .. note::
     This filter was added in Jinja 2.9. However, fear not! The 2018.3.3 release

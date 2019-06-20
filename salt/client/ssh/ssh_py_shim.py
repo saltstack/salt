@@ -119,7 +119,8 @@ def need_deployment():
         if dstat.st_uid != euid:
             # Attack detected, try again
             need_deployment()
-        if dstat.st_mode != 16832:
+        # AIX has non-POSIX bit 0o240700, isolate to 0o40700
+        if dstat.st_mode & ~65536 != 16832:
             # Attack detected
             need_deployment()
         # If SUDOing then also give the super user group write permissions
