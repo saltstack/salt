@@ -29,11 +29,15 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkgrepo state tests
     '''
+    def setUp(self):
+        self.remote = False
+
     @requires_system_grains
     def test_pkgrepo_01_managed(self, grains):
         '''
         Test adding a repo
         '''
+        self.remote = True
         os_grain = self.run_function('grains.item', ['os'])['os']
         os_release_info = tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info'])
         if os_grain == 'Ubuntu' and os_release_info >= (15, 10):
@@ -61,6 +65,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test removing the repo from the above test
         '''
+        self.remote = True
         os_grain = self.run_function('grains.item', ['os'])['os']
         os_release_info = tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info'])
         if os_grain == 'Ubuntu' and os_release_info >= (15, 10):

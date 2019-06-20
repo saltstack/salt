@@ -26,6 +26,7 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the cmd state
     '''
+
     def test_run_simple(self):
         '''
         cmd.run
@@ -60,6 +61,8 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the cmd state of run_redirect
     '''
+    remote = True
+
     def setUp(self):
         self.state_name = 'run_redirect'
         state_filename = self.state_name + '.sls'
@@ -178,6 +181,8 @@ class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the cmd state of run_watch
     '''
+    remote = True
+
     def setUp(self):
         self.state_name = 'run_watch'
         state_filename = self.state_name + '.sls'

@@ -28,6 +28,7 @@ from tests.support.paths import FILES, TMP
 # Import salt libs
 import salt.utils.files
 import salt.utils.platform
+import salt.exceptions
 
 
 def symlink(source, link_name):
@@ -174,14 +175,16 @@ class FileModuleTest(ModuleCase):
         self.assertTrue(ret)
 
     def test_remove_broken_symlink(self):
-        ret = self.run_function('file.remove', arg=[self.mybadsymlink])
+        ret = self.run_function('file.remove', arg=[self.mybadsymlink], rem=True)
         self.assertTrue(ret)
 
     def test_cannot_remove(self):
-        ret = self.run_function('file.remove', arg=['tty'])
-        self.assertEqual(
-            'ERROR executing \'file.remove\': File path must be absolute: tty', ret
-        )
+        with self.assertRaises(salt.exceptions.SaltInvocationError) as err:
+            ret = self.run_function('file.remove', arg=['tty'])
+            self.assertEqual(
+                err.args[0],
+                'ERROR executing \'file.remove\': File path must be absolute: tty',
+            )
 
     def test_source_list_for_single_file_returns_unchanged(self):
         ret = self.run_function('file.source_list', ['salt://http/httpd.conf',

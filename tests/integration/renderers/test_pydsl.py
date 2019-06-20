@@ -17,6 +17,7 @@ import salt.utils.stringutils
 
 
 class PyDSLRendererIncludeTestCase(ModuleCase):
+    remote = True
 
     def setUp(self):
         self.directory_created = False

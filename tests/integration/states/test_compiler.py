@@ -42,7 +42,7 @@ class CompileTest(ModuleCase):
             if release.get('ID') == 'Debian' and int(release.get('RELEASE', '0')[0]) < 9:
                 self.skipTest('This test is flaky on Debian 8. Skipping.')
 
-        ret = self.run_function('state.sls', ['issue-10010'])
+        ret = self.run_function('state.sls', ['issue-10010'], rem=True)
         self.assertTrue(
             ', in jinja_error' in ret[0].strip())
         self.assertTrue(

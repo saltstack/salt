@@ -33,7 +33,7 @@ class LoaderGrainsTest(ModuleCase):
 
     def test_grains_overwrite(self):
         # Force a grains sync
-        self.run_function('saltutil.sync_grains')
+        self.run_function('saltutil.sync_grains', rem=True)
         # To avoid a race condition on Windows, we need to make sure the
         # `test_custom_grain2.py` file is present in the _grains directory
         # before trying to get the grains. This test may execute before the
@@ -46,7 +46,7 @@ class LoaderGrainsTest(ModuleCase):
             if tries > 60:
                 break
             time.sleep(1)
-        grains = self.run_function('grains.items')
+        grains = self.run_function('grains.items', rem=True)
 
         # Check that custom grains are overwritten
         self.assertEqual({'k2': 'v2'}, grains['a_custom'])
@@ -67,7 +67,7 @@ class LoaderGrainsMergeTest(ModuleCase):
         __grains__ = salt.loader.grains(self.opts)
 
     def test_grains_merge(self):
-        __grain__ = self.run_function('grains.item', ['a_custom'])
+        __grain__ = self.run_function('grains.item', ['a_custom'], rem=True)
 
         # Check that the grain is present
         self.assertIn('a_custom', __grain__)

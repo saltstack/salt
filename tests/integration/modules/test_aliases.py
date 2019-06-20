@@ -4,6 +4,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
+import salt.utils.platform
 from tests.support.case import ModuleCase
 
 
@@ -11,6 +12,8 @@ class AliasesTest(ModuleCase):
     '''
     Validate aliases module
     '''
+    remote = salt.utils.platform.is_windows()
+
     def test_set_target(self):
         '''
         aliases.set_target and aliases.get_target

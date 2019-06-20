@@ -97,14 +97,14 @@ class FirewallTest(ModuleCase):
         port = '8080'
 
         # test adding firewall rule
-        add_rule = self.run_function('firewall.add_rule', [rule, port])
-        ret = self.run_function('firewall.get_rule', [rule])
+        add_rule = self.run_function('firewall.add_rule', [rule, port], rem=True)
+        ret = self.run_function('firewall.get_rule', [rule], rem=True)
         self.assertIn(rule, ret[rule])
         self.assertIn(port, ret[rule])
 
         # test deleting firewall rule
-        self.assertTrue(self.run_function('firewall.delete_rule', [rule, port]))
-        ret = self.run_function('firewall.get_rule', [rule])
+        self.assertTrue(self.run_function('firewall.delete_rule', [rule, port], rem=True))
+        ret = self.run_function('firewall.get_rule', [rule], rem=True)
         self.assertNotIn(rule, ret)
         self.assertNotIn(port, ret)
         self.assertIn('No rules match the specified criteria.', ret)

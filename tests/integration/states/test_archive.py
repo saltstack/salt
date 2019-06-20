@@ -253,6 +253,8 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
             'state.sls',
             ['issue45893'],
             pillar={'issue45893.name': ARCHIVE_DIR},
-            saltenv='prod')
+            saltenv='prod',
+            rem=True,
+        )
         self.assertSaltTrueReturn(ret)
         self._check_extracted(os.path.join(ARCHIVE_DIR, UNTAR_FILE))

@@ -33,6 +33,8 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
     Reg state module tests
     These tests are destructive as the modify the registry
     '''
+    remote = salt.utils.platform.is_windows()
+
     def tearDown(self):
         reg.delete_key_recursive(hive='HKLM',
                                  key=FAKE_KEY)

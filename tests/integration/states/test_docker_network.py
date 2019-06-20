@@ -113,6 +113,9 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test docker_network states
     '''
+
+    remote = True
+
     @classmethod
     def tearDownClass(cls):
         '''

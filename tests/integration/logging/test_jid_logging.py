@@ -17,6 +17,8 @@ class LoggingJIDsTest(ModuleCase):
     '''
     Validate that JIDs appear in LOGs
     '''
+    remote = True
+
     def setUp(self):
         '''
         Set up

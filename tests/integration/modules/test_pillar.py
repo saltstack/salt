@@ -12,6 +12,8 @@ class PillarModuleTest(ModuleCase):
     '''
     Validate the pillar module
     '''
+    remote = True
+
     def test_data(self):
         '''
         pillar.data

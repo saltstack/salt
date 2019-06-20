@@ -143,5 +143,5 @@ class GemModuleTest(ModuleCase):
         '''
         gem.update_system
         '''
-        ret = self.run_function('gem.update_system')
+        ret = self.run_function('gem.update_system', rem=True)
         self.assertTrue(ret)

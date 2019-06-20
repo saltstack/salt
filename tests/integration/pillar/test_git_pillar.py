@@ -526,6 +526,7 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     '''
     Test git_pillar with GitPython using SSH authentication
     '''
+    remote = True
     id_rsa_nopass = _rand_key_name(8)
     id_rsa_withpass = _rand_key_name(8)
     username = USERNAME
@@ -542,7 +543,7 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
     '''
     Test git_pillar with GitPython using unauthenticated HTTP
     '''
-    pass
+    remote = True
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

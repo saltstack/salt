@@ -8,6 +8,7 @@ from tests.support.case import ModuleCase
 
 
 class PillarIncludeTest(ModuleCase):
+    remote = True
 
     def test_pillar_include(self):
         '''

@@ -52,6 +52,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         '''
         setup docker.call tests
         '''
+        self.remote = False
         # Create temp dir
         self.random_name = name
         self.image_tag = sys.version_info[0]
@@ -88,6 +89,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         '''
         check that docker.sls works, and works with a container not running as root
         '''
+        self.remote = True
         ret = self.run_function('docker.apply', [self.random_name, 'core'])
         self.assertSaltTrueReturn(ret)
 
@@ -95,5 +97,6 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         '''
         check that docker.highstate works, and works with a container not running as root
         '''
+        self.remote = True
         ret = self.run_function('docker.apply', [self.random_name])
         self.assertSaltTrueReturn(ret)

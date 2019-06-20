@@ -37,6 +37,8 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTe
 from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
 
 # Import 3rd-party libs
+import salt.utils.args
+import salt.minion
 from salt.ext import six
 from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
 
@@ -788,6 +790,19 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
     Execute a module function
     '''
 
+    masterminion = None
+    remote = False
+
+    def __init__(self, *args, **kwargs):
+        super(ModuleCase, self).__init__(*args, **kwargs)
+        if self.masterminion is None:
+            opts = self.get_config(
+                self._salt_client_config_file_name_,
+                from_scratch=True,
+            )
+            opts['id'] = 'master_minion'
+            ModuleCase.masterminion = salt.minion.MasterMinion(opts)
+
     def wait_for_all_jobs(self, minions=('minion', 'sub_minion',), sleep=.3):
         '''
         Wait for all jobs currently running on the list of minions to finish
@@ -808,11 +823,32 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=300, **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=300, rem=False, **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
+
+        # This not rem and minion_tgt block changes how most integration
+        # tests are run. Instead of running client -> master -> minion -> os
+        # and then back again, it skips all of that by just running the
+        # function from the MasterMinion.  This should work in most cases,
+        # but for those that really do need the round trip, or only make
+        # sense when executed in the context of a minion, `rem=True` (where
+        # rem means remote), allows bypassing this. It incurs the cost of
+        # the full loop, but we still want a few of those anyway.
+        if not (rem or self.remote) and minion_tgt in ('minion', 'sub_minion'):
+            kwargs.setdefault('__jid_id', salt.utils.jid.gen_jid(self.masterminion.opts))
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                self.masterminion.functions[function],
+                salt.utils.args.parse_input(arg, kwargs=kwargs),
+                ignore_invalid=True,
+            )
+            ret = self.masterminion.functions[function](*args, **kwargs)
+            return self._check_state_return(
+                ret
+            )
+
         known_to_return_none = (
             'data.get',
             'file.chown',
@@ -857,6 +893,10 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         '''
         Run the state.single command and return the state return structure
         '''
+        # TODO: Not sure thatt this is the right thing to do here... -W. Werner, 2019-06-25
+        if '__jid_id' in kwargs:
+            del kwargs['__jid_id']
+        kwargs['rem'] = True
         ret = self.run_function('state.single', [function], **kwargs)
         return self._check_state_return(ret)
 

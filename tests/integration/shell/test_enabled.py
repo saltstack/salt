@@ -26,6 +26,7 @@ class EnabledTest(ModuleCase):
     cmd = ("printf '%s\n' first second third | wc -l ; "
            "export SALTY_VARIABLE='saltines' && echo $SALTY_VARIABLE ; "
            "echo duh &> /dev/null")
+    remote = True
 
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_shell_default_enabled(self):

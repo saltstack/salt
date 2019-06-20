@@ -69,6 +69,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
     '''
     Testcase for the saltutil sync execution module
     '''
+    remote = True
 
     def setUp(self):
         whitelist = {'modules': [], }

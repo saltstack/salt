@@ -23,6 +23,8 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the service state
     '''
+    remote = salt.utils.platform.is_windows()
+
     def setUp(self):
         self.service_name = 'cron'
         cmd_name = 'crontab'

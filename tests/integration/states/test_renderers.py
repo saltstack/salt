@@ -22,6 +22,8 @@ class TestJinjaRenderer(ModuleCase):
     '''
     Validate that ordering works correctly
     '''
+    remote = True
+
     def test_dot_notation(self):
         '''
         Test the Jinja dot-notation syntax for calling execution modules

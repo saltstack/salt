@@ -39,7 +39,7 @@ class TestModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
         '''
         test.conf_test
         '''
-        self.assertEqual(self.run_function('test.conf_test'), 'baz')
+        self.assertEqual(self.run_function('test.conf_test', rem=True), 'baz')
 
     def test_get_opts(self):
         '''

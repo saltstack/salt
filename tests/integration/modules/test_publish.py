@@ -12,6 +12,8 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the publish module
     '''
+    remote = True
+
     def test_publish(self):
         '''
         publish.publish

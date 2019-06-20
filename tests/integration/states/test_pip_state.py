@@ -71,6 +71,7 @@ class VirtualEnv(object):
 
 @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
+    remote = True
 
     def _create_virtualenv(self, path):
         '''

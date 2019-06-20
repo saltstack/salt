@@ -58,6 +58,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test docker_container states
     '''
+
+    def setUp(self):
+        self.remote = False
+
     @classmethod
     def setUpClass(cls):
         '''
@@ -879,6 +883,8 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         return code, but if the onlyif has a zero return code the container
         should run.
         '''
+        self.remote = True
+
         for cmd in ('/bin/false', ['/bin/true', '/bin/false']):
             log.debug('Trying %s', cmd)
             ret = self.run_state(
@@ -922,6 +928,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         return code, but if the unless has a nonzero return code the container
         should run.
         '''
+        self.remote = True
         for cmd in ('/bin/true', ['/bin/false', '/bin/true']):
             log.debug('Trying %s', cmd)
             ret = self.run_state(
@@ -963,6 +970,8 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         (and the state should return a True result) if all of the files exist,
         but if if any of the files do not exist the container should run.
         '''
+        self.remote = True
+
         def _mkstemp():
             fd, ret = tempfile.mkstemp()
             try:

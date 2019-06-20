@@ -146,6 +146,7 @@ class GitModuleTest(ModuleCase):
 
         TODO: maybe move this behavior to ModuleCase itself?
         '''
+        kwargs['rem'] = True
         return salt.utils.data.decode(
             super(GitModuleTest, self).run_function(*args, **kwargs)
         )

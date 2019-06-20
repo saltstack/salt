@@ -12,6 +12,8 @@ class SysModuleTest(ModuleCase):
     '''
     Validate the sys module
     '''
+    remote = True
+
     def test_valid_docs(self):
         '''
         Make sure no functions are exposed that don't have valid docstrings

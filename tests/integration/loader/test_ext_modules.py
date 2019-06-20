@@ -22,7 +22,7 @@ from tests.support.paths import TMP
 class LoaderOverridesTest(ModuleCase):
 
     def setUp(self):
-        self.run_function('saltutil.sync_modules')
+        self.run_function('saltutil.sync_modules', rem=True)
 
     def test_overridden_internal(self):
         # To avoid a race condition on Windows, we need to make sure the
@@ -38,7 +38,7 @@ class LoaderOverridesTest(ModuleCase):
                 break
             time.sleep(1)
 
-        funcs = self.run_function('sys.list_functions')
+        funcs = self.run_function('sys.list_functions', rem=True)
 
         # We placed a test module under _modules.
         # The previous functions should also still exist.
@@ -52,6 +52,6 @@ class LoaderOverridesTest(ModuleCase):
 
         text = 'foo bar baz quo qux'
         self.assertEqual(
-            self.run_function('test.echo', arg=[text])[::-1],
-            self.run_function('test.recho', arg=[text]),
+            self.run_function('test.echo', arg=[text], rem=True)[::-1],
+            self.run_function('test.recho', arg=[text], rem=True),
         )

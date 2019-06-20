@@ -351,6 +351,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         Check that pkg.latest_version returns the latest version of the uninstalled package.
         The package is not installed. Only the package version is checked.
         '''
+        self.remote = True
         grains = self.run_function('grains.items')
         remove = False
         if salt.utils.platform.is_windows():

@@ -95,7 +95,8 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
                              home=HOMEDIR)
         self.assertSaltTrueReturn(ret)
 
-        self.run_function('file.absent', name=HOMEDIR)
+        # must use remote because run_state does, too
+        self.run_function('file.absent', name=HOMEDIR, rem=True)
         ret = self.run_state('user.present', name=self.user_name,
                              home=HOMEDIR)
         self.assertSaltTrueReturn(ret)

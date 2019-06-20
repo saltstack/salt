@@ -9,6 +9,8 @@ from tests.support.case import ModuleCase
 
 
 class KeyModuleTest(ModuleCase):
+    remote = True
+
     def test_key_finger(self):
         '''
         test key.finger to ensure we receive a valid fingerprint

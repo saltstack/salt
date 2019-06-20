@@ -147,6 +147,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the file state
     '''
+    remote = True
+
     def tearDown(self):
         '''
         remove files created in previous tests
@@ -2791,6 +2793,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
 
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
+    remote = IS_WINDOWS
     marker_start = '# start'
     marker_end = '# end'
     content = dedent(six.text_type('''\
@@ -3998,6 +4001,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
             'state.sls',
             mods='issue-49043',
             pillar={'name': name},
+            rem=True,
         )
         log.error("ret = %s", repr(ret))
         diff = '--- \n+++ \n@@ -0,0 +1,3 @@\n'
@@ -4017,6 +4021,8 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
     Uses a local tornado webserver to test http(s) file.managed states with and
     without skip_verify
     '''
+    remote = IS_WINDOWS
+
     @classmethod
     def setUpClass(cls):
         cls.webserver = Webserver()
@@ -4710,6 +4716,8 @@ class WinFileTest(ModuleCase):
     '''
     Test for the file state on Windows
     '''
+    remote = IS_WINDOWS
+
     def setUp(self):
         self.run_state('file.managed', name=WIN_TEST_FILE, makedirs=True, contents='Only a test')
 

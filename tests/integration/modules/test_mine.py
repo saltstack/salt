@@ -15,9 +15,12 @@ class MineTest(ModuleCase):
     '''
     Test the mine system
     '''
+
     def setUp(self):
+        self.remote = True
         self.wait_for_all_jobs()
 
+    @skipIf(True, "WAR ROOM TESTS")
     def test_get(self):
         '''
         test mine.get and mine.update
@@ -28,7 +31,7 @@ class MineTest(ModuleCase):
         self.assertIsNone(
             self.run_function(
                 'mine.update',
-                minion_tgt='sub_minion'
+                minion_tgt='sub_minion',
             )
         )
         # Since the minion has mine_functions defined in its configuration,

@@ -14,6 +14,8 @@ class HandleOrderTest(ModuleCase):
     '''
     Validate that ordering works correctly
     '''
+    remote = True
+
     def test_handle_iorder(self):
         '''
         Test the error with multiple states of the same type

@@ -16,6 +16,8 @@ class RabbitModuleTest(ModuleCase):
     To run these tests, you will need to be able to access the rabbitmqctl
     commands.
     '''
+    remote = True
+
     def test_user_exists(self):
         '''
         Find out whether a user exists.

@@ -8,6 +8,8 @@ from tests.support.case import ModuleCase
 
 
 class DecoratorTest(ModuleCase):
+    remote = True
+
     def test_module(self):
         self.assertTrue(
                 self.run_function(

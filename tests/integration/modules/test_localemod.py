@@ -25,6 +25,8 @@ def _find_new_locale(current_locale):
 @skipIf(salt.utils.platform.is_darwin(), 'locale method is not supported on mac')
 @requires_salt_modules('locale')
 class LocaleModuleTest(ModuleCase):
+    remote = True
+
     def test_get_locale(self):
         locale = self.run_function('locale.get_locale')
         self.assertNotIn('Unsupported platform!', locale)

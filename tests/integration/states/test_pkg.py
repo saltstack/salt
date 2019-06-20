@@ -158,6 +158,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkg.installed state tests
     '''
+    remote = True
+
     def setUp(self):
         '''
         Ensure that we only refresh the first time we run a test

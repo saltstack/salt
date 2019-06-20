@@ -14,6 +14,8 @@ class HandleErrorTest(ModuleCase):
     '''
     Validate that ordering works correctly
     '''
+    remote = True
+
     def test_function_do_not_return_dictionary_type(self):
         '''
         Handling a case when function returns anything but a dictionary type

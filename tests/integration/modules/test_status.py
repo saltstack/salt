@@ -24,10 +24,10 @@ class StatusModuleTest(ModuleCase):
         '''
         status.pid
         '''
-        status_pid = self.run_function('status.pid', ['salt'])
+        status_pid = self.run_function('status.pid', ['salt'], rem=True)
         grab_pids = status_pid.split()[:10]
         random_pid = random.choice(grab_pids)
-        grep_salt = self.run_function('cmd.run', ['ps aux | grep salt'])
+        grep_salt = self.run_function('cmd.run', ['ps aux | grep salt'], rem=True)
         self.assertIn(random_pid, grep_salt)
 
     @skipIf(not salt.utils.platform.is_windows(), 'windows only test')
@@ -43,7 +43,7 @@ class StatusModuleTest(ModuleCase):
         '''
         status.saltmem
         '''
-        ret = self.run_function('status.saltmem')
+        ret = self.run_function('status.saltmem', rem=True)
         self.assertTrue(isinstance(ret, int))
 
     def test_status_diskusage(self):

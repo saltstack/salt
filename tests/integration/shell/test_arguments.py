@@ -16,6 +16,8 @@ import salt.utils.args
 
 @requires_salt_modules('test.ping', 'test.arg')
 class ArgumentTestCase(ModuleCase):
+    remote = True
+
     def test_unsupported_kwarg(self):
         '''
         Test passing a non-supported keyword argument. The relevant code that

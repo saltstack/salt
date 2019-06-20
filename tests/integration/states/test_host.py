@@ -14,6 +14,7 @@ from tests.support.paths import FILES, TMP
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
+import salt.utils.platform
 import salt.utils.files
 import salt.utils.stringutils
 
@@ -24,6 +25,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the host state
     '''
+    remote = salt.utils.platform.is_windows()
 
     def setUp(self):
         shutil.copyfile(os.path.join(FILES, 'hosts'), HFILE)

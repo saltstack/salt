@@ -228,6 +228,7 @@ class BasePillarTest(ModuleCase):
     '''
     @classmethod
     def setUpClass(cls):
+        cls.remote = True
         os.makedirs(PILLAR_BASE)
         with salt.utils.files.fopen(TOP_SLS, 'w') as fp_:
             fp_.write(textwrap.dedent('''\
@@ -292,6 +293,7 @@ class DecryptGPGPillarTest(ModuleCase):
 
     @classmethod
     def setUpClass(cls):
+        cls.remote = True
         try:
             os.makedirs(GPG_HOMEDIR, mode=0o700)
         except Exception:

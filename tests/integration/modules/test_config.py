@@ -68,13 +68,17 @@ class ConfigTest(ModuleCase):
         self.assertEqual(
                 self.run_function(
                     'config.option',
-                    ['master_port']),
+                    ['master_port'],
+                    rem=True,
+                ),
                 64506)
         # pillar conf opt
         self.assertEqual(
                 self.run_function(
                     'config.option',
-                    ['ext_spam']),
+                    ['ext_spam'],
+                    rem=True,
+                ),
                 'eggs')
 
     def test_get(self):

@@ -28,6 +28,8 @@ class WinPKGTest(ModuleCase):
     specific windows software respository tests while
     using the win_pkg module.
     '''
+    remote = True
+
     @destructiveTest
     def test_adding_removing_pkg_sls(self):
         '''

@@ -24,6 +24,7 @@ class HostsModuleTest(ModuleCase):
     '''
 
     maxDiff = None
+    remote = True
 
     def __clean_hosts(self):
         '''

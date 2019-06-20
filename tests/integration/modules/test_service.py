@@ -39,6 +39,7 @@ class ServiceModuleTest(ModuleCase):
             if int(os_release.split('.')[1]) >= 13:
                 self.service_name = 'com.apple.AirPlayXPCHelper'
         elif salt.utils.platform.is_windows():
+            self.remote = True
             self.service_name = 'Spooler'
 
         self.pre_srv_status = self.run_function('service.status', [self.service_name])
@@ -119,7 +120,7 @@ class ServiceModuleTest(ModuleCase):
         '''
         # enable service before test
         srv_name = 'doesnotexist'
-        enable = self.run_function('service.enable', [srv_name])
+        enable = self.run_function('service.enable', [srv_name], rem=True)
         systemd = salt.utils.systemd.booted()
 
         # check service was not enabled

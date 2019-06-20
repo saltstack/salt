@@ -31,6 +31,7 @@ class SystemModuleTest(ModuleCase):
     '''
     Validate the date/time functions in the system module
     '''
+    remote = True
     fmt_str = "%Y-%m-%d %H:%M:%S"
 
     def __init__(self, arg):
@@ -422,11 +423,16 @@ class WinSystemModuleTest(ModuleCase):
         '''
         self.run_function('service.stop', ['w32time'])
         test_time = '10:55'
+        expected_hour = '10'
+        possible_minutes = ('54', '55', '56')
         current_time = self.run_function('system.get_system_time')
         try:
             self.run_function('system.set_system_time', [test_time + ' AM'])
             get_time = self.run_function('system.get_system_time').rsplit(':', 1)[0]
-            self.assertEqual(get_time, test_time)
+            hour, _, minute = get_time.partition(':')
+            self.assertEqual(hour, expected_hour)
+            # Time is an illusion, lunch time, doubly so - Douglas Adams
+            self.assertIn(minute, possible_minutes)
         finally:
             self.run_function('system.set_system_time', [current_time])
             self.run_function('service.start', ['w32time'])

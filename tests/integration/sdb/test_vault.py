@@ -111,5 +111,5 @@ class VaultTestCase(ModuleCase, ShellCase):
 
     @flaky
     def test_config(self):
-        assert self.run_function('sdb.set', uri='sdb://sdbvault/secret/test/test_pillar_sdb/foo', value='bar') is True
-        assert self.run_function('config.get', arg=['test_vault_pillar_sdb']) == 'bar'
+        assert self.run_function('sdb.set', uri='sdb://sdbvault/secret/test/test_pillar_sdb/foo', value='bar', rem=True) is True
+        assert self.run_function('config.get', arg=['test_vault_pillar_sdb'], rem=True) == 'bar'

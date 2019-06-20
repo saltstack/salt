@@ -26,6 +26,8 @@ class SupervisordModuleTest(ModuleCase):
     '''
     Validates the supervisorctl functions.
     '''
+    remote = True
+
     def setUp(self):
         super(SupervisordModuleTest, self).setUp()
 

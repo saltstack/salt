@@ -207,9 +207,9 @@ def flaky(caller=None, condition=True, attempts=4):
         for attempt in range(0, attempts):
             try:
                 return caller(cls)
-            except Exception as exc:
+            except Exception:
                 if attempt >= attempts -1:
-                    raise exc
+                    six.reraise(*sys.exc_info())
                 backoff_time = attempt ** 2
                 log.info(
                     'Found Exception. Waiting %s seconds to retry.',
@@ -1072,7 +1072,14 @@ def requires_system_grains(func):
                     cls.__class__.__name__
                 )
             )
-        return func(cls, grains=cls.run_function('grains.items'))
+        remote = False
+        try:
+            remote = cls.rem
+        except AttributeError:
+            pass  # Not all test classes will define if they want
+                  # to override and use a remote minion. So, they
+                  # don't have to.
+        return func(cls, grains=cls.run_function('grains.items', rem=remote))
     return decorator
 
 

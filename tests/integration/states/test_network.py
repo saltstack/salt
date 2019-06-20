@@ -19,6 +19,8 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate network state module
     '''
+    remote = True
+
     def setUp(self):
         os_family = self.run_function('grains.get', ['os_family'])
         if os_family not in ('RedHat', 'Debian'):

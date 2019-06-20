@@ -19,4 +19,11 @@ class TestGrainsCore(ModuleCase):
         '''
         test if current grains are passed to grains module functions that have a grains argument
         '''
-        self.assertEqual(self.run_function('grains.get', ['custom_grain_test']), 'itworked')
+        self.assertEqual(
+            self.run_function(
+                'grains.get',
+                ['custom_grain_test'],
+                rem=True,
+            ),
+            'itworked',
+        )

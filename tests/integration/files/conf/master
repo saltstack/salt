@@ -128,3 +128,11 @@ peer_run:
   - vault.generate_token
 sdbvault:
   driver: vault
+
+grains:
+  level1:
+    level2: foo
+  test_grain: cheese
+
+config_test:
+  spam: eggs

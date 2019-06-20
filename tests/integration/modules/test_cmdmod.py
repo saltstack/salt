@@ -5,7 +5,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import tempfile
-import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -38,6 +37,8 @@ class CMDModuleTest(ModuleCase):
     '''
     Validate the cmd module
     '''
+    remote = salt.utils.platform.is_windows()
+
     def setUp(self):
         self.runas_usr = 'nobody'
         if salt.utils.platform.is_darwin():
@@ -70,7 +71,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(self.run_function('cmd.run',
                          ['echo {{grains.id}} | awk "{print $1}"'],
                          template='jinja',
-                         python_shell=True), 'minion')
+                         python_shell=True), 'master_minion')
         self.assertEqual(self.run_function('cmd.run',
                          ['grep f'],
                          stdin='one\ntwo\nthree\nfour\nfive\n'), 'four\nfive')
@@ -157,7 +158,7 @@ class CMDModuleTest(ModuleCase):
         cmd_blacklist_glob
         '''
         self.assertEqual(self.run_function('cmd.run',
-                ['bad_command --foo']).rstrip(),
+                ['bad_command --foo'], rem=True).rstrip(),
                 'ERROR: The shell command "bad_command --foo" is not permitted')
 
     def test_script(self):
@@ -174,7 +175,7 @@ class CMDModuleTest(ModuleCase):
         cmd.script_retcode
         '''
         script = 'salt://script.py'
-        ret = self.run_function('cmd.script_retcode', [script])
+        ret = self.run_function('cmd.script_retcode', [script], rem=True)
         self.assertEqual(ret, 0)
 
     def test_script_cwd(self):
@@ -239,9 +240,8 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.exec_code
         '''
-        code = textwrap.dedent('''\
-               import sys
-               sys.stdout.write('cheese')''')
+        # Will probably merge conflict into develop. Use develop
+        code = "import sys; sys.stdout.write('cheese')"
         self.assertEqual(self.run_function('cmd.exec_code',
                                            [AVAILABLE_PYTHON_EXECUTABLE,
                                             code]).rstrip(),
@@ -251,9 +251,8 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.exec_code
         '''
-        code = textwrap.dedent('''\
-               import sys
-               sys.stdout.write(sys.argv[1])''')
+        # Will probably merge conflict into develop. Use develop
+        code = "import sys; sys.stdout.write(sys.argv[1])"
         arg = 'cheese'
         self.assertEqual(self.run_function('cmd.exec_code',
                                            [AVAILABLE_PYTHON_EXECUTABLE,
@@ -265,9 +264,8 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.exec_code
         '''
-        code = textwrap.dedent('''\
-               import sys
-               sys.stdout.write(sys.argv[1])''')
+        # Will probably merge conflict into develop. Use develop
+        code = "import sys; sys.stdout.write(sys.argv[1])"
         arg = 'cheese'
         self.assertEqual(self.run_function('cmd.exec_code',
                                            [AVAILABLE_PYTHON_EXECUTABLE,
@@ -348,7 +346,7 @@ class CMDModuleTest(ModuleCase):
             if not salt.utils.platform.is_windows() \
             else ['dir', 'c:\\']
 
-        error_command = ['thiscommanddoesnotexist']
+        error_command = ['echo to stderr 1>&2']
 
         # cmd.run
         out = self.run_function(
