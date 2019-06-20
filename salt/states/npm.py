@@ -318,11 +318,13 @@ def bootstrap(name, user=None, silent=True):
 
     return ret
 
+
 def no_package_changes(json):
-  try:
-    return not json['added'] and not json['removed'] and not json['updated'] and not json['moved'] and not json['failed']
-  except (TypeError, KeyError):
-    return False
+    try:
+        return not json['added'] and not json['removed'] and not json['updated'] and not json['moved'] and not json['failed']
+    except (TypeError, KeyError):
+        return False
+
 
 def cache_cleaned(name=None,
                   user=None,
