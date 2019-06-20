@@ -434,7 +434,7 @@ class AESReqServerMixin(object):
         # and an empty request comes in
         try:
             pub = salt.crypt.get_rsa_pub_key(pubfn)
-        except (ValueError, IndexError, TypeError) as err:
+        except Exception as err:
             log.error('Corrupt public key "%s": %s', pubfn, err)
             return {'enc': 'clear',
                     'load': {'ret': False}}
