@@ -333,16 +333,11 @@ class SyncClientMixin(object):
                             }
 
             try:
-                self_functions = pycopy.copy(self.functions)
-                salt.utils.lazy.verify_fun(self_functions, fun)
+                salt.utils.lazy.verify_fun(self.functions, fun)
 
                 # Inject some useful globals to *all* the function's global
                 # namespace only once per module-- not per func
-                self_functions.inject_globals.update(func_globals)
-                for loaded_funcs in six.itervalues(self_functions.loaded_modules):
-                    for func in six.itervalues(loaded_funcs):
-                        for global_key, value in six.iteritems(func_globals):
-                            func.__globals__[global_key] = value
+                self.functions.inject_globals.update(func_globals)
 
                 # There are some discrepancies of what a "low" structure is in the
                 # publisher world it is a dict including stuff such as jid, fun,
