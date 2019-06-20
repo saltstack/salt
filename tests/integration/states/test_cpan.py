@@ -13,7 +13,7 @@ import logging
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
@@ -25,19 +25,20 @@ __testcontext__ = {}
 
 
 class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
-    def setUp(self):
+    @requires_system_grains
+    def setUp(self, grains):
         '''
         Ensure that cpan is installed through perl
         '''
         super(CpanStateTest, self).setUp()
         if 'cpan' not in __testcontext__:
-            if __grains__['os'] == 'CentOS':
+            if grains['os'] == 'CentOS':
                 self.run_state('pkg.installed', name='perl-doc')
-                if __grains__['osrelease'] == '7':
+                if grains['osmajorrelease'] == '7':
                     self.run_state('pkg.installed', name='perl-cpan')
-                elif __grains__['osrelease'] == '6':
+                elif grains['osmajorrelease'] == '6':
                     self.run_state('pkg.installed', name='perl-CPAN')
-            elif __grains__['os_family'] in ('Debian', 'Arch'):
+            elif grains['os_family'] in ('Debian', 'Arch'):
                 # It is part of the perl package for these distrobutionss
                 self.run_state('pkg.installed', name='perl')
             else:
