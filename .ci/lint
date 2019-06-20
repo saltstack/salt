@@ -24,6 +24,7 @@ pipeline {
         stage('setup') {
             steps {
                 sh '''
+                git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}
                 # Need -M to detect renames otherwise they are reported as Delete and Add, need -C to detect copies, -C includes -M
                 # -M is on by default in git 2.9+
                 git diff --name-status -l99999 -C "origin/${SALT_TARGET_BRANCH}" > file-list-status.log
