@@ -12,6 +12,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import python libs
 import os
 import random
+import logging
 
 # Import salt libs
 import salt.utils.data
@@ -26,6 +27,8 @@ from salt.ext.six.moves import range
 TAG = '# Lines below here are managed by Salt, do not edit\n'
 SALT_CRON_IDENTIFIER = 'SALT_CRON_IDENTIFIER'
 SALT_CRON_NO_IDENTIFIER = 'NO ID SET'
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -208,12 +211,23 @@ def write_cron_file(user, path):
 
         Some OS' do not support specifying user via the `crontab` command i.e. (Solaris, AIX)
     '''
-    if _check_instance_uid_match(user) or __grains__.get('os_family') in ('Solaris', 'AIX'):
+    # Some OS' do not support specifying user via the `crontab` command
+    if __grains__.get('os_family') in ('Solaris', 'AIX'):
         return __salt__['cmd.retcode'](_get_cron_cmdstr(path),
                                        runas=user,
                                        python_shell=False) == 0
-    else:
+    # If Salt is running from same user as requested in cron module we don't need any user switch
+    elif _check_instance_uid_match(user):
+        return __salt__['cmd.retcode'](_get_cron_cmdstr(path),
+                                       python_shell=False) == 0
+    # If Salt is running from root user it could modify any user's crontab
+    elif _check_instance_uid_match('root'):
         return __salt__['cmd.retcode'](_get_cron_cmdstr(path, user),
+                                       python_shell=False) == 0
+    # Edge cases here, let's try do a runas
+    else:
+        return __salt__['cmd.retcode'](_get_cron_cmdstr(path),
+                                       runas=user,
                                        python_shell=False) == 0
 
 
@@ -233,12 +247,23 @@ def write_cron_file_verbose(user, path):
 
         Some OS' do not support specifying user via the `crontab` command i.e. (Solaris, AIX)
     '''
-    if _check_instance_uid_match(user) or __grains__.get('os_family') in ('Solaris', 'AIX'):
+    # Some OS' do not support specifying user via the `crontab` command
+    if __grains__.get('os_family') in ('Solaris', 'AIX'):
         return __salt__['cmd.run_all'](_get_cron_cmdstr(path),
                                        runas=user,
                                        python_shell=False)
-    else:
+    # If Salt is running from same user as requested in cron module we don't need any user switch
+    elif _check_instance_uid_match(user):
+        return __salt__['cmd.run_all'](_get_cron_cmdstr(path),
+                                       python_shell=False)
+    # If Salt is running from root user it could modify any user's crontab
+    elif _check_instance_uid_match('root'):
         return __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
+                                       python_shell=False)
+    # Edge cases here, let's try do a runas
+    else:
+        return __salt__['cmd.run_all'](_get_cron_cmdstr(path),
+                                       runas=user,
                                        python_shell=False)
 
 
@@ -248,7 +273,7 @@ def _write_cron_lines(user, lines):
     '''
     lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
     path = salt.utils.files.mkstemp()
-    if _check_instance_uid_match(user) or __grains__.get('os_family') in ('Solaris', 'AIX'):
+    if _check_instance_uid_match('root') or __grains__.get('os_family') in ('Solaris', 'AIX'):
         # In some cases crontab command should be executed as user rather than root
         with salt.utils.files.fpopen(path, 'w+', uid=__salt__['file.user_to_uid'](user), mode=0o600) as fp_:
             fp_.writelines(lines)
@@ -284,7 +309,8 @@ def raw_cron(user):
 
         salt '*' cron.raw_cron root
     '''
-    if _check_instance_uid_match(user) or __grains__.get('os_family') in ('Solaris', 'AIX'):
+    # Some OS' do not support specifying user via the `crontab` command
+    if __grains__.get('os_family') in ('Solaris', 'AIX'):
         cmd = 'crontab -l'
         # Preserve line endings
         lines = salt.utils.data.decode(
@@ -292,17 +318,35 @@ def raw_cron(user):
                                        runas=user,
                                        ignore_retcode=True,
                                        rstrip=False,
-                                       python_shell=False)
-        ).splitlines(True)
-    else:
+                                       python_shell=False)).splitlines(True)
+    # If Salt is running from same user as requested in cron module we don't need any user switch
+    elif _check_instance_uid_match(user):
+        cmd = 'crontab -l'
+        # Preserve line endings
+        lines = salt.utils.data.decode(
+            __salt__['cmd.run_stdout'](cmd,
+                                       ignore_retcode=True,
+                                       rstrip=False,
+                                       python_shell=False)).splitlines(True)
+    # If Salt is running from root user it could modify any user's crontab
+    elif _check_instance_uid_match('root'):
         cmd = 'crontab -u {0} -l'.format(user)
         # Preserve line endings
         lines = salt.utils.data.decode(
             __salt__['cmd.run_stdout'](cmd,
                                        ignore_retcode=True,
                                        rstrip=False,
-                                       python_shell=False)
-        ).splitlines(True)
+                                       python_shell=False)).splitlines(True)
+    # Edge cases here, let's try do a runas
+    else:
+        cmd = 'crontab -l'
+        # Preserve line endings
+        lines = salt.utils.data.decode(
+            __salt__['cmd.run_stdout'](cmd,
+                                       runas=user,
+                                       ignore_retcode=True,
+                                       rstrip=False,
+                                       python_shell=False)).splitlines(True)
 
     if lines and lines[0].startswith('# DO NOT EDIT THIS FILE - edit the master and reinstall.'):
         del lines[0:3]
@@ -403,6 +447,36 @@ def list_tab(user):
 
 # For consistency's sake
 ls = salt.utils.functools.alias_function(list_tab, 'ls')
+
+
+def get_entry(user, identifier=None, cmd=None):
+    '''
+    Return the specified entry from user's crontab.
+    identifier will be used if specified, otherwise will lookup cmd
+    Either identifier or cmd should be specified.
+
+    user:
+        User's crontab to query
+
+    identifier:
+        Search for line with identifier
+
+    cmd:
+        Search for cron line with cmd
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cron.identifier_exists root identifier=task1
+    '''
+    cron_entries = list_tab(user).get('crons', False)
+    for cron_entry in cron_entries:
+        if identifier and cron_entry.get('identifier') == identifier:
+            return cron_entry
+        elif cmd and cron_entry.get('cmd') == cmd:
+            return cron_entry
+    return False
 
 
 def set_special(user,
