@@ -1142,7 +1142,7 @@ def deploy_windows(host,
         # Shell out to winexe to ensure salt-minion service started
         if use_winrm:
             winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
-            time.sleep(5)
+            time.sleep(10)
             winrm_cmd(winrm_session, 'sc', ['start', 'salt-minion'])
         else:
             stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
@@ -1153,7 +1153,7 @@ def deploy_windows(host,
             )
             win_cmd(stop_cmd, logging_command=logging_stop_cmd)
 
-            time.sleep(5)
+            time.sleep(10)
 
             start_cmd = 'winexe {0} "sc start salt-minion"'.format(creds)
             logging_start_cmd = 'winexe {0} "sc start salt-minion"'.format(
