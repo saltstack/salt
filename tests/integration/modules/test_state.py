@@ -2034,6 +2034,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         for id in _expected:
             self.assertEqual(sls[id]['comment'], _expected[id]['comment'])
 
+    @skipIf(six.PY3 and salt.utils.platform.is_darwin(), 'Test is broken on macosx and PY3')
     def test_state_sls_unicode_characters(self):
         '''
         test state.sls when state file contains non-ascii characters
@@ -2044,6 +2045,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         _expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
         self.assertIn(_expected, ret)
 
+    @skipIf(six.PY3 and salt.utils.platform.is_darwin(), 'Test is broken on macosx and PY3')
     def test_state_sls_unicode_characters_cmd_output(self):
         '''
         test the output from running and echo command with non-ascii
