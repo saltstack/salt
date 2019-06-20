@@ -320,6 +320,8 @@ def bootstrap(name, user=None, silent=True):
 
 
 def no_package_changes(json):
+    if not hasattr(json, 'get'):
+        return bool(json)
     return not any(json.get(change, None) for change in ('added', 'failed', 'moved', 'removed', 'updated'))
 
 
