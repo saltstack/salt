@@ -47,6 +47,7 @@ if salt.utils.platform.is_windows():
         import salt.utils.winapi
     else:
         import clr
+        clr.AddReference('System.Net')
         from System.Net import NetworkInformation
 else:
     USE_WMI = False
@@ -227,7 +228,6 @@ def _get_ip_wins_info(i_face):
 
 
 def _get_network_interfaces():
-    clr.AddReference('System.Net')
     return NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
 
 
@@ -239,7 +239,6 @@ def get_interface_info_dot_net():
     Returns:
         dict: A dictionary of information about all interfaces on the system
     '''
-    clr.AddReference('System.Net')
     interfaces = _get_network_interfaces()
 
     int_dict = {}
