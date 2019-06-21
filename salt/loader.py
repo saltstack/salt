@@ -1706,7 +1706,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # enforce depends
         try:
-            Depends.enforce_dependencies(self._dict, self.tag)
+            Depends.enforce_dependencies(self._dict, self.tag, name)
         except RuntimeError as exc:
             log.info(
                 'Depends.enforce_dependencies() failed for the following '

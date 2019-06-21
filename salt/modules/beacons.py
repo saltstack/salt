@@ -614,7 +614,7 @@ def reset(**kwargs):
     ret = {'comment': [],
            'result': True}
 
-    if 'test' in kwargs and kwargs['test']:
+    if kwargs.get('test'):
         ret['comment'] = 'Beacons would be reset.'
     else:
         try:
@@ -629,7 +629,7 @@ def reset(**kwargs):
                     ret['comment'] = 'Beacon configuration reset.'
                 else:
                     ret['result'] = False
-                    ret['comment'] = event_ret['comment']
+                    ret['comment'] = 'Something went wrong.'
                 return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
