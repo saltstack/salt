@@ -12,7 +12,6 @@ import weakref
 import traceback
 import collections
 import os
-import copy as pycopy
 
 # Import Salt libs
 import salt.exceptions
