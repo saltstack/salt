@@ -54,6 +54,9 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     '''
+
+    _file_client = None
+
     def __init__(self, opts, saltenv='base', encoding='utf-8',
                  pillar_rend=False):
         self.opts = opts
@@ -69,7 +72,6 @@ class SaltCacheLoader(BaseLoader):
             self.searchpath = [os.path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
         self.cached = []
-        self._file_client = None
         # Instantiate the fileclient
         self.file_client()
 
@@ -77,10 +79,10 @@ class SaltCacheLoader(BaseLoader):
         '''
         Return a file client. Instantiates on first call.
         '''
-        if not self._file_client:
-            self._file_client = salt.fileclient.get_file_client(
+        if not SaltCacheLoader._file_client:
+            SaltCacheLoader._file_client = salt.fileclient.get_file_client(
                 self.opts, self.pillar_rend)
-        return self._file_client
+        return SaltCacheLoader._file_client
 
     def cache_file(self, template):
         '''
