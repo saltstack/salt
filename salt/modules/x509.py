@@ -1785,13 +1785,13 @@ def verify_crl(crl, cert):
     crltext = _text_or_file(crl)
     crltext = get_pem_entry(crltext, pem_type='X509 CRL')
     crltempfile = tempfile.NamedTemporaryFile()
-    crltempfile.write(salt.utils.stringutils.to_str(crltext))
+    crltempfile.write(salt.utils.stringutils.to_bytes(crltext, encoding='ascii'))
     crltempfile.flush()
 
     certtext = _text_or_file(cert)
     certtext = get_pem_entry(certtext, pem_type='CERTIFICATE')
     certtempfile = tempfile.NamedTemporaryFile()
-    certtempfile.write(salt.utils.stringutils.to_str(certtext))
+    certtempfile.write(salt.utils.stringutils.to_bytes(certtext, encoding='ascii'))
     certtempfile.flush()
 
     cmd = ('openssl crl -noout -in {0} -CAfile {1}'.format(
