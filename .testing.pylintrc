@@ -269,7 +269,10 @@ additional-builtins=__opts__,
   __serializers__,
   __reg__,
   __executors__,
-  __events__
+  __events__,
+  __jid__,
+  __user__,
+  __tag__
 
 
 # List of strings which can identify a callback function by name. A callback
