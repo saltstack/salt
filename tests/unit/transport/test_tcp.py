@@ -333,11 +333,12 @@ class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         test message client cleanup on close
         '''
+        orig_loop = tornado.ioloop.IOLoop()
+        orig_loop.make_current()
         opts = self.get_temp_config('master')
         client = SaltMessageClient(opts, 'localhost', self.port)
 
         # Mock the io_loop's stop method so we know when it has been called.
-        orig_loop = tornado.ioloop.IOLoop.current()
         orig_loop.real_stop = orig_loop.stop
         orig_loop.stop_called = False
 
