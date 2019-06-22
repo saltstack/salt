@@ -27,11 +27,12 @@ def match(tgt, opts=None):
         opts = __opts__
     nodegroups = opts.get('nodegroups', {})
     matchers = salt.loader.matchers(opts)
+    minion_id = opts.get('minion_id', __opts__['id'])
 
     if not isinstance(tgt, six.string_types) and not isinstance(tgt, (list, tuple)):
         log.error('Compound target received that is neither string, list nor tuple')
         return False
-    log.debug('compound_match: %s ? %s', opts['id'], tgt)
+    log.debug('compound_match: %s ? %s', minion_id, tgt)
     ref = {'G': 'grain',
            'P': 'grain_pcre',
            'I': 'pillar',
@@ -104,7 +105,7 @@ def match(tgt, opts=None):
             results.append(six.text_type(matchers['glob_match.match'](word)))
 
     results = ' '.join(results)
-    log.debug('compound_match %s ? "%s" => "%s"', opts['id'], tgt, results)
+    log.debug('compound_match %s ? "%s" => "%s"', minion_id, tgt, results)
     try:
         return eval(results)  # pylint: disable=W0123
     except Exception:

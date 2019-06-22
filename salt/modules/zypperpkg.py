@@ -2182,17 +2182,60 @@ def owner(*paths, **kwargs):
     return __salt__['lowpkg.owner'](*paths, **kwargs)
 
 
-def _get_patterns(installed_only=None, root=None):
-    '''
-    List all known patterns in repos.
-    '''
+def _get_visible_patterns(root=None):
+    '''Get all available patterns in the repo that are visible.'''
     patterns = {}
-    for element in __zypper__(root=root).nolock.xml.call('se', '-t', 'pattern').getElementsByTagName('solvable'):
+    search_patterns = __zypper__(root=root).nolock.xml.call('se', '-t', 'pattern')
+    for element in search_patterns.getElementsByTagName('solvable'):
         installed = element.getAttribute('status') == 'installed'
-        if (installed_only and installed) or not installed_only:
-            patterns[element.getAttribute('name')] = {
-                'installed': installed,
-                'summary': element.getAttribute('summary'),
+        patterns[element.getAttribute('name')] = {
+            'installed': installed,
+            'summary': element.getAttribute('summary'),
+        }
+    return patterns
+
+
+def _get_installed_patterns(root=None):
+    '''
+    List all installed patterns.
+    '''
+    # Some patterns are non visible (`pattern-visible()` capability is
+    # not set), so they cannot be found via a normal `zypper se -t
+    # pattern`.
+    #
+    # Also patterns are not directly searchable in the local rpmdb.
+    #
+    # The proposed solution is, first search all the packages that
+    # containst the 'pattern()' capability, and deduce the name of the
+    # pattern from this capability.
+    #
+    # For example:
+    #
+    #   'pattern() = base' -> 'base'
+    #   'pattern() = microos_defaults' -> 'microos_defaults'
+
+    def _pattern_name(capability):
+        '''Return from a suitable capability the pattern name.'''
+        return capability.split('=')[-1].strip()
+
+    cmd = ['rpm']
+    if root:
+        cmd.extend(['--root', root])
+    cmd.extend(['-q', '--provides', '--whatprovides', 'pattern()'])
+    # If no `pattern()`s are found, RPM returns `1`, but for us is not
+    # a real error.
+    output = __salt__['cmd.run'](cmd, ignore_retcode=True)
+
+    installed_patterns = [_pattern_name(line) for line in output.splitlines()
+                          if line.startswith('pattern() = ')]
+
+    patterns = {k: v for k, v in _get_visible_patterns(root=root).items() if v['installed']}
+
+    for pattern in installed_patterns:
+        if pattern not in patterns:
+            patterns[pattern] = {
+                'installed': True,
+                'summary': 'Non-visible pattern',
             }
 
     return patterns
@@ -2219,7 +2262,7 @@ def list_patterns(refresh=False, root=None):
     if refresh:
         refresh_db(root)
 
-    return _get_patterns(root=root)
+    return _get_visible_patterns(root=root)
 
 
 def list_installed_patterns(root=None):
@@ -2235,7 +2278,7 @@ def list_installed_patterns(root=None):
 
         salt '*' pkg.list_installed_patterns
     '''
-    return _get_patterns(installed_only=True, root=root)
+    return _get_installed_patterns(root=root)
 
 
 def search(criteria, refresh=False, **kwargs):

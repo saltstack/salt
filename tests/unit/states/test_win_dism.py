@@ -26,7 +26,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
         '''
         expected = {
             'comment': "Installed Capa2",
-            'changes': {'capability': {'new': 'Capa2'},
+            'changes': {'capability': {'new': ['Capa2']},
                         'retcode': 0},
             'name': 'Capa2',
             'result': True}
@@ -106,7 +106,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
         '''
         expected = {
             'comment': "Removed Capa2",
-            'changes': {'capability': {'old': 'Capa2'},
+            'changes': {'capability': {'old': ['Capa2']},
                         'retcode': 0},
             'name': 'Capa2',
             'result': True}
@@ -184,7 +184,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
         '''
         expected = {
             'comment': "Installed Feat2",
-            'changes': {'feature': {'new': 'Feat2'},
+            'changes': {'feature': {'new': ['Feat2']},
                         'retcode': 0},
             'name': 'Feat2',
             'result': True}
@@ -263,7 +263,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
         '''
         expected = {
             'comment': "Removed Feat2",
-            'changes': {'feature': {'old': 'Feat2'},
+            'changes': {'feature': {'old': ['Feat2']},
                         'retcode': 0},
             'name': 'Feat2',
             'result': True}
@@ -342,7 +342,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
         '''
         expected = {
             'comment': "Installed Pack2",
-            'changes': {'package': {'new': 'Pack2'},
+            'changes': {'package': {'new': ['Pack2']},
                         'retcode': 0},
             'name': 'Pack2',
             'result': True}
@@ -434,7 +434,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
         '''
         expected = {
             'comment': "Removed Pack2",
-            'changes': {'package': {'old': 'Pack2'},
+            'changes': {'package': {'old': ['Pack2']},
                         'retcode': 0},
             'name': 'Pack2',
             'result': True}
