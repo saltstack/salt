@@ -6,7 +6,7 @@ This module renders highstate configuration into a more human readable format.
 
 How it works:
 
-`highstate or lowstate` data is parsed with a `processor` this defaults to `highstate_doc.processor_markdown`.
+`highstate or lowstate` data is parsed with a `proccesser` this defaults to `highstate_doc.proccesser_markdown`.
 The processed data is passed to a `jinja` template that builds up the document content.
 
 configuration: Pillar
@@ -31,8 +31,8 @@ configuration: Pillar
         # limit size of files that can be included in doc (10000 bytes)
         max_render_file_size: 10000
 
-        # advanced option to set a custom lowstate processor
-        processor: highstate_doc.processor_markdown
+        # advanced option to set a custom lowstate proccesser
+        proccesser: highstate_doc.proccesser_markdown
 
 
 State example
@@ -46,7 +46,7 @@ State example
             - contents: |
                 example `highstate_doc.note`
                 ------------------
-                This state does not do anything to the system! It is only used by a `processor`
+                This state does not do anything to the system! It is only used by a `proccesser`
                 you can use `requisites` and `order` to move your docs around the rendered file.
 
     {{sls}} a file we do not want in the doc !doc_skip:
@@ -146,9 +146,9 @@ If you wish to customize the document format:
 
 .. code-block:: none
 
-    # you could also create a new `processor` for perhaps reStructuredText
+    # you could also create a new `proccesser` for perhaps reStructuredText
     # highstate_doc.config:
-    #     processor: doc_custom.processor_rst
+    #     proccesser: doc_custom.proccesser_rst
 
     # example `salt://makereadme.jinja`
     """
@@ -380,7 +380,7 @@ def _get_config(**kwargs):
         'filter_id_regex': ['.*!doc_skip'],
         'filter_function_regex': [],
         'replace_text_regex': {},
-        'processor': 'highstate_doc.processor_markdown',
+        'proccesser': 'highstate_doc.proccesser_markdown',
         'max_render_file_size': 10000,
         'note': None
     }
@@ -495,7 +495,7 @@ def process_lowstates(**kwargs):
     '''
     states = []
     config = _get_config(**kwargs)
-    processor = config.get('processor')
+    proccesser = config.get('proccesser')
     ls = __salt__['state.show_lowstate']()
 
     if not isinstance(ls, list):
@@ -508,7 +508,7 @@ def process_lowstates(**kwargs):
     for s in ls:
         if _blacklist_filter(s, config):
             continue
-        doc = __salt__[processor](s, config, **kwargs)
+        doc = __salt__[proccesser](s, config, **kwargs)
         states.append(doc)
     return states
 
@@ -589,7 +589,7 @@ def _format_markdown_requisite(state, stateid, makelink=True):
         return ' * `{0}`\n'.format(fmt_id)
 
 
-def processor_markdown(lowstate_item, config, **kwargs):
+def proccesser_markdown(lowstate_item, config, **kwargs):
     '''
     Takes low state data and returns a dict of processed data
     that is by default used in a jinja template when rendering a markdown highstate_doc.

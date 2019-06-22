@@ -1557,7 +1557,7 @@ def reopen(zpool):
         salt '*' zpool.reopen myzpool
 
     '''
-    ## reopen all devices for a pool
+    ## reopen all devices from a pool
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zpool_command'](
             command='reopen',

@@ -43,9 +43,9 @@ def _parse_dbus_locale():
     Get the 'System Locale' parameters from dbus
     '''
     bus = dbus.SystemBus()
-    localedbus = bus.get_object('org.freedesktop.locale1',
+    locale_dbus = bus.get_object('org.freedesktop.locale1',
                              '/org/freedesktop/locale1')
-    properties = dbus.Interface(localedbus, 'org.freedesktop.DBus.Properties')
+    properties = dbus.Interface(locale_dbus, 'org.freedesktop.DBus.Properties')
     system_locale = properties.Get('org.freedesktop.locale1', 'Locale')
 
     ret = {}

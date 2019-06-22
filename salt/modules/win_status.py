@@ -375,11 +375,11 @@ def procs(count=False):
         wmi_obj = wmi.WMI()
         processes = wmi_obj.win32_process()
 
-    #this short circuit's the function to get a short simple proc count.
+    # this short circuit's the function to get a short simple proc count.
     if count:
         return len(processes)
 
-    #a proper run of the function, creating a nonsensically long out put.
+    # a proper run of the function, creating a nonsensically long output.
     process_info = {}
     for proc in processes:
         process_info[proc.ProcessId] = _get_process_info(proc)

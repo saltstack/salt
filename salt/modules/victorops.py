@@ -200,7 +200,7 @@ def create_event(message_type=None, routing_key='everybody', **kwargs):
             if isinstance(kwargs[kwarg], keyword_args[kwarg]):
                 data[kwarg] = kwargs[kwarg]
             else:
-                # Should this failed on the wrong type.
+                # Should this fail on the wrong type.
                 log.error('Wrong type, skipping %s', kwarg)
 
     status, result = _query(action='alert',
