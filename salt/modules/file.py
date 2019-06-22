@@ -23,7 +23,6 @@ import re
 import shutil
 import stat
 import string
-import subprocess
 import sys
 import tempfile
 import time
@@ -2759,11 +2758,20 @@ def blockreplace(path,
                 backup_path = '{0}{1}'.format(path, backup)
                 shutil.copy2(path, backup_path)
                 # copy2 does not preserve ownership
-                check_perms(backup_path,
-                        None,
-                        perms['user'],
-                        perms['group'],
-                        perms['mode'])
+                if salt.utils.platform.is_windows():
+                    # This function resides in win_file.py and will be available
+                    # on Windows. The local function will be overridden
+                    # pylint: disable=E1120,E1123
+                    check_perms(path=backup_path,
+                                ret=None,
+                                owner=perms['user'])
+                    # pylint: enable=E1120,E1123
+                else:
+                    check_perms(name=backup_path,
+                                ret=None,
+                                user=perms['user'],
+                                group=perms['group'],
+                                mode=perms['mode'])
 
             # write new content in the file while avoiding partial reads
             try:
@@ -2774,11 +2782,20 @@ def blockreplace(path,
                 fh_.close()
 
             # this may have overwritten file attrs
-            check_perms(path,
-                    None,
-                    perms['user'],
-                    perms['group'],
-                    perms['mode'])
+            if salt.utils.platform.is_windows():
+                # This function resides in win_file.py and will be available
+                # on Windows. The local function will be overridden
+                # pylint: disable=E1120,E1123
+                check_perms(path=path,
+                            ret=None,
+                            owner=perms['user'])
+                # pylint: enable=E1120,E1123
+            else:
+                check_perms(path,
+                            ret=None,
+                            user=perms['user'],
+                            group=perms['group'],
+                            mode=perms['mode'])
 
         if show_changes:
             return diff
@@ -5397,7 +5414,7 @@ def manage_file(name,
             # on Windows. The local function will be overridden
             # pylint: disable=E1120,E1121,E1123
             ret = check_perms(
-               path=name,
+                path=name,
                 ret=ret,
                 owner=kwargs.get('win_owner'),
                 grant_perms=kwargs.get('win_perms'),
