@@ -74,6 +74,9 @@ else:
     FILEPILLARDEF = '/tmp/filepillar-defaultvalue'
     FILEPILLARGIT = '/tmp/filepillar-bar'
 
+TEST_SYSTEM_USER = 'test_system_user'
+TEST_SYSTEM_GROUP = 'test_system_group'
+
 
 def _test_managed_file_mode_keep_helper(testcase, local=False):
     '''
@@ -2300,6 +2303,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual([salt.utils.stringutils.to_str(line) for line in expected], contents)
 
     @with_tempdir()
+    @skipIf(salt.utils.platform.is_darwin() and six.PY2, 'This test hangs on OS X on Py2')
     def test_issue_11003_immutable_lazy_proxy_sum(self, base_dir):
         # causes the Import-Module ServerManager error on Windows
         template_path = os.path.join(TMP_STATE_TREE, 'issue-11003.sls')
@@ -2343,7 +2347,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(template_path, 'w') as fp_:
             fp_.write(os.linesep.join(sls_template).format(testcase_filedest))
 
-        ret = self.run_function('state.sls', mods='issue-11003')
+        ret = self.run_function('state.sls', mods='issue-11003', timeout=600)
         for name, step in six.iteritems(ret):
             self.assertSaltTrueReturn({name: step})
         with salt.utils.files.fopen(testcase_filedest) as fp_:
@@ -2476,7 +2480,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
-    @with_system_user_and_group('user12209', 'group12209',
+    @with_system_user_and_group(TEST_SYSTEM_USER, TEST_SYSTEM_GROUP,
                                 on_existing='delete', delete=True)
     @with_tempdir()
     def test_issue_12209_follow_symlinks(self, tempdir, user, group):
@@ -2512,7 +2516,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
-    @with_system_user_and_group('user12209', 'group12209',
+    @with_system_user_and_group(TEST_SYSTEM_USER, TEST_SYSTEM_GROUP,
                                 on_existing='delete', delete=True)
     @with_tempdir()
     def test_issue_12209_no_follow_symlinks(self, tempdir, user, group):
@@ -2637,7 +2641,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
-    @with_system_user_and_group('test_setuid_user', 'test_setuid_group',
+    @with_system_user_and_group(TEST_SYSTEM_USER, TEST_SYSTEM_GROUP,
                                 on_existing='delete', delete=True)
     def test_owner_after_setuid(self, user, group):
 
@@ -2694,7 +2698,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
-    @with_system_user_and_group('user12209', 'group12209',
+    @with_system_user_and_group(TEST_SYSTEM_USER, TEST_SYSTEM_GROUP,
                                 on_existing='delete', delete=True)
     @with_tempdir()
     def test_issue_48336_file_managed_mode_setuid(self, tempdir, user, group):
