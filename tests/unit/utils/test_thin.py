@@ -495,6 +495,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.zipfile', MagicMock())
     @patch('salt.utils.thin.os.getcwd', MagicMock())
     @patch('salt.utils.thin.os.chdir', MagicMock())
+    @patch('salt.utils.thin.os.close', MagicMock())
     @patch('salt.utils.thin.tempfile.mkdtemp', MagicMock())
     @patch('salt.utils.thin.tempfile.mkstemp', MagicMock(return_value=(3, ".temporary")))
     @patch('salt.utils.thin.shutil', MagicMock())
