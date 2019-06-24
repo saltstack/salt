@@ -33,7 +33,7 @@ class CacheFactory(object):
     '''
     @classmethod
     def factory(cls, backend, ttl, *args, **kwargs):
-        log.info('Factory backend: %s', backend)
+        log.debug('Factory backend: %s', backend)
         if backend == 'memory':
             return CacheDict(ttl, *args, **kwargs)
         elif backend == 'disk':

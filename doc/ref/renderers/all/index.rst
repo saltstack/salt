@@ -10,6 +10,7 @@ renderer modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    aws_kms
     cheetah
     dson
     genshi
@@ -20,6 +21,7 @@ renderer modules
     json5
     mako
     msgpack
+    nacl
     pass
     py
     pydsl

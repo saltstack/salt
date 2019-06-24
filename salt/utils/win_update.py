@@ -25,6 +25,16 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'win_update'
+
+
+def __virtual__():
+    if not salt.utils.platform.is_windows():
+        return False, 'win_update: Not available on Windows'
+    if not HAS_PYWIN32:
+        return False, 'win_update: Missing pywin32'
+    return __virtualname__
+
 
 class Updates(object):
     '''

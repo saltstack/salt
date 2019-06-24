@@ -1,56 +1,92 @@
-pipeline {
-    agent {
-        label 'docs'
-    }
-    options {
-        timestamps()
-        ansiColor('xterm')
-        timeout(time: 2, unit: 'HOURS')
-    }
-    environment {
-        PYENV_ROOT = "/usr/local/pyenv"
-        PATH = "$PYENV_ROOT/bin:$PATH"
-        PY_COLORS = 1
-    }
-    stages {
-        stage('github-pending') {
-            steps {
-                githubNotify credentialsId: 'test-jenkins-credentials',
-                    description: 'Testing docs...',
-                    status: 'PENDING',
-                    context: "jenkins/pr/docs"
+// Define the maximum time, in hours, that a test run should run for
+def global_timeout = 2
+
+properties([
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
+    [
+        $class: 'ScannerJobProperty', doNotScan: false
+    ],
+    [
+        $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
+    ],
+])
+
+def shell_header
+
+timeout(time: global_timeout, unit: 'HOURS') {
+    node('docs') {
+        ansiColor('xterm') {
+            timestamps {
+                try {
+                    // Set the GH status even before cloning the repo
+                    if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                        stage('github-pending') {
+                            githubNotify credentialsId: 'test-jenkins-credentials',
+                                description: 'Testing docs...',
+                                status: 'PENDING',
+                                context: "jenkins/pr/docs"
+                        }
+                        shell_header = 'export PYENV_ROOT="/usr/local/pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"'
+                    } else {
+                        shell_header = ''
+                    }
+                    // Checkout the repo
+                    stage('checkout-scm') {
+                        cleanWs notFailBuild: true
+                        checkout scm
+                    }
+
+                    // Setup the kitchen required bundle
+                    stage('Setup') {
+                        sh shell_header + '''
+                        eval "$(pyenv init -)"
+                        pyenv --version
+                        pyenv install --skip-existing 2.7.15
+                        pyenv shell 2.7.15
+                        python --version
+                        pip install -U https://github.com/s0undt3ch/nox/archive/hotfix/py2.zip#egg=Nox==2018.10.17
+                        nox --version
+                        '''
+                    }
+
+                    stage('Build') {
+                        sh shell_header + '''
+                        eval "$(pyenv init -)"
+                        pyenv shell 2.7.15
+                        nox -e docs
+                        '''
+                        archiveArtifacts artifacts: 'doc/doc-archive.tar.gz'
+                    }
+                } catch (Exception e) {
+                    currentBuild.result = 'FAILURE'
+                } finally {
+                    cleanWs notFailBuild: true
+                    if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
+                        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                            githubNotify credentialsId: 'test-jenkins-credentials',
+                                description: 'The docs job has passed',
+                                status: 'SUCCESS',
+                                context: "jenkins/pr/docs"
+                        }
+                    } else {
+                        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                            githubNotify credentialsId: 'test-jenkins-credentials',
+                                description: 'The docs job has failed',
+                                status: 'FAILURE',
+                                context: "jenkins/pr/docs"
+                        }
+                        try {
+                            slackSend channel: "#jenkins-prod-pr",
+                                color: '#FF0000',
+                                message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                        } catch (Exception e) {
+                            sh 'echo Failed to send the Slack notification'
+                        }
+                    }
+                }
             }
-        }
-        stage('setup') {
-            steps {
-                sh 'eval "$(pyenv init -)"; pyenv install 2.7.14 || echo "We already have this python."; pyenv local 2.7.14; pyenv shell 2.7.14'
-                sh 'eval "$(pyenv init -)"; pip install sphinx -e .'
-            }
-        }
-        stage('build') {
-            steps {
-                sh 'eval "$(pyenv init -)"; make SPHINXOPTS="-W" -C doc clean html'
-            }
-        }
-    }
-    post {
-        always {
-            cleanWs()
-        }
-        success {
-            githubNotify credentialsId: 'test-jenkins-credentials',
-                description: 'The docs job has passed',
-                status: 'SUCCESS',
-                context: "jenkins/pr/docs"
-        }
-        failure {
-            githubNotify credentialsId: 'test-jenkins-credentials',
-                description: 'The docs job has failed',
-                status: 'FAILURE',
-                context: "jenkins/pr/docs"
-            slackSend channel: "#jenkins-prod-pr",
-                color: '#FF0000',
-                message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
         }
     }
 }
+
+// vim: ft=groovy

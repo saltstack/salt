@@ -58,6 +58,24 @@ Jinja filter`_:
         - context:
             data: {{ data|tojson }}
 
+Another example where the new filter needs to be used is the following state example:
+
+.. code-block:: jinja
+
+    grafana_packages:
+      pkg.installed:
+      - names: {{ server.pkgs }}
+
+This will fail when pkgs is a list or dictionary. You will need to update the state:
+
+.. code-block:: jinja
+
+    grafana_packages:
+      pkg.installed:
+      - names: {{ server.pkgs|tojson }}
+
+This test case has also been tested with the ``yaml`` and ``json`` filters successfully.
+
 .. note::
     This filter was added in Jinja 2.9. However, fear not! The 2018.3.3 release
     added a ``tojson`` filter which will be used if this filter is not already
