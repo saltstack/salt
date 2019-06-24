@@ -317,7 +317,7 @@ def list_jobs(ext_source=None,
                '\'{0}\' returner function not implemented yet.'.format(fun)
             )
         mret = mminion.returners['{0}.get_jids_native'.format(returner)](
-                job_filter = {
+                job_filter={
                     'search_metadata': search_metadata,
                     'search_target': search_target,
                     'search_function': search_function,
@@ -359,29 +359,22 @@ def list_jobs(ext_source=None,
                         if fnmatch.fnmatch(ret[item]['Function'], key):
                             _match = True
 
-            if start_time and _match:
+            if (start_time or end_time) and _match:
                 _match = False
                 if DATEUTIL_SUPPORT:
-                    parsed_start_time = dateutil_parser.parse(start_time)
-                    _start_time = dateutil_parser.parse(ret[item]['StartTime'])
-                    if _start_time >= parsed_start_time:
-                        _match = True
+                    if start_time:
+                        parsed_start_time = dateutil_parser.parse(start_time)
+                        _start_time = dateutil_parser.parse(ret[item]['StartTime'])
+                        if _start_time >= parsed_start_time:
+                            _match = True
+                    if end_time:
+                        parsed_end_time = dateutil_parser.parse(end_time)
+                        _start_time = dateutil_parser.parse(ret[item]['StartTime'])
+                        if _start_time <= parsed_end_time:
+                            _match = True
                 else:
                     log.error(
                         '\'dateutil\' library not available, skipping start_time '
-                        'comparison.'
-                    )
-
-            if end_time and _match:
-                _match = False
-                if DATEUTIL_SUPPORT:
-                    parsed_end_time = dateutil_parser.parse(end_time)
-                    _start_time = dateutil_parser.parse(ret[item]['StartTime'])
-                    if _start_time <= parsed_end_time:
-                        _match = True
-                else:
-                    log.error(
-                        '\'dateutil\' library not available, skipping end_time '
                         'comparison.'
                     )
 

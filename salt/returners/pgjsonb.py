@@ -458,7 +458,8 @@ def get_jids_native(job_filter):
                    row_to_json(tmp) as load FROM (
                      SELECT
                        jid,
-                       to_char(to_timestamp(jid, 'YYYYMMDDHH24miSSUS')::TIMESTAMP, 'YYYY, Mon DD HH24:MI:SS.US') as "StartTime",
+                       to_char(to_timestamp(jid, 'YYYYMMDDHH24miSSUS')::TIMESTAMP,
+                               'YYYY, Mon DD HH24:MI:SS.US') as "StartTime",
                        load->'fun' as "Function",
                        load->'arg' as "Arguments",
                        load->'tgt' as "Target",
