@@ -5,13 +5,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 
-# Posix only
-try:
-    import gpg
-except ImportError:
-    pass
-
-
 # Import Salt Testing libs
 from tests.support.helpers import destructiveTest
 from tests.support.unit import TestCase, skipIf
