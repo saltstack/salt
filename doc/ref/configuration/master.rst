@@ -516,6 +516,20 @@ jobs dir.
     Please see the :ref:`Managing the Job Cache <managing_the_job_cache>`
     documentation for more information.
 
+.. conf_master:: job_cache_filter
+
+``job_cache_filter``
+-----------------
+
+Default: ``''``
+
+When this option is set to ``native``, the default returner will use an optimized
+query to get the jobs list.
+
+.. code-block:: yaml
+
+    job_cache_filter: native
+
 .. conf_master:: minion_data_cache
 
 ``minion_data_cache``

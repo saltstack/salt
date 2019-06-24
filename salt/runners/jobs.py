@@ -310,68 +310,83 @@ def list_jobs(ext_source=None,
         )
     mminion = salt.minion.MasterMinion(__opts__)
 
-    ret = mminion.returners['{0}.get_jids'.format(returner)]()
+    if __opts__.get('filter') == 'native':
+        fun = '{0}.get_jids_native'.format(returner)
+        if fun not in mminion.returners:
+            raise NotImplementedError(
+               '\'{0}\' returner function not implemented yet.'.format(fun)
+            )
+        mret = mminion.returners['{0}.get_jids_native'.format(returner)](
+                job_filter = {
+                    'search_metadata': search_metadata,
+                    'search_target': search_target,
+                    'search_function': search_function,
+                    'start_time': start_time,
+                    'end_time': end_time
+                })
+    else:
+        ret = mminion.returners['{0}.get_jids'.format(returner)]()
 
-    mret = {}
-    for item in ret:
-        _match = True
-        if search_metadata:
-            _match = False
-            if 'Metadata' in ret[item]:
-                if isinstance(search_metadata, dict):
-                    for key in search_metadata:
-                        if key in ret[item]['Metadata']:
-                            if ret[item]['Metadata'][key] == search_metadata[key]:
+        mret = {}
+        for item in ret:
+            _match = True
+            if search_metadata:
+                _match = False
+                if 'Metadata' in ret[item]:
+                    if isinstance(search_metadata, dict):
+                        for key in search_metadata:
+                            if key in ret[item]['Metadata']:
+                                if ret[item]['Metadata'][key] == search_metadata[key]:
+                                    _match = True
+                    else:
+                        log.info('The search_metadata parameter must be specified'
+                                 ' as a dictionary.  Ignoring.')
+            if search_target and _match:
+                _match = False
+                if 'Target' in ret[item]:
+                    targets = ret[item]['Target']
+                    if isinstance(targets, six.string_types):
+                        targets = [targets]
+                    for target in targets:
+                        for key in salt.utils.args.split_input(search_target):
+                            if fnmatch.fnmatch(target, key):
                                 _match = True
-                else:
-                    log.info('The search_metadata parameter must be specified'
-                             ' as a dictionary.  Ignoring.')
-        if search_target and _match:
-            _match = False
-            if 'Target' in ret[item]:
-                targets = ret[item]['Target']
-                if isinstance(targets, six.string_types):
-                    targets = [targets]
-                for target in targets:
-                    for key in salt.utils.args.split_input(search_target):
-                        if fnmatch.fnmatch(target, key):
+
+            if search_function and _match:
+                _match = False
+                if 'Function' in ret[item]:
+                    for key in salt.utils.args.split_input(search_function):
+                        if fnmatch.fnmatch(ret[item]['Function'], key):
                             _match = True
 
-        if search_function and _match:
-            _match = False
-            if 'Function' in ret[item]:
-                for key in salt.utils.args.split_input(search_function):
-                    if fnmatch.fnmatch(ret[item]['Function'], key):
+            if start_time and _match:
+                _match = False
+                if DATEUTIL_SUPPORT:
+                    parsed_start_time = dateutil_parser.parse(start_time)
+                    _start_time = dateutil_parser.parse(ret[item]['StartTime'])
+                    if _start_time >= parsed_start_time:
                         _match = True
+                else:
+                    log.error(
+                        '\'dateutil\' library not available, skipping start_time '
+                        'comparison.'
+                    )
 
-        if start_time and _match:
-            _match = False
-            if DATEUTIL_SUPPORT:
-                parsed_start_time = dateutil_parser.parse(start_time)
-                _start_time = dateutil_parser.parse(ret[item]['StartTime'])
-                if _start_time >= parsed_start_time:
-                    _match = True
-            else:
-                log.error(
-                    '\'dateutil\' library not available, skipping start_time '
-                    'comparison.'
-                )
+            if end_time and _match:
+                _match = False
+                if DATEUTIL_SUPPORT:
+                    parsed_end_time = dateutil_parser.parse(end_time)
+                    _start_time = dateutil_parser.parse(ret[item]['StartTime'])
+                    if _start_time <= parsed_end_time:
+                        _match = True
+                else:
+                    log.error(
+                        '\'dateutil\' library not available, skipping end_time '
+                        'comparison.'
+                    )
 
-        if end_time and _match:
-            _match = False
-            if DATEUTIL_SUPPORT:
-                parsed_end_time = dateutil_parser.parse(end_time)
-                _start_time = dateutil_parser.parse(ret[item]['StartTime'])
-                if _start_time <= parsed_end_time:
-                    _match = True
-            else:
-                log.error(
-                    '\'dateutil\' library not available, skipping end_time '
-                    'comparison.'
-                )
-
-        if _match:
-            mret[item] = ret[item]
+            if _match:
+                mret[item] = ret[item]
 
     if outputter:
         return {'outputter': outputter, 'data': mret}

@@ -55,9 +55,9 @@ optional. The following ssl options are simply for illustration purposes:
     alternative.pgjsonb.pass: 'salt'
     alternative.pgjsonb.db: 'salt'
     alternative.pgjsonb.port: 5432
-    alternative.pgjsonb.ssl_ca: '/etc/pki/mysql/certs/localhost.pem'
-    alternative.pgjsonb.ssl_cert: '/etc/pki/mysql/certs/localhost.crt'
-    alternative.pgjsonb.ssl_key: '/etc/pki/mysql/certs/localhost.key'
+    alternative.pgjsonb.ssl_ca: '/etc/pki/postgresql/certs/localhost.pem'
+    alternative.pgjsonb.ssl_cert: '/etc/pki/postgresql/certs/localhost.crt'
+    alternative.pgjsonb.ssl_key: '/etc/pki/postgresql/certs/localhost.key'
 
 Should you wish the returner data to be cleaned out every so often, set
 ``keep_jobs`` to the number of hours for the jobs to live in the tables.
@@ -178,6 +178,12 @@ from salt.ext import six
 
 # Import third party libs
 try:
+    import dateutil.parser as dateutil_parser
+    DATEUTIL_SUPPORT = True
+except ImportError:
+    DATEUTIL_SUPPORT = False
+
+try:
     import psycopg2
     import psycopg2.extras
     HAS_PG = True
@@ -200,7 +206,7 @@ def __virtual__():
 
 def _get_options(ret=None):
     '''
-    Returns options used for the MySQL connection.
+    Returns options used for the PostgreSQL connection.
     '''
     defaults = {
         'host': 'localhost',
@@ -242,7 +248,7 @@ def _get_serv(ret=None, commit=False):
     '''
     _options = _get_options(ret)
     try:
-        # An empty ssl_options dictionary passed to MySQLdb.connect will
+        # An empty ssl_options dictionary passed to psycopg2.connect will
         # effectively connect w/o SSL.
         ssl_options = {
             k: v for k, v in six.iteritems(_options)
@@ -376,6 +382,30 @@ def get_jid(jid):
         return ret
 
 
+def get_jids_filter(count, filter_find_job=True):
+    '''
+    Return a list of all job ids
+    :param int count: show not more than the count of most recent jobs
+    :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
+    '''
+    with _get_serv(ret=None, commit=True) as cur:
+
+        sql = '''SELECT * FROM (
+                     SELECT DISTINCT jid, load FROM jids
+                     {0}
+                     ORDER BY jid DESC limit {1}
+                 ) tmp
+                 ORDER BY jid;'''
+        where = '''WHERE NOT (load @> '{ "fun": "saltutil.find_job"}') '''
+
+        cur.execute(sql.format(where if filter_find_job else '', count))
+        data = cur.fetchall()
+        ret = {}
+        for jid, load in data:
+            ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
+        return ret
+
+
 def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
@@ -414,6 +444,72 @@ def get_jids():
         ret = {}
         for jid, load in data:
             ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
+        return ret
+
+
+def get_jids_native(job_filter):
+    '''
+    Return a list of all job ids
+    '''
+    with _get_serv(ret=None, commit=True) as cur:
+
+        sql = '''SELECT
+                   jid,
+                   row_to_json(tmp) as load FROM (
+                     SELECT
+                       jid,
+                       to_char(to_timestamp(jid, 'YYYYMMDDHH24miSSUS')::TIMESTAMP, 'YYYY, Mon DD HH24:MI:SS.US') as "StartTime",
+                       load->'fun' as "Function",
+                       load->'arg' as "Arguments",
+                       load->'tgt' as "Target",
+                       load->'tgt_type' as "Target-type",
+                       load->'user' as "User",
+                       load->'metadata' as "Metadata"
+                      FROM jids '''
+
+        executer_filter = {k: v for k, v in job_filter.items() if v is not None}
+        if executer_filter:
+            sql += ' WHERE '
+            filter_start = 0
+
+            if job_filter['search_target']:
+                if filter_start == 1:
+                    sql += ' AND '
+                filter_start = 1
+                sql += """ load->'tgt' ? %(search_target)s"""
+
+            if job_filter['search_function']:
+                if filter_start == 1:
+                    sql += ' AND '
+                filter_start = 1
+                sql += """ load @> '{"fun": %(search_function)s}'"""
+
+            if job_filter['start_time']:
+                if filter_start == 1:
+                    sql += ' AND '
+                filter_start = 1
+                if DATEUTIL_SUPPORT:
+                    parsed_start_time = str(dateutil_parser.parse(job_filter['start_time']))
+                    executer_filter['start_time'] = parsed_start_time
+                    sql += (" to_timestamp(jid, 'YYYYMMDDHH24miSSUS') >="
+                            " to_timestamp(%(start_time)s, 'YYYY-MM-DD HH24:mi:SS')")
+
+            if job_filter['end_time']:
+                if filter_start == 1:
+                    sql += ' AND '
+                filter_start = 1
+                if DATEUTIL_SUPPORT:
+                    parsed_end_time = str(dateutil_parser.parse(job_filter['end_time']))
+                    executer_filter['end_time'] = parsed_end_time
+                    sql += (" to_timestamp(jid, 'YYYYMMDDHH24miSSUS') <="
+                            " to_timestamp(%(end_time)s, 'YYYY-MM-DD HH24:mi:SS')")
+        sql += ') as tmp'
+        cur.execute(sql, executer_filter)
+
+        data = cur.fetchall()
+        ret = {}
+        for jid, load in data:
+            ret[jid] = load
         return ret
 
 
