@@ -122,7 +122,10 @@ class TestSaltCacheLoader(TestCase):
             },
             'pillar_roots': {
                 'test': [self.template_dir]
-            }
+            },
+            'extension_modules': os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                'extmods'),
         }
         super(TestSaltCacheLoader, self).setUp()
 
@@ -222,6 +225,36 @@ class TestSaltCacheLoader(TestCase):
         _, jinja = self.get_test_saltenv()
         result = jinja.get_template('hello_include').render(a='Hi', b='Salt')
         self.assertEqual(result, 'Hey world !Hi Salt !')
+
+    def test_cached_file_client(self):
+        '''
+        Multiple instantiations of SaltCacheLoader use the cached file client
+        '''
+        with patch('salt.transport.client.ReqChannel.factory', Mock()):
+            loader_a = SaltCacheLoader(self.opts)
+            loader_b = SaltCacheLoader(self.opts)
+        assert loader_a._file_client is loader_b._file_client
+
+    def test_file_client_kwarg(self):
+        '''
+        A file client can be passed to SaltCacheLoader overriding the any
+        cached file client
+        '''
+        mfc = MockFileClient()
+        loader = SaltCacheLoader(self.opts, _file_client=mfc)
+        assert loader._file_client is mfc
+
+    def test_cache_loader_shutdown(self):
+        '''
+        The shudown method can be called without raising an exception when the
+        file_client does not have a destroy method
+        '''
+        mfc = MockFileClient()
+        assert not hasattr(mfc, 'destroy')
+        loader = SaltCacheLoader(self.opts, _file_client=mfc)
+        assert loader._file_client is mfc
+        # Shutdown method should not raise any exceptions
+        loader.shutdown()
 
 
 class TestGetTemplate(TestCase):
