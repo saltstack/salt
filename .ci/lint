@@ -31,15 +31,17 @@ timeout(time: global_timeout, unit: 'HOURS') {
                     } else {
                         shell_header = ''
                     }
-                    // Checkout the repo
-                    stage('checkout-scm') {
-                        cleanWs notFailBuild: true
-                        checkout scm
-                    }
 
-                    // Setup the kitchen required bundle
-                    stage('Setup') {
-                        withEnv(["SALT_TARGET_BRANCH=${salt_target_branch}"]) {
+                    withEnv(["SALT_TARGET_BRANCH=${salt_target_branch}"]) {
+                        // Checkout the repo
+                        stage('checkout-scm') {
+                            cleanWs notFailBuild: true
+                            checkout scm
+                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
+                        }
+
+                        // Setup the kitchen required bundle
+                        stage('Setup') {
                             sh shell_header + '''
                             # Need -M to detect renames otherwise they are reported as Delete and Add, need -C to detect copies, -C includes -M
                             # -M is on by default in git 2.9+
@@ -53,7 +55,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
                             pyenv install --skip-existing 2.7.15
                             pyenv shell 2.7.15
                             python --version
-                            pip install -U https://github.com/s0undt3ch/nox/archive/hotfix/py2.zip#egg=Nox==2018.10.17
+                            pip install -U nox-py2
                             nox --version
                             # Create the required virtualenvs in serial
                             nox --install-only -e lint-salt
