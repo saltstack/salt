@@ -36,6 +36,7 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
             '__opts__': opts,
             '__salt__': 'autoload',
             '__context__': {},
+            '__grains__': opts['grains']
         }
         return {
             status: module_globals,
