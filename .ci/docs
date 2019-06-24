@@ -1,14 +1,9 @@
 // Define the maximum time, in hours, that a test run should run for
 def global_timeout = 2
+def salt_target_branch = 'develop'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
-    [
-        $class: 'ScannerJobProperty', doNotScan: false
-    ],
-    [
-        $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
-    ],
 ])
 
 def shell_header
@@ -44,7 +39,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
                         pyenv install --skip-existing 2.7.15
                         pyenv shell 2.7.15
                         python --version
-                        pip install -U https://github.com/s0undt3ch/nox/archive/hotfix/py2.zip#egg=Nox==2018.10.17
+                        pip install -U nox-py2
                         nox --version
                         '''
                     }

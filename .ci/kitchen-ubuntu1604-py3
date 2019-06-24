@@ -1,4 +1,4 @@
-//// Define the maximum time, in hours, that a test run should run for
+// Define the maximum time, in hours, that a test run should run for
 def testrun_timeout = 6
 // Now define a global pipeline timeout. This is the test run timeout with one(1) additional
 // hour to allow for artifacts to be downloaded, if possible.
@@ -12,12 +12,6 @@ def golden_images_branch = 'develop'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
-    [
-        $class: 'ScannerJobProperty', doNotScan: false
-    ],
-    [
-        $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
-    ],
     parameters([
         booleanParam(defaultValue: false, description: 'Run full test suite', name: 'runFull')
     ])
