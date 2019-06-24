@@ -34,6 +34,7 @@ import salt.utils.files
 import salt.utils.napalm
 import salt.utils.versions
 import salt.utils.templates
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 try:
@@ -2011,6 +2012,8 @@ def load_template(template_name=None,
                     __salt__['file.remove'](_temp_tpl_file)
                 else:
                     return _loaded  # exit
+
+        _rendered = salt.utils.stringutils.to_bytes(_rendered)
 
         loaded_config = _rendered
         if _loaded['result']:  # all good
