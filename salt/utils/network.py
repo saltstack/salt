@@ -1465,8 +1465,9 @@ def _netlink_tool_remote_on(port, which_end):
     '''
     remotes = set()
     valid = False
+    tcp_end = 'dst' if which_end == 'remote_port' else 'src'
     try:
-        data = subprocess.check_output(['ss', '-ant'])  # pylint: disable=minimum-python-version
+        data = subprocess.check_output(['ss', '-ant', tcp_end, ':{0}'.format(port)])  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError:
         log.error('Failed ss')
         raise
@@ -1481,13 +1482,8 @@ def _netlink_tool_remote_on(port, which_end):
         elif 'ESTAB' not in line:
             continue
         chunks = line.split()
-        local_host, local_port = chunks[3].rsplit(':', 1)
         remote_host, remote_port = chunks[4].rsplit(':', 1)
 
-        if which_end == 'remote_port' and int(remote_port) != port:
-            continue
-        if which_end == 'local_port' and int(local_port) != port:
-            continue
         remotes.add(remote_host)
 
     if valid is False:
