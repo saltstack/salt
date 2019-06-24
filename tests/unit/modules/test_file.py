@@ -916,9 +916,9 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
             tfile.write(salt.utils.stringutils.to_bytes(
                 'rc.conf ef6e82e4006dee563d98ada2a2a80a27\n'
-                'ead48423703509d37c4a90e6a0d53e143b6fc268 example.tar.gz\n'
+                'ead48423703509d37c4a90e6a0d53e143b6fc268  example.tar.gz\n'
                 'fe05bcdcdc4928012781a5f1a2a77cbb5398e106 ./subdir/example.tar.gz\n'
-                'ad782ecdac770fc6eb9a62e44f90873fb97fb26b foo.tar.bz2\n'
+                'ad782ecdac770fc6eb9a62e44f90873fb97fb26b *foo.tar.bz2\n'
             ))
             tfile.flush()
 
