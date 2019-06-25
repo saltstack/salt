@@ -12,12 +12,6 @@ def golden_images_branch = 'develop'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
-    [
-        $class: 'ScannerJobProperty', doNotScan: false
-    ],
-    [
-        $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
-    ],
     parameters([
         booleanParam(defaultValue: false, description: 'Run full test suite', name: 'runFull')
     ])
