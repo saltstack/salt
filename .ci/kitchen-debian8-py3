@@ -7,16 +7,11 @@ def global_timeout = testrun_timeout + 1;
 def distro_name = 'debian'
 def distro_version = '8'
 def python_version = 'py3'
+def salt_target_branch = 'neon'
 def golden_images_branch = 'neon'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
-    [
-        $class: 'ScannerJobProperty', doNotScan: false
-    ],
-    [
-        $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
-    ],
     parameters([
         booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
     ])
@@ -37,6 +32,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
                         'NOX_ENV_NAME=runtests-zeromq',
                         'NOX_ENABLE_FROM_FILENAMES=true',
                         'NOX_PASSTHROUGH_OPTS=--ssh-tests',
+                        "SALT_TARGET_BRANCH=${salt_target_branch}",
                         "GOLDEN_IMAGES_CI_BRANCH=${golden_images_branch}",
                         "CODECOV_FLAGS=${distro_name}${distro_version},${python_version}",
                         'PATH=~/.rbenv/shims:/usr/local/rbenv/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin:/root/bin',
@@ -62,7 +58,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
 
                         // Setup the kitchen required bundle
                         stage('setup-bundle') {
-                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}'
+                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
                             sh 'bundle install --with ec2 windows --without docker macos opennebula vagrant'
                         }
 
