@@ -290,7 +290,11 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 GPG_CIPHERTEXT = re.compile(
-    r'-----BEGIN PGP MESSAGE-----.*?-----END PGP MESSAGE-----', re.DOTALL)
+    salt.utils.stringutils.to_bytes(
+        r'-----BEGIN PGP MESSAGE-----.*?-----END PGP MESSAGE-----'
+    ),
+    re.DOTALL,
+)
 
 
 def _get_gpg_exec():
@@ -343,39 +347,43 @@ def _decrypt_ciphertext(cipher):
     proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
     decrypted_data, decrypt_error = proc.communicate(input=cipher)
     if not decrypted_data:
-        try:
-            cipher = salt.utils.stringutils.to_unicode(cipher)
-        except UnicodeDecodeError:
-            # decrypted data contains undecodable binary data
-            pass
         log.warning(
-            'Could not decrypt cipher %s, received: %s',
+            'Could not decrypt cipher %r, received: %r',
             cipher,
             decrypt_error
         )
         return cipher
     else:
-        try:
-            decrypted_data = salt.utils.stringutils.to_unicode(decrypted_data)
-        except UnicodeDecodeError:
-            # decrypted data contains undecodable binary data
-            pass
         return decrypted_data
 
 
-def _decrypt_ciphertexts(cipher, translate_newlines=False):
+def _decrypt_ciphertexts(cipher, translate_newlines=False, encoding=None):
+    to_bytes = salt.utils.stringutils.to_bytes
+    cipher = to_bytes(cipher)
     if translate_newlines:
-        cipher = cipher.replace(r'\n', '\n')
-    ret, num = GPG_CIPHERTEXT.subn(lambda m: _decrypt_ciphertext(m.group()), cipher)
+        cipher = cipher.replace(to_bytes(r'\n'), to_bytes('\n'))
+
+    def replace(match):
+        result = to_bytes(_decrypt_ciphertext(match.group()))
+        return result
+
+    ret, num = GPG_CIPHERTEXT.subn(replace, to_bytes(cipher))
     if num > 0:
         # Remove trailing newlines. Without if crypted value initially specified as a YAML multiline
         # it will conain unexpected trailing newline.
-        return ret.rstrip('\n')
+        ret = ret.rstrip(b'\n')
     else:
-        return cipher
+        ret = cipher
+
+    try:
+        ret = salt.utils.stringutils.to_unicode(ret, encoding=encoding)
+    except UnicodeDecodeError:
+        # decrypted data contains some sort of binary data - not our problem
+        pass
+    return ret
 
 
-def _decrypt_object(obj, translate_newlines=False):
+def _decrypt_object(obj, translate_newlines=False, encoding=None):
     '''
     Recursively try to decrypt any object. If the object is a six.string_types
     (string or unicode), and it contains a valid GPG header, decrypt it,
@@ -384,7 +392,7 @@ def _decrypt_object(obj, translate_newlines=False):
     if salt.utils.stringio.is_readable(obj):
         return _decrypt_object(obj.getvalue(), translate_newlines)
     if isinstance(obj, six.string_types):
-        return _decrypt_ciphertexts(obj, translate_newlines=translate_newlines)
+        return _decrypt_ciphertexts(obj, translate_newlines=translate_newlines, encoding=encoding)
     elif isinstance(obj, dict):
         for key, value in six.iteritems(obj):
             obj[key] = _decrypt_object(value,
@@ -409,4 +417,4 @@ def render(gpg_data, saltenv='base', sls='', argline='', **kwargs):
     log.debug('Reading GPG keys from: %s', _get_key_dir())
 
     translate_newlines = kwargs.get('translate_newlines', False)
-    return _decrypt_object(gpg_data, translate_newlines=translate_newlines)
+    return _decrypt_object(gpg_data, translate_newlines=translate_newlines, encoding=kwargs.get('encoding', None))
