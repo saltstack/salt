@@ -374,9 +374,20 @@ Module Changes
 
 - Added new :py:func:`flatpak <salt.modules.flatpak>` module to work with flatpak packages.
   
-- The :py:func:`file.set_selinux_context <salt.modules.file.set_selinux_context>`
-  module now supports perstant changes with ``persist=True`` by calling the
-  :py:func:`selinux.fcontext_add_policy <salt.modules.selinux.fcontext_add_policy>` module.
+- The :py:func:`file.set_selinux_context
+  <salt.modules.file.set_selinux_context>` module now supports persistant
+  changes with ``persist=True`` by calling the
+  :py:func:`selinux.fcontext_add_policy
+  <salt.modules.selinux.fcontext_add_policy>` module.
+
+- The :py:func:`config.option <salt.modules.config.option>` now also returns
+  matches from the grains, making it align better with :py:func:`config.get
+  <salt.modules.config.get>`.
+
+- Configuration for Docker registries is no longer restricted only to pillar
+  data, and is now loaded using :py:func:`config.option
+  <salt.modules.config.option>`. More information on registry authentication
+  can be found :ref:`here <docker-authentication>`.
 
 - The :py:func:`yumpkg <salt.modules.yumpkg>` module has been updated to support
   VMWare's Photon OS, which uses tdnf (a C implementation of dnf).
