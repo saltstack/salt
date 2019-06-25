@@ -17,7 +17,7 @@ boto==2.49.0
 botocore==1.12.132        # via boto3, moto, s3transfer
 cachetools==3.1.0         # via google-auth
 certifi==2019.3.9         # via kubernetes, requests, tornado
-cffi==1.12.2              # via cryptography
+cffi==1.12.2              # via cryptography, pygit2
 chardet==3.0.4            # via requests
 colorama==0.4.1           # via pytest
 cookies==2.2.1            # via responses
@@ -62,6 +62,7 @@ pyasn1-modules==0.2.4     # via google-auth
 pyasn1==0.4.5             # via pyasn1-modules, rsa
 pycparser==2.19           # via cffi
 pycryptodome==3.8.1       # via python-jose
+pygit2==0.28.1
 pyopenssl==19.0.0
 pytest-cov==2.6.1
 pytest-helpers-namespace==2019.1.8
@@ -88,7 +89,7 @@ scandir==1.10.0           # via pathlib2
 sed==0.3.1
 setproctitle==1.1.10
 singledispatch==3.4.0.3   # via tornado
-six==1.12.0               # via cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, pathlib2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, websocket-client
+six==1.12.0               # via cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, pathlib2, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, websocket-client
 strict-rfc3339==0.7
 supervisor==3.3.5 ; python_version < "3"
 timelib==0.2.4

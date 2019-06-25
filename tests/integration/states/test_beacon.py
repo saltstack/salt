@@ -22,6 +22,7 @@ class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
         '''
         '''
         self.run_function('beacons.reset')
+        self.wait_for_all_jobs()
 
     def tearDown(self):
         self.run_function('beacons.reset')
