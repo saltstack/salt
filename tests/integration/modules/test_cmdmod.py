@@ -6,7 +6,6 @@ import os
 import random
 import sys
 import tempfile
-import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -262,9 +261,11 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.exec_code
         '''
-        code = textwrap.dedent('''\
-               import sys\n
-               sys.stdout.write('cheese')''')
+        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
+        code = '''|
+                   import sys
+                   sys.stdout.write('cheese')
+               '''
         self.assertEqual(self.run_function('cmd.exec_code',
                                            [AVAILABLE_PYTHON_EXECUTABLE,
                                             code]).rstrip(),
@@ -274,9 +275,11 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.exec_code
         '''
-        code = textwrap.dedent('''\
-               import sys\n
-               sys.stdout.write(sys.argv[1])''')
+        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
+        code = '''|
+                   import sys
+                   sys.stdout.write(sys.argv[1])
+               '''
         arg = 'cheese'
         self.assertEqual(self.run_function('cmd.exec_code',
                                            [AVAILABLE_PYTHON_EXECUTABLE,
@@ -288,9 +291,11 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.exec_code
         '''
-        code = textwrap.dedent('''\
-               import sys\n
-               sys.stdout.write(sys.argv[1])''')
+        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
+        code = '''|
+                   import sys
+                   sys.stdout.write(sys.argv[1])
+               '''
         arg = 'cheese'
         self.assertEqual(self.run_function('cmd.exec_code',
                                            [AVAILABLE_PYTHON_EXECUTABLE,
@@ -426,3 +431,12 @@ class CMDModuleTest(ModuleCase):
             self.assertIn('administrator', cmd)
         else:
             self.assertEqual('root', cmd)
+
+    @skipIf(not salt.utils.platform.is_windows(), 'minion is not windows')
+    def test_windows_env_handling(self):
+        '''
+        Ensure that nt.environ is used properly with cmd.run*
+        '''
+        out = self.run_function('cmd.run', ['set'], env={"abc": "123", "ABC": "456"}).splitlines()
+        self.assertIn('abc=123', out)
+        self.assertIn('ABC=456', out)

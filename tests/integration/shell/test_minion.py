@@ -49,6 +49,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         'subminion',
     )
 
+    @skipIf(salt.utils.platform.is_darwin(), 'Test is flaky on macosx')
     def test_issue_7754(self):
         old_cwd = os.getcwd()
         config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
