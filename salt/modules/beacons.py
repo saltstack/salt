@@ -22,6 +22,7 @@ from salt.ext.six.moves import map
 # Get logging started
 log = logging.getLogger(__name__)
 
+default_event_wait = 30
 __func_alias__ = {
     'list_': 'list',
     'reload_': 'reload'
@@ -56,7 +57,7 @@ def list_(return_yaml=True,
     beacons = None
 
     try:
-        eventer = salt.utils.event.get_event('minion', opts=__opts__)
+        eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
         res = __salt__['event.fire']({'func': 'list',
                                       'include_pillar': include_pillar,
                                       'include_opts': include_opts},
@@ -64,7 +65,7 @@ def list_(return_yaml=True,
         if res:
             event_ret = eventer.get_event(
                 tag='/salt/minion/minion_beacons_list_complete',
-                wait=kwargs.get('timeout', 30))
+                wait=kwargs.get('timeout', default_event_wait))
             log.debug('event_ret %s', event_ret)
             if event_ret and event_ret['complete']:
                 beacons = event_ret['beacons']
@@ -103,12 +104,12 @@ def list_available(return_yaml=True, **kwargs):
     beacons = None
 
     try:
-        eventer = salt.utils.event.get_event('minion', opts=__opts__)
+        eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
         res = __salt__['event.fire']({'func': 'list_available'}, 'manage_beacons')
         if res:
             event_ret = eventer.get_event(
                 tag='/salt/minion/minion_beacons_list_available_complete',
-                wait=kwargs.get('timeout', 30))
+                wait=kwargs.get('timeout', default_event_wait))
             if event_ret and event_ret['complete']:
                 beacons = event_ret['beacons']
     except KeyError:
@@ -160,7 +161,7 @@ def add(name, beacon_data, **kwargs):
     else:
         try:
             # Attempt to load the beacon module so we have access to the validate function
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
             res = __salt__['event.fire']({'name': name,
                                           'beacon_data': beacon_data,
                                           'func': 'validate_beacon'},
@@ -168,7 +169,7 @@ def add(name, beacon_data, **kwargs):
             if res:
                 event_ret = eventer.get_event(
                     tag='/salt/minion/minion_beacon_validation_complete',
-                    wait=kwargs.get('timeout', 30))
+                    wait=kwargs.get('timeout', default_event_wait))
                 valid = event_ret['valid']
                 vcomment = event_ret['vcomment']
 
@@ -189,7 +190,7 @@ def add(name, beacon_data, **kwargs):
             if res:
                 event_ret = eventer.get_event(
                     tag='/salt/minion/minion_beacon_add_complete',
-                    wait=kwargs.get('timeout', 30))
+                    wait=kwargs.get('timeout', default_event_wait))
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     if name in beacons and beacons[name] == beacon_data:
@@ -234,7 +235,7 @@ def modify(name, beacon_data, **kwargs):
     else:
         try:
             # Attempt to load the beacon module so we have access to the validate function
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
             res = __salt__['event.fire']({'name': name,
                                           'beacon_data': beacon_data,
                                           'func': 'validate_beacon'},
@@ -242,7 +243,7 @@ def modify(name, beacon_data, **kwargs):
             if res:
                 event_ret = eventer.get_event(
                     tag='/salt/minion/minion_beacon_validation_complete',
-                    wait=kwargs.get('timeout', 30))
+                    wait=kwargs.get('timeout', default_event_wait))
                 valid = event_ret['valid']
                 vcomment = event_ret['vcomment']
 
@@ -283,12 +284,12 @@ def modify(name, beacon_data, **kwargs):
         ret['changes']['diff'] = ''.join(_diff)
 
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
             res = __salt__['event.fire']({'name': name, 'beacon_data': beacon_data, 'func': 'modify'}, 'manage_beacons')
             if res:
                 event_ret = eventer.get_event(
                     tag='/salt/minion/minion_beacon_modify_complete',
-                    wait=kwargs.get('timeout', 30))
+                    wait=kwargs.get('timeout', default_event_wait))
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     if name in beacons and beacons[name] == beacon_data:
@@ -329,12 +330,12 @@ def delete(name, **kwargs):
         ret['comment'] = 'Beacon: {0} would be deleted.'.format(name)
     else:
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
             res = __salt__['event.fire']({'name': name, 'func': 'delete'}, 'manage_beacons')
             if res:
                 event_ret = eventer.get_event(
                     tag='/salt/minion/minion_beacon_delete_complete',
-                    wait=kwargs.get('timeout', 30))
+                    wait=kwargs.get('timeout', default_event_wait))
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     if name not in beacons:
@@ -410,12 +411,12 @@ def enable(**kwargs):
         ret['comment'] = 'Beacons would be enabled.'
     else:
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
             res = __salt__['event.fire']({'func': 'enable'}, 'manage_beacons')
             if res:
                 event_ret = eventer.get_event(
                     tag='/salt/minion/minion_beacons_enabled_complete',
-                    wait=kwargs.get('timeout', 30))
+                    wait=kwargs.get('timeout', default_event_wait))
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     if 'enabled' in beacons and beacons['enabled']:
@@ -451,12 +452,12 @@ def disable(**kwargs):
         ret['comment'] = 'Beacons would be disabled.'
     else:
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
             res = __salt__['event.fire']({'func': 'disable'}, 'manage_beacons')
             if res:
                 event_ret = eventer.get_event(
                     tag='/salt/minion/minion_beacons_disabled_complete',
-                    wait=kwargs.get('timeout', 30))
+                    wait=kwargs.get('timeout', default_event_wait))
                 log.debug('event_ret %s', event_ret)
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
@@ -515,12 +516,12 @@ def enable_beacon(name, **kwargs):
             return ret
 
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
             res = __salt__['event.fire']({'func': 'enable_beacon', 'name': name}, 'manage_beacons')
             if res:
                 event_ret = eventer.get_event(
                     tag='/salt/minion/minion_beacon_enabled_complete',
-                    wait=kwargs.get('timeout', 30))
+                    wait=kwargs.get('timeout', default_event_wait))
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     beacon_config_dict = _get_beacon_config_dict(beacons[name])
@@ -573,12 +574,12 @@ def disable_beacon(name, **kwargs):
             return ret
 
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
             res = __salt__['event.fire']({'func': 'disable_beacon', 'name': name}, 'manage_beacons')
             if res:
                 event_ret = eventer.get_event(
                     tag='/salt/minion/minion_beacon_disabled_complete',
-                    wait=kwargs.get('timeout', 30))
+                    wait=kwargs.get('timeout', default_event_wait))
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     beacon_config_dict = _get_beacon_config_dict(beacons[name])
@@ -613,22 +614,22 @@ def reset(**kwargs):
     ret = {'comment': [],
            'result': True}
 
-    if 'test' in kwargs and kwargs['test']:
+    if kwargs.get('test'):
         ret['comment'] = 'Beacons would be reset.'
     else:
         try:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
             res = __salt__['event.fire']({'func': 'reset'}, 'manage_beacons')
             if res:
                 event_ret = eventer.get_event(
                     tag='/salt/minion/minion_beacon_reset_complete',
-                    wait=kwargs.get('timeout', 30))
+                    wait=kwargs.get('timeout', default_event_wait))
                 if event_ret and event_ret['complete']:
                     ret['result'] = True
                     ret['comment'] = 'Beacon configuration reset.'
                 else:
                     ret['result'] = False
-                    ret['comment'] = event_ret['comment']
+                    ret['comment'] = 'Something went wrong.'
                 return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system

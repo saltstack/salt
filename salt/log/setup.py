@@ -362,11 +362,14 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
             extra = None
 
         # Let's try to make every logging message unicode
-        salt_system_encoding = __salt_system_encoding__
-        if salt_system_encoding == 'ascii':
-            # Encoding detection most likely failed, let's use the utf-8
-            # value which we defaulted before __salt_system_encoding__ was
-            # implemented
+        try:
+            salt_system_encoding = __salt_system_encoding__
+            if salt_system_encoding == 'ascii':
+                # Encoding detection most likely failed, let's use the utf-8
+                # value which we defaulted before __salt_system_encoding__ was
+                # implemented
+                salt_system_encoding = 'utf-8'
+        except NameError:
             salt_system_encoding = 'utf-8'
 
         if isinstance(msg, six.string_types) \
@@ -1118,13 +1121,12 @@ def __process_multiprocessing_logging_queue(opts, queue):
         setup_extended_logging(opts)
     while True:
         try:
-            record_dict = queue.get()
-            if record_dict is None:
+            record = queue.get()
+            if record is None:
                 # A sentinel to stop processing the queue
                 break
             # Just log everything, filtering will happen on the main process
             # logging handlers
-            record = logging.makeLogRecord(record_dict)
             logger = logging.getLogger(record.name)
             logger.handle(record)
         except (EOFError, KeyboardInterrupt, SystemExit):

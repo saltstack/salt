@@ -389,7 +389,7 @@ def _file_lists(load, form):
                     rel_dest = _translate_sep(
                         os.path.relpath(
                             os.path.realpath(os.path.normpath(joined)),
-                            fs_root
+                            os.path.realpath(fs_root)
                         )
                     )
                     log.trace(

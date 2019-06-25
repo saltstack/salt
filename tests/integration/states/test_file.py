@@ -74,6 +74,9 @@ else:
     FILEPILLARDEF = '/tmp/filepillar-defaultvalue'
     FILEPILLARGIT = '/tmp/filepillar-bar'
 
+TEST_SYSTEM_USER = 'test_system_user'
+TEST_SYSTEM_GROUP = 'test_system_group'
+
 
 def _test_managed_file_mode_keep_helper(testcase, local=False):
     '''
@@ -559,13 +562,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     '''.format(**managed_files)))
 
             ret = self.run_function('state.sls', [state_name])
+            self.assertSaltTrueReturn(ret)
             for typ in state_keys:
                 self.assertTrue(ret[state_keys[typ]]['result'])
                 self.assertIn('diff', ret[state_keys[typ]]['changes'])
         finally:
-            os.remove(state_file)
+            if os.path.exists(state_file):
+                os.remove(state_file)
             for typ in managed_files:
-                os.remove(managed_files[typ])
+                if os.path.exists(managed_files[typ]):
+                    os.remove(managed_files[typ])
 
     @skip_if_not_root
     @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
@@ -915,10 +921,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             tmp_dir = os.path.join(TMP, 'pgdata')
             sym_dir = os.path.join(TMP, 'pg_data')
 
-            if IS_WINDOWS:
-                self.run_function('file.mkdir', [tmp_dir, 'Administrators'])
-            else:
-                os.mkdir(tmp_dir, 0o700)
+            os.mkdir(tmp_dir, 0o700)
 
             self.run_function('file.symlink', [tmp_dir, sym_dir])
 
@@ -1254,10 +1257,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             null_file = '{0}/null'.format(tmp_dir)
             broken_link = '{0}/broken'.format(tmp_dir)
 
-            if IS_WINDOWS:
-                self.run_function('file.mkdir', [tmp_dir, 'Administrators'])
-            else:
-                os.mkdir(tmp_dir, 0o700)
+            os.mkdir(tmp_dir, 0o700)
 
             self.run_function('file.symlink', [null_file, broken_link])
 
@@ -1770,7 +1770,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(path_test, 'rb') as fp_:
             serialized_file = salt.utils.stringutils.to_unicode(fp_.read())
 
-        # The JSON serializer uses LF even on OSes where os.path.sep is CRLF.
+        # The JSON serializer uses LF even on OSes where os.sep is CRLF.
         expected_file = '\n'.join([
             '{',
             '  "a_list": [',
@@ -2303,6 +2303,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual([salt.utils.stringutils.to_str(line) for line in expected], contents)
 
     @with_tempdir()
+    @skipIf(salt.utils.platform.is_darwin() and six.PY2, 'This test hangs on OS X on Py2')
     def test_issue_11003_immutable_lazy_proxy_sum(self, base_dir):
         # causes the Import-Module ServerManager error on Windows
         template_path = os.path.join(TMP_STATE_TREE, 'issue-11003.sls')
@@ -2346,7 +2347,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(template_path, 'w') as fp_:
             fp_.write(os.linesep.join(sls_template).format(testcase_filedest))
 
-        ret = self.run_function('state.sls', mods='issue-11003')
+        ret = self.run_function('state.sls', mods='issue-11003', timeout=600)
         for name, step in six.iteritems(ret):
             self.assertSaltTrueReturn({name: step})
         with salt.utils.files.fopen(testcase_filedest) as fp_:
@@ -2479,7 +2480,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
-    @with_system_user_and_group('user12209', 'group12209',
+    @with_system_user_and_group(TEST_SYSTEM_USER, TEST_SYSTEM_GROUP,
                                 on_existing='delete', delete=True)
     @with_tempdir()
     def test_issue_12209_follow_symlinks(self, tempdir, user, group):
@@ -2515,7 +2516,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
-    @with_system_user_and_group('user12209', 'group12209',
+    @with_system_user_and_group(TEST_SYSTEM_USER, TEST_SYSTEM_GROUP,
                                 on_existing='delete', delete=True)
     @with_tempdir()
     def test_issue_12209_no_follow_symlinks(self, tempdir, user, group):
@@ -2615,15 +2616,17 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         user = 'salt'
         mode = '0644'
-        self.run_function('user.add', [user])
+        ret = self.run_function('user.add', [user])
+        self.assertTrue(ret, 'Failed to add user. Are you running as sudo?')
         ret = self.run_state('file.copy', name=dest, source=source, user=user,
-                             makedirs=True, mode=mode)
+                              makedirs=True, mode=mode)
+        self.assertSaltTrueReturn(ret)
         file_checks = [dest, os.path.join(TMP, 'dir1'), os.path.join(TMP, 'dir1', 'dir2')]
         for check in file_checks:
             user_check = self.run_function('file.get_user', [check])
             mode_check = self.run_function('file.get_mode', [check])
-            assert user_check == user
-            assert salt.utils.files.normalize_mode(mode_check) == mode
+            self.assertEqual(user_check, user)
+            self.assertEqual(salt.utils.files.normalize_mode(mode_check), mode)
 
     def test_contents_pillar_with_pillar_list(self):
         '''
@@ -2638,7 +2641,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
-    @with_system_user_and_group('test_setuid_user', 'test_setuid_group',
+    @with_system_user_and_group(TEST_SYSTEM_USER, TEST_SYSTEM_GROUP,
                                 on_existing='delete', delete=True)
     def test_owner_after_setuid(self, user, group):
 
@@ -2695,7 +2698,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
-    @with_system_user_and_group('user12209', 'group12209',
+    @with_system_user_and_group(TEST_SYSTEM_USER, TEST_SYSTEM_GROUP,
                                 on_existing='delete', delete=True)
     @with_tempdir()
     def test_issue_48336_file_managed_mode_setuid(self, tempdir, user, group):
