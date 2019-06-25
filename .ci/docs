@@ -4,12 +4,6 @@ def salt_target_branch = '2017.7.9'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
-    [
-        $class: 'ScannerJobProperty', doNotScan: false
-    ],
-    [
-        $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
-    ],
 ])
 
 def shell_header
