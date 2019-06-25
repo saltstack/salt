@@ -1113,6 +1113,19 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         f_call = self._format_call_run_job_async(chunk)
         # fire a job off
         pub_data = yield self.saltclients['local_async'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+        if 'jid' not in pub_data:
+            # TODO uncomment after deprecated
+            # please check test case for this tests.integration.netapi.rest_tornado.test_app:test_simple_local_async_post_no_tgt
+            # raise tornado.gen.Return('No minions matched the target. No command was sent, no jid was assigned.')
+
+            import salt.utils.versions
+            salt.utils.versions.warn_until(
+                'Magnesium',
+                'The empty data returning when jid not exist pub_data will be deprecated.'
+                'Please ensure the message return like '
+                '"No minions matched the target. No command was sent, no jid was assigned" if jid not exist after published.'
+                'this change is for consistency of salt-api return (See PR #53503)'
+            )
 
         raise tornado.gen.Return(pub_data)
 

@@ -298,6 +298,8 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               )
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(response_obj['return'], [{}])
+        # TODO uncomment after deprecated (See PR #53503)
+        # self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
 
     @skipIf(True, 'Undetermined race condition in test. Temporarily disabled.')
     def test_simple_local_post_only_dictionary_request_with_order_masters(self):
