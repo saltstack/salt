@@ -828,7 +828,7 @@ def extracted(name,
         ret['comment'] = (
             'Invalid archive_format \'{0}\'. Either set it to a supported '
             'value ({1}) or remove this argument and the archive format will '
-            'be guesseed based on file extension.'.format(
+            'be guessed based on file extension.'.format(
                 archive_format,
                 ', '.join(valid_archive_formats),
             )
@@ -1354,10 +1354,13 @@ def extracted(name,
                         )
                         return ret
 
-                    tar_opts = shlex.split(options)
+                    # Ignore verbose file list options as we are already using
+                    # "v" below in tar_shortopts
+                    tar_opts = [x for x in shlex.split(options)
+                                if x not in ('v', '-v', '--verbose')]
 
                     tar_cmd = ['tar']
-                    tar_shortopts = 'x'
+                    tar_shortopts = 'xv'
                     tar_longopts = []
 
                     for position, opt in enumerate(tar_opts):
@@ -1387,9 +1390,9 @@ def extracted(name,
                         ret['changes'] = results
                         return ret
                     if _is_bsdtar():
-                        files = results['stderr']
+                        files = results['stderr'].splitlines()
                     else:
-                        files = results['stdout']
+                        files = results['stdout'].splitlines()
                     if not files:
                         files = 'no tar output so far'
         except CommandExecutionError as exc:

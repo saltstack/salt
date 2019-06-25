@@ -153,8 +153,11 @@ class Serial(object):
                 # Due to this, if we don't need it, don't pass it at all so
                 # that under Python 2 we can still work with older versions
                 # of msgpack.
-                if msgpack_version >= (0, 5, 2):
-                    loads_kwargs['raw'] = False
+                if msgpack.version >= (0, 5, 2):
+                    if encoding is None:
+                        loads_kwargs['raw'] = True
+                    else:
+                        loads_kwargs['raw'] = False
                 else:
                     loads_kwargs['encoding'] = encoding
                 try:
@@ -163,7 +166,7 @@ class Serial(object):
                     # msg contains binary data
                     loads_kwargs.pop('raw', None)
                     loads_kwargs.pop('encoding', None)
-                    ret = msgpack.loads(msg, **loads_kwargs)
+                    ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
             else:
                 ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
             if six.PY3 and encoding is None and not raw:
