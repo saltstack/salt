@@ -4,12 +4,6 @@ def salt_target_branch = 'develop'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
-    [
-        $class: 'ScannerJobProperty', doNotScan: false
-    ],
-    [
-        $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
-    ],
 ])
 
 def shell_header
@@ -31,8 +25,9 @@ timeout(time: global_timeout, unit: 'HOURS') {
                     } else {
                         shell_header = ''
                     }
-                    // Checkout the repo
+
                     withEnv(["SALT_TARGET_BRANCH=${salt_target_branch}"]) {
+                        // Checkout the repo
                         stage('checkout-scm') {
                             cleanWs notFailBuild: true
                             checkout scm
@@ -54,7 +49,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
                             pyenv install --skip-existing 2.7.15
                             pyenv shell 2.7.15
                             python --version
-                            pip install -U https://github.com/s0undt3ch/nox/archive/hotfix/py2.zip#egg=Nox==2018.10.17
+                            pip install -U nox-py2
                             nox --version
                             # Create the required virtualenvs in serial
                             nox --install-only -e lint-salt
@@ -63,6 +58,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
                         }
                         archiveArtifacts artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log,file-list-experiment.log'
                     }
+
                     stage('Lint Changes') {
                         try {
                             parallel(
@@ -98,17 +94,22 @@ timeout(time: global_timeout, unit: 'HOURS') {
                                 }
                             )
                         } finally {
-                            archiveArtifacts artifacts: 'pylint-report-*-chg.log', allowEmptyArchive: true
-                            step([$class: 'WarningsPublisher',
-                                parserConfigurations: [[
-                                    parserName: 'PyLint',
-                                    pattern: 'pylint-report-*-chg.log'
-                                ]],
-                                failedTotalAll: '0',
-                                useDeltaValues: false,
-                                canRunOnFailed: true,
-                                usePreviousBuildAsReference: true
-                            ])
+                            def changed_logs_pattern = 'pylint-report-*-chg.log'
+                            archiveArtifacts artifacts: changed_logs_pattern, allowEmptyArchive: true
+                            if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                                step([$class: 'WarningsPublisher',
+                                    parserConfigurations: [[
+                                        parserName: 'PyLint',
+                                        pattern: changed_logs_pattern
+                                    ]],
+                                    failedTotalAll: '0',
+                                    useDeltaValues: false,
+                                    canRunOnFailed: true,
+                                    usePreviousBuildAsReference: true
+                                ])
+                            } else {
+                                recordIssues(enabledForFailure: true, tool: pyLint(pattern: changed_logs_pattern, reportEncoding: 'UTF-8'))
+                            }
                         }
                     }
                     stage('Lint Full') {
@@ -150,17 +151,22 @@ timeout(time: global_timeout, unit: 'HOURS') {
                                     }
                                 )
                             } finally {
-                                archiveArtifacts artifacts: 'pylint-report-*-full.log', allowEmptyArchive: true
-                                step([$class: 'WarningsPublisher',
-                                    parserConfigurations: [[
-                                        parserName: 'PyLint',
-                                        pattern: 'pylint-report-*-full.log'
-                                    ]],
-                                    failedTotalAll: '0',
-                                    useDeltaValues: false,
-                                    canRunOnFailed: true,
-                                    usePreviousBuildAsReference: true
-                                ])
+                                def full_logs_pattern = 'pylint-report-*-full.log'
+                                archiveArtifacts artifacts: full_logs_pattern, allowEmptyArchive: true
+                                if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                                    step([$class: 'WarningsPublisher',
+                                        parserConfigurations: [[
+                                            parserName: 'PyLint',
+                                            pattern: full_logs_pattern
+                                        ]],
+                                        failedTotalAll: '0',
+                                        useDeltaValues: false,
+                                        canRunOnFailed: true,
+                                        usePreviousBuildAsReference: true
+                                    ])
+                                } else {
+                                    recordIssues(enabledForFailure: true, tool: pyLint(pattern: full_logs_pattern, reportEncoding: 'UTF-8'))
+                                }
                             }
                         }
                     }
