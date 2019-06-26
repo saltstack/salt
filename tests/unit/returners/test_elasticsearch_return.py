@@ -1,3 +1,6 @@
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mixins import LoaderModuleMockMixin
@@ -15,7 +18,7 @@ from salt.returners import elasticsearch_return
 # Import elasticsearch exceptions
 NO_ELASTIC = False
 try:
-    from elasticsearch import TransportError, NotFoundError
+    from elasticsearch import NotFoundError
 except Exception:
     NO_ELASTIC = True
 
@@ -35,7 +38,6 @@ class ElasticsearchJobCacheTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
         return module_globals
-
 
     def test_get_load(self):
         '''
@@ -69,7 +71,6 @@ class ElasticsearchJobCacheTestCase(TestCase, LoaderModuleMockMixin):
                         '_version': 1,
                         'found': True}
 
-
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
             self.assertDictEqual(
@@ -94,7 +95,6 @@ class ElasticsearchJobCacheTestCase(TestCase, LoaderModuleMockMixin):
                  '_version': 1,
                  'found': True}
             )
-
 
     def test_get_load_notfound(self):
         '''
