@@ -75,11 +75,7 @@ or specific dynamic modules. The ``saltutil.sync_*``
 :py:mod:`runner functions <salt.runners.saltutil>` can be used to sync modules
 to minions and the master, respectively.
 
-Which saltenvs that the minion syncs from is based on the topfiles. (Unless specified manually.)
-
-The minion syncs modules from saltenvs that mention the minion in the saltenv's topfile.
-
-That is, for each saltenv on the file server, if a minion is mentioned in that saltenv's topfile, the minion will load modules from that saltenv.
+If saltenv environments are used (through the :ref:`top file <states-top>`, the :conf_minion:`environment` option of the minion configuration file, or as an argument on the command line) modules will be synced from the applied environments.
 
 
 The extmods Directory
