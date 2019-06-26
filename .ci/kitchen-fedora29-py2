@@ -17,8 +17,8 @@ properties([
     ])
 ])
 
-timeout(time: global_timeout, unit: 'HOURS') {
-    node('kitchen-slave') {
+node('kitchen-slave') {
+    timeout(time: global_timeout, unit: 'HOURS') {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
                           accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                           credentialsId: 'AWS_ACCESS_KEY_ID',
@@ -54,11 +54,11 @@ timeout(time: global_timeout, unit: 'HOURS') {
                         stage('checkout-scm') {
                             cleanWs notFailBuild: true
                             checkout scm
+                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
                         }
 
                         // Setup the kitchen required bundle
                         stage('setup-bundle') {
-                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
                             sh 'bundle install --with ec2 windows --without docker macos opennebula vagrant'
                         }
 
@@ -76,11 +76,11 @@ timeout(time: global_timeout, unit: 'HOURS') {
                                 try {
                                     timeout(time: testrun_timeout, unit: 'HOURS') {
                                         stage('Converge VM') {
-                                            sh 'bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM'
+                                            sh 'bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?;"'
                                         }
                                         stage('Run Tests') {
                                             withEnv(["DONT_DOWNLOAD_ARTEFACTS=1"]) {
-                                                sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM'
+                                                sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?;"'
                                             }
                                         }
                                     }

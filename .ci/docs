@@ -8,8 +8,8 @@ properties([
 
 def shell_header
 
-timeout(time: global_timeout, unit: 'HOURS') {
-    node('docs') {
+node('docs') {
+    timeout(time: global_timeout, unit: 'HOURS') {
         ansiColor('xterm') {
             timestamps {
                 try {
