@@ -204,6 +204,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                                                         args=(self.opts, self.master_uri,),
                                                         kwargs={'io_loop': self._io_loop})
 
+    # pylint: disable=W1701
     def __del__(self):
         '''
         Since the message_client creates sockets and assigns them to the IOLoop we have to
@@ -211,6 +212,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         '''
         if hasattr(self, 'message_client'):
             self.message_client.destroy()
+    # pylint: enable=W1701
 
     @property
     def master_uri(self):
@@ -437,8 +439,10 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @tornado.gen.coroutine
@@ -989,8 +993,10 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
     def __init__(self, opts, args=None, kwargs=None):
         super(AsyncReqMessageClientPool, self).__init__(AsyncReqMessageClient, opts, args=args, kwargs=kwargs)
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
     def destroy(self):
         for message_client in self.message_clients:
@@ -1060,8 +1066,10 @@ class AsyncReqMessageClient(object):
         if self.context.closed is False:
             self.context.term()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
     def _init_socket(self):
         if hasattr(self, 'stream'):

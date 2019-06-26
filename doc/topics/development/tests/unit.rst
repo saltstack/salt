@@ -99,8 +99,8 @@ Salt loader modules use a series of globally available dunder variables,
 ``__salt__``, ``__opts__``, ``__pillar__``, etc. To facilitate testing these
 modules a mixin class was created, ``LoaderModuleMockMixin`` which can be found
 in ``tests/support/mixins.py``. The reason for the existence of this class is
-because historiclly and because it was easier, one would add these dunder
-variables directly on the imported module. This however, introduces unexpected
+because historically one would add these dunder
+variables directly on the imported module. This, however, introduces unexpected
 behavior when running the full test suite since those attributes would not be
 removed once we were done testing the module and would therefore leak to other
 modules being tested with unpredictable results. This is the kind of work that
