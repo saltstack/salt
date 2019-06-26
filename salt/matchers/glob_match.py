@@ -5,7 +5,6 @@ This is the default glob matcher function.
 from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
-import logging
 from salt.ext import six  # pylint: disable=3rd-party-module-not-gated
 
 
