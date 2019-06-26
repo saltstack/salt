@@ -39,7 +39,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
                         pyenv install --skip-existing 2.7.15
                         pyenv shell 2.7.15
                         python --version
-                        pip install sphinx -e .
+                        pip install tox
                         '''
                     }
 
@@ -47,7 +47,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
                         sh shell_header + '''
                         eval "$(pyenv init -)"
                         pyenv shell 2.7.15
-                        make SPHINXOPTS="-W" -C doc clean html
+                        tox -e docs
                         '''
                     }
                 } catch (Exception e) {
