@@ -17,8 +17,8 @@ properties([
     ])
 ])
 
-timeout(time: global_timeout, unit: 'HOURS') {
-    node('kitchen-slave') {
+node('kitchen-slave') {
+    timeout(time: global_timeout, unit: 'HOURS') {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
                           accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                           credentialsId: 'AWS_ACCESS_KEY_ID',
