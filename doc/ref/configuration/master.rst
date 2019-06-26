@@ -540,8 +540,8 @@ are expected to reply from executions.
 
 Default: ``True``
 
-A  RunnerClient invoces a MasterMinion which loads the grains of the minion.
-On busy salt-masters, where runners do not need grains, disabling can reduce load.
+A RunnerClient invokes a MasterMinion, which loads the grains of the minion.
+If RunnerClients don't need grains, setting this option to False can reduce load on a busy master.
 
 .. code-block:: yaml
 
@@ -554,10 +554,11 @@ On busy salt-masters, where runners do not need grains, disabling can reduce loa
 
 Default: ``True``
 
-A  MasterMinion loads the grains of the minion,
-which could be the minion of a RunnerClient or the salt-master itself.
+A MasterMinion loads the grains of the minion,
+which could be the minion of a RunnerClient or the master itself.
+If MasterMinions don't need grains, setting this option to False can reduce load on a busy master.
+
 When disabled, this also disables the RunnerClient grains.
-On busy salt-masters, where MasterMinions do not need grains, disabling can reduce load.
 
 
 .. code-block:: yaml
