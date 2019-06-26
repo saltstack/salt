@@ -92,7 +92,7 @@ def match(tgt, opts=None):
                 return False
 
             engine_args = [target_info['pattern']]
-            engine_kwargs = {}
+            engine_kwargs = {'opts': opts}
             if target_info['delimiter']:
                 engine_kwargs['delimiter'] = target_info['delimiter']
 
@@ -102,7 +102,7 @@ def match(tgt, opts=None):
 
         else:
             # The match is not explicitly defined, evaluate it as a glob
-            results.append(six.text_type(matchers['glob_match.match'](word)))
+            results.append(six.text_type(matchers['glob_match.match'](word, opts)))
 
     results = ' '.join(results)
     log.debug('compound_match %s ? "%s" => "%s"', minion_id, tgt, results)
