@@ -33,29 +33,18 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {cpan: {}}
 
-    @staticmethod
-    def _patch_binary(func, *args, **kwargs):
-        with patch.object(salt.utils.path, 'which', MagicMock(return_value='/usr/bin/cpan')):
-            with patch.object(cpan, '_configure', MagicMock(return_value=True)):
-                return func(*args, **kwargs)
-
     def test__get_binary_no_env(self):
         # Verify that the name of the default cpan executable starts with 'cpan'
-        bin_path = self._patch_binary(cpan._get_cpan_bin)
-        self.assertEqual('cpan', os.path.split(bin_path)[-1])
+        with patch.object(salt.utils.path, 'which', MagicMock(return_value='/usr/bin/cpan')):
+            bin_path = cpan._get_cpan_bin()
+            self.assertEqual('cpan', os.path.split(bin_path)[-1])
 
     def test__get_binary(self):
         # Verify that the name of the default cpan executable starts with 'cpan'
-        bin_path = self._patch_binary(cpan._get_cpan_bin, 'cpan')
-        self.assertEqual('cpan', os.path.split(bin_path)[-1])
-
-    def test__configure(self):
-        with patch.dict(cpan.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode': 0})}):
-            self.assertTrue(cpan._configure("/usr/bin/cpan"))
-
-    def test__configure_fail(self):
-        with patch.dict(cpan.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode': 1})}):
-            self.assertFalse(cpan._configure("/usr/bin/cpan"))
+        with patch('os.access', lambda path, mode: True):
+            with patch.object(os.path, 'isfile', MagicMock(return_value=True)):
+                bin_path = cpan._get_cpan_bin('cpan')
+                self.assertEqual('cpan', os.path.split(bin_path)[-1])
 
     def test_get_version(self):
         mock = MagicMock(return_value={
@@ -167,7 +156,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
                 'new': None,
                 'old': None})
 
-    def test_remove_nopan_error(self):
+    def test_remove_no_cpan_error(self):
         '''
         Test if it gives no cpan error while removing,
         If nothing has changed then an empty dictionary will be returned
@@ -187,8 +176,9 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         Test if it list installed Perl module
         '''
         mock = MagicMock(return_value={})
-        with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(cpan.list_(), {})
+        with patch.object(salt.utils.path, 'which', MagicMock(return_value='/usr/bin/cpan')):
+            with patch.dict(cpan.__salt__, {'cmd.run_all': mock}):
+                self.assertDictEqual(cpan.list_(), {})
 
     # 'show' function tests: 2
     def test_show(self):

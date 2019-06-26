@@ -19,6 +19,11 @@ from salt.exceptions import CommandNotFoundError
 
 log = logging.getLogger(__name__)
 
+default_env = {
+    # Use the default answer for prompted configuration options
+    'PERL_MM_USE_DEFAULT': '1'
+}
+
 # Don't shadow built-ins.
 __func_alias__ = {
     'list_': 'list'
@@ -26,53 +31,24 @@ __func_alias__ = {
 
 
 def __virtual__():
-    '''
-    Only work on supported POSIX-like systems
-    '''
-    if salt.utils.path.which('cpan'):
-        return True
-    return False, 'Unable to locate cpan. Make sure it is installed and in the PATH.'
+    return True
 
 
 def _get_cpan_bin(bin_env=None):
-    """
+    '''
     Locate the cpan binary, with 'bin_env' as the executable itself,
     or from searching conventional filesystem locations
-    """
-    binary = None
+    '''
     if not bin_env:
         log.debug('cpan: Using cpan from system')
-        binary = salt.utils.path.which('cpan')
-
-    # If cpan is not part of the path, check if it exists in bin_env
-    if not binary:
-        if bin_env and os.access(bin_env, os.X_OK) and os.path.isfile(bin_env):
-            binary = os.path.normpath(bin_env)
-        else:
-            binary = salt.utils.path.which(bin_env)
+        return salt.utils.path.which('cpan')
+    elif os.access(bin_env, os.X_OK) and os.path.isfile(bin_env):
+        # If cpan is not part of the path, check if it exists in bin_env
+        return os.path.normpath(bin_env)
 
     # If none of the above assignments resulted in a path, throw an error
-    if not binary:
-        raise CommandNotFoundError('Unable to locate `{}` binary, '
-                                   'Make sure it is installed and in the PATH'.format(
-                                    bin_env if bin_env else "cpan"))
-
-    if not _configure(binary):
-        raise Exception("Could not configure cpan")
-
-    return binary
-
-
-def _configure(bin_env):
-    '''
-    Configure cpan automatically
-    :param bin_env:
-    :return True if configuration was successful else False
-    '''
-    ret = __salt__['cmd.run_all']("{} -h".format(bin_env), stdin="yes\n")
-    if ret.get("retcode", None):
-        return False
-    return True
+    raise CommandNotFoundError('Make sure `cpan` is installed and in the PATH'.format(
+                                bin_env if bin_env else 'cpan'))
 
 
 def version(bin_env=None):
@@ -88,7 +64,7 @@ def version(bin_env=None):
 
         salt '*' cpan.version
     '''
-    return show("CPAN", bin_env=bin_env).get("installed version", None)
+    return show('CPAN', bin_env=bin_env).get('installed version', None)
 
 
 def install(module,
@@ -107,7 +83,7 @@ def install(module,
         salt '*' cpan.install Template::Alloy
     '''
     # Get the state of the package before the install operations
-    log.debug("logging works!")
+    log.debug('logging works!')
     old_info = show(module, bin_env=bin_env)
 
     # Initialize the standard return information for this function
@@ -126,7 +102,7 @@ def install(module,
     if mirror:
         # cpan accepts a single comma-separated string, but we prefer
         # a list from state files,  Allow both.
-        cmd.append("-M")
+        cmd.append('-M')
         if isinstance(mirror, list):
             mirror = ','.join(mirror)
         cmd.extend(['-M', mirror])
@@ -139,10 +115,10 @@ def install(module,
         cmd.append(module)
 
     # Run the cpan install command
-    cmd_ret = __salt__['cmd.run_all'](cmd)
+    cmd_ret = __salt__['cmd.run_all'](cmd, env=default_env)
 
     # Report an error if the return code was anything but zero
-    if cmd_ret.get("retcode", None):
+    if cmd_ret.get('retcode', None):
         ret['error'] = cmd_ret['stderr']
 
     new_info = show(module)
@@ -168,7 +144,7 @@ def install(module,
 def remove(module, details=False):
     '''
     Attempt to remove a Perl module that was installed from CPAN. Because the
-    ``cpan`` command doesn't actually support "uninstall"-like functionality,
+    ``cpan`` command doesn't actually support 'uninstall'-like functionality,
     this function will attempt to do what it can, with what it has from CPAN.
 
     Until this function is declared stable, USE AT YOUR OWN RISK!
@@ -190,7 +166,7 @@ def remove(module, details=False):
 
     cpan_version = info.get(' version', None)
     if (cpan_version is None) or ('not installed' in cpan_version):
-        log.debug("Module '{}' already removed, no changes made".format(module))
+        log.debug('Module "{}" already removed, no changes made'.format(module))
     else:
         mod_pathfile = module.replace('::', '/') + '.pm'
         ins_path = info['installed file'].replace(mod_pathfile, '')
@@ -204,7 +180,7 @@ def remove(module, details=False):
             # Check if the build directory exists, if not then skip
             if not os.path.isdir(build_dir):
                 log.warning(
-                    "Could not find CPAN build dir: {}".format(build_dir))
+                    'Could not find CPAN build dir: {}'.format(build_dir))
                 continue
 
             # If the manifest is moving then skip
@@ -245,7 +221,7 @@ def remove(module, details=False):
     return ret
 
 
-def list_():
+def list_(bin_env=None):
     '''
     List installed Perl modules, and the version installed
 
@@ -256,8 +232,8 @@ def list_():
         salt '*' cpan.list
     '''
     ret = {}
-    cmd = [_get_cpan_bin('cpan'), '-l']
-    out = __salt__['cmd.run_all'](cmd).get('stdout', "")
+    cmd = [_get_cpan_bin(bin_env), '-l']
+    out = __salt__['cmd.run_all'](cmd, env=default_env).get('stdout', '')
     for line in out.splitlines():
         comps = line.split()
         # If there is text not related to the list we want, it will have
@@ -267,7 +243,7 @@ def list_():
     return ret
 
 
-def show(module, bin_env='cpan'):
+def show(module, bin_env=None):
     '''
     Show information about a specific Perl module
 
@@ -277,13 +253,12 @@ def show(module, bin_env='cpan'):
 
         salt '*' cpan.show Template::Alloy
     '''
-    log.debug("debugging works!")
     ret = {'name': module}
 
     # This section parses out details from CPAN, if possible
     cmd = [_get_cpan_bin(bin_env)]
     cmd.extend(['-D', module])
-    out = __salt__['cmd.run_all'](cmd).get('stdout', "")
+    out = __salt__['cmd.run_all'](cmd, env=default_env).get('stdout', '')
     parse = False
     info = []
     for line in out.splitlines():
@@ -321,7 +296,7 @@ def show(module, bin_env='cpan'):
     ret['author email'] = info[6].strip()
 
     # Check and see if there are cpan build directories
-    cfg = config()
+    cfg = config(bin_env)
     build_dir = cfg.get('build_dir', None)
     if build_dir is not None:
         ret['cpan build dirs'] = []
@@ -337,7 +312,7 @@ def show(module, bin_env='cpan'):
     return ret
 
 
-def config(bin_env='cpan'):
+def config(bin_env=None):
     '''
     Return a dict of CPAN configuration values
 
@@ -348,9 +323,9 @@ def config(bin_env='cpan'):
         salt '*' cpan.config
     '''
     cmd = [_get_cpan_bin(bin_env), '-J']
-    out = __salt__['cmd.run_all'](cmd).get("stdout", "")
+    out = __salt__['cmd.run_all'](cmd, env=default_env).get('stdout', '')
     # Format the output like a python dictionary
-    out = out.replace('=>', ':').replace("\n", "")
+    out = out.replace('=>', ':').replace('\n', '')
     # Remove everything before '{' and after '}'
     if out:
         out = out[out.find('{'):out.rfind('}') + 1]
