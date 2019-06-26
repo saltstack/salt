@@ -140,6 +140,16 @@
 # Cache subsystem module to use for minion data cache.
 #cache: localfs
 
+# Each RunnerClient loads grains.
+# This can be a burden on the master for larger deployments (over 5000 minions).
+# Disabling is not generally recommended.
+#runnerclient_grains: True
+
+# Each MasterMinion loads grains.
+# This can be a burden on the master for larger deployments (over 5000 minions).
+# Disabling is not generally recommended.
+#masterminion_grains: True
+
 # Enables a fast in-memory cache booster and sets the expiration time.
 #memcache_expire_seconds: 0
 
