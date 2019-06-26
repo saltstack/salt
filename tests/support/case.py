@@ -24,6 +24,7 @@ import textwrap
 import logging
 import tempfile
 import subprocess
+import json
 from datetime import datetime, timedelta
 
 # Import salt testing libs
@@ -72,7 +73,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
         return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout)
 
     def run_ssh(self, arg_str, with_retcode=False, timeout=25,
-                catch_stderr=False, wipe=False, raw=False):
+                catch_stderr=False, wipe=False, raw=False, **kwargs):
         '''
         Execute salt-ssh
         '''
@@ -84,7 +85,12 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
             arg_str
         )
-        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
+        return self.run_script('salt-ssh',
+                               arg_str,
+                               with_retcode=with_retcode,
+                               catch_stderr=catch_stderr,
+                               raw=True,
+                               **kwargs)
 
     def run_run(self,
                 arg_str,
@@ -197,7 +203,8 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
                    timeout=15,
                    raw=False,
                    popen_kwargs=None,
-                   log_output=None):
+                   log_output=None,
+                   **kwargs):
         '''
         Execute a script with the given argument string
 
@@ -237,6 +244,9 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
             cmd += 'python{0}.{1} '.format(*sys.version_info)
         cmd += '{0} '.format(script_path)
         cmd += '{0} '.format(arg_str)
+        if kwargs:
+            for key, value in kwargs.items():
+                cmd += "'{0}={1} '".format(key, json.dumps(value))
 
         tmp_file = tempfile.SpooledTemporaryFile()
 
@@ -469,7 +479,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         return ret
 
     def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False,  # pylint: disable=W0221
-                timeout=RUN_TIMEOUT, wipe=True, raw=False):
+                timeout=RUN_TIMEOUT, wipe=True, raw=False, **kwargs):
         '''
         Execute salt-ssh
         '''
@@ -485,8 +495,9 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                               with_retcode=with_retcode,
                               catch_stderr=catch_stderr,
                               timeout=timeout,
-                              raw=True)
-        log.debug('Result of run_ssh for command \'%s\': %s', arg_str, ret)
+                              raw=True,
+                              **kwargs)
+        log.debug('Result of run_ssh for command \'%s %s\': %s', arg_str, kwargs, ret)
         return ret
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False,
@@ -878,8 +889,8 @@ class SSHCase(ShellCase):
         We use a 180s timeout here, which some slower systems do end up needing
         '''
         ret = self.run_ssh(self._arg_str(function, arg), timeout=timeout,
-                           wipe=wipe, raw=raw)
-        log.debug('SSHCase run_function executed %s with arg %s', function, arg)
+                           wipe=wipe, raw=raw, **kwargs)
+        log.debug('SSHCase run_function executed %s with arg %s and kwargs %s', function, arg, kwargs)
         log.debug('SSHCase JSON return: %s', ret)
 
         # Late import

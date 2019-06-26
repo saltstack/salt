@@ -292,7 +292,7 @@ def run_test(**kwargs):
     if test and isinstance(test, dict):
         return scheck.run_test(test)
     else:
-        return "Test must be a dictionary"
+        return "Test argument must be a dictionary"
 
 
 def state_apply(state_name, **kwargs):
@@ -313,9 +313,10 @@ def state_apply(state_name, **kwargs):
     # minion is running with a master, a potentially non-local client is needed to lookup states
     conf_file = copy.deepcopy(__opts__['conf_file'])
     local_opts = salt.config.minion_config(conf_file)
-    if '_salt/running_data/var/run/salt-minion.pid' in __opts__.get('pidfile', False):
+    if 'running_data/var/run/salt-minion.pid' in __opts__.get('pidfile', False):
         # Force salt-ssh minions to use local
         local_opts['file_client'] = 'local'
+        log.debug('Detected salt-ssh, running as local')
     caller = salt.client.Caller(mopts=local_opts)
     if kwargs:
         return caller.cmd('state.apply', state_name, **kwargs)
@@ -872,9 +873,9 @@ class StateTestLoader(object):
         Detects states used, caches needed files, and adds to test list
         '''
         salt_ssh = False
-        if '_salt/running_data/var/run/salt-minion.pid' in __opts__.get('pidfile', False):
+        if 'running_data/var/run/salt-minion.pid' in __opts__.get('pidfile', False):
             salt_ssh = True
-            log.debug('Running on salt-ssh minion. Reading file %s', 'cp_output.txt')
+            log.debug('Running on salt-ssh minion. Reading file %s', sls_name)
             cp_output_file = os.path.join(__opts__['cachedir'], 'files', self.saltenv, 'cp_output.txt')
             with salt.utils.files.fopen(cp_output_file, 'r') as fp:
                 all_states = salt.utils.json.loads(salt.utils.stringutils.to_unicode(fp.read()))

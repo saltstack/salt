@@ -35,7 +35,8 @@ class SaltcheckModuleTest(ModuleCase):
         '''
         saltcheck.run_highstate_tests
         '''
-        expected_top_states = ['master_tops_test', 'core', 'TEST RESULTS']
+        expected_top_states = self.run_function('state.show_top')['base']
+        expected_top_states.append('TEST RESULTS')
         ret = self.run_function('saltcheck.run_highstate_tests')
         for top_state_dict in ret:
             self.assertIn(top_state_dict.keys()[0], expected_top_states)
