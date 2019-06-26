@@ -27,7 +27,7 @@ def match(tgt, opts=None):
         opts = __opts__
     nodegroups = opts.get('nodegroups', {})
     matchers = salt.loader.matchers(opts)
-    minion_id = opts.get('minion_id', __opts__['id'])
+    minion_id = opts.get('minion_id', opts['id'])
 
     if not isinstance(tgt, six.string_types) and not isinstance(tgt, (list, tuple)):
         log.error('Compound target received that is neither string, list nor tuple')
