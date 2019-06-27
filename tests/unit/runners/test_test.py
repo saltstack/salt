@@ -23,7 +23,8 @@ class TestTest(TestCase):
         Test test.arg runner
         '''
         ret = runnerstest.arg('test4me')
-        self.assertEqual(ret, {'args': ('test4me')})
+        expected = {'args': ('test4me',), 'kwargs': {}}
+        self.assertEqual(ret, expected)
 
     def test_get_opts(self):
         '''
