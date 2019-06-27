@@ -7,22 +7,12 @@ Unit tests for the test runner
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
-    patch
-)
+from tests.support.unit import TestCase
 
 # Import Salt Libs
 import salt.runners.test as runnerstest
-import salt.utils.master
 
-
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-class TestTest(TestCase, LoaderModuleMockMixin):
+class TestTest(TestCase):
     '''
     Validate the test runner
     '''
@@ -31,9 +21,8 @@ class TestTest(TestCase, LoaderModuleMockMixin):
         '''
         Test test.arg runner
         '''
-        ret = runnerstest.get_opts('test4me')
-        self.assertEqual(masterconfig, {args: ('test4me')})
-
+        ret = runnerstest.arg('test4me')
+        self.assertEqual(ret, {'args': ('test4me')})
 
     def test_get_opts(self):
         '''
