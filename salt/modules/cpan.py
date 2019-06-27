@@ -324,10 +324,15 @@ def config(bin_env=None):
     cmd = [_get_cpan_bin(bin_env), '-J']
     out = __salt__['cmd.run_all'](cmd, env=default_env).get('stdout', '')
     # Format the output like a python dictionary
-    out = out.replace('=>', ':').replace('\n', '')
+    out = out.replace('=>', ':')
+    # Remove all whitespaces
+    out = ''.join(out.split())
     # Remove everything before '{' and after '}'
     if out:
         out = out[out.find('{'):out.rfind('}') + 1]
-        return literal_eval(out)
+        try:
+            return literal_eval(out)
+        except ValueError as e:
+            raise ValueError(repr(e) + out)
     else:
         return dict()
