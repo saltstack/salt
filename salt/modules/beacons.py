@@ -621,15 +621,22 @@ def reset(**kwargs):
             eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
             res = __salt__['event.fire']({'func': 'reset'}, 'manage_beacons')
             if res:
+                wait = kwargs.get('timeout', default_event_wait)
                 event_ret = eventer.get_event(
                     tag='/salt/minion/minion_beacon_reset_complete',
-                    wait=kwargs.get('timeout', default_event_wait))
+                    wait=wait)
                 if event_ret and event_ret['complete']:
                     ret['result'] = True
                     ret['comment'] = 'Beacon configuration reset.'
                 else:
-                    ret['result'] = False
-                    ret['comment'] = 'Something went wrong.'
+                    if event_ret is None:
+                        ret['result'] = False
+                        ret['comment'] = (
+                            'minion reset event not recieved after {} seconds'
+                        ).format(wait)
+                    else:
+                        ret['result'] = False
+                        ret['comment'] = event_ret['comment']
                 return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system

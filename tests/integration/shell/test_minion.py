@@ -63,6 +63,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
             config = salt.utils.yaml.safe_load(fhr)
             config['log_file'] = 'file:///tmp/log/LOG_LOCAL3'
+            config['id'] = 'issue-7754'
 
             with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
                 salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
