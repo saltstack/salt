@@ -1728,22 +1728,6 @@ def _mkstemp_copy(path,
     return temp_file
 
 
-def _line_match(src, probe):
-    '''
-    Returns True if the line matches the probe
-    '''
-    no_match = 1
-    equal = 0
-
-    if not src or not probe:
-        return no_match
-
-    if probe.rstrip('\r\n') == src.rstrip('\r\n'):
-        return equal
-
-    return no_match
-
-
 def _regex_to_static(src, regex):
     '''
     Expand regular expression to static match.
@@ -1809,20 +1793,178 @@ def _set_line_eol(src, line):
     return line.rstrip() + line_ending
 
 
-def _insert_line_before(idx, body, content, indent):
-    if not idx or (idx and _line_match(body[idx - 1], content) != 0):
-        cnd = _set_line_indent(body[idx], content, indent)
-        body.insert(idx, cnd)
-    return body
+def _set_line(lines,
+              content=None,
+              match=None,
+              mode=None,
+              location=None,
+              before=None,
+              after=None,
+              indent=True,
+              ):
+    '''
+    Take ``lines`` and insert ``content`` and the correct place. If
+    ``mode`` is ``'delete'`` then delete the ``content`` line instead.
+    Returns a list of modified lines.
+
+    lines
+        The original file lines to modify.
+
+    content
+        Content of the line. Allowed to be empty if ``mode='delete'``.
+
+    match
+        The regex or contents to seek for on the line.
+
+    mode
+        What to do with the matching line. One of the following options
+        is required:
+
+        - ensure
+            If ``content`` does not exist, it will be added.
+        - replace
+            If the line already exists, it will be replaced(???? TODO WHAT DOES THIS MEAN?)
+        - delete
+            Delete the line, if found.
+        - insert
+            Insert a line if it does not already exist.
+
+        .. note::
+
+            If ``mode=insert`` is used, at least one of the following
+            options must also be defined: ``location``, ``before``, or
+            ``after``. If ``location`` is used, it takes precedence
+            over the other two options
+
+    location
+        ``start`` or ``end``. Defines where to place the content in the
+        lines. **Note** this option is only used when ``mode='insert`` is
+        specified. If a location is passed in, it takes precedence over
+        both the ``before`` and ``after`` kwargs.
+
+        - start
+            Place the ``content`` at the beginning of the lines.
+        - end
+            Place the ``content`` at the end of the lines.
+
+    before
+        Regular expression or an exact, case-sensitive fragment of the
+        line to place the ``content`` before. This option is only used
+        when either ``ensure`` or ``insert`` mode is specified.
+
+    after
+        Regular expression or an exact, case-sensitive fragment of the
+        line to plaece the ``content`` after. This option is only used
+        when either ``ensure`` or ``insert`` mode is specified.
+
+    indent
+        Keep indentation to match the previous line. Ignored when
+        ``mode='delete'`` is specified.
+    '''
+
+    if mode not in ('insert', 'ensure', 'delete', 'replace'):
+        if mode is None:
+            raise CommandExecutionError('Mode was not defined. How to process the file?')
+        else:
+            raise CommandExecutionError('Unknown mode: {0!r}'.format(mode))
+
+    if mode != 'delete' and content is None:
+        raise CommandExecutionError('Content can only be empty if mode is delete')
+
+    if not match and before is None and after is None:
+        match = content
+
+    after = _regex_to_static(lines, after)
+    before = _regex_to_static(lines, before)
+    match = _regex_to_static(lines, match)
+
+    if not lines and mode in ('delete', 'replace'):
+        log.warning('Cannot find text to %s. File is empty.', mode)
+        lines = []
+    elif mode == 'delete' and match:
+        lines = [line for line in lines if line != match[0]]
+    elif mode == 'replace' and match:
+        idx = lines.index(match[0])
+        original_line = lines.pop(idx)
+        lines.insert(idx, _set_line_indent(original_line, content, indent))
+    elif mode == 'insert':
+        if before is None and after is None and location is None:
+            raise CommandExecutionError(
+                'On insert either "location" or "before/after" conditions are'
+                ' required.',
+            )
+        
+        if location:
+            if location == 'end':
+                if lines:
+                    lines.append(_set_line_indent(lines[-1], content, indent))
+                else:
+                    lines.append(content)
+            elif location == 'start':
+                if lines:
+                    lines.insert(0, _set_line_eol(lines[0], content))
+                else:
+                    lines = [content + os.linesep]
+        else:
+            if before and after:
+                _assert_occurrence(before, 'before')
+                _assert_occurrence(after, 'after')
+                first = lines.index(after[0])
+                last = lines.index(before[0])
+                lines.insert(last, _set_line_indent(lines[last], content, indent))
+            elif after:
+                _assert_occurrence(after, 'after')
+                idx = lines.index(after[0])
+                next_line = None if idx+1 >= len(lines) else lines[idx+1]
+                if next_line is None or next_line.rstrip('\r\n') != content.rstrip('\r\n'):
+                    lines.insert(idx+1, _set_line_indent(lines[idx], content, indent))
+            elif before:
+                _assert_occurrence(before, 'before')
+                idx = lines.index(before[0])
+                prev_line = lines[idx-1]
+                if prev_line.rstrip('\r\n') != content.rstrip('\r\n'):
+                    lines.insert(idx, _set_line_indent(lines[idx], content, indent))
+            else:
+                raise CommandExecutionError('Neither before or after was found in file')
+    elif mode == 'ensure':
+        if before and after:
+            _assert_occurrence(after, 'after')
+            _assert_occurrence(before, 'before')
+
+            after_index = lines.index(after[0])
+            before_index = lines.index(before[0])
+
+            already_there = any(line.lstrip() == content for line in lines)
+            if not already_there:
+                if after_index+1 == before_index:
+                    lines.insert(after_index+1, _set_line_indent(lines[after_index], content, indent))
+                elif after_index+2 == before_index:
+                    lines[after_index+1] = _set_line_indent(lines[after_index], content, indent)
+                else:
+                    raise CommandExecutionError(
+                        'Found more than one line between boundaries'
+                        ' "before" and "after".'
+                    )
+        elif before:
+            _assert_occurrence(before, 'before')
+            before_index = lines.index(before[0])
+            if before_index == 0 or lines[before_index-1].rstrip('\r\n') != content.rstrip('\r\n'):
+                lines.insert(before_index, _set_line_indent(lines[before_index-1], content, indent))
+        elif after:
+            _assert_occurrence(after, 'after')
+            after_index = lines.index(after[0])
+            is_last_line = after_index+1 >= len(lines)
+            if is_last_line or lines[after_index+1].rstrip('\r\n') != content.rstrip('\r\n'):
+                lines.insert(after_index+1, _set_line_indent(lines[after_index], content, indent))
+        else:
+            raise CommandExecutionError(
+                'Wrong conditions? Unable to ensure line without knowing where'
+                ' to put it before and/or after.'
+            )
 
 
-def _insert_line_after(idx, body, content, indent):
-    # No duplicates or append, if "after" is the last line
-    next_line = idx + 1 < len(body) and body[idx + 1] or None
-    if next_line is None or _line_match(next_line, content) != 0:
-        cnd = _set_line_indent(body[idx], content, indent)
-        body.insert(idx + 1, cnd)
-    return body
+
+    return lines
 
 
 def line(path, content=None, match=None, mode=None, location=None,
@@ -1909,7 +2051,7 @@ def line(path, content=None, match=None, mode=None, location=None,
 
     indent
         Keep indentation with the previous line. This option is not considered when
-        the ``delete`` mode is specified.
+        the ``delete`` mode is specified. Default is ``True``
 
     CLI Example:
 
@@ -1960,92 +2102,20 @@ def line(path, content=None, match=None, mode=None, location=None,
     if body and _get_eol(body[-1]):
         body.append('')
 
-    after = _regex_to_static(body, after)
-    before = _regex_to_static(body, before)
-    match = _regex_to_static(body, match)
-
     if os.stat(path).st_size == 0 and mode in ('delete', 'replace'):
         log.warning('Cannot find text to %s. File \'%s\' is empty.', mode, path)
         body = []
-    elif mode == 'delete' and match:
-        body = [line for line in body if line != match[0]]
-    elif mode == 'replace' and match:
-        idx = body.index(match[0])
-        file_line = body.pop(idx)
-        body.insert(idx, _set_line_indent(file_line, content, indent))
-    elif mode == 'insert':
-        if not location and not before and not after:
-            raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
 
-        if not location:
-            if before and after:
-                _assert_occurrence(before, 'before')
-                _assert_occurrence(after, 'after')
-
-                out = []
-                in_range = False
-                for line in body:
-                    if line == after[0]:
-                        in_range = True
-                    elif line == before[0] and in_range:
-                        cnd = _set_line_indent(line, content, indent)
-                        out.append(cnd)
-                    out.append(line)
-                body = out
-
-            if before and not after:
-                _assert_occurrence(before, 'before')
-
-                idx = body.index(before[0])
-                body = _insert_line_before(idx, body, content, indent)
-
-            elif after and not before:
-                _assert_occurrence(after, 'after')
-
-                idx = body.index(after[0])
-                body = _insert_line_after(idx, body, content, indent)
-
-        else:
-            if location == 'start':
-                if body:
-                    body.insert(0, _set_line_eol(body[0], content))
-                else:
-                    body.append(content + os.linesep)
-            elif location == 'end':
-                body.append(_set_line_indent(body[-1], content, indent) if body else content)
-
-    elif mode == 'ensure':
-
-        if before and after:
-            _assert_occurrence(before, 'before')
-            _assert_occurrence(after, 'after')
-
-            is_there = bool([l for l in body if l.count(content)])
-            if not is_there:
-                idx = body.index(after[0])
-                if idx < (len(body) - 1) and body[idx + 1] == before[0]:
-                    cnd = _set_line_indent(body[idx], content, indent)
-                    body.insert(idx + 1, cnd)
-                else:
-                    raise CommandExecutionError('Found more than one line between '
-                                                'boundaries "before" and "after".')
-
-        elif before and not after:
-            _assert_occurrence(before, 'before')
-
-            idx = body.index(before[0])
-            body = _insert_line_before(idx, body, content, indent)
-
-        elif not before and after:
-            _assert_occurrence(after, 'after')
-
-            idx = body.index(after[0])
-            body = _insert_line_after(idx, body, content, indent)
-
-        else:
-            raise CommandExecutionError("Wrong conditions? "
-                                        "Unable to ensure line without knowing "
-                                        "where to put it before and/or after.")
+    body = _set_line(
+        lines=body,
+        content=content,
+        match=match,
+        mode=mode,
+        location=location,
+        before=before,
+        after=after,
+        indent=indent,
+    )
 
     if body:
         for idx, line in enumerate(body):
