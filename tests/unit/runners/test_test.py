@@ -25,12 +25,3 @@ class TestTest(TestCase):
         ret = runnerstest.arg('test4me')
         expected = {'args': ('test4me',), 'kwargs': {}}
         self.assertEqual(ret, expected)
-
-    def test_get_opts(self):
-        '''
-        Test test.get_opts runner
-        '''
-        masterconfig = runnerstest.get_opts()   # configuration options of the master
-        self.assertIsNotNone(masterconfig)
-        self.assertIsInstance(masterconfig, dict)
-        self.assertEqual(masterconfig['__role'], {'master'})
