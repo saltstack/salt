@@ -12,6 +12,7 @@ from tests.support.unit import TestCase
 # Import Salt Libs
 import salt.runners.test as runnerstest
 
+
 class TestTest(TestCase):
     '''
     Validate the test runner
