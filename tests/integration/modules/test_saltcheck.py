@@ -40,4 +40,4 @@ class SaltcheckModuleTest(ModuleCase):
         expected_top_states.append('TEST RESULTS')
         ret = self.run_function('saltcheck.run_highstate_tests')
         for top_state_dict in ret:
-            self.assertIn(top_state_dict.keys()[0], expected_top_states)
+            self.assertIn(list(top_state_dict)[0], expected_top_states)
