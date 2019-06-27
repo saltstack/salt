@@ -33,6 +33,9 @@ def update(branch=None, repo=None):
         changes were fetched. ``False`` now is reserved only for instances in
         which there were errors.
 
+    .. versionchanged:: Sodium
+        The repo parameter also matches against the repo name.
+
     Fetch one or all configured git_pillar remotes.
 
     .. note::
@@ -55,6 +58,8 @@ def update(branch=None, repo=None):
 
         # Update specific branch and repo
         salt-run git_pillar.update branch='branch' repo='https://foo.com/bar.git'
+        # Update specific repo, by name
+        salt-run git_pillar.update repo=myrepo
         # Update all repos
         salt-run git_pillar.update
         # Run with debug logging
@@ -79,7 +84,7 @@ def update(branch=None, repo=None):
                 if branch != remote.branch:
                     continue
             if repo is not None:
-                if repo != remote.url:
+                if repo != remote.url and repo != getattr(remote, "name", None):
                     continue
             try:
                 result = remote.fetch()
