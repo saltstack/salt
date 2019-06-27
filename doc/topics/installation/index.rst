@@ -25,12 +25,12 @@ The general installation process is as follows:
 4. Accept the Salt :ref:`minion keys <using-salt-key>` after the Salt minion
    connects.
 
-After this, you should be able to run a simple command and receive returns from
+After this, you should be able to run a simple command and receive salt version returns from
 all connected Salt minions.
 
 .. code-block:: bash
 
-    salt '*' test.ping
+    salt '*' test.version
 
 Quick Install
 -------------

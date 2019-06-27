@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Management of PostgreSQL Default Privileges
-===================================
+===========================================
 
 The postgres_default_privileges module is used to manage Postgres privileges by default.
 Privileges can be set as either absent or present. They take any and all previously existing
