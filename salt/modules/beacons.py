@@ -110,7 +110,6 @@ def list_available(return_yaml=True, **kwargs):
             event_ret = eventer.get_event(
                 tag='/salt/minion/minion_beacons_list_available_complete',
                 wait=kwargs.get('timeout', default_event_wait))
-            log.error("EVENT RET IS %r", event_ret)
             if event_ret and event_ret['complete']:
                 beacons = event_ret['beacons']
     except KeyError:

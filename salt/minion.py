@@ -2255,7 +2255,6 @@ class Minion(MinionBase):
         '''
         Manage Beacons
         '''
-        log.error("GOT MANAGE BEACONS %s %s", tag, data)
         func = data.get('func', None)
         name = data.get('name', None)
         beacon_data = data.get('beacon_data', None)
