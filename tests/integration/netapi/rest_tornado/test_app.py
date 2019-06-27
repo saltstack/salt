@@ -42,6 +42,10 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         super(TestSaltAPIHandler, self).setUp()
         os.environ['ASYNC_TEST_TIMEOUT'] = '300'
 
+    def get_new_ioloop(self):
+        import salt.utils.asynchronous
+        return salt.utils.asynchronous.IOLoop()
+
     def get_app(self):
         urls = [('/', saltnado.SaltAPIHandler)]
 
@@ -378,6 +382,10 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
 @flaky
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
+    def get_new_ioloop(self):
+        import salt.utils.asynchronous
+        return salt.utils.asynchronous.IOLoop()
+
     def get_app(self):
         urls = [(r"/minions/(.*)", saltnado.MinionSaltAPIHandler),
                 (r"/minions", saltnado.MinionSaltAPIHandler),

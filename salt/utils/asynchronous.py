@@ -123,16 +123,18 @@ class IOLoop(object):
             loop._salt_close_called = False
         if loop._salt_pid != os.getpid() or cls._is_closed(loop):  # or loop._pid != loop._salt_pid:
             tornado.ioloop.IOLoop.clear_current()
-#            if not cls._is_closed(loop):
-#                loop.close()
+            if not cls._is_closed(loop):
+                loop.close()
             if hasattr(loop, '_impl'):
                 del loop._impl
             loop = tornado.ioloop.IOLoop()
             loop._salt_started_called = False
             loop._salt_pid = os.getpid()
             loop._salt_close_called = False
-        if loop._callbacks is None:
-            loop._callbacks = []
+        # TODO: We should not have to do this, it's happening because we're
+        # instaniating the loop in a different thread thand where we start it.
+        #if hasattr(loop, '_callbacks') and loop._callbacks is None:
+        #    loop._callbacks = []
         return loop
 
     @classmethod
@@ -144,7 +146,7 @@ class IOLoop(object):
             if loop._closing is True:
                 return True
         if hasattr(loop, 'asyncio_loop'):
-            if loop.async_ioloop.is_closed() is True:
+            if loop.asyncio_loop.is_closed() is True:
                 return True
         return False
 
@@ -214,7 +216,7 @@ class IOLoop(object):
             return self._ioloop._running
 
 
-if OLD_TORNADO and IOLoop.seed_loop is None:
+if IOLoop.seed_loop is None:
     IOLoop.seed_loop = IOLoop()
 
 
