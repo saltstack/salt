@@ -351,3 +351,68 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
                 python_shell=False
             )
+
+    def test_venv_bin_binary_missing(self):
+        '''
+        test when none of the venv binaries
+        exist on the system
+        '''
+        venv_cmd = ['--distribute', '--system-site-packages', '/tmp/foo']
+        if sys.version_info >= (3, 6):
+            venv_cmd = ['python3', '-m', 'venv'] + venv_cmd
+        else:
+            venv_cmd = ['virtualenv'] + venv_cmd
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}), \
+            patch.dict(virtualenv_mod.__opts__, {'venv_bin': None}):
+            virtualenv_mod.create(
+                '/tmp/foo', system_site_packages=True, distribute=True
+            )
+            mock.assert_called_once_with(
+                venv_cmd,
+                runas=None,
+                python_shell=False
+            )
+
+    def test_venv_bin_from_pillar(self):
+        '''
+        test when venv_bin is set in pillar
+        '''
+        venv_bin = 'venv_from_pillar'
+        venv_cmd = [venv_bin, '--distribute', '--system-site-packages', '/tmp/foo']
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}), \
+            patch.dict(virtualenv_mod.__opts__, {'venv_bin': 'virtualenv'}), \
+            patch.dict(virtualenv_mod.__pillar__, {'venv_bin':
+                                                   venv_bin}):
+            virtualenv_mod.create(
+                '/tmp/foo', system_site_packages=True, distribute=True
+            )
+            mock.assert_called_once_with(
+                venv_cmd,
+                runas=None,
+                python_shell=False
+            )
+
+    def test_venv_bin_from_opts(self):
+        '''
+        test when venv_bin is set in opts
+        '''
+        venv_bin = 'virtualenv_from_opts'
+        venv_cmd = [venv_bin, '--distribute', '--system-site-packages', '/tmp/foo']
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}), \
+            patch.dict(virtualenv_mod.__opts__, {'venv_bin': venv_bin}), \
+            patch.dict(virtualenv_mod.__pillar__, {'venv_bin': None}):
+
+            virtualenv_mod.create(
+                '/tmp/foo', system_site_packages=True, distribute=True
+            )
+            mock.assert_called_once_with(
+                venv_cmd,
+                runas=None,
+                python_shell=False
+            )
