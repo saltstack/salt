@@ -47,7 +47,7 @@ def _get_cpan_bin(bin_env=None):
         return os.path.normpath(bin_env)
 
     # If none of the above assignments resulted in a path, throw an error
-    raise CommandNotFoundError('Make sure `cpan` is installed and in the PATH'.format(
+    raise CommandNotFoundError('Make sure `{}` is installed and in the PATH'.format(
                                 bin_env if bin_env else 'cpan'))
 
 
@@ -278,6 +278,7 @@ def show(module, bin_env=None):
         ret.update({'error': 'Could not find package {}'.format(module)})
         return ret
 
+    ret['installed version'] = None
     ret['description'] = info[0].strip()
     ret['cpan file'] = info[1].strip()
     if info[2].strip():
@@ -287,8 +288,6 @@ def show(module, bin_env=None):
     comps = info[3].split(':')
     if len(comps) > 1:
         ret['installed version'] = comps[1].strip()
-    if 'installed version' not in ret or not ret['installed version']:
-        ret['installed version'] = None
     comps = info[4].split(':')
     comps = comps[1].split()
     ret['cpan version'] = comps[0].strip()

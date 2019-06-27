@@ -53,7 +53,7 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         Tests installed and removed states
         '''
         name = 'File::Temp'
-        ret = self.run_function('cpan.show', (name,))
+        ret = self.run_function('cpan.show', module=name)
         version = ret.get('installed version', None)
         if version and ("not installed" not in version):
             # For now this is not implemented as state because it is experimental/non-stable
@@ -63,7 +63,7 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
         # For now this is not implemented as state because it is experimental/non-stable
-        self.run_function('cpan.remove', module=(name,))
+        self.run_function('cpan.remove', module=name)
 
     def test_missing_cpan(self):
         '''
@@ -75,6 +75,4 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('cpan.installed', name=module, bin_env=bin_env)
         self.assertSaltFalseReturn(ret)
         self.assertInSaltComment(
-            'Unable to locate `{}` binary, Make sure it is installed and in the PATH'.format(
-                bin_env), ret
-        )
+            'Make sure `cpan` is installed and in the PATH'.format(bin_env), ret)
