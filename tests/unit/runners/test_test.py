@@ -30,5 +30,6 @@ class TestTest(TestCase):
         Test test.get_opts runner
         '''
         masterconfig = runnerstest.get_opts()   # configuration options of the master
-        self.assertIsNot(masterconfig, None)
-        self.assertIsNot(masterconfig, {})
+        self.assertIsNotNone(masterconfig)
+        self.assertIsInstance(masterconfig, dict)
+        self.assertEqual(masterconfig['__role'], { 'master'})
