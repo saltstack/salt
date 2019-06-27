@@ -32,4 +32,4 @@ class TestTest(TestCase):
         masterconfig = runnerstest.get_opts()   # configuration options of the master
         self.assertIsNotNone(masterconfig)
         self.assertIsInstance(masterconfig, dict)
-        self.assertEqual(masterconfig['__role'], { 'master'})
+        self.assertEqual(masterconfig['__role'], {'master'})
