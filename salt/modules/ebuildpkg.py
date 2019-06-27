@@ -62,7 +62,7 @@ def __virtual__():
     '''
     Confirm this module is on a Gentoo based system
     '''
-    if HAS_PORTAGE and __grains__['os_family'] == 'Gentoo':
+    if HAS_PORTAGE and __grains__.get('os_family') == 'Gentoo':
         return __virtualname__
     return (False, 'The ebuild execution module cannot be loaded: either the system is not Gentoo or the portage python library is not available.')
 

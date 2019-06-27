@@ -49,7 +49,7 @@ def __virtual__():
     '''
     Confine this module to Debian-based distros
     '''
-    if __grains__['os_family'] == 'Debian':
+    if __grains__.get('os_family') == 'Debian':
         return __virtualname__
     return (False, 'The debian_ip module could not be loaded: '
             'unsupported OS family')

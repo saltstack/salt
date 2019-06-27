@@ -91,12 +91,11 @@ def _supports_parsing():
     return tuple([int(i) for i in _get_version()]) > (0, 6)
 
 
-@decorators.memoize
 def _get_provider():
     '''
     Check if we are the default provider for this platform
     '''
-    return __grains__['os'] in ['NetBSD', 'DragonFly', 'Minix', 'Darwin', 'SmartOS'] or 'pkgin'
+    return __grains__.get('os') in ['NetBSD', 'DragonFly', 'Minix', 'Darwin', 'SmartOS'] or 'pkgin'
 
 
 def __virtual__():
