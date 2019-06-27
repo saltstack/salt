@@ -1183,9 +1183,6 @@ VALID_OPTS = immutabletypes.freeze({
     # Subconfig entries can be specified by using the ':' notation (e.g. key:subkey)
     'pass_to_ext_pillars': (six.string_types, list),
 
-    # Used by salt.modules.dockermod.compare_container_networks to specify which keys are compared
-    'docker.compare_container_networks': dict,
-
     # SSDP discovery publisher description.
     # Contains publisher configuration and minion mapping.
     # Setting it to False disables discovery
@@ -1510,11 +1507,6 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'extmod_whitelist': {},
     'extmod_blacklist': {},
     'minion_sign_messages': False,
-    'docker.compare_container_networks': {
-        'static': ['Aliases', 'Links', 'IPAMConfig'],
-        'automatic': ['IPAddress', 'Gateway',
-                      'GlobalIPv6Address', 'IPv6Gateway'],
-    },
     'discovery': False,
     'schedule': {},
     'ssh_merge_pillar': True,

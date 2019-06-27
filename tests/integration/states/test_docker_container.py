@@ -26,6 +26,7 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
+from salt.modules.config import DEFAULTS as _config_defaults
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -772,7 +773,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         container_netinfo = self.run_function(
             'docker.inspect_container',
             [container_name]).get('NetworkSettings', {}).get('Networks', {})[nets[-1].name]
-        autoip_keys = self.minion_opts['docker.compare_container_networks']['automatic']
+        autoip_keys = _config_defaults['docker.compare_container_networks']['automatic']
         autoip_config = {
             x: y for x, y in six.iteritems(container_netinfo)
             if x in autoip_keys and y
@@ -1150,12 +1151,18 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         Test to make sure that we fail a state when the container exits with
         nonzero status if failhard is set to True, and that we don't when it is
         set to False.
+
+        NOTE: We can't use RUNTIME_VARS.SHELL_FALSE_PATH here because the image
+        we build on-the-fly here is based on busybox and does not include
+        /usr/bin/false. Therefore, when the host machine running the tests
+        has /usr/bin/false, it will not exist in the container and the Docker
+        Engine API will cause an exception to be raised.
         '''
         ret = self.run_state(
             'docker_container.run',
             name=name,
             image=self.image,
-            command=RUNTIME_VARS.SHELL_FALSE_PATH,
+            command='/bin/false',
             failhard=True)
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
@@ -1171,7 +1178,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             'docker_container.run',
             name=name,
             image=self.image,
-            command=RUNTIME_VARS.SHELL_FALSE_PATH,
+            command='/bin/false',
             failhard=False)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
