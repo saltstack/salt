@@ -158,6 +158,10 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         self.assertTrue(minion_in_returns('minion', data))
         self.assertTrue(minion_in_returns('sub_minion', data))
 
+        data = self.run_salt('-N list_group2 test.ping')
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
+
         data = self.run_salt('-N one_list_group test.ping')
         self.assertTrue(minion_in_returns('minion', data))
         self.assertFalse(minion_in_returns('sub_minion', data))
