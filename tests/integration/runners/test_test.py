@@ -20,6 +20,15 @@ class TestRunnerTest(ShellCase):
         Test test.get_opts runner
         '''
         masterconfig = self.run_run('test.get_opts')
+        # returns ['__cli:', '    cli_salt_run.py', '__role:', '    master', ......
         self.assertIsNotNone(masterconfig)
-        self.assertIsInstance(masterconfig, dict)
-        self.assertEqual(masterconfig['__role'], {'master'})
+        self.assertIsInstance(masterconfig, list)
+        # assert __role: master
+        role_found = False
+        for line in masterconfig:
+            if line == '__role:':
+                role_found = True
+                continue
+            if role_found:
+                self.assertEqual(line, '    master')
+                break
