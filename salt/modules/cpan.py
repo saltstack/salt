@@ -327,12 +327,18 @@ def config(bin_env=None):
     out = out.replace('=>', ':')
     # Remove all whitespaces
     out = ''.join(out.split())
-    # Remove everything before '{' and after '}'
-    if out:
-        out = out[out.find('{'):out.rfind('}') + 1]
-        try:
-            return literal_eval(out)
-        except ValueError as e:
-            raise ValueError(repr(e) + out)
-    else:
+
+    # Do not try and parse an empty configuration file
+    if not out:
         return dict()
+
+    # The conf file will occasionally return the keyword "undef" on some systems
+    out = out.replace(':undef', None)
+    # Remove everything before '{' and after '}'
+    out = out[out.find('{'):out.rfind('}') + 1]
+    try:
+        return literal_eval(out)
+    except Exception as e:
+        # Give the full output string to help with debugging
+        raise Exception(repr(e) + out)
+
