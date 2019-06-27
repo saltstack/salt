@@ -333,7 +333,7 @@ def config(bin_env=None):
         return dict()
 
     # The conf file will occasionally return the keyword "undef" on some systems
-    out = out.replace(':undef', None)
+    out = out.replace(':undef', 'None')
     # Remove everything before '{' and after '}'
     out = out[out.find('{'):out.rfind('}') + 1]
     try:
@@ -341,4 +341,3 @@ def config(bin_env=None):
     except Exception as e:
         # Give the full output string to help with debugging
         raise Exception(repr(e) + out)
-
