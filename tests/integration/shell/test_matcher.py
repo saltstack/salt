@@ -153,6 +153,19 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         self.assertTrue(minion_in_returns('minion', data))
         self.assertTrue(minion_in_returns('sub_minion', data))
 
+    def test_nodegroup_list(self):
+        data = self.run_salt('-N list_group test.ping')
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
+
+        data = self.run_salt('-N one_list_group test.ping')
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
+
+        data = self.run_salt('-N one_minion_list test.ping')
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
+
     def test_glob(self):
         '''
         test salt glob matcher
