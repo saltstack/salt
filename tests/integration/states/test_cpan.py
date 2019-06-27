@@ -54,6 +54,7 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         name = 'File::Temp'
         ret = self.run_function('cpan.show', module=name)
+        self.assertIsInstance(ret, dict, "Return value should be a dictionary, instead got: {}".format(ret))
         version = ret.get('installed version', None)
         if version and ("not installed" not in version):
             # For now this is not implemented as state because it is experimental/non-stable
@@ -75,4 +76,4 @@ class CpanStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('cpan.installed', name=module, bin_env=bin_env)
         self.assertSaltFalseReturn(ret)
         self.assertInSaltComment(
-            'Make sure `cpan` is installed and in the PATH'.format(bin_env), ret)
+            'Make sure `{}` is installed and in the PATH'.format(bin_env), ret)
