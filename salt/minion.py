@@ -899,7 +899,6 @@ class MasterMinion(object):
             states=True,
             rend=True,
             matcher=True,
-            grains=True,
             whitelist=None,
             ignore_config_errors=True):
         self.opts = salt.config.minion_config(
@@ -909,10 +908,7 @@ class MasterMinion(object):
         )
         self.opts.update(opts)
         self.whitelist = whitelist
-        if grains and self.opts.get('masterminion_grains', True):
-            self.opts['grains'] = salt.loader.grains(opts)
-        else:
-            self.opts['grains'] = {}
+        self.opts['grains'] = salt.loader.grains(opts)
         self.opts['pillar'] = {}
         self.mk_returners = returners
         self.mk_states = states

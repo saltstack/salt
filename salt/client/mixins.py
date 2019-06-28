@@ -251,9 +251,7 @@ class SyncClientMixin(object):
     @property
     def mminion(self):
         if not hasattr(self, '_mminion'):
-            runnerclient_grains = self.opts.get('runnerclient_grains', True)
-            self._mminion = salt.minion.MasterMinion(
-                self.opts, states=False, rend=False, grains=runnerclient_grains)
+            self._mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
         return self._mminion
 
     @property

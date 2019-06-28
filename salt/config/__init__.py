@@ -864,14 +864,6 @@ VALID_OPTS = immutabletypes.freeze({
     # reply from executions.
     'minion_data_cache': bool,
 
-    # Each RunnerClient loads the grains of the minion.
-    # Omitting that can greatly improve salt-master performance in large installations.
-    'runnerclient_grains': bool,
-
-    # Each MasterMinion loads the grains of a RunnerClient or salt-master minion.
-    # Omitting that can greatly improve salt-master performance in large installations.
-    'masterminion_grains': bool,
-
     # The number of seconds between AES key rotations on the master
     'publish_session': int,
 
@@ -1719,8 +1711,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'master_job_cache': 'local_cache',
     'job_cache_store_endtime': False,
     'minion_data_cache': True,
-    'runnerclient_grains': True,
-    'masterminion_grains': True,
     'enforce_mine_cache': False,
     'ipc_mode': _DFLT_IPC_MODE,
     'ipc_write_buffer': _DFLT_IPC_WBUFFER,

@@ -533,38 +533,6 @@ are expected to reply from executions.
 
     minion_data_cache: True
 
-.. conf_master:: runnerclient_grains
-
-``runnerclient_grains``
----------------------
-
-Default: ``True``
-
-A RunnerClient invokes a MasterMinion, which loads the grains of the minion.
-If RunnerClients don't need grains, setting this option to False can reduce load on a busy master.
-
-.. code-block:: yaml
-
-    runnerclient_grains: True
-
-.. conf_master:: masterminion_grains
-
-``masterminion_grains``
----------------------
-
-Default: ``True``
-
-A MasterMinion loads the grains of the minion,
-which could be the minion of a RunnerClient or the master itself.
-If MasterMinions don't need grains, setting this option to False can reduce load on a busy master.
-
-When disabled, this also disables the RunnerClient grains.
-
-
-.. code-block:: yaml
-
-    masterminion_grains: True
-
 .. conf_master:: cache
 
 ``cache``
