@@ -250,9 +250,21 @@ If it is less than 2047, you should increase it with::
 Running the tests
 ~~~~~~~~~~~~~~~~~
 
-For running tests, you'll also need to install ``requirements/dev_python27.txt``::
+For running tests, you'll also need to install requirements for the
+Python version you're using.
+
+If you're using Python 2.7::
 
     pip install -r requirements/dev_python27.txt
+
+If you're using Python 3.4::
+
+    pip install -r requirements/dev_python34.txt
+
+Regardless of the Python version you're using, common requirements for
+tests need to be installed::
+
+    pip install -r requirements/pytest.txt
 
 Finally you use setup.py to run the tests with the following command::
 
@@ -260,4 +272,4 @@ Finally you use setup.py to run the tests with the following command::
 
 For greater control while running the tests, please try::
 
-	./tests/runtests.py -h
+    ./tests/runtests.py -h

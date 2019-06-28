@@ -42,6 +42,13 @@ depending on your relevant version of Python:
     pip install -r requirements/dev_python27.txt
     pip install -r requirements/dev_python34.txt
 
+Regardless of the Python version you're using, common requirements for
+tests need to be installed::
+
+.. code-block:: bash
+
+    pip install -r requirements/pytest.txt
+
 To be able to run integration tests which utilizes ZeroMQ transport, you also
 need to install additional requirements for it. Make sure you have installed
 the C/C++ compiler and development libraries and header files needed for your
