@@ -1711,19 +1711,17 @@ class LocalClient(object):
         try:
             # Retrieve the jid
             jid = self.returners[fstr](nocache=nocache, passed_jid=jid)
-        except (Exception) as exc:
+        except Exception:
             # The returner is not present
-            msg = (
-                'Failed to allocate a jid. The requested returner \'{0}\' '
-                'could not be loaded.'.format(fstr.split('.')[0])
-            )
-            log.error(msg)
+            log.error('Failed to allocate a jid. The requested returner \'{0}\' '
+                      'could not be loaded.'.format(fstr.split('.')[0]),
+                      exc_info_on_loglevel=logging.DEBUG)
             return ''
 
         # if we did generate a jid or have one provided we should preemptively subscribe
         if subscribe:
             if self.opts.get('order_masters'):
-                self.event.subscribe('syndic/.*/{0}'.format(jid, 'regex'))
+                self.event.subscribe('syndic/.*/{0}'.format(jid), 'regex')
             self.event.subscribe('salt/job/{0}'.format(jid))
 
         return jid
@@ -1792,7 +1790,6 @@ class LocalClient(object):
             if listen and not self.event.connect_pub(timeout=timeout):
                 raise SaltReqTimeoutError()
 
-            log.error(channel)
             payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError as err:
             log.error(err)
