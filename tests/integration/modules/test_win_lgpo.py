@@ -126,7 +126,7 @@ class WinLgpoTest(ModuleCase):
         lgpo_function = 'set_computer_policy'
         lgpo_class = '/m'
         lgpo_folder = 'Machine'
-        if policy_class.lower() == 'user'
+        if policy_class.lower() == 'user':
             lgpo_function = 'set_user_policy'
             lgpo_class = '/u'
             lgpo_folder = 'User'
@@ -194,38 +194,36 @@ class WinLgpoTest(ModuleCase):
         '''
         Test setting/unsetting/changing the PointAndPrint_Restrictions user policy
         '''
-        # Disable Configure NTP Client
+        # Disable Point and Print Restrictions
         self._testAdmxPolicy(r'Control Panel\Printers\Point and Print Restrictions',
                              'Disabled',
                              [
                                  r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*Restricted[\s]*DWORD:0',
-                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*TrustedServers[\s]*DWORD:0',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*TrustedServers[\s]*DELETE',
                                  r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*ServerList[\s]*DELETE',
                                  r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*InForest[\s]*DELETE',
                                  r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*NoWarningNoElevationOnInstall[\s]*DELETE',
                                  r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*UpdatePromptSettings[\s]*DELETE',
                              ],
                              policy_class='User')
-        # Enable Configure NTP Client
-        #self._testAdmxPolicy(r'Control Panel\Printers\Point and Print Restrictions',
-        #                             {
-        #                                 'NtpServer': 'time.windows.com,0x9',
-        #                                 'Type': 'NT5DS',
-        #                                 'CrossSiteSyncFlags': 2,
-        #                                 'ResolvePeerBackoffMinutes': 15,
-        #                                 'ResolvePeerBackoffMaxTimes': 7,
-        #                                 'W32TIME_SpecialPollInterval': 3600,
-        #                                 'W32TIME_NtpClientEventLogFlags': 0
-        #                             },
-        #                             [
-        #                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\Parameters[\s]*NtpServer[\s]*SZ:time.windows.com,0x9',
-        #                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\Parameters[\s]*Type[\s]*SZ:NT5DS',
-        #                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*CrossSiteSyncFlags[\s]*DWORD:2',
-        #                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*ResolvePeerBackoffMinutes[\s]*DWORD:15',
-        #                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*ResolvePeerBackoffMaxTimes[\s]*DWORD:7',
-        #                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*SpecialPollInterval[\s]*DWORD:3600',
-        #                                 r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*EventLogFlags[\s]*DWORD:0',
-        #                             ])
+        # Enable Point and Print Restrictions
+        self._testAdmxPolicy(r'Control Panel\Printers\Point and Print Restrictions',
+                             {
+                                 'Users can only point and print to these servers': True,
+                                 'Enter fully qualified server names separated by semicolons': 'fakeserver1;fakeserver2',
+                                 'Users can only point and print to machines in their forest': True,
+                                 'Security Prompts: When installing drivers for a new connection': 'Show warning and elevation prompt',
+                                 'When updating drivers for an existing connection': 'Do not show warning or elevation prompt',
+                             },
+                             [
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*Restricted[\s]*DWORD:1',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*TrustedServers[\s]*DWORD:1',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*ServerList[\s]*SZ:fakeserver1;fakeserver2',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*InForest[\s]*DWORD:1',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*NoWarningNoElevationOnInstall[\s]*DWORD:0',
+                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*UpdatePromptSettings[\s]*DWORD:2',
+                             ],
+                             policy_class='User')
         # set Point and Print Restrictions to 'Not Configured'
         self._testAdmxPolicy(r'Control Panel\Printers\Point and Print Restrictions',
                              'Not Configured',
