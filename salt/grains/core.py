@@ -2208,7 +2208,7 @@ def fqdns():
                                             interface_data=_INTERFACES)
     addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False,
                                                   interface_data=_INTERFACES))
-    err_message = 'Exception during resolving address: %s'
+    err_message = 'An exception occurred resolving address \'%s\': %s'
     for ip in addresses:
         try:
             fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
@@ -2217,9 +2217,9 @@ def fqdns():
                 # No FQDN for this IP address, so we don't need to know this all the time.
                 log.debug("Unable to resolve address %s: %s", ip, err)
             else:
-                log.error(err_message, err)
+                log.error(err_message, ip, err)
         except (socket.error, socket.gaierror, socket.timeout) as err:
-            log.error(err_message, err)
+            log.error(err_message, ip, err)
 
     grains['fqdns'] = sorted(list(fqdns))
     return grains
