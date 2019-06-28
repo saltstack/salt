@@ -17,6 +17,7 @@ from collections import defaultdict
 # Import salt libs
 import salt.utils.args
 import salt.utils.data
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltConfigurationError
 from salt.log import LOG_LEVELS
 
@@ -141,6 +142,10 @@ class Depends(object):
         '''
         for dependency, dependent_dict in six.iteritems(cls.dependency_dict[kind]):
             for (mod_name, func_name), (frame, params) in six.iteritems(dependent_dict):
+                # Imports from local context take presedence over those from the global context.
+                dep_found = frame.f_locals.get(dependency) or frame.f_globals.get(dependency)
+                # Default to version ``None`` if not found, which will be less than anything.
+                dep_version = getattr(dep_found, '__version__', None)
                 if 'retcode' in params or 'nonzero_retcode' in params:
                     try:
                         retcode = cls.run_command(dependency, mod_name, func_name)
@@ -177,8 +182,18 @@ class Depends(object):
                     continue
 
                 # check if you have the dependency
-                elif dependency in frame.f_globals \
-                        or dependency in frame.f_locals:
+                elif dep_found:
+                    if 'version' in params \
+                            and salt.utils.versions.version_cmp(
+                                dep_version,
+                                params['version']
+                            ) >= 0:
+                        log.trace(
+                            'Dependency (%s) already loaded inside %s with '
+                            'version (%s), required (%s), skipping',
+                            dependency, mod_name, dep_version, params['version']
+                        )
+                        continue
                     log.trace(
                         'Dependency (%s) already loaded inside %s, skipping',
                         dependency, mod_name
