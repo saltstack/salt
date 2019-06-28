@@ -182,8 +182,10 @@ class SaltRaetWorkerSetup(ioflo.base.deeding.Deed):
         self.stack.value.transmit(init, self.stack.value.fetchUidByName(manor_yard.name))
         self.stack.value.serviceAll()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.stack.server.close()
+    # pylint: enable=W1701
 
 
 class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
