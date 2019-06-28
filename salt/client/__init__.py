@@ -1638,6 +1638,7 @@ class LocalClient(object):
                   ret,
                   jid,
                   timeout,
+                  listen,
                   **kwargs):
         '''
         Set up the payload_kwargs to be sent down to the master
@@ -1680,7 +1681,7 @@ class LocalClient(object):
                           'key': self.key,
                           'tgt_type': tgt_type,
                           'ret': ret,
-                          'jid': jid}
+                          'jid': self._prep_jid(jid=jid, nocache=kwargs.get('nocache', False), subscribe=listen)}
 
         # if kwargs are passed, pack them.
         if kwargs:
@@ -1697,6 +1698,35 @@ class LocalClient(object):
             payload_kwargs['to'] = timeout
 
         return payload_kwargs
+
+    def _prep_jid(self, jid=None, nocache=False, subscribe=False):
+        '''
+        Attempt to generate a jid for this publication if necessary
+        '''
+         # remove empty string
+        jid = jid or None
+
+        # Retrieve the jid
+        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+        try:
+            # Retrieve the jid
+            jid = self.returners[fstr](nocache=nocache, passed_jid=jid)
+        except (Exception) as exc:
+            # The returner is not present
+            msg = (
+                'Failed to allocate a jid. The requested returner \'{0}\' '
+                'could not be loaded.'.format(fstr.split('.')[0])
+            )
+            log.error(msg)
+            return ''
+
+        # if we did generate a jid or have one provided we should preemptively subscribe
+        if subscribe:
+            if self.opts.get('order_masters'):
+                self.event.subscribe('syndic/.*/{0}'.format(jid, 'regex'))
+            self.event.subscribe('salt/job/{0}'.format(jid))
+
+        return jid
 
     def pub(self,
             tgt,
@@ -1747,6 +1777,7 @@ class LocalClient(object):
                 ret,
                 jid,
                 timeout,
+                listen,
                 **kwargs)
 
         master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
@@ -1760,6 +1791,8 @@ class LocalClient(object):
             # If not, we won't get a response, so error out
             if listen and not self.event.connect_pub(timeout=timeout):
                 raise SaltReqTimeoutError()
+
+            log.error(channel)
             payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError as err:
             log.error(err)
@@ -1855,6 +1888,7 @@ class LocalClient(object):
                 ret,
                 jid,
                 timeout,
+                listen,
                 **kwargs)
 
         master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
@@ -1869,6 +1903,7 @@ class LocalClient(object):
             # If not, we won't get a response, so error out
             if listen and not self.event.connect_pub(timeout=timeout):
                 raise SaltReqTimeoutError()
+
             payload = yield channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(

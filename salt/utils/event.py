@@ -361,7 +361,7 @@ class SaltEvent(object):
             return
         match_func = self._get_match_func(match_type)
 
-        self.pending_tags.remove([tag, match_func])
+        self.pending_tags = [tag for tag in self.pending_tags if tag != [tag, match_func]]
 
         old_events = self.pending_events
         self.pending_events = []

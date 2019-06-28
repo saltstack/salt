@@ -49,6 +49,10 @@ class LocalClientTestCase(TestCase,
 
         self.assertDictEqual(valid_pub_data, self.client._check_pub_data(valid_pub_data))
 
+    def test__prep_pub(self):
+        fake_pub = self.client._prep_pub('*', 'first.func', [], 'glob', None, '', 30, True)
+        self.assertTrue(salt.utils.jid.is_jid(fake_pub['jid']))
+
     def test_cmd_subset(self):
         with patch('salt.client.LocalClient.cmd', return_value={'minion1': ['first.func', 'second.func'],
                                                                 'minion2': ['first.func', 'second.func']}):
