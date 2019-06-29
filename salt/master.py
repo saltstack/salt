@@ -2209,8 +2209,8 @@ class ClearFuncs(object):
         except (KeyError, TypeError):
             # The returner is not present
             msg = (
-                'Failed to allocate a jid. The requested returner \'{0}\' '
-                'could not be loaded.'.format(fstr.split('.')[0])
+                'Failed to allocate a jid. The requested returner \'%s\' '
+                'could not be loaded.', fstr.split('.')[0]
             )
             log.error(msg)
             return {'error': msg}

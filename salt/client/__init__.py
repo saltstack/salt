@@ -1713,8 +1713,8 @@ class LocalClient(object):
             jid = self.returners[fstr](nocache=nocache, passed_jid=jid)
         except Exception:
             # The returner is not present
-            log.error('Failed to allocate a jid. The requested returner \'{0}\' '
-                      'could not be loaded.'.format(fstr.split('.')[0]),
+            log.error('Failed to allocate a jid. The requested returner \'%s\' '
+                      'could not be loaded.', fstr.split('.')[0],
                       exc_info_on_loglevel=logging.DEBUG)
             return ''
 
