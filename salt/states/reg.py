@@ -74,7 +74,15 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import logging
 import salt.utils.stringutils
-
+import sys
+import io
+PY2 = sys.version_info[0] == 2
+if PY2:
+    import ConfigParser as configparser
+else:
+    import configparser
+from salt.exceptions import CommandExecutionError
+    
 log = logging.getLogger(__name__)
 
 
@@ -618,6 +626,7 @@ def key_absent(name, use_32bit_registry=False):
 
     return ret
 
+
 def _parse_reg_file(reg_file):
     r'''
     This is a utility function used by imported_file. This parses a reg file and returns a
@@ -775,25 +784,36 @@ def _imported_file_test(reference_data, present_data):
 
 def _imported_file_do_import(reference_reg_file,use_32bit_registry):
     r'''
-    This is a utility function used by imported_file. It calls
+    This is a utility function used by imported_file. 
+    If not called in while test mode,
     the module function reg.import_file, if that function throws
     exceptions, this function will catch some of them and generate
     appropriate messages to use as the comment of the
-    ret dictionary. The function returns an ordered pair (a,b).
-    On success a has a value of True and b is None. 
-    On failure a has a value of False and b is the comment.
+    ret dictionary. The function returns an ordered triplet (a,b,c).
+    The values are defined as follows
+       a: Whether or not the operation succeeded expressed as a boolean. If in test, mode, just None
+       b: a comment. This will just be None if not in test mode and the operation succeeds,
+          because we will determine a comment later on.
+       c: a changes dictionary. This will just be None if not in test moded and the operation succeeds,
+          because we will create a changes dictionary later on.
     '''
+    if __opts__['test'] == True:
+        comment = "Changes required. Import will proceed."
+        changes = {}
+        changes['old'] = 'Registry unmodified'
+        changes['new'] = 'Registry modified by importing reg file.'
+        return (None, comment, changes)
     try:
         __salt__['reg.import_file'](reference_reg_file,use_32bit_registry)
     except ValueError as err:
         comment_fmt = "Call to module function 'reg.import_file' has failed. Error is '{0}'"
         comment = comment_fmt.format(str(err))
-        return (False, comment)
+        return (False, comment, {})
     except CommandExecutionError as err:
         comment_fmt = "Call to module function 'reg.import_file' has failed. Error is '{0}'."
         comment = comment_fmt.format(err.message)
-        return (False, comment)
-    return (True, None)
+        return (False, comment, {})
+    return (True, None, None)
 
 
 def imported_file(name, use_32bit_registry=False):
@@ -834,19 +854,17 @@ def imported_file(name, use_32bit_registry=False):
         ret['comment'] = "All data in the reg file is already present in the registry. No import required."
         ret['result'] = True
         return ret
-    # if in test mode and import is necessary, return None.
-    if __opts__['test'] == True:
-        ret['comment'] = "Changes required. Import will proceed."
-        ret['changes']['old'] = 'Registry unmodified'
-        ret['changes']['new'] = 'Registry modified by importing reg file.'
-        ret['result'] = None
-        return ret
     # Perform import
-    (imported_file_do_import_success, info) = \
+    (imported_file_do_import_status, comment, changes) = \
         _imported_file_do_import(reference_reg_file,use_32bit_registry)
-    if not imported_file_do_import_success:
-        ret['comment'] = info
-        ret['result'] = False
+    if not imported_file_do_import_status:
+        # If in test mode, imported_file_do_import_status will be None, and
+        # changes will be appropriately populated
+        # If not in test_mode and the import failed, imported_file_do_import_status
+        # will be False, and changes will be an empty dictionary.
+        ret['comment'] = comment
+        ret['result'] = imported_file_do_import_status
+        ret['changes'] = changes
         return ret
     # acquire new data corresponding with the import.
     (get_present_state_data_success, info) = \
@@ -868,4 +886,3 @@ def imported_file(name, use_32bit_registry=False):
     ret['comment'] = "Reg file was imported, but the data now in the registry does not conform with the imported data."
     ret['result'] = False
     return ret
-
