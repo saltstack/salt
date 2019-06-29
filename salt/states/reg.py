@@ -638,7 +638,7 @@ def _parse_reg_file(reg_file):
         reg_file_fp.close()
         
 
-def _get_present_state_data(reg_location,use_32bit_registry):
+def _get_present_state_data_wrk(reg_location,use_32bit_registry):
     r'''
     This is a utility function used by imported_file. It exports a reg file from a location in the 
     Windows registry to a temporary file, parses the file (using _parse_reg_file), 
@@ -664,15 +664,35 @@ def _get_present_state_data(reg_location,use_32bit_registry):
         (__salt__['file.remove'])(present_reg_file)
 
 
-    
-def _imported_file_data(reference_reg_file_url,use_32bit_registry):
+def _get_present_state_data(reg_location,use_32bit_registry):
     r'''
-    This is a utility function used by imported_file. It first caches the reg file
+    This is a utility function used by imported_file. It wraps
+    the get_present_state_data_wrk function and, if that function throws
+    exceptions, this function will catch some of them and generate
+    appropriate messages to use in as the comment of the
+    ret dictionary. The function returns an ordered pair (a,b).
+    On sucess a has a value of True and b is the return value of get_present_state_data_wrk. 
+    On failure a has a value of False and b is the comment.
+    '''
+    try:
+        present_data = _get_present_state_data_wrk(reg_location,use_32bit_registry)
+    except CommandExecutionError as err:
+        comment_fmt = "{0}. The attempted command was '{1}'."
+        comment = comment_fmt.format(err.message, err.info.get("command","(Unknown)"))
+        return (False, comment)
+    return (True, present_data)
+
+    
+def _imported_file_data_wrk(reference_reg_file_url,use_32bit_registry):
+    r'''
+    This is a utility function used by imported_file. It does the real
+    work needed by the _imported_file_data function. 
+    It first caches the reg file
     refered to by reference_reg_file_url (if it isn't already local path),
     and parses the file. Using the thusly acquired configparser object,
     the registry location from which the reg file was exported is identified. It then
     tests if the location exists in the registry. If the location exists
-    _get_present_state_data is called to get reg file data exported from the location.
+    _get_present_state_data_wrk is called to get reg file data exported from the location.
     The following four items are returned (as 4-tuple).
         - The location.
         - The path of the cached reg file file.
@@ -688,12 +708,7 @@ def _imported_file_data(reference_reg_file_url,use_32bit_registry):
     if not reference_reg_file:
         error_str = "File/URL '{0}' probably invalid.".format(reference_reg_file_url)
         raise ValueError(error_str)
-    try:
-        reference_data = _parse_reg_file(reference_reg_file)
-    except configparser.Error:
-        error_str_fmt = "Could not parse file/URL '{0}'. It may not be a valid REG file."
-        error_str = error_str_fmt.format(reference_reg_file_url)
-        raise ValueError(error_str)
+    reference_data = _parse_reg_file(reference_reg_file)
     reference_section_count = len(reference_data.sections())
     if reference_section_count == 0:
         error_str_fmt = "File/URL '{0}' has a section count of 0. It may not be a valid REG file."
@@ -703,10 +718,37 @@ def _imported_file_data(reference_reg_file_url,use_32bit_registry):
     reg_hive = reg_location[:reg_location.index("\\")]
     reg_key_path = reg_location[reg_location.index("\\")+1:]
     if __salt__['reg.key_exists'](reg_hive,reg_key_path,use_32bit_registry):
-        present_data = _get_present_state_data(reg_location,use_32bit_registry)
+        present_data = _get_present_state_data_wrk(reg_location,use_32bit_registry)
     else:
         present_data = None
     return (reg_location, reference_reg_file, reference_data, present_data)
+
+
+def _imported_file_data(reference_reg_file_url,use_32bit_registry):
+    r'''
+    This is a utility function used by imported_file. It wraps
+    the imported_file_data_wrk function and, if that function throws
+    exceptions, this function will catch some of them and generate
+    appropriate messages to use in as the comment of the
+    ret dictionary. The function returns an ordered pair (a,b).
+    On sucess a has a value of True and b is the return value of imported_file_data_wrk. 
+    On failure a has a value of False and b is the comment.
+    '''
+    try:
+        imported_file_data_result \
+            = _imported_file_data_wrk(reference_reg_file_url,use_32bit_registry)
+    except ValueError as err:
+        comment = str(err)
+        return (False, comment)
+    except CommandExecutionError as err:
+        comment_fmt = "{0}. The attempted command was '{1}'."
+        comment = comment_fmt.format(err.message, err.info.get("command","(Unknown)"))
+        return (False, comment)
+    except configparser.Error:
+        comment_fmt = "Could not parse file/URL '{0}'. It may not be a valid REG file."
+        comment = comment_fmt.format(reference_reg_file_url)
+        return (False, comment)
+    return (True, imported_file_data_result)
 
 
 def _imported_file_test(reference_data, present_data):
@@ -729,6 +771,29 @@ def _imported_file_test(reference_data, present_data):
             if reference_value != present_value:
                 return False
     return True
+
+
+def _imported_file_do_import(reference_reg_file,use_32bit_registry):
+    r'''
+    This is a utility function used by imported_file. It calls
+    the module function reg.import_file, if that function throws
+    exceptions, this function will catch some of them and generate
+    appropriate messages to use as the comment of the
+    ret dictionary. The function returns an ordered pair (a,b).
+    On success a has a value of True and b is None. 
+    On failure a has a value of False and b is the comment.
+    '''
+    try:
+        __salt__['reg.import_file'](reference_reg_file,use_32bit_registry)
+    except ValueError as err:
+        comment_fmt = "Call to module function 'reg.import_file' has failed. Error is '{0}'"
+        comment = comment_fmt.format(str(err))
+        return (False, comment)
+    except CommandExecutionError as err:
+        comment_fmt = "Call to module function 'reg.import_file' has failed. Error is '{0}'."
+        comment = comment_fmt.format(err.message)
+        return (False, comment)
+    return (True, None)
 
 
 def imported_file(name, use_32bit_registry=False):
@@ -756,18 +821,14 @@ def imported_file(name, use_32bit_registry=False):
            'comment': ''}
     reference_reg_file_url = name
     # acquire data
-    try:
-        (reg_location, reference_reg_file, reference_data, present_data) \
-            = _imported_file_data(reference_reg_file_url,use_32bit_registry)
-    except ValueError as err:
-        ret['comment'] = str(err)
+    (imported_file_data_success, info) \
+        = _imported_file_data(reference_reg_file_url,use_32bit_registry)
+    if not imported_file_data_success:
+        ret['comment'] = info
         ret['result'] = False
         return ret
-    except CommandExecutionError as err:
-        comment_fmt = "{0}. The attempted command was '{1}'."
-        ret['comment'] = comment_fmt.format(err.message, err.info.get("command","(Unknown)"))
-        ret['result'] = False
-        return ret
+    (reg_location, reference_reg_file, reference_data, present_data) \
+        = info
     # determine if import is necessary and return True if it is not necessary.
     if _imported_file_test(reference_data, present_data):
         ret['comment'] = "All data in the reg file is already present in the registry. No import required."
@@ -781,26 +842,20 @@ def imported_file(name, use_32bit_registry=False):
         ret['result'] = None
         return ret
     # Perform import
-    try:
-        __salt__['reg.import_file'](reference_reg_file,use_32bit_registry)
-    except ValueError as err:
-        comment_fmt = "Call to module function 'reg.import_file' has failed. Error is '{0}'"
-        ret['comment'] = comment_fmt.format(str(err))
-        ret['result'] = False
-        return ret
-    except CommandExecutionError as err:
-        comment_fmt = "Call to module function 'reg.import_file' has failed. Error is '{0}'."
-        ret['comment'] = comment_fmt.format(err.message)
+    (imported_file_do_import_success, info) = \
+        _imported_file_do_import(reference_reg_file,use_32bit_registry)
+    if not imported_file_do_import_success:
+        ret['comment'] = info
         ret['result'] = False
         return ret
     # acquire new data corresponding with the import.
-    try:
-        present_data = _get_present_state_data(reg_location,use_32bit_registry)
-    except CommandExecutionError as err:
-        comment_fmt = "{0}. The attempted command was '{1}'."
-        ret['comment'] = comment_fmt.format(err.message, err.info.get("command","(Unknown)"))
+    (get_present_state_data_success, info) = \
+        _get_present_state_data(reg_location,use_32bit_registry)
+    if not get_present_state_data_success:
+        ret['comment'] = info
         ret['result'] = False
         return ret
+    present_data = info
     # test that import operation did what we thought it should by re-running our test,
     # but this time using the new data. On success return True.
     if _imported_file_test(reference_data, present_data):
