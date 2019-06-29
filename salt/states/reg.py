@@ -617,3 +617,200 @@ def key_absent(name, use_32bit_registry=False):
         ret['comment'] = 'Failed to remove registry key {0}'.format(name)
 
     return ret
+
+def _parse_reg_file(reg_file):
+    r'''
+    This is a utility function used by imported_file. This parses a reg file and returns a
+    ConfigParser object.
+    '''
+    reg_file_fp = io.open(reg_file,"r",encoding="utf-16")
+    try:
+        reg_file_fp.readline()
+        # The first line of a reg file is english text which we must consume before parsing.
+        # It contains no data.
+        reg_data = configparser.ConfigParser()
+        if PY2:
+            reg_data.readfp(reg_file_fp)
+        else:
+            reg_data.read_file(reg_file_fp)
+        return reg_data
+    finally:
+        reg_file_fp.close()
+        
+
+def _get_present_state_data(reg_location,use_32bit_registry):
+    r'''
+    This is a utility function used by imported_file. It exports a reg file from a location in the 
+    Windows registry to a temporary file, parses the file (using _parse_reg_file), 
+    and returns a ConfigParser object. If the export failed a CommandExecution error is thrown.
+    '''
+    if use_32bit_registry:
+        word_sz_txt = "32"
+    else:
+        word_sz_txt = "64"
+    present_reg_file = (__salt__['temp.file'])()
+    try:
+        cmd = 'reg export "{0}" "{1}" /y /reg:{2}'.format(reg_location, present_reg_file, word_sz_txt)
+        cmd_ret_dict = __salt__['cmd.run_all'](cmd, python_shell=True)
+        retcode = cmd_ret_dict['retcode']
+        if retcode != 0:
+            cmd_ret_dict['command'] = cmd
+            raise CommandExecutionError(
+                'reg.exe export failed from registry location {0}'.format(reg_location),
+                info=cmd_ret_dict)
+        present_data = _parse_reg_file(present_reg_file)
+        return present_data
+    finally:
+        (__salt__['file.remove'])(present_reg_file)
+
+
+    
+def _imported_file_data(reference_reg_file_url,use_32bit_registry):
+    r'''
+    This is a utility function used by imported_file. It first caches the reg file
+    refered to by reference_reg_file_url (if it isn't already local path),
+    and parses the file. Using the thusly acquired configparser object,
+    the registry location from which the reg file was exported is identified. It then
+    tests if the location exists in the registry. If the location exists
+    _get_present_state_data is called to get reg file data exported from the location.
+    The following four items are returned (as 4-tuple).
+        - The location.
+        - The path of the cached reg file file.
+        - The configparser object acquired from parsing the cached reg file.
+        - The configparser object acquired from parsing the reg file
+          exported from the location. If the location did not exist in the registry,
+          the value of this item will instead be None.
+    If reference_reg_file_url cannot be cached a ValueError exception is thrown.
+    If the cached reg file cannot be parsed or has no sections, a ValueError 
+    exception is once again thrown.
+    '''
+    reference_reg_file = __salt__['cp.cache_file'](reference_reg_file_url)
+    if not reference_reg_file:
+        error_str = "File/URL '{0}' probably invalid.".format(reference_reg_file_url)
+        raise ValueError(error_str)
+    try:
+        reference_data = _parse_reg_file(reference_reg_file)
+    except configparser.Error:
+        error_str_fmt = "Could not parse file/URL '{0}'. It may not be a valid REG file."
+        error_str = error_str_fmt.format(reference_reg_file_url)
+        raise ValueError(error_str)
+    reference_section_count = len(reference_data.sections())
+    if reference_section_count == 0:
+        error_str_fmt = "File/URL '{0}' has a section count of 0. It may not be a valid REG file."
+        error_str = error_str_fmt.format(reference_reg_file_url)
+        raise ValueError(error_str)
+    reg_location = (reference_data.sections())[0]
+    reg_hive = reg_location[:reg_location.index("\\")]
+    reg_key_path = reg_location[reg_location.index("\\")+1:]
+    if __salt__['reg.key_exists'](reg_hive,reg_key_path,use_32bit_registry):
+        present_data = _get_present_state_data(reg_location,use_32bit_registry)
+    else:
+        present_data = None
+    return (reg_location, reference_reg_file, reference_data, present_data)
+
+
+def _imported_file_test(reference_data, present_data):
+    r'''
+    This is a utility function used by imported_file. Its job is compare two configparser objects
+    loaded with registry file data. Specifically it tests if reference_data is a subtree of present_data. 
+    If it is, that implies that the an import of the reference reg file would have no effect, and would 
+    therefore be unnecessary. Returns True on success and False on failure. 
+    '''
+    if not present_data:
+        return False
+    for key_path in reference_data.sections():
+        if not present_data.has_section(key_path):
+            return False
+        reference_items = reference_data.items(key_path)
+        for (reference_option, reference_value) in reference_items:
+            if not present_data.has_option(key_path,reference_option):
+                return False
+            present_value = present_data.get(key_path,reference_option)
+            if reference_value != present_value:
+                return False
+    return True
+
+
+def imported_file(name, use_32bit_registry=False):
+    r'''
+    .. versionadded:: Neon
+
+    This is intended to be the stateful correlate of ``reg.import_file``. This will import
+    a ``REG`` file (by invoking ``reg.import_file``) only if the import will create changes
+    to the registry.
+
+    Args:
+
+        name (str):
+            The full path of the ``REG`` file. This can be either a local file
+            path or a URL type supported by salt (e.g. ``salt://salt_master_path``)
+        use_32bit_registry (bool):
+            If the value of this parameter is ``True``, and if the import
+            proceeds, the ``REG`` file
+            will be imported into the Windows 32 bit registry. Otherwise the
+            Windows 64 bit registry will be used.
+    '''
+    ret = {'name': name,
+           'result': False,
+           'changes': {},
+           'comment': ''}
+    reference_reg_file_url = name
+    # acquire data
+    try:
+        (reg_location, reference_reg_file, reference_data, present_data) \
+            = _imported_file_data(reference_reg_file_url,use_32bit_registry)
+    except ValueError as err:
+        ret['comment'] = str(err)
+        ret['result'] = False
+        return ret
+    except CommandExecutionError as err:
+        comment_fmt = "{0}. The attempted command was '{1}'."
+        ret['comment'] = comment_fmt.format(err.message, err.info.get("command","(Unknown)"))
+        ret['result'] = False
+        return ret
+    # determine if import is necessary and return True if it is not necessary.
+    if _imported_file_test(reference_data, present_data):
+        ret['comment'] = "All data in the reg file is already present in the registry. No import required."
+        ret['result'] = True
+        return ret
+    # if in test mode and import is necessary, return None.
+    if __opts__['test'] == True:
+        ret['comment'] = "Changes required. Import will proceed."
+        ret['changes']['old'] = 'Registry unmodified'
+        ret['changes']['new'] = 'Registry modified by importing reg file.'
+        ret['result'] = None
+        return ret
+    # Perform import
+    try:
+        __salt__['reg.import_file'](reference_reg_file,use_32bit_registry)
+    except ValueError as err:
+        comment_fmt = "Call to module function 'reg.import_file' has failed. Error is '{0}'"
+        ret['comment'] = comment_fmt.format(str(err))
+        ret['result'] = False
+        return ret
+    except CommandExecutionError as err:
+        comment_fmt = "Call to module function 'reg.import_file' has failed. Error is '{0}'."
+        ret['comment'] = comment_fmt.format(err.message)
+        ret['result'] = False
+        return ret
+    # acquire new data corresponding with the import.
+    try:
+        present_data = _get_present_state_data(reg_location,use_32bit_registry)
+    except CommandExecutionError as err:
+        comment_fmt = "{0}. The attempted command was '{1}'."
+        ret['comment'] = comment_fmt.format(err.message, err.info.get("command","(Unknown)"))
+        ret['result'] = False
+        return ret
+    # test that import operation did what we thought it should by re-running our test,
+    # but this time using the new data. On success return True.
+    if _imported_file_test(reference_data, present_data):
+        ret['comment'] = "Changes were required. Reg file was imported."
+        ret['changes']['old'] = 'Registry unmodified'
+        ret['changes']['new'] = 'Registry modified by importing reg file.'
+        ret['result'] = True
+        return ret
+    # if we get here we have done an import and the test failed.
+    ret['comment'] = "Reg file was imported, but the data now in the registry does not conform with the imported data."
+    ret['result'] = False
+    return ret
+
