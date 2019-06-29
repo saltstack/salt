@@ -760,33 +760,48 @@ def _imported_file_data(reference_reg_file_url,use_32bit_registry):
     return (True, imported_file_data_result)
 
 
+
+def _imported_file_test_values(reference_data, present_data, key_path):
+    r'''
+    Tests if or not the set of registry values under key_path in reference_data
+    is a subset of the corresponding set in present_data.
+    Returns True on success and False on failure. 
+    '''
+    reference_items = reference_data.items(key_path)
+    for (reference_option, reference_value) in reference_items:
+        if not present_data.has_option(key_path,reference_option):
+            return False
+        present_value = present_data.get(key_path,reference_option)
+        if reference_value != present_value:
+            return False
+    return True
+
+
 def _imported_file_test(reference_data, present_data):
     r'''
     This is a utility function used by imported_file. Its job is compare two configparser objects
     loaded with registry file data. Specifically it tests if reference_data is a subtree of present_data. 
     If it is, that implies that the an import of the reference reg file would have no effect, and would 
-    therefore be unnecessary. Returns True on success and False on failure. 
+    therefore be unnecessary. For a specific keypath in reference_data, to test that the assocciated 
+    set of registry values is a subset of the corresponding set in present_data, 
+    the function _imported_file_test_values is called.
+    Returns True on success and False on failure. 
     '''
     if not present_data:
         return False
     for key_path in reference_data.sections():
         if not present_data.has_section(key_path):
             return False
-        reference_items = reference_data.items(key_path)
-        for (reference_option, reference_value) in reference_items:
-            if not present_data.has_option(key_path,reference_option):
-                return False
-            present_value = present_data.get(key_path,reference_option)
-            if reference_value != present_value:
-                return False
+        if not _imported_file_test_values(reference_data, present_data, key_path):
+            return False
     return True
 
 
 def _imported_file_do_import(reference_reg_file,use_32bit_registry):
     r'''
     This is a utility function used by imported_file. 
-    If not called in while test mode,
-    the module function reg.import_file, if that function throws
+    If not called in while test mode, this function calls
+    the module function reg.import_file. If that function then throws
     exceptions, this function will catch some of them and generate
     appropriate messages to use as the comment of the
     ret dictionary. The function returns an ordered triplet (a,b,c).
@@ -794,8 +809,9 @@ def _imported_file_do_import(reference_reg_file,use_32bit_registry):
        a: Whether or not the operation succeeded expressed as a boolean. If in test, mode, just None
        b: a comment. This will just be None if not in test mode and the operation succeeds,
           because we will determine a comment later on.
-       c: a changes dictionary. This will just be None if not in test moded and the operation succeeds,
-          because we will create a changes dictionary later on.
+       c: a changes dictionary. This will just be None if not in test mode and the operation succeeds,
+          because we will create a changes dictionary later on. If the operation fails, this
+          will be an empty dictionary.
     '''
     if __opts__['test'] == True:
         comment = "Changes required. Import will proceed."
