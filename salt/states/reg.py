@@ -812,32 +812,33 @@ def _imported_file_do_import(reference_reg_file,use_32bit_registry):
     the module function reg.import_file. If that function then throws
     exceptions, this function will catch some of them and generate
     appropriate messages to use as the comment of the
-    ret dictionary. The function returns an ordered triplet (a,b,c).
+    ret dictionary. The function returns an ordered triplet (a,b).
     The values are defined as follows
-       a: Whether or not the operation succeeded expressed as a boolean. If in test, mode, just None.
-       b: a comment. This will just be None if not in test mode and the operation succeeds,
-          because we will determine a comment later on.
-       c: a changes dictionary. This will just be None if not in test mode and the operation succeeds,
-          because we will create a changes dictionary later on. If the operation fails, this
-          will be an empty dictionary.
+       a: Whether or not the operation succeeded expressed as a boolean,
+          or None if in test mode.
+       b: If not in test mode and the operation succeeds this will have the value of None.
+          Otherwise this will be an ordered pair consisting of a comment and a 
+          suitably populated changes directory (empty if the operation failed).
     '''
     if __opts__['test'] == True:
         comment = "Changes required. Import will proceed."
         changes = {}
         changes['old'] = 'Registry unmodified'
         changes['new'] = 'Registry modified by importing reg file.'
-        return (None, comment, changes)
+        return (None, (comment, changes))
     try:
         __salt__['reg.import_file'](reference_reg_file,use_32bit_registry)
     except ValueError as err:
         comment_fmt = "Call to module function 'reg.import_file' has failed. Error is '{0}'"
         comment = comment_fmt.format(str(err))
-        return (False, comment, {})
+        changes = {}
+        return (False, (comment, changes))
     except CommandExecutionError as err:
         comment_fmt = "Call to module function 'reg.import_file' has failed. Error is '{0}'."
         comment = comment_fmt.format(err.message)
-        return (False, comment, {})
-    return (True, None, None)
+        changes = {}
+        return (False, (comment, changes))
+    return (True, None)
 
 
 def _imported_file_data_and_test(reference_reg_file_url,use_32bit_registry):
@@ -874,6 +875,7 @@ def _imported_file_data_and_test(reference_reg_file_url,use_32bit_registry):
     info = (reg_location, reference_reg_file, reference_data)
     return (None, info)
 
+
 def _get_present_state_data_and_test(reg_location,reference_data,use_32bit_registry):
     r'''
     This is a utility function used by imported_file. 
@@ -888,7 +890,8 @@ def _get_present_state_data_and_test(reg_location,reference_data,use_32bit_regis
            a will be False if the data acquisition succeeds and the test fails,
            indicating that the although the import may have appeared to succeed,
            success was not observed when tested.
-        b: In all cases if b will be a suitable comment for the return dictionary.
+        b: In all cases if b will be a an ordered pair consisting
+           of a suitable comment with a changes dictionary.
     '''
     # acquire new data corresponding with the import.
     (get_present_state_data_success, info) = \
@@ -897,7 +900,7 @@ def _get_present_state_data_and_test(reg_location,reference_data,use_32bit_regis
         result = False
         comment = info
         changes = {}
-        return (False, comment, changes)
+        return (False, (comment, changes))
     present_data = info
     # test that import operation did what we thought it should by re-running our test,
     # but this time using the new data. On success return True.
@@ -907,12 +910,12 @@ def _get_present_state_data_and_test(reg_location,reference_data,use_32bit_regis
         changes = {}
         changes['old'] = 'Registry unmodified'
         changes['new'] = 'Registry modified by importing reg file.'
-        return (result, comment, changes)
+        return (result, (comment, changes))
     # Although import has appeared to succeed, the subsequent test has failed.
     result = False
     comment = "Import operation reported success but the desired changes were not observed."
     changes = {}
-    return (result, comment, changes)
+    return (result, (comment, changes))
 
                 
 def imported_file(name, use_32bit_registry=False):
@@ -941,7 +944,7 @@ def imported_file(name, use_32bit_registry=False):
     reference_reg_file_url = name
     # acquire data and test it
     (result, info) \
-        = _imported_file_data_and_test(reference_reg_file_url,use_32bit_registry)
+        = _imported_file_data_and_test(reference_reg_file_url, use_32bit_registry)
     if result is False or result is True:
         # result will be True if we imported the file and the test passed
         # result will be False if we failed to import the file.
@@ -951,19 +954,20 @@ def imported_file(name, use_32bit_registry=False):
     (reg_location, reference_reg_file, reference_data) \
         = info
     # Perform import
-    (result, comment, changes) = \
+    (result, info) = \
         _imported_file_do_import(reference_reg_file,use_32bit_registry)
     if not result:
         # If in test mode, result will be None.
         # If not in test_mode and the import failed, result
         # will be False.
         # Changes are set appropriately, depending on the case
+        (comment, changes) = info
         ret['comment'] = comment
         ret['result'] = result
         ret['changes'] = changes
         return ret
     # acquire new data corresponding with the import and test it.
-    (result, comment, changes) = \
+    (result, (comment, changes)) = \
         _get_present_state_data_and_test(reg_location, reference_data, use_32bit_registry)
     # If we acquired the data from the registry and tested it against our reference data,
     # result will be True.
