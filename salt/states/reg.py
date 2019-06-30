@@ -672,7 +672,17 @@ def _get_present_state_data_wrk(reg_location,use_32bit_registry):
         return present_data
     finally:
         (__salt__['file.remove'])(present_reg_file)
-
+        
+    
+def _imported_file_compose_cmd_execution_err_msg(err):
+    r'''
+    This is a utility function used by imported_file. It composes an error message
+    based on a CommandExecutionError exception. It is expected that
+    the info dictionary of err will have a "command" entry.
+    '''
+    comment_fmt = "{0}. The attempted command was '{1}'."
+    comment = comment_fmt.format(err.message, err.info.get("command","(Unknown)"))
+    return comment
 
 def _get_present_state_data(reg_location,use_32bit_registry):
     r'''
@@ -687,8 +697,7 @@ def _get_present_state_data(reg_location,use_32bit_registry):
     try:
         present_data = _get_present_state_data_wrk(reg_location,use_32bit_registry)
     except CommandExecutionError as err:
-        comment_fmt = "{0}. The attempted command was '{1}'."
-        comment = comment_fmt.format(err.message, err.info.get("command","(Unknown)"))
+        comment = _imported_file_compose_cmd_execution_err_msg(err)
         return (False, comment)
     return (True, present_data)
 
@@ -751,8 +760,7 @@ def _imported_file_data(reference_reg_file_url,use_32bit_registry):
         comment = str(err)
         return (False, comment)
     except CommandExecutionError as err:
-        comment_fmt = "{0}. The attempted command was '{1}'."
-        comment = comment_fmt.format(err.message, err.info.get("command","(Unknown)"))
+        comment = _imported_file_compose_cmd_execution_err_msg(err)
         return (False, comment)
     except configparser.Error:
         comment_fmt = "Could not parse file/URL '{0}'. It may not be a valid REG file."
