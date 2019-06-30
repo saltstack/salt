@@ -76,11 +76,7 @@ import logging
 import salt.utils.stringutils
 import sys
 import io
-PY2 = sys.version_info[0] == 2
-if PY2:
-    import ConfigParser as configparser
-else:
-    import configparser
+from salt.ext.six.moves import configparser
 from salt.exceptions import CommandExecutionError
     
 log = logging.getLogger(__name__)
@@ -639,6 +635,7 @@ def _parse_reg_file(reg_file):
         # The first line of a reg file is english text which we must consume before parsing.
         # It contains no data.
         reg_data = configparser.ConfigParser()
+        PY2 = sys.version_info[0] == 2
         if PY2:
             reg_data.readfp(reg_file_fp)
         else:
