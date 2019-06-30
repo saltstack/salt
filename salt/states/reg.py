@@ -630,7 +630,8 @@ def key_absent(name, use_32bit_registry=False):
 def _parse_reg_file(reg_file):
     r'''
     This is a utility function used by imported_file. This parses a reg file and returns a
-    ConfigParser object.
+    ConfigParser object. A configparser.Error exception will be thrown implicitly
+    upon failure to parse.
     '''
     reg_file_fp = io.open(reg_file,"r",encoding="utf-16")
     try:
@@ -710,8 +711,8 @@ def _imported_file_data_wrk(reference_reg_file_url,use_32bit_registry):
           exported from the location. If the location did not exist in the registry,
           the value of this item will instead be None.
     If reference_reg_file_url cannot be cached a ValueError exception is thrown.
-    If the cached reg file cannot be parsed or has no sections, a ValueError 
-    exception is once again thrown.
+    If the cached reg file cannot be parsed or has no sections, a configparser.error
+    exception will be thrown implicitly.
     '''
     reference_reg_file = __salt__['cp.cache_file'](reference_reg_file_url)
     if not reference_reg_file:
@@ -738,7 +739,7 @@ def _imported_file_data(reference_reg_file_url,use_32bit_registry):
     This is a utility function used by imported_file. It wraps
     the imported_file_data_wrk function and, if that function throws
     exceptions, this function will catch some of them and generate
-    appropriate messages to use in as the comment of the
+    appropriate messages to use as the comment field of the
     ret dictionary. The function returns an ordered pair (a,b).
     On sucess a has a value of True and b is the return value of imported_file_data_wrk. 
     On failure a has a value of False and b is the comment.
@@ -799,13 +800,13 @@ def _imported_file_test(reference_data, present_data):
 def _imported_file_do_import(reference_reg_file,use_32bit_registry):
     r'''
     This is a utility function used by imported_file. 
-    If not called in while test mode, this function calls
+    If not called while test in mode, this function calls
     the module function reg.import_file. If that function then throws
     exceptions, this function will catch some of them and generate
     appropriate messages to use as the comment of the
     ret dictionary. The function returns an ordered triplet (a,b,c).
     The values are defined as follows
-       a: Whether or not the operation succeeded expressed as a boolean. If in test, mode, just None
+       a: Whether or not the operation succeeded expressed as a boolean. If in test, mode, just None.
        b: a comment. This will just be None if not in test mode and the operation succeeds,
           because we will determine a comment later on.
        c: a changes dictionary. This will just be None if not in test mode and the operation succeeds,
@@ -831,6 +832,81 @@ def _imported_file_do_import(reference_reg_file,use_32bit_registry):
     return (True, None, None)
 
 
+def _imported_file_data_and_test(reference_reg_file_url,use_32bit_registry):
+    r'''
+    This is a utility function used by imported_file.
+    It is invoked before the file import. 
+    It calls _imported_file_data to get (using reference_reg_file_url)
+    data representing the reg file, the registry location it was exported from,
+    the path of a cached copy and data exported from the registry at the location.
+    If if fails to get this data it returns at that point.
+    If it succeeds the information is fed into _imported_file_test,
+    which tests the information in the registry against the information in the reg file.
+    The function returns an ordered pair (a,b). a and b are set as follows.
+        a: a will be False if the data acquisition fails
+           and will be True if the data acquistion succeeds and the test also succeeds.
+           a will be None if the data acquisition succeeds and the test fails,
+           indicating that we are not done and must proceed with the file import.
+        b: if a is either True or False, b will be a suitable comment for the return
+           dictionary. If a is None, b is a triple (c,d,e) where c is the registry location,
+           d is the path of the cached copy of the REG file and, e is data from the REG file.    
+    '''
+    # acquire data and return False if that fails.
+    (imported_file_data_success, info) \
+        = _imported_file_data(reference_reg_file_url,use_32bit_registry)
+    if not imported_file_data_success:
+        return (False, info)
+    (reg_location, reference_reg_file, reference_data, present_data) \
+        = info
+    # determine if import is necessary and return True if it is not necessary.
+    if _imported_file_test(reference_data, present_data):
+        comment = "All data in the reg file is already present in the registry. No import required."
+        return (True, comment)
+    # import is necessary
+    info = (reg_location, reference_reg_file, reference_data)
+    return (None, info)
+
+def _get_present_state_data_and_test(reg_location,reference_data,use_32bit_registry):
+    r'''
+    This is a utility function used by imported_file. 
+    It is invoked after the import step.
+    It calls _get_present_state_data to get (using reg_location)
+    data from the registry at reg_location. If this call fails
+    the function returns at that point. If it succeeds the data is fed to
+    _imported_file_test (along with reference_data).
+    The function returns an ordered pair (a,b). a and b are set as follows.
+        a: a will be False if the data acquisition fails
+           and will be True if the data acquistion succeeds and the test also succeeds.
+           a will be False if the data acquisition succeeds and the test fails,
+           indicating that the although the import may have appeared to succeed,
+           success was not observed when tested.
+        b: In all cases if b will be a suitable comment for the return dictionary.
+    '''
+    # acquire new data corresponding with the import.
+    (get_present_state_data_success, info) = \
+        _get_present_state_data(reg_location,use_32bit_registry)
+    if not get_present_state_data_success:
+        result = False
+        comment = info
+        changes = {}
+        return (False, comment, changes)
+    present_data = info
+    # test that import operation did what we thought it should by re-running our test,
+    # but this time using the new data. On success return True.
+    if _imported_file_test(reference_data, present_data):
+        result = True
+        comment = "Changes were required. Reg file was successfully imported."
+        changes = {}
+        changes['old'] = 'Registry unmodified'
+        changes['new'] = 'Registry modified by importing reg file.'
+        return (result, comment, changes)
+    # Although import has appeared to succeed, the subsequent test has failed.
+    result = False
+    comment = "Import operation reported success but the desired changes were not observed."
+    changes = {}
+    return (result, comment, changes)
+
+                
 def imported_file(name, use_32bit_registry=False):
     r'''
     .. versionadded:: Neon
@@ -855,49 +931,38 @@ def imported_file(name, use_32bit_registry=False):
            'changes': {},
            'comment': ''}
     reference_reg_file_url = name
-    # acquire data
-    (imported_file_data_success, info) \
-        = _imported_file_data(reference_reg_file_url,use_32bit_registry)
-    if not imported_file_data_success:
+    # acquire data and test it
+    (result, info) \
+        = _imported_file_data_and_test(reference_reg_file_url,use_32bit_registry)
+    if result is False or result is True:
+        # result will be True if we imported the file and the test passed
+        # result will be False if we failed to import the file.
         ret['comment'] = info
-        ret['result'] = False
+        ret['result'] = result
         return ret
-    (reg_location, reference_reg_file, reference_data, present_data) \
+    (reg_location, reference_reg_file, reference_data) \
         = info
-    # determine if import is necessary and return True if it is not necessary.
-    if _imported_file_test(reference_data, present_data):
-        ret['comment'] = "All data in the reg file is already present in the registry. No import required."
-        ret['result'] = True
-        return ret
     # Perform import
-    (imported_file_do_import_status, comment, changes) = \
+    (result, comment, changes) = \
         _imported_file_do_import(reference_reg_file,use_32bit_registry)
-    if not imported_file_do_import_status:
-        # If in test mode, imported_file_do_import_status will be None, and
-        # changes will be appropriately populated
-        # If not in test_mode and the import failed, imported_file_do_import_status
-        # will be False, and changes will be an empty dictionary.
+    if not result:
+        # If in test mode, result will be None.
+        # If not in test_mode and the import failed, result
+        # will be False.
+        # Changes are set appropriately, depending on the case
         ret['comment'] = comment
-        ret['result'] = imported_file_do_import_status
+        ret['result'] = result
         ret['changes'] = changes
         return ret
-    # acquire new data corresponding with the import.
-    (get_present_state_data_success, info) = \
-        _get_present_state_data(reg_location,use_32bit_registry)
-    if not get_present_state_data_success:
-        ret['comment'] = info
-        ret['result'] = False
-        return ret
-    present_data = info
-    # test that import operation did what we thought it should by re-running our test,
-    # but this time using the new data. On success return True.
-    if _imported_file_test(reference_data, present_data):
-        ret['comment'] = "Changes were required. Reg file was imported."
-        ret['changes']['old'] = 'Registry unmodified'
-        ret['changes']['new'] = 'Registry modified by importing reg file.'
-        ret['result'] = True
-        return ret
-    # if we get here we have done an import and the test failed.
-    ret['comment'] = "Reg file was imported, but the data now in the registry does not conform with the imported data."
-    ret['result'] = False
+    # acquire new data corresponding with the import and test it.
+    (result, comment, changes) = \
+        _get_present_state_data_and_test(reg_location, reference_data, use_32bit_registry)
+    # If we acquired the data from the registry and tested it against our reference data,
+    # result will be True.
+    # If we failed to acquire the data or if we did acquire the data and failed to test it
+    # against the reference data, result will be False.
+    # Changes are set appropriately depending on the case.
+    ret['comment'] = comment
+    ret['result'] = result
+    ret['changes'] = changes
     return ret
