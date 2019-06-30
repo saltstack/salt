@@ -791,7 +791,7 @@ def _imported_file_test(reference_data, present_data):
         return False
     for key_path in reference_data.sections():
         if not present_data.has_section(key_path) \
-           || not _imported_file_test_values(reference_data, present_data, key_path):
+           or not _imported_file_test_values(reference_data, present_data, key_path):
             return False
     return True
 
