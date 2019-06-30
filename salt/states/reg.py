@@ -804,7 +804,7 @@ def _imported_file_test(reference_data, present_data):
 
 def _imported_file_do_import(reference_reg_file, use_32bit_registry):
     r'''
-    This is a utility function used by imported_file. 
+    This is a utility function used by imported_file.
     If not called while test in mode, this function calls
     the module function reg.import_file. If that function then throws
     exceptions, this function will catch some of them and generate
