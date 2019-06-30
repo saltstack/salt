@@ -78,7 +78,7 @@ import sys
 import io
 from salt.ext.six.moves import configparser
 from salt.exceptions import CommandExecutionError
-    
+
 log = logging.getLogger(__name__)
 
 
@@ -629,7 +629,7 @@ def _parse_reg_file(reg_file):
     ConfigParser object. A configparser.Error exception will be thrown implicitly
     upon failure to parse.
     '''
-    reg_file_fp = io.open(reg_file,"r",encoding="utf-16")
+    reg_file_fp = io.open(reg_file, "r", encoding="utf-16")
     try:
         reg_file_fp.readline()
         # The first line of a reg file is english text which we must consume before parsing.
@@ -643,12 +643,12 @@ def _parse_reg_file(reg_file):
         return reg_data
     finally:
         reg_file_fp.close()
-        
 
-def _get_present_state_data_wrk(reg_location,use_32bit_registry):
+
+def _get_present_state_data_wrk(reg_location, use_32bit_registry):
     r'''
-    This is a utility function used by imported_file. It exports a reg file from a location in the 
-    Windows registry to a temporary file, parses the file (using _parse_reg_file), 
+    This is a utility function used by imported_file. It exports a reg file from a location in the
+    Windows registry to a temporary file, parses the file (using _parse_reg_file),
     and returns a ConfigParser object. If the export failed a CommandExecution error is thrown.
     '''
     if use_32bit_registry:
@@ -669,8 +669,8 @@ def _get_present_state_data_wrk(reg_location,use_32bit_registry):
         return present_data
     finally:
         (__salt__['file.remove'])(present_reg_file)
-        
-    
+
+
 def _imported_file_compose_cmd_execution_err_msg(err):
     r'''
     This is a utility function used by imported_file. It composes an error message
@@ -678,31 +678,32 @@ def _imported_file_compose_cmd_execution_err_msg(err):
     the info dictionary of err will have a "command" entry.
     '''
     comment_fmt = "{0}. The attempted command was '{1}'."
-    comment = comment_fmt.format(err.message, err.info.get("command","(Unknown)"))
+    comment = comment_fmt.format(err.message, err.info.get("command", "(Unknown)"))
     return comment
 
-def _get_present_state_data(reg_location,use_32bit_registry):
+
+def _get_present_state_data(reg_location, use_32bit_registry):
     r'''
     This is a utility function used by imported_file. It wraps
     the get_present_state_data_wrk function and, if that function throws
     exceptions, this function will catch some of them and generate
     appropriate messages to use in as the comment of the
     ret dictionary. The function returns an ordered pair (a,b).
-    On sucess a has a value of True and b is the return value of get_present_state_data_wrk. 
+    On sucess a has a value of True and b is the return value of get_present_state_data_wrk.
     On failure a has a value of False and b is the comment.
     '''
     try:
-        present_data = _get_present_state_data_wrk(reg_location,use_32bit_registry)
+        present_data = _get_present_state_data_wrk(reg_location, use_32bit_registry)
     except CommandExecutionError as err:
         comment = _imported_file_compose_cmd_execution_err_msg(err)
         return (False, comment)
     return (True, present_data)
 
-    
-def _imported_file_data_wrk(reference_reg_file_url,use_32bit_registry):
+
+def _imported_file_data_wrk(reference_reg_file_url, use_32bit_registry):
     r'''
     This is a utility function used by imported_file. It does the real
-    work needed by the _imported_file_data function. 
+    work needed by the _imported_file_data function.
     It first caches the reg file
     refered to by reference_reg_file_url (if it isn't already local path),
     and parses the file. Using the thusly acquired configparser object,
@@ -733,26 +734,26 @@ def _imported_file_data_wrk(reference_reg_file_url,use_32bit_registry):
     reg_location = (reference_data.sections())[0]
     reg_hive = reg_location[:reg_location.index("\\")]
     reg_key_path = reg_location[reg_location.index("\\")+1:]
-    if __salt__['reg.key_exists'](reg_hive,reg_key_path,use_32bit_registry):
-        present_data = _get_present_state_data_wrk(reg_location,use_32bit_registry)
+    if __salt__['reg.key_exists'](reg_hive, reg_key_path, use_32bit_registry):
+        present_data = _get_present_state_data_wrk(reg_location, use_32bit_registry)
     else:
         present_data = None
     return (reg_location, reference_reg_file, reference_data, present_data)
 
 
-def _imported_file_data(reference_reg_file_url,use_32bit_registry):
+def _imported_file_data(reference_reg_file_url, use_32bit_registry):
     r'''
     This is a utility function used by imported_file. It wraps
     the imported_file_data_wrk function and, if that function throws
     exceptions, this function will catch some of them and generate
     appropriate messages to use as the comment field of the
     ret dictionary. The function returns an ordered pair (a,b).
-    On sucess a has a value of True and b is the return value of imported_file_data_wrk. 
+    On sucess a has a value of True and b is the return value of imported_file_data_wrk.
     On failure a has a value of False and b is the comment.
     '''
     try:
         imported_file_data_result \
-            = _imported_file_data_wrk(reference_reg_file_url,use_32bit_registry)
+            = _imported_file_data_wrk(reference_reg_file_url, use_32bit_registry)
     except ValueError as err:
         comment = str(err)
         return (False, comment)
@@ -766,18 +767,17 @@ def _imported_file_data(reference_reg_file_url,use_32bit_registry):
     return (True, imported_file_data_result)
 
 
-
 def _imported_file_test_values(reference_data, present_data, key_path):
     r'''
     Tests if or not the set of registry values under key_path in reference_data
     is a subset of the corresponding set in present_data.
-    Returns True on success and False on failure. 
+    Returns True on success and False on failure.
     '''
     reference_items = reference_data.items(key_path)
     for (reference_option, reference_value) in reference_items:
-        if not present_data.has_option(key_path,reference_option):
+        if not present_data.has_option(key_path, reference_option):
             return False
-        present_value = present_data.get(key_path,reference_option)
+        present_value = present_data.get(key_path, reference_option)
         if reference_value != present_value:
             return False
     return True
@@ -786,12 +786,12 @@ def _imported_file_test_values(reference_data, present_data, key_path):
 def _imported_file_test(reference_data, present_data):
     r'''
     This is a utility function used by imported_file. Its job is compare two configparser objects
-    loaded with registry file data. Specifically it tests if reference_data is a subtree of present_data. 
-    If it is, that implies that the an import of the reference reg file would have no effect, and would 
-    therefore be unnecessary. For a specific keypath in reference_data, to test that the assocciated 
-    set of registry values is a subset of the corresponding set in present_data, 
+    loaded with registry file data. Specifically it tests if reference_data is a subtree of present_data.
+    If it is, that implies that the an import of the reference reg file would have no effect, and would
+    therefore be unnecessary. For a specific keypath in reference_data, to test that the assocciated
+    set of registry values is a subset of the corresponding set in present_data,
     the function _imported_file_test_values is called.
-    Returns True on success and False on failure. 
+    Returns True on success and False on failure.
     '''
     if not present_data:
         return False
@@ -802,29 +802,29 @@ def _imported_file_test(reference_data, present_data):
     return True
 
 
-def _imported_file_do_import(reference_reg_file,use_32bit_registry):
+def _imported_file_do_import(reference_reg_file, use_32bit_registry):
     r'''
     This is a utility function used by imported_file. 
     If not called while test in mode, this function calls
     the module function reg.import_file. If that function then throws
     exceptions, this function will catch some of them and generate
     appropriate messages to use as the comment of the
-    ret dictionary. The function returns an ordered triplet (a,b).
+    ret dictionary. The function returns an ordered pair (a,b).
     The values are defined as follows
        a: Whether or not the operation succeeded expressed as a boolean,
           or None if in test mode.
        b: If not in test mode and the operation succeeds this will have the value of None.
-          Otherwise this will be an ordered pair consisting of a comment and a 
+          Otherwise this will be an ordered pair consisting of a comment and a
           suitably populated changes directory (empty if the operation failed).
     '''
-    if __opts__['test'] == True:
+    if __opts__['test']:
         comment = "Changes required. Import will proceed."
         changes = {}
         changes['old'] = 'Registry unmodified'
         changes['new'] = 'Registry modified by importing reg file.'
         return (None, (comment, changes))
     try:
-        __salt__['reg.import_file'](reference_reg_file,use_32bit_registry)
+        __salt__['reg.import_file'](reference_reg_file, use_32bit_registry)
     except ValueError as err:
         comment_fmt = "Call to module function 'reg.import_file' has failed. Error is '{0}'"
         comment = comment_fmt.format(str(err))
@@ -838,10 +838,10 @@ def _imported_file_do_import(reference_reg_file,use_32bit_registry):
     return (True, None)
 
 
-def _imported_file_data_and_test(reference_reg_file_url,use_32bit_registry):
+def _imported_file_data_and_test(reference_reg_file_url, use_32bit_registry):
     r'''
     This is a utility function used by imported_file.
-    It is invoked before the file import. 
+    It is invoked before the file import.
     It calls _imported_file_data to get (using reference_reg_file_url)
     data representing the reg file, the registry location it was exported from,
     the path of a cached copy and data exported from the registry at the location.
@@ -855,11 +855,11 @@ def _imported_file_data_and_test(reference_reg_file_url,use_32bit_registry):
            indicating that we are not done and must proceed with the file import.
         b: if a is either True or False, b will be a suitable comment for the return
            dictionary. If a is None, b is a triple (c,d,e) where c is the registry location,
-           d is the path of the cached copy of the REG file and, e is data from the REG file.    
+           d is the path of the cached copy of the REG file and, e is data from the REG file.
     '''
     # acquire data and return False if that fails.
     (imported_file_data_success, info) \
-        = _imported_file_data(reference_reg_file_url,use_32bit_registry)
+        = _imported_file_data(reference_reg_file_url, use_32bit_registry)
     if not imported_file_data_success:
         return (False, info)
     (reg_location, reference_reg_file, reference_data, present_data) \
@@ -873,9 +873,9 @@ def _imported_file_data_and_test(reference_reg_file_url,use_32bit_registry):
     return (None, info)
 
 
-def _get_present_state_data_and_test(reg_location,reference_data,use_32bit_registry):
+def _get_present_state_data_and_test(reg_location, reference_data, use_32bit_registry):
     r'''
-    This is a utility function used by imported_file. 
+    This is a utility function used by imported_file.
     It is invoked after the import step.
     It calls _get_present_state_data to get (using reg_location)
     data from the registry at reg_location. If this call fails
@@ -892,7 +892,7 @@ def _get_present_state_data_and_test(reg_location,reference_data,use_32bit_regis
     '''
     # acquire new data corresponding with the import.
     (get_present_state_data_success, info) = \
-        _get_present_state_data(reg_location,use_32bit_registry)
+        _get_present_state_data(reg_location, use_32bit_registry)
     if not get_present_state_data_success:
         result = False
         comment = info
@@ -914,7 +914,7 @@ def _get_present_state_data_and_test(reg_location,reference_data,use_32bit_regis
     changes = {}
     return (result, (comment, changes))
 
-                
+
 def imported_file(name, use_32bit_registry=False):
     r'''
     .. versionadded:: Neon
@@ -942,9 +942,11 @@ def imported_file(name, use_32bit_registry=False):
     # acquire data and test it
     (result, info) \
         = _imported_file_data_and_test(reference_reg_file_url, use_32bit_registry)
+    # result will be True if we acquired all data, both from the
+    # reg file and from the registry, tested one against the other, and the test passed.
+    # Result will be False if we failed to acquire the data.
+    # Result will be None otherwise.
     if result is False or result is True:
-        # result will be True if we imported the file and the test passed
-        # result will be False if we failed to import the file.
         ret['comment'] = info
         ret['result'] = result
         return ret
@@ -952,7 +954,7 @@ def imported_file(name, use_32bit_registry=False):
         = info
     # Perform import
     (result, info) = \
-        _imported_file_do_import(reference_reg_file,use_32bit_registry)
+        _imported_file_do_import(reference_reg_file, use_32bit_registry)
     if not result:
         # If in test mode, result will be None.
         # If not in test_mode and the import failed, result
