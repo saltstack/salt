@@ -154,7 +154,7 @@ description:
             __name__ = 'one.two.three'
             __file__ = 'foofile'
 
-            def main():
+            def main():  # pylint: disable=no-method-argument
                 pass
 
         ANSIBLE_MODULE_ARGS = '{"ANSIBLE_MODULE_ARGS": ["arg_1", {"kwarg1": "foobar"}]}'
