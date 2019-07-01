@@ -469,6 +469,7 @@ class MockOpen(object):
                     ret.extend(fh_.writelines_calls)
         return ret
 
+
 class MockTimedProc(object):
     '''
     Class used as a stand-in for salt.utils.timed_subprocess.TimedProc
@@ -500,6 +501,7 @@ class MockTimedProc(object):
     @property
     def stderr(self):
         return self._stderr
+
 
 # reimplement mock_open to support multiple filehandles
 mock_open = MockOpen
