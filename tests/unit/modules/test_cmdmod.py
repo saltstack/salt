@@ -24,6 +24,7 @@ from tests.support.paths import FILES
 from tests.support.mock import (
     mock_open,
     Mock,
+    MockTimedProc,
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
@@ -34,39 +35,6 @@ DEFAULT_SHELL = 'foo/bar'
 MOCK_SHELL_FILE = '# List of acceptable shells\n' \
                   '\n'\
                   '/bin/bash\n'
-
-
-class MockTimedProc(object):
-    '''
-    Class used as a stand-in for salt.utils.timed_subprocess.TimedProc
-    '''
-    class _Process(object):
-        '''
-        Used to provide a dummy "process" attribute
-        '''
-        def __init__(self, returncode=0, pid=12345):
-            self.returncode = returncode
-            self.pid = pid
-
-    def __init__(self, stdout=None, stderr=None, returncode=0, pid=12345):
-        if stdout is not None and not isinstance(stdout, bytes):
-            raise TypeError('Must pass stdout to MockTimedProc as bytes')
-        if stderr is not None and not isinstance(stderr, bytes):
-            raise TypeError('Must pass stderr to MockTimedProc as bytes')
-        self._stdout = stdout
-        self._stderr = stderr
-        self.process = self._Process(returncode=returncode, pid=pid)
-
-    def run(self):
-        pass
-
-    @property
-    def stdout(self):
-        return self._stdout
-
-    @property
-    def stderr(self):
-        return self._stderr
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
