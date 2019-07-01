@@ -148,9 +148,9 @@ class AnsibleModuleCaller(object):
         :return:
         '''
         if six.PY3:
-           python_exec = 'python3'
+            python_exec = 'python3'
         else:
-           python_exec = 'python'
+            python_exec = 'python'
 
         module = self._resolver.load_module(module)
         if not hasattr(module, 'main'):
