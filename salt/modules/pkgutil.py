@@ -29,7 +29,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Solaris
     '''
-    if __grains__['os_family'] == 'Solaris':
+    if __grains__.get('os_family') == 'Solaris':
         return __virtualname__
     return (False, 'The pkgutil execution module cannot be loaded: '
             'only available on Solaris systems.')
