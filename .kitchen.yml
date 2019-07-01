@@ -1,12 +1,14 @@
 ---
 <% vagrant = system('gem list -i kitchen-vagrant 2>/dev/null >/dev/null') %>
-<% version = '2017.7.8' %>
-<% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
-<% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
-<% verifierfile = ENV['SALT_KITCHEN_VERIFIER'] || '.kitchen/verifier.yml' %>
+<% version = ENV['SALT_KITCHEN_BOOTSTRAP_VERSION'] || '2017.7.8' %>
+<% platforms_file = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
+<% driver_file = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
+<% verifier_file = ENV['SALT_KITCHEN_VERIFIER'] || '.kitchen/verifier.yml' %>
+<% provisioner_file = ENV['SALT_KITCHEN_PROVISIONER'] || '.kitchen/provisioner.yml' %>
+<% suites_file = ENV['SALT_KITCHEN_SUITES'] || '.kitchen/suites.yml' %>
 
-<% if File.exists?(driverfile) %>
-<%= ERB.new(File.read(driverfile)).result %>
+<% if File.exists?(driver_file) %>
+<%= ERB.new(File.read(driver_file)).result %>
 <% else %>
 driver:
   name: docker
@@ -25,6 +27,9 @@ transport:
   name: rsync
 <% end %>
 
+<% if File.exists?(provisioner_file) %>
+<%= ERB.new(File.read(provisioner_file)).result %>
+<% else %>
 provisioner:
   name: salt_solo
   salt_install: bootstrap
@@ -72,8 +77,10 @@ provisioner:
       salttesting_namespec: salttesting==2017.6.1
     windows.sls:
       virtualenv_path: 'c:\Python27\Scripts\pip.exe'
-<% if File.exists?(platformsfile) %>
-<%= ERB.new(File.read(platformsfile)).result %>
+<% end %>
+
+<% if File.exists?(platforms_file) %>
+<%= ERB.new(File.read(platforms_file)).result %>
 <% else %>
 platforms:
   - name: fedora
@@ -204,6 +211,10 @@ platforms:
         /salt/var/log/salt/minion: artifacts/logs/minion
 <% end %>
 <% end %>
+
+<% if File.exists?(suites_file) %>
+<%= ERB.new(File.read(suites_file)).result %>
+<% else %>
 suites:
   - name: py2
     verifier:
@@ -220,9 +231,10 @@ suites:
           py3: true
         windows.sls:
           virtualenv_path: 'c:\Python35\Scripts\pip.exe'
+<% end %>
 
-<% if File.exists?(verifierfile) %>
-<%= ERB.new(File.read(verifierfile)).result %>
+<% if File.exists?(verifier_file) %>
+<%= ERB.new(File.read(verifier_file)).result %>
 <% else %>
 verifier:
   name: runtests
