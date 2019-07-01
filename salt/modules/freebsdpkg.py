@@ -98,7 +98,7 @@ def __virtual__():
     Don't load on FreeBSD 9 when the config option
     ``providers:pkg`` is set to 'pkgng'.
     '''
-    if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) < 10:
+    if __grains__.get('os') == 'FreeBSD' and float(__grains__['osrelease']) < 10:
         providers = {}
         if 'providers' in __opts__:
             providers = __opts__['providers']
