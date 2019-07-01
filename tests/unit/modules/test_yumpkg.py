@@ -255,6 +255,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 'installed': False,
                 'summary': [
                     'spacewalk-usix-2.7.5.2-2.2.noarch',
+                    'spacewalksd-5.0.26.2-21.2.x86_64',
                     'suseRegisterInfo-3.1.1-18.2.x86_64',
                 ]
             },
@@ -271,12 +272,13 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(yumpkg.__salt__, {'cmd.run_stdout': MagicMock(return_value=os.linesep.join(yum_out))}):
             patches = yumpkg.list_patches()
             self.assertFalse(patches['my-fake-patch-not-installed-1234']['installed'])
-            for _patch in ['spacewalk-usix-2.7.5.2-2.2.noarch',
-                          'suseRegisterInfo-3.1.1-18.2.x86_64']:
+            self.assertTrue(len(patches['my-fake-patch-not-installed-1234']['summary']) == 3)
+            for _patch in expected_patches['my-fake-patch-not-installed-1234']['summary']:
                 self.assertTrue(_patch in patches['my-fake-patch-not-installed-1234']['summary'])
 
             self.assertTrue(patches['my-fake-patch-installed-1234']['installed'])
-            for _patch in ['my-package-one-1.1-0.1.x86_64', 'my-package-two-1.1-0.1.x86_64']:
+            self.assertTrue(len(patches['my-fake-patch-installed-1234']['summary']) == 2)
+            for _patch in expected_patches['my-fake-patch-installed-1234']['summary']:
                 self.assertTrue(_patch in patches['my-fake-patch-installed-1234']['summary'])
 
     def test_latest_version_with_options(self):
