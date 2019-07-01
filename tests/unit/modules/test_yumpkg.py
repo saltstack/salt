@@ -255,7 +255,6 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 'installed': False,
                 'summary': [
                     'spacewalk-usix-2.7.5.2-2.2.noarch',
-                    'spacewalksd-5.0.26.2-21.2.x86_64',
                     'suseRegisterInfo-3.1.1-18.2.x86_64',
                 ]
             },
@@ -273,7 +272,6 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             patches = yumpkg.list_patches()
             self.assertFalse(patches['my-fake-patch-not-installed-1234']['installed'])
             for _patch in ['spacewalk-usix-2.7.5.2-2.2.noarch',
-                          'spacewalksd-5.0.26.2-21.2.x86_64',
                           'suseRegisterInfo-3.1.1-18.2.x86_64']:
                 self.assertTrue(_patch in patches['my-fake-patch-not-installed-1234']['summary'])
 
