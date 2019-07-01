@@ -183,26 +183,30 @@ class Depends(object):
 
                 # check if you have the dependency
                 elif dep_found:
-                    if 'version' in params \
-                            and salt.utils.versions.version_cmp(
-                                dep_version,
-                                params['version']
-                            ) >= 0:
+                    if 'version' in params:
+                        if salt.utils.versions.version_cmp(
+                                    dep_version,
+                                    params['version']
+                                ) >= 0:
+                            log.trace(
+                                'Dependency (%s) already loaded inside %s with '
+                                'version (%s), required (%s), skipping',
+                                dependency, mod_name, dep_version, params['version']
+                            )
+                            continue
+                    else:
                         log.trace(
-                            'Dependency (%s) already loaded inside %s with '
-                            'version (%s), required (%s), skipping',
-                            dependency, mod_name, dep_version, params['version']
+                            'Dependency (%s) already loaded inside %s, skipping',
+                            dependency, mod_name
                         )
                         continue
-                    log.trace(
-                        'Dependency (%s) already loaded inside %s, skipping',
-                        dependency, mod_name
-                    )
-                    continue
 
                 log.trace(
-                    'Unloading %s.%s because dependency (%s) is not met',
-                    mod_name, func_name, dependency
+                    'Unloading %s.%s because dependency (%s%s) is not met',
+                    mod_name,
+                    func_name,
+                    dependency,
+                    ' version {}'.format(params['version']) if 'version' in params else '',
                 )
                 # if not, unload the function
                 if frame:
