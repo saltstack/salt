@@ -2358,7 +2358,9 @@ class GitBase(object):
         changed = False
         for repo in self.remotes:
             name = getattr(repo, 'name', None)
-            if not remotes or (repo.id, name) in remotes:
+            if not remotes or repo.id in remotes or name in remotes:
+                # Fetch if no specific remote desired, or if the repo's "id" or
+                # "name" attribute matches one of the desired remotes
                 try:
                     if repo.fetch():
                         # We can't just use the return value from repo.fetch()
