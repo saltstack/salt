@@ -38,7 +38,7 @@ def __virtual__():
     '''
     mdadm provides raid functions for Linux
     '''
-    if __grains__['kernel'] != 'Linux':
+    if __grains__.get('kernel') != 'Linux':
         return False
     if not salt.utils.path.which('mdadm'):
         return False
@@ -98,7 +98,7 @@ def present(name,
         if dev == 'missing' or not __salt__['file.access'](dev, 'f'):
             missing.append(dev)
             continue
-        superblock = __salt__['raid.examine'](dev)
+        superblock = __salt__['raid.examine'](dev, quiet=True)
 
         if 'MD_UUID' in superblock:
             uuid = superblock['MD_UUID']

@@ -62,7 +62,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Solaris 11
     '''
-    if __grains__['os_family'] == 'Solaris' \
+    if __grains__.get('os_family') == 'Solaris' \
             and float(__grains__['kernelrelease']) > 5.10 \
             and salt.utils.path.which('pkg'):
         return __virtualname__
@@ -109,7 +109,7 @@ def _ips_get_pkgversion(line):
     return line.split()[0].split('@')[1].strip()
 
 
-def refresh_db(full=False):
+def refresh_db(full=False, **kwargs):
     '''
     Updates the remote repos database.
 
@@ -133,7 +133,7 @@ def refresh_db(full=False):
         return __salt__['cmd.retcode']('/bin/pkg refresh') == 0
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     '''
     Check if there is an upgrade available for a certain package
     Accepts full or partial FMRI. Returns all matches found.

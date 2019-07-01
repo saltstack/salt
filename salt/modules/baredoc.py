@@ -102,8 +102,8 @@ def modules_and_args(modules=True, states=False, names_only=False):
     :param states: Walk the states directory if True
     :param names_only: Return only a list of the callable functions instead of a dictionary with arguments
     :return: An OrderedDict with callable function names as keys and lists of arguments as
-             values (if ``names_only``==False) or simply an ordered list of callable
-             function nanes (if ``names_only``==True).
+             values (if ``names_only`` == False) or simply an ordered list of callable
+             function nanes (if ``names_only`` == True).
 
     CLI Example:
     (example truncated for brevity)

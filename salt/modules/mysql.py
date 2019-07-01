@@ -1263,7 +1263,12 @@ def user_exists(user,
         salt '*' mysql.user_exists 'username' password_column='authentication_string'
     '''
     run_verify = False
-    server_version = version(**connection_args)
+    server_version = salt.utils.data.decode(version(**connection_args))
+    if not server_version:
+        last_err = __context__['mysql.error']
+        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
+        log.error(err)
+        return False
     compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
@@ -1402,7 +1407,12 @@ def user_create(user,
         salt '*' mysql.user_create 'username' 'hostname' password_hash='hash'
         salt '*' mysql.user_create 'username' 'hostname' allow_passwordless=True
     '''
-    server_version = version(**connection_args)
+    server_version = salt.utils.data.decode(version(**connection_args))
+    if not server_version:
+        last_err = __context__['mysql.error']
+        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
+        log.error(err)
+        return False
     compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
     if user_exists(user, host, **connection_args):
         log.info('User \'%s\'@\'%s\' already exists', user, host)
@@ -1507,7 +1517,12 @@ def user_chpass(user,
         salt '*' mysql.user_chpass frank localhost password_hash='hash'
         salt '*' mysql.user_chpass frank localhost allow_passwordless=True
     '''
-    server_version = version(**connection_args)
+    server_version = salt.utils.data.decode(version(**connection_args))
+    if not server_version:
+        last_err = __context__['mysql.error']
+        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
+        log.error(err)
+        return False
     compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
     args = {}
     if password is not None:
@@ -1863,7 +1878,12 @@ def grant_exists(grant,
              'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
 
-    server_version = version(**connection_args)
+    server_version = salt.utils.data.decode(version(**connection_args))
+    if not server_version:
+        last_err = __context__['mysql.error']
+        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
+        log.error(err)
+        return False
     if 'ALL' in grant:
         if salt.utils.versions.version_cmp(server_version, '8.0') >= 0 and \
            'MariaDB' not in server_version:

@@ -49,7 +49,7 @@ def __virtual__():
     '''
     Confine this module to Debian-based distros
     '''
-    if __grains__['os_family'] == 'Debian':
+    if __grains__.get('os_family') == 'Debian':
         return __virtualname__
     return (False, 'The debian_ip module could not be loaded: '
             'unsupported OS family')
@@ -1727,7 +1727,8 @@ def down(iface, iface_type):
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought down.
     if iface_type not in ['slave', 'source']:
-        return __salt__['cmd.run'](['ifdown', iface])
+        cmd = ['ip', 'link', 'set', '{0}'.format(iface), 'down']
+        return __salt__['cmd.run'](cmd, python_shell=False)
     return None
 
 
@@ -1788,7 +1789,8 @@ def up(iface, iface_type):  # pylint: disable=C0103
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought up.
     if iface_type not in ('slave', 'source'):
-        return __salt__['cmd.run'](['ifup', iface])
+        cmd = ['ip', 'link', 'set', '{0}'.format(iface), 'up']
+        return __salt__['cmd.run'](cmd, python_shell=False)
     return None
 
 

@@ -516,7 +516,7 @@ Testing the Salt minion
 
     .. code-block:: bash
 
-        sudo salt '*' test.ping
+        sudo salt '*' test.version
 
 You should get the following response: ``{'your minion hostname': True}``
 

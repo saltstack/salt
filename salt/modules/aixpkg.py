@@ -33,7 +33,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is AIX
     '''
-    if __grains__['os_family'] == 'AIX':
+    if __grains__.get('os_family') == 'AIX':
         return __virtualname__
     return (False,
            'Did not load AIX module on non-AIX OS.')
@@ -398,7 +398,7 @@ def latest_version(*names, **kwargs):
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
 

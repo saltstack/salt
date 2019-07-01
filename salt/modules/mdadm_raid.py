@@ -33,7 +33,7 @@ def __virtual__():
     '''
     mdadm provides raid functions for Linux
     '''
-    if __grains__['kernel'] != 'Linux':
+    if __grains__.get('kernel') != 'Linux':
         return (False, 'The mdadm execution module cannot be loaded: only available on Linux.')
     if not salt.utils.path.which('mdadm'):
         return (False, 'The mdadm execution module cannot be loaded: the mdadm binary is not in the path.')
@@ -247,7 +247,7 @@ def create(name,
            '-v',
            '-l', six.text_type(level),
            ] + opts + [
-           '-e', metadata,
+           '-e', six.text_type(metadata),
            '-n', six.text_type(raid_devices),
            ] + devices
 
@@ -360,9 +360,15 @@ def assemble(name,
         return __salt__['cmd.run'](cmd, python_shell=False)
 
 
-def examine(device):
+def examine(device, quiet=False):
     '''
     Show detail for a specified RAID component device
+
+    device
+        Device to examine, that is part of the RAID
+
+    quiet
+        If the device is not part of the RAID, do not show any error
 
     CLI Example:
 
@@ -370,7 +376,9 @@ def examine(device):
 
         salt '*' raid.examine '/dev/sda1'
     '''
-    res = __salt__['cmd.run_stdout']('mdadm -Y -E {0}'.format(device), output_loglevel='trace', python_shell=False)
+    res = __salt__['cmd.run_stdout']('mdadm -Y -E {0}'.format(device),
+                                     python_shell=False,
+                                     ignore_retcode=quiet)
     ret = {}
 
     for line in res.splitlines():
