@@ -5845,8 +5845,11 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             return None
     elif etree.QName(element).localname == 'string':
         this_vtype = 'REG_SZ'
-        this_element_value = b''.join([element.text.encode('utf-16-le'),
-                                       encoded_null])
+        if element.text is None:
+            this_element_value = encoded_null
+        else:
+            this_element_value = b''.join([element.text.encode('utf-16-le'),
+                                           encoded_null])
     elif etree.QName(parent_element).localname == 'elements':
         standard_element_expected_string = True
         if etree.QName(element).localname == 'boolean':
