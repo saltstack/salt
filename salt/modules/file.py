@@ -1741,7 +1741,7 @@ def _regex_to_static(src, regex):
     except Exception as ex:
         raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
-    return src and src or []
+    return src
 
 
 def _assert_occurrence(probe, target, amount=1):
@@ -1939,6 +1939,8 @@ def _set_line(lines,
                 if after_index+1 == before_index:
                     lines.insert(after_index+1, _set_line_indent(lines[after_index], content, indent))
                 elif after_index+2 == before_index:
+                    # TODO: This should change, it doesn't match existing
+                    # behavior -W. Werner, 2019-06-28
                     lines[after_index+1] = _set_line_indent(lines[after_index], content, indent)
                 else:
                     raise CommandExecutionError(
@@ -1973,49 +1975,66 @@ def line(path, content=None, match=None, mode=None, location=None,
     '''
     .. versionadded:: 2015.8.0
 
-    Edit a line in the configuration file. The ``path`` and ``content``
-    arguments are required, as well as passing in one of the ``mode``
-    options.
+    Line-focused editing of a file.
+
+    .. note::
+
+        ``file.line`` exists for historic reasons, and is not
+        generally recommended. It has a lot of quirks.  You may find
+        ``file.replace`` to be more suitable.
+
+    ``file.line`` is most useful if you have single lines in a file
+    (potentially a config file) that you would like to manage. It can
+    remove, add, and replace a single line at a time.
 
     path
         Filesystem path to the file to be edited.
 
     content
-        Content of the line. Allowed to be empty if mode=delete.
+        Content of the line. Allowed to be empty if ``mode='delete'``.
 
     match
         Match the target line for an action by
         a fragment of a string or regular expression.
 
         If neither ``before`` nor ``after`` are provided, and ``match``
-        is also ``None``, match becomes the ``content`` value.
+        is also ``None``, match falls back to the ``content`` value.
 
     mode
         Defines how to edit a line. One of the following options is
         required:
 
         - ensure
-            If line does not exist, it will be added. This is based on the
-            ``content`` argument.
+            If line does not exist, it will be added. If ``before``
+            and ``after`` are specified either zero lines, or lines
+            that contain the ``content`` line are allowed to be in between
+            ``before`` and ``after``. If there are lines, and none of
+            them match then it will produce an error.
         - replace
-            If line already exists, it will be replaced.
+            If line already exists, the entire line will be replaced.
         - delete
-            Delete the line, once found.
+            Delete the line, if found.
         - insert
-            Insert a line.
+            Nearly identical to ``ensure``. If a line does not exist,
+            it will be added.
+
+            The differences are that multiple (and non-matching) lines are
+            alloweed between ``before`` and ``after``, if they are
+            sepcified. The line will always be inserted right before
+            ``before``. ``insert`` also allows the use of ``location`` to
+            specify that the line should be added at the beginning or end of
+            the file.
 
         .. note::
 
-            If ``mode=insert`` is used, at least one of the following
-            options must also be defined: ``location``, ``before``, or
-            ``after``. If ``location`` is used, it takes precedence
-            over the other two options.
+            If ``mode='insert'`` is used, at least one of ``location``,
+            ``before``, or ``after`` is required.  If ``location`` is used,
+            ``before`` and ``after`` are ignored.
 
     location
-        Defines where to place content in the line. Note this option is only
-        used when ``mode=insert`` is specified. If a location is passed in, it
-        takes precedence over both the ``before`` and ``after`` kwargs. Valid
-        locations are:
+        In ``mode='insert'`` only, whether to place the ``content`` at the
+        beginning or end of a the file. If ``location`` is provided,
+        ``before`` and ``after`` are ignored. Valid locations:
 
         - start
             Place the content at the beginning of the file.
@@ -2024,13 +2043,19 @@ def line(path, content=None, match=None, mode=None, location=None,
 
     before
         Regular expression or an exact case-sensitive fragment of the string.
-        This option is only used when either the ``ensure`` or ``insert`` mode
-        is defined.
+        Will be tried as **both** a regex **and** a part of the line.  Must
+        match **exactly** one line in the file.  This value is only used in
+        ``ensure`` and ``insert`` modes. The ``content`` will be inserted just
+        before this line, with matching indentation unless ``indent=False``.
 
     after
         Regular expression or an exact case-sensitive fragment of the string.
-        This option is only used when either the ``ensure`` or ``insert`` mode
-        is defined.
+        Will be tried as **both** a regex **and** a part of the line.  Must
+        match **exactly** one line in the file.  This value is only used in
+        ``ensure`` and ``insert`` modes. The ``content`` will be inserted
+        directly after this line, unless ``before`` is also provided. If
+        ``before`` is not provided, indentation will match this line, unless
+        ``indent=False``.
 
     show_changes
         Output a unified diff of the old file and the new file.
@@ -2069,6 +2094,122 @@ def line(path, content=None, match=None, mode=None, location=None,
         .. code-block:: bash
 
             salt '*' file.line /path/to/file content="CREATEMAIL_SPOOL=no" match="CREATE_MAIL_SPOOL=yes" mode="replace"
+
+    **Examples:**
+
+    Here's a simple config file.
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+        # this line will go away
+
+        here=False
+        away=True
+        goodybe=away
+
+    .. code-block:: bash
+
+        salt \* file.line /some/file.conf mode=delete match=away
+
+    This will produce:
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+
+        here=False
+        away=True
+        goodbye=away
+
+    If that command is executed 2 more times, this will be the result:
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+
+        here=False
+
+    If we reset the file to its original state and run
+
+    .. code-block:: bash
+
+        salt \* file.line /some/file.conf mode=replace match=away content=here
+
+    Three passes will this state will result in this file:
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+        here
+
+        here=False
+        here
+        here
+
+    Each pass replacing the first line found.
+
+    Given this file:
+
+    .. code-block:: text
+
+        insert after me
+        something
+        insert before me
+
+    The following command
+
+    .. code-block:: bash
+
+        salt \* file.line /some/file.txt mode=insert after="insert after me" before="insert before me" content=thrice
+
+    If that command is executed 3 times, the result will be:
+
+    .. code-block:: text
+
+        insert after me
+        something
+        thrice
+        thrice
+        thrice
+        insert before me
+
+    If the mode is ``ensure`` instead, it will fail each time. To succeed, we
+    need to remove the incorrect line between before and after:
+
+    .. code-block:: text
+
+        insert after me
+        insert before me
+
+    With an ensure mode, this will insert ``thrice`` the first time and
+    make no changes for subsequent calls. For something simple this is
+    fine, but if you have instead blocks like this:
+
+    .. code-block:: text
+
+        Begin SomeBlock
+            foo = bar
+        End
+
+        Begin AnotherBlock
+            another = value
+        End
+
+    And you try to use ensure this way:
+
+    .. code-block:: bash
+
+        salt \* file.line  /tmp/fun.txt mode="ensure" content="this = should be my content" after="Begin SomeBlock" before="End"
+
+    This will fail because there are multiple ``End`` lines. Without that
+    problem, it still would fail because there is a non-matching line,
+    ``foo = bar``. Ensure **only** allows either zero, or the matching
+    line present to be present in between ``before`` and ``after``.
     '''
     path = os.path.realpath(os.path.expanduser(path))
     if not os.path.isfile(path):
