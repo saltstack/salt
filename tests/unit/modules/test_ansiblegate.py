@@ -24,7 +24,7 @@ import salt.modules.ansiblegate as ansible
 import salt.utils.platform
 from salt.exceptions import LoaderError
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, patch, MockTimedProc
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -32,6 +32,8 @@ try:
 except ImportError as import_error:
     pytest = None
 NO_PYTEST = not bool(pytest)
+
+from salt.ext import six
 
 
 @skipIf(NO_PYTEST, False)
@@ -151,3 +153,42 @@ description:
         """
         with patch("salt.modules.ansiblegate.ansible", None):
             assert ansible.__virtual__() == "ansible"
+
+    def test_ansible_module_call(self):
+        """
+        Test Ansible module call from ansible gate module
+
+        :return:
+        """
+
+        class Module(object):
+            """
+            An ansible module mock.
+            """
+            __name__ = "one.two.three"
+            __file__ = "foofile"
+
+            def main():
+                pass
+
+        ANSIBLE_MODULE_ARGS = "{'ANSIBLE_MODULE_ARGS': ['arg_1', {'kwarg1': 'foobar'}]}"
+
+        proc = MagicMock(side_effect=[
+            MockTimedProc(
+                stdout=ANSIBLE_MODULE_ARGS.encode(),
+                stderr=None),
+            MockTimedProc(stdout="{'completed': true}".encode(), stderr=None)
+        ])
+
+        with patch.object(ansible, "_resolver", self.resolver), \
+            patch.object(ansible._resolver, "load_module", MagicMock(return_value=Module())):
+            _ansible_module_caller = ansible.AnsibleModuleCaller(ansible._resolver)
+            with patch("salt.utils.timed_subprocess.TimedProc", proc):
+                ret = _ansible_module_caller.call("one.two.three", "arg_1", kwarg1="foobar")
+                if six.PY3:
+                    proc.assert_any_call(["echo", "{'ANSIBLE_MODULE_ARGS': {'kwarg1': 'foobar', '_raw_params': 'arg_1'}}"], stdout=-1, timeout=1200)
+                    proc.assert_any_call(["python3", "foofile"], stdin=ANSIBLE_MODULE_ARGS, stdout=-1, timeout=1200)
+                else:
+                    proc.assert_any_call(["echo", "{'ANSIBLE_MODULE_ARGS': {'_raw_params': 'arg_1', 'kwarg1': 'foobar'}}"], stdout=-1, timeout=1200)
+                    proc.assert_any_call(["python", 'foofile'], stdin=ANSIBLE_MODULE_ARGS, stdout=-1, timeout=1200)
+                assert ret == {"completed": True, "timeout": 1200}
