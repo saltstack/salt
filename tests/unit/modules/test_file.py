@@ -1077,7 +1077,6 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         else:
             return salt.utils.data.decode_list(ret, to_str=True)
 
-
     def test_set_line_should_raise_command_execution_error_with_no_mode(self):
         with self.assertRaises(CommandExecutionError) as err:
             filemod._set_line(lines=[], mode=None)
@@ -1115,7 +1114,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         lines = ['foo', 'roscivs', 'bar']
         to_remove = 'roscivs'
         expected_lines = ['foo', 'bar']
-        
+
         actual_lines = filemod._set_line(mode='delete', lines=lines, content=to_remove)
 
         self.assertEqual(actual_lines, expected_lines)
@@ -1511,7 +1510,6 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(actual_lines, expected_lines)
 
-
     def test_if_not_location_or_after_but_before_and_indent_False_then_line_should_be_inserted_before_before_without_indent(self):
         location = after = None
         before = 'indessed'
@@ -1608,7 +1606,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(actual_lines, expected_lines)
 
-    def test_ensure_with_too_many_after_should_CommandExecutionError(self):
+    def test_ensure_with_before_and_too_many_after_should_CommandExecutionError(self):
         location = None
         before = 'before'
         after = 'after'
@@ -1630,7 +1628,23 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             'Found more than expected occurrences in "after" expression',
         )
 
-    def test_ensure_with_too_many_before_should_CommandExecutionError(self):
+    def test_ensure_with_too_many_after_should_CommandExecutionError(self):
+        after = 'fnord'
+        bad_lines = [after, after]
+
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=bad_lines,
+                content='asdf',
+                after=after,
+                mode='ensure',
+            )
+        self.assertEqual(
+            err.exception.args[0],
+            'Found more than expected occurrences in "after" expression',
+        )
+
+    def test_ensure_with_after_and_too_many_before_should_CommandExecutionError(self):
         location = None
         before = 'before'
         after = 'after'
@@ -1647,6 +1661,22 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 after=after,
             )
 
+        self.assertEqual(
+            err.exception.args[0],
+            'Found more than expected occurrences in "before" expression',
+        )
+
+    def test_ensure_with_too_many_before_should_CommandExecutionError(self):
+        before = 'fnord'
+        bad_lines = [before, before]
+
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=bad_lines,
+                content='asdf',
+                before=before,
+                mode='ensure',
+            )
         self.assertEqual(
             err.exception.args[0],
             'Found more than expected occurrences in "before" expression',
@@ -1814,38 +1844,6 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(actual_lines, original_lines)
 
-    def test_ensure_with_too_many_after_should_CommandExecutionError(self):
-        after = 'fnord'
-        bad_lines = [after, after]
-
-        with self.assertRaises(CommandExecutionError) as err:
-            filemod._set_line(
-                lines=bad_lines,
-                content='asdf',
-                after=after,
-                mode='ensure',
-            )
-        self.assertEqual(
-            err.exception.args[0],
-            'Found more than expected occurrences in "after" expression',
-        )
-
-    def test_ensure_with_too_many_before_should_CommandExecutionError(self):
-        before = 'fnord'
-        bad_lines = [before, before]
-
-        with self.assertRaises(CommandExecutionError) as err:
-            filemod._set_line(
-                lines=bad_lines,
-                content='asdf',
-                before=before,
-                mode='ensure',
-            )
-        self.assertEqual(
-            err.exception.args[0],
-            'Found more than expected occurrences in "before" expression',
-        )
-
     def test_ensure_without_before_and_after_should_CommandExecutionError(self):
         before = 'before'
         after = 'after'
@@ -1864,8 +1862,6 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             'Wrong conditions? Unable to ensure line without knowing where'
             ' to put it before and/or after.',
         )
-
-
 
     @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))

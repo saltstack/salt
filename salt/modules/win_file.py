@@ -120,7 +120,7 @@ def __virtual__():
             global path_exists_glob, comment, uncomment, _mkstemp_copy
             global _regex_to_static, _set_line_indent, dirname, basename
             global list_backups_dir, normpath_, _assert_occurrence
-            global _insert_line_before, _insert_line_after, _set_line_eol, _get_eol
+            global _set_line_eol, _get_eol
             global _set_line
 
             replace = _namespaced_function(replace, globals())
@@ -181,8 +181,6 @@ def __virtual__():
             _set_line_indent = _namespaced_function(_set_line_indent, globals())
             _set_line_eol = _namespaced_function(_set_line_eol, globals())
             _get_eol = _namespaced_function(_get_eol, globals())
-            _insert_line_after = _namespaced_function(_insert_line_after, globals())
-            _insert_line_before = _namespaced_function(_insert_line_before, globals())
             _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
             _add_flags = _namespaced_function(_add_flags, globals())
             apply_template_on_contents = _namespaced_function(apply_template_on_contents, globals())
