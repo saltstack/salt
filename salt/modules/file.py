@@ -1893,7 +1893,7 @@ def _set_line(lines,
                 'On insert either "location" or "before/after" conditions are'
                 ' required.',
             )
-        
+
         if location:
             if location == 'end':
                 if lines:
@@ -1964,14 +1964,13 @@ def _set_line(lines,
                 ' to put it before and/or after.'
             )
 
-
-
     return lines
 
 
 def line(path, content=None, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
          quiet=False, indent=True):
+    # pylint: disable=W1401
     '''
     .. versionadded:: 2015.8.0
 
@@ -2211,6 +2210,7 @@ def line(path, content=None, match=None, mode=None, location=None,
     ``foo = bar``. Ensure **only** allows either zero, or the matching
     line present to be present in between ``before`` and ``after``.
     '''
+    # pylint: enable=W1401
     path = os.path.realpath(os.path.expanduser(path))
     if not os.path.isfile(path):
         if not quiet:
