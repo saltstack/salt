@@ -15,10 +15,11 @@ except ImportError:
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
-from tests.support.mock import patch, MagicMock
+from tests.support.mock import patch, Mock, MagicMock
 
 # Import salt libs
 import salt.fileserver.s3fs as s3fs
+import salt.utils.s3 as s3_utils
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +34,18 @@ OPTS = {
     'transport': 'zeromq',
     '__role': 'master',
 }
+
+
+def _mock_json_response(data, status_code=200, reason=""):
+    '''
+    Mock helper for http response
+    '''
+    response = MagicMock()
+    response.json = MagicMock(return_value=data)
+    response.status_code = status_code
+    response.reason = reason
+    response.content = ""
+    return Mock(return_value=response)
 
 
 class S3fsConfigTestCase(TestCase, LoaderModuleMockMixin):
@@ -63,3 +76,14 @@ class S3fsConfigTestCase(TestCase, LoaderModuleMockMixin):
                                                           path_style=None,
                                                           service_url=None,
                                                           verify_ssl=None)
+
+    def test_get_file_from_s3_with_spaces(self):
+        path = 'example/unstable/filename with spaces.txt'
+        expected_url = 'http://bucket_name.s3.amazonaws.com/example/unstable/filename%20with%20spaces.txt?'
+        mock = _mock_json_response({})
+        with patch('os.path.isfile', MagicMock(return_value=False)):
+            with patch.dict(s3fs.__utils__, {'s3.query': s3_utils.query}):
+                with patch('salt.utils.aws.get_location', MagicMock(return_value='dummy_location')):
+                    with patch('requests.request', mock):
+                        s3fs._get_file_from_s3(None, 'base', 'bucket_name', path, None)
+                        self.assertEqual(expected_url, mock.call_args[0][1])
