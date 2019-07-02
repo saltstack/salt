@@ -84,7 +84,7 @@ def _is_globalzone():
     '''
     Check if we are running in the globalzone
     '''
-    if not __grains__['kernel'] == 'SunOS':
+    if not __grains__.get('kernel') == 'SunOS':
         return False
 
     zonename = __salt__['cmd.run_all']('zonename')

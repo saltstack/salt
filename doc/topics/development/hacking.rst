@@ -160,7 +160,7 @@ installation is working:
     salt-minion -c ./etc/salt -d
     salt-key -c ./etc/salt -L
     salt-key -c ./etc/salt -A
-    salt -c ./etc/salt '*' test.ping
+    salt -c ./etc/salt '*' test.version
 
 Running the master and minion in debug mode can be helpful when developing. To
 do this, add ``-l debug`` to the calls to ``salt-master`` and ``salt-minion``.

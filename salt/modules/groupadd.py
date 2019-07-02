@@ -34,7 +34,7 @@ def __virtual__():
     '''
     Set the user module if the kernel is Linux or OpenBSD
     '''
-    if __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD'):
+    if __grains__.get('kernel') in ('Linux', 'OpenBSD', 'NetBSD'):
         return __virtualname__
     return (False, 'The groupadd execution module cannot be loaded: '
             ' only available on Linux, OpenBSD and NetBSD')
