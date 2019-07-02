@@ -1,175 +1,205 @@
-pipeline {
-    agent { label 'pr-lint-slave' }
-    options {
-        timestamps()
-        ansiColor('xterm')
-        timeout(time: 3, unit: 'HOURS')
-    }
-    environment {
-        PYENV_ROOT = "/usr/local/pyenv"
-        PATH = "$PYENV_ROOT/bin:$PATH"
-        PY_COLORS = 1
-    }
-    stages {
-        stage('github-pending') {
-            steps {
-                githubNotify credentialsId: 'test-jenkins-credentials',
-                    description: 'Python lint on changes begins...',
-                    status: 'PENDING',
-                    context: "jenkins/pr/lint"
-            }
-        }
-        stage('setup') {
-            steps {
-                sh '''
-                # Need -M to detect renames otherwise they are reported as Delete and Add, need -C to detect copies, -C includes -M
-                # -M is on by default in git 2.9+
-                git diff --name-status -l99999 -C "origin/$CHANGE_TARGET" > file-list-status.log
-                # the -l increase the search limit, lets use awk so we do not need to repeat the search above.
-                gawk 'BEGIN {FS="\\t"} {if ($1 != "D") {print $NF}}' file-list-status.log > file-list-changed.log
-                gawk 'BEGIN {FS="\\t"} {if ($1 == "D") {print $NF}}' file-list-status.log > file-list-deleted.log
-                (git diff --name-status -l99999 -C "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME";echo "---";git diff --name-status -l99999 -C "origin/$BRANCH_NAME";printenv|grep -E '=[0-9a-z]{40,}+$|COMMIT=|BRANCH') > file-list-experiment.log
-                eval "$(pyenv init -)"
-                pyenv --version
-                pyenv install --skip-existing 2.7.15
-                pyenv shell 2.7.15
-                python --version
-                pip install -U https://github.com/s0undt3ch/nox/archive/hotfix/py2.zip#egg=Nox==2018.10.17
-                nox --version
-                # Create the required virtualens in serial
-                nox --install-only -e lint-salt
-                nox --install-only -e lint-tests
-                '''
-                archiveArtifacts artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log,file-list-experiment.log'
-            }
-        }
-        stage('linting chg') {
-            parallel {
-                stage('lint salt chg') {
-                    when {
-                        expression { return readFile('file-list-changed.log') =~ /(?i)(^|\n)(salt\/.*\.py|setup\.py)\n/ }
+// Define the maximum time, in hours, that a test run should run for
+def global_timeout = 3
+def salt_target_branch = '2018.3'
+
+properties([
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
+])
+
+def shell_header
+
+node('lint') {
+    timeout(time: global_timeout, unit: 'HOURS') {
+        ansiColor('xterm') {
+            timestamps {
+                try {
+                    // Set the GH status even before cloning the repo
+                    if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                        stage('github-pending') {
+                            githubNotify credentialsId: 'test-jenkins-credentials',
+                                description: 'Python lint begins...',
+                                status: 'PENDING',
+                                context: "jenkins/pr/lint"
+                        }
+                        shell_header = 'export PYENV_ROOT="/usr/local/pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"'
+                    } else {
+                        shell_header = ''
                     }
-                    steps {
-                        sh '''
-                        eval "$(pyenv init - --no-rehash)"
-                        pyenv shell 2.7.15
-                        EC=254
-                        export PYLINT_REPORT=pylint-report-salt-chg.log
-                        grep -Ei '^salt/.*\\.py$|^setup\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' nox -e lint-salt --
-                        EC=$?
-                        exit $EC
-                        '''
+
+                    withEnv(["SALT_TARGET_BRANCH=${salt_target_branch}"]) {
+                        // Checkout the repo
+                        stage('checkout-scm') {
+                            cleanWs notFailBuild: true
+                            checkout scm
+                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
+                        }
+
+                        // Setup the kitchen required bundle
+                        stage('Setup') {
+                            sh shell_header + '''
+                            # Need -M to detect renames otherwise they are reported as Delete and Add, need -C to detect copies, -C includes -M
+                            # -M is on by default in git 2.9+
+                            git diff --name-status -l99999 -C "origin/${SALT_TARGET_BRANCH}" > file-list-status.log
+                            # the -l increase the search limit, lets use awk so we do not need to repeat the search above.
+                            gawk 'BEGIN {FS="\\t"} {if ($1 != "D") {print $NF}}' file-list-status.log > file-list-changed.log
+                            gawk 'BEGIN {FS="\\t"} {if ($1 == "D") {print $NF}}' file-list-status.log > file-list-deleted.log
+                            (git diff --name-status -l99999 -C "origin/${SALT_TARGET_BRANCH}" "origin/$BRANCH_NAME";echo "---";git diff --name-status -l99999 -C "origin/$BRANCH_NAME";printenv|grep -E '=[0-9a-z]{40,}+$|COMMIT=|BRANCH') > file-list-experiment.log
+                            eval "$(pyenv init -)"
+                            pyenv --version
+                            pyenv install --skip-existing 2.7.15
+                            pyenv shell 2.7.15
+                            python --version
+                            pip install -U nox-py2
+                            nox --version
+                            # Create the required virtualenvs in serial
+                            nox --install-only -e lint-salt
+                            nox --install-only -e lint-tests
+                            '''
+                        }
+                        archiveArtifacts artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log,file-list-experiment.log'
+                    }
+
+                    stage('Lint Changes') {
+                        try {
+                            parallel(
+                                lintSalt: {
+                                    stage('Lint Salt Changes') {
+                                        if (readFile('file-list-changed.log') =~ /(?i)(^|\n)(salt\/.*\.py|setup\.py)\n/) {
+                                            sh shell_header + '''
+                                            eval "$(pyenv init - --no-rehash)"
+                                            pyenv shell 2.7.15
+                                            EC=254
+                                            export PYLINT_REPORT=pylint-report-salt-chg.log
+                                            grep -Ei '^salt/.*\\.py$|^setup\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' nox -e lint-salt --
+                                            EC=$?
+                                            exit $EC
+                                            '''
+                                        }
+                                    }
+                                },
+                                lintTests: {
+                                    stage('Lint Test Changes') {
+                                        if (readFile('file-list-changed.log') =~ /(?i)(^|\n)tests\/.*\.py\n/) {
+                                            sh shell_header + '''
+                                            eval "$(pyenv init - --no-rehash)"
+                                            pyenv shell 2.7.15
+                                            EC=254
+                                            export PYLINT_REPORT=pylint-report-tests-chg.log
+                                            grep -Ei '^tests/.*\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' nox -e lint-tests --
+                                            EC=$?
+                                            exit $EC
+                                            '''
+                                        }
+                                    }
+                                }
+                            )
+                        } finally {
+                            def changed_logs_pattern = 'pylint-report-*-chg.log'
+                            archiveArtifacts artifacts: changed_logs_pattern, allowEmptyArchive: true
+                            if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                                step([$class: 'WarningsPublisher',
+                                    parserConfigurations: [[
+                                        parserName: 'PyLint',
+                                        pattern: changed_logs_pattern
+                                    ]],
+                                    failedTotalAll: '0',
+                                    useDeltaValues: false,
+                                    canRunOnFailed: true,
+                                    usePreviousBuildAsReference: true
+                                ])
+                            } else {
+                                recordIssues(enabledForFailure: true, tool: pyLint(pattern: changed_logs_pattern, reportEncoding: 'UTF-8'))
+                            }
+                        }
+                    }
+                    stage('Lint Full') {
+                        if (env.CHANGE_BRANCH =~ /(?i)^merge[._-]/) {
+                            // perform a full linit if this is a merge forward and the change only lint passed.
+                            try {
+                                if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                                    githubNotify credentialsId: 'test-jenkins-credentials',
+                                        description: 'Python lint on everything begins...',
+                                        status: 'PENDING',
+                                        context: "jenkins/pr/lint"
+                                }
+                                parallel(
+                                    lintSaltFull: {
+                                        stage('Lint Salt Full') {
+                                            sh shell_header + '''
+                                            eval "$(pyenv init - --no-rehash)"
+                                            pyenv shell 2.7.15
+                                            EC=254
+                                            export PYLINT_REPORT=pylint-report-salt-full.log
+                                            nox -e lint-salt
+                                            EC=$?
+                                            exit $EC
+                                            '''
+                                        }
+                                    },
+                                    lintTestsFull: {
+                                        stage('Lint Tests Full') {
+                                            sh shell_header + '''
+                                            eval "$(pyenv init - --no-rehash)"
+                                            pyenv shell 2.7.15
+                                            EC=254
+                                            export PYLINT_REPORT=pylint-report-tests-full.log
+                                            nox -e lint-salt
+                                            EC=$?
+                                            exit $EC
+                                            '''
+                                        }
+                                    }
+                                )
+                            } finally {
+                                def full_logs_pattern = 'pylint-report-*-full.log'
+                                archiveArtifacts artifacts: full_logs_pattern, allowEmptyArchive: true
+                                if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                                    step([$class: 'WarningsPublisher',
+                                        parserConfigurations: [[
+                                            parserName: 'PyLint',
+                                            pattern: full_logs_pattern
+                                        ]],
+                                        failedTotalAll: '0',
+                                        useDeltaValues: false,
+                                        canRunOnFailed: true,
+                                        usePreviousBuildAsReference: true
+                                    ])
+                                } else {
+                                    recordIssues(enabledForFailure: true, tool: pyLint(pattern: full_logs_pattern, reportEncoding: 'UTF-8'))
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    currentBuild.result = 'FAILURE'
+                } finally {
+                    cleanWs notFailBuild: true
+                    if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
+                        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                            githubNotify credentialsId: 'test-jenkins-credentials',
+                                description: 'The lint test passed',
+                                status: 'SUCCESS',
+                                context: "jenkins/pr/lint"
+                        }
+                    } else {
+                        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                            githubNotify credentialsId: 'test-jenkins-credentials',
+                                description: 'The lint test failed',
+                                status: 'FAILURE',
+                                context: "jenkins/pr/lint"
+                        }
+                        try {
+                            slackSend channel: "#jenkins-prod-pr",
+                                color: '#FF0000',
+                                message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                        } catch (Exception e) {
+                            sh 'echo Failed to send the Slack notification'
+                        }
                     }
                 }
-                stage('lint test chg') {
-                    when {
-                        expression { return readFile('file-list-changed.log') =~ /(?i)(^|\n)tests\/.*\.py\n/ }
-                    }
-                    steps {
-                        sh '''
-                        eval "$(pyenv init - --no-rehash)"
-                        pyenv shell 2.7.15
-                        EC=254
-                        export PYLINT_REPORT=pylint-report-tests-chg.log
-                        grep -Ei '^tests/.*\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' nox -e lint-tests --
-                        EC=$?
-                        exit $EC
-                        '''
-                    }
-                }
             }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'pylint-report-*-chg.log', allowEmptyArchive: true
-                    step([$class: 'WarningsPublisher',
-                        parserConfigurations: [[
-                            parserName: 'PyLint',
-                            pattern: 'pylint-report-*-chg.log'
-                        ]],
-                        failedTotalAll: '0',
-                        useDeltaValues: false,
-                        canRunOnFailed: true,
-                        usePreviousBuildAsReference: true
-                    ])
-                }
-            }
-        }
-        stage('linting all') {
-            // perform a full linit if this is a merge forward and the change only lint passed.
-            when {
-                expression { return env.CHANGE_BRANCH =~ /(?i)^merge[._-]/ }
-            }
-            parallel {
-                stage('setup full') {
-                    steps {
-                        githubNotify credentialsId: 'test-jenkins-credentials',
-                            description: 'Python lint on everything begins...',
-                            status: 'PENDING',
-                            context: "jenkins/pr/lint"
-                    }
-                }
-                stage('lint salt full') {
-                    steps {
-                        sh '''
-                        eval "$(pyenv init - --no-rehash)"
-                        pyenv shell 2.7.15
-                        EC=254
-                        export PYLINT_REPORT=pylint-report-salt-full.log
-                        nox -e lint-salt
-                        EC=$?
-                        exit $EC
-                        '''
-                    }
-                }
-                stage('lint test full') {
-                    steps {
-                        sh '''
-                        eval "$(pyenv init - --no-rehash)"
-                        pyenv shell 2.7.15
-                        EC=254
-                        export PYLINT_REPORT=pylint-report-tests-full.log
-                        nox -e lint-salt
-                        EC=$?
-                        exit $EC
-                        '''
-                    }
-                }
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'pylint-report-*-full.log', allowEmptyArchive: true
-                    step([$class: 'WarningsPublisher',
-                        parserConfigurations: [[
-                            parserName: 'PyLint',
-                            pattern: 'pylint-report-*-full.log'
-                        ]],
-                        failedTotalAll: '0',
-                        useDeltaValues: false,
-                        canRunOnFailed: true,
-                        usePreviousBuildAsReference: true
-                    ])
-                }
-            }
-        }
-    }
-    post {
-        always {
-            cleanWs()
-        }
-        success {
-            githubNotify credentialsId: 'test-jenkins-credentials',
-                description: 'Python lint test has passed',
-                status: 'SUCCESS',
-                context: "jenkins/pr/lint"
-        }
-        failure {
-            githubNotify credentialsId: 'test-jenkins-credentials',
-                description: 'Python lint test has failed',
-                status: 'FAILURE',
-                context: "jenkins/pr/lint"
-            slackSend channel: "#jenkins-prod-pr",
-                color: '#FF0000',
-                message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
         }
     }
 }
+
+// vim: ft=groovy

@@ -4,3 +4,14 @@ In Progress: Salt 2018.3.5 Release Notes
 
 Version 2018.3.5 is an **unreleased** bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
 This release is still in progress and has not been released yet.
+
+Master Configuration Changes
+============================
+
+To fix `#53411`_ a new configuration parameter `event_listen_queue_max_seconds` is provided.
+When this is set to a value greater than 0 and `event_listen_queue` is not 0, if the oldest event
+in the listen queue is older than `event_listen_queue_max_seconds`, the queue will be flushed to
+returners regardless of how many events are in the queue.
+
+.. _`#53411`: https://github.com/saltstack/salt/issues/53411
+
