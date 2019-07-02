@@ -5728,6 +5728,14 @@ def _checkValueItemParent(policy_element, policy_name, policy_key,
     return False
 
 
+def _encode_string(value):
+    encoded_null = chr(0).encode('utf-16-le')
+    if value is None:
+        return encoded_null
+    else:
+        return b''.join([value.encode('utf-16-le'), encoded_null])
+
+
 def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data,
                                 check_deleted=False):
     '''
@@ -5749,8 +5757,7 @@ def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data,
         elif reg_vtype == "REG_QWORD":
             this_element_value = struct.pack(b'Q', int(reg_data))
         elif reg_vtype == 'REG_SZ':
-            this_element_value = b''.join([reg_data.encode('utf-16-le'),
-                                           encoded_null])
+            this_element_value = _encode_string(reg_data)
     if check_deleted:
         reg_vtype = 'REG_SZ'
         expected_string = b''.join(['['.encode('utf-16-le'),
@@ -5845,11 +5852,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             return None
     elif etree.QName(element).localname == 'string':
         this_vtype = 'REG_SZ'
-        if element.text is None:
-            this_element_value = encoded_null
-        else:
-            this_element_value = b''.join([element.text.encode('utf-16-le'),
-                                           encoded_null])
+        this_element_value = _encode_string(element.text)
     elif etree.QName(parent_element).localname == 'elements':
         standard_element_expected_string = True
         if etree.QName(element).localname == 'boolean':
@@ -5892,9 +5895,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             if 'expandable' in element.attrib:
                 if element.attrib['expandable'].lower() == 'true':
                     this_vtype = 'REG_EXPAND_SZ'
-            if this_element_value is not None:
-                this_element_value = b''.join([this_element_value.encode('utf-16-le'),
-                                               encoded_null])
+            this_element_value = _encode_string(this_element_value)
         elif etree.QName(element).localname == 'multiText':
             this_vtype = 'REG_MULTI_SZ' if not check_deleted else 'REG_SZ'
             if this_element_value is not None:
@@ -5962,8 +5963,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                                                       six.unichr(len('{0}{1}'.format(element_values[i],
                                                                                  chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
                                                                       encoded_semicolon,
-                                                                      b''.join([element_values[i].encode('utf-16-le'),
-                                                                               encoded_null]),
+                                                                      _encode_string(element_values[i]),
                                                                       ']'.encode('utf-16-le')])
                 else:
                     expected_string = del_keys + b''.join(['['.encode('utf-16-le'),
