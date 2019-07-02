@@ -434,3 +434,8 @@ class Beacon(object):
         Reset the beacons to defaults
         '''
         self.opts['beacons'] = {}
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'comment': 'Beacons have been reset',
+                        'beacons': self.opts['beacons']},
+                       tag='/salt/minion/minion_beacon_reset_complete')
+        return True
