@@ -1264,7 +1264,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             filemod._set_line(lines=[], mode='fnord')
         self.assertEqual(
             err.exception.args[0],
-            "Unknown mode: 'fnord'",
+            "Unknown mode: fnord",
         )
 
     def test_if_content_is_none_and_mode_is_valid_but_not_delete_it_should_raise_command_execution_error(self):
@@ -1398,7 +1398,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
 
     def test_if_mode_is_insert_and_no_lines_then_the_content_should_have_os_linesep_added(self):
         content = 'roscivs'
-        fake_linesep = '\N{SNAKE}'
+        fake_linesep = u'\U0001f40d'
         expected_lines = [content+fake_linesep]
 
         with patch('os.linesep', fake_linesep):

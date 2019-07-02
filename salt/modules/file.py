@@ -1866,7 +1866,7 @@ def _set_line(lines,
         if mode is None:
             raise CommandExecutionError('Mode was not defined. How to process the file?')
         else:
-            raise CommandExecutionError('Unknown mode: {0!r}'.format(mode))
+            raise CommandExecutionError('Unknown mode: {0}'.format(mode))
 
     if mode != 'delete' and content is None:
         raise CommandExecutionError('Content can only be empty if mode is delete')
