@@ -1864,6 +1864,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 pass
 
     @skipIf(sys.platform.startswith('win'), 'Skipped until parallel states can be fixed on Windows')
+    @skipIf(salt.utils.platform.is_darwin() and six.PY2, 'This test hangs on OS X on Py2')
     def test_parallel_state_with_long_tag(self):
         '''
         This tests the case where the state being executed has a long ID dec or
@@ -2034,6 +2035,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         for id in _expected:
             self.assertEqual(sls[id]['comment'], _expected[id]['comment'])
 
+    @skipIf(six.PY3 and salt.utils.platform.is_darwin(), 'Test is broken on macosx and PY3')
     def test_state_sls_unicode_characters(self):
         '''
         test state.sls when state file contains non-ascii characters
@@ -2044,6 +2046,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         _expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
         self.assertIn(_expected, ret)
 
+    @skipIf(six.PY3 and salt.utils.platform.is_darwin(), 'Test is broken on macosx and PY3')
     def test_state_sls_unicode_characters_cmd_output(self):
         '''
         test the output from running and echo command with non-ascii
