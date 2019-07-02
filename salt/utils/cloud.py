@@ -1998,7 +1998,7 @@ def fire_event(key, msg, tag, sock_dir, args=None, transport='zeromq'):
     '''
     Fire deploy action
     '''
-    with salt.utils.event.get_event('master', sock_dir, transport, listen=False) as event:
+    with salt.utils.event.get_event('master', sock_dir, transport, listen=False, keep_loop=True) as event:
         try:
             event.fire_event(msg, tag)
         except ValueError:
