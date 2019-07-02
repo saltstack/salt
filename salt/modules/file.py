@@ -23,14 +23,13 @@ import re
 import shutil
 import stat
 import string
-import subprocess
 import sys
 import tempfile
 import time
 import glob
 import hashlib
 import mmap
-from collections import Iterable, Mapping
+from collections import Iterable, Mapping, namedtuple
 from functools import reduce  # pylint: disable=redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -71,6 +70,9 @@ log = logging.getLogger(__name__)
 __func_alias__ = {
     'makedirs_': 'makedirs'
 }
+
+
+AttrChanges = namedtuple('AttrChanges', 'added,removed')
 
 
 def __virtual__():
@@ -161,33 +163,49 @@ def _splitlines_preserving_trailing_newline(str):
     return lines
 
 
-def _get_chattr_man():
-    '''
-    Get the contents of the chattr man page
-    '''
-    return subprocess.check_output(['man', 'chattr'])
-
-
-def _parse_chattr_man(man):
-    '''
-    Parse the contents of a chattr man page to find the E2fsprogs version
-    '''
-    match = re.search(
-        r'E2fsprogs version [0-9\.]+',
-        salt.utils.stringutils.to_str(man),
-    )
-    if match:
-        version = match.group().strip('E2fsprogs version ')
-    else:
-        version = None
-    return version
-
-
 def _chattr_version():
     '''
     Return the version of chattr installed
     '''
-    return _parse_chattr_man(_get_chattr_man())
+    # There's no really *good* way to get the version of chattr installed.
+    # It's part of the e2fsprogs package - we could try to parse the version
+    # from the package manager, but there's no guarantee that it was
+    # installed that way.
+    #
+    # The most reliable approach is to just check tune2fs, since that should
+    # be installed with chattr, at least if it was installed in a conventional
+    # manner.
+    #
+    # See https://unix.stackexchange.com/a/520399/5788 for discussion.
+    tune2fs = salt.utils.path.which('tune2fs')
+    if not tune2fs or salt.utils.platform.is_aix():
+        return None
+    cmd = [tune2fs]
+    result = __salt__['cmd.run'](cmd, ignore_retcode=True, python_shell=False)
+    match = re.search(
+        r'tune2fs (?P<version>[0-9\.]+)',
+        salt.utils.stringutils.to_str(result),
+    )
+    if match is None:
+        version = None
+    else:
+        version = match.group('version')
+
+    return version
+
+
+def _chattr_has_extended_attrs():
+    '''
+    Return ``True`` if chattr supports extended attributes, that is,
+    the version is >1.41.22. Otherwise, ``False``
+    '''
+    ver = _chattr_version()
+    if ver is None:
+        return False
+
+    needed_version = salt.utils.versions.LooseVersion('1.41.12')
+    chattr_version = salt.utils.versions.LooseVersion(ver)
+    return chattr_version > needed_version
 
 
 def gid_to_group(gid):
@@ -551,8 +569,6 @@ def _cmp_attrs(path, attrs):
     attrs
         string of attributes to compare against a given file
     '''
-    diff = [None, None]
-
     # lsattr for AIX is not the same thing as lsattr for linux.
     if salt.utils.platform.is_aix():
         return None
@@ -563,15 +579,13 @@ def _cmp_attrs(path, attrs):
         # lsattr not installed
         return None
 
-    old = [chr for chr in lattrs if chr not in attrs]
-    if len(old) > 0:
-        diff[1] = ''.join(old)
+    new = set(attrs)
+    old = set(lattrs)
 
-    new = [chr for chr in attrs if chr not in lattrs]
-    if len(new) > 0:
-        diff[0] = ''.join(new)
-
-    return diff
+    return AttrChanges(
+        added=''.join(new-old) or None,
+        removed=''.join(old-new) or None,
+    )
 
 
 def lsattr(path):
@@ -607,15 +621,12 @@ def lsattr(path):
     results = {}
     for line in result.splitlines():
         if not line.startswith('lsattr: '):
-            vals = line.split(None, 1)
-            needed_version = salt.utils.versions.LooseVersion('1.41.12')
-            chattr_version = salt.utils.versions.LooseVersion(_chattr_version())
-            # The version of chattr on Centos 6 does not support extended
-            # attributes.
-            if chattr_version > needed_version:
-                results[vals[1]] = re.findall(r"[aAcCdDeijPsStTu]", vals[0])
+            attrs, file = line.split(None, 1)
+            if _chattr_has_extended_attrs():
+                pattern = r"[aAcCdDeijPsStTu]"
             else:
-                results[vals[1]] = re.findall(r"[acdijstuADST]", vals[0])
+                pattern = r"[acdijstuADST]"
+            results[file] = re.findall(pattern, attrs)
 
     return results
 
@@ -680,8 +691,7 @@ def chattr(*files, **kwargs):
     result = __salt__['cmd.run'](cmd, python_shell=False)
 
     if bool(result):
-        raise CommandExecutionError(
-            "chattr failed to run, possibly due to bad parameters.")
+        return False
 
     return True
 
@@ -2748,11 +2758,20 @@ def blockreplace(path,
                 backup_path = '{0}{1}'.format(path, backup)
                 shutil.copy2(path, backup_path)
                 # copy2 does not preserve ownership
-                check_perms(backup_path,
-                        None,
-                        perms['user'],
-                        perms['group'],
-                        perms['mode'])
+                if salt.utils.platform.is_windows():
+                    # This function resides in win_file.py and will be available
+                    # on Windows. The local function will be overridden
+                    # pylint: disable=E1120,E1123
+                    check_perms(path=backup_path,
+                                ret=None,
+                                owner=perms['user'])
+                    # pylint: enable=E1120,E1123
+                else:
+                    check_perms(name=backup_path,
+                                ret=None,
+                                user=perms['user'],
+                                group=perms['group'],
+                                mode=perms['mode'])
 
             # write new content in the file while avoiding partial reads
             try:
@@ -2763,11 +2782,20 @@ def blockreplace(path,
                 fh_.close()
 
             # this may have overwritten file attrs
-            check_perms(path,
-                    None,
-                    perms['user'],
-                    perms['group'],
-                    perms['mode'])
+            if salt.utils.platform.is_windows():
+                # This function resides in win_file.py and will be available
+                # on Windows. The local function will be overridden
+                # pylint: disable=E1120,E1123
+                check_perms(path=path,
+                            ret=None,
+                            owner=perms['user'])
+                # pylint: enable=E1120,E1123
+            else:
+                check_perms(path,
+                            ret=None,
+                            user=perms['user'],
+                            group=perms['group'],
+                            mode=perms['mode'])
 
         if show_changes:
             return diff
@@ -4516,19 +4544,6 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
 
     is_dir = os.path.isdir(name)
     is_link = os.path.islink(name)
-    if attrs is not None \
-            and not salt.utils.platform.is_windows() \
-            and not is_dir and not is_link:
-        try:
-            lattrs = lsattr(name)
-        except SaltInvocationError:
-            lattrs = None
-        if lattrs is not None:
-            # List attributes on file
-            perms['lattrs'] = ''.join(lattrs.get(name, ''))
-            # Remove attributes on file so changes can be enforced.
-            if perms['lattrs']:
-                chattr(name, operator='remove', attributes=perms['lattrs'])
 
     # user/group changes if needed, then check if it worked
     if user:
@@ -4610,11 +4625,6 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
         elif 'cgroup' in perms and user != '':
             ret['changes']['group'] = group
 
-    if not salt.utils.platform.is_windows() and not is_dir:
-        # Replace attributes on file if it had been removed
-        if perms.get('lattrs', ''):
-            chattr(name, operator='add', attributes=perms['lattrs'])
-
     # Mode changes if needed
     if mode is not None:
         # File is a symlink, ignore the mode setting
@@ -4644,23 +4654,37 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
             pass
         else:
             diff_attrs = _cmp_attrs(name, attrs)
-            if diff_attrs is not None:
-                if diff_attrs[0] is not None or diff_attrs[1] is not None:
-                    if __opts__['test'] is True:
-                        ret['changes']['attrs'] = attrs
+            if diff_attrs and any(attr for attr in diff_attrs):
+                changes = {
+                    'old': ''.join(lsattr(name)[name]),
+                    'new': None,
+                }
+                if __opts__['test'] is True:
+                    changes['new'] = attrs
+                else:
+                    if diff_attrs.added:
+                        chattr(
+                            name,
+                            operator="add",
+                            attributes=diff_attrs.added,
+                        )
+                    if diff_attrs.removed:
+                        chattr(
+                            name,
+                            operator="remove",
+                            attributes=diff_attrs.removed,
+                        )
+                    cmp_attrs = _cmp_attrs(name, attrs)
+                    if any(attr for attr in cmp_attrs):
+                        ret['result'] = False
+                        ret['comment'].append(
+                            'Failed to change attributes to {0}'.format(attrs)
+                        )
+                        changes['new'] = ''.join(lsattr(name)[name])
                     else:
-                        if diff_attrs[0] is not None:
-                            chattr(name, operator="add", attributes=diff_attrs[0])
-                        if diff_attrs[1] is not None:
-                            chattr(name, operator="remove", attributes=diff_attrs[1])
-                        cmp_attrs = _cmp_attrs(name, attrs)
-                        if cmp_attrs[0] is not None or cmp_attrs[1] is not None:
-                            ret['result'] = False
-                            ret['comment'].append(
-                                'Failed to change attributes to {0}'.format(attrs)
-                            )
-                        else:
-                            ret['changes']['attrs'] = attrs
+                        changes['new'] = attrs
+                if changes['old'] != changes['new']:
+                    ret['changes']['attrs'] = changes
 
     # Only combine the comment list into a string
     # after all comments are added above
@@ -5390,7 +5414,7 @@ def manage_file(name,
             # on Windows. The local function will be overridden
             # pylint: disable=E1120,E1121,E1123
             ret = check_perms(
-               path=name,
+                path=name,
                 ret=ret,
                 owner=kwargs.get('win_owner'),
                 grant_perms=kwargs.get('win_perms'),
