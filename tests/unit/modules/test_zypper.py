@@ -409,6 +409,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
                     zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--from', "Dummy",
                                                 '--from', 'Dummy2', '--no-allow-vendor-change')
+                with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
+                    ret = zypper.upgrade(dist_upgrade=False, fromrepo=["Dummy", "Dummy2"], dryrun=False)
+                    zypper_mock.assert_any_call('update', '--auto-agree-with-licenses', '--repo', "Dummy", '--repo', 'Dummy2')
 
     def test_upgrade_kernel(self):
         '''

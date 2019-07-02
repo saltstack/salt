@@ -421,10 +421,12 @@ def list_upgrades(refresh=True, **kwargs):
     ret = dict()
     cmd = ['list-updates']
     if 'fromrepo' in kwargs:
-        repo_name = kwargs['fromrepo']
-        if not isinstance(repo_name, six.string_types):
-            repo_name = str(repo_name)
-        cmd.extend(['--repo', repo_name])
+        repos = kwargs['fromrepo']
+        if isinstance(repos, six.string_types):
+            repos = [repos]
+        for repo in repos:
+            cmd.extend(['--repo', repo if isinstance(repo, six.string_types) else six.text_type(repo)])
+        log.debug('Targeting repos: %s', repos)
     for update_node in __zypper__.nolock.xml.call(*cmd).getElementsByTagName('update'):
         if update_node.getAttribute('kind') == 'package':
             ret[update_node.getAttribute('name')] = update_node.getAttribute('edition')
@@ -1364,8 +1366,8 @@ def upgrade(refresh=True,
     .. code-block:: bash
 
         salt '*' pkg.upgrade
-        salt '*' pkg.upgrade dist-upgrade=True fromrepo='["MyRepoName"]' novendorchange=True
-        salt '*' pkg.upgrade dist-upgrade=True dryrun=True
+        salt '*' pkg.upgrade dist_upgrade=True fromrepo='["MyRepoName"]' novendorchange=True
+        salt '*' pkg.upgrade dist_upgrade=True dryrun=True
     '''
     cmd_update = (['dist-upgrade'] if dist_upgrade else ['update']) + ['--auto-agree-with-licenses']
 
@@ -1379,12 +1381,14 @@ def upgrade(refresh=True,
     if dryrun:
         cmd_update.append('--dry-run')
 
-    if dist_upgrade:
-        if fromrepo:
-            for repo in fromrepo:
-                cmd_update.extend(['--from', repo])
-            log.info('Targeting repos: {0}'.format(fromrepo))
+    if fromrepo:
+        if isinstance(fromrepo, six.string_types):
+            fromrepo = [fromrepo]
+        for repo in fromrepo:
+            cmd_update.extend(['--from' if dist_upgrade else '--repo', repo])
+        log.info('Targeting repos: %s', fromrepo)
 
+    if dist_upgrade:
         if novendorchange:
             # TODO: Grains validation should be moved to Zypper class
             if __grains__['osrelease_info'][0] > 11:
@@ -1397,7 +1401,6 @@ def upgrade(refresh=True,
             # Creates a solver test case for debugging.
             log.info('Executing debugsolver and performing a dry-run dist-upgrade')
             __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update + ['--debug-solver'])
-
     old = list_pkgs()
 
     __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
@@ -1421,7 +1424,7 @@ def upgrade(refresh=True,
             'Problem encountered upgrading packages',
             info={'changes': ret, 'result': result}
         )
-
+  
     if dryrun:
         ret = (__zypper__.stdout + os.linesep + __zypper__.stderr).strip()
 
