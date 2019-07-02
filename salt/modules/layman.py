@@ -12,7 +12,7 @@ def __virtual__():
     '''
     Only work on Gentoo systems with layman installed
     '''
-    if __grains__['os_family'] == 'Gentoo' and salt.utils.path.which('layman'):
+    if __grains__.get('os_family') == 'Gentoo' and salt.utils.path.which('layman'):
         return 'layman'
     return (False, 'layman execution module cannot be loaded: only available on Gentoo with layman installed.')
 
