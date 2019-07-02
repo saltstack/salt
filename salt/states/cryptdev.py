@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Opening of Encrypted Devices
-=======================
+============================
 
 Ensure that an encrypted device is mapped with the `mapped` function:
 

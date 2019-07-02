@@ -330,6 +330,51 @@ class PillarTestCase(TestCase):
             'mocked-minion', 'fake_pillar', 'bar',
             extra_minion_data={'fake_key': 'foo'})
 
+    def test_ext_pillar_first(self):
+        '''
+        test when using ext_pillar and ext_pillar_first
+        '''
+        opts = {
+            'optimization_order': [0, 1, 2],
+            'renderer': 'yaml',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': [],
+            'extension_modules': '',
+            'saltenv': 'base',
+            'file_roots': [],
+            'ext_pillar_first': True,
+        }
+        grains = {
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
+            'oscodename': 'raring',
+            'osfullname': 'Ubuntu',
+            'osrelease': '13.04',
+            'kernel': 'Linux'
+        }
+
+        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        try:
+            sls_files = self._setup_test_topfile_sls_pillar_match(
+                tempdir,)
+            fc_mock = MockFileclient(
+                cache_file=sls_files['top']['dest'],
+                list_states=['top', 'ssh', 'ssh.minion',
+                             'generic', 'generic.minion'],
+                get_state=sls_files)
+            with patch.object(salt.fileclient, 'get_file_client',
+                              MagicMock(return_value=fc_mock)), \
+                    patch('salt.pillar.Pillar.ext_pillar',
+                          MagicMock(return_value=({'id': 'minion',
+                                                  'phase': 'alpha', 'role':
+                                                  'database'}, []))):
+                pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
+                self.assertEqual(pillar.compile_pillar()['generic']['key1'], 'value1')
+        finally:
+            shutil.rmtree(tempdir, ignore_errors=True)
+
     def test_dynamic_pillarenv(self):
         opts = {
             'optimization_order': [0, 1, 2],
@@ -584,6 +629,28 @@ class PillarTestCase(TestCase):
         # test case where nodegroup match happens second and therefore takes
         # precedence over glob match.
         _run_test(nodegroup_order=2, glob_order=1, expected='foo')
+
+    def _setup_test_topfile_sls_pillar_match(self, tempdir):
+        # Write a simple topfile and two pillar state files
+        top_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        s = '''
+base:
+  'phase:alpha':
+    - match: pillar
+    - generic
+'''
+        top_file.write(salt.utils.stringutils.to_bytes(s))
+        top_file.flush()
+        generic_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        generic_file.write(b'''
+generic:
+    key1: value1
+''')
+        generic_file.flush()
+        return {
+            'top': {'path': '', 'dest': top_file.name},
+            'generic': {'path': '', 'dest': generic_file.name},
+        }
 
     def _setup_test_topfile_sls(self, tempdir, nodegroup_order, glob_order):
         # Write a simple topfile and two pillar state files

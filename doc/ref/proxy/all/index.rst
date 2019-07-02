@@ -16,8 +16,12 @@ proxy modules
     chronos
     cimc
     cisconso
+    docker
     dummy
+    esxcluster
+    esxdatacenter
     esxi
+    esxvm
     fx2
     junos
     marathon
@@ -25,7 +29,9 @@ proxy modules
     netmiko_px
     nxos
     nxos_api
+    onyx
     panos
     philips_hue
     rest_sample
     ssh_sample
+    vcenter
