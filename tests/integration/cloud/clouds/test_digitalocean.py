@@ -102,15 +102,15 @@ class DigitalOceanTest(ShellCase):
         pub = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQDDHr/jh2Jy4yALcK4JyWbVkPRaWmhck3IgCoeOO3z1e2dBowLh64QAM+Qb72pxekALga2oi4GvT+TlWNhzPH4V example'
         finger_print = '3b:16:bf:e4:8b:00:8b:b8:59:8c:a9:d3:f0:19:45:fa'
 
-        _key = self.run_cloud('-f create_key {0} name="MyPubKey" public_key="{1}"'.format(PROVIDER_NAME, pub))
-
-        # Upload public key
-        self.assertIn(
-            finger_print,
-            [i.strip() for i in _key]
-        )
-
         try:
+            _key = self.run_cloud('-f create_key {0} name="MyPubKey" public_key="{1}"'.format(PROVIDER_NAME, pub))
+
+            # Upload public key
+            self.assertIn(
+                finger_print,
+                [i.strip() for i in _key]
+            )
+
             # List all keys
             list_keypairs = self.run_cloud('-f list_keypairs {0}'.format(PROVIDER_NAME))
 
@@ -130,9 +130,9 @@ class DigitalOceanTest(ShellCase):
             # Delete the public key if the above assertions fail
             self.run_cloud('-f remove_key {0} id={1}'.format(PROVIDER_NAME, finger_print))
             raise
-
-        # Delete public key
-        self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(PROVIDER_NAME, finger_print)))
+        finally:
+            # Delete public key
+            self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(PROVIDER_NAME, finger_print)))
 
     def test_instance(self):
         '''
