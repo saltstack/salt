@@ -66,8 +66,8 @@ if HAS_PIP is True:
                                    ver2='18.1'):
         from pip._internal.exceptions import InstallationError  # pylint: disable=E0611,E0401
     elif salt.utils.versions.compare(ver1=pip.__version__,
-                                   oper='>=',
-                                   ver2='10.0'):
+                                     oper='>=',
+                                     ver2='1.0'):
         from pip.exceptions import InstallationError  # pylint: disable=E0611,E0401
     else:
         InstallationError = ValueError

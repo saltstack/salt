@@ -497,6 +497,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.isfile(requirements_file):
                 os.unlink(requirements_file)
 
+    @skipIf(salt.utils.platform.is_darwin() and six.PY2, 'This test hangs on OS X on Py2')
     def test_22359_pip_installed_unless_does_not_trigger_warnings(self):
         # This test case should be moved to a format_call unit test specific to
         # the state internal keywords
@@ -509,12 +510,12 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 )
             )
 
-        false_cmd = '/bin/false'
+        false_cmd = salt.utils.path.which('false')
         if salt.utils.platform.is_windows():
             false_cmd = 'exit 1 >nul'
         try:
             ret = self.run_state(
-                'pip.installed', name='pep8', bin_env=venv_dir, unless=false_cmd
+                'pip.installed', name='pep8', bin_env=venv_dir, unless=false_cmd, timeout=600
             )
             self.assertSaltTrueReturn(ret)
             self.assertNotIn('warnings', next(six.itervalues(ret)))
