@@ -5734,8 +5734,9 @@ def _encode_string(value):
         return encoded_null
     else:
         # Should we raise an error here, or attempt to cast to a string
-        if not isinstance(value, six.text_type):
-            raise TypeError('Value "%s" is not a string type' % repr(value))
+        if not isinstance(value, six.string_types):
+            raise TypeError('Value {0} is not a string type\n'
+                            'Type: {1}'.format(repr(value), type(value)))
         return b''.join([value.encode('utf-16-le'), encoded_null])
 
 
