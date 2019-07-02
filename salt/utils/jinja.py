@@ -62,7 +62,9 @@ class SaltCacheLoader(BaseLoader):
     def shutdown(cls):
         if cls._cached_client is None:
             return
-        cls._cached_client.destroy()
+        # PillarClient and LocalClient objects do not have a destroy method
+        if hasattr(cls._cached_client, 'destroy'):
+            cls._cached_client.destroy()
         cls._cached_client = None
 
     def __init__(self, opts, saltenv='base', encoding='utf-8',
