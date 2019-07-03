@@ -4,11 +4,18 @@
 gives access to Windows event log
 '''
 
+# Import Salt Libs
+import salt.utils.platform
+
 # Import Third Party Libs
-import win32evtlog
-import win32evtlogutil
-import winerror
-import pywintypes
+try:
+    import win32evtlog
+    import win32evtlogutil
+    import winerror
+    import pywintypes
+    IMPORT_STATUS = True
+except ImportError:
+    IMPORT_STATUS = False
 
 # keys of all the parts of a Event supported by the API
 EVENT_PARTS = ('closingRecordNumber',
@@ -34,11 +41,22 @@ TIME_PARTS = {"year": 0,
               "minute": 4,
               "second": 5}
 
+__virtualname__ = 'win_event_viewer'
+
+
+def __virtual__():
+    '''
+    Load only on minions running on Windows.
+    '''
+    if not salt.utils.platform.is_windows() or not IMPORT_STATUS:
+        return False, 'win_event_viewer: most be on windows'
+    return __virtualname__
+
 
 def _change_str_to_bytes(data, encoding='utf-8', encode_keys=False):
     '''
-    info: will make string objects into byte objects
-    warning: this function will destroy the data object and objects that data links to
+    Will make string objects into byte objects.
+    Warning this function will destroy the data object and objects that data links to.
     :param data: object
     :param encoding: str
     :param encode_keys: bool: if false key strings will not be turned into bytes
@@ -76,7 +94,7 @@ def _change_str_to_bytes(data, encoding='utf-8', encode_keys=False):
 
 def _get_raw_time(time):
     '''
-    info: will make a pywintypes.datetime into a tuple
+    Will make a pywintypes.datetime into a tuple.
     :param time: pywintypes.datetime
     :return: tuple
     '''
@@ -86,7 +104,7 @@ def _get_raw_time(time):
 
 def make_event_dict(event):
     '''
-    info: will make a PyEventLogRecord into a dict
+    Will make a PyEventLogRecord into a dict.
     :param event: PyEventLogRecord
     :return: dict
     '''
@@ -108,12 +126,14 @@ def make_event_dict(event):
 
 def _get_event_handler(log_name, target_computer=None):
     '''
-    info: will try to open a PyHANDLE
+    Will try to open a PyHANDLE.
     :param log_name: str
     :param target_computer: None or str
     :return: PyHANDLE
     '''
 
+    # TODO: upgrade windows token
+    # log close can fail if this is not done
     try:
         return win32evtlog.OpenEventLog(target_computer, log_name)
     except pywintypes.error:
@@ -123,18 +143,19 @@ def _get_event_handler(log_name, target_computer=None):
 
 def _close_event_handler(handler):
     '''
-    info: will close the event handler
+    Will close the event handler.
     :param handler: PyHANDLE
     :return:
     '''
 
+    # TODO: downgrade windows token
     win32evtlog.CloseEventLog(handler)
 
 
 def get_event_generator(log_name, target_computer=None, raw=False):
     '''
-    info: will get all log events one by one
-    warning: events are not in exact order
+    Will get all log events one by one.
+    Warning events are not in exact order.
     :param log_name: str
     :param target_computer: None or str
     :param raw: bool: True: PyEventLogRecord False: dict
@@ -163,7 +184,7 @@ def get_event_generator(log_name, target_computer=None, raw=False):
 
 def get_events(log_name, target_computer=None, raw=False):
     '''
-    info: will make a tuple of log events
+    Will make a tuple of log events.
     :param log_name: str
     :param target_computer: None or str
     :param raw: bool: True: PyEventLogRecord False: dict
@@ -175,7 +196,7 @@ def get_events(log_name, target_computer=None, raw=False):
 
 def get_event_sorted_by_info_generator(log_name, target_computer=None):
     '''
-    info: makes keys to event
+    Makes keys to event
     :param log_name: str
     :param target_computer: None or str
     :return: dict
@@ -194,7 +215,7 @@ def get_event_sorted_by_info_generator(log_name, target_computer=None):
 
 def get_events_sorted_by_info(log_name, target_computer=None):
     '''
-    info: keys to list of events that match that key
+    Make dict of sorted events
     :param log_name: str
     :param target_computer: None or str
     :return: dict
@@ -210,7 +231,7 @@ def get_events_sorted_by_info(log_name, target_computer=None):
 
 def get_event_filter_generator(log_name, target_computer=None, all_requirements=True, **kwargs):
     '''
-    info: will find events that meet the requirements
+    Will find events that meet the requirements
     :param log_name: str
     :param target_computer: None or str
     :param all_requirements: bool: True: all requirements most be meet False: only a single requirement most be meet
@@ -234,7 +255,7 @@ def get_event_filter_generator(log_name, target_computer=None, all_requirements=
 
 def get_events_filter(log_name, target_computer=None, all_requirements=True, **kwargs):
     '''
-    info: will find events that meet the requirements
+    Will find events that meet the requirements.
     :param log_name: str
     :param target_computer: None or str
     :param all_requirements: bool: True: all requirements most be meet False: only a single requirement most be meet
@@ -247,7 +268,7 @@ def get_events_filter(log_name, target_computer=None, all_requirements=True, **k
 
 def log_event(application_name, event_id, **kwargs):
     '''
-    info: adds event to application log
+    Adds event to application log.
     :param application_name: str
     :param event_id: int
     :param kwargs: parts of event
@@ -259,7 +280,7 @@ def log_event(application_name, event_id, **kwargs):
 
 def clear_log(log_name, target_computer=None):
     '''
-    info: clears event log
+    Clears event log.
     warning: a clear log event will be add it after the log was clear
     :param log_name: str
     :param target_computer: None or str
@@ -273,7 +294,7 @@ def clear_log(log_name, target_computer=None):
 
 def get_number_of_events(log_name, target_computer=None):
     '''
-    info: gets the number of events in a log
+    Gets the number of events in a log.
     :param log_name: str
     :param target_computer: None or str
     :return: int

@@ -19,9 +19,12 @@ from tests.support.mock import (
 )
 
 # Import Third Party Libs
-import win32evtlog
-import win32evtlogutil
-import pywintypes
+try:
+    import win32evtlog
+    import win32evtlogutil
+    import pywintypes
+except ImportError:
+    pass
 
 
 MAX_EVENT_LOOK_UP = 2000
@@ -127,6 +130,7 @@ def mock_get_number_of_event_log_records(handler):
     return len(handler)
 
 
+@skipIf(not salt.utils.platform.is_windows(), "Windows is required")
 class WinEventViewerSimpleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.win_iis
@@ -170,6 +174,7 @@ class WinEventViewerSimpleTestCase(TestCase, LoaderModuleMockMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not salt.utils.platform.is_windows(), "Windows is required")
 class WinEventViewerMockTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.win_iis
