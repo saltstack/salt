@@ -218,6 +218,18 @@ try:
 except ImportError:
     HAS_PYVMOMI = False
 
+# vSphere SDK Automation
+try:
+    from com.vmware.cis.tagging_client import Category, CategoryModel
+    from com.vmware.cis.tagging_client import Tag, TagModel, TagAssociation
+    from com.vmware.vcenter_client import Cluster
+    from com.vmware.vapi.std_client import DynamicID
+    HAS_VSPHERE_SDK = True
+
+except ImportError:
+    HAS_VSPHERE_SDK = False
+
+# ESXI
 esx_cli = salt.utils.path.which('esxcli')
 if esx_cli:
     HAS_ESX_CLI = True
@@ -9048,6 +9060,91 @@ def _delete_device(device):
     device_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.remove
     device_spec.device = device
     return device_spec
+
+
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def create_tag_category(server, username, password,
+                        name, description, cardinality,
+                        service_instance=None):
+    '''
+    Create a category with given cardinality.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.create_tag_category name=category_name description=test_desc cardinality=MULTIPLE
+
+    :param str server:
+        Target DNS or IP of vCenter client.
+    :param str username:
+        Username associated with the vCenter client.
+    :param str password:
+        Password associated with the vCenter client.
+    :param str name:
+        Name of tag category to create (ex. Machine, OS, Availability, etc.)
+    :param str description:
+        Given description of tag category.
+    :param CategoryModel.Cardinality cardinality:
+        Enum of type Cardinality, either SINGLE or MULTIPLE.
+    :return:
+        Integer of category_ID that was created.
+    :rtype:
+        category_id
+    '''
+    details = __salt__['vcenter.get_details']()
+    client = details['vSphereClient']
+
+    create_spec = client.tagging.Category.CreateSpec()
+    create_spec.name = name
+    create_spec.description = description
+    create_spec.cardinality = cardinality
+    associable_types = set()
+    create_spec.associable_types = associable_types
+    return client.tagging.Category.create(create_spec)
+
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def create_tag(server, username, password,
+               name=None, description=None, category_id=None,
+               service_instance=None):
+    '''
+    Create a tag with given description.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.create_tag_category name=category_name description=test_desc cardinality=MULTIPLE
+
+    :param str server:
+        Target DNS or IP of vCenter client.
+    :param str username:
+         Username associated with the vCenter client.
+    :param str password:
+        Password associated with the vCenter client.
+    :param str name:
+        Name of tag category to create (ex. Machine, OS, Availability, etc.)
+    :param str description:
+        Given description of tag category.
+    :param int category_id:
+        Numerical value of category_id representative of the category created previously.
+    :return:
+    '''
+    # import requests
+    # session = requests.session()
+    # session.verify = False
+    client = create_vsphere_client(server=server,
+                                   username=username,
+                                   password=password)
+    create_spec = client.tagging.Tag.CreateSpec()
+    create_spec.name = name
+    create_spec.description = description
+    create_spec.category_id = category_id
+    client.tagging.Tag.create(create_spec)
 
 
 @depends(HAS_PYVMOMI)
