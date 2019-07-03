@@ -830,7 +830,7 @@ class TestDaemon(TestProgram):
                     if not salt.utils.platform.is_windows():
                         raise
                 if any((cmdline == proc_cmdline[n:n + cmd_len])
-                       for n in range(len(proc_cmdline) - cmd_len + 1)):
+                        for n in range(len(proc_cmdline) - cmd_len + 1)):
                     ret.append(proc)
         return ret
 
