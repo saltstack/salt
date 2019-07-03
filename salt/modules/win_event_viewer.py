@@ -4,6 +4,10 @@
 gives access to Windows event log
 '''
 
+
+# Import Python libs
+import logging
+
 # Import Salt Libs
 import salt.utils.platform
 
@@ -41,6 +45,8 @@ TIME_PARTS = {"year": 0,
               "minute": 4,
               "second": 5}
 
+
+log = logging.getLogger(__name__)
 __virtualname__ = 'win_event_viewer'
 
 
@@ -69,7 +75,7 @@ def _change_str_to_bytes(data, encoding='utf-8', encode_keys=False):
         new_dict = {}
         # recursively check every item in dict
         for key in data:
-            item = _change_str_to_bytes(data.get(key), encoding)
+            item = _change_str_to_bytes(data[key], encoding)
             if encode_keys:
                 # keys that are strings most be made into bytes
                 key = _change_str_to_bytes(key, encoding)
@@ -117,11 +123,11 @@ def make_event_dict(event):
         event_dict[event_part] = getattr(event, event_part[0].upper() + event_part[1:], None)
 
     # format items
-    event_dict['eventID'] = winerror.HRESULT_CODE(event_dict.get('eventID'))
-    if event_dict.get('sid') is not None:
-        event_dict['sid'] = event_dict.get('sid').GetSidIdentifierAuthority()
-    event_dict['timeGenerated'] = _get_raw_time(event_dict.get('timeGenerated'))
-    event_dict['timeWritten'] = _get_raw_time(event_dict.get('timeWritten'))
+    event_dict['eventID'] = winerror.HRESULT_CODE(event_dict['eventID'])
+    if event_dict['sid'] is not None:
+        event_dict['sid'] = event_dict['sid'].GetSidIdentifierAuthority()
+    event_dict['timeGenerated'] = _get_raw_time(event_dict['timeGenerated'])
+    event_dict['timeWritten'] = _get_raw_time(event_dict['timeWritten'])
 
     return _change_str_to_bytes(event_dict)
 
@@ -207,10 +213,10 @@ def get_event_sorted_by_info_generator(log_name, target_computer=None):
     for event in get_event_generator(log_name, target_computer):
         event_info = {}
         for part in event:
-            event_info[part] = event.get(part)
+            event_info[part] = event[part]
 
         for key in TIME_PARTS:
-            event_info[key] = event.get('timeGenerated')[TIME_PARTS.get(key)]
+            event_info[key] = event['timeGenerated'][TIME_PARTS[key]]
 
         yield event, event_info
 
@@ -226,7 +232,7 @@ def get_events_sorted_by_info(log_name, target_computer=None):
     event_info = {event_part: {} for event_part in EVENT_PARTS + tuple(TIME_PARTS.keys())}
     for event, info in get_event_sorted_by_info_generator(log_name, target_computer):
         for part in info:
-            event_info.get(part).setdefault(info.get(part), []).append(event)
+            event_info[part].setdefault(info[part], []).append(event)
 
     return event_info
 
@@ -245,13 +251,13 @@ def get_event_filter_generator(log_name, target_computer=None, all_requirements=
         if all_requirements:
             # all keys need to match each other
             for key in kwargs:
-                if kwargs.get(key) != info.get(key):
+                if kwargs[key] != info[key]:
                     break
             else:
                 yield event
         else:
             # just a single key par needs to match
-            if any([kwargs.get(key) == info.get(key) for key in kwargs]):
+            if any([kwargs[key] == info[key] for key in kwargs]):
                 yield event
 
 
