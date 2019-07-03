@@ -81,7 +81,7 @@ class ProxyTest(testprogram.TestProgramCase):
         # Call setup here to ensure config and script exist
         proxy.setup()
         stdout, stderr, status = proxy.run(
-            arg=['-d'] if not salt.utils.platform.is_windows() else [],
+            args=['-d'] if not salt.utils.platform.is_windows() else [],
             catch_stderr=True,
             with_retcode=True,
         )
