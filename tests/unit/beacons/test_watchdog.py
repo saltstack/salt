@@ -41,6 +41,7 @@ def create(path, content=None):
 
 
 @skipIf(not watchdog.HAS_WATCHDOG, 'watchdog is not available')
+@skipIf(salt.utils.platform.is_windows(), 'Skip these tests on Windows')
 class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.watchdog
