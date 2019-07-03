@@ -99,7 +99,7 @@ EVENTS = (
 )
 
 
-class MockHandler:
+class MockHandler(object):
     def __init__(self, events=None):
         if events is None:
             events = []
