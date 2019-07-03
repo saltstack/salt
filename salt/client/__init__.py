@@ -242,6 +242,7 @@ class LocalClient(object):
                                 **kwargs
                                )
 
+        # we should already be subscribed to the response, but incase we are not
         if 'jid' in pub_data:
             self.event.subscribe(pub_data['jid'])
 
@@ -1111,6 +1112,7 @@ class LocalClient(object):
         else:
             ret_iter = self.get_returns_no_block('salt/job/{0}'.format(jid))
         # iterator for the info of this job
+        jinfo = None
         jinfo_iter = []
         # open event jids that need to be un-subscribed from later
         open_jids = set()
@@ -1179,6 +1181,12 @@ class LocalClient(object):
             # if the jinfo has timed out and some minions are still running the job
             # re-do the ping
             if time.time() > timeout_at and minions_running:
+                # unsubscribe from previous find_job ping before sending out
+                # the new broadcast if needed, otherwise long running jobs will
+                # accumulate and be computationally expensive to finish
+                if isinstance(jinfo, dict) and 'jid' in jinfo:
+                    self._clean_up_subscriptions(jinfo['jid'])
+
                 # since this is a new ping, no one has responded yet
                 jinfo = self.gather_job_info(jid, list(minions - found), 'list', **kwargs)
                 minions_running = False
@@ -1215,8 +1223,6 @@ class LocalClient(object):
                             'from client return. This may be an error in '
                             'the client.', missing_key
                         )
-                # Keep track of the jid events to unsubscribe from later
-                open_jids.add(jinfo['jid'])
 
                 # TODO: move to a library??
                 if 'minions' in raw.get('data', {}):
@@ -1272,10 +1278,10 @@ class LocalClient(object):
             else:
                 yield
 
-        # If there are any remaining open events, clean them up.
-        if open_jids:
-            for jid in open_jids:
-                self.event.unsubscribe(jid)
+        # unsubscribe to the last open tracking jids
+        if isinstance(jinfo, dict) and 'jid' in jinfo:
+            self._clean_up_subscriptions(jinfo['jid'])
+        self._clean_up_subscriptions(jid)
 
         if expect_minions:
             for minion in list((minions - found)):
@@ -1720,6 +1726,7 @@ class LocalClient(object):
 
         # if we did generate a jid or have one provided we should preemptively subscribe
         if subscribe:
+            self.event.subscribe(jid)
             if self.opts.get('order_masters'):
                 self.event.subscribe('syndic/.*/{0}'.format(jid), 'regex')
             self.event.subscribe('salt/job/{0}'.format(jid))
@@ -1953,6 +1960,7 @@ class LocalClient(object):
             del self.event
 
     def _clean_up_subscriptions(self, job_id):
+        self.event.unsubscribe(job_id)
         if self.opts.get('order_masters'):
             self.event.unsubscribe('syndic/.*/{0}'.format(job_id), 'regex')
         self.event.unsubscribe('salt/job/{0}'.format(job_id))

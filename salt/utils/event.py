@@ -351,6 +351,11 @@ class SaltEvent(object):
         if tag is None:
             return
         match_func = self._get_match_func(match_type)
+
+        # we only need one of a given tag/func tuple
+        if [tag, match_func] in self.pending_tags:
+            return
+
         self.pending_tags.append([tag, match_func])
 
     def unsubscribe(self, tag, match_type=None):
@@ -361,7 +366,7 @@ class SaltEvent(object):
             return
         match_func = self._get_match_func(match_type)
 
-        self.pending_tags = [tag for tag in self.pending_tags if tag != [tag, match_func]]
+        self.pending_tags = [tagset for tagset in self.pending_tags if tagset != [tag, match_func]]
 
         old_events = self.pending_events
         self.pending_events = []
