@@ -10,6 +10,7 @@ Sample configuration:
     use ``roster_defaults``.
 
 .. code-block:: yaml
+
     ssh_known_hosts_file: /Users/user1/.ssh/known_hosts
     roster_defaults:
       user: user1
