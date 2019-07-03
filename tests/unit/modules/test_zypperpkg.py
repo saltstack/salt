@@ -697,6 +697,33 @@ Repository 'DUMMY' not found by its alias, number, or URI.
     @patch('os.path.getsize', MagicMock(return_value=123456))
     @patch('os.path.getctime', MagicMock(return_value=1234567890.123456))
     @patch('fnmatch.filter', MagicMock(return_value=['/var/cache/zypper/packages/foo/bar/test_package.rpm']))
+    def test_list_downloaded_with_kwargs(self):
+        '''
+        Test downloaded packages listing.
+
+        :return:
+        '''
+        DOWNLOADED_RET = {
+            'test-package': {
+                '1.0': {
+                    'path': '/var/cache/zypper/packages/foo/bar/test_package.rpm',
+                    'size': 123456,
+                    'creation_date_time_t': 1234567890,
+                    'creation_date_time': '2009-02-13T23:31:30',
+                }
+            }
+        }
+
+        with patch.dict(zypper.__salt__, {'lowpkg.bin_pkg_info': MagicMock(return_value={'name': 'test-package',
+                                                                                         'version': '1.0'})}):
+            list_downloaded = zypper.list_downloaded(kw1=True, kw2=False)
+            self.assertEqual(len(list_downloaded), 1)
+            self.assertDictEqual(list_downloaded, DOWNLOADED_RET)
+
+    @patch('salt.utils.path.os_walk', MagicMock(return_value=[('test', 'test', 'test')]))
+    @patch('os.path.getsize', MagicMock(return_value=123456))
+    @patch('os.path.getctime', MagicMock(return_value=1234567890.123456))
+    @patch('fnmatch.filter', MagicMock(return_value=['/var/cache/zypper/packages/foo/bar/test_package.rpm']))
     def test_list_downloaded(self):
         '''
         Test downloaded packages listing.
