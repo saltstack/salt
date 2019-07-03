@@ -245,7 +245,6 @@ try:
     from com.vmware.cis.tagging_client import Tag, TagModel, TagAssociation
     from com.vmware.vcenter_client import Cluster
     from com.vmware.vapi.std_client import DynamicID
-    from vmware.vapi.vsphere.client import create_vsphere_client
     HAS_VSPHERE_SDK = True
 
 except ImportError:
@@ -9092,12 +9091,9 @@ def create_tag_category(server, username, password,
     :rtype:
         category_id
     '''
-    # import requests
-    # session = requests.session()
-    # session.verify = False
-    client = create_vsphere_client(server=server,
-                                   username=username,
-                                   password=password)
+    details = __salt__['vcenter.get_details']()
+    client = details['vSphereClient']
+
     create_spec = client.tagging.Category.CreateSpec()
     create_spec.name = name
     create_spec.description = description

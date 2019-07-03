@@ -202,6 +202,15 @@ try:
 except ImportError:
     HAS_JSONSCHEMA = False
 
+try:
+    import requests
+    from com.vmware.vapi.std.errors_client import Unauthenticated
+    from vmware.vapi.vsphere.client import create_vsphere_client
+    HAS_VSPHERE_SDK = True
+except ImportError:
+    HAS_VSPHERE_SDK = False
+
+
 # Variables are scoped to this module so we can have persistent data
 # across calls to fns in here.
 DETAILS = {}
@@ -278,10 +287,27 @@ def init(opts):
                  'mehchanism \'userpass\'')
         try:
             username, password = find_credentials()
-            DETAILS['password'] = password
         except salt.exceptions.SaltSystemExit as err:
             log.critical('Error: %s', err)
             return False
+        else:
+            DETAILS['password'] = password
+
+        # Create a session to be used for a vSphere client
+        session = requests.session()
+        # If client uses own SSL cert, session must not verify
+        session.verify = False
+        # Establish a vSphereClient by getting correct login details and server
+        username, password = find_credentials()
+        try:
+            client = create_vsphere_client(server=DETAILS['vcenter'],
+                                           username=username,
+                                           password=password,
+                                           session=session)
+        except Unauthenticated as err:
+            log.trace(err)
+        else:
+            DETAILS['vSphereClient'] = client
     return True
 
 
