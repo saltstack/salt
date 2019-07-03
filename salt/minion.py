@@ -719,7 +719,7 @@ class MinionBase(object):
                     if attempts == tries:
                         # Exhausted all attempts. Return exception.
                         self.connected = False
-                        raise exc
+                        six.reraise(*sys.exc_info())
 
     def _discover_masters(self):
         '''
@@ -944,8 +944,10 @@ class MinionManager(MinionBase):
         self.process_manager = ProcessManager(name='MultiMinionProcessManager')
         self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})  # Tornado backward compat
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
@@ -2806,8 +2808,10 @@ class Minion(MinionBase):
             for cb in six.itervalues(self.periodic_callbacks):
                 cb.stop()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
 
 class Syndic(Minion):

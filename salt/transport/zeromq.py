@@ -246,6 +246,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             if not loop_instance_map:
                 del self.__class__.instance_map[self._io_loop]
 
+    # pylint: disable=W1701
     def __del__(self):
         with self._refcount_lock:
             # Make sure we actually close no matter if something
@@ -257,6 +258,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
+    # pylint: enable=W1701
 
     @property
     def master_uri(self):
@@ -497,8 +499,10 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         )
         self.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @tornado.gen.coroutine
@@ -532,9 +536,11 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             payload = self.serial.loads(messages[0])
         # 2 includes a header which says who should do it
         elif messages_len == 2:
-            if (self.opts.get('__role') != 'syndic' and messages[0] not in ('broadcast', self.hexid)) or \
-                (self.opts.get('__role') == 'syndic' and messages[0] not in ('broadcast', 'syndic')):
-                log.debug('Publish received for not this minion: %s', messages[0])
+            message_target = salt.utils.stringutils.to_str(messages[0])
+
+            if (self.opts.get('__role') != 'syndic' and message_target not in ('broadcast', self.hexid)) or \
+                (self.opts.get('__role') == 'syndic' and message_target not in ('broadcast', 'syndic')):
+                log.debug('Publish received for not this minion: %s', message_target)
                 raise tornado.gen.Return(None)
             payload = self.serial.loads(messages[1])
         else:
@@ -616,7 +622,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
             except zmq.ZMQError as exc:
                 if exc.errno == errno.EINTR:
                     continue
-                raise exc
+                six.reraise(*sys.exc_info())
             except (KeyboardInterrupt, SystemExit):
                 break
 
@@ -916,7 +922,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                                 log.trace('Sending filtered data over publisher %s', pub_uri)
                                 # zmq filters are substring match, hash the topic
                                 # to avoid collisions
-                                htopic = salt.utils.stringutils.to_bytes(hashlib.sha1(topic).hexdigest())
+                                htopic = salt.utils.stringutils.to_bytes(hashlib.sha1(salt.utils.stringutils.to_bytes(topic)).hexdigest())
                                 pub_sock.send(htopic, flags=zmq.SNDMORE)
                                 pub_sock.send(payload)
                                 log.trace('Filtered data has been sent')
@@ -941,7 +947,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                 except zmq.ZMQError as exc:
                     if exc.errno == errno.EINTR:
                         continue
-                    raise exc
+                    six.reraise(*sys.exc_info())
 
         except KeyboardInterrupt:
             log.trace('Publish daemon caught Keyboard interupt, tearing down')
@@ -1081,8 +1087,10 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
         )
         self.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
 
 # TODO: unit tests!
@@ -1159,8 +1167,10 @@ class AsyncReqMessageClient(object):
         )
         self.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
     def _init_socket(self):
         if hasattr(self, 'stream'):

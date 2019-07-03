@@ -23,7 +23,8 @@ load-plugins=saltpylint.pep8,
   saltpylint.smartup,
   saltpylint.minpyver,
   saltpylint.blacklist,
-  saltpylint.thirdparty
+  saltpylint.thirdparty,
+  saltpylint.dunder_del
 
 # Use multiple processes to speed up Pylint.
 # Don't bump this values on PyLint 1.4.0 - Know bug that ignores the passed --rcfile
@@ -154,7 +155,8 @@ disable=R,
   E8266,
   E8402,
   E8731,
-  3rd-party-local-module-not-gated
+  3rd-party-local-module-not-gated,
+  pep8-reserved-keywords
 
 # Disabled:
 # R* [refactoring suggestions & reports]

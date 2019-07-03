@@ -1882,6 +1882,7 @@ class LocalClient(object):
         raise tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})
 
+    # pylint: disable=W1701
     def __del__(self):
         # This IS really necessary!
         # When running tests, if self.events is not destroyed, we leak 2
@@ -1889,6 +1890,7 @@ class LocalClient(object):
         if hasattr(self, 'event'):
             # The call below will take care of calling 'self.event.destroy()'
             del self.event
+    # pylint: enable=W1701
 
     def _clean_up_subscriptions(self, job_id):
         if self.opts.get('order_masters'):

@@ -944,6 +944,7 @@ def _virtual(osdata):
                 with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
                     fhr_contents = fhr.read()
                 if ':/lxc/' in fhr_contents:
+                    grains['virtual'] = 'container'
                     grains['virtual_subtype'] = 'LXC'
                 elif ':/kubepods/' in fhr_contents:
                     grains['virtual_subtype'] = 'kubernetes'
@@ -953,6 +954,7 @@ def _virtual(osdata):
                     if any(x in fhr_contents
                            for x in (':/system.slice/docker', ':/docker/',
                                      ':/docker-ce/')):
+                        grains['virtual'] = 'container'
                         grains['virtual_subtype'] = 'Docker'
             except IOError:
                 pass
@@ -1054,6 +1056,11 @@ def _virtual(osdata):
                     '{0} -n machdep.idle-mechanism'.format(sysctl)) == 'xen':
                 if os.path.isfile('/var/run/xenconsoled.pid'):
                     grains['virtual_subtype'] = 'Xen Dom0'
+
+    # If we have a virtual_subtype, we're virtual, but maybe we couldn't
+    # figure out what specific virtual type we were?
+    if grains.get('virtual_subtype') and grains['virtual'] == 'physical':
+        grains['virtual'] = 'virtual'
 
     for command in failed_commands:
         log.info(
@@ -1341,6 +1348,8 @@ def _windows_platform_data():
                 grains['virtual_subtype'] = 'HVM domU'
         elif 'OpenStack' in systeminfo.Model:
             grains['virtual'] = 'OpenStack'
+        elif 'AMAZON' in biosinfo.Version:
+            grains['virtual'] = 'EC2'
 
     return grains
 

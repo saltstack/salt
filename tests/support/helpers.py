@@ -218,7 +218,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 if attempt >= attempts -1:
                     # We won't try to run tearDown once the attempts are exhausted
                     # because the regular test runner will do that for us
-                    raise exc
+                    six.reraise(*sys.exc_info())
                 # Run through tearDown again
                 teardown = getattr(cls, 'tearDown', None)
                 if callable(teardown):

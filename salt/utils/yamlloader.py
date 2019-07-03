@@ -20,6 +20,9 @@ except Exception:
 
 import salt.utils.stringutils
 
+# Import 3rd-party libs
+from salt.ext import six
+
 __all__ = ['SaltYamlSafeLoader', 'load', 'safe_load']
 
 

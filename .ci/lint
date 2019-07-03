@@ -8,9 +8,9 @@ properties([
 
 def shell_header
 
-node('lint') {
-    timeout(time: global_timeout, unit: 'HOURS') {
-        ansiColor('xterm') {
+ansiColor('xterm') {
+    node('lint') {
+        timeout(time: global_timeout, unit: 'HOURS') {
             timestamps {
                 try {
                     // Set the GH status even before cloning the repo
@@ -49,8 +49,11 @@ node('lint') {
                             pyenv install --skip-existing 2.7.15
                             pyenv shell 2.7.15
                             python --version
-                            pip install tox
-                            tox --version
+                            pip install -U nox-py2
+                            nox --version
+                            # Create the required virtualenvs in serial
+                            nox --install-only -e lint-salt
+                            nox --install-only -e lint-tests
                             '''
                         }
                         archiveArtifacts artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log,file-list-experiment.log'
@@ -65,12 +68,11 @@ node('lint') {
                                             sh shell_header + '''
                                             eval "$(pyenv init - --no-rehash)"
                                             pyenv shell 2.7.15
-                                            # tee makes the exit/return code always 0
-                                            grep -Ei '^salt/.*\\.py$|^setup\\.py$' file-list-changed.log | (xargs -r '--delimiter=\\n' tox -e pylint-salt ; echo "$?" >  pylint-salt-chg.exit) | tee pylint-report-salt-chg.log
-                                            # remove color escape coding
-                                            sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-salt-chg.log
-                                            read rc_exit < pylint-salt-chg.exit
-                                            exit "$rc_exit"
+                                            EC=254
+                                            export PYLINT_REPORT=pylint-report-salt-chg.log
+                                            grep -Ei '^salt/.*\\.py$|^setup\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' nox -e lint-salt --
+                                            EC=$?
+                                            exit $EC
                                             '''
                                         }
                                     }
@@ -81,12 +83,11 @@ node('lint') {
                                             sh shell_header + '''
                                             eval "$(pyenv init - --no-rehash)"
                                             pyenv shell 2.7.15
-                                            # tee makes the exit/return code always 0
-                                            grep -Ei '^tests/.*\\.py$' file-list-changed.log | (xargs -r '--delimiter=\\n' tox -e pylint-tests ; echo "$?" > pylint-tests-chg.exit) | tee pylint-report-tests-chg.log
-                                            # remove color escape coding
-                                            sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-tests-chg.log
-                                            read rc_exit < pylint-tests-chg.exit
-                                            exit "$rc_exit"
+                                            EC=254
+                                            export PYLINT_REPORT=pylint-report-tests-chg.log
+                                            grep -Ei '^tests/.*\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' nox -e lint-tests --
+                                            EC=$?
+                                            exit $EC
                                             '''
                                         }
                                     }
@@ -127,11 +128,11 @@ node('lint') {
                                             sh shell_header + '''
                                             eval "$(pyenv init - --no-rehash)"
                                             pyenv shell 2.7.15
-                                            # tee makes the exit/return code always 0
-                                            (tox -e pylint-salt ; echo "$?" > pylint-salt-full.exit) | tee pylint-report-salt-full.log
-                                            # remove color escape coding
-                                            sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-salt-full.log
-                                            read rc_exit <  pylint-salt-full.exit
+                                            EC=254
+                                            export PYLINT_REPORT=pylint-report-salt-full.log
+                                            nox -e lint-salt
+                                            EC=$?
+                                            exit $EC
                                             '''
                                         }
                                     },
@@ -140,12 +141,11 @@ node('lint') {
                                             sh shell_header + '''
                                             eval "$(pyenv init - --no-rehash)"
                                             pyenv shell 2.7.15
-                                            # tee makes the exit/return code always 0
-                                            (tox -e pylint-tests ; echo "$?" > pylint-tests-full.exit) | tee pylint-report-tests-full.log
-                                            # remove color escape coding
-                                            sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-tests-full.log
-                                            read rc_exit <  pylint-tests-full.exit
-                                            exit "$rc_exit"
+                                            EC=254
+                                            export PYLINT_REPORT=pylint-report-tests-full.log
+                                            nox -e lint-salt
+                                            EC=$?
+                                            exit $EC
                                             '''
                                         }
                                     }
@@ -191,7 +191,7 @@ node('lint') {
                         try {
                             slackSend channel: "#jenkins-prod-pr",
                                 color: '#FF0000',
-                                message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                                message: "*FAILED*: ${currentBuild.getFullDisplayName()} (&lt;${env.BUILD_URL}|open&gt;)"
                         } catch (Exception e) {
                             sh 'echo Failed to send the Slack notification'
                         }

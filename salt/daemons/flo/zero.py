@@ -7,20 +7,23 @@ IoFlo behaviors for running a ZeroMQ based master
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
-import logging
-import hashlib
-import multiprocessing
 import errno
+import hashlib
+import logging
+import multiprocessing
+import os
+import sys
 # Import ioflo libs
 import ioflo.base.deeding
 # Import third party libs
-from salt.utils.zeromq import zmq
 import salt.master
 import salt.crypt
 import salt.daemons.masterapi
 import salt.payload
 import salt.utils.stringutils
+
+from salt.ext import six
+from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
 
@@ -110,7 +113,7 @@ class ZmqRet(multiprocessing.Process):
             except zmq.ZMQError as exc:
                 if exc.errno == errno.EINTR:
                     continue
-                raise exc
+                six.reraise(*sys.exc_info())
 
 
 class SaltZmqCrypticleSetup(ioflo.base.deeding.Deed):
@@ -215,7 +218,7 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
         except zmq.ZMQError as exc:
             if exc.errno == errno.EINTR:
                 return
-            raise exc
+            six.reraise(*sys.exc_info())
 
 
 class SaltZmqWorker(ioflo.base.deeding.Deed):

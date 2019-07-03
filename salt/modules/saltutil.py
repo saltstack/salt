@@ -1108,12 +1108,12 @@ def refresh_modules(**kwargs):
             #  If we're going to block, first setup a listener
             ret = __salt__['event.fire']({}, 'module_refresh')
         else:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
-            ret = __salt__['event.fire']({'notify': True}, 'module_refresh')
-            # Wait for the finish event to fire
-            log.trace('refresh_modules waiting for module refresh to complete')
-            # Blocks until we hear this event or until the timeout expires
-            eventer.get_event(tag='/salt/minion/minion_mod_complete', wait=30)
+            with salt.utils.event.get_event('minion', opts=__opts__, listen=True) as event_bus:
+                ret = __salt__['event.fire']({'notify': True}, 'module_refresh')
+                # Wait for the finish event to fire
+                log.trace('refresh_modules waiting for module refresh to complete')
+                # Blocks until we hear this event or until the timeout expires
+                event_bus.get_event(tag='/salt/minion/minion_mod_complete', wait=30)
     except KeyError:
         log.error('Event module not available. Module refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system

@@ -8,9 +8,9 @@ properties([
 
 def shell_header
 
-node('docs') {
-    timeout(time: global_timeout, unit: 'HOURS') {
-        ansiColor('xterm') {
+ansiColor('xterm') {
+    node('docs') {
+        timeout(time: global_timeout, unit: 'HOURS') {
             timestamps {
                 try {
                     // Set the GH status even before cloning the repo
@@ -36,19 +36,21 @@ node('docs') {
                         sh shell_header + '''
                         eval "$(pyenv init -)"
                         pyenv --version
-                        pyenv install --skip-existing 2.7.15
-                        pyenv shell 2.7.15
+                        pyenv install --skip-existing 3.6.8
+                        pyenv shell 3.6.8
                         python --version
-                        pip install tox
+                        pip install -U nox-py2
+                        nox --version
                         '''
                     }
 
                     stage('Build') {
                         sh shell_header + '''
                         eval "$(pyenv init -)"
-                        pyenv shell 2.7.15
-                        tox -e docs
+                        pyenv shell 3.6.8
+                        nox -e docs
                         '''
+                        archiveArtifacts artifacts: 'doc/doc-archive.tar.gz'
                     }
                 } catch (Exception e) {
                     currentBuild.result = 'FAILURE'
@@ -71,7 +73,7 @@ node('docs') {
                         try {
                             slackSend channel: "#jenkins-prod-pr",
                                 color: '#FF0000',
-                                message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                                message: "*FAILED*: ${currentBuild.getFullDisplayName()} (&lt;${env.BUILD_URL}|open&gt;)"
                         } catch (Exception e) {
                             sh 'echo Failed to send the Slack notification'
                         }
