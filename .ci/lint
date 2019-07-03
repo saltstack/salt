@@ -46,8 +46,8 @@ node('lint') {
                             (git diff --name-status -l99999 -C "origin/${SALT_TARGET_BRANCH}" "origin/$BRANCH_NAME";echo "---";git diff --name-status -l99999 -C "origin/$BRANCH_NAME";printenv|grep -E '=[0-9a-z]{40,}+$|COMMIT=|BRANCH') > file-list-experiment.log
                             eval "$(pyenv init -)"
                             pyenv --version
-                            pyenv install --skip-existing 2.7.15
-                            pyenv shell 2.7.15
+                            pyenv install --skip-existing 3.6.8
+                            pyenv shell 3.6.8
                             python --version
                             pip install -U nox-py2
                             nox --version
@@ -67,7 +67,7 @@ node('lint') {
                                         if (readFile('file-list-changed.log') =~ /(?i)(^|\n)(salt\/.*\.py|setup\.py)\n/) {
                                             sh shell_header + '''
                                             eval "$(pyenv init - --no-rehash)"
-                                            pyenv shell 2.7.15
+                                            pyenv shell 3.6.8
                                             EC=254
                                             export PYLINT_REPORT=pylint-report-salt-chg.log
                                             grep -Ei '^salt/.*\\.py$|^setup\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' nox -e lint-salt --
@@ -82,7 +82,7 @@ node('lint') {
                                         if (readFile('file-list-changed.log') =~ /(?i)(^|\n)tests\/.*\.py\n/) {
                                             sh shell_header + '''
                                             eval "$(pyenv init - --no-rehash)"
-                                            pyenv shell 2.7.15
+                                            pyenv shell 3.6.8
                                             EC=254
                                             export PYLINT_REPORT=pylint-report-tests-chg.log
                                             grep -Ei '^tests/.*\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' nox -e lint-tests --
@@ -127,7 +127,7 @@ node('lint') {
                                         stage('Lint Salt Full') {
                                             sh shell_header + '''
                                             eval "$(pyenv init - --no-rehash)"
-                                            pyenv shell 2.7.15
+                                            pyenv shell 3.6.8
                                             EC=254
                                             export PYLINT_REPORT=pylint-report-salt-full.log
                                             nox -e lint-salt
@@ -140,7 +140,7 @@ node('lint') {
                                         stage('Lint Tests Full') {
                                             sh shell_header + '''
                                             eval "$(pyenv init - --no-rehash)"
-                                            pyenv shell 2.7.15
+                                            pyenv shell 3.6.8
                                             EC=254
                                             export PYLINT_REPORT=pylint-report-tests-full.log
                                             nox -e lint-salt

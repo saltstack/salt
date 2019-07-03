@@ -23,11 +23,6 @@ if __name__ == '__main__':
     sys.stderr.flush()
     exit(1)
 
-if not IS_PY3:
-    sys.stderr.write('Python 2 is no longer supported\n')
-    sys.stderr.flush()
-    exit(1)
-
 # Import 3rd-party libs
 import nox
 from nox.command import CommandFailed
@@ -105,6 +100,8 @@ def _get_session_python_site_packages_dir(session):
 
 def _get_pydir(session):
     version_info = _get_session_python_version_info(session)
+    if version_info < (3,):
+        session.error('Only Python 3 is supported')
     return 'py{}.{}'.format(*version_info)
 
 
@@ -770,7 +767,11 @@ def _pytest(session, coverage, cmd_args):
 
 def _lint(session, rcfile, flags, paths):
     _install_requirements(session, 'zeromq')
-    session.install('--progress-bar=off', '-r', 'requirements/static/{}/lint.txt'.format(_get_pydir(session)), silent=PIP_INSTALL_SILENT)
+    pydir = _get_pydir(session)
+    session.install(
+        '--progress-bar=off',
+        '-r', 'requirements/static/{}/lint.txt'.format(pydir),
+        silent=PIP_INSTALL_SILENT)
     session.run('pylint', '--version')
     pylint_report_path = os.environ.get('PYLINT_REPORT')
 
@@ -804,7 +805,7 @@ def _lint(session, rcfile, flags, paths):
         stdout.close()
 
 
-@nox.session(python='2.7')
+@nox.session(python='3')
 def lint(session):
     '''
     Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
@@ -813,7 +814,7 @@ def lint(session):
     session.notify('lint-tests-{}'.format(session.python))
 
 
-@nox.session(python='2.7', name='lint-salt')
+@nox.session(python='3', name='lint-salt')
 def lint_salt(session):
     '''
     Run PyLint against Salt. Set PYLINT_REPORT to a path to capture output.
@@ -828,7 +829,7 @@ def lint_salt(session):
     _lint(session, '.testing.pylintrc', flags, paths)
 
 
-@nox.session(python='2.7', name='lint-tests')
+@nox.session(python='3', name='lint-tests')
 def lint_tests(session):
     '''
     Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
