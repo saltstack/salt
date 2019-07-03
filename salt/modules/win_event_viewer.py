@@ -7,6 +7,7 @@ gives access to Windows event log
 
 # Import Python libs
 import logging
+import collections
 
 # Import Salt Libs
 import salt.utils.platform
@@ -37,13 +38,14 @@ EVENT_PARTS = ('closingRecordNumber',
                'timeGenerated',
                'timeWritten')
 
-# key to position in time tuple
-TIME_PARTS = {"year": 0,
-              "month": 1,
-              "day": 2,
-              "hour": 3,
-              "minute": 4,
-              "second": 5}
+# keys time
+TIME_PARTS = ('year',
+              'month',
+              'day',
+              'hour',
+              'minute',
+              'second')
+TimeTuple = collections.namedtuple('TimeTuple', 'year, month, day, hour, minute, second')
 
 
 log = logging.getLogger(__name__)
@@ -65,10 +67,17 @@ def _change_str_to_bytes(data, encoding='utf-8', encode_keys=False):
     Will make string objects into byte objects.
     Warning this function will destroy the data object and objects that data links to.
 
-    :param data: object
-    :param encoding: str
-    :param encode_keys: bool: if false key strings will not be turned into bytes
-    :return: new object
+    data
+        object
+
+    encoding
+        str
+    encode_keys
+        bool
+        if false key strings will not be turned into bytes
+
+    return
+        new object
     '''
 
     if isinstance(data, dict):
@@ -102,19 +111,27 @@ def _change_str_to_bytes(data, encoding='utf-8', encode_keys=False):
 
 def _get_raw_time(time):
     '''
-    Will make a pywintypes.datetime into a tuple.
-    :param time: pywintypes.datetime
-    :return: tuple
+    Will make a pywintypes.datetime into a TimeTuple.
+
+    time
+        pywintypes.datetime
+
+    return
+        TimeTuple
     '''
 
-    return time.year, time.month, time.day, time.hour, time.minute, time.second
+    return TimeTuple._make((time.year, time.month, time.day, time.hour, time.minute, time.second))
 
 
 def make_event_dict(event):
     '''
     Will make a PyEventLogRecord into a dict.
-    :param event: PyEventLogRecord
-    :return: dict
+
+    event
+        PyEventLogRecord
+
+    return
+        dict
     '''
 
     event_dict = {}
@@ -135,13 +152,19 @@ def make_event_dict(event):
 def _get_event_handler(log_name, target_computer=None):
     '''
     Will try to open a PyHANDLE.
-    :param log_name: str
-    :param target_computer: None or str
-    :return: PyHANDLE
+
+    log_name
+        str
+
+    target_computer
+        None or str
+
+    return
+        PyHANDLE
     '''
 
     # TODO: upgrade windows token
-    # log close can fail if this is not done
+    # 'log close' can fail if this is not done
     try:
         return win32evtlog.OpenEventLog(target_computer, log_name)
     except pywintypes.error:
@@ -152,8 +175,9 @@ def _get_event_handler(log_name, target_computer=None):
 def _close_event_handler(handler):
     '''
     Will close the event handler.
-    :param handler: PyHANDLE
-    :return:
+
+    handler:
+        PyHANDLE
     '''
 
     # TODO: downgrade windows token
@@ -164,10 +188,19 @@ def get_event_generator(log_name, target_computer=None, raw=False):
     '''
     Will get all log events one by one.
     Warning events are not in exact order.
-    :param log_name: str
-    :param target_computer: None or str
-    :param raw: bool: True: PyEventLogRecord False: dict
-    :return: PyEventLogRecord or dict
+
+    log_name
+        str
+
+    target_computer
+        None or str
+    raw
+        bool
+        True: PyEventLogRecord
+        False: dict
+
+    return
+        PyEventLogRecord or dict
     '''
 
     handler = _get_event_handler(log_name, target_computer)
@@ -193,10 +226,20 @@ def get_event_generator(log_name, target_computer=None, raw=False):
 def get_events(log_name, target_computer=None, raw=False):
     '''
     Will make a tuple of log events.
-    :param log_name: str
-    :param target_computer: None or str
-    :param raw: bool: True: PyEventLogRecord False: dict
-    :return: tuple
+
+    log_name:
+        str
+
+    target_computer:
+        None or str
+
+    raw:
+        bool
+        True: PyEventLogRecord
+        False: dict
+
+    return
+        tuple
     '''
 
     return tuple(get_event_generator(log_name, target_computer, raw))
@@ -205,9 +248,15 @@ def get_events(log_name, target_computer=None, raw=False):
 def get_event_sorted_by_info_generator(log_name, target_computer=None):
     '''
     Makes keys to event
-    :param log_name: str
-    :param target_computer: None or str
-    :return: dict
+
+    log_name
+        str
+
+    target_computer
+        None or str
+
+    return
+        dict
     '''
 
     for event in get_event_generator(log_name, target_computer):
@@ -215,8 +264,8 @@ def get_event_sorted_by_info_generator(log_name, target_computer=None):
         for part in event:
             event_info[part] = event[part]
 
-        for key in TIME_PARTS:
-            event_info[key] = event['timeGenerated'][TIME_PARTS[key]]
+        for spot, key in enumerate(TIME_PARTS):
+            event_info[key] = event['timeGenerated'][spot]
 
         yield event, event_info
 
@@ -224,12 +273,18 @@ def get_event_sorted_by_info_generator(log_name, target_computer=None):
 def get_events_sorted_by_info(log_name, target_computer=None):
     '''
     Make dict of sorted events
-    :param log_name: str
-    :param target_computer: None or str
-    :return: dict
+
+    log_name:
+        str
+
+    target_computer
+        None or str
+
+    return
+        dict
     '''
 
-    event_info = {event_part: {} for event_part in EVENT_PARTS + tuple(TIME_PARTS.keys())}
+    event_info = {event_part: {} for event_part in EVENT_PARTS + TIME_PARTS}
     for event, info in get_event_sorted_by_info_generator(log_name, target_computer):
         for part in info:
             event_info[part].setdefault(info[part], []).append(event)
@@ -240,11 +295,23 @@ def get_events_sorted_by_info(log_name, target_computer=None):
 def get_event_filter_generator(log_name, target_computer=None, all_requirements=True, **kwargs):
     '''
     Will find events that meet the requirements
-    :param log_name: str
-    :param target_computer: None or str
-    :param all_requirements: bool: True: all requirements most be meet False: only a single requirement most be meet
-    :param kwargs: requirements for the events
-    :return: dict
+
+    log_name
+        str
+
+    target_computer
+        None or str
+
+    all_requirements
+        bool
+        True: all requirements most be meet
+        False: only a single requirement most be meet
+
+    kwargs:
+        requirements for the events
+
+    return
+        dict
     '''
 
     for event, info in get_event_sorted_by_info_generator(log_name, target_computer):
@@ -264,11 +331,23 @@ def get_event_filter_generator(log_name, target_computer=None, all_requirements=
 def get_events_filter(log_name, target_computer=None, all_requirements=True, **kwargs):
     '''
     Will find events that meet the requirements.
-    :param log_name: str
-    :param target_computer: None or str
-    :param all_requirements: bool: True: all requirements most be meet False: only a single requirement most be meet
-    :param kwargs: requirements for the events
-    :return: list
+
+    log_name:
+        str
+
+    target_computer
+        None or str
+
+    all_requirements
+        bool
+        True: all requirements most be meet
+        False: only a single requirement most be meet
+
+    kwargs
+        requirements for the events
+
+    return
+        list
     '''
 
     return tuple(get_event_filter_generator(log_name, target_computer, all_requirements, **kwargs))
@@ -277,10 +356,15 @@ def get_events_filter(log_name, target_computer=None, all_requirements=True, **k
 def log_event(application_name, event_id, **kwargs):
     '''
     Adds event to application log.
-    :param application_name: str
-    :param event_id: int
-    :param kwargs: parts of event
-    :return:
+
+    application_name
+        str
+
+    event_id
+        int
+
+    kwargs
+        parts of event
     '''
 
     win32evtlogutil.ReportEvent(application_name, event_id, **kwargs)
@@ -289,10 +373,13 @@ def log_event(application_name, event_id, **kwargs):
 def clear_log(log_name, target_computer=None):
     '''
     Clears event log.
-    warning: a clear log event will be add it after the log was clear
-    :param log_name: str
-    :param target_computer: None or str
-    :return:
+    Note that a clear log event will be add it after the log was clear
+
+    log_name
+        str
+
+    target_computer
+        None or str
     '''
 
     handler = _get_event_handler(log_name, target_computer)
@@ -303,9 +390,15 @@ def clear_log(log_name, target_computer=None):
 def get_number_of_events(log_name, target_computer=None):
     '''
     Gets the number of events in a log.
-    :param log_name: str
-    :param target_computer: None or str
-    :return: int
+
+    log_name:
+        str
+
+    target_computer
+        None or str
+
+    return
+        int
     '''
 
     handler = _get_event_handler(log_name, target_computer)
