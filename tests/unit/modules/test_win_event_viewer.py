@@ -30,7 +30,7 @@ except ImportError:
 MAX_EVENT_LOOK_UP = 2000
 
 
-class MockTime:
+class MockTime(object):
     def __init__(self, year=2000, month=1, day=1, hour=1, minute=1, second=1):
         self.year = year
         self.month = month
@@ -40,7 +40,7 @@ class MockTime:
         self.second = second
 
 
-class MockEvent:
+class MockEvent(object):
     def __init__(self,
                  closing_record_number=0,
                  computer_name='PC',
@@ -566,7 +566,6 @@ class WinEventViewerDestructiveTestCase(TestCase, LoaderModuleMockMixin):
 
             if number == MAX_EVENT_LOOK_UP:
                 break
-
 
     @staticmethod
     def test_log_event():
