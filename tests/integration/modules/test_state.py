@@ -1864,6 +1864,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 pass
 
     @skipIf(sys.platform.startswith('win'), 'Skipped until parallel states can be fixed on Windows')
+    @skipIf(salt.utils.platform.is_darwin() and six.PY2, 'This test hangs on OS X on Py2')
     def test_parallel_state_with_long_tag(self):
         '''
         This tests the case where the state being executed has a long ID dec or

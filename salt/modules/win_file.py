@@ -69,9 +69,10 @@ HAS_WINDOWS_MODULES = False
 try:
     if salt.utils.platform.is_windows():
         import win32api
-        import win32file
         import win32con
-        from pywintypes import error as pywinerror
+        import win32file
+        import win32security
+        import salt.platform.win
         HAS_WINDOWS_MODULES = True
 except ImportError:
     HAS_WINDOWS_MODULES = False
@@ -1147,10 +1148,19 @@ def symlink(src, link):
 
     is_dir = os.path.isdir(src)
 
+    # Elevate the token from the current process
+    desired_access = (
+        win32security.TOKEN_QUERY |
+        win32security.TOKEN_ADJUST_PRIVILEGES
+    )
+    th = win32security.OpenProcessToken(win32api.GetCurrentProcess(),
+                                        desired_access)
+    salt.platform.win.elevate_token(th)
+
     try:
         win32file.CreateSymbolicLink(link, src, int(is_dir))
         return True
-    except pywinerror as exc:
+    except win32file.error as exc:
         raise CommandExecutionError(
             'Could not create \'{0}\' - [{1}] {2}'.format(
                 link,

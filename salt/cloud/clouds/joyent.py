@@ -61,6 +61,7 @@ import datetime
 
 try:
     from M2Crypto import EVP
+    HAS_REQUIRED_CRYPTO = True
     HAS_M2 = True
 except ImportError:
     HAS_M2 = False

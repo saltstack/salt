@@ -32,6 +32,7 @@ repos:
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py2.7-zmq-requirements
         name: Windows Py2.7 ZeroMQ Requirements
@@ -76,6 +77,7 @@ repos:
           - --include=requirements/raet.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py2.7-raet-requirements
         name: Windows Py2.7 RAET Requirements
@@ -177,6 +179,7 @@ repos:
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.5-zmq-requirements
         name: Windows Py3.5 ZeroMQ Requirements
@@ -223,6 +226,7 @@ repos:
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
           - --remove-line=^enum34==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.5-raet-requirements
         name: Windows Py3.5 RAET Requirements
@@ -286,6 +290,7 @@ repos:
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.6-zmq-requirements
         name: Windows Py3.6 ZeroMQ Requirements
@@ -332,6 +337,7 @@ repos:
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
           - --remove-line=^enum34==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.6-raet-requirements
         name: Windows Py3.6 RAET Requirements
@@ -395,6 +401,7 @@ repos:
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.7-zmq-requirements
         name: Windows Py3.7 ZeroMQ Requirements
@@ -441,6 +448,7 @@ repos:
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
           - --remove-line=^enum34==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.7-raet-requirements
         name: Windows Py3.7 RAET Requirements

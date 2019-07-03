@@ -10,9 +10,9 @@ Much of what is here was adapted from the following:
     http://stackoverflow.com/questions/29566330
 '''
 from __future__ import absolute_import, unicode_literals
-import os
 import collections
 import logging
+import os
 import psutil
 
 import ctypes
@@ -21,7 +21,6 @@ from ctypes import wintypes
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
 
-import win32con
 import win32con
 import win32api
 import win32process
@@ -598,7 +597,7 @@ class HANDLE_IHV(wintypes.HANDLE):
 
 def errcheck_ihv(result, func, args):
     if result.value == INVALID_HANDLE_VALUE:
-        raise ctypes.WinError()
+        raise ctypes.WinError(ctypes.get_last_error())
     return result.value
 
 
@@ -608,13 +607,13 @@ class DWORD_IDV(wintypes.DWORD):
 
 def errcheck_idv(result, func, args):
     if result.value == INVALID_DWORD_VALUE:
-        raise ctypes.WinError()
+        raise ctypes.WinError(ctypes.get_last_error())
     return result.value
 
 
 def errcheck_bool(result, func, args):
     if not result:
-        raise ctypes.WinError()
+        raise ctypes.WinError(ctypes.get_last_error())
     return args
 
 
@@ -1035,10 +1034,8 @@ def CreateProcessWithTokenW(token,
         startupinfo = STARTUPINFO()
     if currentdirectory is not None:
         currentdirectory = ctypes.create_unicode_buffer(currentdirectory)
-    if environment:
-        environment = ctypes.pointer(
-           environment_string(environment)
-        )
+    if environment is not None:
+        environment = ctypes.pointer(environment_string(environment))
     process_info = PROCESS_INFORMATION()
     ret = advapi32.CreateProcessWithTokenW(
         token,
@@ -1146,7 +1143,7 @@ def dup_token(th):
 
 def elevate_token(th):
     '''
-    Set all token priviledges to enabled
+    Set all token privileges to enabled
     '''
     # Get list of privileges this token contains
     privileges = win32security.GetTokenInformation(
@@ -1174,14 +1171,23 @@ def make_inheritable(token):
     )
 
 
-def CreateProcessWithLogonW(username=None, domain=None, password=None,
-        logonflags=0, applicationname=None, commandline=None, creationflags=0,
-        environment=None, currentdirectory=None, startupinfo=None):
+def CreateProcessWithLogonW(username=None,
+                            domain=None,
+                            password=None,
+                            logonflags=0,
+                            applicationname=None,
+                            commandline=None,
+                            creationflags=0,
+                            environment=None,
+                            currentdirectory=None,
+                            startupinfo=None):
     creationflags |= win32con.CREATE_UNICODE_ENVIRONMENT
     if commandline is not None:
         commandline = ctypes.create_unicode_buffer(commandline)
     if startupinfo is None:
         startupinfo = STARTUPINFO()
+    if environment is not None:
+        environment = ctypes.pointer(environment_string(environment))
     process_info = PROCESS_INFORMATION()
     advapi32.CreateProcessWithLogonW(
         username,

@@ -31,6 +31,7 @@ pythonnet==2.3.0
 pyyaml==3.13
 pyzmq==18.0.1
 requests==2.21.0
+setproctitle
 singledispatch==3.4.0.3
 smmap==0.9.0
 timelib==0.2.4

@@ -24,11 +24,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import re
 import types
 import logging
-try:
-    import pkg_resources
-    HAS_PKG_RESOURCES = True
-except ImportError:
-    HAS_PKG_RESOURCES = False
 
 # Import salt libs
 import salt.utils.data

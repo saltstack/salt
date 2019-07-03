@@ -68,10 +68,9 @@ def __virtual__():
     '''
     Provides zfs state
     '''
-    if __grains__['zfs_support']:
-        return __virtualname__
-    else:
-        return (False, "The zfs state cannot be loaded: zfs not supported")
+    if not __grains__.get('zfs_support'):
+        return False, 'The zfs state cannot be loaded: zfs not supported'
+    return __virtualname__
 
 
 def _absent(name, dataset_type, force=False, recursive=False):
