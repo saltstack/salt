@@ -48,6 +48,7 @@ def __virtual__():
     '''
     Load only on minions running on Windows.
     '''
+
     if not salt.utils.platform.is_windows() or not IMPORT_STATUS:
         return False, 'win_event_viewer: most be on windows'
     return __virtualname__
@@ -57,6 +58,7 @@ def _change_str_to_bytes(data, encoding='utf-8', encode_keys=False):
     '''
     Will make string objects into byte objects.
     Warning this function will destroy the data object and objects that data links to.
+
     :param data: object
     :param encoding: str
     :param encode_keys: bool: if false key strings will not be turned into bytes
