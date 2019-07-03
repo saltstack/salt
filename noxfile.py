@@ -16,16 +16,21 @@ import pprint
 import shutil
 import tempfile
 
+IS_PY3 = sys.version_info >= (3,)
+
 if __name__ == '__main__':
     sys.stderr.write('Do not execute this file directly. Use nox instead, it will know how to handle this file\n')
+    sys.stderr.flush()
+    exit(1)
+
+if not IS_PY3:
+    sys.stderr.write('Python 2 is no longer supported\n')
     sys.stderr.flush()
     exit(1)
 
 # Import 3rd-party libs
 import nox
 from nox.command import CommandFailed
-
-IS_PY3 = sys.version_info > (2,)
 
 # Be verbose when runing under a CI context
 PIP_INSTALL_SILENT = (os.environ.get('JENKINS_URL') or os.environ.get('CI') or os.environ.get('DRONE')) is None
@@ -37,7 +42,7 @@ SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, 'tests', 'support', 'coverage')
 IS_WINDOWS = sys.platform.lower().startswith('win')
 
 # Python versions to run against
-_PYTHON_VERSIONS = ('2', '2.7', '3', '3.4', '3.5', '3.6', '3.7')
+_PYTHON_VERSIONS = ('3', '3.4', '3.5', '3.6', '3.7')
 
 # Nox options
 #  Reuse existing virtualenvs
@@ -100,8 +105,6 @@ def _get_session_python_site_packages_dir(session):
 
 def _get_pydir(session):
     version_info = _get_session_python_version_info(session)
-    if version_info < (2, 7):
-        session.error('Only Python >= 2.7 is supported')
     return 'py{}.{}'.format(*version_info)
 
 
