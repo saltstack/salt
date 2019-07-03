@@ -149,8 +149,8 @@ class WinEventViewerSimpleTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertTrue('key1' in new_data)
 
-        self.assertEqual(new_data.get('key1'), 'item1'.encode('utf-8'))
-        self.assertEqual(new_data.get('key2')[2], 'item2'.encode('utf-8'))
+        self.assertEqual(new_data['key1'], 'item1'.encode('utf-8'))
+        self.assertEqual(new_data['key2'][2], 'item2'.encode('utf-8'))
 
     def test_2__str_to_bytes(self):
         data = {'key1': 'item1',
@@ -164,8 +164,8 @@ class WinEventViewerSimpleTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue('key2'.encode('CP1252') in new_data)
         self.assertTrue('key3'.encode('CP1252') in new_data)
 
-        self.assertEqual(new_data.get('key1'.encode('CP1252')), 'item1'.encode('CP1252'))
-        self.assertEqual(new_data.get('key2'.encode('CP1252'))[2], 'item2'.encode('CP1252'))
+        self.assertEqual(new_data['key1'.encode('CP1252')], 'item1'.encode('CP1252'))
+        self.assertEqual(new_data['key2'.encode('CP1252')][2], 'item2'.encode('CP1252'))
 
     def test__get_raw_time(self):
         mock_time = MockTime(2019, 7, 2, 10, 8, 19)
@@ -301,11 +301,11 @@ class WinEventViewerMockTestCase(TestCase, LoaderModuleMockMixin):
                         self.assertEqual(ReadEventLog.call_count, len(handler))
                         self.assertEqual(GetNumberOfEventLogRecords.call_count, len(handler) + 1)
 
-                        self.assertEqual(ret[1][1].get('eventCategory'), 404)
-                        self.assertEqual(ret[2][1].get('stringInserts'), (b'fail...', b'error...'))
-                        self.assertEqual(ret[4][1].get('eventID'), 5)
-                        self.assertEqual(ret[5][1].get('computerName'), b'sky')
-                        self.assertEqual(ret[5][1].get('timeGenerated'), (1997, 8, 29, 2, 14, 0))
+                        self.assertEqual(ret[1][1]['eventCategory'], 404)
+                        self.assertEqual(ret[2][1]['stringInserts'], (b'fail...', b'error...'))
+                        self.assertEqual(ret[4][1]['eventID'], 5),
+                        self.assertEqual(ret[5][1]['computerName'], b'sky')
+                        self.assertEqual(ret[5][1]['timeGenerated'], (1997, 8, 29, 2, 14, 0))
 
     def test_get_events_sorted_by_info(self):
         handler = MockHandler(EVENTS)
@@ -326,22 +326,22 @@ class WinEventViewerMockTestCase(TestCase, LoaderModuleMockMixin):
                         self.assertEqual(ReadEventLog.call_count, len(handler))
                         self.assertEqual(GetNumberOfEventLogRecords.call_count, len(handler) + 1)
 
-                        self.assertEqual(ret.get('eventID').get(5), [{'closingRecordNumber': 0,
-                                                                      'computerName': b'PC',
-                                                                      'data': b'',
-                                                                      'eventCategory': 300,
-                                                                      'eventID': 5,
-                                                                      'eventType': 4,
-                                                                      'recordNumber': 0,
-                                                                      'reserved': 4,
-                                                                      'reservedFlags': 0,
-                                                                      'sid': None,
-                                                                      'sourceName': 0,
-                                                                      'stringInserts': (b'cat', b'm'),
-                                                                      'timeGenerated': (2000, 1, 1, 1, 1, 1),
-                                                                      'timeWritten': (2000, 1, 1, 1, 1, 1)}])
+                        self.assertEqual(ret['eventID'][5], [{'closingRecordNumber': 0,
+                                                              'computerName': b'PC',
+                                                              'data': b'',
+                                                              'eventCategory': 300,
+                                                              'eventID': 5,
+                                                              'eventType': 4,
+                                                              'recordNumber': 0,
+                                                              'reserved': 4,
+                                                              'reservedFlags': 0,
+                                                              'sid': None,
+                                                              'sourceName': 0,
+                                                              'stringInserts': (b'cat', b'm'),
+                                                              'timeGenerated': (2000, 1, 1, 1, 1, 1),
+                                                              'timeWritten': (2000, 1, 1, 1, 1, 1)}])
 
-                        self.assertEqual(ret.get('computerName').get(b'sky'),
+                        self.assertEqual(ret['computerName'][b'sky'],
                                          [{'closingRecordNumber': 0,
                                            'computerName': b'sky',
                                            'data': b'',
@@ -534,7 +534,7 @@ class WinEventViewerDestructiveTestCase(TestCase, LoaderModuleMockMixin):
                                                                                          target_computer=None)):
             event, event_info = ret[0], ret[1]
             for event_part in win_event_viewer.EVENT_PARTS:
-                self.assertEqual(event.get(event_part), event_info.get(event_part))
+                self.assertEqual(event[event_part], event_info[event_part])
 
             for event_part in win_event_viewer.TIME_PARTS:
                 self.assertTrue(event_part in event_info)
@@ -549,8 +549,8 @@ class WinEventViewerDestructiveTestCase(TestCase, LoaderModuleMockMixin):
                                                                                    hour=3,
                                                                                    eventID=37)):
 
-            self.assertEqual(event.get('timeGenerated')[3], 3)
-            self.assertEqual(event.get('eventID'), 37)
+            self.assertEqual(event['timeGenerated'][3], 3)
+            self.assertEqual(event['eventID'], 37)
 
             if number == MAX_EVENT_LOOK_UP:
                 break
@@ -562,7 +562,7 @@ class WinEventViewerDestructiveTestCase(TestCase, LoaderModuleMockMixin):
                                                                                    hour=3,
                                                                                    eventID=37)):
 
-            self.assertTrue(event.get('timeGenerated')[3] == 3 or event.get('eventID') == 37)
+            self.assertTrue(event['timeGenerated'][3] == 3 or event['eventID'] == 37)
 
             if number == MAX_EVENT_LOOK_UP:
                 break
