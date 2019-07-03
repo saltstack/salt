@@ -1112,7 +1112,7 @@ class LocalClient(object):
         else:
             ret_iter = self.get_returns_no_block('salt/job/{0}'.format(jid))
         # iterator for the info of this job
-        jinfo = None
+        jinfo = {}
         jinfo_iter = []
         # open event jids that need to be un-subscribed from later
         open_jids = set()
@@ -1184,7 +1184,7 @@ class LocalClient(object):
                 # unsubscribe from previous find_job ping before sending out
                 # the new broadcast if needed, otherwise long running jobs will
                 # accumulate and be computationally expensive to finish
-                if isinstance(jinfo, dict) and 'jid' in jinfo:
+                if 'jid' in jinfo:
                     self._clean_up_subscriptions(jinfo['jid'])
 
                 # since this is a new ping, no one has responded yet
@@ -1279,7 +1279,7 @@ class LocalClient(object):
                 yield
 
         # unsubscribe to the last open tracking jids
-        if isinstance(jinfo, dict) and 'jid' in jinfo:
+        if 'jid' in jinfo:
             self._clean_up_subscriptions(jinfo['jid'])
         self._clean_up_subscriptions(jid)
 
