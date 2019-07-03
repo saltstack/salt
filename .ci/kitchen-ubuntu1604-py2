@@ -1,4 +1,4 @@
-//// Define the maximum time, in hours, that a test run should run for
+// Define the maximum time, in hours, that a test run should run for
 def testrun_timeout = 6
 // Now define a global pipeline timeout. This is the test run timeout with one(1) additional
 // hour to allow for artifacts to be downloaded, if possible.
@@ -7,24 +7,18 @@ def global_timeout = testrun_timeout + 1;
 def distro_name = 'ubuntu'
 def distro_version = '1604'
 def python_version = 'py2'
-def golden_images_branch = '2018.3'
 def salt_target_branch = '2018.3'
+def golden_images_branch = '2018.3'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
-    [
-        $class: 'ScannerJobProperty', doNotScan: false
-    ],
-    [
-        $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
-    ],
     parameters([
         booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
     ])
 ])
 
-timeout(time: global_timeout, unit: 'HOURS') {
-    node('kitchen-slave') {
+node('kitchen-slave') {
+    timeout(time: global_timeout, unit: 'HOURS') {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
                           accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                           credentialsId: 'AWS_ACCESS_KEY_ID',
@@ -35,10 +29,10 @@ timeout(time: global_timeout, unit: 'HOURS') {
                         'SALT_KITCHEN_PLATFORMS=/var/jenkins/workspace/nox-platforms.yml',
                         'SALT_KITCHEN_VERIFIER=/var/jenkins/workspace/nox-verifier.yml',
                         'SALT_KITCHEN_DRIVER=/var/jenkins/workspace/driver.yml',
-                        "SALT_TARGET_BRANCH=${salt_target_branch}",
                         'NOX_ENV_NAME=runtests-zeromq',
                         'NOX_ENABLE_FROM_FILENAMES=true',
                         'NOX_PASSTHROUGH_OPTS=--ssh-tests',
+                        "SALT_TARGET_BRANCH=${salt_target_branch}",
                         "GOLDEN_IMAGES_CI_BRANCH=${golden_images_branch}",
                         "CODECOV_FLAGS=${distro_name}${distro_version},${python_version}",
                         'PATH=~/.rbenv/shims:/usr/local/rbenv/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin:/root/bin',
@@ -60,11 +54,11 @@ timeout(time: global_timeout, unit: 'HOURS') {
                         stage('checkout-scm') {
                             cleanWs notFailBuild: true
                             checkout scm
+                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
                         }
 
                         // Setup the kitchen required bundle
                         stage('setup-bundle') {
-                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
                             sh 'bundle install --with ec2 windows --without docker macos opennebula vagrant'
                         }
 
@@ -82,11 +76,11 @@ timeout(time: global_timeout, unit: 'HOURS') {
                                 try {
                                     timeout(time: testrun_timeout, unit: 'HOURS') {
                                         stage('Converge VM') {
-                                            sh 'bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM'
+                                            sh 'bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?;"'
                                         }
                                         stage('Run Tests') {
                                             withEnv(["DONT_DOWNLOAD_ARTEFACTS=1"]) {
-                                                sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM'
+                                                sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?;"'
                                             }
                                         }
                                     }
