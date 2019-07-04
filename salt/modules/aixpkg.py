@@ -33,7 +33,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is AIX
     '''
-    if __grains__['os_family'] == 'AIX':
+    if __grains__.get('os_family') == 'AIX':
         return __virtualname__
     return (False,
            'Did not load AIX module on non-AIX OS.')
