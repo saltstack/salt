@@ -1068,7 +1068,7 @@ def recursive_diff(old, new, ignore=None, unordered_lists=False):
     :param mapping/iterable old: Mapping or Iterable to compare from.
     :param mapping/iterable new: Mapping or Iterable to compare to.
     :param list ignore: List of keys to ignore when comparing Mappings.
-    :param bool unordered_lists: Compare lists like sets.
+    :param bool unordered_lists: Compare lists without regard for order.
 
     :return dict: Returns dict with keys 'old' and 'new' containing the differences.
     '''
