@@ -28,6 +28,7 @@ from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
+from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
@@ -996,6 +997,14 @@ def json_query(data, expr):
     return jmespath.search(expr, data)
 
 
+def is_iterable(data):
+    '''
+    Helper function to determine if something is an iterable.
+    Strings are manually excluded.
+    '''
+    return hasattr(data, '__iter__') and not isinstance(data, six.string_types)
+
+
 def _is_not_considered_falsey(value, ignore_types=()):
     '''
     Helper function for filter_falsey to determine if something is not to be
@@ -1039,10 +1048,124 @@ def filter_falsey(data, recurse_depth=None, ignore_types=()):
             for key, value in processed_elements
             if _is_not_considered_falsey(value, ignore_types=ignore_types)
         ])
-    elif hasattr(data, '__iter__') and not isinstance(data, six.string_types):
+    elif is_iterable(data):
         processed_elements = (filter_element(value) for value in data)
         return type(data)([
             value for value in processed_elements
             if _is_not_considered_falsey(value, ignore_types=ignore_types)
         ])
     return data
+
+
+def recursive_diff(old, new, ignore=None, unordered_lists=False):
+    '''
+    Performs a recursive diff on mappings and/or iterables and returns the result
+    in a {'old': values, 'new': values}-style.
+    Compares dicts and sets unordered (obviously), OrderedDicts and Lists ordered
+    (but only if both ``old`` and ``new`` are of the same type),
+    all other Mapping types unordered, and all other iterables ordered.
+
+    :param mapping/iterable old: Mapping or Iterable to compare from.
+    :param mapping/iterable new: Mapping or Iterable to compare to.
+    :param list ignore: List of keys to ignore when comparing Mappings.
+    :param bool unordered_lists: Compare lists like sets.
+
+    :return dict: Returns dict with keys 'old' and 'new' containing the differences.
+    '''
+    ignore = ignore or []
+    res = {}
+    ret_old = copy.deepcopy(old)
+    ret_new = copy.deepcopy(new)
+    print('Comparing {} with {}'.format(old, new))
+    if isinstance(old, OrderedDict) and isinstance(new, OrderedDict):
+        append_old, append_new = [], []
+        if len(old) != len(new):
+            min_length = min(len(old), len(new))
+            # The list coercion is required for Py3
+            append_old = list(old.keys())[min_length:]
+            append_new = list(new.keys())[min_length:]
+        # Compare ordered
+        for (key_old, key_new) in zip(old, new):
+            if key_old == key_new:
+                if key_old in ignore:
+                    del ret_old[key_old]
+                    del ret_new[key_new]
+                else:
+                    res = recursive_diff(
+                        old[key_old],
+                        new[key_new],
+                        ignore=ignore,
+                        unordered_lists=unordered_lists)
+                    if not res:  # Equal
+                        del ret_old[key_old]
+                        del ret_new[key_new]
+                    else:
+                        ret_old[key_old] = res['old']
+                        ret_new[key_new] = res['new']
+            else:
+                if key_old in ignore:
+                    del ret_old[key_old]
+                if key_new in ignore:
+                    del ret_new[key_new]
+        # If the OrderedDicts were of inequal length, add the remaining key/values.
+        for item in append_old:
+            ret_old[item] = old[item]
+        for item in append_new:
+            ret_new[item] = new[item]
+        ret = {'old': ret_old, 'new': ret_new} if ret_old or ret_new else {}
+    elif isinstance(old, Mapping) and isinstance(new, Mapping):
+        # Compare unordered
+        for key in set(list(old) + list(new)):
+            if key in ignore:
+                ret_old.pop(key, None)
+                ret_new.pop(key, None)
+            elif key in old and key in new:
+                res = recursive_diff(
+                    old[key],
+                    new[key],
+                    ignore=ignore,
+                    unordered_lists=unordered_lists)
+                if not res:  # Equal
+                    del ret_old[key]
+                    del ret_new[key]
+                else:
+                    ret_old[key] = res['old']
+                    ret_new[key] = res['new']
+        ret = {'old': ret_old, 'new': ret_new} if ret_old or ret_new else {}
+    elif isinstance(old, set) and isinstance(new, set):
+        ret = {'old': old - new, 'new': new - old} if old - new or new - old else {}
+    elif is_iterable(old) and is_iterable(new):
+        # Create a list so we can edit on an index-basis.
+        list_old = list(ret_old)
+        list_new = list(ret_new)
+        if unordered_lists:
+            for item_old in old:
+                for item_new in new:
+                    res = recursive_diff(item_old, item_new, ignore=ignore, unordered_lists=unordered_lists)
+                    if not res:
+                        list_old.remove(item_old)
+                        list_new.remove(item_new)
+                        continue
+        else:
+            remove_indices = []
+            for index, (iter_old, iter_new) in enumerate(zip(old, new)):
+                res = recursive_diff(
+                    iter_old,
+                    iter_new,
+                    ignore=ignore,
+                    unordered_lists=unordered_lists)
+                if not res:  # Equal
+                    remove_indices.append(index)
+                else:
+                    list_old[index] = res['old']
+                    list_new[index] = res['new']
+            for index in reversed(remove_indices):
+                list_old.pop(index)
+                list_new.pop(index)
+        # Instantiate a new whatever-it-was using the list as iterable source.
+        # This may not be the most optimized in way of speed and memory usage,
+        # but it will work for all iterable types.
+        ret = {'old': type(old)(list_old), 'new': type(new)(list_new)} if list_old or list_new else {}
+    else:
+        ret = {} if old == new else {'old': ret_old, 'new': ret_new}
+    return ret
