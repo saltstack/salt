@@ -1076,7 +1076,6 @@ def recursive_diff(old, new, ignore=None, unordered_lists=False):
     res = {}
     ret_old = copy.deepcopy(old)
     ret_new = copy.deepcopy(new)
-    print('Comparing {} with {}'.format(old, new))
     if isinstance(old, OrderedDict) and isinstance(new, OrderedDict):
         append_old, append_new = [], []
         if len(old) != len(new):
