@@ -690,7 +690,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 source_hash=uppercase_hash
             )
             assert ret[state_name]['result'] is True
-            assert ret[state_name]['pchanges'] == {}
             assert ret[state_name]['changes'] == {}
 
             # Test uppercase source_hash using test=true
@@ -703,7 +702,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 test=True
             )
             assert ret[state_name]['result'] is True
-            assert ret[state_name]['pchanges'] == {}
             assert ret[state_name]['changes'] == {}
 
         finally:
@@ -756,6 +754,87 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # Now make sure that the file is not cached
         result = self.run_function('cp.is_cached', [source, saltenv])
         assert result == '', 'File is still cached at {0}'.format(result)
+
+    @with_tempfile(create=False)
+    @with_tempfile(create=False)
+    def test_file_managed_onchanges(self, file1, file2):
+        '''
+        Test file.managed state with onchanges
+        '''
+        pillar = {'file1': file1,
+                  'file2': file2,
+                  'source': 'salt://testfile',
+                  'req': 'onchanges'}
+
+        # Lay down the file used in the below SLS to ensure that when it is
+        # run, there are no changes.
+        self.run_state(
+            'file.managed',
+            name=pillar['file2'],
+            source=pillar['source'])
+
+        ret = self.repack_state_returns(
+            self.run_function(
+                'state.apply',
+                mods='onchanges_prereq',
+                pillar=pillar,
+                test=True,
+            )
+        )
+        # The file states should both exit with None
+        assert ret['one']['result'] is None, ret['one']['result']
+        assert ret['three']['result'] is True, ret['three']['result']
+        # The first file state should have changes, since a new file was
+        # created. The other one should not, since we already created that file
+        # before applying the SLS file.
+        assert ret['one']['changes']
+        assert not ret['three']['changes'], ret['three']['changes']
+        # The state watching 'one' should have been run due to changes
+        assert ret['two']['comment'] == 'Success!', ret['two']['comment']
+        # The state watching 'three' should not have been run
+        assert ret['four']['comment'] == \
+            'State was not run because none of the onchanges reqs changed', \
+            ret['four']['comment']
+
+    @with_tempfile(create=False)
+    @with_tempfile(create=False)
+    def test_file_managed_prereq(self, file1, file2):
+        '''
+        Test file.managed state with prereq
+        '''
+        pillar = {'file1': file1,
+                  'file2': file2,
+                  'source': 'salt://testfile',
+                  'req': 'prereq'}
+
+        # Lay down the file used in the below SLS to ensure that when it is
+        # run, there are no changes.
+        self.run_state(
+            'file.managed',
+            name=pillar['file2'],
+            source=pillar['source'])
+
+        ret = self.repack_state_returns(
+            self.run_function(
+                'state.apply',
+                mods='onchanges_prereq',
+                pillar=pillar,
+                test=True,
+            )
+        )
+        # The file states should both exit with None
+        assert ret['one']['result'] is None, ret['one']['result']
+        assert ret['three']['result'] is True, ret['three']['result']
+        # The first file state should have changes, since a new file was
+        # created. The other one should not, since we already created that file
+        # before applying the SLS file.
+        assert ret['one']['changes']
+        assert not ret['three']['changes'], ret['three']['changes']
+        # The state watching 'one' should have been run due to changes
+        assert ret['two']['comment'] == 'Success!', ret['two']['comment']
+        # The state watching 'three' should not have been run
+        assert ret['four']['comment'] == 'No changes detected', \
+            ret['four']['comment']
 
     def test_directory(self):
         '''
@@ -3841,7 +3920,7 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
             os.remove(self.name)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
-                raise exc
+                six.reraise(*sys.exc_info())
 
     def run_state(self, *args, **kwargs):
         ret = super(RemoteFileTest, self).run_state(*args, **kwargs)

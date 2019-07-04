@@ -45,6 +45,14 @@ def _load_libcrypto():
             # two checks below
             lib = glob.glob('/opt/local/lib/libcrypto.so*') + glob.glob('/opt/tools/lib/libcrypto.so*')
             lib = lib[0] if len(lib) > 0 else None
+        if not lib and salt.utils.platform.is_aix():
+            if os.path.isdir('/opt/salt/lib'):
+                # preference for Salt installed fileset
+                lib = glob.glob('/opt/salt/lib/libcrypto.so*')
+                lib = lib[0] if len(lib) > 0 else None
+            else:
+                lib = glob.glob('/opt/freeware/lib/libcrypto.so*')
+                lib = lib[0] if len(lib) > 0 else None
         if lib:
             return cdll.LoadLibrary(lib)
         raise OSError('Cannot locate OpenSSL libcrypto')
@@ -57,7 +65,12 @@ def _init_libcrypto():
     libcrypto = _load_libcrypto()
 
     try:
-        libcrypto.OPENSSL_init_crypto()
+        # If we're greater than OpenSSL 1.1.0, no need to to the init
+        openssl_version_num = libcrypto.OpenSSL_version_num
+        if callable(openssl_version_num):
+            openssl_version_num = openssl_version_num()
+        if openssl_version_num < 0x10100000:
+            libcrypto.OPENSSL_init_crypto()
     except AttributeError:
         # Support for OpenSSL < 1.1 (OPENSSL_API_COMPAT < 0x10100000L)
         libcrypto.OPENSSL_no_config()
@@ -102,9 +115,11 @@ class RSAX931Signer(object):
         if not libcrypto.PEM_read_bio_RSAPrivateKey(self._bio, pointer(self._rsa), None, None):
             raise ValueError('invalid RSA private key')
 
+    # pylint: disable=W1701
     def __del__(self):
         libcrypto.BIO_free(self._bio)
         libcrypto.RSA_free(self._rsa)
+    # pylint: enable=W1701
 
     def sign(self, msg):
         '''
@@ -140,9 +155,11 @@ class RSAX931Verifier(object):
         if not libcrypto.PEM_read_bio_RSA_PUBKEY(self._bio, pointer(self._rsa), None, None):
             raise ValueError('invalid RSA public key')
 
+    # pylint: disable=W1701
     def __del__(self):
         libcrypto.BIO_free(self._bio)
         libcrypto.RSA_free(self._rsa)
+    # pylint: enable=W1701
 
     def verify(self, signed):
         '''

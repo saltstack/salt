@@ -39,6 +39,7 @@ from salt.exceptions import (
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
+from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
 OPKG_CONFDIR = '/etc/opkg'
@@ -153,6 +154,9 @@ def __virtual__():
         if not os.listdir(NILRT_RESTARTCHECK_STATE_PATH):
             _update_nilrt_restart_state()
         return __virtualname__
+
+    if os.path.isdir(OPKG_CONFDIR):
+        return __virtualname__
     return False, "Module opkg only works on OpenEmbedded based systems"
 
 
@@ -175,7 +179,7 @@ def latest_version(*names, **kwargs):
     '''
     refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
-    if len(names) == 0:
+    if not names:
         return ''
 
     ret = {}
@@ -474,7 +478,7 @@ def install(name=None,
     to_downgrade = []
 
     _append_noaction_if_testmode(cmd_prefix, **kwargs)
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
     elif pkg_type == 'file':
         if reinstall:
@@ -618,12 +622,12 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     remove_dependencies
         Remove package and all dependencies
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     auto_remove_deps
         Remove packages that were installed automatically to satisfy dependencies
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     Returns a dict containing the changes.
 
@@ -739,6 +743,7 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
            }
 
     errors = []
+
     if salt.utils.data.is_true(refresh):
         refresh_db()
 
@@ -1077,7 +1082,7 @@ def _process_info_installed_output(out, filter_attrs):
             # This is a continuation of the last attr
             if filter_attrs is None or attr in filter_attrs:
                 line = line.strip()
-                if len(attrs[attr]):
+                if attrs[attr]:
                     # If attr is empty, don't add leading newline
                     attrs[attr] += '\n'
                 attrs[attr] += line
@@ -1239,6 +1244,21 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):  # pylint: disable=un
     return None
 
 
+def _set_repo_option(repo, option):
+    '''
+    Set the option to repo
+    '''
+    if not option:
+        return
+    opt = option.split('=')
+    if len(opt) != 2:
+        return
+    if opt[0] == 'trusted':
+        repo['trusted'] = opt[1] == 'yes'
+    else:
+        repo[opt[0]] = opt[1]
+
+
 def _set_repo_options(repo, options):
     '''
     Set the options to the repo.
@@ -1248,13 +1268,42 @@ def _set_repo_options(repo, options):
     for option in options:
         splitted = re.split(pattern, option)
         for opt in splitted:
-            if opt:
-                opt = opt.split('=')
-                if len(opt) == 2:
-                    if opt[0] == 'trusted':
-                        repo['trusted'] = opt[1] == 'yes'
-                    else:
-                        repo[opt[0]] = opt[1]
+            _set_repo_option(repo, opt)
+
+
+def _create_repo(line, filename):
+    '''
+    Create repo
+    '''
+    repo = {}
+    if line.startswith('#'):
+        repo['enabled'] = False
+        line = line[1:]
+    else:
+        repo['enabled'] = True
+    cols = salt.utils.args.shlex_split(line.strip())
+    repo['compressed'] = not cols[0] in 'src'
+    repo['name'] = cols[1]
+    repo['uri'] = cols[2]
+    repo['file'] = os.path.join(OPKG_CONFDIR, filename)
+    if len(cols) > 3:
+        _set_repo_options(repo, cols[3:])
+    return repo
+
+
+def _read_repos(conf_file, repos, filename, regex):
+    '''
+    Read repos from configuration file
+    '''
+    for line in conf_file:
+        line = salt.utils.stringutils.to_unicode(line)
+        if not regex.search(line):
+            continue
+        repo = _create_repo(line, filename)
+
+        # do not store duplicated uri's
+        if repo['uri'] not in repos:
+            repos[repo['uri']] = [repo]
 
 
 def list_repos(**kwargs):  # pylint: disable=unused-argument
@@ -1270,35 +1319,14 @@ def list_repos(**kwargs):  # pylint: disable=unused-argument
     repos = {}
     regex = re.compile(REPO_REGEXP)
     for filename in os.listdir(OPKG_CONFDIR):
-        if filename.endswith(".conf"):
-            with salt.utils.files.fopen(os.path.join(OPKG_CONFDIR, filename)) as conf_file:
-                for line in conf_file:
-                    line = salt.utils.stringutils.to_unicode(line)
-                    if regex.search(line):
-                        repo = {}
-                        if line.startswith('#'):
-                            repo['enabled'] = False
-                            line = line[1:]
-                        else:
-                            repo['enabled'] = True
-                        cols = salt.utils.args.shlex_split(line.strip())
-                        if cols[0] in 'src':
-                            repo['compressed'] = False
-                        else:
-                            repo['compressed'] = True
-                        repo['name'] = cols[1]
-                        repo['uri'] = cols[2]
-                        repo['file'] = os.path.join(OPKG_CONFDIR, filename)
-                        if len(cols) > 3:
-                            _set_repo_options(repo, cols[3:])
-
-                        # do not store duplicated uri's
-                        if repo['uri'] not in repos:
-                            repos[repo['uri']] = [repo]
+        if not filename.endswith(".conf"):
+            continue
+        with salt.utils.files.fopen(os.path.join(OPKG_CONFDIR, filename)) as conf_file:
+            _read_repos(conf_file, repos, filename, regex)
     return repos
 
 
-def get_repo(alias, **kwargs):  # pylint: disable=unused-argument
+def get_repo(repo, **kwargs):  # pylint: disable=unused-argument
     '''
     Display a repo from the ``/etc/opkg/*.conf``
 
@@ -1306,19 +1334,19 @@ def get_repo(alias, **kwargs):  # pylint: disable=unused-argument
 
     .. code-block:: bash
 
-        salt '*' pkg.get_repo alias
+        salt '*' pkg.get_repo repo
     '''
     repos = list_repos()
 
     if repos:
         for source in six.itervalues(repos):
             for sub in source:
-                if sub['name'] == alias:
+                if sub['name'] == repo:
                     return sub
     return {}
 
 
-def _del_repo_from_file(alias, filepath):
+def _del_repo_from_file(repo, filepath):
     '''
     Remove a repo from filepath
     '''
@@ -1331,7 +1359,7 @@ def _del_repo_from_file(alias, filepath):
                 if line.startswith('#'):
                     line = line[1:]
                 cols = salt.utils.args.shlex_split(line.strip())
-                if alias != cols[1]:
+                if repo != cols[1]:
                     output.append(salt.utils.stringutils.to_str(line))
     with salt.utils.files.fopen(filepath, 'w') as fhandle:
         fhandle.writelines(output)
@@ -1348,26 +1376,26 @@ def _set_trusted_option_if_needed(repostr, trusted):
     return repostr
 
 
-def _add_new_repo(alias, uri, compressed, enabled=True, trusted=None):
+def _add_new_repo(repo, properties):
     '''
     Add a new repo entry
     '''
-    repostr = '# ' if not enabled else ''
-    repostr += 'src/gz ' if compressed else 'src '
-    if ' ' in alias:
-        repostr += '"' + alias + '" '
+    repostr = '# ' if not properties.get('enabled') else ''
+    repostr += 'src/gz ' if properties.get('compressed') else 'src '
+    if ' ' in repo:
+        repostr += '"' + repo + '" '
     else:
-        repostr += alias + ' '
-    repostr += uri
-    repostr = _set_trusted_option_if_needed(repostr, trusted)
+        repostr += repo + ' '
+    repostr += properties.get('uri')
+    repostr = _set_trusted_option_if_needed(repostr, properties.get('trusted'))
     repostr += '\n'
-    conffile = os.path.join(OPKG_CONFDIR, alias + '.conf')
+    conffile = os.path.join(OPKG_CONFDIR, repo + '.conf')
 
     with salt.utils.files.fopen(conffile, 'a') as fhandle:
         fhandle.write(salt.utils.stringutils.to_str(repostr))
 
 
-def _mod_repo_in_file(alias, repostr, filepath):
+def _mod_repo_in_file(repo, repostr, filepath):
     '''
     Replace a repo entry in filepath with repostr
     '''
@@ -1377,7 +1405,7 @@ def _mod_repo_in_file(alias, repostr, filepath):
             cols = salt.utils.args.shlex_split(
                 salt.utils.stringutils.to_unicode(line).strip()
             )
-            if alias not in cols:
+            if repo not in cols:
                 output.append(line)
             else:
                 output.append(salt.utils.stringutils.to_str(repostr + '\n'))
@@ -1385,7 +1413,7 @@ def _mod_repo_in_file(alias, repostr, filepath):
         fhandle.writelines(output)
 
 
-def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
+def del_repo(repo, **kwargs):  # pylint: disable=unused-argument
     '''
     Delete a repo from ``/etc/opkg/*.conf``
 
@@ -1396,22 +1424,22 @@ def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
 
     .. code-block:: bash
 
-        salt '*' pkg.del_repo alias
+        salt '*' pkg.del_repo repo
     '''
     refresh = salt.utils.data.is_true(kwargs.get('refresh', True))
     repos = list_repos()
     if repos:
         deleted_from = dict()
-        for repo in repos:
-            source = repos[repo][0]
-            if source['name'] == alias:
+        for repository in repos:
+            source = repos[repository][0]
+            if source['name'] == repo:
                 deleted_from[source['file']] = 0
-                _del_repo_from_file(alias, source['file'])
+                _del_repo_from_file(repo, source['file'])
 
         if deleted_from:
             ret = ''
-            for repo in repos:
-                source = repos[repo][0]
+            for repository in repos:
+                source = repos[repository][0]
                 if source['file'] in deleted_from:
                     deleted_from[source['file']] += 1
             for repo_file, count in six.iteritems(deleted_from):
@@ -1423,22 +1451,22 @@ def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
                         os.remove(repo_file)
                     except OSError:
                         pass
-                ret += msg.format(alias, repo_file)
+                ret += msg.format(repo, repo_file)
             if refresh:
                 refresh_db()
             return ret
 
-    return "Repo {0} doesn't exist in the opkg repo lists".format(alias)
+    return "Repo {0} doesn't exist in the opkg repo lists".format(repo)
 
 
-def mod_repo(alias, **kwargs):
+def mod_repo(repo, **kwargs):
     '''
     Modify one or more values for a repo.  If the repo does not exist, it will
     be created, so long as uri is defined.
 
     The following options are available to modify a repo definition:
 
-    alias
+    repo
         alias by which opkg refers to the repo.
     uri
         the URI to the repo.
@@ -1454,8 +1482,8 @@ def mod_repo(alias, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' pkg.mod_repo alias uri=http://new/uri
-        salt '*' pkg.mod_repo alias enabled=False
+        salt '*' pkg.mod_repo repo uri=http://new/uri
+        salt '*' pkg.mod_repo repo enabled=False
     '''
     repos = list_repos()
     found = False
@@ -1463,9 +1491,9 @@ def mod_repo(alias, **kwargs):
     if 'uri' in kwargs:
         uri = kwargs['uri']
 
-    for repo in repos:
-        source = repos[repo][0]
-        if source['name'] == alias:
+    for repository in repos:
+        source = repos[repository][0]
+        if source['name'] == repo:
             found = True
             repostr = ''
             if 'enabled' in kwargs and not kwargs['enabled']:
@@ -1474,7 +1502,7 @@ def mod_repo(alias, **kwargs):
                 repostr += 'src/gz ' if kwargs['compressed'] else 'src'
             else:
                 repostr += 'src/gz' if source['compressed'] else 'src'
-            repo_alias = kwargs['alias'] if 'alias' in kwargs else alias
+            repo_alias = kwargs['alias'] if 'alias' in kwargs else repo
             if ' ' in repo_alias:
                 repostr += ' "{0}"'.format(repo_alias)
             else:
@@ -1483,7 +1511,7 @@ def mod_repo(alias, **kwargs):
             trusted = kwargs.get('trusted')
             repostr = _set_trusted_option_if_needed(repostr, trusted) if trusted is not None else \
                 _set_trusted_option_if_needed(repostr, source.get('trusted'))
-            _mod_repo_in_file(alias, repostr, source['file'])
+            _mod_repo_in_file(repo, repostr, source['file'])
         elif uri and source['uri'] == uri:
             raise CommandExecutionError(
                 'Repository \'{0}\' already exists as \'{1}\'.'.format(uri, source['name']))
@@ -1492,12 +1520,14 @@ def mod_repo(alias, **kwargs):
         # Need to add a new repo
         if 'uri' not in kwargs:
             raise CommandExecutionError(
-                'Repository \'{0}\' not found and no URI passed to create one.'.format(alias))
+                'Repository \'{0}\' not found and no URI passed to create one.'.format(repo))
+        properties = {'uri': kwargs['uri']}
         # If compressed is not defined, assume True
-        compressed = kwargs['compressed'] if 'compressed' in kwargs else True
+        properties['compressed'] = kwargs['compressed'] if 'compressed' in kwargs else True
         # If enabled is not defined, assume True
-        enabled = kwargs['enabled'] if 'enabled' in kwargs else True
-        _add_new_repo(alias, kwargs['uri'], compressed, enabled, kwargs.get('trusted'))
+        properties['enabled'] = kwargs['enabled'] if 'enabled' in kwargs else True
+        properties['trusted'] = kwargs.get('trusted')
+        _add_new_repo(repo, properties)
 
     if 'refresh' in kwargs:
         refresh_db()

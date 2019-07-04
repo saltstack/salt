@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-SSH" "1" "Sep 21, 2018" "2018.3.4" "Salt"
+.TH "SALT-SSH" "1" "Apr 17, 2019" "2018.3.0-1107-g2b5d655" "Salt"
 .SH NAME
 salt-ssh \- salt-ssh Documentation
 .
@@ -273,14 +273,11 @@ Pass in an alternative outputter to display the return of data. This
 outputter can be any of the available outputters:
 .INDENT 7.0
 .INDENT 3.5
-\fBgrains\fP, \fBhighstate\fP, \fBjson\fP, \fBkey\fP, \fBoverstatestage\fP, \fBpprint\fP, \fBraw\fP, \fBtxt\fP, \fByaml\fP
+\fBhighstate\fP, \fBjson\fP, \fBkey\fP, \fBoverstatestage\fP, \fBpprint\fP, \fBraw\fP, \fBtxt\fP, \fByaml\fP, and many others\&.
 .UNINDENT
 .UNINDENT
 .sp
-Some outputters are formatted only for data returned from specific
-functions; for instance, the \fBgrains\fP outputter will not work for non\-grains
-data.
-.sp
+Some outputters are formatted only for data returned from specific functions.
 If an outputter is used that does not support the data passed into it, then
 Salt will fall back on the \fBpprint\fP outputter and display the return data
 using the Python \fBpprint\fP standard library module.

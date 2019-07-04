@@ -94,8 +94,6 @@ def managed(name,
 
     compliance_report: ``False``
         Return the compliance report in the comment.
-        The compliance report structured object can be found however
-        in the ``pchanges`` field of the output (not displayed on the CLI).
 
         .. versionadded:: 2017.7.3
 

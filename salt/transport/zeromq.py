@@ -32,7 +32,7 @@ import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
 from salt.ext import six
-from salt.exceptions import SaltReqTimeoutError
+from salt.exceptions import SaltReqTimeoutError, SaltException
 from salt._compat import ipaddress
 
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO, LIBZMQ_VERSION_INFO
@@ -204,6 +204,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                                                         args=(self.opts, self.master_uri,),
                                                         kwargs={'io_loop': self._io_loop})
 
+    # pylint: disable=W1701
     def __del__(self):
         '''
         Since the message_client creates sockets and assigns them to the IOLoop we have to
@@ -211,15 +212,22 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         '''
         if hasattr(self, 'message_client'):
             self.message_client.destroy()
+    # pylint: enable=W1701
 
     @property
     def master_uri(self):
+        if 'master_uri' in self.opts:
+            return self.opts['master_uri']
+
+        # if by chance master_uri is not there..
         if 'master_ip' in self.opts:
             return _get_master_uri(self.opts['master_ip'],
                                    self.opts['master_port'],
                                    source_ip=self.opts.get('source_ip'),
                                    source_port=self.opts.get('source_ret_port'))
-        return self.opts['master_uri']
+
+        # if we've reached here something is very abnormal
+        raise SaltException('ReqChannel: missing master_uri/master_ip in self.opts')
 
     def _package_load(self, load):
         return {
@@ -431,8 +439,10 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @tornado.gen.coroutine
@@ -466,8 +476,9 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             payload = self.serial.loads(messages[0])
         # 2 includes a header which says who should do it
         elif messages_len == 2:
-            if messages[0] not in ('broadcast', self.hexid):
-                log.debug('Publish received for not this minion: %s', messages[0])
+            message_target = salt.utils.stringutils.to_str(messages[0])
+            if message_target not in ('broadcast', self.hexid):
+                log.debug('Publish received for not this minion: %s', message_target)
                 raise tornado.gen.Return(None)
             payload = self.serial.loads(messages[1])
         else:
@@ -549,7 +560,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
             except zmq.ZMQError as exc:
                 if exc.errno == errno.EINTR:
                     continue
-                raise exc
+                six.reraise(*sys.exc_info())
             except (KeyboardInterrupt, SystemExit):
                 break
 
@@ -849,7 +860,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                                 log.trace('Sending filtered data over publisher %s', pub_uri)
                                 # zmq filters are substring match, hash the topic
                                 # to avoid collisions
-                                htopic = hashlib.sha1(topic).hexdigest()
+                                htopic = salt.utils.stringutils.to_bytes(hashlib.sha1(salt.utils.stringutils.to_bytes(topic)).hexdigest())
                                 pub_sock.send(htopic, flags=zmq.SNDMORE)
                                 pub_sock.send(payload)
                                 log.trace('Filtered data has been sent')
@@ -857,7 +868,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                         else:
                             # TODO: constants file for "broadcast"
                             log.trace('Sending broadcasted data over publisher %s', pub_uri)
-                            pub_sock.send('broadcast', flags=zmq.SNDMORE)
+                            pub_sock.send(b'broadcast', flags=zmq.SNDMORE)
                             pub_sock.send(payload)
                             log.trace('Broadcasted data has been sent')
                     else:
@@ -867,7 +878,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                 except zmq.ZMQError as exc:
                     if exc.errno == errno.EINTR:
                         continue
-                    raise exc
+                    six.reraise(*sys.exc_info())
 
         except KeyboardInterrupt:
             log.trace('Publish daemon caught Keyboard interupt, tearing down')
@@ -982,8 +993,10 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
     def __init__(self, opts, args=None, kwargs=None):
         super(AsyncReqMessageClientPool, self).__init__(AsyncReqMessageClient, opts, args=args, kwargs=kwargs)
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
     def destroy(self):
         for message_client in self.message_clients:
@@ -1053,8 +1066,10 @@ class AsyncReqMessageClient(object):
         if self.context.closed is False:
             self.context.term()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
     def _init_socket(self):
         if hasattr(self, 'stream'):

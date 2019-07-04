@@ -34,7 +34,7 @@ wrap conditional or redundant state elements:
         {% endif %}
         - source: salt://motd
 
-In this example, the first if block will only be evaluated on minions that
+In this example, the first **if** block will only be evaluated on minions that
 aren't running FreeBSD, and the second block changes the file name based on the
 *os* grain.
 
@@ -656,7 +656,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return is an iterable object is already sorted.
+Return ``True`` if an iterable object is already sorted.
 
 Example:
 
@@ -690,7 +690,7 @@ Returns:
 
 .. code-block:: python
 
-  {'new': 4, 'old': 3}
+  {'new': [4], 'old': [3]}
 
 
 .. jinja_ref:: compare_dicts
@@ -706,7 +706,7 @@ Example:
 
 .. code-block:: jinja
 
-  {{ {'a': 'b'} | compare_lists({'a': 'c'}) }}
+  {{ {'a': 'b'} | compare_dicts({'a': 'c'}) }}
 
 Returns:
 
@@ -722,7 +722,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return True if the value is hexazecimal.
+Return ``True`` if the value is hexadecimal.
 
 Example:
 
@@ -746,7 +746,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return True if a text contains whitespaces.
+Return ``True`` if a text contains whitespaces.
 
 Example:
 
@@ -770,7 +770,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return is a substring is found in a list of string values.
+Return ``True`` if a substring is found in a list of string values.
 
 Example:
 
