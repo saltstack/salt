@@ -105,6 +105,12 @@ def present(name,
             ret['comment'] = "Mongo Err: {0}".format(users[1])
             return ret
 
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = ('User {0} is already present and should be updated if neccesary.'
+                    ).format(name)
+            return ret
+
         # check each user occurrence
         for usr in users:
             # prepare empty list for current roles
