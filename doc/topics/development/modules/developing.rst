@@ -208,7 +208,7 @@ each file. Here is an example from salt/modules/cp.py:
 
 __utils__
 ---------
-Defined in: Cloud, Engine, Execution, File Server, Pillar, Proxy, Runner, SDB.
+Defined in: Cloud, Engine, Execution, File Server, Pillar, Proxy, Roster, Runner, SDB.
 
 __proxy__
 ---------
@@ -217,6 +217,11 @@ Defined in: Beacon, Engine, Execution, Executor, Proxy, Renderer, Returner, Stat
 __runners__
 -----------
 Defined in: Engine, Roster, Thorium
+
+__executors__
+-------------
+
+Defined in: Executor
 
 __ret__
 -------
