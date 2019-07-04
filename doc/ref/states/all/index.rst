@@ -78,6 +78,7 @@ state modules
     cmd
     composer
     consul
+    cpan
     cron
     cryptdev
     csf
