@@ -1083,7 +1083,7 @@ def verify(text=None,
 
     if trustmodel and trustmodel not in trustmodels:
         msg = 'Invalid trustmodel defined: {}. Use one of: {}'.format(trustmodel, ', '.join(trustmodels))
-        log.warn(msg)
+        log.warning(msg)
         return {'res': False, 'message': msg}
 
     extra_args = []

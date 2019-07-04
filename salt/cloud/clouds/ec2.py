@@ -4895,7 +4895,7 @@ def get_password_data(
 
     if not HAS_M2 and not HAS_PYCRYPTO:
         if 'key' in kwargs or 'key_file' in kwargs:
-            log.warn("No crypto library is installed, can not decrypt password")
+            log.warning("No crypto library is installed, can not decrypt password")
         return ret
 
     if 'key' not in kwargs:
