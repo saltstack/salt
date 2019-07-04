@@ -1222,3 +1222,44 @@ class FilterRecursiveDiff(TestCase):
             expected_result,
             salt.utils.data.recursive_diff(dict_one, dict_two)
         )
+
+    def test_ignore_missing_keys_dict(self):
+        '''
+        Test case ignoring missing keys on a comparison of dicts.
+        '''
+        dict_one = {'foo': 1, 'bar': 2, 'baz': 3}
+        dict_two = {'bar': 3}
+        expected_result = {'old': {'bar': 2}, 'new': {'bar': 3}}
+        self.assertEqual(
+            expected_result,
+            salt.utils.data.recursive_diff(dict_one, dict_two, ignore_missing_keys=True)
+        )
+
+    def test_ignore_missing_keys_ordered_dict(self):
+        '''
+        Test case not ignoring missing keys on a comparison of OrderedDicts.
+        '''
+        odict_one = OrderedDict([('foo', 1), ('bar', 2), ('baz', 3)])
+        odict_two = OrderedDict([('bar', 3)])
+        expected_result = {'old': odict_one, 'new': odict_two}
+        self.assertEqual(
+            expected_result,
+            salt.utils.data.recursive_diff(odict_one, odict_two, ignore_missing_keys=True)
+        )
+
+    def test_ignore_missing_keys_recursive(self):
+        '''
+        Test case ignoring missing keys on a comparison of nested dicts.
+        '''
+        dict_one = {'foo': {'bar': 2, 'baz': 3}}
+        dict_two = {'foo': {'baz': 3}}
+        expected_result = {}
+        self.assertEqual(
+            expected_result,
+            salt.utils.data.recursive_diff(dict_one, dict_two, ignore_missing_keys=True)
+        )
+        dit_two = {}
+        self.assertEqual(
+            expected_result,
+            salt.utils.data.recursive_diff(dict_one, dict_two, ignore_missing_keys=True)
+        )

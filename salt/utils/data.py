@@ -1057,7 +1057,7 @@ def filter_falsey(data, recurse_depth=None, ignore_types=()):
     return data
 
 
-def recursive_diff(old, new, ignore=None, unordered_lists=False):
+def recursive_diff(old, new, ignore=None, unordered_lists=False, ignore_missing_keys=False):
     '''
     Performs a recursive diff on mappings and/or iterables and returns the result
     in a {'old': values, 'new': values}-style.
@@ -1069,6 +1069,8 @@ def recursive_diff(old, new, ignore=None, unordered_lists=False):
     :param mapping/iterable new: Mapping or Iterable to compare to.
     :param list ignore: List of keys to ignore when comparing Mappings.
     :param bool unordered_lists: Compare lists without regard for order.
+    :param bool ignore_missing_keys: Do not return keys only present in ``old``
+        but missing in ``new``. Only works for regular dicts.
 
     :return dict: Returns dict with keys 'old' and 'new' containing the differences.
     '''
@@ -1094,7 +1096,8 @@ def recursive_diff(old, new, ignore=None, unordered_lists=False):
                         old[key_old],
                         new[key_new],
                         ignore=ignore,
-                        unordered_lists=unordered_lists)
+                        unordered_lists=unordered_lists,
+                        ignore_missing_keys=ignore_missing_keys)
                     if not res:  # Equal
                         del ret_old[key_old]
                         del ret_new[key_new]
@@ -1118,12 +1121,15 @@ def recursive_diff(old, new, ignore=None, unordered_lists=False):
             if key in ignore:
                 ret_old.pop(key, None)
                 ret_new.pop(key, None)
+            elif ignore_missing_keys and key in old and key not in new:
+                del ret_old[key]
             elif key in old and key in new:
                 res = recursive_diff(
                     old[key],
                     new[key],
                     ignore=ignore,
-                    unordered_lists=unordered_lists)
+                    unordered_lists=unordered_lists,
+                    ignore_missing_keys=ignore_missing_keys)
                 if not res:  # Equal
                     del ret_old[key]
                     del ret_new[key]
@@ -1140,7 +1146,12 @@ def recursive_diff(old, new, ignore=None, unordered_lists=False):
         if unordered_lists:
             for item_old in old:
                 for item_new in new:
-                    res = recursive_diff(item_old, item_new, ignore=ignore, unordered_lists=unordered_lists)
+                    res = recursive_diff(
+                        item_old,
+                        item_new,
+                        ignore=ignore,
+                        unordered_lists=unordered_lists,
+                        ignore_missing_keys=ignore_missing_keys)
                     if not res:
                         list_old.remove(item_old)
                         list_new.remove(item_new)
