@@ -28,6 +28,7 @@ from salt.ext import six
 from salt._compat import ipaddress
 from salt.utils.network import parse_host_port
 from salt.ext.six.moves import range
+from salt.template import SLS_ENCODING
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 import salt.transport.client
 import salt.defaults.exitcodes
@@ -822,11 +823,11 @@ class SMinion(MinionBase):
                 penv = 'base'
             cache_top = {penv: {self.opts['id']: ['cache']}}
             with salt.utils.files.fopen(ptop, 'wb') as fp_:
-                salt.utils.yaml.safe_dump(cache_top, fp_)
+                salt.utils.yaml.safe_dump(cache_top, fp_, encoding=SLS_ENCODING)
                 os.chmod(ptop, 0o600)
             cache_sls = os.path.join(pdir, 'cache.sls')
             with salt.utils.files.fopen(cache_sls, 'wb') as fp_:
-                salt.utils.yaml.safe_dump(self.opts['pillar'], fp_)
+                salt.utils.yaml.safe_dump(self.opts['pillar'], fp_, encoding=SLS_ENCODING)
                 os.chmod(cache_sls, 0o600)
 
     def gen_modules(self, initial_load=False):
