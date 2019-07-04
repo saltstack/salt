@@ -7,6 +7,10 @@ Custom YAML loading in Salt
 from __future__ import absolute_import, print_function, unicode_literals
 import warnings
 
+# Import Salt libs
+import salt.utils.stringutils
+
+# Import 3rd-party libs
 import yaml  # pylint: disable=blacklisted-import
 from yaml.nodes import MappingNode, SequenceNode
 from yaml.constructor import ConstructorError
@@ -18,10 +22,6 @@ try:
 except Exception:
     pass
 
-import salt.utils.stringutils
-
-# Import 3rd-party libs
-from salt.ext import six
 
 __all__ = ['SaltYamlSafeLoader', 'load', 'safe_load']
 

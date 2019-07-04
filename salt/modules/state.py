@@ -17,6 +17,7 @@ import logging
 import os
 import shutil
 import sys
+import fnmatch
 import tarfile
 import tempfile
 import time
