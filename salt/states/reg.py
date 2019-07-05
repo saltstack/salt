@@ -913,7 +913,7 @@ def imported(name, use_32bit_registry=False):
         err_msg = operation_data
         ret['comment'] = err_msg
         ret['result'] = False
-        return
+        return ret
     # retest
     (result, post_operation_data) = _imported_get_change_requirements(reference_data)
     if not result:
