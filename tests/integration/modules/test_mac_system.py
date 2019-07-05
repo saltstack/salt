@@ -128,6 +128,7 @@ class MacSystemModuleTest(ModuleCase):
             'Invalid String Value for Enabled',
             self.run_function('system.set_remote_events', ['spongebob']))
 
+    @skipIf(salt.utils.platform.is_darwin() and six.PY3, 'This test hangs on OS X on Py3')
     @destructiveTest
     def test_get_set_computer_name(self):
         '''
