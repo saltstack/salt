@@ -527,7 +527,7 @@ would only fetch branches and tags (the default).
 Global Remotes
 ==============
 
-.. versionadded:: 2018.3.0
+.. versionadded:: 2018.3.0 for all_saltenvs, neon for fallback
 
 The ``all_saltenvs`` per-remote configuration parameter overrides the logic
 Salt uses to map branches/tags to fileserver environments (i.e. saltenvs). This
@@ -539,7 +539,9 @@ allows a single branch/tag to appear in *all* GitFS saltenvs.
    environment defined via some other fileserver backend (e.g.
    :conf_master:`file_roots`).
 
-This is very useful in particular when working with :ref:`salt formulas
+The ``fallback`` global or per-remote configuration can also be used.
+
+Those are very useful in particular when working with :ref:`salt formulas
 <conventions-formula>`. Prior to the addition of this feature, it was necessary
 to push a branch/tag to the remote repo for each saltenv in which that formula
 was to be used. If the formula needed to be updated, this update would need to
@@ -554,6 +556,15 @@ single branch.
     gitfs_remotes:
       - http://foo.com/quux.git:
         - all_saltenvs: anything
+
+If you want to also test working branches of the formula repository, use
+``fallback``:
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - http://foo.com/quux.git:
+        - fallback: anything
 
 .. _gitfs-update-intervals:
 

@@ -21,19 +21,26 @@ import salt.utils.verify
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six import string_types
 
-KNOWN_BINARY_NAMES = frozenset([
-    'pyvenv-{0}.{1}'.format(*sys.version_info[:2]),
-    'virtualenv-{0}.{1}'.format(*sys.version_info[:2]),
-    'pyvenv{0}'.format(sys.version_info[0]),
-    'virtualenv{0}'.format(sys.version_info[0]),
-    'pyvenv',
-    'virtualenv',
-])
+if sys.version_info >= (3, 6):
+    KNOWN_BINARY_NAMES = frozenset([
+        'virtualenv-{0}.{1}'.format(*sys.version_info[:2]),
+        'virtualenv{0}'.format(sys.version_info[0]),
+        'virtualenv',
+    ])
+else:
+    KNOWN_BINARY_NAMES = frozenset([
+        'pyvenv-{0}.{1}'.format(*sys.version_info[:2]),
+        'virtualenv-{0}.{1}'.format(*sys.version_info[:2]),
+        'pyvenv{0}'.format(sys.version_info[0]),
+        'virtualenv{0}'.format(sys.version_info[0]),
+        'pyvenv',
+        'virtualenv',
+    ])
 
 log = logging.getLogger(__name__)
 
 __opts__ = {
-    'venv_bin': salt.utils.path.which_bin(KNOWN_BINARY_NAMES) or 'virtualenv'
+    'venv_bin': salt.utils.path.which_bin(KNOWN_BINARY_NAMES)
 }
 
 __pillar__ = {}
@@ -139,12 +146,14 @@ def create(path,
         salt '*' virtualenv.create /path/to/new/virtualenv
     '''
     if venv_bin is None:
+        venv_bin = __pillar__.get('venv_bin') or __opts__.get('venv_bin')
         # Beginning in 3.6, pyvenv has been deprecated
         # in favor of "python3 -m venv"
-        if sys.version_info >= (3, 6):
-            venv_bin = ['python3', '-m', 'venv']
-        else:
-            venv_bin = __pillar__.get('venv_bin') or __opts__.get('venv_bin')
+        if venv_bin is None:
+            if sys.version_info >= (3, 6):
+                venv_bin = ['python3', '-m', 'venv']
+            else:
+                venv_bin = 'virtualenv'
 
     if not isinstance(venv_bin, list):
         cmd = [venv_bin]
