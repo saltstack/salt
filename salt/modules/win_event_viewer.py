@@ -67,8 +67,10 @@ def __virtual__():
 
 def _change_str_to_bytes(data, encoding='utf-8', encode_keys=False):
     '''
-    Will make string objects into byte objects.
-    Warning this function will destroy the data object and objects that data links to.
+    Convert string objects to byte objects.
+
+    .. warning::
+        this function will destroy the data object and objects that data links to.
 
     data
         object
@@ -190,7 +192,9 @@ def _close_event_handler(handler):
 def get_event_generator(log_name, target_computer=None, raw=False):
     '''
     Will get all log events one by one.
-    Warning events are not in exact order.
+
+    .. warning::
+        Events are not in exact order.
 
     log_name
         str
@@ -228,7 +232,7 @@ def get_event_generator(log_name, target_computer=None, raw=False):
 
 def get_events(log_name, target_computer=None, raw=False):
     '''
-    Will make a tuple of log events.
+    Convert pywinypes.datetime into a TimeTuple.
 
     log_name:
         str
@@ -376,7 +380,9 @@ def log_event(application_name, event_id, **kwargs):
 def clear_log(log_name, target_computer=None):
     '''
     Clears event log.
-    Note that a clear log event will be add it after the log was clear
+
+    .. note::
+        that a clear log event will be add it after the log was clear
 
     log_name
         str
