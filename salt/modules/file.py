@@ -345,7 +345,7 @@ def user_to_uid(user):
         if isinstance(user, int):
             return user
         return pwd.getpwnam(user).pw_uid
-    except (KeyError, NameError):
+    except KeyError:
         return ''
 
 
