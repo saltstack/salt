@@ -179,6 +179,10 @@ def _install_requirements(session, transport, *extra_requirements):
     # Install requirements
     distro_requirements = None
 
+    if transport == 'tcp':
+        # The TCP requirements are the exact same requirements as the ZeroMQ ones
+        transport = 'zeromq'
+
     pydir = _get_pydir(session)
 
     if IS_WINDOWS:

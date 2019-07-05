@@ -1,20 +1,24 @@
 // Define the maximum time, in hours, that a test run should run for
 def global_timeout = 2
+def salt_target_branch = '2018.3'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
-    [
-        $class: 'ScannerJobProperty', doNotScan: false
-    ],
-    [
-        $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
-    ],
 ])
+
+// Be sure to cancel any previously running builds
+def buildNumber = env.BUILD_NUMBER as int
+if (buildNumber > 1) {
+    // This will cancel the previous build which also defined a matching milestone
+    milestone(buildNumber - 1)
+}
+// Define a milestone for this build so that, if another build starts, this one will be aborted
+milestone(buildNumber)
 
 def shell_header
 
-timeout(time: global_timeout, unit: 'HOURS') {
-    node('docs') {
+node('docs') {
+    timeout(time: global_timeout, unit: 'HOURS') {
         ansiColor('xterm') {
             timestamps {
                 try {
@@ -44,7 +48,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
                         pyenv install --skip-existing 3.6.8
                         pyenv shell 3.6.8
                         python --version
-                        pip install -U https://github.com/s0undt3ch/nox/archive/hotfix/py2.zip#egg=Nox==2018.10.17
+                        pip install -U nox-py2
                         nox --version
                         '''
                     }
@@ -78,7 +82,7 @@ timeout(time: global_timeout, unit: 'HOURS') {
                         try {
                             slackSend channel: "#jenkins-prod-pr",
                                 color: '#FF0000',
-                                message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                                message: "*${currentBuild.currentResult}*: ${currentBuild.getFullDisplayName()} (<${env.BUILD_URL}|open>)"
                         } catch (Exception e) {
                             sh 'echo Failed to send the Slack notification'
                         }
