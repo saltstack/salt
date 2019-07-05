@@ -76,7 +76,7 @@ from salt.utils.event import tagify
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'hg'
+__virtualname__ = 'hgfs'
 
 
 def __virtual__():
