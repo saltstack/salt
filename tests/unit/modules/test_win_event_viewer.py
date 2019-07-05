@@ -571,11 +571,10 @@ class WinEventViewerDestructiveTestCase(TestCase, LoaderModuleMockMixin):
     @staticmethod
     def test_log_event():
         '''
-        info: does not check for event because
+        Does not check for event because
          * the log can be slow to update
          * the log can be cleared at anytime
          * I dont want to add a flaky test
-        :return:
         '''
 
         win_event_viewer.log_event('salt_test', event_id=117)
