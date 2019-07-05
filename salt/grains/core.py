@@ -2920,3 +2920,14 @@ def kernelparams():
             log.debug('Failed to read /proc/cmdline: %s', exc)
 
         return grains
+
+
+def ip4_routes():
+    '''
+    Provide a list of the routing table entries
+    '''
+    if salt.utils.platform.is_proxy():
+        return {}
+
+    ret = salt.utils.network.routes()
+    return {'ip4_routes': ret}

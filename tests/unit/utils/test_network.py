@@ -131,6 +131,26 @@ IPV4_SUBNETS = {True: ('10.10.0.0/24',),
 IPV6_SUBNETS = {True: ('::1/128',),
                 False: ('::1', '::1/129', 'FOO', 9, 'aj01::feac/64')}
 
+LINUX_ROUTES_IP = '''\
+192.168.1.1 dev eth0 scope link
+192.168.2.0/24 via 172.17.0.254 dev eth0
+192.168.3.0/24 via 172.17.0.254 dev eth0 metric 100
+172.17.0.0/16 dev eth0 proto kernel scope link src 172.17.0.2
+192.168.3.0/24 via 172.17.0.254 dev eth0 proto static onlink
+default via 172.17.0.1 dev eth0
+'''
+
+LINUX_ROUTES_ROUTE = '''\
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+192.168.1.1     0.0.0.0         255.255.255.255 UH    0      0        0 eth0
+192.168.2.0     172.17.0.254    255.255.255.0   UG    0      0        0 eth0
+192.168.3.0     172.17.0.254    255.255.255.0   UG    100    0        0 eth0
+172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 eth0
+192.168.3.0     172.17.0.254    255.255.255.0   UG    0      0        0 eth0
+0.0.0.0         172.17.0.1      0.0.0.0         UG    0      0        0 eth0
+'''
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class NetworkTestCase(TestCase):
@@ -682,3 +702,69 @@ class NetworkTestCase(TestCase):
         with patch('subprocess.check_output', return_value=NETLINK_SS):
             remotes = network._netlink_tool_remote_on('4505', 'remote')
             self.assertEqual(remotes, set(['127.0.0.1', '::ffff:1.2.3.4']))
+
+    def test_routes_linux_ip(self):
+        routes = network._routes_linux_ip(LINUX_ROUTES_IP)
+        self.assertEqual(routes,
+                         [{'destination': '192.168.1.1',
+                           'netmask': '255.255.255.255',
+                           'device': 'eth0',
+                           'scope': 'link'},
+                          {'destination': '192.168.2.0',
+                           'netmask': '255.255.255.0',
+                           'device': 'eth0',
+                           'gateway': '172.17.0.254'},
+                          {'destination': '192.168.3.0',
+                           'netmask': '255.255.255.0',
+                           'device': 'eth0',
+                           'metric': '100',
+                           'gateway': '172.17.0.254'},
+                          {'destination': '172.17.0.0',
+                           'netmask': '255.255.0.0',
+                           'device': 'eth0',
+                           'proto': 'kernel',
+                           'scope': 'link',
+                           'source': '172.17.0.2'},
+                          {'destination': '192.168.3.0',
+                           'netmask': '255.255.255.0',
+                           'device': 'eth0',
+                           'gateway': '172.17.0.254',
+                           'proto': 'static'},
+                          {'destination': '0.0.0.0',
+                           'netmask': '0.0.0.0',
+                           'device': 'eth0',
+                           'gateway': '172.17.0.1'}]
+        )
+
+    def test_routes_linux_route(self):
+        routes = network._routes_linux_route(LINUX_ROUTES_ROUTE)
+        self.assertEqual(routes,
+                         [{'destination': '192.168.1.1',
+                           'metric': '0',
+                           'netmask': '255.255.255.255',
+                           'device': 'eth0'},
+                          {'destination': '192.168.2.0',
+                           'netmask': '255.255.255.0',
+                           'device': 'eth0',
+                           'metric': '0',
+                           'gateway': '172.17.0.254'},
+                          {'destination': '192.168.3.0',
+                           'netmask': '255.255.255.0',
+                           'device': 'eth0',
+                           'metric': '100',
+                           'gateway': '172.17.0.254'},
+                          {'destination': '172.17.0.0',
+                           'netmask': '255.255.0.0',
+                           'device': 'eth0',
+                           'metric': '0'},
+                          {'destination': '192.168.3.0',
+                           'netmask': '255.255.255.0',
+                           'device': 'eth0',
+                           'gateway': '172.17.0.254',
+                           'metric': '0'},
+                          {'destination': '0.0.0.0',
+                           'netmask': '0.0.0.0',
+                           'device': 'eth0',
+                           'metric': '0',
+                           'gateway': '172.17.0.1'}]
+        )

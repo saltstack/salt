@@ -2024,3 +2024,103 @@ def is_fqdn(hostname):
 
     compliant = re.compile(r"(?!-)[A-Z\d\-\_]{1,63}(?<!-)$", re.IGNORECASE)
     return "." in hostname and len(hostname) < 0xff and all(compliant.match(x) for x in hostname.rstrip(".").split("."))
+
+
+def linux_routes():
+    '''
+    Obtain routing table information for *NIX/BSD variants
+    '''
+    routes = dict()
+    ip_path = salt.utils.path.which('ip')
+    route_path = None if ip_path else salt.utils.path.which('route')
+    if ip_path:
+        cmd = subprocess.Popen(
+            '{0} route show'.format(ip_path),
+            shell=True,
+            close_fds=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT).communicate()[0]
+        routes = _routes_linux_ip(salt.utils.stringutils.to_str(cmd))
+    elif route_path:
+        cmd = subprocess.Popen(
+            '{0} -n'.format(route_path),
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT).communicate()[0]
+        routes = _routes_linux_route(salt.utils.stringutils.to_str(cmd))
+    return routes
+
+
+def routes():
+    '''
+    Return a list of routing table entries on the minion
+    '''
+    ret = []
+    if salt.utils.platform.is_linux():
+        ret = linux_routes()
+
+    return ret
+
+
+def _routes_linux_ip(out):
+    '''
+    Uses ip to return a dictionary of routes with various information about
+    each (destination, netmask, device, proto, scope, source, gateway, metric)
+    '''
+    ret = []
+
+    options_map = {
+        'via': 'gateway',
+        'dev': 'device',
+        'src': 'source',
+        'metric': 'metric',
+        'proto': 'proto',
+        'scope': 'scope'
+    }
+
+    for line in out.splitlines():
+        cols = line.split()
+        dst = cols.pop(0)
+        # Handle default route
+        if dst == 'default':
+            dst = '0.0.0.0'
+            netmask = '0.0.0.0'
+        # Handle network route
+        elif '/' in dst:
+            (dst, cidr) = dst.split('/')
+            netmask = cidr_to_ipv4_netmask(cidr)
+        # Handle host route
+        else:
+            netmask = '255.255.255.255'
+
+        data = {'destination': dst,
+                'netmask': netmask}
+
+        while cols:
+            key = cols.pop(0)
+            if key in options_map:
+                key = options_map[key]
+                value = cols.pop(0)
+                data.update({key: value})
+        ret.append(data)
+    return ret
+
+
+def _routes_linux_route(out):
+    '''
+    Uses route to return a dictionary of routes with various information about
+    each (destination, netmask, device, gateway, metric)
+    '''
+    ret = []
+
+    # Skip two lines header
+    for line in out.splitlines()[2:]:
+        cols = line.split()
+        data = {'destination': cols[0],
+                'netmask': cols[2],
+                'metric': cols[4],
+                'device': cols[7]}
+        if cols[1] != '0.0.0.0':
+            data.update({'gateway': cols[1]})
+        ret.append(data)
+    return ret
