@@ -135,6 +135,26 @@ The slot syntax has been updated to support parsing dictionary responses and to 
     Duration: 1.229 ms
      Changes:
 
+Also, slot parsing is now supported inside of nested state data structures (dicts, lists, unless/onlyif args):
+
+.. code-block:: yaml
+
+  demo slot parsing for nested elements:
+    file.managed:
+      - name: /tmp/slot.txt
+      - source: salt://slot.j2
+      - template: jinja
+      - context:
+          # Slot inside of the nested context dictionary
+          variable: __slot__:salt:test.echo(a_value)
+      - unless:
+        - fun: file.search
+          args:
+            # Slot as unless argument
+            - __slot__:salt:test.echo(/tmp/slot.txt)
+            - "DO NOT OVERRIDE"
+          ignore_if_missing: True
+
 
 State Changes
 =============
