@@ -273,6 +273,9 @@ def get_dependencies():
     '''
     Warn if dependencies aren't met.
     '''
+    if not HAS_SHADE[0]:
+        log.warning(HAS_SHADE[1])
+        return False
     deps = {
         'shade': shade[0],
         'os_client_config': shade[0],
