@@ -2857,6 +2857,7 @@ class LsattrTests(TestCase, LoaderModuleMockMixin):
 # a merge forward to develop happens. Develop's changes are made
 # obsolete by this ChattrTests class, and should be removed in favor
 # of this change.
+@skipIf(salt.utils.platform.is_windows(), "Chattr shouldn't be available on Windows")
 class ChattrTests(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
