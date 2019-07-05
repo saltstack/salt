@@ -3,6 +3,7 @@
 test of win_event_viewer
 '''
 
+from __future__ import absolute_import
 
 # Import Salt Libs
 import salt.utils.platform
