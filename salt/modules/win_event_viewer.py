@@ -37,7 +37,7 @@ EVENT_PARTS = ('closingRecordNumber',
                'sourceName',
                'stringInserts',
                'timeGenerated',
-               'timeWritten'
+               'timeWritten',
 )
 
 # keys time
@@ -46,7 +46,7 @@ TIME_PARTS = ('year',
               'day',
               'hour',
               'minute',
-              'second'
+              'second',
 )
 TimeTuple = collections.namedtuple('TimeTuple', 'year, month, day, hour, minute, second')
 
