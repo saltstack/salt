@@ -69,9 +69,6 @@ def _change_str_to_bytes(data, encoding='utf-8', encode_keys=False):
     '''
     Convert string objects to byte objects.
 
-    .. warning::
-        this function will destroy the data object and objects that data links to.
-
     data
         object
 
@@ -84,6 +81,9 @@ def _change_str_to_bytes(data, encoding='utf-8', encode_keys=False):
 
     return
         new object
+
+    .. warning::
+        This function will destroy the data object and objects that data links to.
     '''
 
     if isinstance(data, dict):
@@ -194,9 +194,6 @@ def get_event_generator(log_name, target_computer=None, raw=False):
     '''
     Will get all log events one by one.
 
-    .. warning::
-        Events are not in exact order.
-
     log_name
         str
 
@@ -209,6 +206,9 @@ def get_event_generator(log_name, target_computer=None, raw=False):
 
     return
         PyEventLogRecord or dict
+
+    .. warning::
+        Events are not in exact order.
     '''
 
     handler = _get_event_handler(log_name, target_computer)
@@ -382,14 +382,14 @@ def clear_log(log_name, target_computer=None):
     '''
     Clears event log.
 
-    .. note::
-        that a clear log event will be add it after the log was clear
-
     log_name
         str
 
     target_computer
         None or str
+
+    .. note::
+        A clear log event will be add it after the log was clear.
     '''
 
     handler = _get_event_handler(log_name, target_computer)
