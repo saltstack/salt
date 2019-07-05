@@ -4445,7 +4445,7 @@ def extract_hash(hash_fn,
     else:
         hash_len_expr = six.text_type(hash_len)
 
-    filename_separators = string.whitespace + r'\/'
+    filename_separators = string.whitespace + r'\/*'
 
     if source_hash_name:
         if not isinstance(source_hash_name, six.string_types):
