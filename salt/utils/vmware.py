@@ -101,6 +101,14 @@ except ImportError:
     HAS_PYVMOMI = False
 
 try:
+    from com.vmware.vapi.std.errors_client import Unauthenticated
+    from vmware.vapi.vsphere.client import create_vsphere_client
+    HAS_VSPHERE_SDK = True
+
+except ImportError:
+    HAS_VSPHERE_SDK = False
+
+try:
     import gssapi
     import base64
     HAS_GSSAPI = True
@@ -177,6 +185,40 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None, creds
     ret = salt.modules.cmdmod.run_all(esx_cmd, output_loglevel='quiet')
 
     return ret
+
+
+def get_vsphere_client(server, username, password, session=None):
+    '''
+    Internal helper method to create an instance of the vSphere API client.
+    Please provide username and password to authenticate.
+
+    :type  server: :class:`str`
+    :param server: vCenter host name or IP address
+    :type  username: :class:`str`
+    :param username: Name of the user
+    :type  password: :class:`str`
+    :param password: Password of the user
+    :type  session: :class:`requests.Session` or ``None``
+    :param session: Requests HTTP session instance. If not specified, then one
+        is automatically created and used
+
+    :rtype: :class:`vmware.vapi.vmc.client.VsphereClient`
+    :return: Vsphere Client instance
+    '''
+    if not session:
+        # Create an https session to be used for a vSphere client
+        session = requests.session()
+        # If client uses own SSL cert, session must not verify
+        session.verify = False
+    client = None
+    try:
+        client = create_vsphere_client(server=server,
+                                       username=username,
+                                       password=password,
+                                       session=session)
+    except Unauthenticated as err:
+        log.trace(err)
+    return client
 
 
 def _get_service_instance(host, username, password, protocol,
