@@ -303,7 +303,7 @@ class WinEventViewerMockTestCase(TestCase, LoaderModuleMockMixin):
 
                         self.assertEqual(ret[1][1]['eventCategory'], 404)
                         self.assertEqual(ret[2][1]['stringInserts'], (b'fail...', b'error...'))
-                        self.assertEqual(ret[4][1]['eventID'], 5),
+                        self.assertEqual(ret[4][1]['eventID'], 5)
                         self.assertEqual(ret[5][1]['computerName'], b'sky')
                         self.assertEqual(ret[5][1]['timeGenerated'], (1997, 8, 29, 2, 14, 0))
 
