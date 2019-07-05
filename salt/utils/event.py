@@ -322,12 +322,8 @@ class SaltEvent(object):
                     sock_dir,
                     'minion_event_{0}_pull.ipc'.format(id_hash)
                 )
-        log.debug(
-            '{0} PUB socket URI: {1}'.format(self.__class__.__name__, puburi)
-        )
-        log.debug(
-            '{0} PULL socket URI: {1}'.format(self.__class__.__name__, pulluri)
-        )
+        log.debug('%s PUB socket URI: %s', self.__class__.__name__, puburi)
+        log.debug('%s PULL socket URI: %s', self.__class__.__name__, pulluri)
         return puburi, pulluri
 
     def subscribe(self, tag=None, match_type=None):
@@ -372,9 +368,9 @@ class SaltEvent(object):
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.subscriber is None:
                     self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
-                    self.puburi,
-                    io_loop=self.io_loop
-                )
+                        self.puburi,
+                        io_loop=self.io_loop
+                    )
                 try:
                     self.io_loop.run_sync(
                         lambda: self.subscriber.connect(timeout=timeout))
@@ -384,9 +380,9 @@ class SaltEvent(object):
         else:
             if self.subscriber is None:
                 self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
-                self.puburi,
-                io_loop=self.io_loop
-            )
+                    self.puburi,
+                    io_loop=self.io_loop
+                )
 
             # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
@@ -876,6 +872,7 @@ class SaltEvent(object):
         # This will handle reconnects
         return self.subscriber.read_async(event_handler)
 
+    # pylint: disable=W1701
     def __del__(self):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
         # shutdown-- where globals start going missing
@@ -883,6 +880,7 @@ class SaltEvent(object):
             self.destroy()
         except Exception:
             pass
+    # pylint: enable=W1701
 
     def __enter__(self):
         return self
@@ -999,16 +997,10 @@ class AsyncEventPublisher(object):
             epub_uri = epub_sock_path
             epull_uri = epull_sock_path
 
-        log.debug(
-            '{0} PUB socket URI: {1}'.format(
-                self.__class__.__name__, epub_uri
-            )
-        )
-        log.debug(
-            '{0} PULL socket URI: {1}'.format(
-                self.__class__.__name__, epull_uri
-            )
-        )
+        log.debug('%s PUB socket URI: %s',
+                  self.__class__.__name__, epub_uri)
+        log.debug('%s PULL socket URI: %s',
+                  self.__class__.__name__, epull_uri)
 
         minion_sock_dir = self.opts['sock_dir']
 
@@ -1018,7 +1010,7 @@ class AsyncEventPublisher(object):
             try:
                 os.makedirs(minion_sock_dir, 0o755)
             except OSError as exc:
-                log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                log.error('Could not create SOCK_DIR: %s', exc)
                 # Let's not fail yet and try using the default path
                 if minion_sock_dir == default_minion_sock_dir:
                     # We're already trying the default system path, stop now!
@@ -1028,7 +1020,7 @@ class AsyncEventPublisher(object):
                     try:
                         os.makedirs(default_minion_sock_dir, 0o755)
                     except OSError as exc:
-                        log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                        log.error('Could not create SOCK_DIR: %s', exc)
                         # Let's stop at this stage
                         raise
 
@@ -1044,7 +1036,7 @@ class AsyncEventPublisher(object):
             payload_handler=self.handle_publish
         )
 
-        log.info('Starting pull socket on {0}'.format(epull_uri))
+        log.info('Starting pull socket on %s', epull_uri)
         with salt.utils.files.set_umask(0o177):
             self.publisher.start()
             self.puller.start()
@@ -1071,8 +1063,10 @@ class AsyncEventPublisher(object):
         if hasattr(self, 'puller'):
             self.puller.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
 
 class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
@@ -1173,8 +1167,10 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.close()
         super(EventPublisher, self)._handle_signals(signum, sigframe)
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
 
 class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
@@ -1202,6 +1198,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
 
         self.opts = opts
         self.event_return_queue = self.opts['event_return_queue']
+        self.event_return_queue_max_seconds = self.opts.get('event_return_queue_max_seconds', 0)
         local_minion_opts = self.opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
@@ -1230,13 +1227,13 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         if isinstance(self.opts['event_return'], list):
             # Multiple event returners
             for r in self.opts['event_return']:
-                log.debug('Calling event returner {0}, one of many.'.format(r))
+                log.debug('Calling event returner %s, one of many.', r)
                 event_return = '{0}.event_return'.format(r)
                 self._flush_event_single(event_return)
         else:
             # Only a single event returner
-            log.debug('Calling event returner {0}, only one '
-                      'configured.'.format(self.opts['event_return']))
+            log.debug('Calling event returner %s, only one '
+                      'configured.', self.opts['event_return'])
             event_return = '{0}.event_return'.format(
                 self.opts['event_return']
                 )
@@ -1248,13 +1245,13 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
             try:
                 self.minion.returners[event_return](self.event_queue)
             except Exception as exc:
-                log.error('Could not store events - returner \'{0}\' raised '
-                          'exception: {1}'.format(event_return, exc))
+                log.error('Could not store events - returner \'%s\' raised '
+                          'exception: %s', event_return, exc)
                 # don't waste processing power unnecessarily on converting a
                 # potentially huge dataset to a string
                 if log.level <= logging.DEBUG:
-                    log.debug('Event data that caused an exception: {0}'.format(
-                        self.event_queue))
+                    log.debug('Event data that caused an exception: %s',
+                        self.event_queue)
         else:
             log.error('Could not store return for event(s) - returner '
                       '\'%s\' not found.', event_return)
@@ -1268,17 +1265,52 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         events = self.event.iter_events(full=True)
         self.event.fire_event({}, 'salt/event_listen/start')
         try:
+            # events below is a generator, we will iterate until we get the salt/event/exit tag
+            oldestevent = None
             for event in events:
+
                 if event['tag'] == 'salt/event/exit':
+                    # We're done eventing
                     self.stop = True
                 if self._filter(event):
+                    # This event passed the filter, add it to the queue
                     self.event_queue.append(event)
-                if len(self.event_queue) >= self.event_return_queue:
+                too_long_in_queue = False
+
+                # if max_seconds is >0, then we want to make sure we flush the queue
+                # every event_return_queue_max_seconds seconds,  If it's 0, don't
+                # apply any of this logic
+                if self.event_return_queue_max_seconds > 0:
+                    rightnow = datetime.datetime.now()
+                    if not oldestevent:
+                        oldestevent = rightnow
+                    age_in_seconds = (rightnow - oldestevent).seconds
+                    if age_in_seconds > 0:
+                        log.debug('Oldest event in queue is %s seconds old.', age_in_seconds)
+                    if age_in_seconds >= self.event_return_queue_max_seconds:
+                        too_long_in_queue = True
+                        oldestevent = None
+                    else:
+                        too_long_in_queue = False
+
+                    if too_long_in_queue:
+                        log.debug('Oldest event has been in queue too long, will flush queue')
+
+                # If we are over the max queue size or the oldest item in the queue has been there too long
+                # then flush the queue
+                if len(self.event_queue) >= self.event_return_queue or too_long_in_queue:
+                    log.debug('Flushing %s events.', len(self.event_queue))
                     self.flush_events()
+                    oldestevent = None
                 if self.stop:
+                    # We saw the salt/event/exit tag, we can stop eventing
                     break
         finally:  # flush all we have at this moment
+            # No matter what, make sure we flush the queue even when we are exiting
+            # and there will be no more events.
             if self.event_queue:
+                log.debug('Flushing %s events.', len(self.event_queue))
+
                 self.flush_events()
 
     def _filter(self, event):

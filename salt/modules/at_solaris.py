@@ -29,6 +29,7 @@ from salt.ext import six
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'at'
