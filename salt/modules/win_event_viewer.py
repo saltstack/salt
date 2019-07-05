@@ -337,7 +337,7 @@ def get_event_filter_generator(log_name, target_computer=None, all_requirements=
 
 def get_events_filter(log_name, target_computer=None, all_requirements=True, **kwargs):
     '''
-    Will find events that meet the requirements.
+    Find events that meet the requirements.
 
     log_name:
         str
