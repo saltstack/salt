@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON, MagicMock
 from tornado.concurrent import Future
 
 
@@ -52,6 +52,46 @@ class LocalClientTestCase(TestCase,
     def test__prep_pub(self):
         fake_pub = self.client._prep_pub('*', 'first.func', [], 'glob', None, '', 30, True)
         self.assertTrue(salt.utils.jid.is_jid(fake_pub['jid']))
+
+    def test_get_iter_returns(self):
+        closure_jid = {'count': 1}
+
+        def get_load(jid):
+            return {'jid': jid}
+
+        def get_returns_no_block(tag, matcher=None):
+            jid = int(tag.split('/').pop())
+
+            if jid == 1:
+                # original ret iterator
+                def jit_iter():
+                    while True:
+                        if closure_jid['count'] < 5:
+                            yield None
+                        elif closure_jid['count'] >= 5:
+                            yield {'data': {'retcode': 0, 'return': { 'ret': 'final result'}, 'id': 'minion1'}}
+                            break
+                return jit_iter()
+            else:
+                # gather_job_info calls
+                self.assertTrue(len(self.client.event.pending_tags) == 1, msg='pending tags tracking only single jid while in flight')
+                return iter([{'data': {'retcode': 0, 'return': { 'ret': 'still running'}, 'id': 'minion1'}}])
+
+        def run_job(*args, **kwargs):
+            closure_jid['count'] += 1
+            return {'jid': str(closure_jid['count'])}
+
+        with patch('salt.client.LocalClient.get_returns_no_block', side_effect=get_returns_no_block), \
+                patch('salt.client.LocalClient.run_job', side_effect=run_job), \
+                patch.object(self.client, 'returners', new={'local_cache.get_load': get_load}), \
+                patch.dict(self.client.opts, {'timeout': 1, 'gather_job_timeout': 1, 'master_job_cache': 'local_cache'}):
+            # clear pending tags to ensure test is sane
+            self.client.event.pending_tags = []
+
+            ret = list(self.client.get_iter_returns('1', 'minion1'))
+
+            self.assertFalse(len(self.client.event.pending_tags), msg='pending tags are empty after get_iter_returns')
+            self.assertIn('final result', ret[0]['minion1']['ret']['ret'])
 
     def test_cmd_subset(self):
         with patch('salt.client.LocalClient.cmd', return_value={'minion1': ['first.func', 'second.func'],
