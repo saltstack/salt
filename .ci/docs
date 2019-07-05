@@ -82,7 +82,7 @@ node('docs') {
                         try {
                             slackSend channel: "#jenkins-prod-pr",
                                 color: '#FF0000',
-                                message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                                message: "*${currentBuild.currentResult}*: ${currentBuild.getFullDisplayName()} (<${env.BUILD_URL}|open>)"
                         } catch (Exception e) {
                             sh 'echo Failed to send the Slack notification'
                         }
