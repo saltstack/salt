@@ -9,7 +9,6 @@ import time
 
 # Salt libs
 import salt.utils.files
-import salt.utils.platform
 from salt.beacons import watchdog
 from salt.ext.six.moves import range
 
@@ -43,7 +42,7 @@ def create(path, content=None):
 @skipIf(not watchdog.HAS_WATCHDOG, 'watchdog is not available')
 class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
-    Test case for salt.beacons.watchdog on Windows
+    Test case for salt.beacons.watchdog
     '''
 
     def setup_loader_modules(self):
