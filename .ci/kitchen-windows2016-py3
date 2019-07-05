@@ -102,7 +102,7 @@ node('kitchen-slave') {
                                                 '''
                                             }
                                         }
-                                        archiveArtifacts artifacts: 'artifacts/*,artifacts/**/*'
+                                        archiveArtifacts artifacts: 'artifacts/*,artifacts/**/*,.kitchen/logs/kitchen.log'
                                         junit 'artifacts/xml-unittests-output/*.xml'
                                     } finally {
                                         stage('Cleanup') {
