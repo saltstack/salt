@@ -8,6 +8,17 @@ properties([
 
 def shell_header
 
+// Be sure to cancel any previously running builds
+def buildNumber = env.BUILD_NUMBER as int
+if (buildNumber > 1) {
+    // This will cancel the previous build which also defined a matching milestone
+    milestone(buildNumber - 1)
+}
+// Define a milestone for this build so that, if another build starts, this one will be aborted
+milestone(buildNumber)
+
+def lint_report_issues = []
+
 node('lint') {
     timeout(time: global_timeout, unit: 'HOURS') {
         ansiColor('xterm') {
@@ -56,7 +67,10 @@ node('lint') {
                             nox --install-only -e lint-tests
                             '''
                         }
-                        archiveArtifacts artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log,file-list-experiment.log'
+                        archiveArtifacts(
+                            artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log,file-list-experiment.log',
+                            allowEmptyArchive: true
+                        )
                     }
 
                     stage('Lint Changes') {
@@ -95,7 +109,10 @@ node('lint') {
                             )
                         } finally {
                             def changed_logs_pattern = 'pylint-report-*-chg.log'
-                            archiveArtifacts artifacts: changed_logs_pattern, allowEmptyArchive: true
+                            archiveArtifacts(
+                                artifacts: changed_logs_pattern,
+                                allowEmptyArchive: true
+                            )
                             if (env.NODE_NAME.startsWith('jenkins-pr-')) {
                                 step([$class: 'WarningsPublisher',
                                     parserConfigurations: [[
@@ -108,7 +125,11 @@ node('lint') {
                                     usePreviousBuildAsReference: true
                                 ])
                             } else {
-                                recordIssues(enabledForFailure: true, tool: pyLint(pattern: changed_logs_pattern, reportEncoding: 'UTF-8'))
+                                lint_report_issues.add(
+                                    scanForIssues(
+                                        tool: pyLint(pattern: changed_logs_pattern, reportEncoding: 'UTF-8')
+                                    )
+                                )
                             }
                         }
                     }
@@ -152,7 +173,10 @@ node('lint') {
                                 )
                             } finally {
                                 def full_logs_pattern = 'pylint-report-*-full.log'
-                                archiveArtifacts artifacts: full_logs_pattern, allowEmptyArchive: true
+                                archiveArtifacts(
+                                    artifacts: full_logs_pattern,
+                                    allowEmptyArchive: true
+                                )
                                 if (env.NODE_NAME.startsWith('jenkins-pr-')) {
                                     step([$class: 'WarningsPublisher',
                                         parserConfigurations: [[
@@ -165,7 +189,11 @@ node('lint') {
                                         usePreviousBuildAsReference: true
                                     ])
                                 } else {
-                                    recordIssues(enabledForFailure: true, tool: pyLint(pattern: full_logs_pattern, reportEncoding: 'UTF-8'))
+                                    lint_report_issues.add(
+                                        scanForIssues(
+                                            tool: pyLint(pattern: full_logs_pattern, reportEncoding: 'UTF-8')
+                                        )
+                                    )
                                 }
                             }
                         }
@@ -173,6 +201,17 @@ node('lint') {
                 } catch (Exception e) {
                     currentBuild.result = 'FAILURE'
                 } finally {
+                    if (!env.NODE_NAME.startsWith('jenkins-pr-')) {
+                        publishIssues(
+                            enabledForFailure: true,
+                            aggregatingResults: true,
+                            referenceJobName: "${salt_target_branch}/salt-${salt_target_branch}-lint",
+                            qualityGates: [
+                                [threshold: 1, type: 'TOTAL', unstable: false]
+                            ],
+                            issues: lint_report_issues
+                        )
+                    }
                     cleanWs notFailBuild: true
                     if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
                         if (env.NODE_NAME.startsWith('jenkins-pr-')) {
