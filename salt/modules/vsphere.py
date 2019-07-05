@@ -9061,12 +9061,87 @@ def _delete_device(device):
     device_spec.device = device
     return device_spec
 
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def list_tag_categories(server=None, username=None, password=None,
+                        service_instance=None):
+    '''
+    List all the existing categories user has access to.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.list_tag_categories
+
+    :param str server:
+        Target DNS or IP of vCenter client.
+    :param str username:
+        Username associated with the vCenter client.
+    :param str password:
+        Password associated with the vCenter client.
+    :return:
+        Value(s) of category_id that a user has access to.
+    :rtype:
+        category_id
+    '''
+    # Get salted vSphere Client
+    details = __salt__['vcenter.get_details']()
+    client = details['vSphereClient']
+
+    # If we failed to attempt earlier, or providing other server information
+    if not client:
+        client = salt.utils.vmware.get_vsphere_client(server=server,
+                                                      username=username,
+                                                      password=password)
+    categories = client.tagging.Category.list()
+    return categories if len(categories) > 0 else None
+
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
-def create_tag_category(server, username, password,
-                        name, description, cardinality,
+def list_tags(server=None, username=None, password=None,
+              service_instance=None):
+    '''
+    List all the existing tags user has access to.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.list_tags
+
+    :param str server:
+        Target DNS or IP of vCenter client.
+    :param str username:
+        Username associated with the vCenter client.
+    :param str password:
+        Password associated with the vCenter client.
+    :return:
+        Value(s) of tag_id that was created.
+    :rtype:
+        tag_id
+    '''
+    # Get salted vSphere Client
+    details = __salt__['vcenter.get_details']()
+    client = details['vSphereClient']
+
+    # If we failed to attempt earlier, or providing other server information
+    if not client:
+        client = salt.utils.vmware.get_vsphere_client(server=server,
+                                                      username=username,
+                                                      password=password)
+    tags = client.tagging.Tag.list()
+    return tags if len(tags) > 0 else None
+
+
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def create_tag_category(name, description, cardinality,
+                        server=None, username=None, password=None,
                         service_instance=None):
     '''
     Create a category with given cardinality.
@@ -9087,15 +9162,22 @@ def create_tag_category(server, username, password,
         Name of tag category to create (ex. Machine, OS, Availability, etc.)
     :param str description:
         Given description of tag category.
-    :param CategoryModel.Cardinality cardinality:
-        Enum of type Cardinality, either SINGLE or MULTIPLE.
+    :param :class:`CategoryModel.Cardinality`
+        The associated cardinality (SINGLE, MULTIPLE) of the category.
     :return:
         Integer of category_ID that was created.
     :rtype:
         category_id
     '''
+    # Get salted vSphere Client
     details = __salt__['vcenter.get_details']()
     client = details['vSphereClient']
+
+    # If we failed to attempt earlier, or providing other server information
+    if not client:
+        client = salt.utils.vmware.get_vsphere_client(server=server,
+                                                      username=username,
+                                                      password=password)
 
     create_spec = client.tagging.Category.CreateSpec()
     create_spec.name = name
@@ -9108,17 +9190,17 @@ def create_tag_category(server, username, password,
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
-def create_tag(server, username, password,
-               name=None, description=None, category_id=None,
+def create_tag(name, description, category_id,
+               server=None, username=None, password=None,
                service_instance=None):
     '''
-    Create a tag with given description.
+    Create a tag under a category with given description.
 
     CLI Example:
 
     .. code-block:: bash
 
-            salt vm_minion vsphere.create_tag_category name=category_name description=test_desc cardinality=MULTIPLE
+            salt vm_minion vsphere.create_tag name=tag_name description=test_desc category_id=[TODO]
 
     :param str server:
         Target DNS or IP of vCenter client.
@@ -9134,17 +9216,24 @@ def create_tag(server, username, password,
         Numerical value of category_id representative of the category created previously.
     :return:
     '''
-    # import requests
-    # session = requests.session()
-    # session.verify = False
-    client = create_vsphere_client(server=server,
-                                   username=username,
-                                   password=password)
+    # Get salted vSphere Client
+    details = __salt__['vcenter.get_details']()
+    client = details['vSphereClient']
+
+    # If we failed to attempt earlier, or providing other server information
+    if not client:
+        client = salt.utils.vmware.get_vsphere_client(server=server,
+                                                      username=username,
+                                                      password=password)
+
     create_spec = client.tagging.Tag.CreateSpec()
     create_spec.name = name
     create_spec.description = description
     create_spec.category_id = category_id
-    client.tagging.Tag.create(create_spec)
+    return client.tagging.Tag.create(create_spec)
+
+
+# TODO tag a cluster
 
 
 @depends(HAS_PYVMOMI)
