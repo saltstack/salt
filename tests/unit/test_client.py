@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON, MagicMock
+from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 from tornado.concurrent import Future
 
 
@@ -69,13 +69,13 @@ class LocalClientTestCase(TestCase,
                         if closure_jid['count'] < 5:
                             yield None
                         elif closure_jid['count'] >= 5:
-                            yield {'data': {'retcode': 0, 'return': { 'ret': 'final result'}, 'id': 'minion1'}}
+                            yield {'data': {'retcode': 0, 'return': {'ret': 'final result'}, 'id': 'minion1'}}
                             break
                 return jit_iter()
             else:
                 # gather_job_info calls
                 self.assertTrue(len(self.client.event.pending_tags) == 1, msg='pending tags tracking only single jid while in flight')
-                return iter([{'data': {'retcode': 0, 'return': { 'ret': 'still running'}, 'id': 'minion1'}}])
+                return iter([{'data': {'retcode': 0, 'return': {'ret': 'still running'}, 'id': 'minion1'}}])
 
         def run_job(*args, **kwargs):
             closure_jid['count'] += 1
