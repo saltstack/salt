@@ -96,7 +96,7 @@ EVENTS = (
     MOCK_EVENT_3,
     MOCK_EVENT_4,
     MOCK_EVENT_5,
-    MOCK_EVENT_6
+    MOCK_EVENT_6,
 )
 
 
