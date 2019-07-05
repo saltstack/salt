@@ -27,7 +27,7 @@ def __virtual__():
     '''
     Only work on systems which default to SMF
     '''
-    if 'Solaris' in __grains__['os_family']:
+    if 'Solaris' in __grains__.get('os_family'):
         # Don't let this work on Solaris 9 since SMF doesn't exist on it.
         if __grains__['kernelrelease'] == "5.9":
             return (False, 'The smf execution module failed to load: SMF not available on Solaris 9.')
