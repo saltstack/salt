@@ -284,10 +284,10 @@ def get_events_sorted_by_info(log_name, target_computer=None):
         dict
     '''
 
-    event_info = {event_part: {} for event_part in EVENT_PARTS + TIME_PARTS}
+    event_info = {event_part: collections.defaultdict(list) for event_part in EVENT_PARTS + TIME_PARTS}
     for event, info in get_event_sorted_by_info_generator(log_name, target_computer):
         for part in info:
-            event_info[part].setdefault(info[part], []).append(event)
+            event_info[part][info.get(part)].append(event)
 
     return event_info
 
