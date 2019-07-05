@@ -9,7 +9,6 @@ import time
 
 # Salt libs
 import salt.utils.files
-import salt.utils.platform
 from salt.beacons import watchdog
 from salt.ext.six.moves import range
 
