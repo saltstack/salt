@@ -925,7 +925,7 @@ def imported(name, use_32bit_registry=False):
     (post_operation_required_changes, _) = post_operation_data
     if post_operation_required_changes:
         # Required change dict is *NOT* the empty dictionary even though it should be.
-        err_msg = "Operation appears to have succeeded, but registry is still not in the desire state."
+        err_msg = "Operation appears to have succeeded, but registry is still not in the desired state."
         ret['comment'] = err_msg
         ret['result'] = False
         return ret
