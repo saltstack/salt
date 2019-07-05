@@ -37,4 +37,3 @@ supervisor==3.3.5; python_version < '3'
 timelib
 tornado<5.0
 virtualenv
-watchdog
