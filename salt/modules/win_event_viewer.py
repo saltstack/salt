@@ -77,6 +77,7 @@ def _change_str_to_bytes(data, encoding='utf-8', encode_keys=False):
 
     encoding
         str
+
     encode_keys
         bool
         if false key strings will not be turned into bytes
@@ -181,7 +182,7 @@ def _close_event_handler(handler):
     '''
     Will close the event handler.
 
-    handler:
+    handler
         PyHANDLE
     '''
 
@@ -234,13 +235,13 @@ def get_events(log_name, target_computer=None, raw=False):
     '''
     Convert pywinypes.datetime into a TimeTuple.
 
-    log_name:
+    log_name
         str
 
-    target_computer:
+    target_computer
         None or str
 
-    raw:
+    raw
         bool
         True: PyEventLogRecord
         False: dict
@@ -281,7 +282,7 @@ def get_events_sorted_by_info(log_name, target_computer=None):
     '''
     Make dict of sorted events
 
-    log_name:
+    log_name
         str
 
     target_computer
@@ -314,7 +315,7 @@ def get_event_filter_generator(log_name, target_computer=None, all_requirements=
         True: all requirements most be meet
         False: only a single requirement most be meet
 
-    kwargs:
+    kwargs
         requirements for the events
 
     return
@@ -339,7 +340,7 @@ def get_events_filter(log_name, target_computer=None, all_requirements=True, **k
     '''
     Find events that meet the requirements.
 
-    log_name:
+    log_name
         str
 
     target_computer
@@ -400,7 +401,7 @@ def get_number_of_events(log_name, target_computer=None):
     '''
     Gets the number of events in a log.
 
-    log_name:
+    log_name
         str
 
     target_computer
