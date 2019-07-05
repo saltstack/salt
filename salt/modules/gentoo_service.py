@@ -31,9 +31,9 @@ def __virtual__():
     '''
     Only work on systems which default to OpenRC
     '''
-    if __grains__['os_family'] == 'Gentoo' and not salt.utils.systemd.booted(__context__):
+    if __grains__.get('os_family') == 'Gentoo' and not salt.utils.systemd.booted(__context__):
         return __virtualname__
-    if __grains__['os'] == 'Alpine':
+    if __grains__.get('os') == 'Alpine':
         return __virtualname__
     return (False, 'The gentoo_service execution module cannot be loaded: '
             'only available on Gentoo/Open-RC systems.')
