@@ -41,157 +41,7 @@ def create(path, content=None):
 
 
 @skipIf(not watchdog.HAS_WATCHDOG, 'watchdog is not available')
-@skipIf(salt.utils.platform.is_windows(), 'Skip these tests on Windows')
 class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
-    '''
-    Test case for salt.beacons.watchdog
-    '''
-
-    def setup_loader_modules(self):
-        return {watchdog: {}}
-
-    def setUp(self):
-        self.tmpdir = tempfile.mkdtemp()
-
-    def tearDown(self):
-        watchdog.close({})
-        shutil.rmtree(self.tmpdir, ignore_errors=True)
-
-    def assertValid(self, config):
-        ret = watchdog.validate(config)
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
-
-    def test_empty_config(self):
-        config = [{}]
-        ret = watchdog.beacon(config)
-        self.assertEqual(ret, [])
-
-    def test_file_create(self):
-        path = os.path.join(self.tmpdir, 'tmpfile')
-
-        config = [{'directories': {self.tmpdir: {'mask': ['create']}}}]
-        self.assertValid(config)
-        self.assertEqual(watchdog.beacon(config), [])
-
-        create(path)
-
-        ret = check_events(config)
-        self.assertEqual(len(ret), 1)
-        self.assertEqual(ret[0]['path'], path)
-        self.assertEqual(ret[0]['change'], 'created')
-
-    def test_file_modified(self):
-        path = os.path.join(self.tmpdir, 'tmpfile')
-
-        config = [{'directories': {self.tmpdir: {'mask': ['modify']}}}]
-        self.assertValid(config)
-        self.assertEqual(watchdog.beacon(config), [])
-
-        create(path, 'some content')
-
-        ret = check_events(config)
-
-        self.assertEqual(len(ret), 2)
-        self.assertEqual(ret[0]['path'], os.path.dirname(path))
-        self.assertEqual(ret[0]['change'], 'modified')
-        self.assertEqual(ret[1]['path'], path)
-        self.assertEqual(ret[1]['change'], 'modified')
-
-    def test_file_deleted(self):
-        path = os.path.join(self.tmpdir, 'tmpfile')
-        create(path)
-
-        config = [{'directories': {self.tmpdir: {'mask': ['delete']}}}]
-        self.assertValid(config)
-        self.assertEqual(watchdog.beacon(config), [])
-
-        os.remove(path)
-
-        ret = check_events(config)
-        self.assertEqual(len(ret), 1)
-        self.assertEqual(ret[0]['path'], path)
-        self.assertEqual(ret[0]['change'], 'deleted')
-
-    def test_file_moved(self):
-        path = os.path.join(self.tmpdir, 'tmpfile')
-        create(path)
-
-        config = [{'directories': {self.tmpdir: {'mask': ['move']}}}]
-        self.assertValid(config)
-        self.assertEqual(watchdog.beacon(config), [])
-
-        os.rename(path, path + '_moved')
-
-        ret = check_events(config)
-        self.assertEqual(len(ret), 1)
-        self.assertEqual(ret[0]['path'], path)
-        self.assertEqual(ret[0]['change'], 'moved')
-
-    def test_file_create_in_directory(self):
-        config = [{'directories': {self.tmpdir: {'mask': ['create', 'modify']}}}]
-        self.assertValid(config)
-        self.assertEqual(watchdog.beacon(config), [])
-
-        path = os.path.join(self.tmpdir, 'tmpfile')
-        create(path)
-
-        ret = check_events(config)
-        self.assertEqual(len(ret), 2)
-        self.assertEqual(ret[0]['path'], path)
-        self.assertEqual(ret[0]['change'], 'created')
-        self.assertEqual(ret[1]['path'], self.tmpdir)
-        self.assertEqual(ret[1]['change'], 'modified')
-
-    def test_trigger_all_possible_events(self):
-        path = os.path.join(self.tmpdir, 'tmpfile')
-        moved = path + '_moved'
-
-        config = [{'directories': {
-            self.tmpdir: {},
-        }}]
-        self.assertValid(config)
-        self.assertEqual(watchdog.beacon(config), [])
-
-        # create
-        create(path)
-        # modify
-        create(path, 'modified content')
-        # move
-        os.rename(path, moved)
-        # delete
-        os.remove(moved)
-
-        ret = check_events(config)
-
-        self.assertEqual(len(ret), 8)
-
-        # create
-        self.assertEqual(ret[0]['path'], path)
-        self.assertEqual(ret[0]['change'], 'created')
-        self.assertEqual(ret[1]['path'], self.tmpdir)
-        self.assertEqual(ret[1]['change'], 'modified')
-
-        # modify
-        self.assertEqual(ret[2]['path'], path)
-        self.assertEqual(ret[2]['change'], 'modified')
-        self.assertEqual(ret[3]['path'], path)
-        self.assertEqual(ret[3]['change'], 'modified')
-
-        # move
-        self.assertEqual(ret[4]['path'], path)
-        self.assertEqual(ret[4]['change'], 'moved')
-        self.assertEqual(ret[5]['path'], self.tmpdir)
-        self.assertEqual(ret[5]['change'], 'modified')
-
-        # delete
-        self.assertEqual(ret[6]['path'], moved)
-        self.assertEqual(ret[6]['change'], 'deleted')
-        self.assertEqual(ret[7]['path'], self.tmpdir)
-        self.assertEqual(ret[7]['change'], 'modified')
-
-@skipIf(not watchdog.HAS_WATCHDOG, 'watchdog is not available')
-@skipIf(not salt.utils.platform.is_windows(), 'Not a Windows system')
-class IWatchdogBeaconWindowsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.watchdog on Windows
     '''
@@ -231,6 +81,9 @@ class IWatchdogBeaconWindowsTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_file_modified(self):
         path = os.path.join(self.tmpdir, 'tmpfile')
+        # Create triggers a modify event along with the create event in Py3
+        # So, let's do this before configuring the beacon
+        create(path)
 
         config = [{'directories': {self.tmpdir: {'mask': ['modify']}}}]
         self.assertValid(config)
@@ -275,7 +128,7 @@ class IWatchdogBeaconWindowsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]['change'], 'moved')
 
     def test_file_create_in_directory(self):
-        config = [{'directories': {self.tmpdir: {'mask': ['create', 'modify']}}}]
+        config = [{'directories': {self.tmpdir: {'mask': ['create']}}}]
         self.assertValid(config)
         self.assertEqual(watchdog.beacon(config), [])
 
@@ -306,22 +159,39 @@ class IWatchdogBeaconWindowsTestCase(TestCase, LoaderModuleMockMixin):
         # delete
         os.remove(moved)
 
+        # Give the events time to load into the queue
+        time.sleep(1)
+
         ret = check_events(config)
 
-        self.assertEqual(len(ret), 4)
+        events = {'created': '',
+                  'deleted': '',
+                  'moved': ''}
+        modified = False
+        for event in ret:
+            if event['change'] == 'created':
+                self.assertEqual(event['path'], path)
+                events.pop('created', '')
+            if event['change'] == 'moved':
+                self.assertEqual(event['path'], path)
+                events.pop('moved', '')
+            if event['change'] == 'deleted':
+                self.assertEqual(event['path'], moved)
+                events.pop('deleted', '')
+            # "modified" requires special handling
+            # All events [created, moved, deleted] also trigger a "modified"
+            # event on Linux
+            # Only the "created" event triggers a modified event on Py3 Windows
+            # When the "modified" event triggers on modify, it will have the
+            # path to the temp file (path), other modified events will contain
+            # the path minus "tmpfile" and will not match. That's how we'll
+            # distinguish the two
+            if event['change'] == 'modified':
+                if event['path'] == path:
+                    modified = True
 
-        # create
-        self.assertEqual(ret[0]['path'], path)
-        self.assertEqual(ret[0]['change'], 'created')
+        # Check results of the for loop to validate modified
+        self.assertTrue(modified)
 
-        # modify
-        self.assertEqual(ret[1]['path'], path)
-        self.assertEqual(ret[1]['change'], 'modified')
-
-        # move
-        self.assertEqual(ret[2]['path'], path)
-        self.assertEqual(ret[2]['change'], 'moved')
-
-        # delete
-        self.assertEqual(ret[3]['path'], moved)
-        self.assertEqual(ret[3]['change'], 'deleted')
+        # Make sure all events were checked
+        self.assertDictEqual(events, {})
