@@ -4,6 +4,7 @@
 gives access to Windows event log
 '''
 
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
@@ -36,7 +37,8 @@ EVENT_PARTS = ('closingRecordNumber',
                'sourceName',
                'stringInserts',
                'timeGenerated',
-               'timeWritten')
+               'timeWritten'
+)
 
 # keys time
 TIME_PARTS = ('year',
@@ -44,7 +46,8 @@ TIME_PARTS = ('year',
               'day',
               'hour',
               'minute',
-              'second')
+              'second'
+)
 TimeTuple = collections.namedtuple('TimeTuple', 'year, month, day, hour, minute, second')
 
 
