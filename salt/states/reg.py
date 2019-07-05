@@ -892,7 +892,7 @@ def imported(name, use_32bit_registry=False):
     if not result:
         err_msg = pre_operation_data
         ret['comment'] = err_msg
-        ret['result'] = True
+        ret['result'] = False
         return ret
     (pre_operation_required_changes, operation) = pre_operation_data 
     if not pre_operation_required_changes:
@@ -920,7 +920,7 @@ def imported(name, use_32bit_registry=False):
         # we met with an error during testing 
         err_msg = post_operation_data
         ret['comment'] = err_msg
-        ret['result'] = True
+        ret['result'] = False
         return ret
     (post_operation_required_changes, _) = post_operation_data
     if post_operation_required_changes:
