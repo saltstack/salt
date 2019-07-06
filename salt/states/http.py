@@ -162,8 +162,7 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
                 # workaround pylint bug https://www.logilab.org/ticket/3207
                 raise caught_exception  # pylint: disable=E0702
             return ret
-        else:
+        elif 'request_interval' in kwargs:
             # Space requests out by delaying for an interval
-            if 'request_interval' in kwargs:
-                log.debug('delaying query for %s seconds.', kwargs['request_interval'])
-                time.sleep(kwargs['request_interval'])
+            log.debug('delaying query for %s seconds.', kwargs['request_interval'])
+            time.sleep(kwargs['request_interval'])
