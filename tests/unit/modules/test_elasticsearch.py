@@ -999,6 +999,150 @@ class ElasticsearchTestCase(TestCase):
                           MagicMock(return_value=MockElastic())):
             self.assertRaises(CommandExecutionError, elasticsearch.index_exists, "foo", "bar")
 
+    def test_settings_get(self):
+        '''
+        Test if settings can be obtained
+        '''
+        class MockElasticIndices(object):
+            '''
+            Mock of Elasticsearch IndicesClient
+            '''
+            def get_settings(self, index=None):
+                '''
+                Mock of get_settings method
+                '''
+                return {"test": "key"}
+
+        class MockElastic(object):
+            '''
+            Mock of Elasticsearch client
+            '''
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertDictEqual(elasticsearch.index_settings_get("foo", "bar"), {"test": "key"})
+
+    def test_settings_get_not(self):
+        '''
+        Test if index doesn't exist
+        '''
+        class MockElasticIndices(object):
+            '''
+            Mock of Elasticsearch IndicesClient
+            '''
+            def get_settings(self, index=None):
+                '''
+                Mock of get_settings method
+                '''
+                raise NotFoundError
+
+        class MockElastic(object):
+            '''
+            Mock of Elasticsearch client
+            '''
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertIs(elasticsearch.index_settings_get("foo", "bar"), None)
+
+    def test_settings_get_failure(self):
+        '''
+        Test if index obtain fails with CommandExecutionError
+        '''
+        class MockElasticIndices(object):
+            '''
+            Mock of Elasticsearch IndicesClient
+            '''
+            def get_settings(self, index=None):
+                '''
+                Mock of get_settings method
+                '''
+                raise TransportError("custom message", 123)
+
+        class MockElastic(object):
+            '''
+            Mock of Elasticsearch client
+            '''
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.index_settings_get, "foo", "bar")
+
+    def test_index_settings_put(self):
+        '''
+        Test if we can put settings for the index
+        '''
+        class MockElasticIndices(object):
+            '''
+            Mock of Elasticsearch IndicesClient
+            '''
+            def put_settings(self, index=None, body=None):
+                '''
+                Mock of put_settings method
+                '''
+                return {"acknowledged": True}
+
+        class MockElastic(object):
+            '''
+            Mock of Elasticsearch client
+            '''
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertTrue(elasticsearch.index_settings_put("foo", "bar"))
+
+    def test_index_settings_put_not(self):
+        '''
+        Test if settings put returned False
+        '''
+        class MockElasticIndices(object):
+            '''
+            Mock of Elasticsearch IndicesClient
+            '''
+            def put_settings(self, index=None, body=None):
+                '''
+                Mock of put_settings method
+                '''
+                return {"acknowledged": False}
+
+        class MockElastic(object):
+            '''
+            Mock of Elasticsearch client
+            '''
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertFalse(elasticsearch.index_settings_put("foo", "bar"))
+
+    def test_index_settings_put_failure(self):
+        '''
+        Test if settings put failed with CommandExecutionError
+        '''
+        class MockElasticIndices(object):
+            '''
+            Mock of Elasticsearch IndicesClient
+            '''
+            def put_settings(self, index=None, body=None):
+                '''
+                Mock of put_settings method
+                '''
+                raise TransportError("custom message", 123)
+
+        class MockElastic(object):
+            '''
+            Mock of Elasticsearch client
+            '''
+            indices = MockElasticIndices()
+
+        with patch.object(elasticsearch, '_get_instance',
+                          MagicMock(return_value=MockElastic())):
+            self.assertRaises(CommandExecutionError, elasticsearch.index_settings_put, "foo", "bar")
+
     # 'index_get' function tests: 3
 
     def test_index_get(self):

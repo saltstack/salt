@@ -638,6 +638,60 @@ def index_close(index, allow_no_indices=True, expand_wildcards='open', ignore_un
         raise CommandExecutionError("Cannot close index {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
 
+def index_settings_get(index, hosts=None, profile=None):
+    '''
+    Check for the existence of an index and if it exists, return its settings
+
+    index
+        Index name
+
+    CLI example::
+
+        salt myminion elasticsearch.index_settings_get testindex
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.indices.get_settings(index=index)
+    except elasticsearch.exceptions.NotFoundError:
+        return None
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve index settings {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
+
+
+def index_settings_put(index, body=None, hosts=None, profile=None, source=None):
+    '''
+    Update existing index settings
+
+    index
+        Index name
+    body
+        Index definition, such as settings and mappings as defined in https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-create-index.html
+    source
+        URL to file specifying index definition. Cannot be used in combination with ``body``.
+
+    CLI example::
+
+        salt myminion elasticsearch.index_settings_put testindex '{"settings" : {"index" : {"number_of_replicas" : 2}}}'
+    '''
+    es = _get_instance(hosts, profile)
+    if source and body:
+        message = 'Either body or source should be specified but not both.'
+        raise SaltInvocationError(message)
+    if source:
+        body = __salt__['cp.get_file_str'](
+                  source,
+                  saltenv=__opts__.get('saltenv', 'base'))
+
+    try:
+        result = es.indices.put_settings(index=index, body=body)
+        return result.get('acknowledged', False)
+    except elasticsearch.exceptions.NotFoundError:
+        return None
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot update index settings {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
+
+
 def mapping_create(index, doc_type, body=None, hosts=None, profile=None, source=None):
     '''
     Create a mapping in a given index
