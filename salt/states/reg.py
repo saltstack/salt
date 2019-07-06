@@ -933,5 +933,5 @@ def imported(name, use_32bit_registry=False):
     # since success of the retest implies that those changes have happened.
     ret['changes'] = pre_operation_required_changes
     ret['comment'] = "Reg file has been imported."
-    ret['result'] = result
+    ret['result'] = True
     return ret
