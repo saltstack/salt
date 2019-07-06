@@ -406,9 +406,23 @@ class WinSystemModuleTest(ModuleCase):
         '''
         Test getting the system time
         '''
+        # We have to do some datetime fu to account for the possibility that the
+        # system time will be obtained just before the minutes increment
         ret = self.run_function('system.get_system_time')
-        now = datetime.datetime.now()
-        self.assertEqual(now.strftime("%I:%M"), ret.rsplit(':', 1)[0])
+        # Split out time and AM/PM
+        sys_time, meridian = ret.split(' ')
+        h, m, s = sys_time.split(':')
+        # Get the current time
+        time_now = datetime.datetime.now()
+        # Use the system time to generate a datetime object for the system time
+        # with the same date
+        time_sys = time_now.replace(hour=int(h), minute=int(m), second=int(s))
+        # get_system_time returns a non 24 hour time
+        # Lets make it 24 hour time
+        if meridian == 'PM':
+            time_sys = time_sys + datetime.timedelta(hours=12)
+        diff = time_now - time_sys
+        self.assertTrue(diff.seconds < 60)
 
     @destructiveTest
     def test_set_system_time(self):
@@ -420,10 +434,11 @@ class WinSystemModuleTest(ModuleCase):
             In order for this test to pass, time sync must be disabled for the
             VM in the hypervisor
         '''
-        self.run_function('service.stop', ['w32time'])
-        test_time = '10:55'
-        current_time = self.run_function('system.get_system_time')
         try:
+            self.assertTrue(self.run_function('service.stop', ['w32time']))
+            self.assertFalse(self.run_function('service.status', ['w32time']))
+            test_time = '10:55'
+            current_time = self.run_function('system.get_system_time')
             self.run_function('system.set_system_time', [test_time + ' AM'])
             get_time = self.run_function('system.get_system_time').rsplit(':', 1)[0]
             self.assertEqual(get_time, test_time)
@@ -449,9 +464,12 @@ class WinSystemModuleTest(ModuleCase):
             In order for this test to pass, time sync must be disabled for the
             VM in the hypervisor
         '''
-        self.run_function('service.stop', ['w32time'])
-        current_date = self.run_function('system.get_system_date')
         try:
+            # If the test still fails, the hypervisor may be maintaining time
+            # sync
+            self.assertTrue(self.run_function('service.stop', ['w32time']))
+            self.assertFalse(self.run_function('service.status', ['w32time']))
+            current_date = self.run_function('system.get_system_date')
             self.run_function('system.set_system_date', ['03/25/2018'])
             ret = self.run_function('system.get_system_date')
             self.assertEqual(ret, '03/25/2018')
