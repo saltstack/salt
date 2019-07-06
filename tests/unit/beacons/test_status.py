@@ -31,11 +31,12 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         opts = salt.config.DEFAULT_MINION_OPTS
+        opts['grains'] = salt.loader.grains(opts)
         module_globals = {
             '__opts__': opts,
             '__salt__': 'autoload',
             '__context__': {},
-            '__grains__': {'kernel': 'Linux'}
+            '__grains__': opts['grains']
         }
         return {
             status: module_globals,
