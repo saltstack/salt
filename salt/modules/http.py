@@ -79,6 +79,10 @@ def wait_for_successful_query(url, wait_for=300, **kwargs):
                 raise caught_exception  # pylint: disable=E0702
 
             return result
+        else:
+            # Space requests out by delaying for an interval
+            if 'request_interval' in kwargs:
+                time.sleep(kwargs['request_interval'])
 
 
 def update_ca_bundle(target=None, source=None, merge_files=None):
