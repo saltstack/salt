@@ -273,7 +273,10 @@ def get_dependencies():
     '''
     Warn if dependencies aren't met.
     '''
-    if not HAS_SHADE[0]:
+    if not HAS_SHADE:
+        log.warning('"shade" not found')
+        return False
+    elif hasattr(HAS_SHADE, '__len__') and not HAS_SHADE[0]:
         log.warning(HAS_SHADE[1])
         return False
     deps = {
