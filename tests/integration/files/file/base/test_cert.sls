@@ -56,10 +56,22 @@ test_crt:
     - CN: minion
     - days_remaining: 30
     - backup: True
+    - require:
+        - {{ tmp_dir  }}/pki/ca.crt
+        - {{ tmp_dir  }}/pki/test.key
+
+test_pem_cert:
+  x509.certificate_managed:
+    - name: {{ tmp_dir  }}/pki/test.pem
+    - ca_server: minion
+    - signing_policy: ca_policy
+    - public_key: {{ tmp_dir  }}/pki/test.key
+    - CN: minion
+    - days_remaining: 30
+    - backup: True
     - managed_private_key:
-        name: {{ tmp_dir  }}/pki/test.key
+        name: {{ tmp_dir  }}/pki/test.pem
         bits: 4096
         backup: True
     - require:
         - {{ tmp_dir  }}/pki/ca.crt
-        - {{ tmp_dir  }}/pki/test.key

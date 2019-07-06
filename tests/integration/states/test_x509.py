@@ -97,9 +97,49 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert os.path.exists(crtfile)
 
     def test_cert_signing(self):
+        '''
+        Test certificate signing, private key and cert in separate files
+        '''
         ret = self.run_function('state.apply', ['test_cert'], pillar={'tmp_dir': TMP})
         key = 'x509_|-test_crt_|-{}/pki/test.crt_|-certificate_managed'.format(TMP)
         assert key in ret
         assert 'changes' in ret[key]
         assert 'Certificate' in ret[key]['changes']
         assert 'New' in ret[key]['changes']['Certificate']
+
+    def test_cert_signing_no_change(self):
+        '''
+        Test private key and cert in separate files with no changes
+        '''
+        ret = self.run_function('state.apply', ['test_cert'], pillar={'tmp_dir': TMP})
+        key = 'x509_|-test_crt_|-{}/pki/test.crt_|-certificate_managed'.format(TMP)
+        assert key in ret
+        assert 'changes' in ret[key]
+        assert 'Certificate' in ret[key]['changes']
+        assert 'New' in ret[key]['changes']['Certificate']
+        ret = self.run_function('state.apply', ['test_cert'], pillar={'tmp_dir': TMP})
+        assert ret[key]['result'] == True
+        assert ret[key]['changes'] == {}
+
+    def test_cert_pem_format(self):
+        '''
+        Test private key and cert saved in single pem file
+        '''
+        ret = self.run_function('state.apply', ['test_cert'], pillar={'tmp_dir': TMP})
+        key = 'x509_|-test_pem_cert_|-{}/pki/test.pem_|-certificate_managed'.format(TMP)
+        assert key in ret
+        assert ret[key]['result'] == True
+        assert 'Certificate' in ret[key]['changes']
+
+    def test_cert_pem_format_no_change(self):
+        '''
+        Test private key in pem with no changes
+        '''
+        ret = self.run_function('state.apply', ['test_cert'], pillar={'tmp_dir': TMP})
+        key = 'x509_|-test_pem_cert_|-{}/pki/test.pem_|-certificate_managed'.format(TMP)
+        assert key in ret
+        assert ret[key]['result'] == True
+        assert 'Certificate' in ret[key]['changes']
+        ret = self.run_function('state.apply', ['test_cert'], pillar={'tmp_dir': TMP})
+        assert ret[key]['result'] == True
+        assert ret[key]['changes'] == {}
