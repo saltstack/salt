@@ -78,6 +78,7 @@ import sys
 import io
 from salt.ext.six.moves import configparser
 from salt.exceptions import CommandExecutionError
+from salt.ext.six import PY2
 
 log = logging.getLogger(__name__)
 
@@ -635,7 +636,6 @@ def _imported_parse_reg_file(reg_file):
         # The first line of a reg file is english text which we must consume before parsing.
         # It contains no data.
         reg_data = configparser.ConfigParser()
-        PY2 = sys.version_info[0] == 2
         if PY2:
             reg_data.readfp(reg_file_fp)
         else:
@@ -648,14 +648,12 @@ def _imported_parse_reg_file(reg_file):
 def _imported_reference_data_wrk(reference_reg_file_url, use_32bit_registry):
     r'''
     This is a utility function used by imported. It does the real work
-    for the function _imported_reference_data. It caches the file pointed to by the
-    file pointed to with the reference_reg_file_url argument and the parses it.
+    for the function _imported_reference_data. It caches the file pointed to by the 
+    reference_reg_file_url argument and then parses it.
     It then returns (reference_reg_file, reference_parse, use_32bit_registry)
     where reference_parse is the parser object.
     This information is considered to be the "reference data". It is acquired once
-    (here) and the used maximally twice. The first time it is used is when running
-    the initial test, and it will be used again if the operation is undertaken
-    because a re-test will occur.
+    (here) and then used throughout the process
     '''
     reference_reg_file = __salt__['cp.cache_file'](reference_reg_file_url)
     if not reference_reg_file:
@@ -750,50 +748,59 @@ def _imported_state_data(reg_location, use_32bit_registry):
     return state_data    
     
 
-
-
-def _imported_test_values(reference_parse, state_parse, key_path):
+def _imported_get_value_changes(reference_parse, state_parse, key_path, \
+                                new_values, old_values):
     r'''
     This is a utility function used by imported.
-    Tests if or not the set of registry values under key_path in reference_parse
-    is a subset of the corresponding set in state_parse.
-    Returns True on success and False on failure.
+    Determines which "values" (name/data pairs) have been changed or added,
+    under a specific key path.
     '''
     reference_items = reference_parse.items(key_path)
     for (reference_option, reference_value) in reference_items:
-        if not state_parse.has_option(key_path, reference_option):
-            return False
-        state_value = state_parse.get(key_path, reference_option)
-        if reference_value != state_value:
-            return False
+        if not state_parse or not state_parse.has_option(key_path, reference_option):
+            if key_path not in new_values:
+                new_values[key_path] = []
+            new_values[key_path].append({reference_option.strip('"'): reference_value.strip('"')})
+        else:
+            state_value = state_parse.get(key_path, reference_option)
+            if reference_value != state_value:
+                if key_path not in old_values:
+                    old_values[key_path] = []
+                old_values[key_path].append({reference_option.strip('"'): state_value.strip('"')})
+                if key_path not in new_values:
+                    new_values[key_path] = []
+                new_values[key_path].append({reference_option.strip('"'): reference_value.strip('"')})
     return True
 
 
-def _imported_test(state_data, reference_data):
+def _imported_get_changes(state_parse, reference_parse):
     r'''
     This is a utility function used by imported.
-    It is intended to test if the present state (as represented by state_data)
-    is conformant with the desired state.
-    reference_data includes a parser object, and state_data is just a parser object.
-    The test just establishes if one is a substructure of the other.
-    This function returns True if the test passes, and False if the test fails.
+    Its job is to construct the changes dictionary. It does this by comparing
+    parse trees. One is of data we exported from the registry and the other
+    is a parse tree of our reg file.
     '''
-    (_, reference_parse, _) \
-        = reference_data
-    state_parse = state_data
-    if not state_parse:
-        # i.e. state_parse is None because the present state doesn't even
-        # have a key at the location.
-        return False
-    else:
-        for key_path in reference_parse.sections():
-            if not state_parse.has_section(key_path) \
-               or not _imported_test_values(reference_parse, state_parse, key_path):
-                return False
-    return True
+    new_keys = []
+    new_values = {}
+    old_values = {}
+    for key_path in reference_parse.sections():
+        if not state_parse or not state_parse.has_section(key_path):
+            # state_parse could be None if the location doesn't exist in the registry
+            new_keys.append(key_path)
+        _imported_get_value_changes(reference_parse, state_parse, key_path, \
+                                    new_values, old_values)
+    result = {}
+    if new_keys or new_values or old_values:
+    # old_values is actually redundant in the condition
+        result["old"] = {}
+        result["old"]["values"] = old_values
+        result["new"] = {}
+        result["new"]["added keys"] = new_keys
+        result["new"]["added/changed values"] = new_values
+    return result
 
 
-def _imported_do_import(reference_reg_file, use_32bit_registry):
+def _imported_do_import(operation_data):
     r'''
     This is a utility function used by imported. This function calls
     the module function reg.import_file. If that function then throws
@@ -803,6 +810,7 @@ def _imported_do_import(reference_reg_file, use_32bit_registry):
        A: Whether or not the operation succeeded expressed as a boolean.
        B: an error message if the operation failed. Otherwise None.
     '''
+    (reference_reg_file, use_32bit_registry, changes) = operation_data
     try:
         __salt__['reg.import_file'](reference_reg_file, use_32bit_registry)
     except ValueError as err:
@@ -813,10 +821,10 @@ def _imported_do_import(reference_reg_file, use_32bit_registry):
         err_msg_fmt = "Call to module function 'reg.import_file' has failed. Error is '{0}'."
         err_msg = comment_fmt.format(err.message)
         return (False, err_msg)
-    return (True, None)
+    return (True, changes)
     
 
-def _imported_get_change_requirements(reference_data):
+def _imported_get_requirements(reference_data):
     r'''
     This is a utility function used by imported. It's job is to
     determine, using the the reference data, what
@@ -830,13 +838,14 @@ def _imported_get_change_requirements(reference_data):
               of c and d are defined as follows.
                  c: This is a dictionary of required changes. It is not a dictionary
                     of changes that have happened.
-                 d: If c is non-empty, d will be a function with no paramaters.
-                    This function is an operation which will effectuate the changes
-                    in the change dictionary.
-                    Id c is empty, d will just be None (no operation is needed when no
-                    changes are needed). Note that the change dictionary created here 
-                    is rather minimal and probably
-                    should be fleshed out to include specific changes.
+                 d: If c is non-empty, d is data required by the operation. In this
+                    case that data is just the path of the cached reg file
+                    and the required changes dictionary. The reg file is needed
+                    as an argument to ``reg.exe`` and the changes dictionary
+                    is being recycled so the operation (i.e. _imported_do_import)
+                    can return it as its
+                    own list of changes (the operation can't track its own changes since
+                    reg.exe doesn't report changes).
     '''
     (reference_reg_file, reference_parse, use_32bit_registry) \
         = reference_data
@@ -846,13 +855,11 @@ def _imported_get_change_requirements(reference_data):
     except CommandExecutionError as err:
         comment = _imported_compose_cmd_execution_err_msg(err)
         return (False, comment)
-    changes = {}
-    operation = None
-    if not _imported_test(state_parse, reference_data):
-        changes['old'] = "Registry unmodified."
-        changes['new'] = "Reg file imported."
-        operation = lambda : _imported_do_import(reference_reg_file, use_32bit_registry)
-    return (True, (changes, operation))
+    changes = _imported_get_changes(state_parse,reference_parse)
+    operation_data = None
+    if changes:
+        operation_data = (reference_reg_file, use_32bit_registry, changes)
+    return (True, (changes, operation_data))
 
 
 def imported(name, use_32bit_registry=False):
@@ -873,6 +880,11 @@ def imported(name, use_32bit_registry=False):
             proceeds, the ``REG`` file
             will be imported into the Windows 32 bit registry. Otherwise the
             Windows 64 bit registry will be used.
+
+    ..note::
+        This function is reliant on a conventionally created reg file (either
+        an export of a key from ``regedit``, or the result of ``reg export <key>``.
+        A reg file with multiple tree roots will not work with this function.
     '''
     ret = {'name': name,
            'result': False,
@@ -886,52 +898,50 @@ def imported(name, use_32bit_registry=False):
         ret['comment'] = err_msg
         ret['result'] = False
         return ret
-    # test, get required changes, and compose operation if needed
-    (result, pre_operation_data) \
-        = _imported_get_change_requirements(reference_data)
+    # get requirements for operation to proceed
+    (result, requirements) \
+        = _imported_get_requirements(reference_data)
     if not result:
-        err_msg = pre_operation_data
+        err_msg = requirements
         ret['comment'] = err_msg
         ret['result'] = False
         return ret
-    (pre_operation_required_changes, operation) = pre_operation_data 
-    if not pre_operation_required_changes:
-        # pre_operation_required_changes is the empty dictionary and we are done
+    (required_changes, operation_data) = requirements 
+    if not required_changes:
+        # required_changes is the empty dictionary and we are done
         ret['comment'] = "All data in the reg file is already in the registry. No action taken."
         ret['result'] = True
         return ret
     if __opts__['test']:
-        ret['changes'] = pre_operation_required_changes
+        ret['changes'] = required_changes
         ret['comment'] = "Reg file needs to be imported."
         ret['result'] = None
         return ret
     # Required changes is non-empty and we'ere not in test mode so
     # proceed with the operation
-    (result, operation_data) = operation()
+    (result, changes) = _imported_do_import(operation_data)
     if not result:
         # If result is False, that means the operation failed.
-        err_msg = operation_data
+        err_msg = changes
         ret['comment'] = err_msg
         ret['result'] = False
         return ret
     # retest
-    (result, post_operation_data) = _imported_get_change_requirements(reference_data)
+    (result, requirements) = _imported_get_requirements(reference_data)
     if not result:
         # we met with an error during testing 
-        err_msg = post_operation_data
+        err_msg = requirements
         ret['comment'] = err_msg
         ret['result'] = False
         return ret
-    (post_operation_required_changes, _) = post_operation_data
-    if post_operation_required_changes:
+    (required_changes, _) = requirements
+    if required_changes:
         # Required change dict is *NOT* the empty dictionary even though it should be.
         err_msg = "Operation appears to have succeeded, but registry is still not in the desired state."
         ret['comment'] = err_msg
         ret['result'] = False
         return ret
-    # Report the changes we identified as required before we performed the operation,
-    # since success of the retest implies that those changes have happened.
-    ret['changes'] = pre_operation_required_changes
+    ret['changes'] = changes
     ret['comment'] = "Reg file has been imported."
     ret['result'] = True
     return ret
