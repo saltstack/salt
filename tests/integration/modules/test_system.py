@@ -7,6 +7,7 @@ import logging
 import os
 import signal
 import subprocess
+import time
 import textwrap
 
 # Import Salt Testing libs
@@ -369,9 +370,15 @@ class WinSystemModuleTest(ModuleCase):
     '''
     Validate the date/time functions in the win_system module
     '''
+    @classmethod
+    def setUpClass(cls):
+        if subprocess.call('net stop w32time', shell=True) != 0:
+            log.error('Failed to stop w32time service')
 
     @classmethod
     def tearDownClass(cls):
+        if subprocess.call('net start w32time', shell=True) != 0:
+            log.error('Failed to start w32time service')
         if subprocess.call('w32tm /resync', shell=True) != 0:
             log.error("Re-syncing time failed")
 
@@ -435,23 +442,21 @@ class WinSystemModuleTest(ModuleCase):
             VM in the hypervisor
         '''
         try:
-            self.assertTrue(self.run_function('service.stop', ['w32time']))
-            self.assertFalse(self.run_function('service.status', ['w32time']))
+            current_time = datetime.datetime.now().strftime('%H:%M:%S')
             test_time = '10:55'
-            current_time = self.run_function('system.get_system_time')
             self.run_function('system.set_system_time', [test_time + ' AM'])
-            get_time = self.run_function('system.get_system_time').rsplit(':', 1)[0]
-            self.assertEqual(get_time, test_time)
+            time.sleep(.25)
+            new_time = datetime.datetime.now().strftime('%H:%M')
+            self.assertEqual(new_time, test_time)
         finally:
             self.run_function('system.set_system_time', [current_time])
-            self.run_function('service.start', ['w32time'])
 
     def test_get_system_date(self):
         '''
         Test getting system date
         '''
         ret = self.run_function('system.get_system_date')
-        date = datetime.datetime.now().date().strftime("%m/%d/%Y")
+        date = datetime.datetime.now().strftime("%m/%d/%Y")
         self.assertEqual(date, ret)
 
     @destructiveTest
@@ -467,12 +472,9 @@ class WinSystemModuleTest(ModuleCase):
         try:
             # If the test still fails, the hypervisor may be maintaining time
             # sync
-            self.assertTrue(self.run_function('service.stop', ['w32time']))
-            self.assertFalse(self.run_function('service.status', ['w32time']))
-            current_date = self.run_function('system.get_system_date')
+            current_date = datetime.datetime.now().strftime('%Y/%m/%d')
             self.run_function('system.set_system_date', ['03/25/2018'])
-            ret = self.run_function('system.get_system_date')
-            self.assertEqual(ret, '03/25/2018')
+            new_date = datetime.datetime.now().strftime('%Y/%m/%d')
+            self.assertEqual(new_date, '2018/03/25')
         finally:
             self.run_function('system.set_system_date', [current_date])
-            self.run_function('service.start', ['w32time'])
