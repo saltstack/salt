@@ -468,7 +468,7 @@ def upgraded(
                                   ''.format(name, elasticsearch_version))
     if isinstance(ret['result'], bool):
         return ret
-    log.debug(__name__ + ':upgraded: Check upgrade in progress')
+    log.debug('%s :upgraded: Check upgrade in progress', __name__)
     # Check if an upgrade is already in progress
     res = __salt__['boto3_elasticsearch.get_upgrade_status'](
         name,
@@ -503,7 +503,7 @@ def upgraded(
     if isinstance(ret['result'], bool):
         return ret
 
-    log.debug(__name__ + ':upgraded: Check upgrade eligibility')
+    log.debug('%s :upgraded: Check upgrade eligibility', __name__)
     # Check if the domain is eligible for an upgrade
     res = __salt__['boto3_elasticsearch.check_upgrade_eligibility'](
         name,
@@ -519,7 +519,7 @@ def upgraded(
                               'be upgraded to version {}.'
                               ''.format(name, elasticsearch_version))
     else:
-        log.debug(__name__ + ':upgraded: Start the upgrade')
+        log.debug('%s :upgraded: Start the upgrade', __name__)
         # Start the upgrade
         if __opts__['test']:
             ret['result'] = None
