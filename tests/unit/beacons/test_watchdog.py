@@ -92,9 +92,21 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = check_events(config)
 
-        self.assertEqual(len(ret), 1)
-        self.assertEqual(ret[0]['path'], path)
-        self.assertEqual(ret[0]['change'], 'modified')
+        modified = False
+        for event in ret:
+            # "modified" requires special handling
+            # A modification sometimes triggers 2 modified events depending on
+            # the OS and the python version
+            # When the "modified" event triggers on modify, it will have the
+            # path to the temp file (path), other modified events will contain
+            # the path minus "tmpfile" and will not match. That's how we'll
+            # distinguish the two
+            if event['change'] == 'modified':
+                if event['path'] == path:
+                    modified = True
+
+        # Check results of the for loop to validate modified
+        self.assertTrue(modified)
 
     def test_file_deleted(self):
         path = os.path.join(self.tmpdir, 'tmpfile')
