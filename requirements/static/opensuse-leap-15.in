@@ -36,6 +36,7 @@ rfc3987
 salttesting==2017.6.1
 setproctitle
 setuptools-scm  # XXX: Find out if we can remove this dependency
+shade
 strict_rfc3339
 supervisor==3.3.5; python_version < '3'
 timelib
