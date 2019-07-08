@@ -106,68 +106,87 @@ def present(
     :param str elasticsearch_version: String of format X.Y to specify version for
         the Elasticsearch domain eg. "1.5" or "2.3".
     :param dict elasticsearch_cluster_config: Dict specifying the configuration
-            options for an Elasticsearch domain. Sub-options contained here are:
-        :param str InstanceType: The instance type for an Elasticsearch cluster.
-        :param int InstanceCount: The instance type for an Elasticsearch cluster.
-        :param bool DedicatedMasterEnabled: Indicate whether a dedicated master
-            node is enabled.
-        :param bool ZoneAwarenessEnabled: Indicate whether zone awareness is enabled.
-        :param dict ZoneAwarenessConfig: Specifies the zone awareness configuration
-                for a domain when zone awareness is enabled. Sub-options contained
-                here are:
-            :param int AvailabilityZoneCount: An integer value to indicate the
-                number of availability zones for a domain when zone awareness is
-                enabled. This should be equal to number of subnets if VPC endpoints
-                is enabled.
-        :param str DedicatedMasterType: The instance type for a dedicated master node.
-        :param int DedicatedMasterCount: Total number of dedicated master nodes,
-            active and on standby, for the cluster.
+        options for an Elasticsearch domain.
+        Keys (case sensitive) in here are:
+
+        - InstanceType (str): The instance type for an Elasticsearch cluster.
+        - InstanceCount (int): The instance type for an Elasticsearch cluster.
+        - DedicatedMasterEnabled (bool): Indicate whether a dedicated master
+          node is enabled.
+        - ZoneAwarenessEnabled (bool): Indicate whether zone awareness is enabled.
+        - ZoneAwarenessConfig (dict): Specifies the zone awareness configuration
+          for a domain when zone awareness is enabled.
+          Keys (case sensitive) in here are:
+
+          - AvailabilityZoneCount (int): An integer value to indicate the
+            number of availability zones for a domain when zone awareness is
+            enabled. This should be equal to number of subnets if VPC endpoints
+            is enabled.
+        - DedicatedMasterType (str): The instance type for a dedicated master node.
+        - DedicatedMasterCount (int): Total number of dedicated master nodes,
+          active and on standby, for the cluster.
     :param dict ebs_options: Dict specifying the options to enable or disable and
-            specifying the type and size of EBS storage volumes.
-            Sub-options contained here are:
-        :param bool EBSEnabled: Specifies whether EBS-based storage is enabled.
-        :param str VolumeType: Specifies the volume type for EBS-based storage.
-        :param int VolumeSize: Integer to specify the size of an EBS volume.
-        :param int Iops: Specifies the IOPD for a Provisioned IOPS EBS volume (SSD).
-    :param str/dict access_policies: Dict or JSON string with the IAM access policy.
+        specifying the type and size of EBS storage volumes.
+        Keys (case sensitive) in here are:
+
+        - EBSEnabled (bool): Specifies whether EBS-based storage is enabled.
+        - VolumeType (str): Specifies the volume type for EBS-based storage.
+        - VolumeSize (int): Integer to specify the size of an EBS volume.
+        - Iops (int): Specifies the IOPD for a Provisioned IOPS EBS volume (SSD).
+    :type access_policies: str or dict
+    :param access_policies: Dict or JSON string with the IAM access policy.
     :param dict snapshot_options: Dict specifying the snapshot options.
-            Sub-options contained here are:
-        :param int AutomatedSnapshotStartHour: Specifies the time, in UTC format,
-            when the service takes a daily automated snapshot of the specified
-            Elasticsearch domain. Default value is 0 hours.
+        Keys (case senstive) in here are:
+
+        - AutomatedSnapshotStartHour (int): Specifies the time, in UTC format,
+          when the service takes a daily automated snapshot of the specified
+          Elasticsearch domain. Default value is 0 hours.
     :param dict vpc_options: Dict with the options to specify the subnets and security
-            groups for the VPC endpoint. Sub-options contained here are:
-        :param list SubnetIds: The list of subnets for the VPC endpoint.
-        :param list SecurityGroupIds: The list of security groups for the VPC endpoint.
+        groups for the VPC endpoint.
+        Keys (case sensitive) in here are:
+
+        - SubnetIds (list): The list of subnets for the VPC endpoint.
+        - SecurityGroupIds (list): The list of security groups for the VPC endpoint.
     :param dict cognito_options: Dict with options to specify the cognito user and
-            identity pools for Kibana authentication. Sub-options contained here are:
-        :param bool Enabled: Specifies the option to enable Cognito for Kibana authentication.
-        :param str UserPoolId: Specifies the Cognito user pool ID for Kibana authentication.
-        :param str IdentityPoolId: Specifies the Cognito identity pool ID for Kibana authentication.
-        :param str RoleArn: Specifies the role ARN that provides Elasticsearch permissions
-            for accessing Cognito resources.
+        identity pools for Kibana authentication.
+        Keys (case senstive) in here are:
+
+        - Enabled (bool): Specifies the option to enable Cognito for Kibana authentication.
+        - UserPoolId (str): Specifies the Cognito user pool ID for Kibana authentication.
+        - IdentityPoolId (str): Specifies the Cognito identity pool ID for Kibana authentication.
+        - RoleArn (str): Specifies the role ARN that provides Elasticsearch permissions
+          for accessing Cognito resources.
     :param dict encryption_at_rest_options: Dict specifying the encryption at rest
-            options. This option can only be used for the creation of a new Elasticsearch
-            domain. Sub-options contained here are:
-        :param bool Enabled: Specifies the option to enable Encryption At Rest.
-        :param str KmsKeyId: Specifies the KMS Key ID for Encryption At Rest options.
+        options. This option can only be used for the creation of a new Elasticsearch
+        domain.
+        Keys (case sensitive) in here are:
+
+        - Enabled (bool): Specifies the option to enable Encryption At Rest.
+        - KmsKeyId (str): Specifies the KMS Key ID for Encryption At Rest options.
     :param dict node_to_node_encryption_options: Dict specifying the node to node
-            encryption options. This option can only be used for the creation of
-            a new Elasticsearch domain. Sub-options contained here are:
-        :param bool Enabled: Specify True to enable node-to-node encryption.
+        encryption options. This option can only be used for the creation of
+        a new Elasticsearch domain.
+        Keys (case sensitive) in here are:
+
+        - Enabled (bool): Specify True to enable node-to-node encryption.
     :param dict advanced_options: Dict with option to allow references to indices
         in an HTTP request body. Must be False when configuring access to individual
         sub-resources. By default, the value is True.
         See http://docs.aws.amazon.com/elasticsearch-service/latest/developerguide\
-            /es-createupdatedomains.html#es-createdomain-configure-advanced-options
+        /es-createupdatedomains.html#es-createdomain-configure-advanced-options
         for more information.
     :param dict log_publishing_options: Dict with options for various type of logs.
-            The keys denote the type of log file and can be one of the following:
-                INDEX_SLOW_LOGS, SEARCH_SLOW_LOGS, ES_APPLICATION_LOGS.
-            The value assigned to each key is a dict with the following sub-options:
-        :param str CloudWatchLogsLogGroupArn: The ARN of the Cloudwatch log
-            group to which the log needs to be published.
-        :param bool Enabled: Specifies whether given log publishing option is enabled or not.
+        The keys denote the type of log file and can be one of the following:
+
+        - INDEX_SLOW_LOGS
+        - SEARCH_SLOW_LOGS
+        - ES_APPLICATION_LOGS
+
+        The value assigned to each key is a dict with the following case sensitive keys:
+
+        - CloudWatchLogsLogGroupArn (str): The ARN of the Cloudwatch log
+          group to which the log needs to be published.
+        - Enabled (bool): Specifies whether given log publishing option is enabled or not.
     :param bool blocking: Whether or not the state should wait for all operations
         (create/update/upgrade) to be completed. Default: ``True``
     :param dict tags: Dict of tags to ensure are present on the Elasticsearch domain.

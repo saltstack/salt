@@ -53,6 +53,7 @@ execution modules
     bluecoat_sslv
     bluez_bluetooth
     boto3_elasticache
+    boto3_elasticsearch
     boto3_route53
     boto3_sns
     boto_apigateway

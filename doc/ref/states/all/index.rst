@@ -33,6 +33,7 @@ state modules
     blockdev
     bluecoat_sslv
     boto3_elasticache
+    boto3_elasticsearch
     boto3_route53
     boto3_sns
     boto_apigateway
