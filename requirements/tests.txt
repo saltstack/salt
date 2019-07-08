@@ -10,6 +10,7 @@ docker==2.7.0; sys.platform == 'win32'
 virtualenv
 setuptools>=30
 six>=1.10.0
+shade
 timelib
 coverage
 keyring==5.7.1
