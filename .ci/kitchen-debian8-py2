@@ -102,7 +102,7 @@ node('kitchen-slave') {
                                                 '''
                                             }
                                         }
-                                        archiveArtifacts artifacts: 'artifacts/*,artifacts/**/*'
+                                        archiveArtifacts artifacts: 'artifacts/*,artifacts/**/*,.kitchen/logs/kitchen.log'
                                         junit 'artifacts/xml-unittests-output/*.xml'
                                     } finally {
                                         stage('Cleanup') {
@@ -145,7 +145,7 @@ node('kitchen-slave') {
                                 try {
                                   slackSend channel: "#jenkins-prod-pr",
                                       color: '#FF0000',
-                                      message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                                      message: "*${currentBuild.currentResult}*: ${currentBuild.getFullDisplayName()} (<${env.BUILD_URL}|open>)"
                                 } catch (Exception e) {
                                   sh 'echo Failed to send the Slack notification'
                                 }
