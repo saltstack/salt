@@ -1128,7 +1128,7 @@ def upgrade_elasticsearch_domain(
             ret['result'] = True
             ret['response'] = res
         if blocking:
-            waiter = __utils__['boto3_elasticsearch.get_waiter'](conn, waiter='ESUpgradeFinished2')
+            waiter = __utils__['boto3_elasticsearch.get_waiter'](conn, waiter='ESUpgradeFinished')
             waiter.wait(DomainName=domain_name)
     except (ParamValidationError, ClientError, WaiterError) as exp:
         ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
@@ -1178,7 +1178,7 @@ def wait_for_upgrade(
     ret = {'result': False}
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
-        waiter = __utils__['boto3_elasticsearch.get_waiter'](conn, waiter='ESUpgradeFinished2')
+        waiter = __utils__['boto3_elasticsearch.get_waiter'](conn, waiter='ESUpgradeFinished')
         waiter.wait(DomainName=domain_name)
         ret['result'] = True
     except (ParamValidationError, ClientError, WaiterError) as exp:

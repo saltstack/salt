@@ -35,7 +35,7 @@ WAITER_CONFIGS = {
            'argument': 'DomainConfig.*.Status.PendingDeletion',
         }],
     },
-    'ESUpgradeFinished2': {
+    'ESUpgradeFinished': {
         'delay': 60,
         'operation': 'DescribeElasticsearchDomain',
         'maxAttempts': 60,
@@ -44,27 +44,6 @@ WAITER_CONFIGS = {
             'matcher': 'path',
             'state': 'success',
             'argument': 'DomainStatus.UpgradeProcessing',
-        }],
-    },
-    'ESUpgradeFinished': {
-        'delay': 60,
-        'operation': 'GetUpgradeStatus',
-        'maxAttempts': 60,
-        'acceptors': [{
-            'expected': 'SUCCEEDED',
-            'matcher': 'path',
-            'state': 'success',
-            'argument': 'StepStatus'
-        }, {
-            'expected': 'FAILED',
-            'matcher': 'path',
-            'state': 'success',
-            'argument': 'StepStatus',
-        }, {
-            'expected': 'SUCCEEDED_WITH_ISSUES',
-            'matcher': 'path',
-            'state': 'success',
-            'argument': 'StepStatus',
         }],
     },
     'ESDomainDeleted': {
