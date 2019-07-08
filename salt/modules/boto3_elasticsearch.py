@@ -1130,9 +1130,6 @@ def upgrade_elasticsearch_domain(
         if blocking:
             waiter = __utils__['boto3_elasticsearch.get_waiter'](conn, waiter='ESUpgradeFinished2')
             waiter.wait(DomainName=domain_name)
-        frop = describe_elasticsearch_domain(domain_name, region=region, keyid=keyid, key=key, profile=profile)
-        log.debug(__name__ + ':upgrade_elasticsearch_domain:\n'
-                  '\t\tfrop: {}'.format(frop))
     except (ParamValidationError, ClientError, WaiterError) as exp:
         ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
     return ret
