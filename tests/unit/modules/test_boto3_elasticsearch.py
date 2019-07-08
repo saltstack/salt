@@ -206,7 +206,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 domain_name='testdomain',
                 **CONN_PARAMETERS)
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format('ResourceNotFoundException', 'msg')
             )
             self.assertFalse(result['result'])
@@ -260,7 +260,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             kwargs.update(CONN_PARAMETERS)
             result = boto3_elasticsearch.create_elasticsearch_domain('testdomain', **kwargs)
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'create_domain')
             )
 
@@ -286,7 +286,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             result = boto3_elasticsearch.delete_elasticsearch_domain('testdomain', **CONN_PARAMETERS)
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'delete_domain')
             )
 
@@ -335,7 +335,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             kwargs.update(CONN_PARAMETERS)
             result = boto3_elasticsearch.update_elasticsearch_domain_config('testdomain', **kwargs)
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'update_domain')
             )
 
@@ -373,7 +373,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'add_tags')
             )
 
@@ -410,7 +410,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'remove_tags')
             )
 
@@ -453,7 +453,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'list_tags')
             )
 
@@ -498,7 +498,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'cancel_elasticsearch_service_software_update')
             )
 
@@ -530,7 +530,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'delete_elasticsearch_service_role')
             )
 
@@ -561,7 +561,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'describe_elasticsearch_domain_config')
             )
 
@@ -595,7 +595,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'describe_elasticsearch_domains')
             )
 
@@ -657,7 +657,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'describe_elasticsearch_instance_type_limits')
             )
 
@@ -707,7 +707,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'describe_reserved_elasticsearch_instance_offerings')
             )
 
@@ -764,7 +764,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'describe_reserved_elasticsearch_instances')
             )
 
@@ -806,7 +806,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'get_compatible_elasticsearch_versions')
             )
 
@@ -856,7 +856,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'get_upgrade_history')
             )
 
@@ -868,7 +868,8 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
         ret_val = {
             'UpgradeStep': 'PRE_UPGRADE_CHECK',
             'StepStatus': 'IN_PROGRESS',
-            'UpgradeName': 'string'
+            'UpgradeName': 'string',
+            'ResponseMetadata': None,
         }
         with patch.object(self.conn,
                           'get_upgrade_status',
@@ -895,7 +896,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'get_upgrade_status')
             )
 
@@ -932,7 +933,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'list_domain_names')
             )
 
@@ -985,7 +986,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'list_elasticsearch_instance_types')
             )
 
@@ -1021,7 +1022,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'list_elasticsearch_versions')
             )
 
@@ -1061,7 +1062,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'purchase_reserved_elasticsearch_instance_offering')
             )
 
@@ -1106,7 +1107,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'start_elasticsearch_service_software_update')
             )
 
@@ -1147,6 +1148,6 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result['result'])
             self.assertEqual(
-                result.get('error', {}).get('message'),
+                result.get('error', ''),
                 ERROR_MESSAGE.format(101, 'upgrade_elasticsearch_domain')
             )
