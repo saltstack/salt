@@ -174,6 +174,40 @@ def present(
 
     .. versionadded:: Natrium
 
+    Example:
+
+    This will create an elasticsearch domain consisting of a single t2.small instance
+    in the eu-west-1 region (Ireland) and will wait until the instance is available
+    before returning from the state.
+
+    .. code-block:: yaml
+
+        Create new domain:
+          boto3_elasticsearch.present:
+          - name: my_domain
+          - elasticsearch_version: '5.1'
+          - elasticsearch_cluster_config:
+              InstanceType: t2.small.elasticsearch
+              InstanceCount: 1
+              DedicatedMasterEnabled: False
+              ZoneAwarenessEnabled: False
+          - ebs_options:
+              EBSEnabled: True
+              VolumeType: gp2
+              VolumeSize: 10
+          - snapshot_options:
+              AutomatedSnapshotStartHour: 3
+          - vpc_options:
+              SubnetIds:
+              - subnet-12345678
+              SecurityGroupIds:
+              - sg-12345678
+          - node_to_node_encryption_options:
+              Enabled: False
+          - region: eu-west-1
+          - tags:
+              foo: bar
+              baz: qux
     '''
     ret = {'name': name, 'result': 'oops', 'comment': [], 'changes': {}}
 
@@ -331,6 +365,14 @@ def absent(
 
     .. versionadded:: Natrium
 
+    Example:
+
+    .. code-block:: yaml
+
+        Remove Elasticsearch Domain:
+          boto3_elasticsearch.absent:
+          - name: my_domain
+          - region: eu-west-1
     '''
     ret = {'name': name, 'result': 'oops', 'comment': [], 'changes': {}}
 
@@ -386,6 +428,18 @@ def upgraded(
     :param str name: The name of the Elasticsearch domain to upgrade.
     :param str elasticsearch_version: String of format X.Y to specify version for
         the Elasticsearch domain eg. "1.5" or "2.3".
+
+    .. versionadded:: Natrium
+
+    Example:
+
+    .. code-block:: yaml
+
+        Upgrade Elasticsearch Domain:
+          boto3_elasticsearch.upgraded:
+          - name: my_domain
+          - elasticsearch_version: '7.2'
+          - region: eu-west-1
     '''
     ret = {'name': name, 'result': 'oops', 'comment': [], 'changes': {}}
     current_domain = None
@@ -508,6 +562,22 @@ def latest(
 
     :param str name: The name of the Elasticsearch domain to upgrade.
     :param bool minor_only: Only upgrade to the latest minor version.
+
+    .. versionadded:: Natrium
+
+    Example:
+
+    The following example will ensure the elasticsearch domain ``my_domain`` is
+    upgraded to the latest minor version. So if it is currently 5.1 it will be
+    upgraded to 5.6.
+
+    .. code-block:: yaml
+
+        Upgrade Elasticsearch Domain:
+          boto3_elasticsearch.latest:
+          - name: my_domain
+          - minor_only: True
+          - region: eu-west-1
     '''
     ret = {'name': name, 'result': 'oops', 'comment': [], 'changes': {}}
     # Get current version
@@ -592,6 +662,9 @@ def tagged(
     :param dict tags: The tags to add to/replace on the Elasticsearch domain.
     :param bool replace: Whether or not to replace (``True``) all existing tags
         on the Elasticsearch domain, or add (``False``) tags to the ES domain.
+
+    .. versionadded:: Natrium
+
     '''
     ret = {'name': name, 'result': 'oops', 'comment': [], 'changes': {}}
     current_tags = {}
