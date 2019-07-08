@@ -107,7 +107,8 @@ def add_tags(
         Specifying this overrides ``domain_name``.
     :param dict tags: The dict of tags to add to the Elasticsearch domain.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon failure, also contains a key 'error' with the error message as value.
 
     As a special case, tags whose key starts with `__` are ignored.
@@ -160,7 +161,8 @@ def cancel_elasticsearch_service_software_update(
     :param str domain_name: The name of the domain that you want to stop the latest
         service software update on.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with the current service software options.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -202,76 +204,94 @@ def create_elasticsearch_domain(
         the following characters: a-z (lowercase), 0-9, and - (hyphen).
     :param str elasticsearch_version: String of format X.Y to specify version for
         the Elasticsearch domain eg. "1.5" or "2.3".
-    :param dict elasticsearch_cluster_config: Dict specifying the configuration
-            options for an Elasticsearch domain. Sub-options contained here are:
-        :param str InstanceType: The instance type for an Elasticsearch cluster.
-        :param int InstanceCount: The instance type for an Elasticsearch cluster.
-        :param bool DedicatedMasterEnabled: Indicate whether a dedicated master
-            node is enabled.
-        :param bool ZoneAwarenessEnabled: Indicate whether zone awareness is enabled.
-            If this is not enabled, the Elasticsearch domain will only be in one
-            availability zone.
-        :param dict ZoneAwarenessConfig: Specifies the zone awareness configuration
-                for a domain when zone awareness is enabled. Sub-options contained
-                here are:
-            :param int AvailabilityZoneCount: An integer value to indicate the
-                number of availability zones for a domain when zone awareness is
-                enabled. This should be equal to number of subnets if VPC endpoints
-                is enabled. Allowed values: 2, 3
-        :param str DedicatedMasterType: The instance type for a dedicated master node.
-        :param int DedicatedMasterCount: Total number of dedicated master nodes,
-            active and on standby, for the cluster.
+    :param dict elasticsearch_cluster_config: Dictionary specifying the configuration
+        options for an Elasticsearch domain. Keys (case sensitive) in here are:
+
+        - InstanceType (str): The instance type for an Elasticsearch cluster.
+        - InstanceCount (int): The instance type for an Elasticsearch cluster.
+        - DedicatedMasterEnabled (bool): Indicate whether a dedicated master
+          node is enabled.
+        - ZoneAwarenessEnabled (bool): Indicate whether zone awareness is enabled.
+          If this is not enabled, the Elasticsearch domain will only be in one
+          availability zone.
+        - ZoneAwarenessConfig (dict): Specifies the zone awareness configuration
+          for a domain when zone awareness is enabled.
+          Keys (case sensitive) in here are:
+
+          - AvailabilityZoneCount (int): An integer value to indicate the
+            number of availability zones for a domain when zone awareness is
+            enabled. This should be equal to number of subnets if VPC endpoints
+            is enabled. Allowed values: 2, 3
+
+        - DedicatedMasterType (str): The instance type for a dedicated master node.
+        - DedicatedMasterCount (int): Total number of dedicated master nodes,
+          active and on standby, for the cluster.
     :param dict ebs_options: Dict specifying the options to enable or disable and
-            specifying the type and size of EBS storage volumes.
-            Sub-options contained here are:
-        :param bool EBSEnabled: Specifies whether EBS-based storage is enabled.
-        :param str VolumeType: Specifies the volume type for EBS-based storage.
-        :param int VolumeSize: Integer to specify the size of an EBS volume.
-        :param int Iops: Specifies the IOPD for a Provisioned IOPS EBS volume (SSD).
-    :param str/dict access_policies: Dict or JSON string with the IAM access policy.
+        specifying the type and size of EBS storage volumes.
+        Keys (case sensitive) in here are:
+
+        - EBSEnabled (bool): Specifies whether EBS-based storage is enabled.
+        - VolumeType (str): Specifies the volume type for EBS-based storage.
+        - VolumeSize (int): Integer to specify the size of an EBS volume.
+        - Iops (int): Specifies the IOPD for a Provisioned IOPS EBS volume (SSD).
+    :type access_policies: str or dict
+    :param access_policies: Dict or JSON string with the IAM access policy.
     :param dict snapshot_options: Dict specifying the snapshot options.
-            Sub-options contained here are:
-        :param int AutomatedSnapshotStartHour: Specifies the time, in UTC format,
-            when the service takes a daily automated snapshot of the specified
-            Elasticsearch domain. Default value is 0 hours.
+        Keys (case sensitive) in here are:
+
+        - AutomatedSnapshotStartHour (int): Specifies the time, in UTC format,
+          when the service takes a daily automated snapshot of the specified
+          Elasticsearch domain. Default value is 0 hours.
     :param dict vpc_options: Dict with the options to specify the subnets and security
-            groups for the VPC endpoint. Sub-options contained here are:
-        :param list SubnetIds: The list of subnets for the VPC endpoint.
-        :param list SecurityGroupIds: The list of security groups for the VPC endpoint.
+        groups for the VPC endpoint.
+        Keys (case sensitive) in here are:
+
+        - SubnetIds (list): The list of subnets for the VPC endpoint.
+        - SecurityGroupIds (list): The list of security groups for the VPC endpoint.
     :param dict cognito_options: Dict with options to specify the cognito user and
-            identity pools for Kibana authentication. Sub-options contained here are:
-        :param bool Enabled: Specifies the option to enable Cognito for Kibana authentication.
-        :param str UserPoolId: Specifies the Cognito user pool ID for Kibana authentication.
-        :param str IdentityPoolId: Specifies the Cognito identity pool ID for Kibana authentication.
-        :param str RoleArn: Specifies the role ARN that provides Elasticsearch permissions
-            for accessing Cognito resources.
+        identity pools for Kibana authentication.
+        Keys (case sensitive) in here are:
+
+        - Enabled (bool): Specifies the option to enable Cognito for Kibana authentication.
+        - UserPoolId (str): Specifies the Cognito user pool ID for Kibana authentication.
+        - IdentityPoolId (str): Specifies the Cognito identity pool ID for Kibana authentication.
+        - RoleArn (str): Specifies the role ARN that provides Elasticsearch permissions
+          for accessing Cognito resources.
     :param dict encryption_at_rest_options: Dict specifying the encryption at rest
-            options. Sub-options contained here are:
-        :param bool Enabled: Specifies the option to enable Encryption At Rest.
-        :param str KmsKeyId: Specifies the KMS Key ID for Encryption At Rest options.
+        options. Keys (case sensitive) in here are:
+
+        - Enabled (bool): Specifies the option to enable Encryption At Rest.
+        - KmsKeyId (str): Specifies the KMS Key ID for Encryption At Rest options.
     :param dict node_to_node_encryption_options: Dict specifying the node to node
-            encryption options. Sub-options contained here are:
-        :param bool Enabled: Specify True to enable node-to-node encryption.
+        encryption options. Keys (case sensitive) in here are:
+
+        - Enabled (bool): Specify True to enable node-to-node encryption.
     :param dict advanced_options: Dict with option to allow references to indices
         in an HTTP request body. Must be False when configuring access to individual
         sub-resources. By default, the value is True.
         See http://docs.aws.amazon.com/elasticsearch-service/latest/developerguide\
-            /es-createupdatedomains.html#es-createdomain-configure-advanced-options
+        /es-createupdatedomains.html#es-createdomain-configure-advanced-options
         for more information.
     :param dict log_publishing_options: Dict with options for various type of logs.
-            The keys denote the type of log file and can be one of the following:
-                INDEX_SLOW_LOGS, SEARCH_SLOW_LOGS, ES_APPLICATION_LOGS.
-            The value assigned to each key is a dict with the following sub-options:
-        :param str CloudWatchLogsLogGroupArn: The ARN of the Cloudwatch log
-            group to which the log needs to be published.
-        :param bool Enabled: Specifies whether given log publishing option is enabled or not.
+        The keys denote the type of log file and can be one of the following:
+
+        - INDEX_SLOW_LOGS
+        - SEARCH_SLOW_LOGS
+        - ES_APPLICATION_LOGS
+
+        The value assigned to each key is a dict with the following case sensitive keys:
+
+        - CloudWatchLogsLogGroupArn (str): The ARN of the Cloudwatch log
+          group to which the log needs to be published.
+        - Enabled (bool): Specifies whether given log publishing option is enabled or not.
     :param bool blocking: Whether or not to wait (block) until the Elasticsearch
         domain has been created.
 
     Note: Not all instance types allow enabling encryption at rest. See https://docs.aws.amazon.com\
         /elasticsearch-service/latest/developerguide/aes-supported-instance-types.html
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with the domain status configuration.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -292,7 +312,7 @@ def create_elasticsearch_domain(
                 "VolumeType": "gp2", \\
                 "VolumeSize": 10, \\
                 "Iops": 0}' \\
-              access_policies='{
+              access_policies='{ \\
                 "Version": "2012-10-17", \\
                 "Statement": [ \\
                   {"Effect": "Allow", \\
@@ -302,6 +322,7 @@ def create_elasticsearch_domain(
                    "Condition": {"IpAddress": {"aws:SourceIp": ["127.0.0.1"]}}}]} \\
               snapshot_options='{"AutomatedSnapshotStartHour": 0}' \\
               advanced_options='{"rest.action.multi.allow_explicit_index": "true"}'
+
     '''
     boto_kwargs = salt.utils.data.filter_falsey({
         'DomainName': domain_name,
@@ -346,7 +367,8 @@ def delete_elasticsearch_domain(
     :param bool blocking: Whether or not to wait (block) until the Elasticsearch
         domain has been deleted.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon failure, also contains a key 'error' with the error message as value.
 
     .. versionadded:: Natrium
@@ -356,6 +378,7 @@ def delete_elasticsearch_domain(
     .. code-block:: bash
 
         salt myminion boto_elasticsearch_domain.delete mydomain
+
     '''
     ret = {'result': False}
     try:
@@ -378,7 +401,8 @@ def delete_elasticsearch_service_role(
     maintain VPC domains. Role deletion will fail if any existing VPC domains use
     the role. You must delete any such Elasticsearch domains before deleting the role.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon failure, also contains a key 'error' with the error message as value.
 
     .. versionadded:: Natrium
@@ -402,7 +426,8 @@ def describe_elasticsearch_domain(
 
     :param str domain_name: The name of the domain to get the status of.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary ith key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with the domain status information.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -436,7 +461,8 @@ def describe_elasticsearch_domain_config(
 
     :param str domain_name: The name of the domain to describe.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with the current configuration information.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -447,6 +473,7 @@ def describe_elasticsearch_domain_config(
     .. code-block:: bash
 
         salt myminion boto_elasticsearch_domain.describe mydomain
+
     '''
     ret = {'result': False}
     try:
@@ -469,9 +496,13 @@ def describe_elasticsearch_domains(
 
     :param list domain_names: List of domain names to get information for.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with the list of domain status information.
         Upon failure, also contains a key 'error' with the error message as value.
+
+    .. versionadded:: Natrium
+
     '''
     ret = {'result': False}
     try:
@@ -504,7 +535,8 @@ def describe_elasticsearch_instance_type_limits(
         to modify. This should be present only if we are querying for Elasticsearch
         ``Limits`` for existing domain.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with the limits information.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -539,7 +571,8 @@ def describe_reserved_elasticsearch_instance_offerings(
         filter value. Use this parameter to show only the available offering that
         matches the specified reservation identifier.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with the list of offerings information.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -576,9 +609,10 @@ def describe_reserved_elasticsearch_instances(
         filter value. Use this parameter to show only the reservation that matches
         the specified reserved Elasticsearch instance ID.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with a list of information on
-            reserved instances.
+        reserved instances.
         Upon failure, also contains a key 'error' with the error message as value.
 
     Note: Version 1.9.174 of boto3 has a bug in that reserved_elasticsearch_instance_id
@@ -617,7 +651,8 @@ def get_compatible_elasticsearch_versions(
 
     :param str domain_name: The name of an Elasticsearch domain.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with a list of compatible versions.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -651,7 +686,8 @@ def get_upgrade_history(
         names start with a letter or number and can contain the following characters:
         a-z (lowercase), 0-9, and - (hyphen).
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with a list of upgrade histories.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -686,7 +722,8 @@ def get_upgrade_status(
         names start with a letter or number and can contain the following characters:
         a-z (lowercase), 0-9, and - (hyphen).
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with upgrade status information.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -711,7 +748,8 @@ def list_domain_names(
     '''
     Returns the name of all Elasticsearch domains owned by the current user's account.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with a list of domain names.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -744,7 +782,8 @@ def list_elasticsearch_instance_types(
         are trying to modify. This should be present only if we are querying for
         list of available Elasticsearch instance types when modifying existing domain.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with a list of Elasticsearch instance types.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -775,7 +814,8 @@ def list_elasticsearch_versions(
     '''
     List all supported Elasticsearch versions.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with a list of Elasticsearch versions.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -803,7 +843,8 @@ def list_tags(
     '''
     Returns all tags for the given Elasticsearch domain.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with a dict of tags.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -814,6 +855,7 @@ def list_tags(
     .. code-block:: bash
 
         salt myminion boto_elasticsearch.list_tags my_domain
+
     '''
     if not any((arn, domain_name)):
         raise SaltInvocationError('At least one of domain_name or arn must be specified.')
@@ -853,7 +895,8 @@ def purchase_reserved_elasticsearch_instance_offering(
     :param str reservation_name: A customer-specified identifier to track this reservation.
     :param int instance_count: The number of Elasticsearch instances to reserve.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with purchase information.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -890,7 +933,8 @@ def remove_tags(
     :param str arn: The ARN of the Elasticsearch domain you want to remove tags from.
         Specifying this overrides ``domain_name``.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon failure, also contains a key 'error' with the error message as value.
 
     .. versionadded:: Natrium
@@ -899,7 +943,8 @@ def remove_tags(
 
     .. code-block:: bash
 
-        salt myminion boto_cloudtrail.remove_tags my_trail tag_a=tag_value tag_b=tag_value
+        salt myminion boto_cloudtrail.remove_tags tag_keys='["foo", "bar"]' my_domain
+
     '''
     if not any((arn, domain_name)):
         raise SaltInvocationError('At least one of domain_name or arn must be specified.')
@@ -935,7 +980,8 @@ def start_elasticsearch_service_software_update(
     :param str domain_name: The name of the domain that you want to update to the
         latest service software.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with service software information.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -971,68 +1017,82 @@ def update_elasticsearch_domain_config(
     Modifies the cluster configuration of the specified Elasticsearch domain,
     for example setting the instance type and the number of instances.
 
-    param str domain_name: The name of the Elasticsearch domain that you are creating.
+    :param str domain_name: The name of the Elasticsearch domain that you are creating.
         Domain names are unique across the domains owned by an account within an
         AWS region. Domain names must start with a letter or number and can contain
         the following characters: a-z (lowercase), 0-9, and - (hyphen).
-    param dict elasticsearch_cluster_config: Dict specifying the configuration
-            options for an Elasticsearch domain. Sub-options contained here are:
-        param str InstanceType: The instance type for an Elasticsearch cluster.
-        param int InstanceCount: The instance type for an Elasticsearch cluster.
-        param bool DedicatedMasterEnabled: Indicate whether a dedicated master
-            node is enabled.
-        param bool ZoneAwarenessEnabled: Indicate whether zone awareness is enabled.
-        param dict ZoneAwarenessConfig: Specifies the zone awareness configuration
-                for a domain when zone awareness is enabled. Sub-options contained
-                here are:
-            param int AvailabilityZoneCount: An integer value to indicate the
-                number of availability zones for a domain when zone awareness is
-                enabled. This should be equal to number of subnets if VPC endpoints
-                is enabled.
-        param str DedicatedMasterType: The instance type for a dedicated master node.
-        param int DedicatedMasterCount: Total number of dedicated master nodes,
-            active and on standby, for the cluster.
-    param dict ebs_options: Dict specifying the options to enable or disable and
-            specifying the type and size of EBS storage volumes.
-            Sub-options contained here are:
-        param bool EBSEnabled: Specifies whether EBS-based storage is enabled.
-        param str VolumeType: Specifies the volume type for EBS-based storage.
-        param int VolumeSize: Integer to specify the size of an EBS volume.
-        param int Iops: Specifies the IOPD for a Provisioned IOPS EBS volume (SSD).
-    param dict snapshot_options: Dict specifying the snapshot options.
-            Sub-options contained here are:
-        param int AutomatedSnapshotStartHour: Specifies the time, in UTC format,
-            when the service takes a daily automated snapshot of the specified
-            Elasticsearch domain. Default value is 0 hours.
-    param dict vpc_options: Dict with the options to specify the subnets and security
-            groups for the VPC endpoint. Sub-options contained here are:
-        param list SubnetIds: The list of subnets for the VPC endpoint.
-        param list SecurityGroupIds: The list of security groups for the VPC endpoint.
-    param dict cognito_options: Dict with options to specify the cognito user and
-            identity pools for Kibana authentication. Sub-options contained here are:
-        param bool Enabled: Specifies the option to enable Cognito for Kibana authentication.
-        param str UserPoolId: Specifies the Cognito user pool ID for Kibana authentication.
-        param str IdentityPoolId: Specifies the Cognito identity pool ID for Kibana authentication.
-        param str RoleArn: Specifies the role ARN that provides Elasticsearch permissions
-            for accessing Cognito resources.
-    param dict advanced_options: Dict with option to allow references to indices
+    :param dict elasticsearch_cluster_config: Dictionary specifying the configuration
+        options for an Elasticsearch domain. Keys (case sensitive) in here are:
+
+        - InstanceType (str): The instance type for an Elasticsearch cluster.
+        - InstanceCount (int): The instance type for an Elasticsearch cluster.
+        - DedicatedMasterEnabled (bool): Indicate whether a dedicated master
+          node is enabled.
+        - ZoneAwarenessEnabled (bool): Indicate whether zone awareness is enabled.
+        - ZoneAwarenessConfig (dict): Specifies the zone awareness configuration
+          for a domain when zone awareness is enabled.
+          Keys (case sensitive) in here are:
+
+          - AvailabilityZoneCount (int): An integer value to indicate the
+            number of availability zones for a domain when zone awareness is
+            enabled. This should be equal to number of subnets if VPC endpoints
+            is enabled.
+
+        - DedicatedMasterType (str): The instance type for a dedicated master node.
+        - DedicatedMasterCount (int): Total number of dedicated master nodes,
+          active and on standby, for the cluster.
+    :param dict ebs_options: Dict specifying the options to enable or disable and
+        specifying the type and size of EBS storage volumes.
+        Keys (case sensitive) in here are:
+
+        - EBSEnabled (bool): Specifies whether EBS-based storage is enabled.
+        - VolumeType (str): Specifies the volume type for EBS-based storage.
+        - VolumeSize (int): Integer to specify the size of an EBS volume.
+        - Iops (int): Specifies the IOPD for a Provisioned IOPS EBS volume (SSD).
+    :param dict snapshot_options: Dict specifying the snapshot options.
+        Keys (case sensitive) in here are:
+
+        - AutomatedSnapshotStartHour (int): Specifies the time, in UTC format,
+          when the service takes a daily automated snapshot of the specified
+          Elasticsearch domain. Default value is 0 hours.
+    :param dict vpc_options: Dict with the options to specify the subnets and security
+        groups for the VPC endpoint.
+        Keys (case sensitive) in here are:
+
+        - SubnetIds (list): The list of subnets for the VPC endpoint.
+        - SecurityGroupIds (list): The list of security groups for the VPC endpoint.
+    :param dict cognito_options: Dict with options to specify the cognito user and
+        identity pools for Kibana authentication.
+        Keys (case sensitive) in here are:
+
+        - Enabled (bool): Specifies the option to enable Cognito for Kibana authentication.
+        - UserPoolId (str): Specifies the Cognito user pool ID for Kibana authentication.
+        - IdentityPoolId (str): Specifies the Cognito identity pool ID for Kibana authentication.
+        - RoleArn (str): Specifies the role ARN that provides Elasticsearch permissions
+          for accessing Cognito resources.
+    :param dict advanced_options: Dict with option to allow references to indices
         in an HTTP request body. Must be False when configuring access to individual
         sub-resources. By default, the value is True.
         See http://docs.aws.amazon.com/elasticsearch-service/latest/developerguide\
-            /es-createupdatedomains.html#es-createdomain-configure-advanced-options
+        /es-createupdatedomains.html#es-createdomain-configure-advanced-options
         for more information.
-    param str/dict access_policies: Dict or JSON string with the IAM access policy.
-    param dict log_publishing_options: Dict with options for various type of logs.
-            The keys denote the type of log file and can be one of the following:
-                INDEX_SLOW_LOGS, SEARCH_SLOW_LOGS, ES_APPLICATION_LOGS.
-            The value assigned to each key is a dict with the following sub-options:
-        param str CloudWatchLogsLogGroupArn: The ARN of the Cloudwatch log
-            group to which the log needs to be published.
-        param bool Enabled: Specifies whether given log publishing option is enabled or not.
+    :param str/dict access_policies: Dict or JSON string with the IAM access policy.
+    :param dict log_publishing_options: Dict with options for various type of logs.
+        The keys denote the type of log file and can be one of the following:
+
+            INDEX_SLOW_LOGS, SEARCH_SLOW_LOGS, ES_APPLICATION_LOGS.
+
+        The value assigned to each key is a dict with the following case sensitive keys:
+
+        - CloudWatchLogsLogGroupArn (str): The ARN of the Cloudwatch log
+          group to which the log needs to be published.
+        - Enabled (bool): Specifies whether given log publishing option
+          is enabled or not.
     :param bool blocking: Whether or not to wait (block) until the Elasticsearch
         domain has been updated.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with the domain configuration.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -1108,7 +1168,8 @@ def upgrade_elasticsearch_domain(
     :param bool blocking: Whether or not to wait (block) until the Elasticsearch
         domain has been upgraded.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with the domain configuration.
         Upon failure, also contains a key 'error' with the error message as value.
 
@@ -1143,7 +1204,8 @@ def exists(
 
     :param str domain_name: The name of the domain to check.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon failure, also contains a key 'error' with the error message as value.
 
     .. versionadded:: Natrium
@@ -1153,6 +1215,7 @@ def exists(
     .. code-block:: bash
 
         salt myminion boto_elasticsearch_domain.exists mydomain
+
     '''
     ret = {'result': False}
     try:
@@ -1173,7 +1236,12 @@ def wait_for_upgrade(
 
     :param str name: The name of the domain to wait for.
 
-    :return dict:
+    :rtype dict:
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
+        Upon failure, also contains a key 'error' with the error message as value.
+
+    .. versionadded:: Natrium
+
     '''
     ret = {'result': False}
     try:
@@ -1197,12 +1265,14 @@ def check_upgrade_eligibility(
 
     This assumes that the Elasticsearch domain is at rest at the moment this function
     is called. I.e. The domain is not in the process of :
+
     - being created.
     - being updated.
     - another upgrade running, or a check thereof.
     - being deleted.
 
     Behind the scenes, this does 3 things:
+
     - Check if ``elasticsearch_version`` is among the compatible elasticsearch versions.
     - Perform a check if the Elasticsearch domain is eligible for the upgrade.
     - Check the result of the check and return the result as a boolean.
@@ -1210,9 +1280,13 @@ def check_upgrade_eligibility(
     :param str name: The Elasticsearch domain name to check.
     :param str elasticsearch_version: The Elasticsearch version to upgrade to.
 
-    :return dict: With key 'result' and as value a boolean denoting success or failure.
+    :rtype: dict
+    :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon success, also contains a key 'reponse' with boolean result of the check.
         Upon failure, also contains a key 'error' with the error message as value.
+
+    .. versionadded:: Natrium
+
     '''
     ret = {'result': False}
     # Check if the desired version is in the list of compatible versions
