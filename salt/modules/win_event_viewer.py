@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-:codeauthor: Charles McMarrow <cmcmarrow@saltstack.com>
-gives access to Windows event log
+Gives SaltStack access to Windows event log
+Charles McMarrow <cmcmarrow@saltstack.com>
 '''
 
 from __future__ import absolute_import
