@@ -42,8 +42,3 @@ class WinEventViewerTest(ModuleCase):
         '''
 
         self.run_function('win_event_viewer.log_event', ('Salt_Test', '101',), timeout=180)
-
-
-
-
-
