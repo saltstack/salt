@@ -181,10 +181,10 @@ def run_testsuite(section_name, distro_name, distro_version, python_version, che
         def gh_commit_status_account
         def gh_commit_status_context
         if (env.NODE_NAME.startsWith('jenkins-pr-')) {
-            gh_commit_status_context = "jenkins/pr/${python_version}/${distro_name}-${distro_verion}"
+            gh_commit_status_context = "jenkins/pr/${python_version}/${distro_name}-${distro_version}"
             gh_commit_status_account = 'test-jenkins-credentials'
         } else {
-            gh_commit_status_context = "ci/${python_version}/${distro_name}-${distro_verion}"
+            gh_commit_status_context = "ci/${python_version}/${distro_name}-${distro_version}"
             gh_commit_status_account = 'svc-builderopen3-gh'
         }
         sh "cp -Rp $checkout_directory $checkout_dir"
