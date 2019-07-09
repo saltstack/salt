@@ -1085,7 +1085,7 @@ def update_elasticsearch_domain_config(
 
     .. code-block:: bash
 
-        salt myminion boto3_elasticsearch.update_elasticsearch_domain mydomain \\
+        salt myminion boto3_elasticsearch.update_elasticsearch_domain_config mydomain \\
           elasticsearch_cluster_config='{\\
             "InstanceType": "t2.micro.elasticsearch", \\
             "InstanceCount": 1, \\
