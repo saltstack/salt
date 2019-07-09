@@ -111,16 +111,13 @@ def add_tags(
     :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    As a special case, tags whose key starts with `__` are ignored.
-
     .. versionadded:: Natrium
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_elasticsearch_domain.add_tags mydomain tags='{"foo": "bar", "baz": "qux"}'
-
+        salt myminion boto3_elasticsearch.add_tags domain_name=mydomain tags='{"foo": "bar", "baz": "qux"}'
     '''
     if not any((arn, domain_name)):
         raise SaltInvocationError('At least one of domain_name or arn must be specified.')
@@ -301,28 +298,27 @@ def create_elasticsearch_domain(
 
     .. code-block:: bash
 
-        salt myminion boto_elasticsearch_domain.create mydomain \\
-              elasticsearch_cluster_config='{ \\
-                "InstanceType": "t2.micro.elasticsearch", \\
-                "InstanceCount": 1, \\
-                "DedicatedMasterEnabled": False, \\
-                "ZoneAwarenessEnabled": False}' \\
-              ebs_options='{ \\
-                "EBSEnabled": True, \\
-                "VolumeType": "gp2", \\
-                "VolumeSize": 10, \\
-                "Iops": 0}' \\
-              access_policies='{ \\
-                "Version": "2012-10-17", \\
-                "Statement": [ \\
-                  {"Effect": "Allow", \\
-                   "Principal": {"AWS": "*"}, \\
-                   "Action": "es:*", \\
-                   "Resource": "arn:aws:es:us-east-1:111111111111:domain/mydomain/*", \\
-                   "Condition": {"IpAddress": {"aws:SourceIp": ["127.0.0.1"]}}}]} \\
-              snapshot_options='{"AutomatedSnapshotStartHour": 0}' \\
-              advanced_options='{"rest.action.multi.allow_explicit_index": "true"}'
-
+        salt myminion boto3_elasticsearch.create_elasticsearch_domain mydomain \\
+        elasticsearch_cluster_config='{ \\
+          "InstanceType": "t2.micro.elasticsearch", \\
+          "InstanceCount": 1, \\
+          "DedicatedMasterEnabled": False, \\
+          "ZoneAwarenessEnabled": False}' \\
+        ebs_options='{ \\
+          "EBSEnabled": True, \\
+          "VolumeType": "gp2", \\
+          "VolumeSize": 10, \\
+          "Iops": 0}' \\
+        access_policies='{ \\
+          "Version": "2012-10-17", \\
+          "Statement": [ \\
+            {"Effect": "Allow", \\
+             "Principal": {"AWS": "*"}, \\
+             "Action": "es:*", \\
+             "Resource": "arn:aws:es:us-east-1:111111111111:domain/mydomain/*", \\
+             "Condition": {"IpAddress": {"aws:SourceIp": ["127.0.0.1"]}}}]}' \\
+        snapshot_options='{"AutomatedSnapshotStartHour": 0}' \\
+        advanced_options='{"rest.action.multi.allow_explicit_index": "true"}'
     '''
     boto_kwargs = salt.utils.data.filter_falsey({
         'DomainName': domain_name,
@@ -372,12 +368,6 @@ def delete_elasticsearch_domain(
         Upon failure, also contains a key 'error' with the error message as value.
 
     .. versionadded:: Natrium
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_elasticsearch_domain.delete mydomain
 
     '''
     ret = {'result': False}
@@ -433,12 +423,6 @@ def describe_elasticsearch_domain(
 
     .. versionadded:: Natrium
 
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_elasticsearch_domain.status mydomain
-
     '''
     ret = {'result': False}
     try:
@@ -467,12 +451,6 @@ def describe_elasticsearch_domain_config(
         Upon failure, also contains a key 'error' with the error message as value.
 
     .. versionadded:: Natrium
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_elasticsearch_domain.describe mydomain
 
     '''
     ret = {'result': False}
@@ -503,6 +481,11 @@ def describe_elasticsearch_domains(
 
     .. versionadded:: Natrium
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto3_elasticsearch.describe_elasticsearch_domains '["domain_a", "domain_b"]'
     '''
     ret = {'result': False}
     try:
@@ -542,6 +525,13 @@ def describe_elasticsearch_instance_type_limits(
 
     .. versionadded:: Natrium
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto3_elasticsearch.describe_elasticsearch_instance_type_limits \\
+          instance_type=r3.8xlarge.elasticsearch \\
+          elasticsearch_version='6.2'
     '''
     ret = {'result': False}
     boto_params = salt.utils.data.filter_falsey({
@@ -615,7 +605,7 @@ def describe_reserved_elasticsearch_instances(
         reserved instances.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    Note: Version 1.9.174 of boto3 has a bug in that reserved_elasticsearch_instance_id
+    :note: Version 1.9.174 of boto3 has a bug in that reserved_elasticsearch_instance_id
         is considered a required argument, even though the documentation says otherwise.
 
     .. versionadded:: Natrium
@@ -850,12 +840,6 @@ def list_tags(
 
     .. versionadded:: Natrium
 
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_elasticsearch.list_tags my_domain
-
     '''
     if not any((arn, domain_name)):
         raise SaltInvocationError('At least one of domain_name or arn must be specified.')
@@ -943,8 +927,7 @@ def remove_tags(
 
     .. code-block:: bash
 
-        salt myminion boto_cloudtrail.remove_tags tag_keys='["foo", "bar"]' my_domain
-
+        salt myminion boto3_elasticsearch.remove_tags '["foo", "bar"]' domain_name=my_domain
     '''
     if not any((arn, domain_name)):
         raise SaltInvocationError('At least one of domain_name or arn must be specified.')
@@ -1102,18 +1085,23 @@ def update_elasticsearch_domain_config(
 
     .. code-block:: bash
 
-        salt myminion boto_elasticsearch_domain.update mydomain \\
-              {'InstanceType': 't2.micro.elasticsearch', 'InstanceCount': 1, \\
-              'DedicatedMasterEnabled': false, 'ZoneAwarenessEnabled': false} \\
-              {'EBSEnabled': true, 'VolumeType': 'gp2', 'VolumeSize': 10, \\
-              'Iops': 0} \\
-              {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", \\
-               "Principal": {"AWS": "*"}, "Action": "es:*", \\
-               "Resource": "arn:aws:es:us-east-1:111111111111:domain/mydomain/*", \\
-               "Condition": {"IpAddress": {"aws:SourceIp": ["127.0.0.1"]}}}]} \\
-              {"AutomatedSnapshotStartHour": 0} \\
-              {"rest.action.multi.allow_explicit_index": "true"}
-
+        salt myminion boto3_elasticsearch.update_elasticsearch_domain mydomain \\
+          elasticsearch_cluster_config='{\\
+            "InstanceType": "t2.micro.elasticsearch", \\
+            "InstanceCount": 1, \\
+            "DedicatedMasterEnabled": false,
+            "ZoneAwarenessEnabled": false}' \\
+          ebs_options='{\\
+            "EBSEnabled": true, \\
+            "VolumeType": "gp2", \\
+            "VolumeSize": 10, \\
+            "Iops": 0}' \\
+          access_policies='{"Version": "2012-10-17", "Statement": [{\\
+            "Effect": "Allow", "Principal": {"AWS": "*"}, "Action": "es:*", \\
+            "Resource": "arn:aws:es:us-east-1:111111111111:domain/mydomain/*", \\
+            "Condition": {"IpAddress": {"aws:SourceIp": ["127.0.0.1"]}}}]}' \\
+          snapshot_options='{"AutomatedSnapshotStartHour": 0}' \\
+          advanced_options='{"rest.action.multi.allow_explicit_index": "true"}'
     '''
     ret = {'result': False}
     boto_kwargs = salt.utils.data.filter_falsey({
@@ -1175,6 +1163,13 @@ def upgrade_elasticsearch_domain(
 
     .. versionadded:: Natrium
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto3_elasticsearch.upgrade_elasticsearch_domain mydomain \\
+        target_version='6.7' \\
+        perform_check_only=True
     '''
     ret = {'result': False}
     boto_params = salt.utils.data.filter_falsey({
@@ -1209,12 +1204,6 @@ def exists(
         Upon failure, also contains a key 'error' with the error message as value.
 
     .. versionadded:: Natrium
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_elasticsearch_domain.exists mydomain
 
     '''
     ret = {'result': False}
@@ -1287,6 +1276,11 @@ def check_upgrade_eligibility(
 
     .. versionadded:: Natrium
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto3_elasticsearch.check_upgrade_eligibility mydomain '6.7'
     '''
     ret = {'result': False}
     # Check if the desired version is in the list of compatible versions
