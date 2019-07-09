@@ -28,18 +28,18 @@ def golden_images_branch = 'neon'
 
 def checkout_directory = 'salt-checkout'
 
-def parameters = [
+def parameters_listing = [
     booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
 ]
 test_distributions.each { slug, details ->
-    parameters.add(
+    parameters_listing.add(
         booleanParam(defaultValue: true, description: "Run ${details['display_name']} tests under Py${details['py_version']}", name: slug)
     )
 }
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
-    parameters(parameters)
+    parameters(parameters_listing)
 ])
 
 // Be sure to cancel any previously running builds
@@ -114,6 +114,7 @@ def run_tests(checkout_directory, stage_name, env_array, chunk_timeout) {
                         }
                     } catch (Exception e) {
                         currentBuild.result = 'FAILURE'
+                        println("FAILURE 2: ${e}")
                     }
                 }
             }
@@ -218,6 +219,7 @@ def run_testsuite(section_name, distro_name, distro_version, python_version, che
                             status: 'SUCCESS',
                             context: gh_commit_status_context
                     } catch (Exception e) {
+                        println("FAILURE 3: ${e}")
                         currentBuild.result = 'FAILURE'
                         githubNotify credentialsId: 'test-jenkins-credentials',
                             description: "Tests failed for ${section_name} ...",
@@ -237,7 +239,7 @@ def run_testsuite(section_name, distro_name, distro_version, python_version, che
 // ---> Lint
 def lint_report_issues = []
 
-def run_changes_lint() {
+def run_changes_lint(lint_report_issues) {
     return {
         def gh_commit_status_context
 
@@ -325,7 +327,6 @@ def run_changes_lint() {
                         description: 'Passed code changes lint...',
                         status: 'SUCCESS',
                         context: gh_commit_status_context
-                } catch (Exception e) {
                 } finally {
                     def changed_logs_pattern = 'pylint-report-*-chg.log'
                     archiveArtifacts(
@@ -352,70 +353,8 @@ def run_changes_lint() {
                     }
                 }
             }
-            stage('Lint Full') {
-                if (env.CHANGE_BRANCH =~ /(?i)^merge[._-]/) {
-                    // perform a full linit if this is a merge forward and the change only lint passed.
-                    try {
-                        githubNotify credentialsId: 'test-jenkins-credentials',
-                            description: 'Python lint on everything begins...',
-                            status: 'PENDING',
-                            context: gh_commit_status_context
-                        parallel(
-                            lintSaltFull: {
-                                stage('Lint Salt Full') {
-                                    sh shell_header + '''
-                                    eval "$(pyenv init - --no-rehash)"
-                                    pyenv shell 2.7.15
-                                    EC=254
-                                    export PYLINT_REPORT=pylint-report-salt-full.log
-                                    nox -e lint-salt
-                                    EC=$?
-                                    exit $EC
-                                    '''
-                                }
-                            },
-                            lintTestsFull: {
-                                stage('Lint Tests Full') {
-                                    sh shell_header + '''
-                                    eval "$(pyenv init - --no-rehash)"
-                                    pyenv shell 2.7.15
-                                    EC=254
-                                    export PYLINT_REPORT=pylint-report-tests-full.log
-                                    nox -e lint-salt
-                                    EC=$?
-                                    exit $EC
-                                    '''
-                                }
-                            }
-                        )
-                    } finally {
-                        def full_logs_pattern = 'pylint-report-*-full.log'
-                        archiveArtifacts(
-                            artifacts: full_logs_pattern,
-                            allowEmptyArchive: true
-                        )
-                        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
-                            step([$class: 'WarningsPublisher',
-                                parserConfigurations: [[
-                                    parserName: 'PyLint',
-                                    pattern: full_logs_pattern
-                                ]],
-                                failedTotalAll: '0',
-                                useDeltaValues: false,
-                                canRunOnFailed: true,
-                                usePreviousBuildAsReference: true
-                            ])
-                        } else {
-                            lint_report_issues.add(
-                                scanForIssues(
-                                    tool: pyLint(pattern: full_logs_pattern, reportEncoding: 'UTF-8')
-                                )
-                            )
-                        }
-                    }
-                }
-            }
         } catch (Exception e) {
+            println("FAILURE 4: ${e}")
             currentBuild.result = 'FAILURE'
             githubNotify credentialsId: 'test-jenkins-credentials',
                 description: 'Failed code changes lint...',
@@ -426,7 +365,7 @@ def run_changes_lint() {
 }
 
 
-def run_full_lint() {
+def run_full_lint(lint_report_issues) {
     return {
         def gh_commit_status_context
 
@@ -507,6 +446,7 @@ def run_full_lint() {
                 }
             }
         } catch (Exception e) {
+            println("FAILURE 5: ${e}")
             currentBuild.result = 'FAILURE'
             githubNotify credentialsId: 'test-jenkins-credentials',
                 description: 'Failed full lint...',
@@ -585,6 +525,7 @@ def run_docs_build() {
                 context: gh_commit_status_context
 
         } catch (Exception e) {
+            println("FAILURE 6: ${e}")
             currentBuild.result = 'FAILURE'
             githubNotify credentialsId: 'test-jenkins-credentials',
                 description: 'Failed docs build...',
@@ -598,7 +539,7 @@ def run_docs_build() {
 
 // ---> Main Pipeline
 main_pipeline_parallel_steps = [:]
-main_pipeline_parallel_steps['full-lint'] = run_full_lint()
+main_pipeline_parallel_steps['full-lint'] = run_full_lint(lint_report_issues)
 main_pipeline_parallel_steps['docs'] = run_docs_build()
 
 test_distributions.each { slug, details ->
@@ -662,9 +603,10 @@ node('kitchen-xl-slave') {
                         }
 
                         try {
-                            run_changes_lint()
+                            run_changes_lint(lint_report_issues)
                             parallel main_pipeline_parallel_steps
                         } catch (Exception e) {
+                            println("FAILURE 1: ${e}")
                             currentBuild.result = 'FAILURE'
                         } finally {
                             cleanWs notFailBuild: true
