@@ -1,0 +1,702 @@
+// Global Pipeline Definitions
+def test_distributions = [
+    'centos6-py2': ['name': 'centos', 'version': '6', 'py_version': '2', 'display_name': 'CentOS 6'],
+    'centos7-py2': ['name': 'centos', 'version': '7', 'py_version': '2', 'display_name': 'CentOS 7'],
+    'centos7-py3': ['name': 'centos', 'version': '7', 'py_version': '3', 'display_name': 'CentOS 7'],
+    'debian8-py2': ['name': 'debian', 'version': '8', 'py_version': '2', 'display_name': 'Debian 8'],
+    'debian8-py3': ['name': 'debian', 'version': '8', 'py_version': '3', 'display_name': 'Debian 8'],
+    'debian9-py2': ['name': 'debian', 'version': '9', 'py_version': '2', 'display_name': 'Debian 9'],
+    'debian9-py3': ['name': 'debian', 'version': '9', 'py_version': '3', 'display_name': 'Debian 9'],
+    'fedora29-py2': ['name': 'fedora', 'version': '29', 'py_version': '2', 'display_name': 'Fedora 29'],
+    'fedora29-py3': ['name': 'fedora', 'version': '29', 'py_version': '3', 'display_name': 'Fedora 29'],
+    'ubuntu1604-py2': ['name': 'ubuntu', 'version': '1604', 'py_version': '2', 'display_name': 'Ubuntu 16.04'],
+    'ubuntu1604-py3': ['name': 'ubuntu', 'version': '1604', 'py_version': '3', 'display_name': 'Ubuntu 16.04'],
+    'ubuntu1804-py2': ['name': 'ubuntu', 'version': '1804', 'py_version': '2', 'display_name': 'Ubuntu 18.04'],
+    'ubuntu1804-py3': ['name': 'ubuntu', 'version': '1804', 'py_version': '3', 'display_name': 'Ubuntu 18.04'],
+    'windows2016-py2': ['name': 'windows', 'version': '2016', 'py_version': '2', 'display_name': 'Windows 2016'],
+    'windows2016-py3': ['name': 'windows', 'version': '2016', 'py_version': '3', 'display_name': 'Windows 2016'],
+]
+
+// Define the maximum time, in hours, that a test run should run for
+def testrun_timeout = 6
+// Now define a global pipeline timeout. This is the test run timeout with one(1) additional
+// hour to allow for artifacts to be downloaded, if possible.
+def global_timeout = testrun_timeout + 1;
+
+def salt_target_branch = 'neon'
+def golden_images_branch = 'neon'
+
+def checkout_directory = 'salt-checkout'
+
+def parameters = [
+    booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
+]
+test_distributions.each { slug, details ->
+    parameters.add(
+        booleanParam(defaultValue: true, description: "Run ${details['display_name']} tests under Py${details['py_version']}", name: slug)
+    )
+}
+
+properties([
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
+    parameters(parameters)
+])
+
+// Be sure to cancel any previously running builds
+def buildNumber = env.BUILD_NUMBER as int
+if (buildNumber > 1) {
+    // This will cancel the previous build which also defined a matching milestone
+    milestone(buildNumber - 1)
+}
+// Define a milestone for this build so that, if another build starts, this one will be aborted
+milestone(buildNumber)
+
+// ---> Tests
+def run_tests(checkout_directory, stage_name, env_array, chunk_timeout) {
+    return {
+        def uuid = UUID.randomUUID().toString()
+        def checkout_dir = "$checkout_directory-$uuid"
+        sh "cp -Rp $checkout_directory $checkout_dir"
+        dir("$checkout_dir") {
+            withEnv(env_array) {
+                stage(stage_name) {
+                    stage('Create VM') {
+                        retry(3) {
+                            sh '''
+                            t=$(shuf -i 30-90 -n 1); echo "Sleeping $t seconds"; sleep $t
+                            bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";
+                            '''
+                        }
+                    }
+                    try {
+                        sshagent(credentials: ['jenkins-testing-ssh-key']) {
+                            sh 'ssh-add ~/.ssh/jenkins-testing.pem || ssh-add ~/.ssh/kitchen.pem'
+                            try {
+                                timeout(time: chunk_timeout, unit: 'HOURS') {
+                                    stage('Converge VM') {
+                                        sh 'bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";'
+                                    }
+                                    stage('Run Tests') {
+                                        withEnv(["DONT_DOWNLOAD_ARTEFACTS=1"]) {
+                                            sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";'
+                                        }
+                                    }
+                                }
+                            } finally {
+                                try {
+                                    stage('Download Artefacts') {
+                                        withEnv(["ONLY_DOWNLOAD_ARTEFACTS=1"]){
+                                            sh '''
+                                            bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM || exit 0
+                                            '''
+                                        }
+                                    }
+                                    archiveArtifacts artifacts: 'artifacts/*,artifacts/**/*,.kitchen/logs/kitchen.log'
+                                } finally {
+                                    stage('Cleanup') {
+                                        sh '''
+                                        bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";
+                                        '''
+                                    }
+                                    stage('Upload Coverage') {
+                                        script {
+                                            withCredentials([[$class: 'StringBinding', credentialsId: 'codecov-upload-token-salt', variable: 'CODECOV_TOKEN']]) {
+                                              sh '''
+                                              if [ -n "${FORCE_FULL}" -a "${FORCE_FULL}" = "true" -a -f artifacts/coverage/coverage.xml ]; then
+                                                  curl -L https://codecov.io/bash | /bin/sh -s -- -R $(pwd) -s artifacts/coverage/ -F "${CODECOV_FLAGS}"
+                                              fi
+                                              '''
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        currentBuild.result = 'FAILURE'
+                    }
+                }
+            }
+        }
+    }
+}
+
+def run_testsuite(section_name, distro_name, distro_version, python_version, checkout_directory) {
+    return {
+        def chunks = [:]
+        def nox_passthrough_opts = '--log-cli-level=warning --ignore=tests/utils'
+        if (distro_name == 'windows') {
+            nox_passthrough_opts = "--unit ${nox_passthrough_opts}"
+        } else {
+            nox_passthrough_opts = "--ssh-tests ${nox_passthrough_opts}"
+        }
+
+        // Integration Module Tests
+        def integration_modules_chunks = 4
+        for (int i=1; i<(integration_modules_chunks+1); i++) {
+            def chunk_no = i
+            def stagename = "Integration Modules #${chunk_no}"
+            def env_array = [
+                "NOX_PASSTHROUGH_OPTS=${nox_passthrough_opts} --test-group-count=$integration_modules_chunks --test-group=$chunk_no tests/integration/modules"
+            ]
+            chunks[stagename] = run_tests(checkout_directory, stagename, env_array, 2)
+        }
+
+        // Integration State Tests
+        def integration_states_chunks = 4
+        for (int i=1; i<(integration_states_chunks+1); i++) {
+            def chunk_no = i
+            def stagename = "Integration States #${chunk_no}"
+            def env_array = [
+                "NOX_PASSTHROUGH_OPTS=${nox_passthrough_opts} --test-group-count=$integration_states_chunks --test-group=$chunk_no tests/integration/states"
+            ]
+            chunks[stagename] = run_tests(checkout_directory, stagename, env_array, 2)
+        }
+
+        // Unit Tests
+        def unit_chunks = 3
+        for (int i=1; i<(unit_chunks+1); i++) {
+            def chunk_no = i
+            def stagename = "Unit #${chunk_no}"
+            def env_array = [
+                "NOX_PASSTHROUGH_OPTS=${nox_passthrough_opts} --test-group-count=$unit_chunks --test-group=$chunk_no tests/unit"
+            ]
+            chunks[stagename] = run_tests(checkout_directory, stagename, env_array, 2)
+        }
+
+        // All Other
+        def other_chunks = 8
+        for (int i=1; i<(other_chunks+1); i++) {
+            def chunk_no = i
+            def stagename = "All Other #${chunk_no}"
+            def env_array = [
+                "NOX_PASSTHROUGH_OPTS=${nox_passthrough_opts} --test-group-count=$other_chunks --test-group=$chunk_no --ignore=tests/integration/modules --ignore=tests/integration/states --ignore=tests/unit"
+            ]
+            chunks[stagename] = run_tests(checkout_directory, stagename, env_array, 2)
+        }
+
+        def uuid = UUID.randomUUID().toString()
+        def checkout_dir = "$checkout_directory-$uuid"
+        def gh_commit_status_context
+        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+            gh_commit_status_context = "jenkins/pr/${python_version}/${distro_name}-${distro_verion}"
+        } else {
+            gh_commit_status_context = "ci/${python_version}/${distro_name}-${distro_verion}"
+        }
+        sh "cp -Rp $checkout_directory $checkout_dir"
+        dir("$checkout_dir") {
+            section(section_name) {
+                withEnv([
+                    'NOX_ENV_NAME=pytest-zeromq',
+                    'NOX_ENABLE_FROM_FILENAMES=true',
+                    "CODECOV_FLAGS=${distro_name}${distro_version},${python_version}",
+                    'PATH=~/.rbenv/shims:/usr/local/rbenv/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin:/root/bin',
+                    'RBENV_VERSION=2.4.2',
+                    "TEST_SUITE=${python_version}",
+                    "TEST_PLATFORM=${distro_name}-${distro_version}",
+                ]) {
+                    // Set the GH status even before cloning the repo
+                    githubNotify credentialsId: 'test-jenkins-credentials',
+                        description: "Running ${section_name} ...",
+                        status: 'PENDING',
+                        context: gh_commit_status_context
+
+                    try {
+                        stage('Parallel Test Run') {
+                            parallel chunks
+                        }
+                        stage('Serial Test Run') {
+                            run_tests(
+                                checkout_directory,
+                                'Full Test Suite',
+                                ["NOX_PASSTHROUGH_OPTS=${nox_passthrough_opts} tests/"],
+                                testrun_timeout
+                            )
+                        }
+                        githubNotify credentialsId: 'test-jenkins-credentials',
+                            description: "Tests passed for ${section_name} ...",
+                            status: 'SUCCESS',
+                            context: gh_commit_status_context
+                    } catch (Exception e) {
+                        currentBuild.result = 'FAILURE'
+                        githubNotify credentialsId: 'test-jenkins-credentials',
+                            description: "Tests failed for ${section_name} ...",
+                            status: 'FAILURE',
+                            context: gh_commit_status_context
+                    } finally {
+                        junit 'artifacts/xml-unittests-output/*.xml'
+                    }
+                }
+            }
+        }
+    }
+}
+
+// <--- Tests
+
+// ---> Lint
+def lint_report_issues = []
+
+def run_changes_lint() {
+    return {
+        def gh_commit_status_context
+
+        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+            gh_commit_status_context = "jenkins/pr/lint"
+        } else {
+            gh_commit_status_context = "ci/lint"
+        }
+
+        try {
+            // Set the GH status even before cloning the repo
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'Python lint begins...',
+                status: 'PENDING',
+                context: gh_commit_status_context
+
+            if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                shell_header = 'export PYENV_ROOT="/usr/local/pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"'
+            } else {
+                shell_header = ''
+            }
+
+            // Setup the kitchen required bundle
+            stage('Setup') {
+                sh shell_header + '''
+                # Need -M to detect renames otherwise they are reported as Delete and Add, need -C to detect copies, -C includes -M
+                # -M is on by default in git 2.9+
+                git diff --name-status -l99999 -C "origin/${SALT_TARGET_BRANCH}" > file-list-status.log
+                # the -l increase the search limit, lets use awk so we do not need to repeat the search above.
+                gawk 'BEGIN {FS="\\t"} {if ($1 != "D") {print $NF}}' file-list-status.log > file-list-changed.log
+                gawk 'BEGIN {FS="\\t"} {if ($1 == "D") {print $NF}}' file-list-status.log > file-list-deleted.log
+                (git diff --name-status -l99999 -C "origin/${SALT_TARGET_BRANCH}" "origin/$BRANCH_NAME";echo "---";git diff --name-status -l99999 -C "origin/$BRANCH_NAME";printenv|grep -E '=[0-9a-z]{40,}+$|COMMIT=|BRANCH') > file-list-experiment.log
+                eval "$(pyenv init -)"
+                pyenv --version
+                pyenv install --skip-existing 2.7.15
+                pyenv shell 2.7.15
+                python --version
+                pip install -U nox-py2
+                nox --version
+                # Create the required virtualenvs in serial
+                nox --install-only -e lint-salt
+                nox --install-only -e lint-tests
+                '''
+            }
+            archiveArtifacts(
+                artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log,file-list-experiment.log',
+                allowEmptyArchive: true
+            )
+
+            stage('Lint Changes') {
+                try {
+                    parallel(
+                        lintSalt: {
+                            stage('Lint Salt Changes') {
+                                if (readFile('file-list-changed.log') =~ /(?i)(^|\n)(salt\/.*\.py|setup\.py)\n/) {
+                                    sh shell_header + '''
+                                    eval "$(pyenv init - --no-rehash)"
+                                    pyenv shell 2.7.15
+                                    EC=254
+                                    export PYLINT_REPORT=pylint-report-salt-chg.log
+                                    grep -Ei '^salt/.*\\.py$|^setup\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' nox -e lint-salt --
+                                    EC=$?
+                                    exit $EC
+                                    '''
+                                }
+                            }
+                        },
+                        lintTests: {
+                            stage('Lint Test Changes') {
+                                if (readFile('file-list-changed.log') =~ /(?i)(^|\n)tests\/.*\.py\n/) {
+                                    sh shell_header + '''
+                                    eval "$(pyenv init - --no-rehash)"
+                                    pyenv shell 2.7.15
+                                    EC=254
+                                    export PYLINT_REPORT=pylint-report-tests-chg.log
+                                    grep -Ei '^tests/.*\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' nox -e lint-tests --
+                                    EC=$?
+                                    exit $EC
+                                    '''
+                                }
+                            }
+                        }
+                    )
+                    githubNotify credentialsId: 'test-jenkins-credentials',
+                        description: 'Passed code changes lint...',
+                        status: 'SUCCESS',
+                        context: gh_commit_status_context
+                } catch (Exception e) {
+                } finally {
+                    def changed_logs_pattern = 'pylint-report-*-chg.log'
+                    archiveArtifacts(
+                        artifacts: changed_logs_pattern,
+                        allowEmptyArchive: true
+                    )
+                    if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                        step([$class: 'WarningsPublisher',
+                            parserConfigurations: [[
+                                parserName: 'PyLint',
+                                pattern: changed_logs_pattern
+                            ]],
+                            failedTotalAll: '0',
+                            useDeltaValues: false,
+                            canRunOnFailed: true,
+                            usePreviousBuildAsReference: true
+                        ])
+                    } else {
+                        lint_report_issues.add(
+                            scanForIssues(
+                                tool: pyLint(pattern: changed_logs_pattern, reportEncoding: 'UTF-8')
+                            )
+                        )
+                    }
+                }
+            }
+            stage('Lint Full') {
+                if (env.CHANGE_BRANCH =~ /(?i)^merge[._-]/) {
+                    // perform a full linit if this is a merge forward and the change only lint passed.
+                    try {
+                        githubNotify credentialsId: 'test-jenkins-credentials',
+                            description: 'Python lint on everything begins...',
+                            status: 'PENDING',
+                            context: gh_commit_status_context
+                        parallel(
+                            lintSaltFull: {
+                                stage('Lint Salt Full') {
+                                    sh shell_header + '''
+                                    eval "$(pyenv init - --no-rehash)"
+                                    pyenv shell 2.7.15
+                                    EC=254
+                                    export PYLINT_REPORT=pylint-report-salt-full.log
+                                    nox -e lint-salt
+                                    EC=$?
+                                    exit $EC
+                                    '''
+                                }
+                            },
+                            lintTestsFull: {
+                                stage('Lint Tests Full') {
+                                    sh shell_header + '''
+                                    eval "$(pyenv init - --no-rehash)"
+                                    pyenv shell 2.7.15
+                                    EC=254
+                                    export PYLINT_REPORT=pylint-report-tests-full.log
+                                    nox -e lint-salt
+                                    EC=$?
+                                    exit $EC
+                                    '''
+                                }
+                            }
+                        )
+                    } finally {
+                        def full_logs_pattern = 'pylint-report-*-full.log'
+                        archiveArtifacts(
+                            artifacts: full_logs_pattern,
+                            allowEmptyArchive: true
+                        )
+                        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                            step([$class: 'WarningsPublisher',
+                                parserConfigurations: [[
+                                    parserName: 'PyLint',
+                                    pattern: full_logs_pattern
+                                ]],
+                                failedTotalAll: '0',
+                                useDeltaValues: false,
+                                canRunOnFailed: true,
+                                usePreviousBuildAsReference: true
+                            ])
+                        } else {
+                            lint_report_issues.add(
+                                scanForIssues(
+                                    tool: pyLint(pattern: full_logs_pattern, reportEncoding: 'UTF-8')
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            currentBuild.result = 'FAILURE'
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'Failed code changes lint...',
+                status: 'FAILURE',
+                context: gh_commit_status_context
+        }
+    }
+}
+
+
+def run_full_lint() {
+    return {
+        def gh_commit_status_context
+
+        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+            gh_commit_status_context = "jenkins/pr/docs"
+        } else {
+            gh_commit_status_context = "ci/docs"
+        }
+        try {
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'Python lint on everything begins...',
+                status: 'PENDING',
+                context: gh_commit_status_context
+
+            if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                shell_header = 'export PYENV_ROOT="/usr/local/pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"'
+            } else {
+                shell_header = ''
+            }
+
+            stage('Lint Full') {
+                if (env.CHANGE_BRANCH =~ /(?i)^merge[._-]/) {
+                    // perform a full linit if this is a merge forward and the change only lint passed.
+                    try {
+                        parallel(
+                            lintSaltFull: {
+                                stage('Lint Salt Full') {
+                                    sh shell_header + '''
+                                    eval "$(pyenv init - --no-rehash)"
+                                    pyenv shell 2.7.15
+                                    EC=254
+                                    export PYLINT_REPORT=pylint-report-salt-full.log
+                                    nox -e lint-salt
+                                    EC=$?
+                                    exit $EC
+                                    '''
+                                }
+                            },
+                            lintTestsFull: {
+                                stage('Lint Tests Full') {
+                                    sh shell_header + '''
+                                    eval "$(pyenv init - --no-rehash)"
+                                    pyenv shell 2.7.15
+                                    EC=254
+                                    export PYLINT_REPORT=pylint-report-tests-full.log
+                                    nox -e lint-salt
+                                    EC=$?
+                                    exit $EC
+                                    '''
+                                }
+                            }
+                        )
+                    } finally {
+                        def full_logs_pattern = 'pylint-report-*-full.log'
+                        archiveArtifacts(
+                            artifacts: full_logs_pattern,
+                            allowEmptyArchive: true
+                        )
+                        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                            step([$class: 'WarningsPublisher',
+                                parserConfigurations: [[
+                                    parserName: 'PyLint',
+                                    pattern: full_logs_pattern
+                                ]],
+                                failedTotalAll: '0',
+                                useDeltaValues: false,
+                                canRunOnFailed: true,
+                                usePreviousBuildAsReference: true
+                            ])
+                        } else {
+                            lint_report_issues.add(
+                                scanForIssues(
+                                    tool: pyLint(pattern: full_logs_pattern, reportEncoding: 'UTF-8')
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            currentBuild.result = 'FAILURE'
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'Failed full lint...',
+                status: 'FAILURE',
+                context: gh_commit_status_context
+        } finally {
+            if (!env.NODE_NAME.startsWith('jenkins-pr-')) {
+                publishIssues(
+                    enabledForFailure: true,
+                    aggregatingResults: true,
+                    referenceJobName: "${salt_target_branch}/salt-${salt_target_branch}-lint",
+                    qualityGates: [
+                        [threshold: 1, type: 'TOTAL', unstable: false]
+                    ],
+                    issues: lint_report_issues
+                )
+            }
+        }
+    }
+}
+// <--- Lint
+
+// ---> Docs
+def run_docs_build() {
+    return {
+        def gh_commit_status_context
+
+        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+            gh_commit_status_context = "jenkins/pr/docs"
+        } else {
+            gh_commit_status_context = "ci/docs"
+        }
+        try {
+
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'Testing docs...',
+                status: 'PENDING',
+                context: gh_commit_status_context
+
+            if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                shell_header = 'export PYENV_ROOT="/usr/local/pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"'
+            } else {
+                shell_header = ''
+            }
+            // Checkout the repo
+            stage('checkout-scm') {
+                cleanWs notFailBuild: true
+                checkout scm
+            }
+
+            // Setup the kitchen required bundle
+            stage('Setup') {
+                sh shell_header + '''
+                eval "$(pyenv init -)"
+                pyenv --version
+                pyenv install --skip-existing 3.6.8
+                pyenv shell 3.6.8
+                python --version
+                pip install -U nox-py2
+                nox --version
+                '''
+            }
+
+            stage('Build') {
+                sh shell_header + '''
+                eval "$(pyenv init -)"
+                pyenv shell 3.6.8
+                nox -e docs
+                '''
+                archiveArtifacts artifacts: 'doc/doc-archive.tar.gz'
+            }
+
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'Passed docs build...',
+                status: 'SUCCESS',
+                context: gh_commit_status_context
+
+        } catch (Exception e) {
+            currentBuild.result = 'FAILURE'
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'Failed docs build...',
+                status: 'FAILURE',
+                context: gh_commit_status_context
+        }
+    }
+}
+// <--- Docs
+
+
+// ---> Main Pipeline
+main_pipeline_parallel_steps = [:]
+main_pipeline_parallel_steps['full-lint'] = run_full_lint()
+main_pipeline_parallel_steps['docs'] = run_docs_build()
+
+test_distributions.each { slug, details ->
+    main_pipeline_parallel_steps[slug] = run_testsuite(
+        "Py${details['python_version']} ${details['display_name']}",
+        details['name'],
+        details['version'],
+        details['py_version'],
+        checkout_directory
+    )
+}
+
+node('kitchen-xl-slave') {
+    timeout(time: global_timeout, unit: 'HOURS') {
+
+        def gh_commit_status_context
+
+        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+            gh_commit_status_context = "jenkins/pr"
+        } else {
+            gh_commit_status_context = "ci"
+        }
+
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                          accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                          credentialsId: 'AWS_ACCESS_KEY_ID',
+                          secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+            ansiColor('xterm') {
+                timestamps {
+                    withEnv([
+                        'SALT_KITCHEN_PLATFORMS=/var/jenkins/workspace/nox-platforms.yml',
+                        'SALT_KITCHEN_VERIFIER=/var/jenkins/workspace/nox-verifier.yml',
+                        'SALT_KITCHEN_DRIVER=/var/jenkins/workspace/driver.yml',
+                        'NOX_ENV_NAME=pytest-zeromq',
+                        'NOX_ENABLE_FROM_FILENAMES=true',
+                        "SALT_TARGET_BRANCH=${salt_target_branch}",
+                        "GOLDEN_IMAGES_CI_BRANCH=${golden_images_branch}",
+                        'PATH=~/.rbenv/shims:/usr/local/rbenv/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin:/root/bin',
+                        'RBENV_VERSION=2.4.2',
+                        "FORCE_FULL=${params.runFull}",
+                    ]) {
+                        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                            githubNotify credentialsId: 'test-jenkins-credentials',
+                                description: "Checking PR ...",
+                                status: 'PENDING',
+                                context: gh_commit_status_context
+                        }
+
+                        dir(checkout_directory) {
+                            // Checkout the repo
+                            stage('checkout-scm') {
+                                cleanWs notFailBuild: true
+                                checkout scm
+                                sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
+                            }
+
+                            // Setup the kitchen required bundle
+                            stage('setup-bundle') {
+                                sh 'bundle install --with ec2 windows --without docker macos opennebula vagrant'
+                            }
+                        }
+
+                        try {
+                            run_changes_lint()
+                            parallel main_pipeline_parallel_steps
+                        } catch (Exception e) {
+                            currentBuild.result = 'FAILURE'
+                        } finally {
+                            cleanWs notFailBuild: true
+                            if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
+                                if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                                    githubNotify credentialsId: 'test-jenkins-credentials',
+                                        description: "PR checks succeeded...",
+                                        status: 'SUCCESS',
+                                        context: gh_commit_status_context
+                                }
+                            } else {
+                                if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                                    githubNotify credentialsId: 'test-jenkins-credentials',
+                                        description: "PR checks failed...",
+                                        status: 'FAILURE',
+                                        context: gh_commit_status_context
+                                }
+                                try {
+                                  slackSend channel: "#jenkins-prod-pr",
+                                      color: '#FF0000',
+                                      message: "*${currentBuild.currentResult}*: ${currentBuild.getFullDisplayName()} (<${env.BUILD_URL}|open>)"
+                                } catch (Exception e) {
+                                  sh 'echo Failed to send the Slack notification'
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+// <--- Main Pipeline
+
+// vim: ft=groovy ts=4 sts=4 et
