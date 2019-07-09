@@ -36,24 +36,24 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.http, 'query', return_value='A'):
             self.assertEqual(http.query('url'), 'A')
 
-    def test_wait_for_successful_query_with_request_interval(self):
+    def test_wait_for_with_interval(self):
         '''
         Test for wait_for_successful_query waits for request_interval
         '''
 
-        query_mock = MagicMock(side_effect = [{'error': 'error'}, {}])
+        query_mock = MagicMock(side_effect=[{'error': 'error'}, {}])
 
         with patch.object(salt.utils.http, 'query', query_mock):
             with patch('time.sleep', MagicMock()) as sleep_mock:
                 self.assertEqual(http.wait_for_successful_query('url', request_interval=1), {})
                 sleep_mock.assert_called_once_with(1)
 
-    def test_wait_for_successful_query_without_request_interval(self):
+    def test_wait_for_without_interval(self):
         '''
         Test for wait_for_successful_query waits for request_interval
         '''
 
-        query_mock = MagicMock(side_effect = [{'error': 'error'}, {}])
+        query_mock = MagicMock(side_effect=[{'error': 'error'}, {}])
 
         with patch.object(salt.utils.http, 'query', query_mock):
             with patch('time.sleep', MagicMock()) as sleep_mock:
