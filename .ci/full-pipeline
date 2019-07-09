@@ -126,9 +126,7 @@ def run_testsuite(section_name, distro_name, distro_version, python_version, che
     return {
         def chunks = [:]
         def nox_passthrough_opts = '--log-cli-level=warning --ignore=tests/utils'
-        if (distro_name == 'windows') {
-            nox_passthrough_opts = "--unit ${nox_passthrough_opts}"
-        } else {
+        if (distro_name != 'windows') {
             nox_passthrough_opts = "--ssh-tests ${nox_passthrough_opts}"
         }
 
