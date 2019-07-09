@@ -133,7 +133,7 @@ def run_testsuite(section_name, distro_name, distro_version, python_version, che
         }
 
         // Integration Module Tests
-        def integration_modules_chunks = 4
+        def integration_modules_chunks = 2
         for (int i=1; i<(integration_modules_chunks+1); i++) {
             def chunk_no = i
             def stagename = "Integration Modules #${chunk_no}"
@@ -144,7 +144,7 @@ def run_testsuite(section_name, distro_name, distro_version, python_version, che
         }
 
         // Integration State Tests
-        def integration_states_chunks = 4
+        def integration_states_chunks = 2
         for (int i=1; i<(integration_states_chunks+1); i++) {
             def chunk_no = i
             def stagename = "Integration States #${chunk_no}"
@@ -155,7 +155,7 @@ def run_testsuite(section_name, distro_name, distro_version, python_version, che
         }
 
         // Unit Tests
-        def unit_chunks = 3
+        def unit_chunks = 2
         for (int i=1; i<(unit_chunks+1); i++) {
             def chunk_no = i
             def stagename = "Unit #${chunk_no}"
@@ -166,7 +166,7 @@ def run_testsuite(section_name, distro_name, distro_version, python_version, che
         }
 
         // All Other
-        def other_chunks = 8
+        def other_chunks = 5
         for (int i=1; i<(other_chunks+1); i++) {
             def chunk_no = i
             def stagename = "All Other #${chunk_no}"

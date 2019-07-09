@@ -103,7 +103,7 @@ def chunks = [:]
 def nox_passthrough_opts = '--unit --log-cli-level=warning --ignore=tests/utils'
 
 // Integration Module Tests
-def integration_modules_chunks = 4
+def integration_modules_chunks = 2
 for (int i=1; i<(integration_modules_chunks+1); i++) {
     def chunk_no = i
     def stagename = "Integration Modules #${chunk_no}"
@@ -114,7 +114,7 @@ for (int i=1; i<(integration_modules_chunks+1); i++) {
 }
 
 // Integration State Tests
-def integration_states_chunks = 4
+def integration_states_chunks = 2
 for (int i=1; i<(integration_states_chunks+1); i++) {
     def chunk_no = i
     def stagename = "Integration States #${chunk_no}"
@@ -125,7 +125,7 @@ for (int i=1; i<(integration_states_chunks+1); i++) {
 }
 
 // Unit Tests
-def unit_chunks = 3
+def unit_chunks = 2
 for (int i=1; i<(unit_chunks+1); i++) {
     def chunk_no = i
     def stagename = "Unit #${chunk_no}"
@@ -136,7 +136,7 @@ for (int i=1; i<(unit_chunks+1); i++) {
 }
 
 // All Other
-def other_chunks = 8
+def other_chunks = 5
 for (int i=1; i<(other_chunks+1); i++) {
     def chunk_no = i
     def stagename = "All Other #${chunk_no}"
