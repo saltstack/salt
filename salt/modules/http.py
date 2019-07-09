@@ -58,7 +58,7 @@ def wait_for_successful_query(url, wait_for=300, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' http.wait_for_successful_query http://somelink.com/ wait_for=160
+        salt '*' http.wait_for_successful_query http://somelink.com/ wait_for=160 request_interval=1
     '''
 
     starttime = time.time()
