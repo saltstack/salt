@@ -19,8 +19,8 @@ import tests.integration as integration
 import salt.config
 from salt.utils.schedule import Schedule
 
-from salt.modules.test import ping as test_ping
-from salt.modules.test import true_ as test_true
+from salt.modules.test import ping as salt_test_ping
+from salt.modules.test import true_ as salt_test_true
 from salt.modules.status import time as status_time
 from salt.modules.cmdmod import run as cmd_run
 
@@ -57,8 +57,8 @@ class ScheduleTestCase(TestCase):
 
     def setUp(self):
         with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
-            functions = {'test.ping': test_ping,
-                         'test.true': test_true,
+            functions = {'test.ping': salt_test_ping,
+                         'test.true': salt_test_true,
                          'status.time': status_time,
                          'cmd.run': cmd_run}
             self.schedule = Schedule(copy.deepcopy(self.default_config),
