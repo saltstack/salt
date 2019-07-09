@@ -178,11 +178,14 @@ def run_testsuite(section_name, distro_name, distro_version, python_version, che
 
         def uuid = UUID.randomUUID().toString()
         def checkout_dir = "$checkout_directory-$uuid"
+        def gh_commit_status_account
         def gh_commit_status_context
         if (env.NODE_NAME.startsWith('jenkins-pr-')) {
             gh_commit_status_context = "jenkins/pr/${python_version}/${distro_name}-${distro_verion}"
+            gh_commit_status_account = 'test-jenkins-credentials'
         } else {
             gh_commit_status_context = "ci/${python_version}/${distro_name}-${distro_verion}"
+            gh_commit_status_account = 'svc-builderopen3-gh'
         }
         sh "cp -Rp $checkout_directory $checkout_dir"
         dir("$checkout_dir") {
@@ -197,7 +200,7 @@ def run_testsuite(section_name, distro_name, distro_version, python_version, che
                     "TEST_PLATFORM=${distro_name}-${distro_version}",
                 ]) {
                     // Set the GH status even before cloning the repo
-                    githubNotify credentialsId: 'test-jenkins-credentials',
+                    githubNotify credentialsId: gh_commit_status_account,
                         description: "Running ${section_name} ...",
                         status: 'PENDING',
                         context: gh_commit_status_context
@@ -214,14 +217,14 @@ def run_testsuite(section_name, distro_name, distro_version, python_version, che
                                 testrun_timeout
                             )
                         }
-                        githubNotify credentialsId: 'test-jenkins-credentials',
+                        githubNotify credentialsId: gh_commit_status_account,
                             description: "Tests passed for ${section_name} ...",
                             status: 'SUCCESS',
                             context: gh_commit_status_context
                     } catch (Exception e) {
                         println("FAILURE 3: ${e}")
                         currentBuild.result = 'FAILURE'
-                        githubNotify credentialsId: 'test-jenkins-credentials',
+                        githubNotify credentialsId: gh_commit_status_account,
                             description: "Tests failed for ${section_name} ...",
                             status: 'FAILURE',
                             context: gh_commit_status_context
@@ -241,17 +244,21 @@ def lint_report_issues = []
 
 def run_changes_lint(lint_report_issues) {
     return {
+
+        def gh_commit_status_account
         def gh_commit_status_context
 
         if (env.NODE_NAME.startsWith('jenkins-pr-')) {
             gh_commit_status_context = "jenkins/pr/lint"
+            gh_commit_status_account = 'test-jenkins-credentials'
         } else {
             gh_commit_status_context = "ci/lint"
+            gh_commit_status_account = 'svc-builderopen3-gh'
         }
 
         try {
             // Set the GH status even before cloning the repo
-            githubNotify credentialsId: 'test-jenkins-credentials',
+            githubNotify credentialsId: gh_commit_status_account,
                 description: 'Python lint begins...',
                 status: 'PENDING',
                 context: gh_commit_status_context
@@ -323,7 +330,7 @@ def run_changes_lint(lint_report_issues) {
                             }
                         }
                     )
-                    githubNotify credentialsId: 'test-jenkins-credentials',
+                    githubNotify credentialsId: gh_commit_status_account,
                         description: 'Passed code changes lint...',
                         status: 'SUCCESS',
                         context: gh_commit_status_context
@@ -356,7 +363,7 @@ def run_changes_lint(lint_report_issues) {
         } catch (Exception e) {
             println("FAILURE 4: ${e}")
             currentBuild.result = 'FAILURE'
-            githubNotify credentialsId: 'test-jenkins-credentials',
+            githubNotify credentialsId: gh_commit_status_account,
                 description: 'Failed code changes lint...',
                 status: 'FAILURE',
                 context: gh_commit_status_context
@@ -367,15 +374,18 @@ def run_changes_lint(lint_report_issues) {
 
 def run_full_lint(lint_report_issues) {
     return {
+        def gh_commit_status_account
         def gh_commit_status_context
 
         if (env.NODE_NAME.startsWith('jenkins-pr-')) {
             gh_commit_status_context = "jenkins/pr/docs"
+            gh_commit_status_account = 'test-jenkins-credentials'
         } else {
             gh_commit_status_context = "ci/docs"
+            gh_commit_status_account = 'svc-builderopen3-gh'
         }
         try {
-            githubNotify credentialsId: 'test-jenkins-credentials',
+            githubNotify credentialsId: gh_commit_status_account,
                 description: 'Python lint on everything begins...',
                 status: 'PENDING',
                 context: gh_commit_status_context
@@ -448,7 +458,7 @@ def run_full_lint(lint_report_issues) {
         } catch (Exception e) {
             println("FAILURE 5: ${e}")
             currentBuild.result = 'FAILURE'
-            githubNotify credentialsId: 'test-jenkins-credentials',
+            githubNotify credentialsId: gh_commit_status_account,
                 description: 'Failed full lint...',
                 status: 'FAILURE',
                 context: gh_commit_status_context
@@ -472,16 +482,20 @@ def run_full_lint(lint_report_issues) {
 // ---> Docs
 def run_docs_build() {
     return {
+
+        def gh_commit_status_account
         def gh_commit_status_context
 
         if (env.NODE_NAME.startsWith('jenkins-pr-')) {
             gh_commit_status_context = "jenkins/pr/docs"
+            gh_commit_status_account = 'test-jenkins-credentials'
         } else {
             gh_commit_status_context = "ci/docs"
+            gh_commit_status_account = 'svc-builderopen3-gh'
         }
         try {
 
-            githubNotify credentialsId: 'test-jenkins-credentials',
+            githubNotify credentialsId: gh_commit_status_account,
                 description: 'Testing docs...',
                 status: 'PENDING',
                 context: gh_commit_status_context
@@ -519,7 +533,7 @@ def run_docs_build() {
                 archiveArtifacts artifacts: 'doc/doc-archive.tar.gz'
             }
 
-            githubNotify credentialsId: 'test-jenkins-credentials',
+            githubNotify credentialsId: gh_commit_status_account,
                 description: 'Passed docs build...',
                 status: 'SUCCESS',
                 context: gh_commit_status_context
@@ -527,7 +541,7 @@ def run_docs_build() {
         } catch (Exception e) {
             println("FAILURE 6: ${e}")
             currentBuild.result = 'FAILURE'
-            githubNotify credentialsId: 'test-jenkins-credentials',
+            githubNotify credentialsId: gh_commit_status_account,
                 description: 'Failed docs build...',
                 status: 'FAILURE',
                 context: gh_commit_status_context
@@ -555,12 +569,15 @@ test_distributions.each { slug, details ->
 node('kitchen-xl-slave') {
     timeout(time: global_timeout, unit: 'HOURS') {
 
+        def gh_commit_status_account
         def gh_commit_status_context
 
         if (env.NODE_NAME.startsWith('jenkins-pr-')) {
             gh_commit_status_context = "jenkins/pr"
+            gh_commit_status_account = 'test-jenkins-credentials'
         } else {
             gh_commit_status_context = "ci"
+            gh_commit_status_account = 'svc-builderopen3-gh'
         }
 
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
@@ -582,7 +599,7 @@ node('kitchen-xl-slave') {
                         "FORCE_FULL=${params.runFull}",
                     ]) {
                         if (env.NODE_NAME.startsWith('jenkins-pr-')) {
-                            githubNotify credentialsId: 'test-jenkins-credentials',
+                            githubNotify credentialsId: gh_commit_status_account,
                                 description: "Checking PR ...",
                                 status: 'PENDING',
                                 context: gh_commit_status_context
@@ -612,14 +629,14 @@ node('kitchen-xl-slave') {
                             cleanWs notFailBuild: true
                             if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
                                 if (env.NODE_NAME.startsWith('jenkins-pr-')) {
-                                    githubNotify credentialsId: 'test-jenkins-credentials',
+                                    githubNotify credentialsId: gh_commit_status_account,
                                         description: "PR checks succeeded...",
                                         status: 'SUCCESS',
                                         context: gh_commit_status_context
                                 }
                             } else {
                                 if (env.NODE_NAME.startsWith('jenkins-pr-')) {
-                                    githubNotify credentialsId: 'test-jenkins-credentials',
+                                    githubNotify credentialsId: gh_commit_status_account,
                                         description: "PR checks failed...",
                                         status: 'FAILURE',
                                         context: gh_commit_status_context
