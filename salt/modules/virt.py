@@ -5278,8 +5278,12 @@ def volume_infos(pool=None, volume=None, **kwargs):
     conn = __get_conn(**kwargs)
     try:
         backing_stores = _get_all_volumes_paths(conn)
-        domains = _get_domain(conn)
-        domains_list = domains if isinstance(domains, list) else [domains]
+        try:
+            domains = _get_domain(conn)
+            domains_list = domains if isinstance(domains, list) else [domains]
+        except CommandExecutionError:
+            # Having no VM is not an error here.
+            domains_list = []
         disks = {domain.name():
                  {node.get('file') for node
                   in ElementTree.fromstring(domain.XMLDesc(0)).findall('.//disk/source/[@file]')}
