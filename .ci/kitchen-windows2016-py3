@@ -100,7 +100,7 @@ def run_tests(checkout_directory, stage_name, env_array, chunk_timeout) {
 }
 
 def chunks = [:]
-def nox_passthrough_opts = '--unit --log-cli-level=warning --ignore=tests/utils'
+def nox_passthrough_opts = '--log-cli-level=warning --ignore=tests/utils'
 
 // Integration Module Tests
 def integration_modules_chunks = 2
