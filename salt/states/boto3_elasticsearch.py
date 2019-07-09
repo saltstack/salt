@@ -80,6 +80,21 @@ def __virtual__():
     return __virtualname__
 
 
+def _check_return_value(ret):
+    '''
+    Helper function to check if the 'result' key of the return value has been
+    properly set. This is to detect unexpected code-paths that would otherwise
+    return a 'success'-y value but not actually be succesful.
+
+    :param dict ret: The returned value of a state function.
+    '''
+    if ret['result'] == 'oops':
+        ret['result'] = False
+        ret['comment'].append('An internal error has occurred: The result value was '
+                              'not properly changed.')
+    return ret
+
+
 def present(
         name,
         elasticsearch_version=None,
@@ -363,11 +378,7 @@ def present(
                 'changes:new:tags',
                 res['changes']['new']
             )
-
-    if ret['result'] == 'oops':
-        ret['result'] = False
-        ret['comment'].append('An internal error has occurred: The result value was '
-                              'not properly changed.')
+    ret = _check_return_value(ret)
     return ret
 
 
@@ -425,10 +436,7 @@ def absent(
         ret['result'] = True
         ret['comment'].append('Elasticsearch domain "{}" is already absent.'
                               ''.format(name))
-    if ret['result'] == 'oops':
-        ret['result'] = False
-        ret['comment'].append('An internal error has occurred: The result value was '
-                              'not properly changed.')
+    ret = _check_return_value(ret)
     return ret
 
 
@@ -562,10 +570,7 @@ def upgraded(
                                       ''.format(name, elasticsearch_version))
                 ret['changes'] = {'old': current_domain['ElasticsearchVersion'],
                                   'new': elasticsearch_version}
-    if ret['result'] == 'oops':
-        ret['result'] = False
-        ret['comment'].append('An internal error has occurred: The result value was '
-                              'not properly changed.')
+    ret = _check_return_value(ret)
     return ret
 
 
@@ -653,10 +658,7 @@ def latest(
             ret['comment'].append('Elasticsearch domain "{}" is already at its '
                                   'latest minor version {}.'
                                   ''.format(name, current_version))
-    if ret['result'] == 'oops':
-        ret['result'] = False
-        ret['comment'].append('An internal error has occurred: The result value was '
-                              'not properly changed.')
+    ret = _check_return_value(ret)
     if ret['result'] and ret['changes'] and not minor_only:
         # Try and see if we can upgrade again
         res = latest(name, minor_only=minor_only, region=region, keyid=keyid, key=key, profile=profile)
@@ -748,8 +750,5 @@ def tagged(
                 ret['result'] = True
                 ret['comment'].append('Tags on Elasticsearch domain "{}" have been '
                                       '{}ed.'.format(name, 'replac' if replace else 'add'))
-    if ret['result'] == 'oops':
-        ret['result'] = False
-        ret['comment'].append('An internal error has occurred: The result value was '
-                              'not properly changed.')
+    ret = _check_return_value(ret)
     return ret
