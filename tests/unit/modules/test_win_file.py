@@ -78,7 +78,6 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
             self.assertRaises(
                 CommandExecutionError, win_file.check_perms, self.FAKE_PATH)
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
     @destructiveTest
     @skipIf(not salt.utils.platform.is_windows(), 'Skip on Non-Windows systems')
     def test_issue_52002_check_file_remove_symlink(self):
