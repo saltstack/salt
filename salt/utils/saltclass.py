@@ -20,7 +20,18 @@ log = logging.getLogger(__name__)
 
 # Renders jinja from a template file
 def render_jinja(_file, salt_data):
-    j_env = Environment(loader=FileSystemLoader(os.path.dirname(_file)))
+    root = os.path.join(salt_data["path"], "classes")
+    pwd = os.path.dirname(_file)
+    if os.path.commonprefix([root, pwd]) == root:
+        search_path = [root]
+        for d in os.path.relpath(pwd, root).split(os.sep):
+            root = os.path.join(root, d)
+            search_path.append(root)
+        search_path.reverse()
+    else:
+        search_path = [pwd]
+
+    j_env = Environment(loader=FileSystemLoader(search_path))
     j_env.globals.update(
         {
             "__opts__": salt_data["__opts__"],
