@@ -557,13 +557,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     '''.format(**managed_files)))
 
             ret = self.run_function('state.sls', [state_name])
+            self.assertSaltTrueReturn(ret)
             for typ in state_keys:
                 self.assertTrue(ret[state_keys[typ]]['result'])
                 self.assertIn('diff', ret[state_keys[typ]]['changes'])
         finally:
-            os.remove(state_file)
+            if os.path.exists(state_file):
+                os.remove(state_file)
             for typ in managed_files:
-                os.remove(managed_files[typ])
+                if os.path.exists(managed_files[typ]):
+                    os.remove(managed_files[typ])
 
     @skip_if_not_root
     @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
@@ -938,10 +941,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             tmp_dir = os.path.join(RUNTIME_VARS.TMP, 'pgdata')
             sym_dir = os.path.join(RUNTIME_VARS.TMP, 'pg_data')
 
-            if IS_WINDOWS:
-                self.run_function('file.mkdir', [tmp_dir, 'Administrators'])
-            else:
-                os.mkdir(tmp_dir, 0o700)
+            os.mkdir(tmp_dir, 0o700)
 
             self.run_function('file.symlink', [tmp_dir, sym_dir])
 
@@ -1253,10 +1253,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             null_file = '{0}/null'.format(tmp_dir)
             broken_link = '{0}/broken'.format(tmp_dir)
 
-            if IS_WINDOWS:
-                self.run_function('file.mkdir', [tmp_dir, 'Administrators'])
-            else:
-                os.mkdir(tmp_dir, 0o700)
+            os.mkdir(tmp_dir, 0o700)
 
             self.run_function('file.symlink', [null_file, broken_link])
 
@@ -1769,7 +1766,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(path_test, 'rb') as fp_:
             serialized_file = salt.utils.stringutils.to_unicode(fp_.read())
 
-        # The JSON serializer uses LF even on OSes where os.path.sep is CRLF.
+        # The JSON serializer uses LF even on OSes where os.sep is CRLF.
         expected_file = '\n'.join([
             '{',
             '  "a_list": [',
@@ -2614,15 +2611,17 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         user = 'salt'
         mode = '0644'
-        self.run_function('user.add', [user])
+        ret = self.run_function('user.add', [user])
+        self.assertTrue(ret, 'Failed to add user. Are you running as sudo?')
         ret = self.run_state('file.copy', name=dest, source=source, user=user,
-                             makedirs=True, mode=mode)
-        file_checks = [dest, os.path.join(RUNTIME_VARS.TMP, 'dir1'), os.path.join(RUNTIME_VARS.TMP, 'dir1', 'dir2')]
+                              makedirs=True, mode=mode)
+        self.assertSaltTrueReturn(ret)
+        file_checks = [dest, os.path.join(TMP, 'dir1'), os.path.join(TMP, 'dir1', 'dir2')]
         for check in file_checks:
             user_check = self.run_function('file.get_user', [check])
             mode_check = self.run_function('file.get_mode', [check])
-            assert user_check == user
-            assert salt.utils.files.normalize_mode(mode_check) == mode
+            self.assertEqual(user_check, user)
+            self.assertEqual(salt.utils.files.normalize_mode(mode_check), mode)
 
     def test_contents_pillar_with_pillar_list(self):
         '''
