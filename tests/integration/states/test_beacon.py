@@ -10,6 +10,7 @@ import logging
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
