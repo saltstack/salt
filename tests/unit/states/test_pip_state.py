@@ -17,7 +17,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-import salt.states.pip as pip_state
+import salt.states.pip_state as pip_state
 from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
