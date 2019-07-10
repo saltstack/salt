@@ -12,6 +12,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.unit import skipIf
 
 
 @destructiveTest
