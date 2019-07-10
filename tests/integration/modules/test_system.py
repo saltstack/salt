@@ -174,7 +174,7 @@ class SystemModuleTest(ModuleCase):
         '''
         t1 = datetime.datetime.utcnow()
         res = self.run_function('system.get_system_date_time',
-                                utc_offset="'+0000'")
+                                utc_offset='+0000')
         t2 = datetime.datetime.strptime(res, self.fmt_str)
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(t1, t2))
@@ -266,7 +266,7 @@ class SystemModuleTest(ModuleCase):
         cmp_time = datetime.datetime.now().replace(hour=10, minute=5, second=0)
         self._save_time()
 
-        result = self.run_function('system.set_system_time', ["10:05:00"])
+        result = self.run_function('system.set_system_time', ["'10:05:00'"])
 
         time_now = datetime.datetime.now()
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
