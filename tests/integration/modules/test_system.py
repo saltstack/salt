@@ -25,6 +25,7 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 
+@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(not salt.utils.platform.is_linux(),
         'These tests can only be run on linux')
 class SystemModuleTest(ModuleCase):
