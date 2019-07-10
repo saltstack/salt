@@ -24,6 +24,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
         if os_family not in ('RedHat', 'Debian'):
             self.skipTest('Network state only supported on RedHat and Debian based systems')
 
+    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
     def test_managed(self):
         '''
         network.managed

@@ -41,6 +41,7 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
     _call_binary_ = 'salt-syndic'
 
+    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
     def test_issue_7754(self):
         old_cwd = os.getcwd()
         config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
