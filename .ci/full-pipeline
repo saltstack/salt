@@ -264,7 +264,7 @@ def run_changes_lint(lint_report_issues) {
             if (env.NODE_NAME.startsWith('jenkins-pr-')) {
                 shell_header = 'export PYENV_ROOT="/usr/local/pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"'
             } else {
-                shell_header = ''
+                shell_header = 'export PYENV_ROOT="~/.pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"'
             }
 
             // Setup the kitchen required bundle
@@ -391,7 +391,7 @@ def run_full_lint(lint_report_issues) {
             if (env.NODE_NAME.startsWith('jenkins-pr-')) {
                 shell_header = 'export PYENV_ROOT="/usr/local/pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"'
             } else {
-                shell_header = ''
+                shell_header = 'export PYENV_ROOT="~/.pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"'
             }
 
             stage('Lint Full') {
@@ -501,7 +501,7 @@ def run_docs_build() {
             if (env.NODE_NAME.startsWith('jenkins-pr-')) {
                 shell_header = 'export PYENV_ROOT="/usr/local/pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"'
             } else {
-                shell_header = ''
+                shell_header = 'export PYENV_ROOT="~/.pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"'
             }
             // Checkout the repo
             stage('checkout-scm') {
