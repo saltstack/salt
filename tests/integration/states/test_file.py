@@ -1259,11 +1259,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
             if IS_WINDOWS:
                 ret = self.run_state(
-                    'file.directory', name=tmp_dir, recurse={'mode'},
+                    'file.directory', name=tmp_dir, recurse=['mode'],
                     follow_symlinks=True, win_owner='Administrators')
             else:
                 ret = self.run_state(
-                    'file.directory', name=tmp_dir, recurse={'mode'},
+                    'file.directory', name=tmp_dir, recurse=['mode'],
                     file_mode=644, dir_mode=755)
 
             self.assertSaltTrueReturn(ret)
