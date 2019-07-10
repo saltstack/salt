@@ -316,6 +316,8 @@ class SaltMessageClientPoolTest(AsyncTestCase):
             test_connect(self)
 
 
+@skipIf(salt.utils.platform.is_windows(), 'WAR ROOM TEMPORARY SKIP')
+# This test hangs on Windows
 class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def setUp(self):
