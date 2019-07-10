@@ -70,7 +70,7 @@ class SystemModuleTest(ModuleCase):
         return self.run_function('system.set_system_date_time', t)
 
     def _restore_time(self):
-        result = self._set_time(self._orig_time, "+0000")
+        result = self._set_time(self._orig_time, "'+0000'")
         self.assertTrue(result, msg="Unable to restore time properly")
 
     def _same_times(self, t1, t2, seconds_diff=30):
@@ -175,7 +175,7 @@ class SystemModuleTest(ModuleCase):
         '''
         t1 = datetime.datetime.utcnow()
         res = self.run_function('system.get_system_date_time',
-                                utc_offset="+0000")
+                                utc_offset="'+0000'")
         t2 = datetime.datetime.strptime(res, self.fmt_str)
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(t1, t2))
@@ -208,7 +208,7 @@ class SystemModuleTest(ModuleCase):
         '''
         self._save_time()
         cmp_time = datetime.datetime.utcnow() - datetime.timedelta(days=7)
-        result = self._set_time(cmp_time, offset="+0000")
+        result = self._set_time(cmp_time, offset="'+0000'")
         time_now = datetime.datetime.utcnow()
 
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
@@ -228,7 +228,7 @@ class SystemModuleTest(ModuleCase):
         cmp_time = datetime.datetime.utcnow() - datetime.timedelta(days=7)
         # 25200 seconds = 7 hours
         time_to_set = cmp_time - datetime.timedelta(seconds=25200)
-        result = self._set_time(time_to_set, offset='-0700')
+        result = self._set_time(time_to_set, offset="'-0700'")
         time_now = datetime.datetime.utcnow()
 
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
@@ -248,7 +248,7 @@ class SystemModuleTest(ModuleCase):
         cmp_time = datetime.datetime.utcnow() - datetime.timedelta(days=7)
         # 7200 seconds = 2 hours
         time_to_set = cmp_time + datetime.timedelta(seconds=7200)
-        result = self._set_time(time_to_set, offset='+0200')
+        result = self._set_time(time_to_set, offset="'+0200'")
         time_now = datetime.datetime.utcnow()
 
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
