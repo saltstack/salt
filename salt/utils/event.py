@@ -697,14 +697,14 @@ class SaltEvent(object):
         mtag, data = self.unpack(raw, self.serial)
         return {'data': data, 'tag': mtag}
 
-    def iter_events(self, tag='', full=False, match_type=None, auto_reconnect=False):
+    def iter_events(self, tag='', full=False, match_type=None, auto_reconnect=False, heartbeat=False):
         '''
         Creates a generator that continuously listens for events
         '''
         while True:
             data = self.get_event(tag=tag, full=full, match_type=match_type,
                                   auto_reconnect=auto_reconnect)
-            if data is None:
+            if data is None and not heartbeat:
                 continue
             yield data
 
@@ -1288,24 +1288,27 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         salt.utils.process.appendproctitle(self.__class__.__name__)
         self.event = get_event('master', opts=self.opts, listen=True)
-        events = self.event.iter_events(full=True)
+        events = self.event.iter_events(full=True, heartbeat=True)
         self.event.fire_event({}, 'salt/event_listen/start')
         try:
             # events below is a generator, we will iterate until we get the salt/event/exit tag
             oldestevent = None
             for event in events:
-
-                if event['tag'] == 'salt/event/exit':
-                    # We're done eventing
-                    self.stop = True
-                if self._filter(event):
-                    # This event passed the filter, add it to the queue
-                    self.event_queue.append(event)
+                if event is not None:
+                    if event.get('tag') == 'salt/event/exit':
+                        # We're done eventing
+                        self.stop = True
+                    if self._filter(event):
+                        # This event passed the filter, add it to the queue
+                        self.event_queue.append(event)
                 too_long_in_queue = False
 
                 # if max_seconds is >0, then we want to make sure we flush the queue
                 # every event_return_queue_max_seconds seconds,  If it's 0, don't
                 # apply any of this logic
+                if not self.event_queue:
+                    continue
+
                 if self.event_return_queue_max_seconds > 0:
                     rightnow = datetime.datetime.now()
                     if not oldestevent:
