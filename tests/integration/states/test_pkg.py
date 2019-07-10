@@ -163,6 +163,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         Ensure that we only refresh the first time we run a test
         '''
         super(PkgTest, self).setUp()
+
+        # Skip tests if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
+
         if 'refresh' not in __testcontext__:
             self.run_function('pkg.refresh_db')
             __testcontext__['refresh'] = True
@@ -172,10 +177,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
         pkg_targets = _PKG_TARGETS.get(os_family, [])
 
@@ -202,10 +203,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
         pkg_targets = _PKG_TARGETS.get(os_family, [])
 
@@ -249,10 +246,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
         pkg_targets = _PKG_TARGETS.get(os_family, [])
 
@@ -285,10 +278,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
         pkg_targets = _PKG_TARGETS.get(os_family, [])
 
@@ -335,10 +324,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_name = grains.get('os', '')
         target = _PKG_TARGETS_32.get(os_name, '')
 
@@ -371,10 +356,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_name = grains.get('os', '')
         target = _PKG_TARGETS_32.get(os_name, '')
 
@@ -421,10 +402,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         This is a destructive test as it installs a package
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
         os_version = grains.get('osmajorrelease')
         target = _PKG_TARGETS_DOT.get(os_family, {}).get(os_version)
@@ -451,10 +428,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         This is a destructive test as it installs a package
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
         os_version = grains.get('osmajorrelease')
         target = _PKG_TARGETS_EPOCH.get(os_family, {}).get(os_version)
@@ -485,10 +458,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         This is a destructive test as it installs a package
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         ret = self.run_state('pkg.installed',
                              name='bash-completion',
                              refresh=False)
@@ -504,10 +473,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         a separate method so I can add the requires_salt_modules
         decorator to only the pkg.info_installed command.
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         package = 'bash-completion'
         pkgquery = 'version'
 
@@ -520,10 +485,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         This tests pkg.latest with a package that has no epoch (or a zero
         epoch).
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
         pkg_targets = _PKG_TARGETS.get(os_family, [])
 
@@ -554,10 +515,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         os_family = grains.get('os_family', '')
         if os_family != 'Debian':
             self.skipTest('Minion is not Debian/Ubuntu')
-
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
 
         pkg_targets = _PKG_TARGETS.get(os_family, [])
 
@@ -616,10 +573,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
 
         if os_family not in _WILDCARDS_SUPPORTED:
@@ -685,10 +638,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
         if os_family not in ('Debian', 'RedHat'):
             self.skipTest('Comparison operator not specially implemented')
@@ -775,10 +724,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         the package group is missing. Before this fix, the state would stacktrace.
         See Issue #35819 for bug report.
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         # Group install not available message
         grp_install_msg = 'pkg.group_install not available for this platform'
 
@@ -803,10 +748,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
         pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
         if not pkg_cap_targets:
@@ -837,10 +778,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
         pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
         if not pkg_cap_targets:
@@ -879,10 +816,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
         pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
         if not pkg_cap_targets:
@@ -954,10 +887,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         This tests pkg.latest with a package that has no epoch (or a zero
         epoch).
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
         pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
         if not pkg_cap_targets:
@@ -993,10 +922,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
         pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
         if not pkg_cap_targets:
@@ -1027,10 +952,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        # Skip test if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
-            self.skipTest('Package manager is not available')
-
         os_family = grains.get('os_family', '')
         pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
         if not pkg_cap_targets:
