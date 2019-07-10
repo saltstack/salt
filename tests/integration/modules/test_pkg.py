@@ -21,6 +21,7 @@ import salt.utils.pkg
 import salt.utils.platform
 
 
+@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
 @flaky
 class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''

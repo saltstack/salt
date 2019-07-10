@@ -13,7 +13,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import TestsLoggingHandler
+from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
@@ -72,7 +72,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual('/etc/alternatives/salt', ret)
             mock.assert_called_once_with('/etc/alternatives/better-world')
 
-            with TestsLoggingHandler() as handler:
+            with TstSuiteLoggingHandler() as handler:
                 mock.side_effect = OSError('Hell was not found!!!')
                 self.assertFalse(alternatives.show_current('hell'))
                 mock.assert_called_with('/etc/alternatives/hell')

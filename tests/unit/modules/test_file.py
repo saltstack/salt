@@ -2388,6 +2388,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
             actual = filemod._chattr_has_extended_attrs()
             assert actual, actual
 
+    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
     def test_check_perms_should_report_no_attr_changes_if_there_are_none(self):
         filename = '/path/to/fnord'
         attrs = 'aAcCdDeijPsStTu'
@@ -2425,6 +2426,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
             )
             assert actual_ret.get('changes', {}).get('attrs')is None, actual_ret
 
+    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
     def test_check_perms_should_report_attrs_new_and_old_if_they_changed(self):
         filename = '/path/to/fnord'
         attrs = 'aAcCdDeijPsStTu'
