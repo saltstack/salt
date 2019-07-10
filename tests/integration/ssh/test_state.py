@@ -93,6 +93,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function('file.file_exists', [SSH_SLS_FILE], wipe=False)
         self.assertFalse(check_file)
 
+    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
     def test_state_show_top(self):
         '''
         test state.show_top with salt-ssh
