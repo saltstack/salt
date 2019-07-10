@@ -57,7 +57,7 @@ msgpack==0.6.1
 ncclient==0.6.4           # via junos-eznc
 netaddr==0.7.19           # via junos-eznc
 packaging==19.0           # via pytest
-paramiko==2.1.2
+paramiko==2.1.2 ; python_version < "3.7"
 pbr==5.1.3                # via mock, pylxd
 pluggy==0.12.0            # via pytest
 portend==2.4              # via cherrypy
