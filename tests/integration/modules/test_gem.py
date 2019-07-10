@@ -17,13 +17,6 @@ import salt.utils.path
 # Import 3rd-party libs
 from tornado.httpclient import HTTPClient
 
-GEM = 'tidy'
-GEM_VER = '1.1.2'
-OLD_GEM = 'brass'
-OLD_VERSION = '1.0.0'
-NEW_VERSION = '1.2.1'
-GEM_LIST = [GEM, OLD_GEM]
-
 
 def check_status():
     '''
@@ -46,64 +39,72 @@ class GemModuleTest(ModuleCase):
         if check_status() is False:
             self.skipTest('External resource \'https://rubygems.org\' is not available')
 
+        self.GEM = 'tidy'
+        self.GEM_VER = '1.1.2'
+        self.OLD_GEM = 'brass'
+        self.OLD_VERSION = '1.0.0'
+        self.NEW_VERSION = '1.2.1'
+        self.GEM_LIST = [self.GEM, self.OLD_GEM]
+        for name in ('GEM', 'GEM_VER', 'OLD_GEM', 'OLD_VERSION', 'NEW_VERSION', 'GEM_LIST'):
+            self.addCleanup(delattr, self, name)
+
+        def uninstall_gem():
+            # Remove gem if it is already installed
+            if self.run_function('gem.list', [self.GEM]):
+                self.run_function('gem.uninstall', [self.GEM])
+
+        self.addCleanup(uninstall_gem)
+
     def test_install_uninstall(self):
         '''
         gem.install
         gem.uninstall
         '''
-        # Remove gem if it is already installed
-        if self.run_function('gem.list', [GEM]):
-            self.run_function('gem.uninstall', [GEM])
+        self.run_function('gem.install', [self.GEM])
+        gem_list = self.run_function('gem.list', [self.GEM])
+        self.assertIn(self.GEM, gem_list)
 
-        self.run_function('gem.install', [GEM])
-        gem_list = self.run_function('gem.list', [GEM])
-        self.assertIn(GEM, gem_list)
-
-        self.run_function('gem.uninstall', [GEM])
-        self.assertFalse(self.run_function('gem.list', [GEM]))
+        self.run_function('gem.uninstall', [self.GEM])
+        self.assertFalse(self.run_function('gem.list', [self.GEM]))
 
     def test_install_version(self):
         '''
         gem.install rake version=11.1.2
         '''
-        # Remove gem if it is already installed
-        if self.run_function('gem.list', [GEM]):
-            self.run_function('gem.uninstall', [GEM])
+        self.run_function('gem.install', [self.GEM], version=self.GEM_VER)
+        gem_list = self.run_function('gem.list', [self.GEM])
+        self.assertIn(self.GEM, gem_list)
+        self.assertIn(self.GEM_VER, gem_list[self.GEM])
 
-        self.run_function('gem.install', [GEM], version=GEM_VER)
-        gem_list = self.run_function('gem.list', [GEM])
-        self.assertIn(GEM, gem_list)
-        self.assertIn(GEM_VER, gem_list[GEM])
-
-        self.run_function('gem.uninstall', [GEM])
-        self.assertFalse(self.run_function('gem.list', [GEM]))
+        self.run_function('gem.uninstall', [self.GEM])
+        self.assertFalse(self.run_function('gem.list', [self.GEM]))
 
     def test_list(self):
         '''
         gem.list
         '''
-        self.run_function('gem.install', [' '.join(GEM_LIST)])
+        self.run_function('gem.install', [' '.join(self.GEM_LIST)])
 
         all_ret = self.run_function('gem.list')
-        for gem in GEM_LIST:
+        for gem in self.GEM_LIST:
             self.assertIn(gem, all_ret)
 
-        single_ret = self.run_function('gem.list', [GEM])
-        self.assertIn(GEM, single_ret)
+        single_ret = self.run_function('gem.list', [self.GEM])
+        self.assertIn(self.GEM, single_ret)
 
-        self.run_function('gem.uninstall', [' '.join(GEM_LIST)])
+        self.run_function('gem.uninstall', [' '.join(self.GEM_LIST)])
 
     def test_list_upgrades(self):
         '''
         gem.list_upgrades
         '''
         # install outdated gem
-        self.run_function('gem.install', [OLD_GEM], version=OLD_VERSION)
+        self.run_function('gem.install', [self.OLD_GEM], version=self.OLD_VERSION)
 
         ret = self.run_function('gem.list_upgrades')
-        self.assertIn(OLD_GEM, ret)
+        self.assertIn(self.OLD_GEM, ret)
 
-        self.run_function('gem.uninstall', [OLD_GEM])
+        self.run_function('gem.uninstall', [self.OLD_GEM])
 
     def test_sources_add_remove(self):
         '''
@@ -124,20 +125,16 @@ class GemModuleTest(ModuleCase):
         '''
         gem.update
         '''
-        # Remove gem if it is already installed
-        if self.run_function('gem.list', [OLD_GEM]):
-            self.run_function('gem.uninstall', [OLD_GEM])
+        self.run_function('gem.install', [self.OLD_GEM], version=self.OLD_VERSION)
+        gem_list = self.run_function('gem.list', [self.OLD_GEM])
+        self.assertEqual({self.OLD_GEM: [self.OLD_VERSION]}, gem_list)
 
-        self.run_function('gem.install', [OLD_GEM], version=OLD_VERSION)
-        gem_list = self.run_function('gem.list', [OLD_GEM])
-        self.assertEqual({OLD_GEM: [OLD_VERSION]}, gem_list)
+        self.run_function('gem.update', [self.OLD_GEM])
+        gem_list = self.run_function('gem.list', [self.OLD_GEM])
+        self.assertEqual({self.OLD_GEM: [self.NEW_VERSION, self.OLD_VERSION]}, gem_list)
 
-        self.run_function('gem.update', [OLD_GEM])
-        gem_list = self.run_function('gem.list', [OLD_GEM])
-        self.assertEqual({OLD_GEM: [NEW_VERSION, OLD_VERSION]}, gem_list)
-
-        self.run_function('gem.uninstall', [OLD_GEM])
-        self.assertFalse(self.run_function('gem.list', [OLD_GEM]))
+        self.run_function('gem.uninstall', [self.OLD_GEM])
+        self.assertFalse(self.run_function('gem.list', [self.OLD_GEM]))
 
     def test_update_system(self):
         '''

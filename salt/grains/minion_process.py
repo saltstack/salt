@@ -3,75 +3,57 @@
 Set grains describing the minion process.
 '''
 
+# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
 # Import salt libs
+import salt.utils.user
 import salt.utils.platform
-
-try:
-    import pwd
-except ImportError:
-    import getpass
-    pwd = None
-
-try:
-    import grp
-except ImportError:
-    grp = None
 
 
 def _uid():
     '''
     Grain for the minion User ID
     '''
-    if salt.utils.platform.is_windows():
-        return None
-    return os.getuid()
+    return salt.utils.user.get_uid()
 
 
 def _username():
     '''
     Grain for the minion username
     '''
-    if pwd:
-        username = pwd.getpwuid(os.getuid()).pw_name
-    else:
-        username = getpass.getuser()
-
-    return username
+    return salt.utils.user.get_user()
 
 
 def _gid():
     '''
     Grain for the minion Group ID
     '''
-    if salt.utils.platform.is_windows():
-        return None
-    return os.getgid()
+    return salt.utils.user.get_gid()
 
 
 def _groupname():
     '''
     Grain for the minion groupname
     '''
-    if grp:
-        try:
-            groupname = grp.getgrgid(os.getgid()).gr_name
-        except KeyError:
-            groupname = ''
-    else:
-        groupname = ''
-
-    return groupname
+    try:
+        return salt.utils.user.get_default_group(_username()) or ''
+    except KeyError:
+        return ''
 
 
 def _pid():
+    '''
+    Return the current process pid
+    '''
     return os.getpid()
 
 
 def grains():
+    '''
+    Return the grains dictionary
+    '''
     ret = {
         'username': _username(),
         'groupname': _groupname(),

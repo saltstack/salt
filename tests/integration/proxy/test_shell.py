@@ -8,12 +8,16 @@ tests.integration.proxy.test_shell
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import json
+import logging
 
 # Import Salt Libs
 import salt.utils.json as json
 
 # Import salt tests libs
 from tests.support.case import ShellCase
+
+log = logging.getLogger(__name__)
 
 
 class ProxyCallerSimpleTestCase(ShellCase):
@@ -22,7 +26,11 @@ class ProxyCallerSimpleTestCase(ShellCase):
     '''
     @staticmethod
     def _load_return(ret):
-        return json.loads('\n'.join(ret))
+        try:
+            return json.loads('\n'.join(ret))
+        except ValueError:
+            log.warning('Failed to JSON decode: \'%s\'', ret)
+            raise
 
     def test_can_it_ping(self):
         '''
