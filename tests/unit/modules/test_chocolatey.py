@@ -17,6 +17,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch
 
 
+@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(not salt.utils.is_windows(), 'Not a Windows system')
 class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
     '''
