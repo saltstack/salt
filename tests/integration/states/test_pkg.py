@@ -158,6 +158,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     pkg.installed state tests
     '''
     def setUp(self):
+        '''
+        Ensure that we only refresh the first time we run a test
+        '''
         super(PkgTest, self).setUp()
 
         # Skip tests if package manager not available
