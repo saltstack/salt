@@ -10,7 +10,7 @@ The setup script for salt
 
 # For Python 2.5.  A no-op on 2.6 and above.
 from __future__ import absolute_import, print_function, with_statement
-
+import salt.utils.type_count
 import os
 import sys
 import glob
@@ -640,6 +640,7 @@ class TestCommand(Command):
             test_cmd += ' {0}'.format(self.runtests_opts)
 
         print('running test')
+        salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
         test_process = Popen(
             test_cmd, shell=True,
             stdout=sys.stdout, stderr=sys.stderr,

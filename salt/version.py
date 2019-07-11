@@ -11,6 +11,8 @@ import platform
 import warnings
 
 # linux_distribution deprecated in py3.7
+import salt.utils.type_count
+
 try:
     from platform import linux_distribution as _deprecated_linux_distribution
 
@@ -499,6 +501,7 @@ def __discover_version(saltstack_version):
             # Let's not import `salt.utils` for the above check
             kwargs['close_fds'] = True
 
+        salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
         process = subprocess.Popen(
             ['git', 'describe', '--tags', '--first-parent', '--match', 'v[0-9]*', '--always'], **kwargs)
 
@@ -507,6 +510,7 @@ def __discover_version(saltstack_version):
         if process.returncode != 0:
             # The git version running this might not support --first-parent
             # Revert to old command
+            salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
             process = subprocess.Popen(
                 ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
             out, err = process.communicate()

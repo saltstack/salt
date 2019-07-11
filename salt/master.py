@@ -68,6 +68,7 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
+import salt.utils.type_count
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.transport import iter_transport_opts
@@ -229,6 +230,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
 
         old_present = set()
         while True:
+            salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
             now = int(time.time())
             if (now - last) >= self.loop_interval:
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
@@ -492,6 +494,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
 
         # Keep the process alive
         while True:
+            salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
             time.sleep(60)
 
 

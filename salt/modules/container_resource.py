@@ -24,6 +24,7 @@ import traceback
 import salt.utils.args
 import salt.utils.path
 import salt.utils.vt
+import salt.utils.type_count
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -141,6 +142,7 @@ def run(name,
 
         salt myminion container_resource.run mycontainer 'ps aux' container_type=docker exec_driver=nsenter output=stdout
     '''
+    salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
     valid_output = ('stdout', 'stderr', 'retcode', 'all')
     if output is None:
         cmd_func = 'cmd.run'

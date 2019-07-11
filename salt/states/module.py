@@ -184,6 +184,7 @@ from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
 from salt.exceptions import SaltInvocationError
 from salt.utils.decorators import with_deprecated
+import salt.utils.type_count
 
 
 def wait(name, **kwargs):
@@ -281,7 +282,7 @@ def run(**kwargs):
                                          func=(', '.join(tests)) or '') or '',
         ]).strip()
         ret['result'] = not (missing or not tests)
-
+    salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
     if ret['result'] is None:
         ret['result'] = True
 
