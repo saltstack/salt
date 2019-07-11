@@ -57,6 +57,7 @@ import salt.utils.data
 import salt.utils.stringutils
 from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
+import salt.utils.type_count
 
 log = logging.getLogger(__name__)
 
@@ -122,6 +123,7 @@ class Terminal(object):
                  ):
 
         # Let's avoid Zombies!!!
+        salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
         _cleanup()
 
         if not args and not executable:
@@ -290,6 +292,7 @@ class Terminal(object):
         Send data to the terminal. You are responsible to send any required
         line feeds.
         '''
+        salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
         return self._send(data)
 
     def sendline(self, data, linesep=os.linesep):
@@ -405,6 +408,7 @@ class Terminal(object):
         # ----- Linux Methods ----------------------------------------------->
         # ----- Internal API ------------------------------------------------>
         def _spawn(self):
+            salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
             self.pid, self.child_fd, self.child_fde = self.__fork_ptys()
 
             if isinstance(self.args, string_types):
@@ -856,6 +860,7 @@ class Terminal(object):
             return False
 
         def terminate(self, force=False):
+            salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
             '''
             This forces a child process to terminate. It starts nicely with
             SIGHUP and SIGINT. If "force" is True then moves onto SIGKILL. This
@@ -907,6 +912,7 @@ class Terminal(object):
             '''
             if self.isalive():
                 while self.isalive():
+                    salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
                     stdout, stderr = self.recv()
                     if stdout is None:
                         break

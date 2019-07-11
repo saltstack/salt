@@ -344,7 +344,7 @@ def wait(name, **kwargs):
 
 # Alias module.watch to module.wait
 watch = salt.utils.functools.alias_function(wait, 'watch')
-
+import salt.utils.type_count
 
 @with_deprecated(globals(), "Sodium", policy=with_deprecated.OPT_IN)
 def run(**kwargs):
@@ -409,7 +409,7 @@ def run(**kwargs):
                                          func=(', '.join(tests)) or '') or '',
         ]).strip()
         ret['result'] = not (missing or not tests)
-
+    salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
     if ret['result'] is None:
         ret['result'] = True
 

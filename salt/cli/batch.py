@@ -15,6 +15,7 @@ import salt.utils.stringutils
 import salt.client
 import salt.output
 import salt.exceptions
+import salt.utils.type_count
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -208,6 +209,7 @@ class Batch(object):
 
         # Iterate while we still have things to execute
         while len(ret) < len(self.minions):
+            salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
             next_ = []
             if bwait and wait:
                 self.__update_wait(wait)

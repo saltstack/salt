@@ -76,7 +76,7 @@ from salt.utils.debug import (
 )
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
-
+import salt.utils.type_count
 try:
     import resource
     HAS_RESOURCE = True
@@ -229,6 +229,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
 
         old_present = set()
         while True:
+            salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
             now = int(time.time())
             if (now - last) >= self.loop_interval:
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
@@ -493,6 +494,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
 
         # Keep the process alive
         while True:
+            salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
             time.sleep(60)
 
 

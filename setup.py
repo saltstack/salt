@@ -33,6 +33,7 @@ from distutils.command.sdist import sdist
 from distutils.command.install_lib import install_lib
 from distutils.version import LooseVersion  # pylint: disable=blacklisted-module
 from ctypes.util import find_library
+import salt.utils.type_count
 # pylint: enable=E0611
 
 try:
@@ -639,6 +640,7 @@ class TestCommand(Command):
             test_cmd += ' {0}'.format(self.runtests_opts)
 
         print('running test')
+        salt.utils.type_count.get_type_count_snap_shoot(logtf=True)
         test_process = Popen(
             test_cmd, shell=True,
             stdout=sys.stdout, stderr=sys.stderr,
