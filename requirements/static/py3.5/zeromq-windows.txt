@@ -78,7 +78,7 @@ pymysql==0.9.3
 pyopenssl==19.0.0
 pyparsing==2.4.0          # via packaging
 pytest-helpers-namespace==2019.1.8
-pytest-salt-runtests-bridge==2019.6.14
+pytest-salt-runtests-bridge==2019.7.10
 pytest-salt==2019.6.13
 pytest-tempdir==2018.8.11
 pytest==4.6.4

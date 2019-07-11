@@ -136,7 +136,7 @@ for (int i=1; i<(unit_chunks+1); i++) {
 }
 
 // All Other
-def other_chunks = 5
+def other_chunks = 4
 for (int i=1; i<(other_chunks+1); i++) {
     def chunk_no = i
     def stagename = "All Other #${chunk_no}"
