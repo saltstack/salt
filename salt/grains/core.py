@@ -2222,6 +2222,9 @@ def fqdns():
     # Provides:
     # fqdns
 
+    if __opts__.get('enable_fqdns_grains', False) is False:
+        return {'fqdns': []}
+
     grains = {}
     fqdns = set()
 

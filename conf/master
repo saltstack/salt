@@ -127,6 +127,9 @@
 # data for your master.
 #enable_gpu_grains: False
 
+# Enable the FQDNs grains for all ip address configured on the master.
+#enable_fqdns_grains: False
+
 # The master maintains a job cache. While this is a great addition, it can be
 # a burden on the master for larger deployments (over 5000 minions).
 # Disabling the job cache will make previously executed jobs unavailable to

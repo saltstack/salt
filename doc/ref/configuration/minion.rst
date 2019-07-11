@@ -1053,6 +1053,19 @@ grains.
 
     enable_gpu_grains: False
 
+.. conf_minion:: enable_fqdns_grains
+
+``enable_fqdns_grains``
+---------------------
+
+Default: ``False``
+
+Enable the FQDN data for all ip addressed configured on your minion.
+
+.. code-block:: yaml
+
+    enable_fqdns_grains: False
+
 .. conf_minion:: outputter_dirs
 
 ``outputter_dirs``

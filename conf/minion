@@ -162,6 +162,9 @@
 # GPU hardware grains for your minion.
 # enable_gpu_grains: True
 
+# Enable the FQDNs grains for all ip address configured on the master.
+#enable_fqdns_grains: False
+
 # Set the default outputter used by the salt-call command. The default is
 # "nested".
 #output: nested

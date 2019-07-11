@@ -482,6 +482,19 @@ grains for the master.
 
     enable_gpu_grains: True
 
+.. conf_minion:: enable_fqdns_grains
+
+``enable_fqdns_grains``
+---------------------
+
+Default: ``False``
+
+Enable the FQDN data for all ip addressed configured on your master.
+
+.. code-block:: yaml
+
+    enable_fqdns_grains: False
+
 .. conf_master:: job_cache
 
 ``job_cache``

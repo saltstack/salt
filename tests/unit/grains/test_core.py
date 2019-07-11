@@ -1045,11 +1045,25 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                ('foo.bar.baz', [], ['fe80::a8b2:93ff:fe00:0']),
                                ('bluesniff.foo.bar', [], ['fe80::a8b2:93ff:dead:beef'])]
         ret = {'fqdns': ['bluesniff.foo.bar', 'foo.bar.baz', 'rinzler.evil-corp.com']}
-        with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
-            fqdns = core.fqdns()
-            assert "fqdns" in fqdns
-            assert len(fqdns['fqdns']) == len(ret['fqdns'])
-            assert set(fqdns['fqdns']) == set(ret['fqdns'])
+        with patch.dict(core.__opts__, {'enable_fqdns_grains': True}):
+            with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
+                fqdns = core.fqdns()
+                assert "fqdns" in fqdns
+                assert len(fqdns['fqdns']) == len(ret['fqdns'])
+                assert set(fqdns['fqdns']) == set(ret['fqdns'])
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch.object(salt.utils.platform, 'is_windows', MagicMock(return_value=False))
+    def test_fqdns_return_is_disabled(self):
+        '''
+        test the return for a dns grain. test for issue:
+        https://github.com/saltstack/salt/issues/41230
+        '''
+        ret = {'fqdns': []}
+        fqdns = core.fqdns()
+        assert "fqdns" in fqdns
+        assert len(fqdns['fqdns']) == len(ret['fqdns'])
+        assert set(fqdns['fqdns']) == set(ret['fqdns'])
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     @patch.object(salt.utils.platform, 'is_windows', MagicMock(return_value=False))

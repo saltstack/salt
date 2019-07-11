@@ -451,6 +451,9 @@ VALID_OPTS = immutabletypes.freeze({
     # Whether or not to load grains for the GPU
     'enable_gpu_grains': bool,
 
+    # Whether or not to load grains for the FQDNs
+    'enable_fqdns_grains': bool,
+
     # Tell the loader to attempt to import *.zip archives
     'enable_zip_modules': bool,
 
@@ -1413,6 +1416,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'ext_job_cache': '',
     'cython_enable': False,
     'enable_gpu_grains': True,
+    'enable_fqdns_grains': False,
     'enable_zip_modules': False,
     'state_verbose': True,
     'state_output': 'full',
@@ -1758,6 +1762,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'ssh_use_home_key': False,
     'cython_enable': False,
     'enable_gpu_grains': False,
+    'enable_fqdns_grains': False,
     # XXX: Remove 'key_logfile' support in 2014.1.0
     'key_logfile': os.path.join(salt.syspaths.LOGS_DIR, 'key'),
     'verify_env': True,
