@@ -17,7 +17,6 @@ from tests.support.helpers import (
     destructiveTest,
     requires_system_grains,
     requires_salt_modules,
-    flaky
 )
 
 # Import Salt libs
@@ -166,7 +165,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # Skip tests if package manager not available
         if 'pkgmgr_avail' not in __testcontext__:
             __testcontext__['pkgmgr_avail'] = pkgmgr_avail(self.run_function, self.run_function('grains.items'))
-        if not __testcontext__['pkgmgr_avail'] or True:
+        if not __testcontext__['pkgmgr_avail']:
             self.skipTest('Package manager is not available')
 
         if 'refresh' not in __testcontext__:
