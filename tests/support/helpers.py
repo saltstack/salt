@@ -1639,9 +1639,9 @@ class PatchedEnviron(object):
             clean_kwargs = {}
             for k in self.kwargs:
                 key = k
-                if isinstance(key, unicode):
+                if isinstance(key, six.text_type):
                     key = key.encode('utf-8')
-                if isinstance(self.kwargs[k], unicode):
+                if isinstance(self.kwargs[k], six.text_type):
                     kwargs[k] = kwargs[k].encode('utf-8')
                 clean_kwargs[key] = kwargs[k]
             self.kwargs = clean_kwargs
