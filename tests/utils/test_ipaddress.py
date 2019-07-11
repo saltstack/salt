@@ -667,6 +667,7 @@ class ComparisonTests(TestCase):
 
 @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(sys.version_info > (3,), 'These are tested by the python test suite under Py3')
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class IpaddrUnitTest(TestCase):
 
     def setUp(self):

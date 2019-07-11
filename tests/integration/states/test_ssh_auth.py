@@ -18,9 +18,11 @@ from tests.support.helpers import (
 )
 
 # Import salt libs
+from tests.support.unit import skipIf  # WAR ROOM temp import
 import salt.utils.files
 
 
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest

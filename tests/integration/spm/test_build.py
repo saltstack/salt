@@ -18,6 +18,7 @@ from tests.support.unit import skipIf
 
 
 @destructiveTest
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class SPMBuildTest(SPMCase, ModuleCase):
     '''
     Validate the spm build command
