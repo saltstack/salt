@@ -151,7 +151,6 @@ def latest_version(run_function, *names):
     return ret
 
 
-@flaky
 @destructiveTest
 @requires_salt_modules('pkg.version', 'pkg.latest_version')
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
@@ -159,13 +158,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     pkg.installed state tests
     '''
     def setUp(self):
-        '''
-        Ensure that we only refresh the first time we run a test
-        '''
         super(PkgTest, self).setUp()
 
         # Skip tests if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+        if 'pkgmgr_avail' not in __testcontext__:
+            __testcontext__['pkgmgr_avail'] = pkgmgr_avail(self.run_function, self.run_function('grains.items'))
+        if not __testcontext__['pkgmgr_avail'] or True:
             self.skipTest('Package manager is not available')
 
         if 'refresh' not in __testcontext__:
