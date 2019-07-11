@@ -23,6 +23,7 @@ from salt.ext.six.moves import range
 
 @skip_if_not_root
 @skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class ShadowModuleTest(ModuleCase):
     '''
     Validate the linux shadow system module
