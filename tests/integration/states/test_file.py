@@ -131,6 +131,7 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         os.chmod(grail_fs_path, grail_fs_mode)
 
 
+@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
 class FileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the file state
@@ -4160,6 +4161,7 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
         assert result == '', 'File is still cached at {0}'.format(result)
 
 
+@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(not salt.utils.path.which('patch'), 'patch is not installed')
 class PatchTest(ModuleCase, SaltReturnAssertsMixin):
     def _check_patch_version(self, min_version):
