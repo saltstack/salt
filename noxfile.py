@@ -301,7 +301,12 @@ def _run_with_coverage(session, *test_cmd):
         )
     finally:
         # Always combine and generate the XML coverage report
-        session.run('coverage', 'combine')
+        try:
+            session.run('coverage', 'combine')
+        except CommandFailed:
+            # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
+            # exception
+            pass
         session.run('coverage', 'xml', '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'coverage.xml'))
 
 
