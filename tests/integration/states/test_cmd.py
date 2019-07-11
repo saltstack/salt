@@ -63,6 +63,7 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret[u'changes'][u'stderr'], u'')
 
 
+@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
 class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the cmd state of run_redirect

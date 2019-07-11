@@ -473,7 +473,7 @@ class GitFSTestBase(object):
             shutil.rmtree(cls.tmp_repo_dir)
         except OSError as exc:
             if exc.errno == errno.EACCES:
-                log.error("Access error removeing file %s", cls.tmp_repo_dir)
+                log.error("Access error removing file %s", cls.tmp_repo_dir)
             elif exc.errno != errno.ENOENT:
                 raise
         shutil.copytree(

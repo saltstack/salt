@@ -138,6 +138,7 @@ with_git_mirror = WithGitMirror
 
 
 @ensure_min_git
+@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
 class GitTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the git state
