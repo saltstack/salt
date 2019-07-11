@@ -124,12 +124,18 @@ class TestSaltCacheLoader(TestCase):
         )
         self.opts = {
             'cachedir': self.tempdir,
+            'master_uri': 'localhost',
+            'file_client': 'local',
+            'file_ignore_regex': None,
+            'file_ignore_glob': None,
             'file_roots': {
                 'test': [self.template_dir]
             },
             'pillar_roots': {
                 'test': [self.template_dir]
             },
+            'fileserver_backend': ['roots'],
+            'hash_type': 'md5',
             'extension_modules': os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
                 'extmods'),
@@ -138,6 +144,7 @@ class TestSaltCacheLoader(TestCase):
 
     def tearDown(self):
         salt.utils.files.rm_rf(self.tempdir)
+        del self.opts
 
     def test_searchpath(self):
         '''
@@ -275,6 +282,7 @@ class TestGetTemplate(TestCase):
         )
         self.local_opts = {
             'cachedir': self.tempdir,
+            'master_uri': 'localhost',
             'file_client': 'local',
             'file_ignore_regex': None,
             'file_ignore_glob': None,
@@ -295,6 +303,8 @@ class TestGetTemplate(TestCase):
 
     def tearDown(self):
         salt.utils.files.rm_rf(self.tempdir)
+        del self.local_opts
+        del self.local_salt
 
     def test_fallback(self):
         '''
