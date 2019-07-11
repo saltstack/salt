@@ -24,6 +24,7 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 @destructiveTest
 @skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
 @skip_if_not_root
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class UseraddModuleTestLinux(ModuleCase):
 
     def setUp(self):

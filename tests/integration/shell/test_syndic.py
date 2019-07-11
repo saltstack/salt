@@ -53,6 +53,7 @@ def session_salt_syndic(request, session_salt_master_of_masters, session_salt_sy
             log.warning('Failed to terminate daemon: %s', daemon.__class__.__name__)
 
 
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     '''
     Test the salt-syndic command

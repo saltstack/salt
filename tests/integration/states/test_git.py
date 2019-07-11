@@ -23,6 +23,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 import salt.utils.files
 import salt.utils.path
 from salt.utils.versions import LooseVersion as _LooseVersion
+from tests.support.unit import skipIf; skipIf(True, "WAR ROOM TEMPORARY SKIP")  # pylint: disable=C0321,E8702
 from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-in-module
 
 TEST_REPO = 'https://github.com/saltstack/salt-test-repo.git'
