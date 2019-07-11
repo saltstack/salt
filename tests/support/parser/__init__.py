@@ -62,7 +62,9 @@ WEIRD_SIGNAL_NUM = -45654
 __GLOBAL_EXCEPTION_HANDLER = sys.excepthook
 
 
-def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
+def __global_logging_exception_handler(exc_type, exc_value, exc_traceback,
+                                       logging=logging,
+                                       global_exc_handler=__GLOBAL_EXCEPTION_HANDLER):
     '''
     This function will log all python exceptions.
     '''
@@ -77,7 +79,7 @@ def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
         )).strip()
     )
     # Call the original sys.excepthook
-    __GLOBAL_EXCEPTION_HANDLER(exc_type, exc_value, exc_traceback)
+    global_exc_handler(exc_type, exc_value, exc_traceback)
 
 
 # Set our own exception handler as the one to use
