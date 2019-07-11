@@ -16,9 +16,11 @@ from tests.support.mixins import RUNTIME_VARS
 import salt.config
 import salt.utils.yaml
 from salt.output import display_output
+from tests.support.unit import skipIf  # WAR ROOM temp import
 from salt.ext import six
 
 
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class OutputReturnTest(ShellCase):
     '''
     Integration tests to ensure outputters return their expected format.

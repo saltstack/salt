@@ -154,6 +154,7 @@ def latest_version(run_function, *names):
 @flaky
 @destructiveTest
 @requires_salt_modules('pkg.version', 'pkg.latest_version')
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkg.installed state tests

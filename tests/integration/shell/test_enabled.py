@@ -15,6 +15,7 @@ import salt.utils.platform
 import salt.utils.files
 
 
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class EnabledTest(ModuleCase):
     '''
     validate the use of shell processing for cmd.run on the salt command line

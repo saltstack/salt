@@ -16,6 +16,7 @@ from tests.support.unit import skipIf
 
 
 @destructiveTest
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate network state module

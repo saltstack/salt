@@ -30,6 +30,7 @@ def check_status():
 
 @destructiveTest
 @skipIf(not salt.utils.path.which('gem'), 'Gem is not available')
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class GemModuleTest(ModuleCase):
     '''
     Validate gem module
