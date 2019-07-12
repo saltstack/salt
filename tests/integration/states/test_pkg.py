@@ -154,9 +154,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkg.installed state tests
     '''
+    @classmethod
     def setUpClass(cls):
         cls.ctx = {}
 
+    @classmethod
     def tearDownClass(cls):
         del cls.ctx
 
