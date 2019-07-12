@@ -68,7 +68,11 @@ def present(host, groups, interfaces, **kwargs):
 
 
     '''
-    connection_args = {}
+    connection_args = dict(kwargs)
+    for prop in ['name', 'host', 'hostids', 'template', 'proxy_hostid', 'interfaceids', 'inventory']:
+        if connection_args.get(prop, None):
+            connection_args.pop(prop)
+
     if '_connection_user' in kwargs:
         connection_args['_connection_user'] = kwargs['_connection_user']
     if '_connection_password' in kwargs:
