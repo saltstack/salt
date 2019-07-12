@@ -17,7 +17,6 @@ from tests.support.helpers import (
     destructiveTest,
     requires_system_grains,
     requires_salt_modules,
-    flaky
 )
 
 # Import Salt libs
@@ -151,10 +150,8 @@ def latest_version(run_function, *names):
     return ret
 
 
-@flaky
 @destructiveTest
 @requires_salt_modules('pkg.version', 'pkg.latest_version')
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkg.installed state tests
@@ -166,7 +163,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         super(PkgTest, self).setUp()
 
         # Skip tests if package manager not available
-        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+        if 'pkgmgr_avail' not in __testcontext__:
+            __testcontext__['pkgmgr_avail'] = pkgmgr_avail(self.run_function, self.run_function('grains.items'))
+        if not __testcontext__['pkgmgr_avail']:
             self.skipTest('Package manager is not available')
 
         if 'refresh' not in __testcontext__:
@@ -983,6 +982,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=realpkg)
             self.assertSaltTrueReturn(ret)
 
+    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')            # needs to be rewritten to allow for dnf on Fedora 30 and RHEL 8
     @requires_salt_modules('pkg.hold', 'pkg.unhold')
     @requires_system_grains
     def test_pkg_015_installed_held(self, grains):
