@@ -1011,7 +1011,6 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
             'key': self.key,
             'k_mtime': self.k_mtime,
             'secrets': SMaster.secrets,
-            'stats': self.stats,
             'log_queue': self.log_queue,
             'log_queue_level': self.log_queue_level
         }
