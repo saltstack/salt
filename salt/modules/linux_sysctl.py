@@ -71,6 +71,10 @@ def show(config_file=False):
     '''
     ret = {}
     if config_file:
+        # If the file doesn't exist, return an empty list
+        if not os.path.exists(config_file):
+            return []
+
         try:
             with salt.utils.files.fopen(config_file) as fp_:
                 for line in fp_:

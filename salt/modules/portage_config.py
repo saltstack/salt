@@ -10,6 +10,7 @@ import os
 import shutil
 
 # Import salt libs
+import salt.utils.compat
 import salt.utils.data
 import salt.utils.files
 import salt.utils.path
@@ -57,7 +58,7 @@ def _get_portage():
     portage module must be reloaded or it can't catch the changes
     in portage.* which had been added after when the module was loaded
     '''
-    return reload(portage)
+    return salt.utils.compat.reload(portage)
 
 
 def _porttree():

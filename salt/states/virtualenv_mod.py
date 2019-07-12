@@ -343,4 +343,5 @@ def managed(name,
                 'old': old if old else ''}
     return ret
 
+
 manage = salt.utils.functools.alias_function(managed, 'manage')

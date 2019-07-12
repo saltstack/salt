@@ -2,8 +2,9 @@
 /src
 *.py[co]
 pkg/arch/*.tar.xz
-*.sw[pon]
+*.sw[a-p]
 doc/_build
+doc/doc-archive.tar.gz
 dist
 MANIFEST
 *~
@@ -38,6 +39,7 @@ Pipfile.lock
 
 # code coverage outputs genereated by coverage.py
 .coverage
+.coverage.*
 coverage.xml
 htmlcov/
 
@@ -84,6 +86,8 @@ tests/unit/templates/roots
 # Pycharm
 .idea
 
+.vscode/
+
 # Ignore the log directory created by tests
 /logs
 tests/integration/cloud/providers/logs
@@ -94,6 +98,9 @@ tests/integration/cloud/providers/pki/minions
 
 # Ignore tox virtualenvs
 /.tox/
+
+# Ignore nox virtualenvs
+/.nox/
 
 # Kitchen tests files
 .kitchen.local.yml

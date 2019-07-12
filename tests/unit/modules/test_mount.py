@@ -297,6 +297,13 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                    'stderr': True})
                     with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
                         self.assertTrue(mount.mount('name', 'device'))
+                        mock.assert_called_with('mount  device name ',
+                                                python_shell=False, runas=None)
+
+                    with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                        self.assertTrue(mount.mount('name', 'device', fstype='fstype'))
+                        mock.assert_called_with('mount  -t fstype device name ',
+                                                python_shell=False, runas=None)
 
                     mock = MagicMock(return_value={'retcode': False,
                                                    'stderr': False})
@@ -312,6 +319,35 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                    'stderr': True})
                     with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
                         self.assertTrue(mount.mount('name', 'device'))
+                        mock.assert_called_with('mount  device name ',
+                                                python_shell=False, runas=None)
+
+                    with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                        self.assertTrue(mount.mount('name', 'device', fstype='fstype'))
+                        mock.assert_called_with('mount  -v fstype device name ',
+                                                python_shell=False, runas=None)
+
+                    mock = MagicMock(return_value={'retcode': False,
+                                                   'stderr': False})
+                    with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                        self.assertTrue(mount.mount('name', 'device'))
+
+        with patch.dict(mount.__grains__, {'os': 'Linux'}):
+            mock = MagicMock(return_value=True)
+            with patch.object(os.path, 'exists', mock):
+                mock = MagicMock(return_value=None)
+                with patch.dict(mount.__salt__, {'file.mkdir': None}):
+                    mock = MagicMock(return_value={'retcode': True,
+                                                   'stderr': True})
+                    with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                        self.assertTrue(mount.mount('name', 'device'))
+                        mock.assert_called_with('mount -o defaults device name ',
+                                                python_shell=False, runas=None)
+
+                    with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                        self.assertTrue(mount.mount('name', 'device', fstype='fstype'))
+                        mock.assert_called_with('mount -o defaults -t fstype device name ',
+                                                python_shell=False, runas=None)
 
                     mock = MagicMock(return_value={'retcode': False,
                                                    'stderr': False})

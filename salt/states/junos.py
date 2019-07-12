@@ -202,7 +202,7 @@ def diff(name, d_id):
     return ret
 
 
-def cli(name, format='text', **kwargs):
+def cli(name, **kwargs):
     '''
     Executes the CLI commands and reuturns the text output.
 
@@ -218,10 +218,10 @@ def cli(name, format='text', **kwargs):
         * command:
           The command that need to be executed on Junos CLI. (default = None)
       Optional
-        * format:
-          Format in which to get the CLI output. (text or xml, \
-            default = 'text')
         * kwargs: Keyworded arguments which can be provided like-
+            * format:
+              Format in which to get the CLI output. (text or xml, \
+                default = 'text')
             * timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
@@ -230,7 +230,7 @@ def cli(name, format='text', **kwargs):
                (default = None)
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
-    ret['changes'] = __salt__['junos.cli'](name, format, **kwargs)
+    ret['changes'] = __salt__['junos.cli'](name, **kwargs)
     return ret
 
 

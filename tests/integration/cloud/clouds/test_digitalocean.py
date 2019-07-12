@@ -15,6 +15,7 @@ from tests.support.helpers import expensiveTest, generate_random_name
 # Import Salt Libs
 from salt.config import cloud_providers_config
 
+
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'digitalocean'
@@ -80,7 +81,7 @@ class DigitalOceanTest(ShellCase):
         '''
         _list_locations = self.run_cloud('--list-locations {0}'.format(PROVIDER_NAME))
         self.assertIn(
-            'San Francisco 1',
+            'San Francisco 2',
             [i.strip() for i in _list_locations]
         )
 

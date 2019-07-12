@@ -92,13 +92,13 @@ RunnerClient
 ------------
 
 .. autoclass:: salt.runner.RunnerClient
-    :members: cmd, async, cmd_sync, cmd_async
+    :members: cmd, asynchronous, cmd_sync, cmd_async
 
 WheelClient
 -----------
 
 .. autoclass:: salt.wheel.WheelClient
-    :members: cmd, async, cmd_sync, cmd_async
+    :members: cmd, asynchronous, cmd_sync, cmd_async
 
 CloudClient
 -----------

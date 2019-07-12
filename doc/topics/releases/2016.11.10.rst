@@ -13,3 +13,5 @@ Security Fix
 CVE-2018-15751 Remote command execution and incorrect access control when using salt-api.
 
 CVE-2018-15750 Directory traversal vulnerability when using salt-api. Allows an attacker to determine what files exist on a server when querying /run or /events.
+
+Credit and thanks for discovery and responsible disclosure: nullbr4in, xcuter, koredge, loupos, blackcon, Naver Business Platform

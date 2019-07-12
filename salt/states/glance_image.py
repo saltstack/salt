@@ -52,15 +52,16 @@ def present(name, auth=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+
     __salt__['glanceng.setup_clouds'](auth)
 
     image = __salt__['glanceng.image_get'](name=name)
 
     if not image:
-        if __opts__['test'] is True:
+        if __opts__['test']:
             ret['result'] = None
             ret['changes'] = kwargs
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Image {} will be created.'.format(name)
             return ret
 
@@ -91,10 +92,9 @@ def absent(name, auth=None):
     image = __salt__['glanceng.image_get'](name=name)
 
     if image:
-        if __opts__['test'] is True:
+        if __opts__['test']:
             ret['result'] = None
             ret['changes'] = {'name': name}
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Image {} will be deleted.'.format(name)
             return ret
 

@@ -81,6 +81,7 @@ def computer_desc(name):
                           '\'{0}\''.format(name))
     return ret
 
+
 computer_description = salt.utils.functools.alias_function(computer_desc, 'computer_description')
 
 

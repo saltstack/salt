@@ -290,6 +290,8 @@ All beacons are configured using a similar process of enabling the beacon,
 writing a reactor SLS (and state SLS if needed), and mapping a beacon event to
 the reactor SLS.
 
+.. _writing-beacons:
+
 Writing Beacon Plugins
 ======================
 
@@ -303,7 +305,7 @@ the minion. The ``beacon`` function therefore cannot block and should be as
 lightweight as possible. The ``beacon`` also must return a list of dicts, each
 dict in the list will be translated into an event on the master.
 
-Beacons may also choose to implement a ``__validate__`` function which
+Beacons may also choose to implement a ``validate`` function which
 takes the beacon configuration as an argument and ensures that it
 is valid prior to continuing. This function is called automatically
 by the Salt loader when a beacon is loaded.
@@ -360,5 +362,5 @@ new execution modules and functions to back specific beacons.
 Distributing Custom Beacons
 ---------------------------
 
-Custom beacons can be distributed to minions using ``saltutil``, see
-:ref:`Dynamic Module Distribution <dynamic-module-distribution>`.
+Custom beacons can be distributed to minions via the standard methods, see
+:ref:`Modular Systems <modular-systems>`.

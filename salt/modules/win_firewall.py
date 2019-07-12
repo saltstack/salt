@@ -10,6 +10,7 @@ import re
 # Import Salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
+import salt.utils.win_lgpo_netsh
 
 # Define the module's virtual name
 __virtualname__ = 'firewall'
@@ -285,7 +286,7 @@ def delete_rule(name=None,
         salt '*' firewall.delete_rule 'test' '8080' 'tcp' 'in'
 
         # Delete the incoming tcp port 8000 from 192.168.0.1 in the rule named
-        # 'test_remote_ip`
+        # 'test_remote_ip'
         salt '*' firewall.delete_rule 'test_remote_ip' '8000' 'tcp' 'in' '192.168.0.1'
 
         # Delete all rules for local port 80:
@@ -342,3 +343,436 @@ def rule_exists(name):
         return True
     except CommandExecutionError:
         return False
+
+
+def get_settings(profile, section, store='local'):
+    '''
+    Get the firewall property from the specified profile in the specified store
+    as returned by ``netsh advfirewall``.
+
+    .. versionadded:: 2018.3.4
+    .. versionadded:: Fluorine
+
+    Args:
+
+        profile (str):
+            The firewall profile to query. Valid options are:
+
+            - domain
+            - public
+            - private
+
+        section (str):
+            The property to query within the selected profile. Valid options
+            are:
+
+            - firewallpolicy : inbound/outbound behavior
+            - logging : firewall logging settings
+            - settings : firewall properties
+            - state : firewalls state (on | off)
+
+        store (str):
+            The store to use. This is either the local firewall policy or the
+            policy defined by local group policy. Valid options are:
+
+            - lgpo
+            - local
+
+            Default is ``local``
+
+    Returns:
+        dict: A dictionary containing the properties for the specified profile
+
+    Raises:
+        CommandExecutionError: If an error occurs
+        ValueError: If the parameters are incorrect
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Get the inbound/outbound firewall settings for connections on the
+        # local domain profile
+        salt * win_firewall.get_settings domain firewallpolicy
+
+        # Get the inbound/outbound firewall settings for connections on the
+        # domain profile as defined by local group policy
+        salt * win_firewall.get_settings domain firewallpolicy lgpo
+    '''
+    return salt.utils.win_lgpo_netsh.get_settings(profile=profile,
+                                                  section=section,
+                                                  store=store)
+
+
+def get_all_settings(domain, store='local'):
+    '''
+    Gets all the properties for the specified profile in the specified store
+
+    .. versionadded:: 2018.3.4
+    .. versionadded:: Fluorine
+
+    Args:
+
+        profile (str):
+            The firewall profile to query. Valid options are:
+
+            - domain
+            - public
+            - private
+
+        store (str):
+            The store to use. This is either the local firewall policy or the
+            policy defined by local group policy. Valid options are:
+
+            - lgpo
+            - local
+
+            Default is ``local``
+
+    Returns:
+        dict: A dictionary containing the specified settings
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Get all firewall settings for connections on the domain profile
+        salt * win_firewall.get_all_settings domain
+
+        # Get all firewall settings for connections on the domain profile as
+        # defined by local group policy
+        salt * win_firewall.get_all_settings domain lgpo
+    '''
+    return salt.utils.win_lgpo_netsh.get_all_settings(profile=domain,
+                                                      store=store)
+
+
+def get_all_profiles(store='local'):
+    '''
+    Gets all properties for all profiles in the specified store
+
+    .. versionadded:: 2018.3.4
+    .. versionadded:: Fluorine
+
+    Args:
+
+        store (str):
+            The store to use. This is either the local firewall policy or the
+            policy defined by local group policy. Valid options are:
+
+            - lgpo
+            - local
+
+            Default is ``local``
+
+    Returns:
+        dict: A dictionary containing the specified settings for each profile
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Get all firewall settings for all profiles
+        salt * firewall.get_all_settings
+
+        # Get all firewall settings for all profiles as defined by local group
+        # policy
+
+        salt * firewall.get_all_settings lgpo
+    '''
+    return salt.utils.win_lgpo_netsh.get_all_profiles(store=store)
+
+
+def set_firewall_settings(profile, inbound=None, outbound=None, store='local'):
+    '''
+    Set the firewall inbound/outbound settings for the specified profile and
+    store
+
+    .. versionadded:: 2018.3.4
+    .. versionadded:: Fluorine
+
+    Args:
+
+        profile (str):
+            The firewall profile to query. Valid options are:
+
+            - domain
+            - public
+            - private
+
+        inbound (str):
+            The inbound setting. If ``None`` is passed, the setting will remain
+            unchanged. Valid values are:
+
+            - blockinbound
+            - blockinboundalways
+            - allowinbound
+            - notconfigured
+
+            Default is ``None``
+
+        outbound (str):
+            The outbound setting. If ``None`` is passed, the setting will remain
+            unchanged. Valid values are:
+
+            - allowoutbound
+            - blockoutbound
+            - notconfigured
+
+            Default is ``None``
+
+        store (str):
+            The store to use. This is either the local firewall policy or the
+            policy defined by local group policy. Valid options are:
+
+            - lgpo
+            - local
+
+            Default is ``local``
+
+    Returns:
+        bool: ``True`` if successful
+
+    Raises:
+        CommandExecutionError: If an error occurs
+        ValueError: If the parameters are incorrect
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Set the inbound setting for the domain profile to block inbound
+        # connections
+        salt * firewall.set_firewall_settings domain='domain' inbound='blockinbound'
+
+        # Set the outbound setting for the domain profile to allow outbound
+        # connections
+        salt * firewall.set_firewall_settings domain='domain' outbound='allowoutbound'
+
+        # Set inbound/outbound settings for the domain profile in the group
+        # policy to block inbound and allow outbound
+        salt * firewall.set_firewall_settings domain='domain' inbound='blockinbound' outbound='allowoutbound' store='lgpo'
+    '''
+    return salt.utils.win_lgpo_netsh.set_firewall_settings(profile=profile,
+                                                           inbound=inbound,
+                                                           outbound=outbound,
+                                                           store=store)
+
+
+def set_logging_settings(profile, setting, value, store='local'):
+    r'''
+    Configure logging settings for the Windows firewall.
+
+    .. versionadded:: 2018.3.4
+    .. versionadded:: Fluorine
+
+    Args:
+
+        profile (str):
+            The firewall profile to configure. Valid options are:
+
+            - domain
+            - public
+            - private
+
+        setting (str):
+            The logging setting to configure. Valid options are:
+
+            - allowedconnections
+            - droppedconnections
+            - filename
+            - maxfilesize
+
+        value (str):
+            The value to apply to the setting. Valid values are dependent upon
+            the setting being configured. Valid options are:
+
+            allowedconnections:
+
+                - enable
+                - disable
+                - notconfigured
+
+            droppedconnections:
+
+                - enable
+                - disable
+                - notconfigured
+
+            filename:
+
+                - Full path and name of the firewall log file
+                - notconfigured
+
+            maxfilesize:
+
+                - 1 - 32767
+                - notconfigured
+
+            .. note::
+                ``notconfigured`` can only be used when using the lgpo store
+
+        store (str):
+            The store to use. This is either the local firewall policy or the
+            policy defined by local group policy. Valid options are:
+
+            - lgpo
+            - local
+
+            Default is ``local``
+
+    Returns:
+        bool: ``True`` if successful
+
+    Raises:
+        CommandExecutionError: If an error occurs
+        ValueError: If the parameters are incorrect
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Log allowed connections and set that in local group policy
+        salt * firewall.set_logging_settings domain allowedconnections enable lgpo
+
+        # Don't log dropped connections
+        salt * firewall.set_logging_settings profile=private setting=droppedconnections value=disable
+
+        # Set the location of the log file
+        salt * firewall.set_logging_settings domain filename C:\windows\logs\firewall.log
+
+        # You can also use environment variables
+        salt * firewall.set_logging_settings domain filename %systemroot%\system32\LogFiles\Firewall\pfirewall.log
+
+        # Set the max file size of the log to 2048 Kb
+        salt * firewall.set_logging_settings domain maxfilesize 2048
+    '''
+    return salt.utils.win_lgpo_netsh.set_logging_settings(profile=profile,
+                                                          setting=setting,
+                                                          value=value,
+                                                          store=store)
+
+
+def set_settings(profile, setting, value, store='local'):
+    '''
+    Configure firewall settings.
+
+    .. versionadded:: 2018.3.4
+    .. versionadded:: Fluorine
+
+    Args:
+
+        profile (str):
+            The firewall profile to configure. Valid options are:
+
+            - domain
+            - public
+            - private
+
+        setting (str):
+            The firewall setting to configure. Valid options are:
+
+            - localfirewallrules
+            - localconsecrules
+            - inboundusernotification
+            - remotemanagement
+            - unicastresponsetomulticast
+
+        value (str):
+            The value to apply to the setting. Valid options are
+
+            - enable
+            - disable
+            - notconfigured
+
+            .. note::
+                ``notconfigured`` can only be used when using the lgpo store
+
+        store (str):
+            The store to use. This is either the local firewall policy or the
+            policy defined by local group policy. Valid options are:
+
+            - lgpo
+            - local
+
+            Default is ``local``
+
+    Returns:
+        bool: ``True`` if successful
+
+    Raises:
+        CommandExecutionError: If an error occurs
+        ValueError: If the parameters are incorrect
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Merge local rules with those distributed through group policy
+        salt * firewall.set_settings domain localfirewallrules enable
+
+        # Allow remote management of Windows Firewall
+        salt * firewall.set_settings domain remotemanagement enable
+    '''
+    return salt.utils.win_lgpo_netsh.set_settings(profile=profile,
+                                                  setting=setting,
+                                                  value=value,
+                                                  store=store)
+
+
+def set_state(profile, state, store='local'):
+    '''
+    Configure the firewall state.
+
+    .. versionadded:: 2018.3.4
+    .. versionadded:: Fluorine
+
+    Args:
+
+        profile (str):
+            The firewall profile to configure. Valid options are:
+
+            - domain
+            - public
+            - private
+
+        state (str):
+            The firewall state. Valid options are:
+
+            - on
+            - off
+            - notconfigured
+
+            .. note::
+                ``notconfigured`` can only be used when using the lgpo store
+
+        store (str):
+            The store to use. This is either the local firewall policy or the
+            policy defined by local group policy. Valid options are:
+
+            - lgpo
+            - local
+
+            Default is ``local``
+
+    Returns:
+        bool: ``True`` if successful
+
+    Raises:
+        CommandExecutionError: If an error occurs
+        ValueError: If the parameters are incorrect
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Turn the firewall off when the domain profile is active
+        salt * firewall.set_state domain off
+
+        # Turn the firewall on when the public profile is active and set that in
+        # the local group policy
+        salt * firewall.set_state public on lgpo
+    '''
+    return salt.utils.win_lgpo_netsh.set_state(profile=profile,
+                                               state=state,
+                                               store=store)

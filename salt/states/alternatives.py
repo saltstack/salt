@@ -202,6 +202,12 @@ def set_(name, path):
     path
         is the location of one of the alternative target files.
         (e.g. /usr/bin/less)
+
+    .. code-block:: yaml
+
+        foo:
+          alternatives.set:
+            - path: /usr/bin/foo-2.0
     '''
     ret = {'name': name,
            'path': path,

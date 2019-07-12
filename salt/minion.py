@@ -27,6 +27,7 @@ from binascii import crc32
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt._compat import ipaddress
+from salt.utils.network import parse_host_port
 from salt.ext.six.moves import range
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 
@@ -243,27 +244,29 @@ def resolve_dns(opts, fallback=True):
 
 
 def prep_ip_port(opts):
+    '''
+    parse host:port values from opts['master'] and return valid:
+        master: ip address or hostname as a string
+        master_port: (optional) master returner port as integer
+
+    e.g.:
+      - master: 'localhost:1234' -> {'master': 'localhost', 'master_port': 1234}
+      - master: '127.0.0.1:1234' -> {'master': '127.0.0.1', 'master_port' :1234}
+      - master: '[::1]:1234' -> {'master': '::1', 'master_port': 1234}
+      - master: 'fe80::a00:27ff:fedc:ba98' -> {'master': 'fe80::a00:27ff:fedc:ba98'}
+    '''
     ret = {}
     # Use given master IP if "ip_only" is set or if master_ip is an ipv6 address without
     # a port specified. The is_ipv6 check returns False if brackets are used in the IP
     # definition such as master: '[::1]:1234'.
-    if opts['master_uri_format'] == 'ip_only' or salt.utils.network.is_ipv6(opts['master']):
-        ret['master'] = opts['master']
+    if opts['master_uri_format'] == 'ip_only':
+        ret['master'] = ipaddress.ip_address(opts['master'])
     else:
-        ip_port = opts['master'].rsplit(':', 1)
-        if len(ip_port) == 1:
-            # e.g. master: mysaltmaster
-            ret['master'] = ip_port[0]
-        else:
-            # e.g. master: localhost:1234
-            # e.g. master: 127.0.0.1:1234
-            # e.g. master: [::1]:1234
-            # Strip off brackets for ipv6 support
-            ret['master'] = ip_port[0].strip('[]')
+        host, port = parse_host_port(opts['master'])
+        ret = {'master': host}
+        if port:
+            ret.update({'master_port': port})
 
-            # Cast port back to an int! Otherwise a TypeError is thrown
-            # on some of the socket calls elsewhere in the minion and utils code.
-            ret['master_port'] = int(ip_port[1])
     return ret
 
 
@@ -713,7 +716,7 @@ class MinionBase(object):
                     if attempts == tries:
                         # Exhausted all attempts. Return exception.
                         self.connected = False
-                        raise exc
+                        six.reraise(*sys.exc_info())
 
     def _discover_masters(self):
         '''
@@ -938,8 +941,10 @@ class MinionManager(MinionBase):
         self.process_manager = ProcessManager(name='MultiMinionProcessManager')
         self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})  # Tornado backward compat
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
@@ -974,9 +979,8 @@ class MinionManager(MinionBase):
         '''
         if not self.minions:
             err = ('Minion unable to successfully connect to '
-                   'a Salt Master.  Exiting.')
+                   'a Salt Master.')
             log.error(err)
-            raise SaltSystemExit(code=42, msg=err)
 
     def _spawn_minions(self, timeout=60):
         '''
@@ -2745,8 +2749,10 @@ class Minion(MinionBase):
             for cb in six.itervalues(self.periodic_callbacks):
                 cb.stop()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
 
 class Syndic(Minion):

@@ -6,16 +6,16 @@ Configuring the Salt Master
 
 The Salt system is amazingly simple and easy to configure, the two components
 of the Salt system each have a respective configuration file. The
-:command:`salt-master` is configured via the master configuration file, and the
-:command:`salt-minion` is configured via the minion configuration file.
+``salt-master`` is configured via the master configuration file, and the
+``salt-minion`` is configured via the minion configuration file.
 
 .. seealso::
+
     :ref:`Example master configuration file <configuration-examples-master>`.
 
-The configuration file for the salt-master is located at
-:file:`/etc/salt/master` by default.  A notable exception is FreeBSD, where the
-configuration file is located at :file:`/usr/local/etc/salt`.  The available
-options are as follows:
+The configuration file for the salt-master is located at ``/etc/salt/master``
+by default. A notable exception is FreeBSD, where the configuration file is
+located at ``/usr/local/etc/salt``. The available options are as follows:
 
 
 .. _primary-master-configuration:
@@ -748,6 +748,22 @@ accessible from the minions.
 .. code-block:: yaml
 
     master_job_cache: redis
+
+.. conf_master:: job_cache_store_endtime
+
+``job_cache_store_endtime``
+---------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``False``
+
+Specify whether the Salt Master should store end times for jobs as returns
+come in.
+
+.. code-block:: yaml
+
+    job_cache_store_endtime: False
 
 .. conf_master:: enforce_mine_cache
 
@@ -2583,6 +2599,8 @@ can have multiple root directories. The subdirectories in the multiple file
 roots cannot match, otherwise the downloaded files will not be able to be
 reliably ensured. A base environment is required to house the top file.
 
+As of 2018.3.5 and 2019.2.1, it is possible to have `__env__` as a catch-all environment.
+
 Example:
 
 .. code-block:: yaml
@@ -2596,6 +2614,8 @@ Example:
       prod:
         - /srv/salt/prod/services
         - /srv/salt/prod/states
+      __env__:
+        - /srv/salt/default
 
 .. note::
     For masterless Salt, this parameter must be specified in the minion config
@@ -4614,6 +4634,55 @@ The queue size for workers in the reactor.
     reactor_worker_hwm: 10000
 
 
+.. _salt-api-master-settings:
+
+Salt-API Master Settings
+========================
+
+There are some settings for :ref:`salt-api <netapi-introduction>` that can be
+configured on the Salt Master.
+
+.. conf_master:: api_logfile
+
+``api_logfile``
+---------------
+
+Default: ``/var/log/salt/api``
+
+The logfile location for ``salt-api``.
+
+.. code-block:: yaml
+
+    api_logfile: /var/log/salt/api
+
+.. conf_master:: api_pidfile
+
+``api_pidfile``
+---------------
+
+Default: /var/run/salt-api.pid
+
+If this master will be running ``salt-api``, specify the pidfile of the
+``salt-api`` daemon.
+
+.. code-block:: yaml
+
+    api_pidfile: /var/run/salt-api.pid
+
+.. conf_master:: rest_timeout
+
+``rest_timeout``
+----------------
+
+Default: ``300``
+
+Used by ``salt-api`` for the master requests timeout.
+
+.. code-block:: yaml
+
+    rest_timeout: 300
+
+
 .. _syndic-server-settings:
 
 Syndic Server Settings
@@ -4981,12 +5050,42 @@ This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
 
+.. conf_master:: log_rotate_max_bytes
+
+``log_rotate_max_bytes``
+------------------------
+
+Default:  ``0``
+
+The maximum number of bytes a single log file may contain before it is rotated.
+A value of 0 disables this feature. Currently only supported on Windows. On
+other platforms, use an external tool such as 'logrotate' to manage log files.
+:conf_log:`log_rotate_max_bytes`
+
+
+.. conf_master:: log_rotate_backup_count
+
+``log_rotate_backup_count``
+---------------------------
+
+Default:  ``0``
+
+The number of backup files to keep when rotating log files. Only used if
+:conf_master:`log_rotate_max_bytes` is greater than 0. Currently only supported
+on Windows. On other platforms, use an external tool such as 'logrotate' to
+manage log files.
+:conf_log:`log_rotate_backup_count`
+
+
 .. _node-groups:
 
 Node Groups
 ===========
 
 .. conf_master:: nodegroups
+
+``nodegroups``
+--------------
 
 Default: ``{}``
 

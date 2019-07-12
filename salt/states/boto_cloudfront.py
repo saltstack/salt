@@ -135,7 +135,7 @@ def present(
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Distribution {0} set for creation.'.format(name)
-            ret['pchanges'] = {'old': None, 'new': name}
+            ret['changes'] = {'old': None, 'new': name}
             return ret
 
         res = __salt__['boto_cloudfront.create_distribution'](
@@ -203,7 +203,7 @@ def present(
                 'Distribution {0} set for new config:'.format(name),
                 changes_diff,
             ])
-            ret['pchanges'] = {'diff': changes_diff}
+            ret['changes'] = {'diff': changes_diff}
             return ret
 
         res = __salt__['boto_cloudfront.update_distribution'](

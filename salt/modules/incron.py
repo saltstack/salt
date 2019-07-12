@@ -53,11 +53,10 @@ def _render_tab(lst):
     for pre in lst['pre']:
         ret.append('{0}\n'.format(pre))
     for cron in lst['crons']:
-        ret.append('{0} {1} {2} {3}\n'.format(cron['path'],
-                                                      cron['mask'],
-                                                      cron['cmd'],
-                                                      TAG
-                                                      )
+        ret.append('{0} {1} {2}\n'.format(cron['path'],
+                                          cron['mask'],
+                                          cron['cmd'],
+                                          )
                    )
     return ret
 
@@ -191,26 +190,22 @@ def list_tab(user):
            'pre': []
            }
     flag = False
-    comment = None
-    tag = '# Line managed by Salt, do not edit'
     for line in data.splitlines():
-        if line.endswith(tag):
-            if len(line.split()) > 3:
-                # Appears to be a standard incron line
-                comps = line.split()
-                path = comps[0]
-                mask = comps[1]
-                (cmd, comment) = ' '.join(comps[2:]).split(' # ')
+        if len(line.split()) > 3:
+            # Appears to be a standard incron line
+            comps = line.split()
+            path = comps[0]
+            mask = comps[1]
+            cmd = ' '.join(comps[2:])
 
-                dat = {'path': path,
-                       'mask': mask,
-                       'cmd': cmd,
-                       'comment': comment}
-                ret['crons'].append(dat)
-                comment = None
+            dat = {'path': path,
+                   'mask': mask,
+                   'cmd': cmd}
+            ret['crons'].append(dat)
         else:
             ret['pre'].append(line)
     return ret
+
 
 # For consistency's sake
 ls = salt.utils.functools.alias_function(list_tab, 'ls')
@@ -316,5 +311,6 @@ def rm_job(user,
         return comdat['stderr']
 
     return ret
+
 
 rm = salt.utils.functools.alias_function(rm_job, 'rm')

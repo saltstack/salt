@@ -846,12 +846,22 @@ def _get_create_kwargs(skip_translate=None,
     Take input kwargs and return a kwargs dict to pass to docker-py's
     create_container() function.
     '''
+
+    networks = kwargs.pop('networks', {})
+    if kwargs.get('network_mode', '') in networks:
+        networks = {kwargs['network_mode']: networks[kwargs['network_mode']]}
+    else:
+        networks = {}
+
     kwargs = __utils__['docker.translate_input'](
         salt.utils.docker.translate.container,
         skip_translate=skip_translate,
         ignore_collisions=ignore_collisions,
         validate_ip_addrs=validate_ip_addrs,
         **__utils__['args.clean_kwargs'](**kwargs))
+
+    if networks:
+        kwargs['networking_config'] = _create_networking_config(networks)
 
     if client_args is None:
         try:
@@ -939,6 +949,9 @@ def compare_containers(first, second, ignore=None):
                 if item == 'Ulimits':
                     val1 = _ulimit_sort(val1)
                     val2 = _ulimit_sort(val2)
+                if item == 'Env':
+                    val1 = sorted(val1)
+                    val2 = sorted(val2)
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
         # Check for optionally-present items that were in the second container
@@ -965,6 +978,9 @@ def compare_containers(first, second, ignore=None):
                 if item == 'Ulimits':
                     val1 = _ulimit_sort(val1)
                     val2 = _ulimit_sort(val2)
+                if item == 'Env':
+                    val1 = sorted(val1)
+                    val2 = sorted(val2)
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
     return ret
@@ -1190,10 +1206,18 @@ def compare_container_networks(first, second):
                         old_val.remove(result1['Config']['Hostname'])
                     except (AttributeError, ValueError):
                         pass
+                    try:
+                        old_val.remove(result1['Id'][:12])
+                    except (AttributeError, ValueError):
+                        pass
                     if not old_val:
                         old_val = None
                     try:
                         new_val.remove(result2['Config']['Hostname'])
+                    except (AttributeError, ValueError):
+                        pass
+                    try:
+                        new_val.remove(result2['Id'][:12])
                     except (AttributeError, ValueError):
                         pass
                     if not new_val:
@@ -2381,6 +2405,11 @@ def version():
             )
     return ret
 
+
+def _create_networking_config(networks):
+    log.debug("creating networking config from {}".format(networks))
+    return _client_wrapper('create_networking_config',
+        {k: _client_wrapper('create_endpoint_config', **v) for k, v in networks.items()})
 
 # Functions to manage containers
 @_refresh_mine_cache
@@ -5617,6 +5646,7 @@ def pause(name):
                             .format(name))}
     return _change_state(name, 'pause', 'paused')
 
+
 freeze = salt.utils.functools.alias_function(pause, 'freeze')
 
 
@@ -5818,6 +5848,7 @@ def unpause(name):
                 'comment': ('Container \'{0}\' is stopped, cannot unpause'
                             .format(name))}
     return _change_state(name, 'unpause', 'running')
+
 
 unfreeze = salt.utils.functools.alias_function(unpause, 'unfreeze')
 

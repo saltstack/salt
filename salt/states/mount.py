@@ -515,16 +515,16 @@ def mounted(name,
                         if re.match(regex, _device):
                             _device_mismatch_is_ignored = _device
                             break
-                if __opts__['test']:
-                    ret['result'] = None
-                    ret['comment'] = "An umount would have been forced " \
-                                     + "because devices do not match.  Watched: " \
-                                     + device
-                elif _device_mismatch_is_ignored:
+                if _device_mismatch_is_ignored:
                     ret['result'] = True
                     ret['comment'] = "An umount will not be forced " \
                                      + "because device matched device_name_regex: " \
                                      + _device_mismatch_is_ignored
+                elif __opts__['test']:
+                    ret['result'] = None
+                    ret['comment'] = "An umount would have been forced " \
+                                     + "because devices do not match.  Watched: " \
+                                     + device
                 else:
                     ret['changes']['umount'] = "Forced unmount because devices " \
                                                + "don't match. Wanted: " + device

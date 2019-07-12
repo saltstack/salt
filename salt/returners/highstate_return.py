@@ -135,6 +135,7 @@ def _get_options(ret):
 
     return _options
 
+
 #
 # Most email readers to not support <style> tag.
 # The following dict and a function provide a primitive styler

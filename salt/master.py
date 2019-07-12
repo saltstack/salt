@@ -250,8 +250,12 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
                     keys.append(fn_)
             log.debug('Writing master key cache')
             # Write a temporary file securely
-            with salt.utils.atomicfile.atomic_open(os.path.join(self.opts['pki_dir'], acc, '.key_cache')) as cache_file:
-                self.serial.dump(keys, cache_file)
+            if six.PY2:
+                with salt.utils.atomicfile.atomic_open(os.path.join(self.opts['pki_dir'], acc, '.key_cache')) as cache_file:
+                    self.serial.dump(keys, cache_file)
+            else:
+                with salt.utils.atomicfile.atomic_open(os.path.join(self.opts['pki_dir'], acc, '.key_cache'), mode='wb') as cache_file:
+                    self.serial.dump(keys, cache_file)
 
     def handle_key_rotate(self, now):
         '''
@@ -912,8 +916,10 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
             self.process_manager.send_signal_to_processes(signum)
             self.process_manager.kill_children()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
 
 class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):

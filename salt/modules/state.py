@@ -637,7 +637,7 @@ def apply_(mods=None, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test pillar='{"foo": "bar"}'
+            salt '*' state.apply stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override Pillar values set via
@@ -680,11 +680,11 @@ def apply_(mods=None, **kwargs):
 
     .. code-block:: bash
 
-        # Run the states configured in salt://test.sls (or salt://test/init.sls)
-        salt '*' state.apply test
-        # Run the states configured in salt://test.sls (or salt://test/init.sls)
+        # Run the states configured in salt://stuff.sls (or salt://stuff/init.sls)
+        salt '*' state.apply stuff
+        # Run the states configured in salt://stuff.sls (or salt://stuff/init.sls)
         # and salt://pkgs.sls (or salt://pkgs/init.sls).
-        salt '*' state.apply test,pkgs
+        salt '*' state.apply stuff,pkgs
 
     The following additional arguments are also accepted when applying
     individual SLS files:
@@ -704,7 +704,7 @@ def apply_(mods=None, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test pillar='{"foo": "bar"}'
+            salt '*' state.apply stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override Pillar values set via
@@ -755,7 +755,7 @@ def apply_(mods=None, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test localconfig=/path/to/minion.yml
+            salt '*' state.apply stuff localconfig=/path/to/minion.yml
 
     sync_mods
         If specified, the desired custom module types will be synced prior to
@@ -763,8 +763,8 @@ def apply_(mods=None, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test sync_mods=states,modules
-            salt '*' state.apply test sync_mods=all
+            salt '*' state.apply stuff sync_mods=states,modules
+            salt '*' state.apply stuff sync_mods=all
 
         .. note::
             This option is ignored when no SLS files are specified, as a
@@ -792,8 +792,8 @@ def request(mods=None,
     .. code-block:: bash
 
         salt '*' state.request
-        salt '*' state.request test
-        salt '*' state.request test,pkgs
+        salt '*' state.request stuff
+        salt '*' state.request stuff,pkgs
     '''
     kwargs['test'] = True
     ret = apply_(mods, **kwargs)
@@ -929,7 +929,7 @@ def highstate(test=None, queue=False, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test pillar='{"foo": "bar"}'
+            salt '*' state.apply stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override Pillar values set via
@@ -1109,7 +1109,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test pillar='{"foo": "bar"}'
+            salt '*' state.apply stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override existing Pillar values set via
@@ -1195,8 +1195,8 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.sls test sync_mods=states,modules
-            salt '*' state.sls test sync_mods=all
+            salt '*' state.sls stuff sync_mods=states,modules
+            salt '*' state.sls stuff sync_mods=all
 
         .. versionadded:: 2017.7.8,2018.3.3,Fluorine
 
@@ -1727,7 +1727,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.show_low_sls test pillar='{"foo": "bar"}'
+            salt '*' state.show_low_sls stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override Pillar values set via
@@ -2292,37 +2292,37 @@ def event(tagmatch='*',
 
         salt-call --local state.event pretty=True
     '''
-    sevent = salt.utils.event.get_event(
+    with salt.utils.event.get_event(
             node,
             sock_dir or __opts__['sock_dir'],
             __opts__['transport'],
             opts=__opts__,
-            listen=True)
+            listen=True) as sevent:
 
-    while True:
-        ret = sevent.get_event(full=True, auto_reconnect=True)
-        if ret is None:
-            continue
+        while True:
+            ret = sevent.get_event(full=True, auto_reconnect=True)
+            if ret is None:
+                continue
 
-        if fnmatch.fnmatch(ret['tag'], tagmatch):
-            if not quiet:
-                salt.utils.stringutils.print_cli(
-                    str('{0}\t{1}').format(  # future lint: blacklisted-function
-                        salt.utils.stringutils.to_str(ret['tag']),
-                        salt.utils.json.dumps(
-                            ret['data'],
-                            sort_keys=pretty,
-                            indent=None if not pretty else 4)
+            if fnmatch.fnmatch(ret['tag'], tagmatch):
+                if not quiet:
+                    salt.utils.stringutils.print_cli(
+                        str('{0}\t{1}').format(  # future lint: blacklisted-function
+                            salt.utils.stringutils.to_str(ret['tag']),
+                            salt.utils.json.dumps(
+                                ret['data'],
+                                sort_keys=pretty,
+                                indent=None if not pretty else 4)
+                        )
                     )
-                )
-                sys.stdout.flush()
+                    sys.stdout.flush()
 
-            if count > 0:
-                count -= 1
-                log.debug('Remaining event matches: %s', count)
+                if count > 0:
+                    count -= 1
+                    log.debug('Remaining event matches: %s', count)
 
-            if count == 0:
-                break
-        else:
-            log.debug('Skipping event tag: %s', ret['tag'])
-            continue
+                if count == 0:
+                    break
+            else:
+                log.debug('Skipping event tag: %s', ret['tag'])
+                continue

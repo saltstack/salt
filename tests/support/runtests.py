@@ -54,6 +54,7 @@ import logging
 import multiprocessing
 
 import salt.utils.json
+import salt.utils.path
 
 # Import tests support libs
 import tests.support.paths as paths
@@ -184,7 +185,10 @@ class RuntimeVars(object):
             object.__setattr__(self, name, value)
             return
         self._vars[name] = value
+
+
 # <---- Helper Methods -----------------------------------------------------------------------------------------------
+
 
 # ----- Global Variables -------------------------------------------------------------------------------------------->
 XML_OUTPUT_DIR = os.environ.get('SALT_XML_TEST_REPORTS_DIR', os.path.join(paths.TMP, 'xml-test-reports'))
@@ -216,6 +220,8 @@ RUNTIME_VARS = RuntimeVars(
     TMP_PILLAR_TREE=paths.TMP_PILLAR_TREE,
     TMP_PRODENV_STATE_TREE=paths.TMP_PRODENV_STATE_TREE,
     RUNNING_TESTS_USER=RUNNING_TESTS_USER,
-    RUNTIME_CONFIGS={}
+    RUNTIME_CONFIGS={},
+    SHELL_TRUE_PATH=salt.utils.path.which('true'),
+    SHELL_FALSE_PATH=salt.utils.path.which('false'),
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------

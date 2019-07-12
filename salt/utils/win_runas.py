@@ -271,7 +271,7 @@ def make_inheritable(token):
                                     win32con.DUPLICATE_SAME_ACCESS)
 
 
-def runas_system(cmd, username, password):
+def runas_system(cmd, username, password, cwd=None):
     # This only works as system, when salt is running as a service for example
 
     # Check for a domain
@@ -310,8 +310,8 @@ def runas_system(cmd, username, password):
 
     except win32security.error as exc:
         # User doesn't have admin, use existing token
-        if exc[0] == winerror.ERROR_NO_SUCH_LOGON_SESSION \
-                or exc[0] == winerror.ERROR_PRIVILEGE_NOT_HELD:
+        if exc.winerror == winerror.ERROR_NO_SUCH_LOGON_SESSION \
+                or exc.winerror == winerror.ERROR_PRIVILEGE_NOT_HELD:
             elevated_token = token
         else:
             raise
@@ -352,7 +352,7 @@ def runas_system(cmd, username, password):
                 1,
                 0,
                 user_environment,
-                None,
+                cwd,
                 startup_info)
 
     hProcess, hThread, PId, TId = \
@@ -397,7 +397,7 @@ def runas(cmd, username, password, cwd=None):
     # This only works when not running under the system account
     # Debug mode for example
     if salt.utils.win_functions.get_current_user() == 'SYSTEM':
-        return runas_system(cmd, username, password)
+        return runas_system(cmd, username, password, cwd)
 
     # Create a pipe to set as stdout in the child. The write handle needs to be
     # inheritable.

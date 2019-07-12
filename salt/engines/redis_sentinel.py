@@ -48,6 +48,7 @@ def __virtual__():
     else:
         return True
 
+
 log = logging.getLogger(__name__)
 
 

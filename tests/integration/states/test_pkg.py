@@ -38,13 +38,13 @@ _PKG_TARGETS = {
     'Debian': ['python-plist', 'apg'],
     'RedHat': ['units', 'zsh-html'],
     'FreeBSD': ['aalib', 'pth'],
-    'Suse': ['aalib', 'rpm-python'],
+    'Suse': ['aalib', 'htop'],
     'MacOS': ['libpng', 'jpeg'],
     'Windows': ['putty', '7zip'],
 }
 
 _PKG_CAP_TARGETS = {
-    'Suse': [('w3m_ssl', 'w3m')],
+    'Suse': [('perl(ZNC)', 'znc-perl')],
 }
 
 _PKG_TARGETS_32 = {
@@ -821,12 +821,14 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(version)
         self.assertFalse(realver)
 
-        ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True, test=True)
-        self.assertInSaltComment("The following packages would be installed/updated: {0}".format(realpkg), ret)
-        ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.removed', name=realpkg)
-        self.assertSaltTrueReturn(ret)
+        try:
+            ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True, test=True)
+            self.assertInSaltComment("The following packages would be installed/updated: {0}".format(realpkg), ret)
+            ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True)
+            self.assertSaltTrueReturn(ret)
+        finally:
+            ret = self.run_state('pkg.removed', name=realpkg)
+            self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
@@ -853,18 +855,22 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(version)
         self.assertFalse(realver)
 
-        # install the package already
-        ret = self.run_state('pkg.installed', name=realpkg, refresh=False)
+        try:
+            # install the package
+            ret = self.run_state('pkg.installed', name=realpkg, refresh=False)
+            self.assertSaltTrueReturn(ret)
 
-        ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True, test=True)
-        self.assertInSaltComment("All specified packages are already installed", ret)
+            # Try to install again. Nothing should be installed this time.
+            ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True, test=True)
+            self.assertInSaltComment("All specified packages are already installed", ret)
 
-        ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True)
-        self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True)
+            self.assertSaltTrueReturn(ret)
 
-        self.assertInSaltComment("packages are already installed", ret)
-        ret = self.run_state('pkg.removed', name=realpkg)
-        self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment("packages are already installed", ret)
+        finally:
+            ret = self.run_state('pkg.removed', name=realpkg)
+            self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
@@ -890,8 +896,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # Make sure that we have targets that match the os_family. If this
         # fails then the _PKG_TARGETS dict above needs to have an entry added,
         # with two packages that are not installed before these tests are run
-        self.assertTrue(bool(pkg_cap_targets))
-        self.assertTrue(bool(pkg_targets))
+        self.assertTrue(pkg_cap_targets)
+        self.assertTrue(pkg_targets)
 
         if os_family == 'Arch':
             for idx in range(13):
@@ -909,34 +915,36 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
         # packages need to not be installed before we run the states below
-        self.assertTrue(bool(version))
-        self.assertTrue(bool(realver))
+        self.assertTrue(version)
+        self.assertTrue(realver)
 
-        pkgs = [{pkg_targets[0]: version}, pkg_targets[1], {capability: realver}]
-        ret = self.run_state('pkg.installed',
-                             name='test_pkg_cap_003_installed_multipkg_with_version-install',
-                             pkgs=pkgs,
-                             refresh=False)
-        self.assertSaltFalseReturn(ret)
+        try:
+            pkgs = [{pkg_targets[0]: version}, pkg_targets[1], {capability: realver}]
+            ret = self.run_state('pkg.installed',
+                                 name='test_pkg_cap_003_installed_multipkg_with_version-install',
+                                 pkgs=pkgs,
+                                 refresh=False)
+            self.assertSaltFalseReturn(ret)
 
-        ret = self.run_state('pkg.installed',
-                             name='test_pkg_cap_003_installed_multipkg_with_version-install-capability',
-                             pkgs=pkgs,
-                             refresh=False, resolve_capabilities=True, test=True)
-        self.assertInSaltComment("packages would be installed/updated", ret)
-        self.assertInSaltComment("{0}={1}".format(realpkg, realver), ret)
+            ret = self.run_state('pkg.installed',
+                                 name='test_pkg_cap_003_installed_multipkg_with_version-install-capability',
+                                 pkgs=pkgs,
+                                 refresh=False, resolve_capabilities=True, test=True)
+            self.assertInSaltComment("packages would be installed/updated", ret)
+            self.assertInSaltComment("{0}={1}".format(realpkg, realver), ret)
 
-        ret = self.run_state('pkg.installed',
-                             name='test_pkg_cap_003_installed_multipkg_with_version-install-capability',
-                             pkgs=pkgs,
-                             refresh=False, resolve_capabilities=True)
-        self.assertSaltTrueReturn(ret)
-        cleanup_pkgs = pkg_targets
-        cleanup_pkgs.append(realpkg)
-        ret = self.run_state('pkg.removed',
-                             name='test_pkg_cap_003_installed_multipkg_with_version-remove',
-                             pkgs=cleanup_pkgs)
-        self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pkg.installed',
+                                 name='test_pkg_cap_003_installed_multipkg_with_version-install-capability',
+                                 pkgs=pkgs,
+                                 refresh=False, resolve_capabilities=True)
+            self.assertSaltTrueReturn(ret)
+            cleanup_pkgs = pkg_targets
+            cleanup_pkgs.append(realpkg)
+        finally:
+            ret = self.run_state('pkg.removed',
+                                 name='test_pkg_cap_003_installed_multipkg_with_version-remove',
+                                 pkgs=cleanup_pkgs)
+            self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
@@ -964,17 +972,18 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(version)
         self.assertFalse(realver)
 
-        ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True, test=True)
-        self.assertInSaltComment("The following packages would be installed/upgraded: {0}".format(realpkg), ret)
-        ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True)
-        self.assertSaltTrueReturn(ret)
+        try:
+            ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True, test=True)
+            self.assertInSaltComment("The following packages would be installed/upgraded: {0}".format(realpkg), ret)
+            ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True)
+            self.assertSaltTrueReturn(ret)
 
-        ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True)
-        self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment("is already up-to-date", ret)
-
-        ret = self.run_state('pkg.removed', name=realpkg)
-        self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True)
+            self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment("is already up-to-date", ret)
+        finally:
+            ret = self.run_state('pkg.removed', name=realpkg)
+            self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
@@ -1035,23 +1044,20 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(version)
         self.assertFalse(realver)
 
-        ret = self.run_state('pkg.installed', name=target,
-                             refresh=False, resolve_capabilities=True)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.uptodate',
-                             name='test_pkg_cap_006_uptodate',
-                             pkgs=[target],
-                             refresh=False,
-                             resolve_capabilities=True)
-        self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment("System is already up-to-date", ret)
-        ret = self.run_state('pkg.removed', name=realpkg)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.uptodate',
-                             name='test_pkg_cap_006_uptodate',
-                             refresh=False,
-                             test=True)
-        self.assertInSaltComment("System update will be performed", ret)
+        try:
+            ret = self.run_state('pkg.installed', name=target,
+                                 refresh=False, resolve_capabilities=True)
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pkg.uptodate',
+                                 name='test_pkg_cap_006_uptodate',
+                                 pkgs=[target],
+                                 refresh=False,
+                                 resolve_capabilities=True)
+            self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment("System is already up-to-date", ret)
+        finally:
+            ret = self.run_state('pkg.removed', name=realpkg)
+            self.assertSaltTrueReturn(ret)
 
     @requires_salt_modules('pkg.hold', 'pkg.unhold')
     @requires_system_grains

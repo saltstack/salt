@@ -9,6 +9,7 @@ authenticating peers
 # the Array class, which has incompatibilities with it.
 from __future__ import absolute_import, print_function
 import os
+import random
 import sys
 import copy
 import time
@@ -649,8 +650,8 @@ class AsyncAuth(object):
             self._authenticate_future.set_result(True)  # mark the sign-in as complete
             # Notify the bus about creds change
             if self.opts.get('auth_events') is True:
-                event = salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False)
-                event.fire_event({'key': key, 'creds': creds}, salt.utils.event.tagify(prefix='auth', suffix='creds'))
+                with salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False) as event:
+                    event.fire_event({'key': key, 'creds': creds}, salt.utils.event.tagify(prefix='auth', suffix='creds'))
 
     @tornado.gen.coroutine
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
@@ -727,6 +728,10 @@ class AsyncAuth(object):
                             'minion.\nOr restart the Salt Master in open mode to '
                             'clean out the keys. The Salt Minion will now exit.'
                         )
+                        # Add a random sleep here for systems that are using a
+                        # a service manager to immediately restart the service
+                        # to avoid overloading the system
+                        time.sleep(random.randint(10, 20))
                         sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 # has the master returned that its maxed out with minions?
                 elif payload['load']['ret'] == 'full':

@@ -78,6 +78,7 @@ def test():
     minion = salt.daemons.flo.IofloMinion(opts=opts)
     minion.start(behaviors=['raet.flo.behaving'])
 
+
 if __name__ == '__main__':
     console.reinit(verbosity=console.Wordage.concise)
     test()

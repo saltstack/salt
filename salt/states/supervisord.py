@@ -338,6 +338,7 @@ def dead(name,
         else:
             # process name doesn't exist
             ret['comment'] = "Service {0} doesn't exist".format(name)
+            return ret
 
         if is_stopped is True:
             ret['comment'] = "Service {0} is not running".format(name)

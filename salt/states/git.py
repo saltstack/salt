@@ -281,8 +281,8 @@ def latest(name,
            identity=None,
            https_user=None,
            https_pass=None,
-           onlyif=False,
-           unless=False,
+           onlyif=None,
+           unless=None,
            refspec_branch='*',
            refspec_tag='*',
            output_encoding=None,
@@ -685,6 +685,15 @@ def latest(name,
     if https_pass is not None and not isinstance(https_pass, six.string_types):
         https_pass = six.text_type(https_pass)
 
+    # Check for lfs filter settings, and setup lfs_opts accordingly. These opts
+    # will be passed where appropriate to ensure that these commands are
+    # authenticated and that the git LFS plugin can download files.
+    use_lfs = bool(
+        __salt__['git.config_get_regexp'](
+            r'filter\.lfs\.',
+            **{'global': True}))
+    lfs_opts = {'identity': identity} if use_lfs else {}
+
     if os.path.isfile(target):
         return _fail(
             ret,
@@ -749,6 +758,12 @@ def latest(name,
             ret,
             'Failed to check remote refs: {0}'.format(_strip_exc(exc))
         )
+    except NameError as exc:
+        if 'global name' in exc.message:
+            raise CommandExecutionError(
+                'Failed to check remote refs: You may need to install '
+                'GitPython or PyGit2')
+        raise
 
     if 'HEAD' in all_remote_refs:
         head_rev = all_remote_refs['HEAD']
@@ -1554,7 +1569,8 @@ def latest(name,
                         opts=['--hard', remote_rev],
                         user=user,
                         password=password,
-                        output_encoding=output_encoding)
+                        output_encoding=output_encoding,
+                        **lfs_opts)
                     ret['changes']['forced update'] = True
                     comments.append(
                         'Repository was hard-reset to {0}'.format(remote_loc)
@@ -1607,7 +1623,8 @@ def latest(name,
                                 opts=merge_opts,
                                 user=user,
                                 password=password,
-                                output_encoding=output_encoding)
+                                output_encoding=output_encoding,
+                                **lfs_opts)
                             comments.append(
                                 'Repository was fast-forwarded to {0}'
                                 .format(remote_loc)
@@ -1627,7 +1644,8 @@ def latest(name,
                                   remote_rev if rev == 'HEAD' else rev],
                             user=user,
                             password=password,
-                            output_encoding=output_encoding)
+                            output_encoding=output_encoding,
+                            **lfs_opts)
                         comments.append(
                             'Repository was reset to {0} (fast-forward)'
                             .format(rev)
@@ -2197,8 +2215,8 @@ def detached(name,
            identity=None,
            https_user=None,
            https_pass=None,
-           onlyif=False,
-           unless=False,
+           onlyif=None,
+           unless=None,
            output_encoding=None,
            **kwargs):
     '''
@@ -3409,18 +3427,65 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
     Otherwise, returns ``True``
     '''
     cmd_kwargs = copy.deepcopy(cmd_kwargs)
-    cmd_kwargs['python_shell'] = True
-    if onlyif:
-        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+    cmd_kwargs.update({
+        'use_vt': False,
+        'bg': False,
+        'ignore_retcode': True,
+        'python_shell': True,
+    })
+
+    if onlyif is not None:
+        if not isinstance(onlyif, list):
+            onlyif = [onlyif]
+
+        for command in onlyif:
+            if not isinstance(command, six.string_types) and command:
+                # Boolean or some other non-string which resolves to True
+                continue
+            try:
+                if __salt__['cmd.retcode'](command, **cmd_kwargs) == 0:
+                    # Command exited with a zero retcode
+                    continue
+            except Exception as exc:
+                log.exception(
+                    'The following onlyif command raised an error: %s',
+                    command
+                )
+                return {
+                    'comment': 'onlyif raised error ({0}), see log for '
+                               'more details'.format(exc),
+                    'result': False
+                }
+
             return {'comment': 'onlyif condition is false',
                     'skip_watch': True,
                     'result': True}
 
-    if unless:
-        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+    if unless is not None:
+        if not isinstance(unless, list):
+            unless = [unless]
+
+        for command in unless:
+            if not isinstance(command, six.string_types) and not command:
+                # Boolean or some other non-string which resolves to False
+                break
+            try:
+                if __salt__['cmd.retcode'](command, **cmd_kwargs) != 0:
+                    # Command exited with a non-zero retcode
+                    break
+            except Exception as exc:
+                log.exception(
+                    'The following unless command raised an error: %s',
+                    command
+                )
+                return {
+                    'comment': 'unless raised error ({0}), see log for '
+                               'more details'.format(exc),
+                    'result': False
+                }
+        else:
             return {'comment': 'unless condition is true',
                     'skip_watch': True,
                     'result': True}
 
-    # No reason to stop, return True
     return True

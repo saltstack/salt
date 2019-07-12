@@ -23,13 +23,11 @@ pyvmomi
 setproctitle
 cherrypy>=3.2.2,<18.0.0; python_version < '3.5' and sys.platform != 'win32' and sys.platform != 'darwin'
 cherrypy>=3.2.2; python_version >= '3.5' and sys.platform != 'win32' and sys.platform != 'darwin'
-ldap; sys.platform != 'win32' and sys.platform != 'darwin'
 pyinotify; sys.platform != 'win32' and sys.platform != 'darwin'
 PyMySQL; sys.platform != 'win32' and sys.platform != 'darwin'
 jsonschema
 strict_rfc3339
 rfc3987
-jinja2
 pyOpenSSL
 ioflo
 dnspython

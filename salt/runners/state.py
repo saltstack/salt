@@ -25,6 +25,7 @@ def pause(jid, state_id=None, duration=None):
     minion = salt.minion.MasterMinion(__opts__)
     minion.functions['state.pause'](jid, state_id, duration)
 
+
 set_pause = salt.utils.functools.alias_function(pause, 'set_pause')
 
 
@@ -34,6 +35,7 @@ def resume(jid, state_id=None):
     '''
     minion = salt.minion.MasterMinion(__opts__)
     minion.functions['state.resume'](jid, state_id)
+
 
 rm_pause = salt.utils.functools.alias_function(resume, 'rm_pause')
 
@@ -132,6 +134,7 @@ def orchestrate(mods,
         ret['retcode'] = 1
     return ret
 
+
 # Aliases for orchestrate runner
 orch = salt.utils.functools.alias_function(orchestrate, 'orch')
 sls = salt.utils.functools.alias_function(orchestrate, 'sls')
@@ -206,7 +209,7 @@ def orchestrate_high(data, test=None, queue=False, pillar=None, **kwargs):
 def orchestrate_show_sls(mods,
                          saltenv='base',
                          test=None,
-                         exclude=None,
+                         queue=False,
                          pillar=None,
                          pillarenv=None,
                          pillar_enc=None):
@@ -231,15 +234,16 @@ def orchestrate_show_sls(mods,
     minion = salt.minion.MasterMinion(__opts__)
     running = minion.functions['state.show_sls'](
         mods,
-        saltenv,
         test,
-        exclude,
+        queue,
         pillar=pillar,
         pillarenv=pillarenv,
-        pillar_enc=pillar_enc)
+        pillar_enc=pillar_enc,
+        saltenv=saltenv)
 
     ret = {minion.opts['id']: running}
     return ret
+
 
 orch_show_sls = salt.utils.functools.alias_function(orchestrate_show_sls, 'orch_show_sls')
 

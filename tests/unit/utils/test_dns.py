@@ -14,6 +14,8 @@ from salt.utils.odict import OrderedDict
 import salt.utils.dns
 from salt.utils.dns import _to_port, _tree, _weighted_order, _data2rec, _data2rec_group
 from salt.utils.dns import _lookup_gai, _lookup_dig, _lookup_drill, _lookup_host, _lookup_nslookup
+from salt.utils.dns import lookup
+import salt.modules.cmdmod
 
 # Testing
 from tests.support.unit import skipIf, TestCase
@@ -277,6 +279,52 @@ class DNSlookupsCase(TestCase):
                         msg='Error parsing DNSSEC\'d {0} returns'.format(rec_t)
                     )
 
+    def test_lookup_with_servers(self):
+        rights = {
+            'A': [
+                'Name:\tmocksrvr.example.com\nAddress: 10.1.1.1',
+                'Name:\tmocksrvr.example.com\nAddress: 10.1.1.1\n'
+                'Name:\tweb.example.com\nAddress: 10.2.2.2\n'
+                'Name:\tweb.example.com\nAddress: 10.3.3.3'
+            ],
+            'AAAA': [
+                'mocksrvr.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:111',
+                'mocksrvr.example.com\tcanonical name = web.example.com.\n'
+                'web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:111\n'
+                'web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:222\n'
+                'web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:333'
+            ],
+            'CNAME': [
+                'mocksrvr.example.com\tcanonical name = web.example.com.'
+            ],
+            'MX':    [
+                'example.com\tmail exchanger = 10 mx1.example.com.',
+                'example.com\tmail exchanger = 10 mx1.example.com.\n'
+                'example.com\tmail exchanger = 20 mx2.example.eu.\n'
+                'example.com\tmail exchanger = 30 mx3.example.nl.'
+            ],
+            'TXT':   [
+                'example.com\ttext = "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
+            ]
+        }
+
+        for rec_t, tests in rights.items():
+            with self._mock_cmd_ret([dict([('stdout', dres)]) for dres in tests]):
+                for test_res in self.RESULTS[rec_t]:
+                    if rec_t in ('A', 'AAAA', 'CNAME'):
+                        rec = 'mocksrvr.example.com'
+                    else:
+                        rec = 'example.com'
+                    self.assertEqual(
+                        lookup(rec, rec_t, method='nslookup', servers='8.8.8.8'), test_res,
+                    )
+
+    @skipIf(not salt.utils.dns.HAS_DIG, 'dig is not available')
+    def test_dig_options(self):
+        cmd = 'dig {0} -v'.format(salt.utils.dns.DIG_OPTIONS)
+        cmd = salt.modules.cmdmod.retcode(cmd, python_shell=False, output_loglevel='quiet')
+        self.assertEqual(cmd, 0)
+
     def test_dig(self):
         wrong_type = {'retcode': 0, 'stderr':  ';; Warning, ignoring invalid type ABC'}
 
@@ -442,13 +490,13 @@ class DNSlookupsCase(TestCase):
 
         empty = {'stdout': 'www.example.com has no MX record'}
 
-        # example returns for dig
+        # example returns for host
         rights = {
             'A':     [
                 'mocksrvr.example.com has address 10.1.1.1',
-                'web.example.com  has address 10.1.1.1\n'
-                'web.example.com  has address 10.2.2.2\n'
-                'web.example.com  has address 10.3.3.3'
+                'web.example.com has address 10.1.1.1\n'
+                'web.example.com has address 10.2.2.2\n'
+                'web.example.com has address 10.3.3.3'
 
             ],
             'AAAA':  [

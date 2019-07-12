@@ -1582,7 +1582,7 @@ def _split_repo_str(repo):
     Return APT source entry as a tuple.
     '''
     split = sourceslist.SourceEntry(repo)
-    return split.type, split.uri, split.dist, split.comps
+    return split.type, split.architectures, split.uri, split.dist, split.comps
 
 
 def _consolidate_repo_sources(sources):
@@ -1771,7 +1771,7 @@ def get_repo(repo, **kwargs):
 
     if repos:
         try:
-            repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
+            repo_type, repo_architectures, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
             if ppa_auth:
                 uri_match = re.search('(http[s]?://)(.+)', repo_uri)
                 if uri_match:
@@ -1844,7 +1844,11 @@ def del_repo(repo, **kwargs):
     if repos:
         deleted_from = dict()
         try:
-            repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
+            repo_type, \
+                repo_architectures, \
+                repo_uri, \
+                repo_dist, \
+                repo_comps = _split_repo_str(repo)
         except SyntaxError:
             raise SaltInvocationError(
                 'Error: repo \'{0}\' not a well formatted definition'
@@ -1852,8 +1856,10 @@ def del_repo(repo, **kwargs):
             )
 
         for source in repos:
-            if (source.type == repo_type and source.uri == repo_uri and
-                    source.dist == repo_dist):
+            if (source.type == repo_type
+                    and source.architectures == repo_architectures
+                    and source.uri == repo_uri
+                    and source.dist == repo_dist):
 
                 s_comps = set(source.comps)
                 r_comps = set(repo_comps)
@@ -1945,7 +1951,7 @@ def get_repo_keys():
 
     # The double usage of '--with-fingerprint' is necessary in order to
     # retrieve the fingerprint of the subkey.
-    cmd = ['apt-key', 'adv', '--list-public-keys', '--with-fingerprint',
+    cmd = ['apt-key', 'adv', '--batch', '--list-public-keys', '--with-fingerprint',
            '--with-fingerprint', '--with-colons', '--fixed-list-mode']
 
     cmd_ret = __salt__['cmd.run_all'](cmd=cmd)
@@ -2045,7 +2051,7 @@ def add_repo_key(path=None, text=None, keyserver=None, keyid=None, saltenv='base
             error_msg = 'No keyid or keyid too short for keyserver: {0}'.format(keyserver)
             raise SaltInvocationError(error_msg)
 
-        cmd.extend(['adv', '--keyserver', keyserver, '--recv', keyid])
+        cmd.extend(['adv', '--batch', '--keyserver', keyserver, '--recv', keyid])
     elif keyid:
         error_msg = 'No keyserver specified for keyid: {0}'.format(keyid)
         raise SaltInvocationError(error_msg)
@@ -2319,7 +2325,11 @@ def mod_repo(repo, saltenv='base', **kwargs):
     repos = [s for s in sources if not s.invalid]
     mod_source = None
     try:
-        repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
+        repo_type, \
+            repo_architectures, \
+            repo_uri, \
+            repo_dist, \
+            repo_comps = _split_repo_str(repo)
     except SyntaxError:
         raise SyntaxError(
             'Error: repo \'{0}\' not a well formatted definition'.format(repo)
@@ -2342,10 +2352,10 @@ def mod_repo(repo, saltenv='base', **kwargs):
             if not imported:
                 http_proxy_url = _get_http_proxy_url()
                 if http_proxy_url:
-                    cmd = ['apt-key', 'adv', '--keyserver-options', 'http-proxy={0}'.format(http_proxy_url),
+                    cmd = ['apt-key', 'adv', '--batch', '--keyserver-options', 'http-proxy={0}'.format(http_proxy_url),
                            '--keyserver', keyserver, '--logger-fd', '1', '--recv-keys', keyid]
                 else:
-                    cmd = ['apt-key', 'adv', '--keyserver', keyserver,
+                    cmd = ['apt-key', 'adv', '--batch', '--keyserver', keyserver,
                            '--logger-fd', '1', '--recv-keys', keyid]
                 ret = __salt__['cmd.run_all'](cmd,
                                               python_shell=False,
@@ -2387,6 +2397,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     if 'architectures' in kwargs:
         kwargs['architectures'] = kwargs['architectures'].split(',')
+    else:
+        kwargs['architectures'] = repo_architectures
 
     if 'disabled' in kwargs:
         kwargs['disabled'] = salt.utils.data.is_true(kwargs['disabled'])
@@ -2407,6 +2419,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
                 if comp in getattr(source, 'comps', []):
                     mod_source = source
             if not source.comps:
+                mod_source = source
+            if kwargs['architectures'] != source.architectures:
                 mod_source = source
             if mod_source:
                 break

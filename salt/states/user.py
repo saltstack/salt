@@ -141,13 +141,13 @@ def _changes(name,
             change['empty_password'] = True
         if date is not None and lshad['lstchg'] != date:
             change['date'] = date
-        if mindays and mindays is not 0 and lshad['min'] != mindays:
+        if mindays is not None and lshad['min'] != mindays:
             change['mindays'] = mindays
-        if maxdays and maxdays is not 999999 and lshad['max'] != maxdays:
+        if maxdays is not None and lshad['max'] != maxdays:
             change['maxdays'] = maxdays
-        if inactdays and inactdays is not 0 and lshad['inact'] != inactdays:
+        if inactdays is not None and lshad['inact'] != inactdays:
             change['inactdays'] = inactdays
-        if warndays and warndays is not 7 and lshad['warn'] != warndays:
+        if warndays is not None and lshad['warn'] != warndays:
             change['warndays'] = warndays
         if expire and lshad['expire'] != expire:
             change['expire'] = expire
@@ -161,13 +161,13 @@ def _changes(name,
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
     if win_homedrive and lusr['homedrive'] != win_homedrive:
-        change['homedrive'] = win_homedrive
+        change['win_homedrive'] = win_homedrive
     if win_profile and lusr['profile'] != win_profile:
-        change['profile'] = win_profile
+        change['win_profile'] = win_profile
     if win_logonscript and lusr['logonscript'] != win_logonscript:
-        change['logonscript'] = win_logonscript
+        change['win_logonscript'] = win_logonscript
     if win_description and lusr['description'] != win_description:
-        change['description'] = win_description
+        change['win_description'] = win_description
 
     # MacOS doesn't have full GECOS support, so check for the "ch" functions
     # and ignore these parameters if these functions do not exist.

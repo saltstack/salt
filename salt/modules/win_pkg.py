@@ -579,7 +579,7 @@ def refresh_db(**kwargs):
     The database is stored in a serialized format located by default at the
     following location:
 
-    `C:\salt\var\cache\salt\minion\files\base\win\repo-ng\winrepo.p`
+    ``C:\salt\var\cache\salt\minion\files\base\win\repo-ng\winrepo.p``
 
     This module performs the following steps to generate the software metadata
     database:
@@ -587,7 +587,7 @@ def refresh_db(**kwargs):
     - Fetch the package definition files (.sls) from `winrepo_source_dir`
       (default `salt://win/repo-ng`) and cache them in
       `<cachedir>\files\<saltenv>\<winrepo_source_dir>`
-      (default: `C:\salt\var\cache\salt\minion\files\base\win\repo-ng`)
+      (default: ``C:\salt\var\cache\salt\minion\files\base\win\repo-ng``)
     - Call :py:func:`pkg.genrepo <salt.modules.win_pkg.genrepo>` to parse the
       package definition files and generate the repository metadata database
       file (`winrepo.p`)
@@ -783,7 +783,7 @@ def _get_repo_details(saltenv):
 
 def genrepo(**kwargs):
     '''
-    Generate package metedata db based on files within the winrepo_source_dir
+    Generate package metadata db based on files within the winrepo_source_dir
 
     Kwargs:
 
@@ -1188,6 +1188,11 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 'extra_install_flags': kwargs.get('extra_install_flags')
             }
         }
+    elif len(pkg_params) == 1:
+        # A dict of packages was passed, but it contains only 1 key, so we need
+        # to add the 'extra_install_flags'
+        for pkg in pkg_params:
+            pkg_params[pkg]['extra_install_flags'] = kwargs.get('extra_install_flags')
 
     # Get a list of currently installed software for comparison at the end
     old = list_pkgs(saltenv=saltenv, refresh=refresh, versions_as_list=True)
@@ -1828,7 +1833,7 @@ def purge(name=None, pkgs=None, **kwargs):
 
 def get_repo_data(saltenv='base'):
     '''
-    Returns the existing package meteadata db. Will create it, if it does not
+    Returns the existing package metadata db. Will create it, if it does not
     exist, however will not refresh it.
 
     Args:

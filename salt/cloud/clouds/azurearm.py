@@ -265,7 +265,7 @@ def avail_locations(conn=None, call=None):  # pylint: disable=unused-argument
         webconn = get_conn(WebSiteManagementClient)
 
     ret = {}
-    regions = webconn.global_model.get_subscription_geo_regions()
+    regions = webconn.list_geo_regions()
     if hasattr(regions, 'value'):
         regions = regions.value
     for location in regions:  # pylint: disable=no-member
@@ -533,7 +533,7 @@ def list_nodes_select(conn=None, call=None):  # pylint: disable=unused-argument
     )
 
 
-def show_instance(name, resource_group=None, call=None):  # pylint: disable=unused-argument
+def show_instance(name, kwargs=None, call=None):  # pylint: disable=unused-argument
     '''
     Show the details from the provider concerning an instance
     '''
@@ -547,6 +547,12 @@ def show_instance(name, resource_group=None, call=None):  # pylint: disable=unus
         compconn = get_conn()
 
     data = None
+    resource_group = None
+
+    # check if there is a resource_group specified
+    if kwargs:
+        resource_group = kwargs.get('resource_group', None)
+
     if resource_group is None:
         for group in list_resource_groups():
             try:
@@ -555,8 +561,13 @@ def show_instance(name, resource_group=None, call=None):  # pylint: disable=unus
                 resource_group = group
             except CloudError:
                 continue
+    else:
+        try:
+            instance = compconn.virtual_machines.get(resource_group, name)
+            data = object_to_dict(instance)
+        except CloudError:
+            pass
 
-    # Find under which cloud service the name is listed, if any
     if data is None:
         return {}
 
@@ -568,7 +579,7 @@ def show_instance(name, resource_group=None, call=None):  # pylint: disable=unus
         data['network_profile']['network_interfaces'] = []
 
     for iface in data['network_profile']['network_interfaces']:
-        iface_name = iface.id.split('/')[-1]
+        iface_name = iface['id'].split('/')[-1]
         iface_data = show_interface(kwargs={
             'resource_group': resource_group,
             'iface_name': iface_name,

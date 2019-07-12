@@ -198,6 +198,7 @@ def __virtual__():
 
     return __virtualname__
 
+
 __outputter__ = {
     'touch': 'txt',
     'append': 'txt',
@@ -1070,7 +1071,7 @@ def remove(path, force=False):
         raise SaltInvocationError('File path must be absolute: {0}'.format(path))
 
     # Does the file/folder exists
-    if not os.path.exists(path):
+    if not os.path.exists(path) and not is_link(path):
         raise CommandExecutionError('Path not found: {0}'.format(path))
 
     # Remove ReadOnly Attribute
@@ -1639,7 +1640,6 @@ def check_perms(path,
     if not ret:
         ret = {'name': path,
                'changes': {},
-               'pchanges': {},
                'comment': [],
                'result': True}
         orig_comment = ''
@@ -1653,7 +1653,7 @@ def check_perms(path,
         current_owner = salt.utils.win_dacl.get_owner(obj_name=path)
         if owner != current_owner:
             if __opts__['test'] is True:
-                ret['pchanges']['owner'] = owner
+                ret['changes']['owner'] = owner
             else:
                 try:
                     salt.utils.win_dacl.set_owner(
@@ -1728,13 +1728,12 @@ def check_perms(path,
                             changes[user]['applies_to'] = applies_to
 
     if changes:
-        ret['pchanges']['deny_perms'] = {}
         ret['changes']['deny_perms'] = {}
         for user in changes:
             user_name = salt.utils.win_dacl.get_name(principal=user)
 
             if __opts__['test'] is True:
-                ret['pchanges']['deny_perms'][user] = changes[user]
+                ret['changes']['deny_perms'][user] = changes[user]
             else:
                 # Get applies_to
                 applies_to = None
@@ -1850,12 +1849,11 @@ def check_perms(path,
                             changes[user]['applies_to'] = applies_to
 
     if changes:
-        ret['pchanges']['grant_perms'] = {}
         ret['changes']['grant_perms'] = {}
         for user in changes:
             user_name = salt.utils.win_dacl.get_name(principal=user)
             if __opts__['test'] is True:
-                ret['pchanges']['grant_perms'][user] = changes[user]
+                ret['changes']['grant_perms'][user] = changes[user]
             else:
                 applies_to = None
                 if 'applies_to' not in changes[user]:
@@ -1913,7 +1911,7 @@ def check_perms(path,
     if inheritance is not None:
         if not inheritance == salt.utils.win_dacl.get_inheritance(obj_name=path):
             if __opts__['test'] is True:
-                ret['pchanges']['inheritance'] = inheritance
+                ret['changes']['inheritance'] = inheritance
             else:
                 try:
                     salt.utils.win_dacl.set_inheritance(
@@ -1938,9 +1936,9 @@ def check_perms(path,
                 if 'grant' in cur_perms[user_name] and \
                         not cur_perms[user_name]['grant']['inherited']:
                     if __opts__['test'] is True:
-                        if 'remove_perms' not in ret['pchanges']:
-                            ret['pchanges']['remove_perms'] = {}
-                        ret['pchanges']['remove_perms'].update(
+                        if 'remove_perms' not in ret['changes']:
+                            ret['changes']['remove_perms'] = {}
+                        ret['changes']['remove_perms'].update(
                             {user_name: cur_perms[user_name]})
                     else:
                         if 'remove_perms' not in ret['changes']:
@@ -1957,9 +1955,9 @@ def check_perms(path,
                 if 'deny' in cur_perms[user_name] and \
                         not cur_perms[user_name]['deny']['inherited']:
                     if __opts__['test'] is True:
-                        if 'remove_perms' not in ret['pchanges']:
-                            ret['pchanges']['remove_perms'] = {}
-                        ret['pchanges']['remove_perms'].update(
+                        if 'remove_perms' not in ret['changes']:
+                            ret['changes']['remove_perms'] = {}
+                        ret['changes']['remove_perms'].update(
                             {user_name: cur_perms[user_name]})
                     else:
                         if 'remove_perms' not in ret['changes']:
@@ -1982,7 +1980,7 @@ def check_perms(path,
     ret['comment'] = '\n'.join(ret['comment'])
 
     # Set result for test = True
-    if __opts__['test'] and (ret['changes'] or ret['pchanges']):
+    if __opts__['test'] and (ret['changes']):
         ret['result'] = None
 
     return ret

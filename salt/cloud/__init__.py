@@ -1294,16 +1294,16 @@ class Cloud(object):
                 start = int(time.time())
                 while int(time.time()) < start + 60:
                     # We'll try every <timeout> seconds, up to a minute
-                    mopts_ = salt.config.DEFAULT_MINION_OPTS
+                    mopts_ = salt.config.DEFAULT_MASTER_OPTS
                     conf_path = '/'.join(self.opts['conf_file'].split('/')[:-1])
                     mopts_.update(
-                        salt.config.minion_config(
+                        salt.config.master_config(
                             os.path.join(conf_path,
-                                         'minion')
+                                         'master')
                         )
                     )
 
-                    client = salt.client.get_local_client(mopts=self.opts)
+                    client = salt.client.get_local_client(mopts=mopts_)
 
                     ret = client.cmd(
                         vm_['name'],
@@ -1343,6 +1343,24 @@ class Cloud(object):
             )
             output['ret'] = action_out
         return output
+
+    @staticmethod
+    def vm_config(name, main, provider, profile, overrides):
+        '''
+        Create vm config.
+
+        :param str name: The name of the vm
+        :param dict main: The main cloud config
+        :param dict provider: The provider config
+        :param dict profile: The profile config
+        :param dict overrides: The vm's config overrides
+        '''
+        vm = main.copy()
+        vm = salt.utils.dictupdate.update(vm, provider)
+        vm = salt.utils.dictupdate.update(vm, profile)
+        vm.update(overrides)
+        vm['name'] = name
+        return vm
 
     def extras(self, extra_):
         '''
@@ -1430,12 +1448,13 @@ class Cloud(object):
                 ret[name] = {'Error': msg}
                 continue
 
-            vm_ = main_cloud_config.copy()
-            vm_.update(provider_details)
-            vm_.update(profile_details)
-            vm_.update(vm_overrides)
-
-            vm_['name'] = name
+            vm_ = self.vm_config(
+                name,
+                main_cloud_config,
+                provider_details,
+                profile_details,
+                vm_overrides,
+            )
             if self.opts['parallel']:
                 process = multiprocessing.Process(
                     target=self.create,

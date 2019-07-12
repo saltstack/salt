@@ -199,6 +199,7 @@ def latest_version(*names, **kwargs):
     '''
     return '' if len(names) == 1 else dict((x, '') for x in names)
 
+
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
@@ -484,6 +485,7 @@ def remove(name=None, pkgs=None, **kwargs):
         )
 
     return ret
+
 
 # Support pkg.delete to remove packages to more closely match pkg_delete
 delete = salt.utils.functools.alias_function(remove, 'delete')

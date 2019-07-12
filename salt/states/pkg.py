@@ -1720,7 +1720,7 @@ def installed(
         try:
             action = 'pkg.hold' if kwargs['hold'] else 'pkg.unhold'
             hold_ret = __salt__[action](
-                name=name, pkgs=desired, sources=sources
+                name=name, pkgs=desired
             )
         except (CommandExecutionError, SaltInvocationError) as exc:
             comment.append(six.text_type(exc))

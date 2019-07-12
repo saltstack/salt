@@ -449,6 +449,14 @@ class SaltTestingParser(optparse.OptionParser):
                     ret.update(filename_map[path_expr])
                     break
 
+        if any(x.startswith('integration.proxy.') for x in ret):
+            # Ensure that the salt-proxy daemon is started for these tests.
+            self.options.proxy = True
+
+        if any(x.startswith('integration.ssh.') for x in ret):
+            # Ensure that an ssh daemon is started for these tests.
+            self.options.ssh = True
+
         return ret
 
     def parse_args(self, args=None, values=None):
@@ -594,6 +602,9 @@ class SaltTestingParser(optparse.OptionParser):
         # Default logging level: ERROR
         logging.root.setLevel(logging.NOTSET)
 
+        log_levels_to_evaluate = [
+            logging.ERROR,  # Default log level
+        ]
         if self.options.tests_logfile:
             filehandler = logging.FileHandler(
                 mode='w',           # Not preserved between re-runs
@@ -604,6 +615,7 @@ class SaltTestingParser(optparse.OptionParser):
             filehandler.setLevel(logging.DEBUG)
             filehandler.setFormatter(formatter)
             logging.root.addHandler(filehandler)
+            log_levels_to_evaluate.append(logging.DEBUG)
 
             print(' * Logging tests on {0}'.format(self.options.tests_logfile))
 
@@ -617,16 +629,17 @@ class SaltTestingParser(optparse.OptionParser):
                 logging_level = logging.TRACE
             elif self.options.verbosity == 4:   # -vvv
                 logging_level = logging.DEBUG
-                print('DEBUG')
             elif self.options.verbosity == 3:   # -vv
-                print('INFO')
                 logging_level = logging.INFO
             else:
                 logging_level = logging.ERROR
+            log_levels_to_evaluate.append(logging_level)
             os.environ['TESTS_LOG_LEVEL'] = str(self.options.verbosity)  # future lint: disable=blacklisted-function
             consolehandler.setLevel(logging_level)
             logging.root.addHandler(consolehandler)
             log.info('Runtests logging has been setup')
+
+        os.environ['TESTS_MIN_LOG_LEVEL_NAME'] = logging.getLevelName(min(log_levels_to_evaluate))
 
     def pre_execution_cleanup(self):
         '''

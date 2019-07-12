@@ -108,7 +108,7 @@ Saltclass Examples
 
 ``<saltclass_path>/nodes/lausanne/qls.node1.yml``
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     environment: base
 
@@ -228,19 +228,20 @@ def __virtual__():
 
 def top(**kwargs):
     '''
-    Node definitions path will be retrieved from __opts__ - or set to default -
-    then added to 'salt_data' dict that is passed to the 'get_tops' function.
-    'salt_data' dict is a convenient way to pass all the required datas to the function
-    It contains:
-        - __opts__
-        - empty __salt__
-        - __grains__
-        - empty __pillar__
-        - minion_id
-        - path
-
-    If successfull the function will return a top dict for minion_id
+    Compile tops
     '''
+    # Node definitions path will be retrieved from args (or set to default),
+    # then added to 'salt_data' dict that is passed to the 'get_pillars'
+    # function. The dictionary contains:
+    #     - __opts__
+    #     - __salt__
+    #     - __grains__
+    #     - __pillar__
+    #     - minion_id
+    #     - path
+    #
+    # If successful, the function will return a pillar dict for minion_id.
+
     # If path has not been set, make a default
     _opts = __opts__['master_tops']['saltclass']
     if 'path' not in _opts:

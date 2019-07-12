@@ -152,7 +152,7 @@ class TestSerializers(TestCase):
 
         # BLAAM! yml_src is not valid !
         final_obj = OrderedDict(yaml.deserialize(yml_src))
-        assert obj != final_obj
+        assert obj != final_obj, 'Objects matched! {} == {}'.format(obj, final_obj)
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
     def test_sls_aggregate(self):

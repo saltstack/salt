@@ -390,7 +390,7 @@ def _passphrase_callback(passphrase):
     Returns a callback function used to supply a passphrase for private keys
     '''
     def f(*args):
-        return salt.utils.stringutils.to_str(passphrase)
+        return salt.utils.stringutils.to_bytes(passphrase)
     return f
 
 
@@ -671,7 +671,7 @@ def read_crl(crl):
     text = get_pem_entry(text, pem_type='X509 CRL')
 
     crltempfile = tempfile.NamedTemporaryFile()
-    crltempfile.write(text)
+    crltempfile.write(salt.utils.stringutils.to_str(text))
     crltempfile.flush()
     crlparsed = _parse_openssl_crl(crltempfile.name)
     crltempfile.close()
@@ -776,21 +776,22 @@ def write_pem(text, path, overwrite=True, pem_type=None):
         text = get_pem_entry(text, pem_type=pem_type)
         _dhparams = ''
         _private_key = ''
-        if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and \
-                not overwrite:
+        if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and not overwrite:
             _filecontents = _text_or_file(path)
             try:
                 _dhparams = get_pem_entry(_filecontents, 'DH PARAMETERS')
-            except salt.exceptions.SaltInvocationError:
-                pass
+            except salt.exceptions.SaltInvocationError as err:
+                log.debug("Error when getting DH PARAMETERS: %s", err)
+                log.trace(err, exc_info=err)
             try:
                 _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
-            except salt.exceptions.SaltInvocationError:
-                pass
+            except salt.exceptions.SaltInvocationError as err:
+                log.debug("Error when getting PRIVATE KEY: %s", err)
+                log.trace(err, exc_info=err)
         with salt.utils.files.fopen(path, 'w') as _fp:
             if pem_type and pem_type == 'CERTIFICATE' and _private_key:
                 _fp.write(salt.utils.stringutils.to_str(_private_key))
-            _fp.write(text)
+            _fp.write(salt.utils.stringutils.to_str(text))
             if pem_type and pem_type == 'CERTIFICATE' and _dhparams:
                 _fp.write(salt.utils.stringutils.to_str(_dhparams))
     return 'PEM written to {0}'.format(path)
@@ -960,7 +961,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
 
         serial_number = rev_item['serial_number'].replace(':', '')
         # OpenSSL bindings requires this to be a non-unicode string
-        serial_number = salt.utils.stringutils.to_str(serial_number)
+        serial_number = salt.utils.stringutils.to_bytes(serial_number)
 
         if 'not_after' in rev_item and not include_expired:
             not_after = datetime.datetime.strptime(
@@ -975,6 +976,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         rev_date = datetime.datetime.strptime(
             rev_item['revocation_date'], '%Y-%m-%d %H:%M:%S')
         rev_date = rev_date.strftime('%Y%m%d%H%M%SZ')
+        rev_date = salt.utils.stringutils.to_bytes(rev_date)
 
         rev = OpenSSL.crypto.Revoked()
         rev.set_serial(serial_number)
@@ -1004,7 +1006,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         'days': days_valid
     }
     if digest:
-        export_kwargs['digest'] = bytes(digest)
+        export_kwargs['digest'] = salt.utils.stringutils.to_bytes(digest)
     else:
         log.warning('No digest specified. The default md5 digest will be used.')
 
@@ -1375,9 +1377,9 @@ def create_certificate(
                 pem_type='CERTIFICATE REQUEST').replace('\n', '')
         if 'public_key' in kwargs:
             # Strip newlines to make passing through as cli functions easier
-            kwargs['public_key'] = get_public_key(
+            kwargs['public_key'] = salt.utils.stringutils.to_str(get_public_key(
                 kwargs['public_key'],
-                passphrase=kwargs['public_key_passphrase']).replace('\n', '')
+                passphrase=kwargs['public_key_passphrase'])).replace('\n', '')
 
         # Remove system entries in kwargs
         # Including listen_in and preqreuired because they are not included
@@ -1572,7 +1574,7 @@ def create_certificate(
             pem_type='CERTIFICATE'
         )
     else:
-        return cert.as_pem()
+        return salt.utils.stringutils.to_str(cert.as_pem())
 # pylint: enable=too-many-locals
 
 
@@ -1778,13 +1780,13 @@ def verify_crl(crl, cert):
     crltext = _text_or_file(crl)
     crltext = get_pem_entry(crltext, pem_type='X509 CRL')
     crltempfile = tempfile.NamedTemporaryFile()
-    crltempfile.write(crltext)
+    crltempfile.write(salt.utils.stringutils.to_str(crltext))
     crltempfile.flush()
 
     certtext = _text_or_file(cert)
     certtext = get_pem_entry(certtext, pem_type='CERTIFICATE')
     certtempfile = tempfile.NamedTemporaryFile()
-    certtempfile.write(certtext)
+    certtempfile.write(salt.utils.stringutils.to_str(certtext))
     certtempfile.flush()
 
     cmd = ('openssl crl -noout -in {0} -CAfile {1}'.format(

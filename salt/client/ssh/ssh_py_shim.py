@@ -118,7 +118,8 @@ def need_deployment():
         if dstat.st_uid != euid:
             # Attack detected, try again
             need_deployment()
-        if dstat.st_mode != 16832:
+        # AIX has non-POSIX bit 0o240700, isolate to 0o40700
+        if dstat.st_mode & ~65536 != 16832:
             # Attack detected
             need_deployment()
         # If SUDOing then also give the super user group write permissions
@@ -303,19 +304,23 @@ def main(argv):  # pylint: disable=W0613
     if OPTIONS.cmd_umask is not None:
         old_umask = os.umask(OPTIONS.cmd_umask)  # pylint: disable=blacklisted-function
     if OPTIONS.tty:
+        proc = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # Returns bytes instead of string on python 3
-        stdout, _ = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+        stdout, _ = proc.communicate()
         sys.stdout.write(stdout.decode(encoding=get_system_encoding(), errors="replace"))
         sys.stdout.flush()
+        retcode = proc.returncode
         if OPTIONS.wipe:
             shutil.rmtree(OPTIONS.saltdir)
     elif OPTIONS.wipe:
-        subprocess.call(salt_argv)
+        retcode = subprocess.call(salt_argv)
         shutil.rmtree(OPTIONS.saltdir)
     else:
-        subprocess.call(salt_argv)
+        retcode = subprocess.call(salt_argv)
     if OPTIONS.cmd_umask is not None:
         os.umask(old_umask)  # pylint: disable=blacklisted-function
+    return retcode
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

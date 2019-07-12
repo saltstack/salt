@@ -50,6 +50,7 @@ class ValidateNetTestCase(TestCase):
         Test IPv6 address validation
         '''
         true_addrs = [
+            '::',
             '::1',
             '::1/32',
             '::1/32',
@@ -62,6 +63,8 @@ class ValidateNetTestCase(TestCase):
             '::1/0',
             '::1/32d',
             '::1/129',
+            '2a03:4000:c:10aa:1017:f00d:aaaa:a:4506',
+            '2a03::1::2',
         ]
 
         for addr in true_addrs:

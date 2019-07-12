@@ -393,7 +393,7 @@ def __within(within=None, errmsg=None, dtype=None):
 
 def __space_delimited_list(value):
     '''validate that a value contains one or more space-delimited values'''
-    if isinstance(value, str):
+    if isinstance(value, six.string_types):
         value = value.strip().split()
 
     if hasattr(value, '__iter__') and value != []:
@@ -407,6 +407,7 @@ SALT_ATTR_TO_DEBIAN_ATTR_MAP = {
     'search': 'dns-search',
     'hwaddr': 'hwaddress',  # TODO: this limits bootp functionality
     'ipaddr': 'address',
+    'ipaddrs': 'addresses',
 }
 
 
@@ -423,6 +424,7 @@ IPV4_ATTR_MAP = {
     'proto': __within(IPV4_VALID_PROTO, dtype=six.text_type),
     # ipv4 static & manual
     'address': __ipv4_quad,
+    'addresses': __anything,
     'netmask': __ipv4_netmask,
     'broadcast': __ipv4_quad,
     'metric':  __int,
@@ -473,6 +475,7 @@ IPV6_ATTR_MAP = {
     'proto': __within(IPV6_VALID_PROTO),
     # ipv6 static & manual
     'address': __ipv6,
+    'addresses': __anything,
     'netmask': __ipv6_netmask,
     'broadcast': __ipv6,
     'gateway': __ipv6,  # supports a colon-delimited list
@@ -626,7 +629,12 @@ def _parse_interfaces(interface_files=None):
                             attrname = attr
                         (valid, value, errmsg) = _validate_interface_option(
                             attr, valuestr, addrfam)
-                        iface_dict[attrname] = value
+                        if attrname == 'address' and 'address' in iface_dict:
+                            if 'addresses' not in iface_dict:
+                                iface_dict['addresses'] = []
+                            iface_dict['addresses'].append(value)
+                        else:
+                            iface_dict[attrname] = value
 
                     elif attr in _REV_ETHTOOL_CONFIG_OPTS:
                         if 'ethtool' not in iface_dict:
@@ -1814,7 +1822,8 @@ def down(iface, iface_type):
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought down.
     if iface_type not in ['slave', 'source']:
-        return __salt__['cmd.run'](['ifdown', iface])
+        cmd = ['ip', 'link', 'set', '{0}'.format(iface), 'down']
+        return __salt__['cmd.run'](cmd, python_shell=False)
     return None
 
 
@@ -1875,7 +1884,8 @@ def up(iface, iface_type):  # pylint: disable=C0103
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought up.
     if iface_type not in ('slave', 'source'):
-        return __salt__['cmd.run'](['ifup', iface])
+        cmd = ['ip', 'link', 'set', '{0}'.format(iface), 'up']
+        return __salt__['cmd.run'](cmd, python_shell=False)
     return None
 
 
@@ -1905,9 +1915,11 @@ def get_network_settings():
 
         hostname = _parse_hostname()
         domainname = _parse_domainname()
+        searchdomain = _parse_searchdomain()
 
         settings['hostname'] = hostname
         settings['domainname'] = domainname
+        settings['searchdomain'] = searchdomain
 
     else:
         settings = _parse_current_network_settings()

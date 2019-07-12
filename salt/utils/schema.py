@@ -403,6 +403,7 @@ of a field to null.
 def _failing_new(*args, **kwargs):
     raise TypeError('Can\'t create another NullSentinel instance')
 
+
 NullSentinel.__new__ = staticmethod(_failing_new)
 del _failing_new
 
