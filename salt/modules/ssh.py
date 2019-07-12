@@ -1407,3 +1407,59 @@ def key_is_encrypted(key):
         salt '*' ssh.key_is_encrypted /root/id_rsa
     '''
     return __utils__['ssh.key_is_encrypted'](key)
+
+
+def generate_host_key(filename, key_type, num_bits=False):
+    '''
+    Function to generate a new host key, given the path to a file a key
+    type (RSA, DSA, ED25519, ECDSA), and optionally the bit depth.
+
+    Checks for an existing SSH key at the requested file path, and automatically
+    creates a backup copy if one is found.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ssh.generate_host_key /etc/ssh/ssh_host_dsa_key dsa
+    '''
+    try:
+        with salt.utils.files.fopen(filename, 'r') as fp_:
+            key_data = fp_.read()
+    except:
+        key_data = False
+
+    cmd = ['ssh-keygen', '-N', '', '-t', key_type]
+    if num_bits:
+        cmd.extend(['-b', num_bits])
+
+    if key_data:
+        basename = os.path.basename(filename)
+        dirname = os.path.dirname(os.path.abspath(filename))
+        tgt = salt.utils.files.mkstemp(prefix=basename, dir=dirname)
+        os.remove(tgt)
+
+        cmd.extend(['-f', tgt])
+        cmd_result = __salt__['cmd.run'](cmd, ignore_retcode=True, python_shell=False)
+
+        try:
+            salt.utils.files.copyfile('{0}.pub'.format(tgt),
+                                      '{0}.pub'.format(filename),
+                                      __salt__['config.get']('backup_mode'),
+                                      __salt__['config.get']('cachedir'))
+
+            salt.utils.files.copyfile(tgt,
+                                      filename,
+                                      __salt__['config.get']('backup_mode'),
+                                      __salt__['config.get']('cachedir'))
+            
+            os.remove('{0}.pub'.format(tgt))
+            os.remove(tgt)
+        except IOError as io_error:
+            return {'status': 'failed', 'comment': 'failed to create backup: {0}'.format(io_error)}
+
+        return {'status': 'updated', 'comment': cmd_result}
+    else:
+        cmd.extend(['-f', filename])
+        cmd_result = __salt__['cmd.run'](cmd, ignore_retcode=True, python_shell=False)
+        return {'status': 'created', 'comment': cmd_result}
