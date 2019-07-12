@@ -597,6 +597,7 @@ class GitPythonTest(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMix
         }
 
 
+@skipIf(salt.utils.platform.is_windows(), 'WAR ROOM TEMPORARY SKIP')
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required for temp repo setup'.format(GITPYTHON_MINVER))
 @skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
