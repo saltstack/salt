@@ -68,18 +68,23 @@ def __global_logging_exception_handler(exc_type, exc_value, exc_traceback,
     '''
     This function will log all python exceptions.
     '''
-    # Log the exception
-    logging.getLogger(__name__).error(
-        'An un-handled exception was caught by salt-testing\'s global '
-        'exception handler:\n%s: %s\n%s',
-        exc_type.__name__,
-        exc_value,
-        ''.join(traceback.format_exception(
-            exc_type, exc_value, exc_traceback
-        )).strip()
-    )
-    # Call the original sys.excepthook
-    global_exc_handler(exc_type, exc_value, exc_traceback)
+    try:
+        # Log the exception
+        logging.getLogger(__name__).error(
+            'An un-handled exception was caught by salt-testing\'s global '
+            'exception handler:\n%s: %s\n%s',
+            exc_type.__name__,
+            exc_value,
+            ''.join(traceback.format_exception(
+                exc_type, exc_value, exc_traceback
+            )).strip()
+        )
+        # Call the original sys.excepthook
+        global_exc_handler(exc_type, exc_value, exc_traceback)
+    except (AttributeError, NameError):
+        # Python is probably shutting down and has set objects to None
+        # Carry on
+        pass
 
 
 # Set our own exception handler as the one to use
