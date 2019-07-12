@@ -30,8 +30,6 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 
 log = logging.getLogger(__name__)
 
-__testcontext__ = {}
-
 _PKG_TARGETS = {
     'Arch': ['sl', 'libpng'],
     'Debian': ['python-plist', 'apg'],
@@ -124,7 +122,7 @@ def pkgmgr_avail(run_function, grains):
     return True
 
 
-def latest_version(run_function, *names):
+def latest_version(ctx, run_function, *names):
     '''
     Helper function which ensures that we don't make any unnecessary calls to
     pkg.latest_version to figure out what version we need to install. This
@@ -133,18 +131,18 @@ def latest_version(run_function, *names):
     test suite.
     '''
     key = 'latest_version'
-    if key not in __testcontext__:
-        __testcontext__[key] = {}
-    targets = [x for x in names if x not in __testcontext__[key]]
+    if key not in ctx:
+        ctx[key] = {}
+    targets = [x for x in names if x not in ctx[key]]
     if targets:
         result = run_function('pkg.latest_version', targets, refresh=False)
         try:
-            __testcontext__[key].update(result)
+            ctx[key].update(result)
         except ValueError:
             # Only a single target, pkg.latest_version returned a string
-            __testcontext__[key][targets[0]] = result
+            ctx[key][targets[0]] = result
 
-    ret = dict([(x, __testcontext__[key][x]) for x in names])
+    ret = dict([(x, ctx[key][x]) for x in names])
     if len(names) == 1:
         return ret[names[0]]
     return ret
@@ -156,6 +154,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkg.installed state tests
     '''
+    def setUpClass(cls):
+        cls.ctx = {}
+
+    def tearDownClass(cls):
+        del cls.ctx
+
     def setUp(self):
         '''
         Ensure that we only refresh the first time we run a test
@@ -163,14 +167,14 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         super(PkgTest, self).setUp()
 
         # Skip tests if package manager not available
-        if 'pkgmgr_avail' not in __testcontext__:
-            __testcontext__['pkgmgr_avail'] = pkgmgr_avail(self.run_function, self.run_function('grains.items'))
-        if not __testcontext__['pkgmgr_avail']:
+        if 'pkgmgr_avail' not in self.ctx:
+            self.ctx['pkgmgr_avail'] = pkgmgr_avail(self.run_function, self.run_function('grains.items'))
+        if not self.ctx['pkgmgr_avail']:
             self.skipTest('Package manager is not available')
 
-        if 'refresh' not in __testcontext__:
+        if 'refresh' not in self.ctx:
             self.run_function('pkg.refresh_db')
-            __testcontext__['refresh'] = True
+            self.ctx['refresh'] = True
 
     @requires_system_grains
     def test_pkg_001_installed(self, grains):
@@ -226,7 +230,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 time.sleep(5)
 
         target = pkg_targets[0]
-        version = latest_version(self.run_function, target)
+        version = latest_version(self.ctx, self.run_function, target)
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
@@ -300,7 +304,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                     break
                 time.sleep(5)
 
-        version = latest_version(self.run_function, pkg_targets[0])
+        version = latest_version(self.ctx, self.run_function, pkg_targets[0])
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
@@ -378,7 +382,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 and grains['osrelease'].startswith('5.'):
             target = target.replace('.i686', '.i386')
 
-        version = latest_version(self.run_function, target)
+        version = latest_version(self.ctx, self.run_function, target)
 
         # If this assert fails, we need to find a new target. This test
         # needs to be able to test successful installation of the package, so
@@ -409,7 +413,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         if not target:
             self.skipTest('No targets configured for this test')
 
-        version = latest_version(self.run_function, target)
+        version = latest_version(self.ctx, self.run_function, target)
         # If this assert fails, we need to find a new target. This test
         # needs to be able to test successful installation of the package, so
         # the target needs to not be installed before we run the
@@ -435,7 +439,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         if not target:
             self.skipTest('No targets configured for this test')
 
-        version = latest_version(self.run_function, target)
+        version = latest_version(self.ctx, self.run_function, target)
         # If this assert fails, we need to find a new target. This test
         # needs to be able to test successful installation of the package, so
         # the target needs to not be installed before we run the
@@ -494,7 +498,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(pkg_targets)
 
         target = pkg_targets[0]
-        version = latest_version(self.run_function, target)
+        version = latest_version(self.ctx, self.run_function, target)
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
@@ -524,7 +528,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(pkg_targets)
 
         target = pkg_targets[0]
-        version = latest_version(self.run_function, target)
+        version = latest_version(self.ctx, self.run_function, target)
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test that the state fails when you try to run the state
@@ -843,8 +847,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 time.sleep(5)
 
         capability, realpkg = pkg_cap_targets[0]
-        version = latest_version(self.run_function, pkg_targets[0])
-        realver = latest_version(self.run_function, realpkg)
+        version = latest_version(self.ctx, self.run_function, pkg_targets[0])
+        realver = latest_version(self.ctx, self.run_function, realpkg)
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
