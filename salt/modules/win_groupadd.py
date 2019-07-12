@@ -13,11 +13,11 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import Salt libs
 import salt.utils.platform
 import salt.utils.win_functions
-import salt.utils.winapi
 
 
 try:
     import win32com.client
+    import pythoncom
     import pywintypes
     HAS_DEPENDENCIES = True
 except ImportError:
@@ -43,8 +43,8 @@ def _get_computer_object():
     Returns:
         object: Returns the computer object for the local machine
     '''
-    with salt.utils.winapi.Com():
-        nt = win32com.client.Dispatch('AdsNameSpaces')
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
     return nt.GetObject('', 'WinNT://.,computer')
 
 
@@ -59,8 +59,8 @@ def _get_group_object(name):
     Returns:
         object: The specified group object
     '''
-    with salt.utils.winapi.Com():
-        nt = win32com.client.Dispatch('AdsNameSpaces')
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
     return nt.GetObject('', 'WinNT://./' + name + ',group')
 
 
@@ -72,8 +72,8 @@ def _get_all_groups():
     Returns:
         iter: A list of objects for all groups on the machine
     '''
-    with salt.utils.winapi.Com():
-        nt = win32com.client.Dispatch('AdsNameSpaces')
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
     results = nt.GetObject('', 'WinNT://.')
     results.Filter = ['group']
     return results

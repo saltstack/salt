@@ -10,7 +10,6 @@ import subprocess
 # Import Salt libs
 import salt.utils.args
 import salt.utils.data
-import salt.utils.winapi
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
@@ -18,6 +17,7 @@ from salt.exceptions import CommandExecutionError
 # Import 3rd-party libs
 try:
     import win32com.client
+    import pythoncom
     import pywintypes
     HAS_PYWIN32 = True
 except ImportError:
@@ -78,8 +78,7 @@ class Updates(object):
         Initialize the updates collection. Can be accessed via
         ``Updates.updates``
         '''
-        with salt.utils.winapi.Com():
-            self.updates = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
+        self.updates = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
     def count(self):
         '''
@@ -285,13 +284,13 @@ class WindowsUpdateAgent(object):
         Need to look at the possibility of loading this into ``__context__``
         '''
         # Initialize the PyCom system
-        with salt.utils.winapi.Com():
+        pythoncom.CoInitialize()
 
-            # Create a session with the Windows Update Agent
-            self._session = win32com.client.Dispatch('Microsoft.Update.Session')
+        # Create a session with the Windows Update Agent
+        self._session = win32com.client.Dispatch('Microsoft.Update.Session')
 
-            # Create Collection for Updates
-            self._updates = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
+        # Create Collection for Updates
+        self._updates = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
         self.refresh()
 
@@ -583,8 +582,7 @@ class WindowsUpdateAgent(object):
         # Initialize the downloader object and list collection
         downloader = self._session.CreateUpdateDownloader()
         self._session.ClientApplicationID = 'Salt: Download Update'
-        with salt.utils.winapi.Com():
-            download_list = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
+        download_list = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
         ret = {'Updates': {}}
 
@@ -695,8 +693,7 @@ class WindowsUpdateAgent(object):
 
         installer = self._session.CreateUpdateInstaller()
         self._session.ClientApplicationID = 'Salt: Install Update'
-        with salt.utils.winapi.Com():
-            install_list = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
+        install_list = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
         ret = {'Updates': {}}
 
@@ -815,8 +812,7 @@ class WindowsUpdateAgent(object):
 
         installer = self._session.CreateUpdateInstaller()
         self._session.ClientApplicationID = 'Salt: Install Update'
-        with salt.utils.winapi.Com():
-            uninstall_list = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
+        uninstall_list = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
         ret = {'Updates': {}}
 
@@ -1013,7 +1009,8 @@ def needs_reboot():
 
     '''
     # Initialize the PyCom system
-    with salt.utils.winapi.Com():
-        # Create an AutoUpdate object
-        obj_sys = win32com.client.Dispatch('Microsoft.Update.SystemInfo')
+    pythoncom.CoInitialize()
+
+    # Create an AutoUpdate object
+    obj_sys = win32com.client.Dispatch('Microsoft.Update.SystemInfo')
     return salt.utils.data.is_true(obj_sys.RebootRequired)

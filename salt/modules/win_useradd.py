@@ -9,6 +9,7 @@ Module for managing Windows Users
     <module-provider-override>`.
 
 :depends:
+        - pythoncom
         - pywintypes
         - win32api
         - win32con
@@ -37,7 +38,6 @@ except Exception:
 import salt.utils.args
 import salt.utils.dateutils
 import salt.utils.platform
-import salt.utils.winapi
 from salt.ext import six
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
@@ -47,6 +47,7 @@ log = logging.getLogger(__name__)
 try:
     import pywintypes
     import wmi
+    import pythoncom
     import win32api
     import win32con
     import win32net
@@ -988,8 +989,8 @@ def rename(name, new_name):
 
     # Rename the user account
     # Connect to WMI
-    with salt.utils.winapi.Com():
-        c = wmi.WMI(find_classes=0)
+    pythoncom.CoInitialize()
+    c = wmi.WMI(find_classes=0)
 
     # Get the user object
     try:
