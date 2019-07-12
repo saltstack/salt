@@ -120,5 +120,3 @@ peer_run:
   - vault.generate_token
 sdbvault:
   driver: vault
-
-master_stats: true
