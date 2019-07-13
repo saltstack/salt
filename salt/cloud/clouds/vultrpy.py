@@ -203,6 +203,7 @@ def get_keyids_for_keys_names(keylist_str):
     want_keyids = keylist_str.split(",")
     want_keyids = [tmp.lower() for tmp in want_keyids]
 
+    available_keys = []
     target_keyids = []
 
     # print("Want keys:", )
@@ -214,11 +215,12 @@ def get_keyids_for_keys_names(keylist_str):
     # pprint.pprint(items)
 
     for key_pair in items.values():
+        available_keys.append(key_pair['name'])
         if key_pair['name'].lower() in want_keyids:
             target_keyids.append(key_pair['SSHKEYID'])
             # print("Wanted key %s with resulting id: %s" % (key_pair['name'], key_pair['SSHKEYID']))
 
-    return ",".join(target_keyids)
+    return ",".join(target_keyids), ",".join(available_keys)
 
 
 def list_nodes_select(conn=None, call=None):
@@ -375,7 +377,14 @@ def create(vm_):
 
 
     if ssh_keys:
-        keyids = get_keyids_for_keys_names(ssh_keys)
+        keyids, available_keys = get_keyids_for_keys_names(ssh_keys)
+        if not keyids:
+            # None of the requested key names were found.
+            raise SaltCloudConfigError(
+                'The specified ssh key names were not found in the vultr key list. Desired key names: \'{0}\'. Available keys: \'{1}\''.format(
+                    ssh_keys, available_keys
+                )
+            )
 
         kwargs['SSHKEYID'] = keyids
 
