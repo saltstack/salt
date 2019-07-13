@@ -58,6 +58,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import pprint
 import logging
 import time
+import os.path
 
 # Import salt libs
 import salt.config as config
@@ -192,6 +193,34 @@ def list_nodes_full(**kwargs):
     return ret
 
 
+
+def get_keyids_for_keys_names(keylist_str):
+    '''
+    Get a mapping of available SSH keys names (as entered in the vultr web-interface)
+    to vultr's internal ssh key IDs.
+    '''
+
+    want_keyids = keylist_str.split(",")
+    want_keyids = [tmp.lower() for tmp in want_keyids]
+
+    target_keyids = []
+
+    # print("Want keys:", )
+    # pprint.pprint(want_keyids)
+
+    items = _query('sshkey/list')
+
+    # print("Query return:", )
+    # pprint.pprint(items)
+
+    for key_pair in items.values():
+        if key_pair['name'].lower() in want_keyids:
+            target_keyids.append(key_pair['SSHKEYID'])
+            # print("Wanted key %s with resulting id: %s" % (key_pair['name'], key_pair['SSHKEYID']))
+
+    return ",".join(target_keyids)
+
+
 def list_nodes_select(conn=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
@@ -313,6 +342,28 @@ def create(vm_):
         log.error('Vultr does not have a location with id or name %s', vm_['location'])
         return False
 
+
+    ssh_keys = config.get_cloud_config_value(
+        'ssh_key_names',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+    )
+
+    key_filename = config.get_cloud_config_value(
+        'ssh_key_file', vm_, __opts__, search_global=False, default=None
+    )
+
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined key_filename \'{0}\' does not exist'.format(
+                key_filename
+            )
+        )
+
+    log.debug("Using SSH Key file: '%s'", key_filename)
+    log.debug("Selected server SSH keys to install: '%s'", ssh_keys)
+
     kwargs = {
         'label': vm_['name'],
         'OSID': osid,
@@ -321,6 +372,13 @@ def create(vm_):
         'hostname': vm_['name'],
         'enable_private_network': enable_private_network,
     }
+
+
+    if ssh_keys:
+        keyids = get_keyids_for_keys_names(ssh_keys)
+
+        kwargs['SSHKEYID'] = keyids
+
     if startup_script:
         kwargs['SCRIPTID'] = startup_script
 
@@ -388,7 +446,7 @@ def create(vm_):
 
     def wait_for_default_password():
         '''
-        Wait for the IP address to become available
+        Wait for the password to become available
         '''
         data = show_instance(vm_['name'], call='action')
         # print("Waiting for default password")
@@ -410,6 +468,10 @@ def create(vm_):
             return False
         return data['default_password']
 
+    # Maximum delay if we don't see the server
+    # reach the 'ok' state.
+    install_timeout = 60 * 5
+
     def wait_for_server_state():
         '''
         Wait for the IP address to become available
@@ -417,23 +479,34 @@ def create(vm_):
         data = show_instance(vm_['name'], call='action')
         # print("Waiting for server state ok")
         # pprint.pprint(data)
-        if six.text_type(data.get('server_state', '')) != 'ok':
-            time.sleep(1)
-            return False
-        return data['default_password']
+
+        # So vultr somehow sits in the 'installingbooting' state for many, MANY minutes after
+        # the install has actually finished. I think it might be just a timer somewhere.
+        if six.text_type(data.get('server_state', '')) == 'ok':
+            return data['default_password']
+
+        if six.text_type(data.get('server_state', '')) == 'installingbooting':
+            nonlocal install_timeout
+            install_timeout -= 1
+            log.debug('Install delay: %s seconds remaining', install_timeout)
+            if install_timeout == 0:
+                return data['default_password']
+
+        time.sleep(1)
+        return False
 
     vm_['ssh_host'] = __utils__['cloud.wait_for_fun'](
         wait_for_hostname,
         timeout=config.get_cloud_config_value(
             'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
-    vm_['password'] = __utils__['cloud.wait_for_fun'](
-        wait_for_default_password,
+    __utils__['cloud.wait_for_fun'](
+        wait_for_status,
         timeout=config.get_cloud_config_value(
             'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
-    __utils__['cloud.wait_for_fun'](
-        wait_for_status,
+    vm_['password'] = __utils__['cloud.wait_for_fun'](
+        wait_for_default_password,
         timeout=config.get_cloud_config_value(
             'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
@@ -451,6 +524,11 @@ def create(vm_):
         default=None,
     )
 
+    log.debug("VM Created. Host: '%s'", vm_['ssh_host'])
+    log.debug("Password: '%s'", vm_['password'])
+
+    if key_filename:
+        vm_['key_filename'] = key_filename
     # Bootstrap
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
