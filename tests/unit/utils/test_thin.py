@@ -472,8 +472,7 @@ class SSHThinTestCase(TestCase):
                               'tops for Python 2',
                               handler.messages)
 
-    @skipIf(salt.utils.platform.is_windows() and thin._six.PY2,
-            'Dies on Python2 on Windows')
+    @skipIf(thin._six.PY2, reason='This test does too much patching on places it should not. Needs to be reworked')
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
     @patch('salt.utils.thin.os.makedirs', MagicMock())
