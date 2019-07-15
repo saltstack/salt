@@ -1002,7 +1002,6 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.mkey = state['mkey']
         self.key = state['key']
         self.k_mtime = state['k_mtime']
-        self.stats = state['stats']
         SMaster.secrets = state['secrets']
 
     def __getstate__(self):
@@ -1013,7 +1012,6 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
             'key': self.key,
             'k_mtime': self.k_mtime,
             'secrets': SMaster.secrets,
-            'stats': self.stats,
             'log_queue': self.log_queue,
             'log_queue_level': self.log_queue_level
         }
