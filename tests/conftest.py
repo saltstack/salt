@@ -1118,12 +1118,17 @@ class GrainsMarkEvaluator(MarkEvaluator):
         if GrainsMarkEvaluator._cached_grains is None:
             cachedir = self.item.config.cache._cachedir
             root_dir = cachedir / 'salt'
-            opts = {
+            defaults = salt.config.DEFAULT_MINION_OPTS.copy()
+            defaults.pop('conf_file')
+            defaults.update({
                 'root_dir': str(root_dir),
-                'cachedir': str(root_dir / 'cache'),
-                'extension_modules': str(root_dir / 'extmods'),
-                'optimization_order': [0, 1, 2],
-            }
+                'cachedir': 'cachedir',
+                'sock_dir': 'sock',
+                'pki_dir': 'pki',
+                'log_file': 'logs/minion',
+                'pidfile': 'pids/minion.pid'
+            })
+            opts = salt.config.minion_config(None, defaults=defaults)
             GrainsMarkEvaluator._grains = salt.loader.grains(opts)
         item_globals['grains'] = GrainsMarkEvaluator._grains.copy()
         return item_globals
@@ -1139,11 +1144,16 @@ _pytest.skipping.MarkEvaluator = GrainsMarkEvaluator
 def grains(request):
     cachedir = request.config.cache._cachedir
     root_dir = cachedir / 'salt'
-    opts = {
+    defaults = salt.config.DEFAULT_MINION_OPTS.copy()
+    defaults.pop('conf_file')
+    defaults.update({
         'root_dir': str(root_dir),
-        'cachedir': str(root_dir / 'cache'),
-        'extension_modules': str(root_dir / 'extmods'),
-        'optimization_order': [0, 1, 2],
-    }
+        'cachedir': 'cachedir',
+        'sock_dir': 'sock',
+        'pki_dir': 'pki',
+        'log_file': 'logs/minion',
+        'pidfile': 'pids/minion.pid'
+    })
+    opts = salt.config.minion_config(None, defaults=defaults)
     return salt.loader.grains(opts)
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------
