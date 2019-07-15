@@ -319,10 +319,11 @@ class SaltMessageClientPoolTest(AsyncTestCase):
 class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def setUp(self):
+        self.listen_on = '127.0.0.1'
         self.port = get_unused_localhost_port()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.bind(('localhost', self.port))
+        self.sock.bind((self.listen_on, self.port))
         self.sock.listen(1)
 
     def tearDown(self):
@@ -336,7 +337,7 @@ class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
         orig_loop = tornado.ioloop.IOLoop()
         orig_loop.make_current()
         opts = self.get_temp_config('master')
-        client = SaltMessageClient(opts, 'localhost', self.port)
+        client = SaltMessageClient(opts, self.listen_on, self.port)
 
         # Mock the io_loop's stop method so we know when it has been called.
         orig_loop.real_stop = orig_loop.stop
