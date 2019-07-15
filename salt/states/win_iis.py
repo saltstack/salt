@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Microsoft IIS site management
-
 This module provides the ability to add/remove websites and application pools
 from Microsoft IIS.
-
 .. versionadded:: 2016.3.0
-
 '''
 
 # Import python libs
@@ -38,13 +35,10 @@ def _get_binding_info(hostheader='', ipaddress='*', port=80):
 def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80, protocol='http'):
     '''
     Ensure the website has been deployed.
-
     .. note:
-
         This function only validates against the site name, and will return True even
         if the site already exists with a different configuration. It will not modify
         the configuration of an existing site.
-
     :param str name: The IIS site name.
     :param str sourcepath: The physical path of the IIS site.
     :param str apppool: The name of the IIS application pool.
@@ -52,26 +46,18 @@ def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80
     :param str ipaddress: The IP address of the binding.
     :param str port: The TCP port of the binding.
     :param str protocol: The application protocol of the binding.
-
     .. note:
-
         If an application pool is specified, and that application pool does not already exist,
         it will be created.
-
     Example of usage with only the required arguments. This will default to using the default application pool
     assigned by IIS:
-
     .. code-block:: yaml
-
         site0-deployed:
             win_iis.deployed:
                 - name: site0
                 - sourcepath: C:\\inetpub\\site0
-
     Example of usage specifying all available arguments:
-
     .. code-block:: yaml
-
         site0-deployed:
             win_iis.deployed:
                 - name: site0
@@ -109,13 +95,9 @@ def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80
 def remove_site(name):
     '''
     Delete a website from IIS.
-
     :param str name: The IIS site name.
-
     Usage:
-
     .. code-block:: yaml
-
         defaultwebsite-remove:
             win_iis.remove_site:
                 - name: Default Web Site
@@ -146,32 +128,23 @@ def remove_site(name):
 def create_binding(name, site, hostheader='', ipaddress='*', port=80, protocol='http', sslflags=0):
     '''
     Create an IIS binding.
-
     .. note:
-
         This function only validates against the binding ipaddress:port:hostheader combination,
         and will return True even if the binding already exists with a different configuration.
         It will not modify the configuration of an existing binding.
-
     :param str site: The IIS site name.
     :param str hostheader: The host header of the binding.
     :param str ipaddress: The IP address of the binding.
     :param str port: The TCP port of the binding.
     :param str protocol: The application protocol of the binding.
     :param str sslflags: The flags representing certificate type and storage of the binding.
-
     Example of usage with only the required arguments:
-
     .. code-block:: yaml
-
         site0-https-binding:
             win_iis.create_binding:
                 - site: site0
-
     Example of usage specifying all available arguments:
-
     .. code-block:: yaml
-
         site0-https-binding:
             win_iis.create_binding:
                 - site: site0
@@ -183,7 +156,7 @@ def create_binding(name, site, hostheader='', ipaddress='*', port=80, protocol='
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
@@ -208,24 +181,17 @@ def create_binding(name, site, hostheader='', ipaddress='*', port=80, protocol='
 def remove_binding(name, site, hostheader='', ipaddress='*', port=80):
     '''
     Remove an IIS binding.
-
     :param str site: The IIS site name.
     :param str hostheader: The host header of the binding.
     :param str ipaddress: The IP address of the binding.
     :param str port: The TCP port of the binding.
-
     Example of usage with only the required arguments:
-
     .. code-block:: yaml
-
         site0-https-binding-remove:
             win_iis.remove_binding:
                 - site: site0
-
     Example of usage specifying all available arguments:
-
     .. code-block:: yaml
-
         site0-https-binding-remove:
             win_iis.remove_binding:
                 - site: site0
@@ -235,7 +201,7 @@ def remove_binding(name, site, hostheader='', ipaddress='*', port=80):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
@@ -260,31 +226,22 @@ def remove_binding(name, site, hostheader='', ipaddress='*', port=80):
 def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443, sslflags=0):
     '''
     Assign a certificate to an IIS binding.
-
     .. note:
-
         The web binding that the certificate is being assigned to must already exist.
-
     :param str name: The thumbprint of the certificate.
     :param str site: The IIS site name.
     :param str hostheader: The host header of the binding.
     :param str ipaddress: The IP address of the binding.
     :param str port: The TCP port of the binding.
     :param str sslflags: Flags representing certificate type and certificate storage of the binding.
-
     Example of usage with only the required arguments:
-
     .. code-block:: yaml
-
         site0-cert-binding:
             win_iis.create_cert_binding:
                 - name: 9988776655443322111000AAABBBCCCDDDEEEFFF
                 - site: site0
-
     Example of usage specifying all available arguments:
-
     .. code-block:: yaml
-
         site0-cert-binding:
             win_iis.create_cert_binding:
                 - name: 9988776655443322111000AAABBBCCCDDDEEEFFF
@@ -293,12 +250,11 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443, sslf
                 - ipaddress: 192.168.1.199
                 - port: 443
                 - sslflags: 1
-
     .. versionadded:: 2016.11.0
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
@@ -330,31 +286,22 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443, sslf
 def remove_cert_binding(name, site, hostheader='', ipaddress='*', port=443):
     '''
     Remove a certificate from an IIS binding.
-
     .. note:
-
         This function only removes the certificate from the web binding. It does
         not remove the web binding itself.
-
     :param str name: The thumbprint of the certificate.
     :param str site: The IIS site name.
     :param str hostheader: The host header of the binding.
     :param str ipaddress: The IP address of the binding.
     :param str port: The TCP port of the binding.
-
     Example of usage with only the required arguments:
-
     .. code-block:: yaml
-
         site0-cert-binding-remove:
             win_iis.remove_cert_binding:
                 - name: 9988776655443322111000AAABBBCCCDDDEEEFFF
                 - site: site0
-
     Example of usage specifying all available arguments:
-
     .. code-block:: yaml
-
         site0-cert-binding-remove:
             win_iis.remove_cert_binding:
                 - name: 9988776655443322111000AAABBBCCCDDDEEEFFF
@@ -362,12 +309,11 @@ def remove_cert_binding(name, site, hostheader='', ipaddress='*', port=443):
                 - hostheader: site0.local
                 - ipaddress: 192.168.1.199
                 - port: 443
-
     .. versionadded:: 2016.11.0
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
@@ -395,19 +341,13 @@ def remove_cert_binding(name, site, hostheader='', ipaddress='*', port=443):
 def create_apppool(name):
     '''
     Create an IIS application pool.
-
     .. note:
-
         This function only validates against the application pool name, and will return
         True even if the application pool already exists with a different configuration.
         It will not modify the configuration of an existing application pool.
-
     :param str name: The name of the IIS application pool.
-
     Usage:
-
     .. code-block:: yaml
-
         site0-apppool:
             win_iis.create_apppool:
                 - name: site0
@@ -439,13 +379,9 @@ def remove_apppool(name):
     # Remove IIS AppPool
     '''
     Remove an IIS application pool.
-
     :param str name: The name of the IIS application pool.
-
     Usage:
-
     .. code-block:: yaml
-
         defaultapppool-remove:
             win_iis.remove_apppool:
                 - name: DefaultAppPool
@@ -476,15 +412,12 @@ def remove_apppool(name):
 def container_setting(name, container, settings=None):
     '''
     Set the value of the setting for an IIS container.
-
     :param str name: The name of the IIS container.
     :param str container: The type of IIS container. The container types are:
         AppPools, Sites, SslBindings
-    :param str settings: A dictionary of the setting names and their values.
+    :param dict settings: A dictionary of the setting names and their values.
         Example of usage for the ``AppPools`` container:
-
     .. code-block:: yaml
-
         site0-apppool-setting:
             win_iis.container_setting:
                 - name: site0
@@ -495,11 +428,8 @@ def container_setting(name, container, settings=None):
                     processModel.userName: TestUser
                     processModel.password: TestPassword
                     processModel.identityType: SpecificUser
-
     Example of usage for the ``Sites`` container:
-
     .. code-block:: yaml
-
         site0-site-setting:
             win_iis.container_setting:
                 - name: site0
@@ -513,7 +443,7 @@ def container_setting(name, container, settings=None):
     identityType_map2string = {0: 'LocalSystem', 1: 'LocalService', 2: 'NetworkService', 3: 'SpecificUser', 4: 'ApplicationPoolIdentity'}
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     if not settings:
@@ -572,32 +502,23 @@ def container_setting(name, container, settings=None):
 def create_app(name, site, sourcepath, apppool=None):
     '''
     Create an IIS application.
-
     .. note:
-
         This function only validates against the application name, and will return True
         even if the application already exists with a different configuration. It will not
         modify the configuration of an existing application.
-
     :param str name: The IIS application.
     :param str site: The IIS site name.
     :param str sourcepath: The physical path.
     :param str apppool: The name of the IIS application pool.
-
     Example of usage with only the required arguments:
-
     .. code-block:: yaml
-
         site0-v1-app:
             win_iis.create_app:
                 - name: v1
                 - site: site0
                 - sourcepath: C:\\inetpub\\site0\\v1
-
     Example of usage specifying all available arguments:
-
     .. code-block:: yaml
-
         site0-v1-app:
             win_iis.create_app:
                 - name: v1
@@ -607,7 +528,7 @@ def create_app(name, site, sourcepath, apppool=None):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     current_apps = __salt__['win_iis.list_apps'](site)
@@ -631,14 +552,10 @@ def create_app(name, site, sourcepath, apppool=None):
 def remove_app(name, site):
     '''
     Remove an IIS application.
-
     :param str name: The application name.
     :param str site: The IIS site name.
-
     Usage:
-
     .. code-block:: yaml
-
         site0-v1-app-remove:
             win_iis.remove_app:
                 - name: v1
@@ -646,7 +563,7 @@ def remove_app(name, site):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     current_apps = __salt__['win_iis.list_apps'](site)
@@ -669,32 +586,23 @@ def remove_app(name, site):
 def create_vdir(name, site, sourcepath, app='/'):
     '''
     Create an IIS virtual directory.
-
     .. note:
-
         This function only validates against the virtual directory name, and will return
         True even if the virtual directory already exists with a different configuration.
         It will not modify the configuration of an existing virtual directory.
-
     :param str name: The virtual directory name.
     :param str site: The IIS site name.
     :param str sourcepath: The physical path.
     :param str app: The IIS application.
-
     Example of usage with only the required arguments:
-
     .. code-block:: yaml
-
         site0-foo-vdir:
             win_iis.create_vdir:
                 - name: foo
                 - site: site0
                 - sourcepath: C:\\inetpub\\vdirs\\foo
-
     Example of usage specifying all available arguments:
-
     .. code-block:: yaml
-
         site0-foo-vdir:
             win_iis.create_vdir:
                 - name: foo
@@ -704,7 +612,7 @@ def create_vdir(name, site, sourcepath, app='/'):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     current_vdirs = __salt__['win_iis.list_vdirs'](site, app)
@@ -729,24 +637,17 @@ def create_vdir(name, site, sourcepath, app='/'):
 def remove_vdir(name, site, app='/'):
     '''
     Remove an IIS virtual directory.
-
     :param str name: The virtual directory name.
     :param str site: The IIS site name.
     :param str app: The IIS application.
-
     Example of usage with only the required arguments:
-
     .. code-block:: yaml
-
         site0-foo-vdir-remove:
             win_iis.remove_vdir:
                 - name: foo
                 - site: site0
-
     Example of usage specifying all available arguments:
-
     .. code-block:: yaml
-
         site0-foo-vdir-remove:
             win_iis.remove_vdir:
                 - name: foo
@@ -755,7 +656,7 @@ def remove_vdir(name, site, app='/'):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     current_vdirs = __salt__['win_iis.list_vdirs'](site, app)
@@ -780,29 +681,20 @@ def set_app(name, site, settings=None):
     # pylint: disable=anomalous-backslash-in-string
     '''
     .. versionadded:: 2017.7.0
-
     Set the value of the setting for an IIS web application.
-
     .. note::
         This function only configures existing app. Params are case sensitive.
-
     :param str name: The IIS application.
     :param str site: The IIS site name.
-    :param str settings: A dictionary of the setting names and their values.
-
+    :param dict settings: A dictionary of the setting names and their values.
     Available settings:
-
     - ``physicalPath`` - The physical path of the webapp
     - ``applicationPool`` - The application pool for the webapp
     - ``userName`` "connectAs" user
     - ``password`` "connectAs" password for user
-
     :rtype: bool
-
     Example of usage:
-
     .. code-block:: yaml
-
         site0-webapp-setting:
             win_iis.set_app:
                 - name: app0
@@ -816,7 +708,7 @@ def set_app(name, site, settings=None):
     # pylint: enable=anomalous-backslash-in-string
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     if not settings:
