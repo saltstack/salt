@@ -9,11 +9,8 @@ import os
 import sys
 import tempfile
 
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution
-except ImportError:
-    from distro import linux_distribution
+# Import 3rd-party libs
+import pytest
 
 # Import Salt Libs
 import salt.utils.files
@@ -73,11 +70,6 @@ class MockTimedProc(object):
     @property
     def stderr(self):
         return self._stderr
-
-
-ON_SUSE = False
-if 'SuSE' in linux_distribution(full_distribution_name=False):
-    ON_SUSE = True
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -356,8 +348,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             raise RuntimeError
 
     @skipIf(True, 'WAR ROOM SKIP FRIDAY')
-    @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
-    @skipIf(salt.utils.platform.is_darwin(), 'Do not run on MacOS')
+    @pytest.mark.skipif('grains["os_family"] in ("MacOS", "Windows")', reason='Do not run on Windows or MacOS')
     def test_run_cwd_in_combination_with_runas(self):
         '''
         cmd.run executes command in the cwd directory

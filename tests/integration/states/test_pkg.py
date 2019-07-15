@@ -9,12 +9,6 @@ import logging
 import os
 import time
 
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution
-except ImportError:
-    from distro import linux_distribution
-
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -31,6 +25,7 @@ import salt.utils.pkg.rpm
 import salt.utils.platform
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
@@ -69,10 +64,6 @@ _PKG_TARGETS_EPOCH = {
 }
 
 _WILDCARDS_SUPPORTED = ('Arch', 'Debian', 'RedHat')
-
-ON_SUSE = False
-if 'SuSE' in linux_distribution(full_distribution_name=False):
-    ON_SUSE = True
 
 
 def pkgmgr_avail(run_function, grains):
@@ -188,7 +179,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_function('pkg.refresh_db')
             self.ctx['refresh'] = True
 
-    @skipIf(ON_SUSE, 'WAR ROOM SKIP FRIDAY')
+    @pytest.mark.skipif('grains["os_family"] in ("Suse",)', reason='WAR ROOM SKIP FRIDAY')
     @requires_system_grains
     def test_pkg_001_installed(self, grains):
         '''
@@ -290,7 +281,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(ON_SUSE, 'WAR ROOM SKIP FRIDAY')
+    @pytest.mark.skipif('grains["os_family"] in ("Suse",)', reason='WAR ROOM SKIP FRIDAY')
     @requires_system_grains
     def test_pkg_004_installed_multipkg_with_version(self, grains):
         '''
