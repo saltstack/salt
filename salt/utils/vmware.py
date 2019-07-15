@@ -193,23 +193,25 @@ def get_vsphere_client(server, username, password, session=None):
     Internal helper method to create an instance of the vSphere API client.
     Please provide username and password to authenticate.
 
-    :type  server: :class:`str`
-    :param server: vCenter host name or IP address
-    :type  username: :class:`str`
-    :param username: Name of the user
-    :type  password: :class:`str`
-    :param password: Password of the user
-    :type  session: :class:`requests.Session` or ``None``
-    :param session: Requests HTTP session instance. If not specified, then one
+    :param basestring server:
+        vCenter host name or IP address
+    :param basestring username:
+        Name of the user
+    :param basestring password:
+        Password of the user
+    :param Session session:
+        Request HTTP session instance. If not specified, one
         is automatically created and used
 
-    :rtype: :class:`vmware.vapi.vmc.client.VsphereClient`
-    :return: Vsphere Client instance
+    :returns:
+        Vsphere Client instance
+    :rtype:
+        :class:`vmware.vapi.vmc.client.VsphereClient`
     '''
     if not session:
         # Create an https session to be used for a vSphere client
         session = requests.session()
-        # If client uses own SSL cert, session must not verify
+        # If client uses own SSL cert, session should not verify
         session.verify = False
     client = None
     try:

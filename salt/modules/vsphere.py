@@ -214,7 +214,6 @@ from salt.config.schemas.esxi import DiskGroupsDiskIdSchema, \
 from salt.config.schemas.esxvm import ESXVirtualMachineDeleteSchema, \
         ESXVirtualMachineUnregisterSchema
 
-
 log = logging.getLogger(__name__)
 
 # Import Third Party Libs
@@ -9064,7 +9063,7 @@ def _delete_device(device):
 def list_tag_categories(server=None, username=None, password=None,
                         service_instance=None):
     '''
-    List all the existing categories user has access to.
+    List existing categories a user has access to.
 
     CLI Example:
 
@@ -9072,28 +9071,33 @@ def list_tag_categories(server=None, username=None, password=None,
 
             salt vm_minion vsphere.list_tag_categories
 
-    :param str server:
-        Target DNS or IP of vCenter client.
-    :param str username:
-        Username associated with the vCenter client.
-    :param str password:
-        Password associated with the vCenter client.
-    :return:
-        Value(s) of category_id that a user has access to.
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
+    :returns:
+        Value(s) of category_id.
     :rtype:
-        category_id
+        list of str
     '''
     # Get salted vSphere Client
-    details = __salt__['vcenter.get_details']()
-    client = details['vSphereClient']
+    if not (server and username and password):
+        # User didn't provide CLI args so use proxy information
+        details = __salt__['vcenter.get_details']()
+        server = details['vcenter']
+        username = details['username']
+        password = details['password']
 
-    # If we failed to attempt earlier, or providing other server information
-    if not client:
-        client = salt.utils.vmware.get_vsphere_client(server=server,
-                                                      username=username,
-                                                      password=password)
-    categories = client.tagging.Category.list()
-    return categories if len(categories) > 0 else None
+    # Establish connection with client
+    client = salt.utils.vmware.get_vsphere_client(server=server,
+                                                  username=username,
+                                                  password=password)
+    categories = None
+    if client:
+        categories = client.tagging.Category.list()
+    return categories
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
@@ -9102,7 +9106,7 @@ def list_tag_categories(server=None, username=None, password=None,
 def list_tags(server=None, username=None, password=None,
               service_instance=None):
     '''
-    List all the existing tags user has access to.
+    List existing tags a user has access to.
 
     CLI Example:
 
@@ -9110,29 +9114,89 @@ def list_tags(server=None, username=None, password=None,
 
             salt vm_minion vsphere.list_tags
 
-    :param str server:
-        Target DNS or IP of vCenter client.
-    :param str username:
-        Username associated with the vCenter client.
-    :param str password:
-        Password associated with the vCenter client.
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
     :return:
-        Value(s) of tag_id that was created.
+        Value(s) of tag_id.
     :rtype:
-        tag_id
+        list of str
     '''
     # Get salted vSphere Client
-    details = __salt__['vcenter.get_details']()
-    client = details['vSphereClient']
+    if not (server and username and password):
+        # User didn't provide cli args so use proxy information
+        details = __salt__['vcenter.get_details']()
+        server = details['vcenter']
+        username = details['username']
+        password = details['password']
 
-    # If we failed to attempt earlier, or providing other server information
-    if not client:
-        client = salt.utils.vmware.get_vsphere_client(server=server,
-                                                      username=username,
-                                                      password=password)
-    tags = client.tagging.Tag.list()
-    return tags if len(tags) > 0 else None
+    # Establish connection with client
+    client = salt.utils.vmware.get_vsphere_client(server=server,
+                                                  username=username,
+                                                  password=password)
+    tags = None
+    if client:
+        tags = client.tagging.Tag.list()
+    return tags
 
+
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def list_attached_tags(object_id,
+                       server=None, username=None, password=None,
+                       service_instance=None):
+    '''
+    List existing tags a user has access to.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.list_attached_tags object_id=''domain-c2283''
+
+    :param str object_id:
+        The identifier of the input object.
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
+    :return:
+        The list of all tag identifiers that correspond to the
+        tags attached to the given object.
+    :rtype:
+        list of tags
+    :raise: Unauthorized
+        if you do not have the privilege to read the object.
+    :raise: Unauthenticated
+        if the user can not be authenticated.
+    '''
+    # Get salted vSphere Client
+    if not (server and username and password):
+        # User didn't provide cli args so use proxy information
+        details = __salt__['vcenter.get_details']()
+        server = details['vcenter']
+        username = details['username']
+        password = details['password']
+
+    # Establish connection with client
+    client = salt.utils.vmware.get_vsphere_client(server=server,
+                                                  username=username,
+                                                  password=password)
+    attached_tags = None
+    if client:
+        # Create dynamic id object associated with a type and an id.
+        # Type refers to the type of resource being identified.
+        # ID refers to the identifier for a resources who's type
+        # is specified by dynamic id, in this case a virtual machine object.
+        dynamic_id = DynamicID(type=vim.VirtualMachine, id=object_id)
+        attached_tags = client.tagging.TagAssociation.list_attached_tags(dynamic_id)
+    return attached_tags
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
@@ -9147,42 +9211,111 @@ def create_tag_category(name, description, cardinality,
 
     .. code-block:: bash
 
-            salt vm_minion vsphere.create_tag_category name=category_name description=test_desc cardinality=MULTIPLE
+            salt vm_minion vsphere.create_tag_category
 
-    :param str server:
-        Target DNS or IP of vCenter client.
-    :param str username:
-        Username associated with the vCenter client.
-    :param str password:
-        Password associated with the vCenter client.
     :param str name:
         Name of tag category to create (ex. Machine, OS, Availability, etc.)
     :param str description:
         Given description of tag category.
-    :param :class:`CategoryModel.Cardinality`
+    :param str cardinality
         The associated cardinality (SINGLE, MULTIPLE) of the category.
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
     :return:
-        Integer of category_ID that was created.
+        Identifier of the created category.
     :rtype:
-        category_id
+        str
+    :raise: AlreadyExists
+        if the name` provided in the create_spec is the name of an already
+        existing category.
+    :raise: InvalidArgument
+        if any of the information in the create_spec is invalid.
+    :raise: Unauthorized
+        if you do not have the privilege to create a category.
     '''
     # Get salted vSphere Client
-    details = __salt__['vcenter.get_details']()
-    client = details['vSphereClient']
+    if not (server and username and password):
+        # User didn't provide cli args so use proxy information
+        details = __salt__['vcenter.get_details']()
+        server = details['vcenter']
+        username = details['username']
+        password = details['password']
 
-    # If we failed to attempt earlier, or providing other server information
-    if not client:
-        client = salt.utils.vmware.get_vsphere_client(server=server,
-                                                      username=username,
-                                                      password=password)
+    # Establish connection with client
+    client = salt.utils.vmware.get_vsphere_client(server=server,
+                                                  username=username,
+                                                  password=password)
+    identifier = None
+    if client:
+        if cardinality == 'SINGLE':
+            cardinality = CategoryModel.Cardinality.SINGLE
+        elif cardinality == 'MULTIPLE':
+            cardinality = CategoryModel.Cardinality.MULTIPLE
+        else:
+            # Cardinality must be supplied correctly
+            cardinality = None
 
-    create_spec = client.tagging.Category.CreateSpec()
-    create_spec.name = name
-    create_spec.description = description
-    create_spec.cardinality = cardinality
-    associable_types = set()
-    create_spec.associable_types = associable_types
-    return client.tagging.Category.create(create_spec)
+        create_spec = client.tagging.Category.CreateSpec()
+        create_spec.name = name
+        create_spec.description = description
+        create_spec.cardinality = cardinality
+        associable_types = set()
+        create_spec.associable_types = associable_types
+        identifier = client.tagging.Category.create(create_spec)
+    return identifier
+
+
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def delete_tag_category(category_id,
+                        server=None, username=None, password=None,
+                        service_instance=None):
+    '''
+    Delete a category.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.delete_tag_category
+
+    :param str category_id:
+        The identifier of category to be deleted.
+        The parameter must be an identifier for the resource type:
+        ``com.vmware.cis.tagging.Category``.
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
+    :raise: NotFound
+        if the tag for the given tag_id does not exist in the system.
+    :raise: Unauthorized
+        if you do not have the privilege to delete the tag.
+    :raise: Unauthenticated
+        if the user can not be authenticated.
+    '''
+    # Get salted vSphere Client
+    if not (server and username and password):
+        # User didn't provide cli args so use proxy information
+        details = __salt__['vcenter.get_details']()
+        server = details['vcenter']
+        username = details['username']
+        password = details['password']
+
+    # Establish connection with client
+    client = salt.utils.vmware.get_vsphere_client(server=server,
+                                                  username=username,
+                                                  password=password)
+    if client:
+        client.tagging.Category.delete(category_id)
+
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
@@ -9197,40 +9330,104 @@ def create_tag(name, description, category_id,
 
     .. code-block:: bash
 
-            salt vm_minion vsphere.create_tag name=tag_name description=test_desc category_id=[TODO]
+            salt vm_minion vsphere.create_tag
 
-    :param str server:
+    :param basestring server:
         Target DNS or IP of vCenter client.
-    :param str username:
+    :param basestring username:
          Username associated with the vCenter client.
-    :param str password:
+    :param basestring password:
         Password associated with the vCenter client.
     :param str name:
         Name of tag category to create (ex. Machine, OS, Availability, etc.)
     :param str description:
         Given description of tag category.
-    :param int category_id:
-        Numerical value of category_id representative of the category created previously.
+    :param str category_id:
+        Value of category_id representative of the category created previously.
     :return:
+        The identifier of the created tag.
+    :rtype:
+        str
+    :raise: AlreadyExists
+        if the name provided in the create_spec is the name of an already
+         existing tag in the input category.
+    :raise: InvalidArgument
+        if any of the input information in the create_spec is invalid.
+    :raise: NotFound
+        if the category for in the given create_spec does not exist in
+        the system.
+    :raise: Unauthorized
+        if you do not have the privilege to create tag.
     '''
     # Get salted vSphere Client
-    details = __salt__['vcenter.get_details']()
-    client = details['vSphereClient']
+    if not (server and username and password):
+        # User didn't provide cli args so use proxy information
+        details = __salt__['vcenter.get_details']()
+        server = details['vcenter']
+        username = details['username']
+        password = details['password']
 
-    # If we failed to attempt earlier, or providing other server information
-    if not client:
-        client = salt.utils.vmware.get_vsphere_client(server=server,
-                                                      username=username,
-                                                      password=password)
+    # Establish connection with client
+    client = salt.utils.vmware.get_vsphere_client(server=server,
+                                                  username=username,
+                                                  password=password)
+    identifier = None
+    if client:
+        create_spec = client.tagging.Tag.CreateSpec()
+        create_spec.name = name
+        create_spec.description = description
+        create_spec.category_id = category_id
+        identifier = client.tagging.Tag.create(create_spec)
+    return identifier
 
-    create_spec = client.tagging.Tag.CreateSpec()
-    create_spec.name = name
-    create_spec.description = description
-    create_spec.category_id = category_id
-    return client.tagging.Tag.create(create_spec)
 
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def delete_tag(tag_id,
+               server=None, username=None, password=None,
+               service_instance=None):
+    '''
+    Delete a tag.
 
-# TODO tag a cluster
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.delete_tag
+
+    :param str tag_id:
+        The identifier of tag to be deleted.
+        The parameter must be an identifier for the resource type:
+        ``com.vmware.cis.tagging.Tag``.
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
+    :raise: AlreadyExists
+        if the name provided in the create_spec is the name of an already
+        existing category.
+    :raise: InvalidArgument
+        if any of the information in the create_spec is invalid.
+    :raise: Unauthorized
+        if you do not have the privilege to create a category.
+    '''
+    # Get salted vSphere Client
+    if not (server and username and password):
+        # User didn't provide cli args so use proxy information
+        details = __salt__['vcenter.get_details']()
+        server = details['vcenter']
+        username = details['username']
+        password = details['password']
+
+    # Establish connection with client
+    client = salt.utils.vmware.get_vsphere_client(server=server,
+                                                  username=username,
+                                                  password=password)
+    if client:
+        client.tagging.Category.delete(tag_id)
 
 
 @depends(HAS_PYVMOMI)

@@ -285,10 +285,6 @@ def init(opts):
             return False
         else:
             DETAILS['password'] = password
-
-        # Attempt vSphere Client connection
-        server = DETAILS['vcenter']
-        DETAILS['vSphereClient'] = get_vsphere_client(server, username, password)
     return True
 
 
