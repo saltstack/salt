@@ -43,6 +43,8 @@ from tests.support.runtests import RUNTIME_VARS
 # Import pytest libs
 import pytest
 import _pytest.logging
+import _pytest.skipping
+from _pytest.mark.evaluate import MarkEvaluator
 
 # Import 3rd-party libs
 import yaml
@@ -50,6 +52,7 @@ import psutil
 from salt.ext import six
 
 # Import salt libs
+import salt.loader
 import salt.config
 import salt.utils.files
 import salt.utils.path
@@ -1092,3 +1095,28 @@ def bridge_pytest_and_runtests(reap_stray_processes,
                 os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry)
             )
 # <---- Salt Configuration -------------------------------------------------------------------------------------------
+# <---- Fixtures Overrides -------------------------------------------------------------------------------------------
+
+
+# ----- Custom Grains Mark Evaluator -------------------------------------------------------------------------------->
+class GrainsMarkEvaluator(MarkEvaluator):
+    _cached_grains = None
+
+    def _getglobals(self):
+        item_globals = super(GrainsMarkEvaluator, self)._getglobals()
+        if GrainsMarkEvaluator._cached_grains is None:
+            cachedir = self.item.config.cache._cachedir
+            root_dir = cachedir / 'salt'
+            opts = {
+                'root_dir': str(root_dir),
+                'cachedir': str(root_dir / 'cache'),
+                'extension_modules': str(root_dir / 'extmods')
+            }
+            GrainsMarkEvaluator._grains = salt.loader.grains(opts)
+        item_globals['grains'] = GrainsMarkEvaluator._grains.copy()
+        return item_globals
+
+
+# Patch PyTest's skipping MarkEvaluator to use our GrainsMarkEvaluator
+_pytest.skipping.MarkEvaluator = GrainsMarkEvaluator
+# <---- Custom Grains Mark Evaluator ---------------------------------------------------------------------------------
