@@ -400,13 +400,14 @@ class SaltTestingParser(optparse.OptionParser):
             ret.update(
                 x for x in
                 ['.'.join(('unit', mod_relname)),
-                 '.'.join(('integration', mod_relname))]
+                 '.'.join(('integration', mod_relname)),
+                 '.'.join(('multimaster', mod_relname))]
                 if x in self._test_mods
             )
 
         # First, try a path match
         for path in files:
-            match = re.match(r'^(salt/|tests/(integration|unit)/)(.+\.py)$', path)
+            match = re.match(r'^(salt/|tests/(unit|integration|multimaster)/)(.+\.py)$', path)
             if match:
                 comps = match.group(3).split('/')
 
