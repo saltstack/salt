@@ -126,7 +126,7 @@ class AdaptedConfigurationTestCaseMixin(object):
     @staticmethod
     def get_config(config_for, from_scratch=False):
         if from_scratch:
-            if config_for in ('master', 'syndic_master'):
+            if config_for in ('master', 'syndic_master', 'mm_master', 'mm_sub_master'):
                 return salt.config.master_config(
                     AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for)
                 )
@@ -145,7 +145,7 @@ class AdaptedConfigurationTestCaseMixin(object):
                 )
 
         if config_for not in RUNTIME_VARS.RUNTIME_CONFIGS:
-            if config_for in ('master', 'syndic_master'):
+            if config_for in ('master', 'syndic_master', 'mm_master', 'mm_sub_master'):
                 RUNTIME_VARS.RUNTIME_CONFIGS[config_for] = freeze(
                     salt.config.master_config(
                         AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for)
@@ -188,6 +188,14 @@ class AdaptedConfigurationTestCaseMixin(object):
             return os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion')
         if filename == 'sub_minion':
             return os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion')
+        if filename == 'mm_master':
+            return os.path.join(RUNTIME_VARS.TMP_MM_CONF_DIR, 'master')
+        if filename == 'mm_sub_master':
+            return os.path.join(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR, 'master')
+        if filename == 'mm_minion':
+            return os.path.join(RUNTIME_VARS.TMP_MM_CONF_DIR, 'minion')
+        if filename == 'mm_sub_minion':
+            return os.path.join(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR, 'minion')
         return os.path.join(RUNTIME_VARS.TMP_CONF_DIR, filename)
 
     @property
@@ -247,6 +255,44 @@ class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
             mopts = self.get_config(self._salt_client_config_file_name_, from_scratch=True)
             RUNTIME_VARS.RUNTIME_CONFIGS['runtime_client'] = salt.client.get_local_client(mopts=mopts)
         return RUNTIME_VARS.RUNTIME_CONFIGS['runtime_client']
+
+
+class SaltMultimasterClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
+    '''
+    Mix-in class that provides a ``clients`` attribute which returns a list of Salt
+    :class:`LocalClient<salt:salt.client.LocalClient>`.
+
+    .. code-block:: python
+
+        class LocalClientTestCase(TestCase, SaltMultimasterClientTestCaseMixin):
+
+            def test_check_pub_data(self):
+                just_minions = {'minions': ['m1', 'm2']}
+                jid_no_minions = {'jid': '1234', 'minions': []}
+                valid_pub_data = {'minions': ['m1', 'm2'], 'jid': '1234'}
+
+                for client in self.clients:
+                    self.assertRaises(EauthAuthenticationError,
+                                      client._check_pub_data, None)
+                    self.assertDictEqual({},
+                        client._check_pub_data(just_minions),
+                        'Did not handle lack of jid correctly')
+
+                    self.assertDictEqual(
+                        {},
+                        client._check_pub_data({'jid': '0'}),
+                        'Passing JID of zero is not handled gracefully')
+    '''
+    _salt_client_config_file_name_ = 'master'
+
+    @property
+    def clients(self):
+        # Late import
+        import salt.client
+        if 'runtime_clients' not in RUNTIME_VARS.RUNTIME_CONFIGS:
+            mopts = self.get_config(self._salt_client_config_file_name_, from_scratch=True)
+            RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients'] = salt.client.get_local_client(mopts=mopts)
+        return RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients']
 
 
 class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
