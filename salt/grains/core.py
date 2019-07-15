@@ -1034,38 +1034,42 @@ def _virtual(osdata):
                         grains["virtual_subtype"] = "Docker"
             except IOError:
                 pass
-        if os.path.isfile("/proc/cpuinfo"):
-            with salt.utils.files.fopen("/proc/cpuinfo", "r") as fhr:
-                if "QEMU Virtual CPU" in fhr.read():
-                    grains["virtual"] = "kvm"
-        if os.path.isfile("/sys/devices/virtual/dmi/id/product_name"):
-            try:
-                with salt.utils.files.fopen(
-                    "/sys/devices/virtual/dmi/id/product_name", "r"
-                ) as fhr:
-                    output = salt.utils.stringutils.to_unicode(
-                        fhr.read(), errors="replace"
+        # When creating an LXC container on a virtual machine which has access
+        # to /proc/cpuinfo and potentially paths in /sys, the below overrides
+        # the correct 'virtual' grain with the virtual machine type.
+        if ("virtual" not in grains) or (grains["virtual"] != "LXC"):
+            if os.path.isfile("/proc/cpuinfo"):
+                with salt.utils.files.fopen("/proc/cpuinfo", "r") as fhr:
+                    if "QEMU Virtual CPU" in fhr.read():
+                        grains["virtual"] = "kvm"
+            if os.path.isfile("/sys/devices/virtual/dmi/id/product_name"):
+                try:
+                    with salt.utils.files.fopen(
+                        "/sys/devices/virtual/dmi/id/product_name", "r"
+                    ) as fhr:
+                        output = salt.utils.stringutils.to_unicode(
+                            fhr.read(), errors="replace"
+                        )
+                        if "VirtualBox" in output:
+                            grains["virtual"] = "VirtualBox"
+                        elif "RHEV Hypervisor" in output:
+                            grains["virtual"] = "kvm"
+                            grains["virtual_subtype"] = "rhev"
+                        elif "oVirt Node" in output:
+                            grains["virtual"] = "kvm"
+                            grains["virtual_subtype"] = "ovirt"
+                        elif "Google" in output:
+                            grains["virtual"] = "gce"
+                        elif "BHYVE" in output:
+                            grains["virtual"] = "bhyve"
+                except UnicodeDecodeError:
+                    # Some firmwares provide non-valid 'product_name'
+                    # files, ignore them
+                    log.debug(
+                        "The content in /sys/devices/virtual/dmi/id/product_name is not valid"
                     )
-                    if "VirtualBox" in output:
-                        grains["virtual"] = "VirtualBox"
-                    elif "RHEV Hypervisor" in output:
-                        grains["virtual"] = "kvm"
-                        grains["virtual_subtype"] = "rhev"
-                    elif "oVirt Node" in output:
-                        grains["virtual"] = "kvm"
-                        grains["virtual_subtype"] = "ovirt"
-                    elif "Google" in output:
-                        grains["virtual"] = "gce"
-                    elif "BHYVE" in output:
-                        grains["virtual"] = "bhyve"
-            except UnicodeDecodeError:
-                # Some firmwares provide non-valid 'product_name'
-                # files, ignore them
-                log.debug(
-                    "The content in /sys/devices/virtual/dmi/id/product_name is not valid"
-                )
-            except IOError:
-                pass
+                except IOError:
+                    pass
     elif osdata["kernel"] == "FreeBSD":
         kenv = salt.utils.path.which("kenv")
         if kenv:
