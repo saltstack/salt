@@ -96,7 +96,7 @@ def get_unused_localhost_port():
     usock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     usock.bind(('127.0.0.1', 0))
     port = usock.getsockname()[1]
-    if port in (54505, 54506, 64505, 64506, 64510, 64511, 64520, 64521):
+    if port in (54505, 54506, 64505, 64506, 64507, 64508, 64510, 64511, 64520, 64521):
         # These ports are hardcoded in the test configuration
         port = get_unused_localhost_port()
         usock.close()
