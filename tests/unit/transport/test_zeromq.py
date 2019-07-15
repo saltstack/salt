@@ -12,13 +12,8 @@ import multiprocessing
 import ctypes
 from concurrent.futures.thread import ThreadPoolExecutor
 
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution
-except ImportError:
-    from distro import linux_distribution
-
 # Import 3rd-party libs
+import pytest
 import zmq.eventloop.ioloop
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
 if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
@@ -45,10 +40,6 @@ from tests.support.helpers import flaky, get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin
-
-ON_SUSE = False
-if 'SuSE' in linux_distribution(full_distribution_name=False):
-    ON_SUSE = True
 
 
 class BaseZMQReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -158,7 +149,8 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
 
 
 @flaky
-@skipIf(ON_SUSE, 'Skipping until https://github.com/saltstack/salt/issues/32902 gets fixed')
+@pytest.mark.skipif('grains["os_family"] in ("Suse",)',
+                    reason='Skipping until https://github.com/saltstack/salt/issues/32902 gets fixed')
 class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     def setUp(self):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config)
