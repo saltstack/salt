@@ -27,6 +27,5 @@ class ExecutorTest(ModuleCase, ShellCase):
         '''
         test that executor is fired when sending a multifunction job
         '''
-        data = self.run_salt('\'*\' test.arg,test.arg foo,bar --module-executors=arg')
+        data = self.run_salt('"*" test.arg,test.arg foo,bar --module-executors=arg')
         self.assertIn('test.arg fired', "".join(data))
-

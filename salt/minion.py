@@ -1631,7 +1631,6 @@ class Minion(MinionBase):
 
         return None
 
-
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
         '''
