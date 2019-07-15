@@ -1110,7 +1110,8 @@ class GrainsMarkEvaluator(MarkEvaluator):
             opts = {
                 'root_dir': str(root_dir),
                 'cachedir': str(root_dir / 'cache'),
-                'extension_modules': str(root_dir / 'extmods')
+                'extension_modules': str(root_dir / 'extmods'),
+                'optimization_order': [0, 1, 2],
             }
             GrainsMarkEvaluator._grains = salt.loader.grains(opts)
         item_globals['grains'] = GrainsMarkEvaluator._grains.copy()
@@ -1130,7 +1131,8 @@ def grains(request):
     opts = {
         'root_dir': str(root_dir),
         'cachedir': str(root_dir / 'cache'),
-        'extension_modules': str(root_dir / 'extmods')
+        'extension_modules': str(root_dir / 'extmods'),
+        'optimization_order': [0, 1, 2],
     }
     return salt.loader.grains(opts)
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------
