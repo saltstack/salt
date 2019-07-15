@@ -1131,3 +1131,17 @@ class GrainsMarkEvaluator(MarkEvaluator):
 # Patch PyTest's skipping MarkEvaluator to use our GrainsMarkEvaluator
 _pytest.skipping.MarkEvaluator = GrainsMarkEvaluator
 # <---- Custom Grains Mark Evaluator ---------------------------------------------------------------------------------
+
+
+# ----- Custom Fixtures --------------------------------------------------------------------------------------------->
+@pytest.fixture(scope='session')
+def grains(request):
+    cachedir = request.config.cache._cachedir
+    root_dir = cachedir / 'salt'
+    opts = {
+        'root_dir': str(root_dir),
+        'cachedir': str(root_dir / 'cache'),
+        'extension_modules': str(root_dir / 'extmods')
+    }
+    return salt.loader.grains(opts)
+# <---- Custom Fixtures ----------------------------------------------------------------------------------------------
