@@ -1202,6 +1202,8 @@ def _terminate_process_list(process_list, kill=False, slow_stop=False):
             except psutil.AccessDenied:
                 # OSX is more restrictive about the above information
                 cmdline = None
+            except OSError:
+                cmdline = None
             if not cmdline:
                 try:
                     cmdline = process.as_dict()
