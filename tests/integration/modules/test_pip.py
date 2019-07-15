@@ -33,6 +33,13 @@ class PipModuleTest(ModuleCase):
     def setUp(self):
         super(PipModuleTest, self).setUp()
 
+        # Restore the environ
+        def cleanup_environ(environ):
+            os.environ.clear()
+            os.environ.update(environ)
+
+        self.addCleanup(cleanup_environ, os.environ.copy())
+
         self.venv_test_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         # Remove the venv test directory
         self.addCleanup(shutil.rmtree, self.venv_test_dir, ignore_errors=True)
