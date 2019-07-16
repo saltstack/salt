@@ -399,7 +399,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         check_file = self.run_function('file.file_exists', [self.file_pillar_def])
         self.assertTrue(check_file)
 
-    @skipIf(IS_WINDOWS, 'Don\'t know how to fix for Windows')
     @skip_if_not_root
     def test_managed_dir_mode(self):
         '''
@@ -569,8 +568,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 if os.path.exists(managed_files[typ]):
                     os.remove(managed_files[typ])
 
-    @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
     @skip_if_not_root
+    @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
     @skipIf(not salt.utils.path.which('visudo'), 'sudo is missing')
     def test_managed_check_cmd(self):
         '''
@@ -961,7 +960,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.islink(sym_dir):
                 self.run_function('file.remove', [sym_dir])
 
-    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     @skip_if_not_root
     def test_directory_max_depth(self):
         '''
@@ -2473,8 +2471,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             except OSError:
                 pass
 
-    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     @skip_if_not_root
+    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('user12209', 'group12209',
@@ -2510,8 +2508,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             root_group = self.run_function('user.primary_group', ['root'])
             self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, root_group)
 
-    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     @skip_if_not_root
+    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('user12209', 'group12209',
@@ -2638,8 +2636,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.sls', mods=state_file)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     @skip_if_not_root
+    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('test_setuid_user', 'test_setuid_group',
@@ -2696,8 +2694,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             except OSError:
                 pass
 
-    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     @skip_if_not_root
+    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('user12209', 'group12209',
