@@ -18,7 +18,6 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import patched_environ, destructiveTest
-from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils.files
@@ -27,7 +26,7 @@ import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
-class PipModuleTest(ModuleCase, SaltReturnAssertsMixin):
+class PipModuleTest(ModuleCase):
     '''
     These tests don't require the overhead of an environment being set up and torn down for them
     '''
@@ -125,12 +124,19 @@ class PipModuleVenvTest(ModuleCase):
 
     def _create_virtualenv(self, path):
         ret = self.run_function('virtualenv.create', [path], **self.venv_kwargs)
-        self.assertSaltTrueReturn(ret)
+        self.assertCmdSuccess(ret)
+
+    def assertCmdSuccess(self, ret):
+        self.assertIsInstance(ret, dict, ret)
+        self.assertEqual(ret.get('retcode', None), 0, ret)
 
     def assertPipInstall(self, target, expect=('irc3-plugins-test', 'pep8')):
         '''
         isolate regex for extracting `successful install` message from pip
         '''
+        if isinstance(target, dict):
+            target = target.get('stdout', '')
+
         success = re.search(
             r'^.*Successfully installed\s([^\n]+)(?:Clean.*)?',
             target,
@@ -165,8 +171,7 @@ class PipModuleVenvTest(ModuleCase):
             'pip.install', requirements=requirements_list,
             bin_env=self.venv_dir, cwd=self.venv_dir
         )
-        self.assertSaltTrueReturn(ret)
-        self.assertPipInstall(ret['stdout'] if isinstance(ret, dict) else ret)
+        self.assertPipInstall(ret)
 
     def test_requirements_as_list_of_chains__cwd_not_set__absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
@@ -193,8 +198,8 @@ class PipModuleVenvTest(ModuleCase):
             'pip.install', requirements=requirements_list, bin_env=self.venv_dir
         )
 
-        self.assertSaltTrueReturn(ret)
-        self.assertPipInstall(ret['stdout'] if isinstance(ret, dict) else ret)
+        self.assertCmdSuccess(ret)
+        self.assertPipInstall(ret)
 
     def test_requirements_as_list__absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
@@ -213,8 +218,8 @@ class PipModuleVenvTest(ModuleCase):
             'pip.install', requirements=requirements_list, bin_env=self.venv_dir
         )
 
-        self.assertSaltTrueReturn(ret)
-        self.assertPipInstall(ret['stdout'] if isinstance(ret, dict) else ret)
+        self.assertCmdSuccess(ret)
+        self.assertPipInstall(ret)
 
     def test_requirements_as_list__non_absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
@@ -240,8 +245,8 @@ class PipModuleVenvTest(ModuleCase):
             bin_env=self.venv_dir, cwd=req_cwd
         )
 
-        self.assertSaltTrueReturn(ret)
-        self.assertPipInstall(ret['stdout'] if isinstance(ret, dict) else ret)
+        self.assertCmdSuccess(ret)
+        self.assertPipInstall(ret)
 
     def test_chained_requirements__absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
@@ -260,7 +265,7 @@ class PipModuleVenvTest(ModuleCase):
             'pip.install', requirements=req1_filename, bin_env=self.venv_dir
         )
 
-        self.assertSaltTrueReturn(ret)
+        self.assertCmdSuccess(ret)
         self.assertIn('installed pep8', ret['stdout'])
 
     def test_chained_requirements__non_absolute_file_path(self):
@@ -285,7 +290,7 @@ class PipModuleVenvTest(ModuleCase):
             bin_env=self.venv_dir
         )
 
-        self.assertSaltTrueReturn(ret)
+        self.assertCmdSuccess(ret)
         self.assertIn('installed pep8', ret['stdout'])
 
     def test_issue_4805_nested_requirements(self):
@@ -302,7 +307,7 @@ class PipModuleVenvTest(ModuleCase):
         ret = self.run_function(
             'pip.install', requirements=req1_filename, bin_env=self.venv_dir, timeout=300)
 
-        self.assertSaltTrueReturn(ret)
+        self.assertCmdSuccess(ret)
 
         self.assertNotIn('URLError', ret['stdout'])
         self.assertNotIn('Download error', ret['stdout'])
@@ -314,7 +319,7 @@ class PipModuleVenvTest(ModuleCase):
         self._create_virtualenv(self.venv_dir)
         ret = self.run_function('pip.install', ['pep8'], bin_env=self.venv_dir)
 
-        self.assertSaltTrueReturn(ret)
+        self.assertCmdSuccess(ret)
 
         self.assertNotIn('URLError', ret['stdout'])
         self.assertNotIn('Download error', ret['stdout'])
@@ -325,7 +330,7 @@ class PipModuleVenvTest(ModuleCase):
             'pip.uninstall', ['pep8'], bin_env=self.venv_dir
         )
 
-        self.assertSaltTrueReturn(ret)
+        self.assertCmdSuccess(ret)
 
         self.assertIn('uninstalled pep8', ret['stdout'])
 
@@ -336,7 +341,7 @@ class PipModuleVenvTest(ModuleCase):
             'pip.install', ['pep8==1.3.4'], bin_env=self.venv_dir
         )
 
-        self.assertSaltTrueReturn(ret)
+        self.assertCmdSuccess(ret)
 
         self.assertNotIn('URLError', ret['stdout'])
         self.assertNotIn('Download error', ret['stdout'])
@@ -349,7 +354,7 @@ class PipModuleVenvTest(ModuleCase):
             upgrade=True
         )
 
-        self.assertSaltTrueReturn(ret)
+        self.assertCmdSuccess(ret)
 
         self.assertNotIn('URLError', ret['stdout'])
         self.assertNotIn('Download error', ret['stdout'])
@@ -360,7 +365,7 @@ class PipModuleVenvTest(ModuleCase):
             'pip.uninstall', ['pep8'], bin_env=self.venv_dir
         )
 
-        self.assertSaltTrueReturn(ret)
+        self.assertCmdSuccess(ret)
 
         self.assertIn('uninstalled pep8', ret['stdout'])
 
@@ -378,7 +383,7 @@ class PipModuleVenvTest(ModuleCase):
             bin_env=self.venv_dir
         )
 
-        self.assertSaltTrueReturn(ret)
+        self.assertCmdSuccess(ret)
 
         self.assertNotIn('URLError', ret['stdout'])
         self.assertNotIn('Download error', ret['stdout'])
@@ -401,7 +406,7 @@ class PipModuleVenvTest(ModuleCase):
             bin_env=self.venv_dir
         )
 
-        self.assertSaltTrueReturn(ret)
+        self.assertCmdSuccess(ret)
 
         self.assertNotIn('URLError', ret['stdout'])
         self.assertNotIn('Download error', ret['stdout'])
