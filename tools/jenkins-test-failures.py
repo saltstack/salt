@@ -18,19 +18,32 @@ import requests.auth
 
 log = logging.getLogger()
 
-TestFailure = collections.namedtuple('TestFailure', 'full_name, branch, suite, case')
+TestFailure = collections.namedtuple('TestFailure', 'full_name, branch, suite, case, uri')
 
 uri = os.environ.get('JENKINS_URI', 'https://jenkinsci.saltstack.com/api/json')
 user = os.environ['JENKINS_USER']
 password = os.environ['JENKINS_PASS']
 
-current_versions = (
-    '2017.7',
-#    '2017.7.9',
-#    '2018.3',
-#    '2019.2',
-#    'develop',
-)
+# TODO: Is 2019.2 a good default branch? Maybe develop? -W. Werner, 2019-05-02
+current_versions = [
+    branch.strip()
+    for branch in os.environ.get('JENKINS_BRANCHES', '2019.2').split(',')
+]
+
+
+template = '''
+{title} test failures
+=======
+
+{branches}
+---
+
+{details}
+
+```
+{stacktrace}
+```
+'''
 
 
 def all_jobs(branches=current_versions):
@@ -90,11 +103,28 @@ def test_report(branch, suite, build_number):
         auth=requests.auth.HTTPBasicAuth(user, password))
     if resp.status_code != 200:
         return
+    testsuite = suite
     data = resp.json()
     for suite in data['suites']:
         for case in suite['cases']:
+            test, _, klass = case['className'].rpartition('.')
             if case['status'] not in ('PASSED', 'SKIPPED',):
-                yield case
+                # TODO: There is probably a better way -W. Werner, 2019-05-02
+                # This was just the least intrusive, and quickest thing
+                # I could do.
+                uri = (
+                    'https://jenkinsci.saltstack.com/job/{branch}/job'
+                    '/{suite}/{build_number}/testReport/junit/{test}/'
+                    '{testclass}/{testcase}'
+                ).format(
+                    branch=branch,
+                    suite=testsuite,
+                    build_number=build_number,
+                    test=test,
+                    testclass=klass,
+                    testcase=case['name'],
+                )
+                yield case, uri
 
 
 def main():
@@ -110,7 +140,7 @@ def main():
             suite = parts[6]
             build_number = parts[7]
             has_failures = False
-            for case in test_report(branch, suite, build_number):
+            for case, uri in test_report(branch, suite, build_number):
                 has_failures = True
                 full_name = '{}.{}'.format(case['className'], case['name'])
                 failure = TestFailure(
@@ -118,6 +148,7 @@ def main():
                     branch,
                     suite,
                     case,
+                    uri=uri,
                 )
                 if full_name not in test_failures:
                     test_failures[full_name] = {}
@@ -130,22 +161,29 @@ def main():
                     suite_failures[suite] = [branch]
                 else:
                     suite_failures[suite].append(branch)
-            #print('\n')
     for name in suite_failures:
         print("Suite {} failed on {}".format(name, ', '.join(suite_failures[name])))
     for name in test_failures:
         print('*' * 80)
-        print(name)
+        branches = []
         for branch in test_failures[name]:
-            print('-' * 80)
-            print('{} failed {}'.format(branch, ', '.join([x.suite for x in test_failures[name][branch]])))
-            print('-' * 80)
+            branches.append(
+                '{} failed {}'.format(
+                    branch, ', '.join(
+                        [
+                            f'[{str(x.suite)}]({x.uri})'
+                            for x in test_failures[name][branch]
+                        ]
+                    )
+                )
+            )
         case = test_failures[name][branch][-1].case
-        print('~' * 80)
-        print(case['errorDetails'])
-        print('.' * 80)
-        print(case['errorStackTrace'])
-        print('\n')
+        print(template.format(
+            title=name,
+            branches='\n'.join(branches),
+            details=case['errorDetails'],
+            stacktrace=case['errorStackTrace'],
+        ))
 
 
 if __name__ == '__main__':
