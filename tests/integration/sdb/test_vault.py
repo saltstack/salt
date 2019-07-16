@@ -11,14 +11,13 @@ import time
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase, ShellCase
-from tests.support.helpers import destructiveTest, flaky
+from tests.support.helpers import flaky
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
 import salt.utils.path
 
 
-@destructiveTest
 @skipIf(not salt.utils.path.which('dockerd'), 'Docker not installed')
 @skipIf(not salt.utils.path.which('vault'), 'Vault not installed')
 class VaultTestCase(ModuleCase, ShellCase):
@@ -31,6 +30,7 @@ class VaultTestCase(ModuleCase, ShellCase):
         '''
         SetUp vault container
         '''
+        vault_binary = salt.utils.path.which('vault')
         if VaultTestCase.count == 0:
             config = '{"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h"}'
             self.run_state('docker_image.present', name='vault', tag='0.9.6')
@@ -48,7 +48,7 @@ class VaultTestCase(ModuleCase, ShellCase):
             time.sleep(5)
             ret = self.run_function(
                 'cmd.retcode',
-                cmd='/usr/local/bin/vault login token=testsecret',
+                cmd='{} login token=testsecret'.format(vault_binary),
                 env={'VAULT_ADDR': 'http://127.0.0.1:8200'},
             )
             login_attempts = 1
@@ -70,7 +70,7 @@ class VaultTestCase(ModuleCase, ShellCase):
                 time.sleep(5)
                 ret = self.run_function(
                     'cmd.retcode',
-                    cmd='/usr/local/bin/vault login token=testsecret',
+                    cmd='{} login token=testsecret'.format(vault_binary),
                     env={'VAULT_ADDR': 'http://127.0.0.1:8200'},
                 )
                 login_attempts += 1
@@ -78,7 +78,7 @@ class VaultTestCase(ModuleCase, ShellCase):
                     self.skipTest('unable to login to vault')
             ret = self.run_function(
                 'cmd.retcode',
-                cmd='/usr/local/bin/vault policy write testpolicy {0}/vault.hcl'.format(RUNTIME_VARS.FILES),
+                cmd='{} policy write testpolicy {}/vault.hcl'.format(vault_binary, RUNTIME_VARS.FILES),
                 env={'VAULT_ADDR': 'http://127.0.0.1:8200'},
             )
             if ret != 0:
