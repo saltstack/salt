@@ -5,13 +5,27 @@ Salt Release Notes - Codename Neon
 ==================================
 
 
+Jinja enhancements
+==================
+
 Execution Module for Checking Jinja Map Files
-=============================================
+---------------------------------------------
 
 To aid in troubleshooting, an execution module has been added, which allows one
 to see the data loaded from a jinja map, or imported using ``import_yaml`` or
 ``import_json``. See :py:mod:`here <salt.modules.jinja>` for more information.
 
+json_query filter
+-----------------
+
+A port of Ansible :jinja_ref:`json_query` Jinja filter has been added. It allows
+making queries against JSON data using `JMESPath language`_. Could be used to
+filter ``pillar`` data, ``yaml`` maps, and also useful with :jinja_ref:`http_query`.
+
+Depends on the `jmespath`_ Python module.
+
+.. _`JMESPath language`: http://jmespath.org/
+.. _`jmespath`: https://github.com/jmespath/jmespath.py
 
 Saltcheck Updates
 =================
