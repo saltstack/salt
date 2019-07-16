@@ -78,6 +78,7 @@ pylxd==2.2.9
 pyopenssl==19.0.0
 pyparsing==2.4.0          # via packaging
 pyserial==3.4             # via junos-eznc
+pytest-clarity==0.2.0a1
 pytest-helpers-namespace==2019.1.8
 pytest-salt-runtests-bridge==2019.7.10
 pytest-salt==2019.6.13
@@ -106,6 +107,7 @@ six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-
 smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
+termcolor==1.1.0          # via pytest-clarity
 timelib==0.2.4
 tornado==4.5.3 ; python_version >= "3.4"
 urllib3==1.24.3           # via botocore, kubernetes, python-etcd, requests, requests-unixsocket

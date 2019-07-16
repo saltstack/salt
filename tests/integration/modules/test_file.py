@@ -29,6 +29,8 @@ from tests.support.unit import skipIf
 import salt.utils.files
 import salt.utils.platform
 
+import pytest
+
 
 def symlink(source, link_name):
     '''
@@ -72,6 +74,7 @@ class FileModuleTest(ModuleCase):
         shutil.rmtree(self.mydir, ignore_errors=True)
         super(FileModuleTest, self).tearDown()
 
+    @pytest.mark.skip('Test migrated to functional tests')
     @skipIf(salt.utils.platform.is_windows(), 'No chgrp on Windows')
     def test_chown(self):
         user = getpass.getuser()

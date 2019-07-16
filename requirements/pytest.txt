@@ -5,3 +5,4 @@ pytest-salt >= 2019.6.13
 pytest-tempdir >= 2018.8.11
 pytest-helpers-namespace >= 2019.1.8
 pytest-salt-runtests-bridge >= 2019.7.10
+pytest-clarity
