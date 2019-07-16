@@ -57,12 +57,10 @@ class PipModuleTest(ModuleCase):
 
         self.run_function('pip.install', pkgs=['lazyimport==0.0.1'], bin_env=pip)
         ret = self.run_function('cmd.run', [pip + ' -qqq freeze | grep lazyimport'])
-        self.assertIsInstance(ret, str)
         self.assertIn('lazyimport==0.0.1', ret)
 
         self.run_function('pip.uninstall', pkgs=['lazyimport'], bin_env=pip)
         ret = self.run_function('cmd.run', [pip + ' -qqq freeze | grep lazyimport'])
-        self.assertIsInstance(ret, str)
         self.assertNotIn('lazyimport', ret)
 
 
