@@ -63,12 +63,12 @@ class PipModuleTest(ModuleCase):
                     break
 
         self.run_function('pip.install', pkgs=['lazyimport==0.0.1'], bin_env=pip)
-        ret = self.run_function('cmd.run', [pip + ' -q freeze | grep lazyimport'])
+        ret = self.run_function('cmd.run', [pip + ' -qqq freeze | grep lazyimport'])
         self.assertIn('lazyimport==0.0.1', ret)
 
         self.run_function('pip.uninstall', pkgs=['lazyimport'], bin_env=pip)
-        ret = self.run_function('cmd.run', [pip + ' -q freeze | grep lazyimport'])
-        self.assertEqual(ret, '')
+        ret = self.run_function('cmd.run', [pip + ' -qqq freeze | grep lazyimport'])
+        self.assertNotIn('lazyimport', ret)
 
 
 @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
