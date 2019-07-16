@@ -5228,8 +5228,14 @@ def _is_valid_volume(vol):
     the last pool refresh.
     '''
     try:
-        # Getting info on an invalid volume raises error
+        # Getting info on an invalid volume raises error and libvirt logs an error
+        def discarder(ctxt, error):  # pylint: disable=unused-argument
+            log.debug("Ignore libvirt error: %s", error[2])
+        # Disable the libvirt error logging
+        libvirt.registerErrorHandler(discarder, None)
         vol.info()
+        # Reenable the libvirt error logging
+        libvirt.registerErrorHandler(None, None)
         return True
     except libvirt.libvirtError as err:
         return False
