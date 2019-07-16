@@ -71,6 +71,11 @@ try:
 except ImportError:
     import socketserver
 
+if six.PY2:
+    # Python 2 does not have PermissionError
+    class PermissionError(OSError):
+        pass
+
 # Import salt tests support libs
 from tests.support.processes import SaltMaster, SaltMinion, SaltSyndic
 
