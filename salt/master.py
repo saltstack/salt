@@ -9,7 +9,6 @@ from __future__ import absolute_import, with_statement, print_function, unicode_
 import copy
 import ctypes
 import functools
-import pprint
 import os
 import re
 import sys
@@ -1002,7 +1001,6 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.mkey = state['mkey']
         self.key = state['key']
         self.k_mtime = state['k_mtime']
-        self.stats = state['stats']
         SMaster.secrets = state['secrets']
 
     def __getstate__(self):
@@ -1013,7 +1011,6 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
             'key': self.key,
             'k_mtime': self.k_mtime,
             'secrets': SMaster.secrets,
-            'stats': self.stats,
             'log_queue': self.log_queue,
             'log_queue_level': self.log_queue_level
         }
@@ -1076,11 +1073,9 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.stats[cmd]['mean'] = (self.stats[cmd]['mean'] * (self.stats[cmd]['runs'] - 1) + duration) / self.stats[cmd]['runs']
         if end - self.stat_clock > self.opts['master_stats_event_iter']:
             # Fire the event with the stats and wipe the tracker
-            stats_last = {'time': end - self.stat_clock, 'worker': self.name, 'stats': self.stats}
-            self.aes_funcs.event.fire_event(stats_last, tagify(self.name, 'stats'))
+            self.aes_funcs.event.fire_event({'time': end - self.stat_clock, 'worker': self.name, 'stats': self.stats}, tagify(self.name, 'stats'))
             self.stats = collections.defaultdict(lambda: {'mean': 0, 'runs': 0})
             self.stat_clock = end
-            log.error("STATS %s", pprint.pformat(stats_last))
 
     def _handle_clear(self, load):
         '''
