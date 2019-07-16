@@ -1532,7 +1532,10 @@ def user_chpass(user,
             password_sql = 'PASSWORD(%(password)s)'
         args['password'] = password
     elif password_hash is not None:
-        password_sql = '%(password)s'
+        if 'MariaDB' in server_version:
+            password_sql = 'PASSWORD %(password)s'
+        else:
+            password_sql = '%(password)s'
         args['password'] = password_hash
     elif not salt.utils.data.is_true(allow_passwordless):
         log.error('password or password_hash must be specified, unless '
