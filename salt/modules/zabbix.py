@@ -597,11 +597,15 @@ def user_get(alias=None, userids=None, **kwargs):
         salt '*' zabbix.user_get james
     '''
     conn_args = _login(**kwargs)
+    zabbix_version = apiinfo_version(**kwargs)
     ret = {}
     try:
         if conn_args:
             method = 'user.get'
-            params = {"output": "extend", "filter": {}}
+            if _LooseVersion(zabbix_version) < _LooseVersion("4.0"):
+                params = {"output": "extend", "filter": {}}
+            else:
+                params = {"output": "extend", "selectMedias": "extend", "filter": {}}
             if not userids and not alias:
                 return {'result': False, 'comment': 'Please submit alias or userids parameter to retrieve users.'}
             if alias:
@@ -682,17 +686,28 @@ def user_getmedia(userids=None, **kwargs):
         salt '*' zabbix.user_getmedia
     '''
     conn_args = _login(**kwargs)
+    zabbix_version = apiinfo_version(**kwargs)
     ret = {}
     try:
         if conn_args:
-            method = 'usermedia.get'
             if userids:
                 params = {"userids": userids}
             else:
                 params = {}
+
+            if _LooseVersion(zabbix_version) < _LooseVersion("4.0"):
+                method = 'usermedia.get'
+            else:
+                method = 'user.get'
+                params.update({"selectMedias": "extend"})
+
             params = _params_extend(params, **kwargs)
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']
+
+            if _LooseVersion(zabbix_version) < _LooseVersion("4.0"):
+                return ret['result']
+            else:
+                return ret.get('result', [{'medias': []}])[0].get('medias')
         else:
             raise KeyError
     except KeyError:

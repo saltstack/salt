@@ -9,12 +9,13 @@ Management of Zabbix users.
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-from salt.utils.json import loads, dumps
 from copy import deepcopy
+from salt.utils.json import loads, dumps
 
 # Import Salt libs
 from salt.ext import six
 from salt.exceptions import SaltException
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 
 def __virtual__():
@@ -151,6 +152,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
                         - mediatype: mail
                         - period: '1-7,00:00-24:00'
                         - severity: NIWAHD
+                        - sendto: me@example.com
                     - make_jabber:
                         - active: true
                         - mediatype: jabber
@@ -163,9 +165,20 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
                         - severity: D
                         - sendto: '+42032132588568'
 
+    There is slight change for Zabbix 4.0 and later. For mediatype=mail the value must be a list of email addresses.
+
+    .. code-block:: yaml
+
+                    - me@example.com:
+                        - mediatype: mail
+                        - period: '1-7,00:00-24:00'
+                        - severity: NIWAHD
+                        - sendto: ['me@example.com']
     '''
     if medias is None:
         medias = []
+    update_usrgrps = False
+    update_medias = False
     connection_args = {}
     if '_connection_user' in kwargs:
         connection_args['_connection_user'] = kwargs['_connection_user']
@@ -175,6 +188,8 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
         connection_args['_connection_url'] = kwargs['_connection_url']
 
     ret = {'name': alias, 'changes': {}, 'result': False, 'comment': ''}
+
+    zabbix_version = __salt__['zabbix.apiinfo_version'](**connection_args)
 
     # Comment and change messages
     comment_user_created = 'User {0} created.'.format(alias)
@@ -241,9 +256,6 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
         user = __salt__['zabbix.user_get'](alias, **connection_args)[0]
         userid = user['userid']
 
-        update_usrgrps = False
-        update_medias = False
-
         usergroups = __salt__['zabbix.usergroup_get'](userids=userid, **connection_args)
         cur_usrgrps = list()
 
@@ -283,7 +295,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
 
     error = []
 
-    if user_exists:
+    if user_exists and not __opts__['test']:
         ret['result'] = True
         if update_usrgrps or password_reset or update_medias:
             ret['comment'] = comment_user_updated
@@ -311,29 +323,43 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
                     ret['changes']['passwd'] = 'updated'
 
             if update_medias:
-                for user_med in user_medias:
-                    deletedmed = __salt__['zabbix.user_deletemedia'](user_med['mediaid'], **connection_args)
-                    if 'error' in deletedmed:
-                        error.append(deletedmed['error'])
+                if _LooseVersion(zabbix_version) < _LooseVersion("4.0"):
+                    for user_med in user_medias:
+                        deletedmed = __salt__['zabbix.user_deletemedia'](user_med['mediaid'], **connection_args)
+                        if 'error' in deletedmed:
+                            error.append(deletedmed['error'])
 
-                for media in medias_formated:
-                    updatemed = __salt__['zabbix.user_addmedia'](userids=userid,
-                                                                 active=media['active'],
-                                                                 mediatypeid=media['mediatypeid'],
-                                                                 period=media['period'],
-                                                                 sendto=media['sendto'],
-                                                                 severity=media['severity'],
-                                                                 **connection_args)
+                    for media in medias_formated:
+                        updatemed = __salt__['zabbix.user_addmedia'](userids=userid,
+                                                                     active=media['active'],
+                                                                     mediatypeid=media['mediatypeid'],
+                                                                     period=media['period'],
+                                                                     sendto=media['sendto'],
+                                                                     severity=media['severity'],
+                                                                     **connection_args)
 
-                    if 'error' in updatemed:
-                        error.append(updatemed['error'])
+                        if 'error' in updatemed:
+                            error.append(updatemed['error'])
+                else:
+                    updated_medias = __salt__['zabbix.user_update'](userid,
+                                                                    user_medias=medias_formated,
+                                                                    **connection_args)
+                    if 'error' in updated_medias:
+                        error.append(updated_medias['error'])
+                    else:
+                        ret['changes']['user_medias'] = 'updated'
 
                 ret['changes']['medias'] = six.text_type(medias_formated)
 
         else:
             ret['comment'] = comment_user_exists
     else:
-        user_create = __salt__['zabbix.user_create'](alias, passwd, usrgrps, **kwargs)
+        if _LooseVersion(zabbix_version) >= _LooseVersion("4.0"):
+            kwargs.update({'user_medias': _media_format(medias)})
+
+        user_create = {}
+        if not __opts__['test']:
+            user_create = __salt__['zabbix.user_create'](alias, passwd, usrgrps, **kwargs)
 
         if 'error' not in user_create:
             ret['result'] = True
