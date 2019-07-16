@@ -44,6 +44,7 @@ class PipModuleTest(ModuleCase):
         # Run a pip depending functions with a non existent pip binary
         for func in ('pip.freeze', 'pip.list'):
             ret = self.run_function(func, bin_env=os.path.join(RUNTIME_VARS.TMP, 'no_pip'))
+            self.assertIsInstance(ret, str)
             self.assertIn('command required for \'{0}\' not found: '.format(func), ret.lower())
             self.assertIn('could not find a pip binary', ret)
 
@@ -56,10 +57,12 @@ class PipModuleTest(ModuleCase):
 
         self.run_function('pip.install', pkgs=['lazyimport==0.0.1'], bin_env=pip)
         ret = self.run_function('cmd.run', [pip + ' -qqq freeze | grep lazyimport'])
+        self.assertIsInstance(ret, list)
         self.assertIn('lazyimport==0.0.1', ret)
 
         self.run_function('pip.uninstall', pkgs=['lazyimport'], bin_env=pip)
         ret = self.run_function('cmd.run', [pip + ' -qqq freeze | grep lazyimport'])
+        self.assertIsInstance(ret, list)
         self.assertNotIn('lazyimport', ret)
 
 
@@ -109,17 +112,18 @@ class PipModuleVenvTest(ModuleCase):
         virtualenv because it will fail otherwise
         '''
         if not hasattr(self, '_venv_kwargs'):
+            # Default to the system python
+            self._venv_kwargs = {}
             if hasattr(sys, 'real_prefix'):
                 if salt.utils.platform.is_windows():
                     python = os.path.join(sys.real_prefix, os.path.basename(sys.executable))
                 else:
                     python = os.path.join(sys.real_prefix, 'bin', os.path.basename(sys.executable))
-                # We're running off a virtualenv, and we don't want to create a virtualenv off of
-                # a virtualenv
-                self._venv_kwargs = {'python': python}
-            else:
-                # We're running off of the system python
-                self._venv_kwargs = {}
+                # We're running off a virtualenv, and we don't want to create a virtualenv off of a virtualenv
+
+                # pyvenv 3.4 does not support the --python option
+                if (3,) < sys.version_info > (3, 4):
+                    self._venv_kwargs = {'python': python}
         return self._venv_kwargs
 
     def _create_virtualenv(self, path):
@@ -308,10 +312,8 @@ class PipModuleVenvTest(ModuleCase):
             'pip.install', requirements=req1_filename, bin_env=self.venv_dir, timeout=300)
 
         self.assertCmdSuccess(ret)
-
         self.assertNotIn('URLError', ret['stdout'])
         self.assertNotIn('Download error', ret['stdout'])
-
         self.assertIn('installed pep8', ret['stdout'])
 
     def test_pip_uninstall(self):
@@ -320,10 +322,8 @@ class PipModuleVenvTest(ModuleCase):
         ret = self.run_function('pip.install', ['pep8'], bin_env=self.venv_dir)
 
         self.assertCmdSuccess(ret)
-
         self.assertNotIn('URLError', ret['stdout'])
         self.assertNotIn('Download error', ret['stdout'])
-
         self.assertIn('installed pep8', ret['stdout'])
 
         ret = self.run_function(
@@ -331,7 +331,6 @@ class PipModuleVenvTest(ModuleCase):
         )
 
         self.assertCmdSuccess(ret)
-
         self.assertIn('uninstalled pep8', ret['stdout'])
 
     def test_pip_install_upgrade(self):
@@ -342,7 +341,6 @@ class PipModuleVenvTest(ModuleCase):
         )
 
         self.assertCmdSuccess(ret)
-
         self.assertNotIn('URLError', ret['stdout'])
         self.assertNotIn('Download error', ret['stdout'])
         self.assertIn('installed pep8', ret['stdout'])
@@ -355,10 +353,8 @@ class PipModuleVenvTest(ModuleCase):
         )
 
         self.assertCmdSuccess(ret)
-
         self.assertNotIn('URLError', ret['stdout'])
         self.assertNotIn('Download error', ret['stdout'])
-
         self.assertIn('installed pep8', ret['stdout'])
 
         ret = self.run_function(
@@ -366,7 +362,6 @@ class PipModuleVenvTest(ModuleCase):
         )
 
         self.assertCmdSuccess(ret)
-
         self.assertIn('uninstalled pep8', ret['stdout'])
 
     def test_pip_install_multiple_editables(self):
@@ -384,10 +379,8 @@ class PipModuleVenvTest(ModuleCase):
         )
 
         self.assertCmdSuccess(ret)
-
         self.assertNotIn('URLError', ret['stdout'])
         self.assertNotIn('Download error', ret['stdout'])
-
         self.assertIn(
             'Successfully installed Blinker SaltTesting', ret['stdout']
         )
@@ -407,7 +400,6 @@ class PipModuleVenvTest(ModuleCase):
         )
 
         self.assertCmdSuccess(ret)
-
         self.assertNotIn('URLError', ret['stdout'])
         self.assertNotIn('Download error', ret['stdout'])
 
