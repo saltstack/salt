@@ -961,6 +961,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 self.run_function('file.remove', [sym_dir])
 
     @skip_if_not_root
+    @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
     def test_directory_max_depth(self):
         '''
         file.directory
