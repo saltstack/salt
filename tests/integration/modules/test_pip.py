@@ -47,9 +47,20 @@ class PipModuleTest(ModuleCase):
             self.assertIn('command required for \'{0}\' not found: '.format(func), ret.lower())
             self.assertIn('could not find a pip binary', ret)
 
-#    @destructiveTest
+    @destructiveTest
     def test_system_pip3(self):
-        pip = '/bin/pip3'
+        # This will be the fallback if pip cannot be found in a known location
+        pip = salt.utils.path.which('pip3')
+        if not salt.utils.platform.is_windows():
+            for path in (
+                ('bin', 'pip3'),
+                ('usr', 'bin', 'pip3'),
+                ('usr', 'local', 'bin', 'pip3'),
+                ('sbin', 'pip3'),
+            ):
+                if os.path.exists(os.path.join(*path)):
+                    pip = os.path.join(*path)
+                    break
 
         self.run_function('pip.install', pkgs=['lazyimport==0.0.1'], bin_env=pip)
         ret = self.run_function('cmd.run', [pip + ' freeze | grep lazyimport'])
