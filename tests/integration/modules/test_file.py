@@ -73,19 +73,6 @@ class FileModuleTest(ModuleCase):
         super(FileModuleTest, self).tearDown()
 
     @skipIf(salt.utils.platform.is_windows(), 'No chgrp on Windows')
-    def test_chown(self):
-        user = getpass.getuser()
-        if sys.platform == 'darwin':
-            group = 'staff'
-        elif sys.platform.startswith(('linux', 'freebsd', 'openbsd')):
-            group = grp.getgrgid(pwd.getpwuid(os.getuid()).pw_gid).gr_name
-        ret = self.run_function('file.chown', arg=[self.myfile, user, group])
-        self.assertIsNone(ret)
-        fstat = os.stat(self.myfile)
-        self.assertEqual(fstat.st_uid, os.getuid())
-        self.assertEqual(fstat.st_gid, grp.getgrnam(group).gr_gid)
-
-    @skipIf(salt.utils.platform.is_windows(), 'No chgrp on Windows')
     def test_chown_no_user(self):
         user = 'notanyuseriknow'
         group = grp.getgrgid(pwd.getpwuid(os.getuid()).pw_gid).gr_name
