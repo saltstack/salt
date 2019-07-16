@@ -77,6 +77,11 @@ try:
 except ImportError:
     import socketserver
 
+if six.PY2:
+    # Python 2 does not have PermissionError
+    class PermissionError(OSError):
+        pass
+
 from tornado import gen
 from tornado import ioloop
 
