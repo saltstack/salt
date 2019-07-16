@@ -44,7 +44,8 @@ class PipModuleTest(ModuleCase):
         # Run a pip depending functions with a non existent pip binary
         for func in ('pip.freeze', 'pip.list'):
             ret = self.run_function(func, bin_env=os.path.join(RUNTIME_VARS.TMP, 'no_pip'))
-            self.assertIsInstance(ret, str)
+            self.assertNotIsInstance(ret, list)
+            self.assertNotIsInstance(ret, dict)
             self.assertIn('command required for \'{0}\' not found: '.format(func), ret.lower())
             self.assertIn('could not find a pip binary', ret)
 
@@ -57,10 +58,14 @@ class PipModuleTest(ModuleCase):
 
         self.run_function('pip.install', pkgs=['lazyimport==0.0.1'], bin_env=pip)
         ret = self.run_function('cmd.run', [pip + ' -qqq freeze | grep lazyimport'])
+        self.assertNotIsInstance(ret, list)
+        self.assertNotIsInstance(ret, dict)
         self.assertIn('lazyimport==0.0.1', ret)
 
         self.run_function('pip.uninstall', pkgs=['lazyimport'], bin_env=pip)
         ret = self.run_function('cmd.run', [pip + ' -qqq freeze | grep lazyimport'])
+        self.assertNotIsInstance(ret, list)
+        self.assertNotIsInstance(ret, dict)
         self.assertNotIn('lazyimport', ret)
 
 
