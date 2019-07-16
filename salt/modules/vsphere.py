@@ -9060,6 +9060,7 @@ def _delete_device(device):
     device_spec.device = device
     return device_spec
 
+
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
@@ -9086,6 +9087,7 @@ def list_tag_categories(server=None, username=None, password=None,
         list of str
     '''
     # Get salted vSphere Client
+
     if not (server and username and password):
         # User didn't provide CLI args so use proxy information
         details = __salt__['vcenter.get_details']()
@@ -9100,7 +9102,7 @@ def list_tag_categories(server=None, username=None, password=None,
     categories = None
     if client:
         categories = client.tagging.Category.list()
-    return categories
+    return {"categories": categories}
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
@@ -9143,7 +9145,7 @@ def list_tags(server=None, username=None, password=None,
     tags = None
     if client:
         tags = client.tagging.Tag.list()
-    return tags
+    return {'tags': tags}
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
@@ -9201,6 +9203,7 @@ def list_attached_tags(object_id,
         attached_tags = client.tagging.TagAssociation.list_attached_tags(dynamic_id)
     return attached_tags
 
+
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
@@ -9220,7 +9223,7 @@ def create_tag_category(name, description, cardinality,
         Name of tag category to create (ex. Machine, OS, Availability, etc.)
     :param str description:
         Given description of tag category.
-    :param str cardinality
+    :param str cardinality:
         The associated cardinality (SINGLE, MULTIPLE) of the category.
     :param basestring server:
         Target DNS or IP of vCenter center.
