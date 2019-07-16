@@ -124,8 +124,8 @@ class PipModuleVenvTest(ModuleCase):
                     python = os.path.join(sys.real_prefix, 'bin', os.path.basename(sys.executable))
                 # We're running off a virtualenv, and we don't want to create a virtualenv off of a virtualenv
 
-                # pyvenv 3.4 does not support the --python option
-                if (3,) < sys.version_info > (3, 4):
+                # pyvenv-3.4 does not support the --python option
+                if not salt.utils.path.which('pyvenv-3.4'):
                     self._venv_kwargs = {'python': python}
         return self._venv_kwargs
 
