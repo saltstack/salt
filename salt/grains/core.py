@@ -2135,8 +2135,16 @@ def locale_info():
         grains['locale_info']['defaultlanguage'] = 'unknown'
         grains['locale_info']['defaultencoding'] = 'unknown'
     grains['locale_info']['detectedencoding'] = __salt_system_encoding__
+
+    grains['locale_info']['timezone'] = 'unknown'
     if _DATEUTIL_TZ:
-        grains['locale_info']['timezone'] = datetime.datetime.now(dateutil.tz.tzlocal()).tzname()
+        try:
+            grains['locale_info']['timezone'] = datetime.datetime.now(dateutil.tz.tzlocal()).tzname()
+        except UnicodeDecodeError:
+            # Because the method 'tzname' is not a part of salt the decoding error cant be fixed.
+            # 'datetime' does not supply the raw data to write a new 'tzname' in a graceful way.
+            pass
+
     return grains
 
 

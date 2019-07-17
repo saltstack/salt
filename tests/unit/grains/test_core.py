@@ -19,6 +19,7 @@ except ImportError as import_error:
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
+    call,
     MagicMock,
     patch,
     mock_open,
@@ -52,6 +53,19 @@ IP6_ADD2 = '2001:4860:4860::8888'
 IP6_ADD_SCOPE = 'fe80::6238:e0ff:fe06:3f6b%enp2s0'
 OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
 SOLARIS_DIR = os.path.join(os.path.dirname(__file__), 'solaris')
+
+
+class MockDateTime:
+    def __init__(self, **kwargs):
+        for attr in kwargs:
+            setattr(self, attr, self._getattr(attr, kwargs[attr]))
+
+    def _getattr(self, attr, attr_value):
+        def __getattr(*args, **kwargs):
+            return attr_value
+
+        setattr(__getattr, attr, attr_value)
+        return __getattr
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -1171,3 +1185,37 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = core._osx_memdata()
             assert ret['swap_total'] == 0
             assert ret['mem_total'] == 4096
+
+    @skipIf(not core._DATEUTIL_TZ, 'Missing dateutil.tz')
+    def test_locale_info_tzname(self):
+        # core.datatime.datatime.now is readonly
+        with patch.object(core.datetime, 'datetime', wraps=MockDateTime(now=MockDateTime(tzname='MDT'))) as datetime:
+            with patch.object(core.dateutil.tz, 'tzlocal', return_value=object) as tzlocal:
+                ret = core.locale_info()
+
+                self.assertEqual(len(datetime.method_calls), 1)
+                self.assertEqual(datetime.method_calls[0], call.now(object))
+                tzlocal.assert_called_once_with()
+                self.assertEqual(ret['locale_info']['timezone'], 'MDT')
+
+    @skipIf(not core._DATEUTIL_TZ, 'Missing dateutil.tz')
+    def test_locale_info_unicode_error_tzname(self):
+        # UnicodeDecodeError most have the default string encoding
+        unicode_error = UnicodeDecodeError(str('fake'), b'\x00\x00', 1, 2, str('fake'))
+        # core.datatime.datatime.now is readonly
+        with patch.object(core.datetime, 'datetime', wraps=MockDateTime(now=MockDateTime(tzname='MDT'))) as datetime:
+            with patch.object(core.dateutil.tz, 'tzlocal', side_effect=unicode_error) as tzlocal:
+                ret = core.locale_info()
+
+                tzlocal.assert_called_once_with()
+                self.assertEqual(len(datetime.method_calls), 0)
+                self.assertEqual(ret['locale_info']['timezone'], 'unknown')
+
+    @skipIf(core._DATEUTIL_TZ, 'Not Missing dateutil.tz')
+    def test_locale_info_no_tz_tzname(self):
+        # core.datatime.datatime.now is readonly
+        with patch.object(core.datetime, 'datetime', wraps=MockDateTime(now=MockDateTime(tzname='MDT'))) as datetime:
+            ret = core.locale_info()
+
+            self.assertEqual(len(datetime.method_calls), 0)
+            self.assertEqual(ret['locale_info']['timezone'], 'unknown')
