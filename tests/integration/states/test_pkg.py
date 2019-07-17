@@ -31,6 +31,7 @@ import salt.utils.pkg.rpm
 import salt.utils.platform
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
@@ -651,6 +652,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
+    @pytest.mark.skip('WAR ROOM TEMPORARY SKIP - 2019/07/17')
     @requires_system_grains
     def test_pkg_014_installed_with_comparison_operator(self, grains):
         '''
