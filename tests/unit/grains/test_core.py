@@ -55,7 +55,7 @@ OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
 SOLARIS_DIR = os.path.join(os.path.dirname(__file__), 'solaris')
 
 
-class MockDateTime:
+class MockDateTime(object):
     def __init__(self, **kwargs):
         for attr in kwargs:
             setattr(self, attr, self._getattr(attr, kwargs[attr]))
