@@ -25,75 +25,32 @@ import sys
 from salt.ext import six
 import salt.utils.stringutils
 
-try:
-    from mock import (
-        Mock,
-        MagicMock,
-        patch,
-        sentinel,
-        DEFAULT,
-        # ANY and call will be imported further down
-        create_autospec,
-        FILTER_DIR,
-        NonCallableMock,
-        NonCallableMagicMock,
-        PropertyMock,
-        __version__
-    )
-    NO_MOCK = False
-    NO_MOCK_REASON = ''
-    mock_version = []
-    for __part in __version__.split('.'):
-        try:
-            mock_version.append(int(__part))
-        except ValueError:
-            # Non-integer value (ex. '1a')
-            mock_version.append(__part)
-    mock_version = tuple(mock_version)
-except ImportError as exc:
-    NO_MOCK = True
-    NO_MOCK_REASON = 'mock python module is unavailable'
-    mock_version = (0, 0, 0)
+# Let the lines bellow while we still have these variables laying around in the test suite modules
+NO_MOCK = True
+NO_MOCK_REASON = ''
 
-    # Let's not fail on imports by providing fake objects and classes
+# By these days, we should blowup if mock is not available
+import mock  # pylint: disable=blacklisted-external-import
+__mock_version = tuple([int(part) for part in mock.__version__.split('.') if part.isdigit()])  # pylint: disable=no-member
+if sys.version_info < (3, 6) and __mock_version < (2,):
+    # We need mock >= 2.0.0 before Py3.6
+    raise ImportError('Please install mock>=2.0.0')
 
-    class MagicMock(object):
+NO_MOCK = False
 
-        # __name__ can't be assigned a unicode
-        __name__ = str('{0}.fakemock').format(__name__)  # future lint: disable=blacklisted-function
-
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def dict(self, *args, **kwargs):
-            return self
-
-        def multiple(self, *args, **kwargs):
-            return self
-
-        def __call__(self, *args, **kwargs):
-            return self
-
-    Mock = MagicMock
-    patch = MagicMock()
-    sentinel = object()
-    DEFAULT = object()
-    create_autospec = MagicMock()
-    FILTER_DIR = True
-    NonCallableMock = MagicMock()
-    NonCallableMagicMock = MagicMock()
-    mock_open = object()
-    PropertyMock = object()
-    call = tuple
-    ANY = object()
-
-
-if NO_MOCK is False:
-    try:
-        from mock import call, ANY
-    except ImportError:
-        NO_MOCK = True
-        NO_MOCK_REASON = 'you need to upgrade your mock version to >= 0.8.0'
+from mock import (Mock,  # pylint: disable=no-name-in-module,no-member
+                  MagicMock,
+                  patch,
+                  sentinel,
+                  DEFAULT,
+                  create_autospec,
+                  FILTER_DIR,
+                  NonCallableMock,
+                  NonCallableMagicMock,
+                  PropertyMock,
+                  __version__,
+                  ANY,
+                  call)
 
 
 class MockFH(object):
