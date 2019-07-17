@@ -451,7 +451,7 @@ def apiinfo_version(**kwargs):
             method = 'apiinfo.version'
             params = {}
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']
+            return six.text_type(ret['result'])
         else:
             raise KeyError
     except KeyError:

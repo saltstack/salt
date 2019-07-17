@@ -282,9 +282,42 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                         "mediatypeid": "1", "sendto": "email@example.com", "active": "0", "severity": "63",
                         "period": "1-7,00:00-24:00"}], "id": 0}
 
-        with patch.object(zabbix, '_query', return_value=query_return):
-            with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.user_getmedia('3', **CONN_ARGS), module_return)
+        with patch.object(zabbix, 'apiinfo_version', return_value='3.2'):
+            with patch.object(zabbix, '_query', return_value=query_return):
+                with patch.object(zabbix, '_login', return_value=CONN_ARGS):
+                    self.assertEqual(zabbix.user_getmedia('3', **CONN_ARGS), module_return)
+
+    def test_user_getmedia_zabbix_v4(self):
+        '''
+        query_submitted = {"params": {"userids": 3}, "jsonrpc": "2.0", "id": 0,
+        "auth": "d4de741ea7cdd434b3ba7b56efa4efaf", "method": "user.get"}
+        '''
+
+        module_return = [
+            {
+                "mediatypeid": "1",
+                "mediaid": "1",
+                "severity": "63",
+                "userid": "3",
+                "period": "1-7,00:00-24:00",
+                "sendto": ["email@example.com"],
+                "active": "0"
+            }
+        ]
+        # pylint: disable=E8128
+        query_return = {"jsonrpc": "2.0",
+                        "result": [{"userid": "11", "alias": "user", "name": "", "surname": "", "url": "",
+                                    "autologin": "0", "autologout": "15m", "lang": "en_GB", "refresh": "30s",
+                                    "type": "1", "theme": "default", "attempt_failed": "0", "attempt_ip": "",
+                                    "attempt_clock": "0", "rows_per_page": "50",
+                                    "medias": [{"mediaid": "1", "userid": "3", "mediatypeid": "1",
+                                                "sendto": ["email@example.com"], "active": "0", "severity": "63",
+                                                "period": "1-7,00:00-24:00"}]}], "id": 0}
+
+        with patch.object(zabbix, 'apiinfo_version', return_value='4.0'):
+            with patch.object(zabbix, '_query', return_value=query_return):
+                with patch.object(zabbix, '_login', return_value=CONN_ARGS):
+                    self.assertEqual(zabbix.user_getmedia('3', **CONN_ARGS), module_return)
 
     def test_user_addmedia(self):
         '''
