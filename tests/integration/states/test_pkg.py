@@ -46,7 +46,6 @@ _PKG_TARGETS = {
     'MacOS': ['libpng', 'jpeg'],
     'Windows': ['putty', '7zip'],
 }
-
 _PKG_CAP_TARGETS = {
     'Suse': [('perl(ZNC)', 'znc-perl')],
 }
@@ -74,63 +73,6 @@ _WILDCARDS_SUPPORTED = ('Arch', 'Debian', 'RedHat')
 ON_SUSE = False
 if 'SuSE' in linux_distribution(full_distribution_name=False):
     ON_SUSE = True
-
-
-def pkgmgr_avail(run_function, grains):
-    '''
-    Return True if the package manager is available for use
-    '''
-    def proc_fd_lsof(path):
-        '''
-        Return True if any entry in /proc/locks points to path.  Example data:
-
-        .. code-block:: bash
-
-            # cat /proc/locks
-            1: FLOCK  ADVISORY  WRITE 596 00:0f:10703 0 EOF
-            2: FLOCK  ADVISORY  WRITE 14590 00:0f:11282 0 EOF
-            3: POSIX  ADVISORY  WRITE 653 00:0f:11422 0 EOF
-        '''
-        import glob
-        # https://www.centos.org/docs/5/html/5.2/Deployment_Guide/s2-proc-locks.html
-        locks = run_function('cmd.run', ['cat /proc/locks']).splitlines()
-        for line in locks:
-            fields = line.split()
-            try:
-                major, minor, inode = fields[5].split(':')
-                inode = int(inode)
-            except (IndexError, ValueError):
-                return False
-
-            for fd in glob.glob('/proc/*/fd'):
-                fd_path = os.path.realpath(fd)
-                # If the paths match and the inode is locked
-                if fd_path == path and os.stat(fd_path).st_ino == inode:
-                    return True
-
-        return False
-
-    def get_lock(path):
-        '''
-        Return True if any locks are found for path
-        '''
-        # Try lsof if it's available
-        if salt.utils.path.which('lsof'):
-            lock = run_function('cmd.run', ['lsof {0}'.format(path)])
-            return True if lock else False
-
-        # Try to find any locks on path from /proc/locks
-        elif grains.get('kernel') == 'Linux':
-            return proc_fd_lsof(path)
-
-        return False
-
-    if 'Debian' in grains.get('os_family', ''):
-        for path in ['/var/lib/apt/lists/lock']:
-            if get_lock(path):
-                return False
-
-    return True
 
 
 def latest_version(ctx, run_function, *names):
@@ -165,6 +107,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkg.installed state tests
     '''
+
     @classmethod
     def setUpClass(cls):
         cls.ctx = {}
@@ -173,37 +116,91 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDownClass(cls):
         del cls.ctx
 
-    def setUp(self):
+    @property
+    def pkgmgr_avail(self):
+        '''
+        Return True if the package manager is available for use
+        '''
+
+        def proc_fd_lsof(path):
+            '''
+            Return True if any entry in /proc/locks points to path.  Example data:
+
+            .. code-block:: bash
+
+                # cat /proc/locks
+                1: FLOCK  ADVISORY  WRITE 596 00:0f:10703 0 EOF
+                2: FLOCK  ADVISORY  WRITE 14590 00:0f:11282 0 EOF
+                3: POSIX  ADVISORY  WRITE 653 00:0f:11422 0 EOF
+            '''
+            import glob
+            # https://www.centos.org/docs/5/html/5.2/Deployment_Guide/s2-proc-locks.html
+            locks = self.run_function('cmd.run', ['cat /proc/locks']).splitlines()
+            for line in locks:
+                fields = line.split()
+                try:
+                    major, minor, inode = fields[5].split(':')
+                    inode = int(inode)
+                except (IndexError, ValueError):
+                    return False
+
+                for fd in glob.glob('/proc/*/fd'):
+                    fd_path = os.path.realpath(fd)
+                    # If the paths match and the inode is locked
+                    if fd_path == path and os.stat(fd_path).st_ino == inode:
+                        return True
+
+            return False
+
+        # Return True if any locks are found for path
+        if self.ctx['os_family'] == 'Debian':
+            path = '/var/lib/apt/lists/lock'
+            # Try lsof if it's available
+            if salt.utils.path.which('lsof'):
+                lock = self.run_function('cmd.run', ['lsof {0}'.format(path)])
+                return True if lock else False
+
+            # Try to find any locks on path from /proc/locks
+            elif not self.ctx['os_family'] == 'Windows':
+                return proc_fd_lsof(path)
+
+            return False
+
+        return True
+
+    @requires_system_grains
+    def setUp(self, grains=None):
         '''
         Ensure that we only refresh the first time we run a test
         '''
         super(PkgTest, self).setUp()
+        # Make sure that we have targets that match the os_family. If this
+        # fails then the _PKG_TARGETS dict above needs to have an entry added,
+        # with two packages that are not installed before these tests are run
+        if 'os_family' not in self.ctx:
+            self.ctx['os_family'] = grains['os_family']
+            log.debug('Running on os family: {}'.format(self.ctx['os_family']))
+        if 'pkg_targets' not in self.ctx:
+            self.ctx['pkg_targets'] = _PKG_TARGETS.get(self.ctx['os_family'], [])
+            self.assertTrue(self.ctx['pkg_targets'])
 
         # Skip tests if package manager not available
         if 'pkgmgr_avail' not in self.ctx:
-            self.ctx['pkgmgr_avail'] = pkgmgr_avail(self.run_function, self.run_function('grains.items'))
+            self.ctx['pkgmgr_avail'] = self.pkgmgr_avail
         if not self.ctx['pkgmgr_avail']:
             self.skipTest('Package manager is not available')
-
         if 'refresh' not in self.ctx:
             self.run_function('pkg.refresh_db')
             self.ctx['refresh'] = True
 
     @skipIf(ON_SUSE, 'WAR ROOM SKIP FRIDAY')
-    @requires_system_grains
-    def test_pkg_001_installed(self, grains):
+    def test_pkg_001_installed(self):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        os_family = grains.get('os_family', '')
-        pkg_targets = _PKG_TARGETS.get(os_family, [])
+        self.assertTrue(self.ctx['pkg_targets'])
 
-        # Make sure that we have targets that match the os_family. If this
-        # fails then the _PKG_TARGETS dict above needs to have an entry added,
-        # with two packages that are not installed before these tests are run
-        self.assertTrue(pkg_targets)
-
-        target = pkg_targets[0]
+        target = self.ctx['pkg_targets'][0]
         version = self.run_function('pkg.version', [target])
 
         # If this assert fails, we need to find new targets, this test needs to
@@ -216,25 +213,14 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_system_grains
-    def test_pkg_002_installed_with_version(self, grains):
+    def test_pkg_002_installed_with_version(self):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        os_family = grains.get('os_family', '')
-        pkg_targets = _PKG_TARGETS.get(os_family, [])
+        if self.ctx['os_family'] == 'FreeBSD':
+            self.skipTest('Version specification is not supported on FreeBSD')
 
-        # Don't perform this test on FreeBSD since version specification is not
-        # supported.
-        if os_family == 'FreeBSD':
-            return
-
-        # Make sure that we have targets that match the os_family. If this
-        # fails then the _PKG_TARGETS dict above needs to have an entry added,
-        # with two packages that are not installed before these tests are run
-        self.assertTrue(pkg_targets)
-
-        if os_family == 'Arch':
+        if self.ctx['os_family'] == 'Arch':
             for idx in range(13):
                 if idx == 12:
                     raise Exception('Package database locked after 60 seconds, '
@@ -243,7 +229,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                     break
                 time.sleep(5)
 
-        target = pkg_targets[0]
+        target = self.ctx['pkg_targets'][0]
         version = latest_version(self.ctx, self.run_function, target)
 
         # If this assert fails, we need to find new targets, this test needs to
@@ -259,19 +245,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_system_grains
-    def test_pkg_003_installed_multipkg(self, grains):
+    def test_pkg_003_installed_multipkg(self):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
-        os_family = grains.get('os_family', '')
-        pkg_targets = _PKG_TARGETS.get(os_family, [])
-
-        # Make sure that we have targets that match the os_family. If this
-        # fails then the _PKG_TARGETS dict above needs to have an entry added,
-        # with two packages that are not installed before these tests are run
-        self.assertTrue(pkg_targets)
-        version = self.run_function('pkg.version', pkg_targets)
+        version = self.run_function('pkg.version', self.ctx['pkg_targets'])
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
@@ -279,38 +257,27 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         try:
             self.assertFalse(any(version.values()))
         except AssertionError:
-            self.assertSaltTrueReturn(self.run_state('pkg.removed', name=None, pkgs=pkg_targets))
+            self.assertSaltTrueReturn(self.run_state('pkg.removed', name=None, pkgs=self.ctx['pkg_targets']))
 
         try:
             ret = self.run_state('pkg.installed',
                                  name=None,
-                                 pkgs=pkg_targets,
+                                 pkgs=self.ctx['pkg_targets'],
                                  refresh=False)
             self.assertSaltTrueReturn(ret)
         finally:
-            ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
+            ret = self.run_state('pkg.removed', name=None, pkgs=self.ctx['pkg_targets'])
             self.assertSaltTrueReturn(ret)
 
     @skipIf(ON_SUSE, 'WAR ROOM SKIP FRIDAY')
-    @requires_system_grains
-    def test_pkg_004_installed_multipkg_with_version(self, grains):
+    def test_pkg_004_installed_multipkg_with_version(self):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
-        os_family = grains.get('os_family', '')
-        pkg_targets = _PKG_TARGETS.get(os_family, [])
+        if self.ctx['os_family'] == 'FreeBSD':
+            self.skipTest('Version specification is not supported on FreeBSD')
 
-        # Don't perform this test on FreeBSD since version specification is not
-        # supported.
-        if os_family == 'FreeBSD':
-            return
-
-        # Make sure that we have targets that match the os_family. If this
-        # fails then the _PKG_TARGETS dict above needs to have an entry added,
-        # with two packages that are not installed before these tests are run
-        self.assertTrue(bool(pkg_targets))
-
-        if os_family == 'Arch':
+        if self.ctx['os_family'] == 'Arch':
             for idx in range(13):
                 if idx == 12:
                     raise Exception('Package database locked after 60 seconds, '
@@ -319,14 +286,14 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                     break
                 time.sleep(5)
 
-        version = latest_version(self.ctx, self.run_function, pkg_targets[0])
+        version = latest_version(self.ctx, self.run_function, self.ctx['pkg_targets'][0])
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
         # packages need to not be installed before we run the states below
         self.assertTrue(bool(version))
 
-        pkgs = [{pkg_targets[0]: version}, pkg_targets[1]]
+        pkgs = [{self.ctx['pkg_targets'][0]: version}, self.ctx['pkg_targets'][1]]
 
         try:
             ret = self.run_state('pkg.installed',
@@ -335,7 +302,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                                  refresh=False)
             self.assertSaltTrueReturn(ret)
         finally:
-            ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
+            ret = self.run_state('pkg.removed', name=None, pkgs=self.ctx['pkg_targets'])
             self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
@@ -345,14 +312,14 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         os_name = grains.get('os', '')
         target = _PKG_TARGETS_32.get(os_name, '')
+        os_name = grains.get('os', '')
 
         # _PKG_TARGETS_32 is only populated for platforms for which Salt has to
         # munge package names for 32-bit-on-x86_64 (Currently only Ubuntu and
         # RHEL-based). Don't actually perform this test on other platforms.
         if target:
             # CentOS 5 has .i386 arch designation for 32-bit pkgs
-            if os_name == 'CentOS' \
-                    and grains['osrelease'].startswith('5.'):
+            if os_name == 'CentOS' and grains['osrelease'].startswith('5.'):
                 target = target.replace('.i686', '.i386')
 
             version = self.run_function('pkg.version', [target])
@@ -394,7 +361,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         # CentOS 5 has .i386 arch designation for 32-bit pkgs
         if os_name == 'CentOS' \
-                and grains['osrelease'].startswith('5.'):
+            and grains['osrelease'].startswith('5.'):
             target = target.replace('.i686', '.i386')
 
         version = latest_version(self.ctx, self.run_function, target)
@@ -413,7 +380,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_system_grains
     def test_pkg_007_with_dot_in_pkgname(self, grains):
         '''
         This tests for the regression found in the following issue:
@@ -439,7 +405,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_system_grains
     def test_pkg_008_epoch_in_version(self, grains):
         '''
         This tests for the regression found in the following issue:
@@ -498,21 +463,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('pkg.info_installed', [package])
         self.assertTrue(pkgquery in six.text_type(ret))
 
-    @requires_system_grains
     def test_pkg_011_latest(self, grains):
         '''
         This tests pkg.latest with a package that has no epoch (or a zero
         epoch).
         '''
-        os_family = grains.get('os_family', '')
-        pkg_targets = _PKG_TARGETS.get(os_family, [])
-
-        # Make sure that we have targets that match the os_family. If this
-        # fails then the _PKG_TARGETS dict above needs to have an entry added,
-        # with two packages that are not installed before these tests are run
-        self.assertTrue(pkg_targets)
-
-        target = pkg_targets[0]
+        target = self.ctx['pkg_targets'][0]
         version = latest_version(self.ctx, self.run_function, target)
 
         # If this assert fails, we need to find new targets, this test needs to
@@ -525,24 +481,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_system_grains
     def test_pkg_012_latest_only_upgrade(self, grains):
         '''
         WARNING: This test will pick a package with an available upgrade (if
         there is one) and upgrade it to the latest version.
         '''
-        os_family = grains.get('os_family', '')
-        if os_family != 'Debian':
-            self.skipTest('Minion is not Debian/Ubuntu')
-
-        pkg_targets = _PKG_TARGETS.get(os_family, [])
-
-        # Make sure that we have targets that match the os_family. If this
-        # fails then the _PKG_TARGETS dict above needs to have an entry added,
-        # with two packages that are not installed before these tests are run
-        self.assertTrue(pkg_targets)
-
-        target = pkg_targets[0]
+        target = self.ctx['pkg_targets'][0]
         version = latest_version(self.ctx, self.run_function, target)
 
         # If this assert fails, we need to find new targets, this test needs to
@@ -587,28 +531,17 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 'Package {0} is already up-to-date'.format(target)
             )
 
-    @requires_system_grains
     def test_pkg_013_installed_with_wildcard_version(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        os_family = grains.get('os_family', '')
-
-        if os_family not in _WILDCARDS_SUPPORTED:
+        if self.ctx['os_family'] not in _WILDCARDS_SUPPORTED:
             self.skipTest(
                 'Wildcards only supported on {0}'.format(
                     ', '.join(_WILDCARDS_SUPPORTED)
                 )
             )
-
-        pkg_targets = _PKG_TARGETS.get(os_family, [])
-
-        # Make sure that we have targets that match the os_family. If this
-        # fails then the _PKG_TARGETS dict above needs to have an entry added,
-        # with two packages that are not installed before these tests are run
-        self.assertTrue(pkg_targets)
-
-        target = pkg_targets[0]
+        target = self.ctx['pkg_targets'][0]
         version = self.run_function('pkg.version', [target])
 
         # If this assert fails, we need to find new targets, this test needs to
@@ -653,23 +586,13 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @pytest.mark.skip('WAR ROOM TEMPORARY SKIP - 2019/07/17')
-    @requires_system_grains
     def test_pkg_014_installed_with_comparison_operator(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        os_family = grains.get('os_family', '')
-        if os_family not in ('Debian', 'RedHat'):
+        if self.ctx['os_family'] not in ('Debian', 'RedHat'):
             self.skipTest('Comparison operator not specially implemented')
-
-        pkg_targets = _PKG_TARGETS.get(os_family, [])
-
-        # Make sure that we have targets that match the os_family. If this
-        # fails then the _PKG_TARGETS dict above needs to have an entry added,
-        # with two packages that are not installed before these tests are run
-        self.assertTrue(pkg_targets)
-
-        target = pkg_targets[0]
+        target = self.ctx['pkg_targets'][0]
         version = self.run_function('pkg.version', [target])
 
         # If this assert fails, we need to find new targets, this test needs to
@@ -699,25 +622,15 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
-    @requires_system_grains
     def test_pkg_014_installed_missing_release(self, grains):
         '''
         Tests that a version number missing the release portion still resolves
         as correctly installed. For example, version 2.0.2 instead of 2.0.2-1.el7
         '''
-        os_family = grains.get('os_family', '')
-
-        if os_family.lower() != 'redhat':
+        if self.ctx['os_family'].lower() != 'redhat':
             self.skipTest('Test only runs on RedHat OS family')
 
-        pkg_targets = _PKG_TARGETS.get(os_family, [])
-
-        # Make sure that we have targets that match the os_family. If this
-        # fails then the _PKG_TARGETS dict above needs to have an entry added,
-        # with two packages that are not installed before these tests are run
-        self.assertTrue(pkg_targets)
-
-        target = pkg_targets[0]
+        target = self.ctx['pkg_targets'][0]
         version = self.run_function('pkg.version', [target])
 
         # If this assert fails, we need to find new targets, this test needs to
@@ -763,13 +676,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                                       'not found.')
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
-    @requires_system_grains
-    def test_pkg_cap_001_installed(self, grains):
+    def test_pkg_cap_001_installed(self):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        os_family = grains.get('os_family', '')
-        pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
+        pkg_cap_targets = _PKG_CAP_TARGETS.get(self.ctx['os_family'], [])
         if not pkg_cap_targets:
             self.skipTest('Capability not provided')
 
@@ -793,13 +704,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
-    @requires_system_grains
-    def test_pkg_cap_002_already_installed(self, grains):
+    def test_pkg_cap_002_already_installed(self):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        os_family = grains.get('os_family', '')
-        pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
+        pkg_cap_targets = _PKG_CAP_TARGETS.get(self.ctx['os_family'], [])
         if not pkg_cap_targets:
             self.skipTest('Capability not provided')
 
@@ -831,29 +740,18 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
-    @requires_system_grains
-    def test_pkg_cap_003_installed_multipkg_with_version(self, grains):
+    def test_pkg_cap_003_installed_multipkg_with_version(self):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
-        os_family = grains.get('os_family', '')
-        pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
+        pkg_cap_targets = _PKG_CAP_TARGETS.get(self.ctx['os_family'], [])
         if not pkg_cap_targets:
             self.skipTest('Capability not provided')
-        pkg_targets = _PKG_TARGETS.get(os_family, [])
 
-        # Don't perform this test on FreeBSD since version specification is not
-        # supported.
-        if os_family == 'FreeBSD':
-            return
+        if self.ctx['os_family'] == 'FreeBSD':
+            self.skipTest('Version specification is not supported on FreeBSD')
 
-        # Make sure that we have targets that match the os_family. If this
-        # fails then the _PKG_TARGETS dict above needs to have an entry added,
-        # with two packages that are not installed before these tests are run
-        self.assertTrue(pkg_cap_targets)
-        self.assertTrue(pkg_targets)
-
-        if os_family == 'Arch':
+        if self.ctx['os_family'] == 'Arch':
             for idx in range(13):
                 if idx == 12:
                     raise Exception('Package database locked after 60 seconds, '
@@ -863,7 +761,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 time.sleep(5)
 
         capability, realpkg = pkg_cap_targets[0]
-        version = latest_version(self.ctx, self.run_function, pkg_targets[0])
+        version = latest_version(self.ctx, self.run_function, self.ctx['os_family'][0])
         realver = latest_version(self.ctx, self.run_function, realpkg)
 
         # If this assert fails, we need to find new targets, this test needs to
@@ -873,7 +771,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(realver)
 
         try:
-            pkgs = [{pkg_targets[0]: version}, pkg_targets[1], {capability: realver}]
+            pkgs = [{self.ctx['pkg_targets'][0]: version}, self.ctx['pkg_targets'][1], {capability: realver}]
             ret = self.run_state('pkg.installed',
                                  name='test_pkg_cap_003_installed_multipkg_with_version-install',
                                  pkgs=pkgs,
@@ -892,7 +790,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                                  pkgs=pkgs,
                                  refresh=False, resolve_capabilities=True)
             self.assertSaltTrueReturn(ret)
-            cleanup_pkgs = pkg_targets
+            cleanup_pkgs = self.ctx['pkg_targets']
             cleanup_pkgs.append(realpkg)
         finally:
             ret = self.run_state('pkg.removed',
@@ -901,14 +799,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
-    @requires_system_grains
-    def test_pkg_cap_004_latest(self, grains):
+    def test_pkg_cap_004_latest(self):
         '''
         This tests pkg.latest with a package that has no epoch (or a zero
         epoch).
         '''
-        os_family = grains.get('os_family', '')
-        pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
+        pkg_cap_targets = _PKG_CAP_TARGETS.get(self.ctx['os_family'], [])
         if not pkg_cap_targets:
             self.skipTest('Capability not provided')
 
@@ -937,13 +833,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
-    @requires_system_grains
-    def test_pkg_cap_005_downloaded(self, grains):
+    def test_pkg_cap_005_downloaded(self):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        os_family = grains.get('os_family', '')
-        pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
+        pkg_cap_targets = _PKG_CAP_TARGETS.get(self.ctx['os_family'], [])
         if not pkg_cap_targets:
             self.skipTest('Capability not provided')
 
@@ -967,13 +861,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
-    @requires_system_grains
-    def test_pkg_cap_006_uptodate(self, grains):
+    def test_pkg_cap_006_uptodate(self):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        os_family = grains.get('os_family', '')
-        pkg_cap_targets = _PKG_CAP_TARGETS.get(os_family, [])
+        pkg_cap_targets = _PKG_CAP_TARGETS.get(self.cgx['os_family'], [])
         if not pkg_cap_targets:
             self.skipTest('Capability not provided')
 
@@ -1002,21 +894,17 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=realpkg)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')            # needs to be rewritten to allow for dnf on Fedora 30 and RHEL 8
+    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')  # needs to be rewritten to allow for dnf on Fedora 30 and RHEL 8
     @requires_salt_modules('pkg.hold', 'pkg.unhold')
-    @requires_system_grains
-    def test_pkg_015_installed_held(self, grains):
+    def test_pkg_015_installed_held(self):
         '''
         Tests that a package can be held even when the package is already installed.
         '''
-        os_family = grains.get('os_family', '')
 
-        if os_family.lower() != 'redhat' and os_family.lower() != 'debian':
+        if self.ctx['os_family'].lower() != 'redhat' and self.ctx['os_family'].lower() != 'debian':
             self.skipTest('Test only runs on RedHat or Debian family')
 
-        pkg_targets = _PKG_TARGETS.get(os_family, [])
-
-        if os_family.lower() == 'redhat':
+        if self.ctx['os_family'].lower() == 'redhat':
             # If we're in the Red Hat family first we ensure that
             # the yum-plugin-versionlock package is installed
             ret = self.run_state(
@@ -1026,12 +914,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertSaltTrueReturn(ret)
 
-        # Make sure that we have targets that match the os_family. If this
-        # fails then the _PKG_TARGETS dict above needs to have an entry added,
-        # with two packages that are not installed before these tests are run
-        self.assertTrue(pkg_targets)
-
-        target = pkg_targets[0]
+        target = self.ctx['pkg_targets'][0]
 
         # First we ensure that the package is installed
         ret = self.run_state(
@@ -1050,9 +933,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         # changes from pkg.hold for Red Hat family are different
-        if os_family.lower() == 'redhat':
+        if self.ctx['os_family'].lower() == 'redhat':
             target_changes = {'new': 'hold', 'old': ''}
-        elif os_family.lower() == 'debian':
+        elif self.ctx['os_family'].lower() == 'debian':
             target_changes = {'new': 'hold', 'old': 'install'}
 
         try:
@@ -1067,7 +950,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_function('pkg.unhold', name=target)
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
-            if os_family.lower() == 'redhat':
+            if self.ctx['os_family'].lower() == 'redhat':
                 ret = self.run_state('pkg.removed',
                                      name='yum-plugin-versionlock')
                 self.assertSaltTrueReturn(ret)
