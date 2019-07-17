@@ -367,7 +367,7 @@ class PipModuleVenvTest(ModuleCase):
         self.assertCmdSuccess(ret)
         self.assertIn('uninstalled pep8', ret['stdout'])
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(PY3, 'WAR ROOM TEMPORARY SKIP')
     def test_pip_install_multiple_editables(self):
         editables = [
             'git+https://github.com/jek/blinker.git#egg=Blinker',
@@ -389,7 +389,7 @@ class PipModuleVenvTest(ModuleCase):
             'Successfully installed Blinker SaltTesting', ret['stdout']
         )
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(PY3, 'WAR ROOM TEMPORARY SKIP')
     def test_pip_install_multiple_editables_and_pkgs(self):
         editables = [
             'git+https://github.com/jek/blinker.git#egg=Blinker',
