@@ -14,8 +14,8 @@ import shutil
 from tests.support.runtests import RUNTIME_VARS
 from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import patch, Mock, MagicMock, NO_MOCK, NO_MOCK_REASON
-from tests.support.unit import TestCase, skipIf
+from tests.support.mock import patch, Mock, MagicMock
+from tests.support.unit import TestCase
 
 # Import Salt libs
 import salt.utils.files
@@ -83,7 +83,6 @@ def _get_file_roots(fs_root):
     )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class FileClientTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -127,7 +126,6 @@ class FileClientTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMo
             self.assertEqual('remote_client', ret)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
     '''
     Tests for the fileclient caching. The LocalClient is the only thing we can

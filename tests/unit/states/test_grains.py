@@ -12,8 +12,8 @@ import contextlib
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.utils.files
@@ -24,7 +24,6 @@ import salt.states.grains as grains
 from salt.ext import six
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

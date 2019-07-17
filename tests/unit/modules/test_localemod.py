@@ -13,8 +13,6 @@ from tests.support.mock import (
     MagicMock,
     Mock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 try:
     import pytest
@@ -28,7 +26,6 @@ from salt.ext import six
 
 
 @skipIf(not pytest, False)
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.localemod

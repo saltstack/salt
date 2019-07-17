@@ -19,11 +19,9 @@ import time
 from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -38,7 +36,6 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for the local_cache.clean_old_jobs function.

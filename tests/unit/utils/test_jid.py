@@ -10,11 +10,9 @@ import os
 
 # Import Salt libs
 import salt.utils.jid
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 
@@ -33,7 +31,6 @@ class JidTestCase(TestCase):
         self.assertFalse(salt.utils.jid.is_jid(20131219110700123489))  # int
         self.assertFalse(salt.utils.jid.is_jid('2013121911070012348911111'))  # Wrong length
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_gen_jid(self):
         now = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
         with patch('datetime.datetime'):

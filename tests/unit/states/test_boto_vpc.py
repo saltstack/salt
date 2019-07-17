@@ -10,7 +10,7 @@ import sys
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -126,7 +126,6 @@ class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
         conn_parameters['key'] = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(50))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
@@ -279,7 +278,6 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
             self.assertTrue('Mocked error' in resource_absent_result['comment'])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
@@ -292,7 +290,6 @@ class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMi
     extra_kwargs = {'cidr_block': cidr_block}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
@@ -304,7 +301,6 @@ class BotoVpcInternetGatewayTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTe
     backend_delete = 'InternetGatewayBackend.delete_internet_gateway'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(six.PY3, 'Disabled for Python 3 due to upstream bugs: '
                  'https://github.com/spulec/moto/issues/548 and '
                  'https://github.com/gabrielfalcao/HTTPretty/issues/325')

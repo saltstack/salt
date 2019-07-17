@@ -5,8 +5,8 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import Mock, MagicMock, patch
 
 # Import salt libs
 import salt.modules.postgres as postgresmod
@@ -17,7 +17,6 @@ import salt.states.postgres_extension as postgres_extension
 import salt.states.postgres_schema as postgres_schema
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -164,7 +163,6 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(self.salt_stub['postgres.user_update'].call_count, 0)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -309,7 +307,6 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(self.salt_stub['postgres.group_update'].call_count, 0)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -498,7 +495,6 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
             )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

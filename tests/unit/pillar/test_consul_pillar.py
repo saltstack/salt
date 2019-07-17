@@ -6,7 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
 import salt.pillar.consul_pillar as consul_pillar
@@ -38,7 +38,6 @@ PILLAR_DATA = [
 SIMPLE_DICT = {'key1': {'key2': 'val1'}}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not consul_pillar.consul, 'python-consul module not installed')
 class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
     '''

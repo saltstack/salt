@@ -8,8 +8,8 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch, call
 
 # Import Salt libs
 import salt.modules.cron as cron
@@ -60,7 +60,6 @@ def write_crontab(*args, **kw):
     return MagicMock()
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class CronTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -894,7 +893,6 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                                                                python_shell=False)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PsTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

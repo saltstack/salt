@@ -12,8 +12,7 @@ import tornado
 import tornado.testing
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import salt libs
@@ -25,7 +24,6 @@ log = logging.getLogger(__name__)
 __opts__ = {}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_post_master_init_metaproxy_called(self):
         '''
