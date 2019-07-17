@@ -44,15 +44,15 @@ class BeaconsAddDeleteTest(ModuleCase):
             ['ps', [{'processes': {'apache2': 'stopped'}}]],
             f_timeout=300
         )
-        self.assertTrue(_add['result'])
+        self.assertTrue(_add if isinstance(_add, bool) else _add['result'], _add)
 
         # save added beacon
         _save = self.run_function('beacons.save', f_timeout=300)
-        self.assertTrue(_save['result'])
+        self.assertTrue(_save if isinstance(_save, bool) else _save['result'], _save)
 
         # delete the beacon
         _delete = self.run_function('beacons.delete', ['ps'], f_timeout=300)
-        self.assertTrue(_delete['result'])
+        self.assertTrue(_delete if isinstance(_delete, bool) else _delete['result'], _delete)
 
         # save the results
         self.run_function('beacons.save', f_timeout=300)
