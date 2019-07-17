@@ -91,7 +91,7 @@ class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
         ctx = {}
         utils = salt.loader.utils(
             self.opts,
-            whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform'],
+            whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform', 'reg'],
             context=ctx)
         serializers = salt.loader.serializers(self.opts)
         self.funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_vpc', 'config'])

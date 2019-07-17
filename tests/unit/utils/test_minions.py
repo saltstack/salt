@@ -19,6 +19,9 @@ NODEGROUPS = {
     'group2': ['G@foo:bar', 'or', 'web1*'],
     'group3': ['N@group1', 'or', 'N@group2'],
     'group4': ['host4', 'host5', 'host6'],
+    'group5': 'N@group4',
+    'group6': 'N@group3',
+    'group7': ['host1']
 }
 
 EXPECTED = {
@@ -26,6 +29,10 @@ EXPECTED = {
     'group2': ['G@foo:bar', 'or', 'web1*'],
     'group3': ['(', '(', 'L@host1,host2,host3', ')', 'or', '(', 'G@foo:bar', 'or', 'web1*', ')', ')'],
     'group4': ['L@host4,host5,host6'],
+    'group5': ['(', 'L@host4,host5,host6', ')'],
+    'group6': ['(', '(', '(', 'L@host1,host2,host3', ')', 'or', '(',
+               'G@foo:bar', 'or', 'web1*', ')', ')', ')'],
+    'group7': ['L@host1']
 }
 
 
