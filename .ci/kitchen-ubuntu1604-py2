@@ -65,7 +65,7 @@ node('kitchen-slave') {
                         stage('Create VM') {
                             retry(3) {
                                 sh '''
-                                t=$(shuf -i 1-15 -n 1); echo "Sleeping $t seconds"; sleep $t
+                                t=$(shuf -i 30-120 -n 1); echo "Sleeping $t seconds"; sleep $t
                                 bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?;"
                                 '''
                             }
