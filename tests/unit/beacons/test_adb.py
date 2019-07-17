@@ -4,15 +4,14 @@
 from __future__ import absolute_import
 
 # Salt testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, Mock
+from tests.support.unit import TestCase
+from tests.support.mock import patch, Mock
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
 import salt.beacons.adb as adb
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.adb

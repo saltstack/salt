@@ -8,7 +8,7 @@ import textwrap
 
 # Import Salt Testing libs
 from tests.support.helpers import with_tempfile
-from tests.support.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch, MagicMock
 from tests.support.unit import TestCase, LOREM_IPSUM, skipIf
 
 # Import Salt libs
@@ -97,7 +97,6 @@ class JSONTestCase(TestCase):
 
     @skipIf(salt.utils.platform.is_windows(), 'skip until we figure out what to do about decoding unicode on windows')
     @skipIf(not six.PY2, 'Test only needed on Python 2')
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_find_json_unicode_splitlines(self):
         '''
         Tests a case in salt-ssh where a unicode string is split into a list of

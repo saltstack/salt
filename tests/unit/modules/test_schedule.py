@@ -10,12 +10,10 @@ import os
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -26,7 +24,6 @@ JOB1 = {'function': 'test.ping', 'maxrunning': 1, 'name': 'job1',
         'jid_include': True, 'enabled': True}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.schedule
