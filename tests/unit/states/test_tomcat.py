@@ -12,16 +12,13 @@ from salt.modules import tomcat as tomcatmod
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TomcatTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Validate the tomcat state

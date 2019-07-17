@@ -7,14 +7,12 @@
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
 
 # Import Salt Libs
 import salt.utils.http as http
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class HTTPTestCase(TestCase):
     '''
     Unit TestCase for the salt.utils.http module.

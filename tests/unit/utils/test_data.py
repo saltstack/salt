@@ -11,8 +11,8 @@ import logging
 import salt.utils.data
 import salt.utils.stringutils
 from salt.utils.odict import OrderedDict
-from tests.support.unit import TestCase, skipIf, LOREM_IPSUM
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase, LOREM_IPSUM
+from tests.support.mock import patch
 from salt.ext.six.moves import builtins  # pylint: disable=import-error,redefined-builtin
 from salt.ext import six
 
@@ -418,7 +418,6 @@ class DataTestCase(TestCase):
                 keep=False,
                 to_str=True)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_decode_fallback(self):
         '''
         Test fallback to utf-8
@@ -563,7 +562,6 @@ class DataTestCase(TestCase):
                 keep=False,
                 preserve_tuples=True)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_encode_fallback(self):
         '''
         Test fallback to utf-8

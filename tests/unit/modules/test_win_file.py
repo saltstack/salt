@@ -9,7 +9,7 @@ import sys
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 from tests.support.runtests import RUNTIME_VARS
 
@@ -40,7 +40,6 @@ class DummyStat(object):
     st_ctime = 1552661253
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinFileTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.win_file
@@ -104,7 +103,6 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
                 win_file.remove(base)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.platform.is_windows(), 'Skip on Non-Windows systems')
 class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
     '''

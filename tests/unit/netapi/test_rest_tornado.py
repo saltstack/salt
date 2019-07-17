@@ -51,7 +51,7 @@ from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlencode, urlparse  # pylint: disable=no-name-in-module
 # pylint: enable=import-error
 
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 
 
 @skipIf(not HAS_TORNADO, 'The tornado package needs to be installed')  # pylint: disable=W0223
@@ -476,7 +476,6 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(headers["Access-Control-Allow-Origin"], "*")
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestWebhookSaltHandler(SaltnadoTestCase):
 
     def get_app(self):

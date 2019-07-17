@@ -9,8 +9,6 @@ import sys
 from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 
@@ -29,7 +27,6 @@ except ImportError:
     pytest = None
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(pytest is None, 'PyTest is missing')
 class SSHThinTestCase(TestCase):
     '''

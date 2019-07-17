@@ -19,8 +19,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt libs
@@ -168,7 +166,6 @@ except ImportError:
 
 
 @destructiveTest
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
 class GpgTestCase(TestCase, LoaderModuleMockMixin):
     '''

@@ -9,12 +9,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
 )
 
 # Import Salt Libs
@@ -33,7 +31,6 @@ MATCHERS_DICT = {
 MINION_ID = 'bar03'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.loader.matchers', MagicMock(return_value=MATCHERS_DICT))
 class MatchTestCase(TestCase, LoaderModuleMockMixin):
     '''

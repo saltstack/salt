@@ -10,13 +10,11 @@ import xml.parsers.expat
 import os
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     call,
     MagicMock,
     mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 from tests.support.mixins import LoaderModuleMockMixin
@@ -31,7 +29,6 @@ from salt.ext.six.moves import range
 from salt.ext import six
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.platform.is_darwin(), 'These tests run only on mac')
 class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     '''

@@ -11,8 +11,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -122,7 +120,6 @@ if _has_required_boto():
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto3_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoIoTTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
@@ -635,7 +632,6 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
                                        ' module must be greater than or equal to'
                                        ' version {1}.'
         .format(required_boto3_version, required_botocore_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
     '''
     TestCase for salt.modules.boto_iot module

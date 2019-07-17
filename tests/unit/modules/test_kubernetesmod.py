@@ -15,8 +15,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     Mock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 import salt.utils.files
@@ -35,7 +33,6 @@ def mock_kubernetes_library():
         yield mock_kubernetes_lib
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not kubernetes.HAS_LIBS, "Kubernetes client lib is not installed. "
                                  "Skipping test_kubernetes.py")
 class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
