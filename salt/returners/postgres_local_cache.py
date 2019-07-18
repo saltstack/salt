@@ -116,6 +116,7 @@ import sys
 # Import salt libs
 import salt.utils.jid
 import salt.utils.json
+import salt.utils.stringutils
 from salt.ext import six
 
 # Import third party libs
@@ -235,7 +236,7 @@ def returner(load):
     try:
         ret = six.text_type(load['return'])
     except UnicodeDecodeError:
-        ret = str(load['return'])
+        ret = salt.utils.stringutils.to_unicode(load['return'])
     job_ret = {'return': ret}
     if 'retcode' in load:
         job_ret['retcode'] = load['retcode']
