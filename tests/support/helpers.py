@@ -34,6 +34,7 @@ import time
 import tornado.ioloop
 import tornado.web
 import types
+import unittest
 
 # Import 3rd-party libs
 import psutil  # pylint: disable=3rd-party-module-not-gated
@@ -207,6 +208,8 @@ def flaky(caller=None, condition=True, attempts=4):
                     if callable(setup):
                         setup()
                 return caller(cls)
+            except unittest.SkipTest as exc:
+                cls.skipTest(exc.message)
             except Exception:
                 if attempt >= attempts -1:
                     # We won't try to run tearDown once the attempts are exhausted
