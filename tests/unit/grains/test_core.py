@@ -1197,7 +1197,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
                     self.assertEqual(ret['locale_info']['timezone'], 'MDT_FAKE')
 
-
     @skipIf(not core._DATEUTIL_TZ, 'Missing dateutil.tz')
     def test_locale_info_unicode_error_tzname(self):
         # UnicodeDecodeError most have the default string encoding
