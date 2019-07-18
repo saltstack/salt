@@ -33,6 +33,7 @@ import time
 import tornado.ioloop
 import tornado.web
 import types
+import unittest
 
 # Import 3rd-party libs
 import psutil  # pylint: disable=3rd-party-module-not-gated
@@ -214,6 +215,8 @@ def flaky(caller=None, condition=True):
                     if callable(setup):
                         setup()
                 return caller(cls)
+            except unittest.SkipTest as exc:
+                cls.skipTest(exc.message)
             except Exception as exc:
                 if attempt >= 3:
                     six.reraise(*sys.exc_info())
