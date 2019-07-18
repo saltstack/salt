@@ -169,7 +169,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         return True
 
     @requires_system_grains
-    def setUp(self, grains=None):
+    def setUp(self, grains=None):  # pylint: disable=arguments-differ
         '''
         Ensure that we only refresh the first time we run a test
         '''
@@ -381,7 +381,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_007_with_dot_in_pkgname(self, grains = None):
+    def test_pkg_007_with_dot_in_pkgname(self, grains=None):
         '''
         This tests for the regression found in the following issue:
         https://github.com/saltstack/salt/issues/8614
