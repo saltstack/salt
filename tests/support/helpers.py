@@ -1153,7 +1153,7 @@ def skip_if_not_root(func):
     if RUNTIME_VARS.PYTEST_SESSION:
         setattr(func, '__skip_if_not_root__', True)
 
-    if not salt.utils.platform.is_windows() and hasattr(os, 'getuid'):
+    if not sys.platform.startswith('win'):
         if os.getuid() != 0:
             func.__unittest_skip__ = True
             func.__unittest_skip_why__ = 'You must be logged in as root to run this test'

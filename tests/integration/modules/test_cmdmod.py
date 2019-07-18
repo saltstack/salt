@@ -383,44 +383,44 @@ class CMDModuleTest(ModuleCase):
             'cmd.run',
             ls_command,
             hide_output=True)
-        self.assertFalse(out)
+        self.assertEqual(out, '')
 
         # cmd.shell
         out = self.run_function(
             'cmd.shell',
             ls_command,
             hide_output=True)
-        self.assertFalse(out)
+        self.assertEqual(out, '')
 
         # cmd.run_stdout
         out = self.run_function(
             'cmd.run_stdout',
             ls_command,
             hide_output=True)
-        self.assertFalse(out)
+        self.assertEqual(out, '')
 
         # cmd.run_stderr
         out = self.run_function(
             'cmd.shell',
             error_command,
             hide_output=True)
-        self.assertFalse(out)
+        self.assertEqual(out, '')
 
         # cmd.run_all (command should have produced stdout)
         out = self.run_function(
             'cmd.run_all',
             ls_command,
             hide_output=True)
-        self.assertFalse(out['stdout'])
-        self.assertFalse(out['stderr'])
+        self.assertEqual(out['stdout'], '')
+        self.assertEqual(out['stderr'], '')
 
         # cmd.run_all (command should have produced stderr)
         out = self.run_function(
             'cmd.run_all',
             error_command,
             hide_output=True)
-        self.assertFalse(out['stdout'])
-        self.assertFalse(out['stderr'])
+        self.assertEqual(out['stdout'], '')
+        self.assertEqual(out['stderr'], '')
 
     def test_cmd_run_whoami(self):
         '''
