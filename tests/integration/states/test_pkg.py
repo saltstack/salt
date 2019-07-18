@@ -380,7 +380,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    def test_pkg_007_with_dot_in_pkgname(self, grains):
+    @requires_system_grains
+    def test_pkg_007_with_dot_in_pkgname(self, grains = None):
         '''
         This tests for the regression found in the following issue:
         https://github.com/saltstack/salt/issues/8614
@@ -405,6 +406,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
+    @requires_system_grains
     def test_pkg_008_epoch_in_version(self, grains):
         '''
         This tests for the regression found in the following issue:
@@ -463,7 +465,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('pkg.info_installed', [package])
         self.assertTrue(pkgquery in six.text_type(ret))
 
-    def test_pkg_011_latest(self, grains):
+    def test_pkg_011_latest(self):
         '''
         This tests pkg.latest with a package that has no epoch (or a zero
         epoch).
@@ -481,7 +483,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    def test_pkg_012_latest_only_upgrade(self, grains):
+    def test_pkg_012_latest_only_upgrade(self):
         '''
         WARNING: This test will pick a package with an available upgrade (if
         there is one) and upgrade it to the latest version.
@@ -531,7 +533,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 'Package {0} is already up-to-date'.format(target)
             )
 
-    def test_pkg_013_installed_with_wildcard_version(self, grains):
+    def test_pkg_013_installed_with_wildcard_version(self):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -586,7 +588,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @pytest.mark.skip('WAR ROOM TEMPORARY SKIP - 2019/07/17')
-    def test_pkg_014_installed_with_comparison_operator(self, grains):
+    def test_pkg_014_installed_with_comparison_operator(self):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -622,7 +624,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
-    def test_pkg_014_installed_missing_release(self, grains):
+    def test_pkg_014_installed_missing_release(self):
         '''
         Tests that a version number missing the release portion still resolves
         as correctly installed. For example, version 2.0.2 instead of 2.0.2-1.el7
@@ -865,7 +867,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        pkg_cap_targets = _PKG_CAP_TARGETS.get(self.cgx['os_family'], [])
+        pkg_cap_targets = _PKG_CAP_TARGETS.get(self.ctx['os_family'], [])
         if not pkg_cap_targets:
             self.skipTest('Capability not provided')
 
