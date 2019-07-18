@@ -23,6 +23,7 @@ import uuid
 from errno import EACCES, EPERM
 import datetime
 import warnings
+import time
 
 # pylint: disable=import-error
 try:
@@ -2142,8 +2143,9 @@ def locale_info():
             grains['locale_info']['timezone'] = datetime.datetime.now(dateutil.tz.tzlocal()).tzname()
         except UnicodeDecodeError:
             # Because the method 'tzname' is not a part of salt the decoding error cant be fixed.
-            # 'datetime' does not supply the raw data to write a new 'tzname' in a graceful way.
-            pass
+            # The error is in datetime in the python2 lib
+            if salt.utils.platform.is_windows():
+                grains['locale_info']['timezone'] = time.tzname[0].decode('mbcs')
 
     return grains
 

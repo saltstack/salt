@@ -20,6 +20,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     call,
+    Mock,
     MagicMock,
     patch,
     mock_open,
@@ -53,19 +54,6 @@ IP6_ADD2 = '2001:4860:4860::8888'
 IP6_ADD_SCOPE = 'fe80::6238:e0ff:fe06:3f6b%enp2s0'
 OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
 SOLARIS_DIR = os.path.join(os.path.dirname(__file__), 'solaris')
-
-
-class MockDateTime(object):
-    def __init__(self, **kwargs):
-        for attr in kwargs:
-            setattr(self, attr, self._getattr(attr, kwargs[attr]))
-
-    def _getattr(self, attr, attr_value):
-        def __getattr(*args, **kwargs):
-            return attr_value
-
-        setattr(__getattr, attr, attr_value)
-        return __getattr
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -1188,34 +1176,70 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(not core._DATEUTIL_TZ, 'Missing dateutil.tz')
     def test_locale_info_tzname(self):
-        # core.datatime.datatime.now is readonly
-        with patch.object(core.datetime, 'datetime', wraps=MockDateTime(now=MockDateTime(tzname='MDT'))) as datetime:
-            with patch.object(core.dateutil.tz, 'tzlocal', return_value=object) as tzlocal:
-                ret = core.locale_info()
+        # mock datetime.now().tzname()
+        # cant just mock now because it is read only
+        tzname = Mock(return_value='MDT_FAKE')
+        now_ret_object = Mock(tzname=tzname)
+        now = Mock(return_value=now_ret_object)
+        datetime = Mock(now=now)
 
-                self.assertEqual(len(datetime.method_calls), 1)
-                self.assertEqual(datetime.method_calls[0], call.now(object))
-                tzlocal.assert_called_once_with()
-                self.assertEqual(ret['locale_info']['timezone'], 'MDT')
+        with patch.object(core, 'datetime', datetime=datetime) as datetime_module:
+            with patch.object(core.dateutil.tz, 'tzlocal', return_value=object) as tzlocal:
+                with patch.object(salt.utils.platform, 'is_proxy', return_value=False) as is_proxy:
+                    ret = core.locale_info()
+
+                    tzname.assert_called_once_with()
+                    self.assertEqual(len(now_ret_object.method_calls), 1)
+                    now.assert_called_once_with(object)
+                    self.assertEqual(len(datetime.method_calls), 1)
+                    self.assertEqual(len(datetime_module.method_calls), 1)
+                    tzlocal.assert_called_once_with()
+                    is_proxy.assert_called_once_with()
+
+                    self.assertEqual(ret['locale_info']['timezone'], 'MDT_FAKE')
+
 
     @skipIf(not core._DATEUTIL_TZ, 'Missing dateutil.tz')
     def test_locale_info_unicode_error_tzname(self):
         # UnicodeDecodeError most have the default string encoding
         unicode_error = UnicodeDecodeError(str('fake'), b'\x00\x00', 1, 2, str('fake'))
-        # core.datatime.datatime.now is readonly
-        with patch.object(core.datetime, 'datetime', wraps=MockDateTime(now=MockDateTime(tzname='MDT'))) as datetime:
-            with patch.object(core.dateutil.tz, 'tzlocal', side_effect=unicode_error) as tzlocal:
-                ret = core.locale_info()
 
-                tzlocal.assert_called_once_with()
-                self.assertEqual(len(datetime.method_calls), 0)
-                self.assertEqual(ret['locale_info']['timezone'], 'unknown')
+        # mock datetime.now().tzname()
+        # cant just mock now because it is read only
+        tzname = Mock(return_value='MDT_FAKE')
+        now_ret_object = Mock(tzname=tzname)
+        now = Mock(return_value=now_ret_object)
+        datetime = Mock(now=now)
+
+        # mock tzname[0].decode()
+        decode = Mock(return_value='CST_FAKE')
+        tzname2 = (Mock(decode=decode,),)
+
+        with patch.object(core, 'datetime', datetime=datetime) as datetime_module:
+            with patch.object(core.dateutil.tz, 'tzlocal', side_effect=unicode_error) as tzlocal:
+                with patch.object(salt.utils.platform, 'is_proxy', return_value=False) as is_proxy:
+                    with patch.object(core.salt.utils.platform, 'is_windows', return_value=True) as is_windows:
+                        with patch.object(core, 'time', tzname=tzname2):
+                            ret = core.locale_info()
+
+                            tzname.assert_not_called()
+                            self.assertEqual(len(now_ret_object.method_calls), 0)
+                            now.assert_not_called()
+                            self.assertEqual(len(datetime.method_calls), 0)
+                            decode.assert_called_once_with('mbcs')
+                            self.assertEqual(len(tzname2[0].method_calls), 1)
+                            self.assertEqual(len(datetime_module.method_calls), 0)
+                            tzlocal.assert_called_once_with()
+                            is_proxy.assert_called_once_with()
+                            is_windows.assert_called_once_with()
+
+                            self.assertEqual(ret['locale_info']['timezone'], 'CST_FAKE')
 
     @skipIf(core._DATEUTIL_TZ, 'Not Missing dateutil.tz')
     def test_locale_info_no_tz_tzname(self):
-        # core.datatime.datatime.now is readonly
-        with patch.object(core.datetime, 'datetime', wraps=MockDateTime(now=MockDateTime(tzname='MDT'))) as datetime:
-            ret = core.locale_info()
-
-            self.assertEqual(len(datetime.method_calls), 0)
-            self.assertEqual(ret['locale_info']['timezone'], 'unknown')
+        with patch.object(salt.utils.platform, 'is_proxy', return_value=False) as is_proxy:
+            with patch.object(core.salt.utils.platform, 'is_windows', return_value=True) as is_windows:
+                ret = core.locale_info()
+                is_proxy.assert_called_once_with()
+                is_windows.assert_not_called()
+                self.assertEqual(ret['locale_info']['timezone'], 'unknown')
