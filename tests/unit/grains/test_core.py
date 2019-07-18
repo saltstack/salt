@@ -19,7 +19,6 @@ except ImportError as import_error:
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    call,
     Mock,
     MagicMock,
     patch,
