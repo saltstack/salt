@@ -47,6 +47,7 @@ import re
 import locale
 import ctypes
 import tempfile
+import time
 import uuid
 
 # Import Salt libs
@@ -5547,9 +5548,9 @@ def _getFullPolicyName(policy_item,
     '''
     helper function to retrieve the full policy name if needed
     '''
-    adml_data = _get_policy_resources(language=adml_language)
     if policy_name in adm_policy_name_map[return_full_policy_names]:
         return adm_policy_name_map[return_full_policy_names][policy_name]
+    adml_data = _get_policy_resources(language=adml_language)
     if return_full_policy_names and 'displayName' in policy_item.attrib:
         fullPolicyName = _getAdmlDisplayName(adml_data, policy_item.attrib['displayName'])
         if fullPolicyName:
@@ -6084,21 +6085,28 @@ def _checkAllAdmxPolicies(policy_class,
                    re.sub(re.escape(module_policy_data.reg_pol_header.encode('utf-16-le')),
                           b'',
                           policy_file_data))).split(']['.encode('utf-16-le'))
+        log.debug('Parsing %s policies...', len(policy_filedata_split))
+        start_time = time.time()
+        # Get the policy for each item defined in Registry.pol
         for policy_item in policy_filedata_split:
             policy_item_key = policy_item.split('{0};'.format(chr(0)).encode('utf-16-le'))[0].decode('utf-16-le').lower()
             if policy_item_key:
+                # Find the policy definitions with this key
                 for admx_item in REGKEY_XPATH(admx_policy_definitions, keyvalue=policy_item_key):
+                    # If this is a policy, append it to admx_policies
                     if etree.QName(admx_item).localname == 'policy':
                         if admx_item not in admx_policies:
                             admx_policies.append(admx_item)
                     else:
+                        # If this is not a policy, find the parent policy for this item
                         for policy_item in POLICY_ANCESTOR_XPATH(admx_item):
                             if policy_item not in admx_policies:
                                 admx_policies.append(policy_item)
+        log.debug('Parsing complete: %s seconds', time.time() - start_time)
 
-        log.debug('%s policies to examine', len(admx_policies))
         if return_not_configured:
-            log.debug('returning non configured policies')
+            log.debug('Gathering non configured policies')
+            start_time = time.time()
             not_configured_policies = ALL_CLASS_POLICY_XPATH(admx_policy_definitions, registry_class=policy_class)
             for policy_item in admx_policies:
                 if policy_item in not_configured_policies:
@@ -6125,6 +6133,10 @@ def _checkAllAdmxPolicies(policy_class,
                     policy_definition=not_configured_policy,
                     return_full_policy_names=return_full_policy_names,
                     adml_language=adml_language)
+            log.debug('Gathering complete: %s seconds', time.time() - start_time)
+
+        log.debug('Examining %s policies...', len(admx_policies))
+        start_time = time.time()
         for admx_policy in admx_policies:
             this_valuename = None
             this_policy_setting = 'Not Configured'
@@ -6449,6 +6461,16 @@ def _checkAllAdmxPolicies(policy_class,
                         policy_name=admx_policy.attrib['name'],
                         return_full_policy_names=return_full_policy_names,
                         adml_language=adml_language)
+                # Make sure the we're passing the full policy name
+                # This issue was found when setting the `Allow Telemetry` setting
+                # All following states would show a change in this setting
+                # When the state does it's first `lgpo.get` it would return `AllowTelemetry`
+                # On the second run, it would return `Allow Telemetry`
+                # This makes sure we're always returning the full_name when required
+                if admx_policy.attrib['name'] in policy_vals[this_policynamespace][this_policyname]:
+                    full_name = full_names[this_policynamespace][this_policyname]
+                    setting = policy_vals[this_policynamespace][this_policyname].pop(admx_policy.attrib['name'])
+                    policy_vals[this_policynamespace][this_policyname][full_name] = setting
             if this_policynamespace in policy_vals and this_policyname in policy_vals[this_policynamespace]:
                 if this_policynamespace not in hierarchy:
                     hierarchy[this_policynamespace] = {}
@@ -6456,7 +6478,10 @@ def _checkAllAdmxPolicies(policy_class,
                     policy_definition=admx_policy,
                     return_full_policy_names=return_full_policy_names,
                     adml_language=adml_language)
+        log.debug('Examination complete: %s seconds', time.time() - start_time)
     if policy_vals and return_full_policy_names and not hierarchical_return:
+        log.debug('Compiling non hierarchical return...')
+        start_time = time.time()
         unpathed_dict = {}
         pathed_dict = {}
         for policy_namespace in list(policy_vals):
@@ -6481,11 +6506,14 @@ def _checkAllAdmxPolicies(policy_class,
                 full_path_list.append(path_needed)
                 log.debug('full_path_list == %s', full_path_list)
                 policy_vals['\\'.join(full_path_list)] = policy_vals[policy_namespace].pop(path_needed)
+        log.debug('Compilation complete: %s seconds', time.time() - start_time)
     for policy_namespace in list(policy_vals):
         if policy_vals[policy_namespace] == {}:
             policy_vals.pop(policy_namespace)
     if policy_vals and hierarchical_return:
         if hierarchy:
+            log.debug('Compiling hierarchical return...')
+            start_time = time.time()
             for policy_namespace in hierarchy:
                 for hierarchy_item in hierarchy[policy_namespace]:
                     if hierarchy_item in policy_vals[policy_namespace]:
@@ -6506,11 +6534,10 @@ def _checkAllAdmxPolicies(policy_class,
                             policy_vals = dictupdate.update(policy_vals, tdict)
                 if policy_namespace in policy_vals and policy_vals[policy_namespace] == {}:
                     policy_vals.pop(policy_namespace)
+            log.debug('Compilation complete: %s seconds', time.time() - start_time)
         policy_vals = {
-                        module_policy_data.admx_registry_classes[policy_class]['lgpo_section']: {
-                            'Administrative Templates': policy_vals
-                        }
-                      }
+            module_policy_data.admx_registry_classes[policy_class]['lgpo_section']: {
+                'Administrative Templates': policy_vals}}
     return policy_vals
 
 
