@@ -33,6 +33,8 @@ Pipfile.lock
 /tests/cachedir/
 /tests/unit/templates/roots/
 /var/
+.direnv
+.envrc
 
 # setuptools stuff
 *.egg-info
