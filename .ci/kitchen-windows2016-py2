@@ -12,7 +12,16 @@ def python_version = 'py2'
 def test_transport = 'ZeroMQ'
 def salt_target_branch = 'neon'
 def golden_images_branch = 'neon'
-def nox_passthrough_opts = '--log-cli-level=warning --ignore=tests/utils'
+
+// While we don't move the Branch job to Pytest
+def nox_passthrough_opts
+def tests_runner = 'runtests'
+
+if (tests_runner == 'runtests') {
+    nox_passthrough_opts = '--unit'
+} else {
+    nox_passthrough_opts = '--log-cli-level=warning --ignore=tests/utils'
+}
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
@@ -36,7 +45,7 @@ wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
         'SALT_KITCHEN_PLATFORMS=/var/jenkins/workspace/nox-platforms.yml',
         'SALT_KITCHEN_VERIFIER=/var/jenkins/workspace/nox-verifier.yml',
         'SALT_KITCHEN_DRIVER=/var/jenkins/workspace/driver.yml',
-        "NOX_ENV_NAME=pytest-${test_transport.toLowerCase()}",
+        "NOX_ENV_NAME=${tests_runner}-${test_transport.toLowerCase()}",
         'NOX_ENABLE_FROM_FILENAMES=true',
         "NOX_PASSTHROUGH_OPTS=${nox_passthrough_opts}",
         "SALT_TARGET_BRANCH=${salt_target_branch}",
