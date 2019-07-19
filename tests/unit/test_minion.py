@@ -286,6 +286,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
+    @skipIf(salt.utils.platform.is_darwin(), 'WAR ROOM TEMPORARY SKIP - mac only july 19')
     def test_valid_ipv4_master_address_ipv6_enabled(self):
         '''
         Tests that the 'scheduler_before_connect' option causes the scheduler to be initialized before connect.
