@@ -37,15 +37,6 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 
 log = logging.getLogger(__name__)
 
-_PKG_TARGETS = {
-    'Arch': ['sl', 'libpng'],
-    'Debian': ['python-plist', 'apg'],
-    'RedHat': ['sl', 'cowsay'],
-    'FreeBSD': ['aalib', 'pth'],
-    'Suse': ['aalib', 'htop'],
-    'MacOS': ['libpng', 'jpeg'],
-    'Windows': ['putty', '7zip'],
-}
 _PKG_CAP_TARGETS = {
     'Suse': [('perl(ZNC)', 'znc-perl')],
 }
@@ -180,9 +171,15 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         if 'os_family' not in self.ctx:
             self.ctx['os_family'] = grains['os_family']
             log.debug('Running on os family: {}'.format(self.ctx['os_family']))
+
+        # Set up package targets
         if 'pkg_targets' not in self.ctx:
-            self.ctx['pkg_targets'] = _PKG_TARGETS.get(self.ctx['os_family'], [])
-            self.assertTrue(self.ctx['pkg_targets'])
+            if self.ctx['os_family'] == 'Windows':
+                self.ctx['pkg_targets'] = ['curl', 'wingrep']
+            else:
+                self.ctx['pkg_targets'] = ['figlet', 'sl']
+
+
 
         # Skip tests if package manager not available
         if 'pkgmgr_avail' not in self.ctx:
