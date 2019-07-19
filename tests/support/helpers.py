@@ -33,7 +33,6 @@ import time
 import tornado.ioloop
 import tornado.web
 import types
-import unittest
 
 # Import 3rd-party libs
 import psutil  # pylint: disable=3rd-party-module-not-gated
@@ -53,7 +52,7 @@ except ImportError:
         return port
 
 # Import Salt Tests Support libs
-from tests.support.unit import skip, _id
+from tests.support.unit import skip, _id, SkipTest
 from tests.support.mock import patch
 from tests.support.paths import FILES, TMP
 
@@ -215,8 +214,8 @@ def flaky(caller=None, condition=True):
                     if callable(setup):
                         setup()
                 return caller(cls)
-            except unittest.SkipTest as exc:
-                cls.skipTest(exc.message)
+            except SkipTest as exc:
+                cls.skipTest(exc.args[0])
             except Exception as exc:
                 if attempt >= 3:
                     six.reraise(*sys.exc_info())
