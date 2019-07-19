@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-integration tests for mac_system
+integration tests for mac_shadow
 '''
 
 # Import Python libs
@@ -40,7 +40,7 @@ NO_USER = __random_string()
 @skipIf(not salt.utils.path.which('pwpolicy'), '\'pwpolicy\' binary not found in $PATH')
 class MacShadowModuleTest(ModuleCase):
     '''
-    Validate the mac_system module
+    Validate the mac_shadow module
     '''
 
     def setUp(self):
