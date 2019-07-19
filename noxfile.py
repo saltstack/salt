@@ -722,7 +722,7 @@ def pytest_cloud(session, coverage):
         '--no-print-logs',
         '-ra',
         '-s',
-        os.path.join(REPO_ROOT, 'tests', 'integration', 'cloud', 'providers')
+        os.path.join(REPO_ROOT, 'tests', 'integration', 'cloud')
     ] + session.posargs
     _pytest(session, coverage, cmd_args)
 
