@@ -8,6 +8,17 @@ properties([
 
 def shell_header
 
+// Be sure to cancel any previously running builds
+def buildNumber = env.BUILD_NUMBER as int
+if (buildNumber > 1) {
+    // This will cancel the previous build which also defined a matching milestone
+    milestone(buildNumber - 1)
+}
+// Define a milestone for this build so that, if another build starts, this one will be aborted
+milestone(buildNumber)
+
+def lint_report_issues = []
+
 node('lint') {
     timeout(time: global_timeout, unit: 'HOURS') {
         ansiColor('xterm') {
@@ -46,8 +57,8 @@ node('lint') {
                             (git diff --name-status -l99999 -C "origin/${SALT_TARGET_BRANCH}" "origin/$BRANCH_NAME";echo "---";git diff --name-status -l99999 -C "origin/$BRANCH_NAME";printenv|grep -E '=[0-9a-z]{40,}+$|COMMIT=|BRANCH') > file-list-experiment.log
                             eval "$(pyenv init -)"
                             pyenv --version
-                            pyenv install --skip-existing 2.7.15
-                            pyenv shell 2.7.15
+                            pyenv install --skip-existing 3.6.8
+                            pyenv shell 3.6.8
                             python --version
                             pip install -U nox-py2
                             nox --version
@@ -56,7 +67,10 @@ node('lint') {
                             nox --install-only -e lint-tests
                             '''
                         }
-                        archiveArtifacts artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log,file-list-experiment.log'
+                        archiveArtifacts(
+                            artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log,file-list-experiment.log',
+                            allowEmptyArchive: true
+                        )
                     }
 
                     stage('Lint Changes') {
@@ -67,7 +81,7 @@ node('lint') {
                                         if (readFile('file-list-changed.log') =~ /(?i)(^|\n)(salt\/.*\.py|setup\.py)\n/) {
                                             sh shell_header + '''
                                             eval "$(pyenv init - --no-rehash)"
-                                            pyenv shell 2.7.15
+                                            pyenv shell 3.6.8
                                             EC=254
                                             export PYLINT_REPORT=pylint-report-salt-chg.log
                                             grep -Ei '^salt/.*\\.py$|^setup\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' nox -e lint-salt --
@@ -82,7 +96,7 @@ node('lint') {
                                         if (readFile('file-list-changed.log') =~ /(?i)(^|\n)tests\/.*\.py\n/) {
                                             sh shell_header + '''
                                             eval "$(pyenv init - --no-rehash)"
-                                            pyenv shell 2.7.15
+                                            pyenv shell 3.6.8
                                             EC=254
                                             export PYLINT_REPORT=pylint-report-tests-chg.log
                                             grep -Ei '^tests/.*\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' nox -e lint-tests --
@@ -95,7 +109,10 @@ node('lint') {
                             )
                         } finally {
                             def changed_logs_pattern = 'pylint-report-*-chg.log'
-                            archiveArtifacts artifacts: changed_logs_pattern, allowEmptyArchive: true
+                            archiveArtifacts(
+                                artifacts: changed_logs_pattern,
+                                allowEmptyArchive: true
+                            )
                             if (env.NODE_NAME.startsWith('jenkins-pr-')) {
                                 step([$class: 'WarningsPublisher',
                                     parserConfigurations: [[
@@ -108,7 +125,11 @@ node('lint') {
                                     usePreviousBuildAsReference: true
                                 ])
                             } else {
-                                recordIssues(enabledForFailure: true, tool: pyLint(pattern: changed_logs_pattern, reportEncoding: 'UTF-8'))
+                                lint_report_issues.add(
+                                    scanForIssues(
+                                        tool: pyLint(pattern: changed_logs_pattern, reportEncoding: 'UTF-8')
+                                    )
+                                )
                             }
                         }
                     }
@@ -127,7 +148,7 @@ node('lint') {
                                         stage('Lint Salt Full') {
                                             sh shell_header + '''
                                             eval "$(pyenv init - --no-rehash)"
-                                            pyenv shell 2.7.15
+                                            pyenv shell 3.6.8
                                             EC=254
                                             export PYLINT_REPORT=pylint-report-salt-full.log
                                             nox -e lint-salt
@@ -140,7 +161,7 @@ node('lint') {
                                         stage('Lint Tests Full') {
                                             sh shell_header + '''
                                             eval "$(pyenv init - --no-rehash)"
-                                            pyenv shell 2.7.15
+                                            pyenv shell 3.6.8
                                             EC=254
                                             export PYLINT_REPORT=pylint-report-tests-full.log
                                             nox -e lint-salt
@@ -152,7 +173,10 @@ node('lint') {
                                 )
                             } finally {
                                 def full_logs_pattern = 'pylint-report-*-full.log'
-                                archiveArtifacts artifacts: full_logs_pattern, allowEmptyArchive: true
+                                archiveArtifacts(
+                                    artifacts: full_logs_pattern,
+                                    allowEmptyArchive: true
+                                )
                                 if (env.NODE_NAME.startsWith('jenkins-pr-')) {
                                     step([$class: 'WarningsPublisher',
                                         parserConfigurations: [[
@@ -165,7 +189,11 @@ node('lint') {
                                         usePreviousBuildAsReference: true
                                     ])
                                 } else {
-                                    recordIssues(enabledForFailure: true, tool: pyLint(pattern: full_logs_pattern, reportEncoding: 'UTF-8'))
+                                    lint_report_issues.add(
+                                        scanForIssues(
+                                            tool: pyLint(pattern: full_logs_pattern, reportEncoding: 'UTF-8')
+                                        )
+                                    )
                                 }
                             }
                         }
@@ -173,6 +201,17 @@ node('lint') {
                 } catch (Exception e) {
                     currentBuild.result = 'FAILURE'
                 } finally {
+                    if (!env.NODE_NAME.startsWith('jenkins-pr-')) {
+                        publishIssues(
+                            enabledForFailure: true,
+                            aggregatingResults: true,
+                            referenceJobName: "${salt_target_branch}/salt-${salt_target_branch}-lint",
+                            qualityGates: [
+                                [threshold: 1, type: 'TOTAL', unstable: false]
+                            ],
+                            issues: lint_report_issues
+                        )
+                    }
                     cleanWs notFailBuild: true
                     if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
                         if (env.NODE_NAME.startsWith('jenkins-pr-')) {
@@ -191,7 +230,7 @@ node('lint') {
                         try {
                             slackSend channel: "#jenkins-prod-pr",
                                 color: '#FF0000',
-                                message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                                message: "*${currentBuild.currentResult}*: ${currentBuild.getFullDisplayName()} (<${env.BUILD_URL}|open>)"
                         } catch (Exception e) {
                             sh 'echo Failed to send the Slack notification'
                         }
