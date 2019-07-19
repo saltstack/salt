@@ -107,58 +107,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDownClass(cls):
         del cls.ctx
 
-    @property
-    def pkgmgr_avail(self):
-        '''
-        Return True if the package manager is available for use
-        '''
-
-        def proc_fd_lsof(path):
-            '''
-            Return True if any entry in /proc/locks points to path.  Example data:
-
-            .. code-block:: bash
-
-                # cat /proc/locks
-                1: FLOCK  ADVISORY  WRITE 596 00:0f:10703 0 EOF
-                2: FLOCK  ADVISORY  WRITE 14590 00:0f:11282 0 EOF
-                3: POSIX  ADVISORY  WRITE 653 00:0f:11422 0 EOF
-            '''
-            import glob
-            # https://www.centos.org/docs/5/html/5.2/Deployment_Guide/s2-proc-locks.html
-            locks = self.run_function('cmd.run', ['cat /proc/locks']).splitlines()
-            for line in locks:
-                fields = line.split()
-                try:
-                    major, minor, inode = fields[5].split(':')
-                    inode = int(inode)
-                except (IndexError, ValueError):
-                    return False
-
-                for fd in glob.glob('/proc/*/fd'):
-                    fd_path = os.path.realpath(fd)
-                    # If the paths match and the inode is locked
-                    if fd_path == path and os.stat(fd_path).st_ino == inode:
-                        return True
-
-            return False
-
-        # Return True if any locks are found for path
-        if self.ctx['os_family'] == 'Debian':
-            path = '/var/lib/apt/lists/lock'
-            # Try lsof if it's available
-            if salt.utils.path.which('lsof'):
-                lock = self.run_function('cmd.run', ['lsof {0}'.format(path)])
-                return True if lock else False
-
-            # Try to find any locks on path from /proc/locks
-            elif not self.ctx['os_family'] == 'Windows':
-                return proc_fd_lsof(path)
-
-            return False
-
-        return True
-
     @requires_system_grains
     def setUp(self, grains=None):  # pylint: disable=arguments-differ
         '''
@@ -177,15 +125,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             if self.ctx['os_family'] == 'Windows':
                 self.ctx['pkg_targets'] = ['curl', 'wingrep']
             else:
+                # figlet and sl are very small packages, with no new dependencies, that exist in all *nix repos
+                # but don't come pre-installed.  Perfect for our test
                 self.ctx['pkg_targets'] = ['figlet', 'sl']
 
-
-
-        # Skip tests if package manager not available
-        if 'pkgmgr_avail' not in self.ctx:
-            self.ctx['pkgmgr_avail'] = self.pkgmgr_avail
-        if not self.ctx['pkgmgr_avail']:
-            self.skipTest('Package manager is not available')
         if 'refresh' not in self.ctx:
             self.run_function('pkg.refresh_db')
             self.ctx['refresh'] = True
