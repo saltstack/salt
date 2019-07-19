@@ -40,7 +40,7 @@ log = logging.getLogger(__name__)
 _PKG_TARGETS = {
     'Arch': ['sl', 'libpng'],
     'Debian': ['python-plist', 'apg'],
-    'RedHat': ['units', 'zsh-html'],
+    'RedHat': ['sl', 'cowsay'],
     'FreeBSD': ['aalib', 'pth'],
     'Suse': ['aalib', 'htop'],
     'MacOS': ['libpng', 'jpeg'],

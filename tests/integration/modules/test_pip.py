@@ -6,7 +6,6 @@ tests.integration.modules.pip
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-from git.compat import PY3
 import os
 import re
 import sys
@@ -23,6 +22,7 @@ from tests.support.helpers import patched_environ, destructiveTest
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+from salt.ext.six import PY3
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
@@ -127,7 +127,7 @@ class PipModuleVenvTest(ModuleCase):
                 # pyvenv-3.4 does not support the --python option
                 if not salt.utils.path.which('pyvenv-3.4'):
                     self._venv_kwargs = {'python': python}
-        return self._venv_kwargs
+        return self._venv_kwargs.copy()
 
     def _create_virtualenv(self, path):
         ret = self.run_function('virtualenv.create', [path], **self.venv_kwargs)
