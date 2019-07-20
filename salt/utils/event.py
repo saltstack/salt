@@ -1343,8 +1343,8 @@ class StateFire(object):
         channel = salt.transport.client.ReqChannel.factory(self.opts)
         try:
             channel.send(load)
-        except Exception:
-            pass
+        except Exception as exc:
+            log.info('An exception occurred on fire_master: %s', exc, exc_info_on_loglevel=logging.DEBUG)
         finally:
             channel.close()
         return True
@@ -1375,8 +1375,8 @@ class StateFire(object):
         channel = salt.transport.client.ReqChannel.factory(self.opts)
         try:
             channel.send(load)
-        except Exception:
-            pass
+        except Exception as exc:
+            log.info('An exception occurred on fire_master: %s', exc, exc_info_on_loglevel=logging.DEBUG)
         finally:
             channel.close()
         return True
