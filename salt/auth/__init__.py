@@ -687,12 +687,17 @@ class Resolver(object):
         self.auth = salt.loader.auth(opts)
 
     def _send_token_request(self, load):
-        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                     ':' + six.text_type(self.opts['ret_port'])
+        master_uri = 'tcp://{}:{}'.format(
+            salt.utils.zeromq.ip_bracket(self.opts['interface']),
+            six.text_type(self.opts['ret_port'])
+        )
         channel = salt.transport.client.ReqChannel.factory(self.opts,
                                                            crypt='clear',
                                                            master_uri=master_uri)
-        return channel.send(load)
+        try:
+            return channel.send(load)
+        finally:
+            channel.close()
 
     def cli(self, eauth):
         '''
