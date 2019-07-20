@@ -445,6 +445,17 @@ class SaltEvent(object):
             self.cpush = True
         return self.cpush
 
+    def close_pull(self):
+        '''
+        Close the pusher connection (if established)
+        '''
+        if not self.cpush:
+            return
+
+        self.pusher.close()
+        self.pusher = None
+        self.cpush = False
+
     @classmethod
     def unpack(cls, raw, serial=None):
         if serial is None:
@@ -783,9 +794,9 @@ class SaltEvent(object):
 
     def destroy(self):
         if self.subscriber is not None:
-            self.subscriber.close()
+            self.close_pub()
         if self.pusher is not None:
-            self.pusher.close()
+            self.close_pull()
         if self._run_io_loop_sync and not self.keep_loop:
             self.io_loop.close()
 
