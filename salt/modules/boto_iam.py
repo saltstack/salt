@@ -1283,42 +1283,11 @@ def build_policy(region=None, key=None, keyid=None, profile=None):
 
 
 def get_account_id(region=None, key=None, keyid=None, profile=None):
-    '''
-    Get a the AWS account id associated with the used credentials.
+    return __salt__['boto_sts.get_account_id'](region=region, key=key, keyid=keyid, profile=profile)
 
-    CLI Example:
 
-    .. code-block:: bash
-
-        salt myminion boto_iam.get_account_id
-    '''
-    cache_key = 'boto_iam.account_id'
-    if cache_key not in __context__:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        try:
-            ret = conn.get_user()
-            # The get_user call returns an user ARN:
-            #    arn:aws:iam::027050522557:user/salt-test
-            arn = ret['get_user_response']['get_user_result']['user']['arn']
-            account_id = arn.split(':')[4]
-        except boto.exception.BotoServerError:
-            # If call failed, then let's try to get the ARN from the metadata
-            timeout = boto.config.getfloat(
-                'Boto', 'metadata_service_timeout', 1.0
-            )
-            attempts = boto.config.getint(
-                'Boto', 'metadata_service_num_attempts', 1
-            )
-            identity = boto.utils.get_instance_identity(
-                timeout=timeout, num_retries=attempts
-            )
-            try:
-                account_id = identity['document']['accountId']
-            except KeyError:
-                log.error('Failed to get account id from instance_identity in'
-                          ' boto_iam.get_account_id.')
-        __context__[cache_key] = account_id
-    return __context__[cache_key]
+def get_partition(region=None, key=None, keyid=None, profile=None):
+    return __salt__['boto_sts.get_partition'](region=region, key=key, keyid=keyid, profile=profile)
 
 
 def get_all_roles(path_prefix=None, region=None, key=None, keyid=None,
@@ -1669,13 +1638,16 @@ def export_roles(path_prefix='/', region=None, key=None, keyid=None, profile=Non
 
 
 def _get_policy_arn(name, region=None, key=None, keyid=None, profile=None):
-    if name.startswith('arn:aws:iam:'):
-        return name
-
     account_id = get_account_id(
         region=region, key=key, keyid=keyid, profile=profile
     )
-    return 'arn:aws:iam::{0}:policy/{1}'.format(account_id, name)
+    partition = get_partition(
+        region=region, key=key, keyid=keyid, profile=profile
+    )
+    if name.startswith('arn:{0}:iam'.format(partition)):
+        return name
+
+    return 'arn:{0}:iam::{1}:policy/{2}'.format(partition,account_id, name)
 
 
 def policy_exists(policy_name,

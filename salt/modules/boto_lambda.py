@@ -187,17 +187,22 @@ def function_exists(FunctionName, region=None, key=None,
 
 
 def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
-    if name.startswith('arn:aws:iam:'):
-        return name
-
-    account_id = __salt__['boto_iam.get_account_id'](
+    account_id = __salt__['boto_sts.get_account_id'](
         region=region, key=key, keyid=keyid, profile=profile
     )
+    partition = __salt__['boto_sts.get_partition'](
+        region=region, key=key, keyid=keyid, profile=profile
+    )
+
+    if name.startswith('arn:{0}:iam'.format(partition)):
+        return name
+
     if profile and 'region' in profile:
         region = profile['region']
     if region is None:
         region = 'us-east-1'
-    return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
+
+    return 'arn:{0}:iam::{1}:role/{2}'.format(partition, account_id, name)
 
 
 def _filedata(infile):
