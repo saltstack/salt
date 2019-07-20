@@ -1671,16 +1671,18 @@ def ping_master(master):
     result = False
     channel = salt.transport.client.ReqChannel.factory(opts, crypt='clear')
     try:
-        payload = channel.send(load, tries=0, timeout=timeout)
-        result = True
-    except Exception as e:
-        pass
+        try:
+            payload = channel.send(load, tries=0, timeout=timeout)
+            result = True
+        except Exception as e:
+            pass
 
-    if result:
-        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-        event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
-
-    return result
+        if result:
+            event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+            event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
+        return result
+    finally:
+        channel.close()
 
 
 def proxy_reconnect(proxy_name, opts=None):

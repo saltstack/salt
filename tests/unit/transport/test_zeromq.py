@@ -133,6 +133,7 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config, crypt='clear')
 
     def tearDown(self):
+        self.channel.close()
         del self.channel
 
     @classmethod
@@ -162,6 +163,7 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config)
 
     def tearDown(self):
+        self.channel.close()
         del self.channel
 
     @classmethod
