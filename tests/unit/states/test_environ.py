@@ -52,6 +52,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         ret = envstate.setenv('test', 'other')
         self.assertEqual(ret['changes'], {})
 
+    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(not salt.utils.platform.is_windows(), 'Windows only')
     def test_setenv_permanent(self):
         '''

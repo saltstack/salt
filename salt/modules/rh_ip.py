@@ -1032,6 +1032,14 @@ def build_interface(iface, iface_type, enabled, **settings):
             rh_major = '7'
         else:
             rh_major = '6'
+    elif __grains__['os'] == 'Amazon':
+        # TODO: Is there a better formula for this? -W. Werner, 2019-05-30
+        # If not, it will need to be updated whenever Amazon releases
+        # Amazon Linux 3
+        if __grains__['osmajorrelease'] == 2:
+            rh_major = '7'
+        else:
+            rh_major = '6'
     else:
         rh_major = __grains__['osrelease'][:1]
 

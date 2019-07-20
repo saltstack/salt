@@ -13,12 +13,14 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils.path
+from tests.support.unit import skipIf  # WAR ROOM temp import
 import salt.utils.platform
 
 INIT_DELAY = 5
 
 
 @destructiveTest
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the service state

@@ -14,7 +14,7 @@ import sys
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import TestsLoggingHandler, ForceImportErrorOn
+from tests.support.helpers import TstSuiteLoggingHandler, ForceImportErrorOn
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
@@ -54,7 +54,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False
             )
 
-        with TestsLoggingHandler() as handler:
+        with TstSuiteLoggingHandler() as handler:
             # Let's fake a higher virtualenv version
             virtualenv_mock = MagicMock()
             virtualenv_mock.__version__ = '1.10rc1'
@@ -92,7 +92,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False
             )
 
-        with TestsLoggingHandler() as handler:
+        with TstSuiteLoggingHandler() as handler:
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             # Let's fake a higher virtualenv version
             virtualenv_mock = MagicMock()

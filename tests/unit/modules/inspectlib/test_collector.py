@@ -34,6 +34,7 @@ from tests.support.mock import (
 from salt.modules.inspectlib.collector import Inspector
 
 
+@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(no_symlinks(), "Git missing 'core.symlinks=true' config")
 class InspectorCollectorTestCase(TestCase):

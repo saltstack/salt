@@ -16,6 +16,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
 @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class VirtualenvModuleTest(ModuleCase):
     '''
     Validate the virtualenv module
