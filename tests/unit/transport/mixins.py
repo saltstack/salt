@@ -79,4 +79,5 @@ class PubChannelMixin(object):
             self.wait(timeout=0.5)
 
         # close our pub_channel, to pass our FD checks
+        self.pub_channel.close()
         del self.pub_channel

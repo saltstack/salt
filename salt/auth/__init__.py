@@ -685,7 +685,10 @@ class Resolver(object):
         channel = salt.transport.client.ReqChannel.factory(self.opts,
                                                            crypt='clear',
                                                            master_uri=master_uri)
-        return channel.send(load)
+        try:
+            return channel.send(load)
+        finally:
+            channel.close()
 
     def cli(self, eauth):
         '''

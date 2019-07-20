@@ -623,6 +623,7 @@ class MinionBase(object):
                 else:
                     shuffle(opts['local_masters'])
 
+            pub_channel = None
             while True:
                 if attempts != 0:
                     # Give up a little time between connection attempts
@@ -668,6 +669,8 @@ class MinionBase(object):
                             msg = ('Master %s could not be reached, trying next '
                                    'next master (if any)', opts['master'])
                         log.info(msg)
+                        pub_channel.close()
+                        pub_channel = None
                         continue
 
                 if not conn:
@@ -679,6 +682,8 @@ class MinionBase(object):
                             'No master could be reached or all masters '
                             'denied the minion\'s connection attempt.'
                         )
+                        if pub_channel:
+                            pub_channel.close()
                         # If the code reaches this point, 'last_exc'
                         # should already be set.
                         raise last_exc  # pylint: disable=E0702
@@ -691,6 +696,7 @@ class MinionBase(object):
         else:
             if opts['random_master']:
                 log.warning('random_master is True but there is only one master specified. Ignoring.')
+            pub_channel = None
             while True:
                 if attempts != 0:
                     # Give up a little time between connection attempts
@@ -732,6 +738,8 @@ class MinionBase(object):
                     if attempts == tries:
                         # Exhausted all attempts. Return exception.
                         self.connected = False
+                        if pub_channel:
+                            pub_channel.close()
                         six.reraise(*sys.exc_info())
 
     def _discover_masters(self):
