@@ -67,6 +67,14 @@ wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
                 t=$(shuf -i 30-120 -n 1); echo "Sleeping $t seconds"; sleep $t
                 bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";
                 '''
+                sh """
+                if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
+                    mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-create.log"
+                fi
+                if [ -s ".kitchen/logs/kitchen.log" ]; then
+                    mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-create.log"
+                fi
+                """
             }
         }
 
@@ -76,6 +84,14 @@ wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
                 timeout(time: testrun_timeout, unit: 'HOURS') {
                     stage('Converge VM') {
                         sh 'bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";'
+                        sh """
+                        if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
+                            mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-converge.log"
+                        fi
+                        if [ -s ".kitchen/logs/kitchen.log" ]; then
+                            mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-converge.log"
+                        fi
+                        """
                     }
                     stage('Run Tests') {
                         withEnv(["DONT_DOWNLOAD_ARTEFACTS=1"]) {
@@ -85,14 +101,33 @@ wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
                 }
             } finally {
                 try {
+                    sh """
+                    if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
+                        mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-verify.log"
+                    fi
+                    if [ -s ".kitchen/logs/kitchen.log" ]; then
+                        mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-verify.log"
+                    fi
+                    """
                     stage('Download Artefacts') {
                         withEnv(["ONLY_DOWNLOAD_ARTEFACTS=1"]){
                             sh '''
                             bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM || exit 0
                             '''
                         }
+                        sh """
+                        if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
+                            mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-download.log"
+                        fi
+                        if [ -s ".kitchen/logs/kitchen.log" ]; then
+                            mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-download.log"
+                        fi
+                        """
                     }
-                    archiveArtifacts artifacts: 'artifacts/*,artifacts/**/*,.kitchen/logs/kitchen.log,artifacts/xml-unittests-output/*.xml'
+                    archiveArtifacts(
+                        artifacts: "artifacts/*,artifacts/**/*,.kitchen/logs/*-create.log,.kitchen/logs/*-converge.log,.kitchen/logs/*-verify.log,.kitchen/logs/*-download.log,artifacts/xml-unittests-output/*.xml",
+                        allowEmptyArchive: true
+                    )
                     junit 'artifacts/xml-unittests-output/*.xml'
                 } finally {
                     stage('Cleanup') {
