@@ -76,6 +76,17 @@ wrappedNode('lint', global_timeout, '#jenkins-prod-pr') {
                                 EC=$?
                                 exit $EC
                                 '''
+                            } else {
+                                // Always lint something so reporting doesn't fail
+                                sh shell_header + '''
+                                eval "$(pyenv init - --no-rehash)"
+                                pyenv shell 2.7.15
+                                EC=254
+                                export PYLINT_REPORT=pylint-report-salt-chg.log
+                                nox -e lint-salt -- salt/ext/__init__.py
+                                EC=$?
+                                exit $EC
+                                '''
                             }
                         }
                     },
