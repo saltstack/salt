@@ -16,6 +16,7 @@ from tests.support.helpers import skip_if_not_root
 # Import salt libs
 import salt.minion
 import salt.utils.event as event
+import salt.utils.platform
 from salt.exceptions import SaltSystemExit, SaltMasterUnresolvableError
 import salt.syspaths
 from tornado.concurrent import Future
