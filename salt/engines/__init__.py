@@ -61,7 +61,8 @@ def start_engines(opts, proc_mgr, proxy=None):
                         runners,
                         proxy
                         ),
-                    name=name
+                    name=name,
+                    kwargs={'_opts': opts}
                     )
 
 
@@ -94,7 +95,8 @@ class Engine(SignalHandlingMultiprocessingProcess):
             state['runners'],
             state['proxy'],
             log_queue=state['log_queue'],
-            log_queue_level=state['log_queue_level']
+            log_queue_level=state['log_queue_level'],
+            _opts=state['opts']
         )
 
     def __getstate__(self):

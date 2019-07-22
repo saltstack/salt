@@ -163,7 +163,8 @@ if USE_LOAD_BALANCER:
                 state['opts'],
                 state['socket_queue'],
                 log_queue=state['log_queue'],
-                log_queue_level=state['log_queue_level']
+                log_queue_level=state['log_queue_level'],
+                _opts=state['opts']
             )
 
         def __getstate__(self):
@@ -598,8 +599,10 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         if USE_LOAD_BALANCER:
             self.socket_queue = multiprocessing.Queue()
             process_manager.add_process(
-                LoadBalancerServer, args=(self.opts, self.socket_queue)
-            )
+                LoadBalancerServer,
+                args=(self.opts, self.socket_queue),
+                kwargs= {'_opts': self.opts}
+                )
         elif not salt.utils.platform.is_windows():
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

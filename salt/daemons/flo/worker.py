@@ -60,7 +60,8 @@ def worker_fork(self):
                     self.access_keys.value,
                     self.mkey.value,
                     self.aes.value
-                    )
+                    ),
+                kwargs={'_opts': self.opts.value}
                 )
 
 

@@ -23,7 +23,9 @@ def reactor_fork(self):
     '''
     self.proc_mgr.value.add_process(
             salt.utils.reactor.Reactor,
-            args=(self.opts.value,))
+            args=(self.opts.value,),
+            kwargs={'_opts': self.opts.value}
+            )
 
 
 @ioflo.base.deeding.deedify(
@@ -37,4 +39,6 @@ def event_return_fork(self):
     '''
     self.proc_mgr.value.add_process(
             salt.utils.event.EventReturn,
-            args=(self.opts.value,))
+            args=(self.opts.value,),
+            kwargs={'_opts': self.opts.value}
+            )

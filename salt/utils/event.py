@@ -1088,7 +1088,8 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
-            log_queue_level=state['log_queue_level']
+            log_queue_level=state['log_queue_level'],
+            _opts=state['opts']
         )
 
     def __getstate__(self):
@@ -1220,7 +1221,8 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
-            log_queue_level=state['log_queue_level']
+            log_queue_level=state['log_queue_level'],
+            _opts=state['opts']
         )
 
     def __getstate__(self):
