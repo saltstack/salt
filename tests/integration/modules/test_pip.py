@@ -49,25 +49,6 @@ class PipModuleTest(ModuleCase):
             self.assertIn('command required for \'{0}\' not found: '.format(func), ret.lower())
             self.assertIn('could not find a pip binary', ret)
 
-    @skipIf(salt.utils.path.which('deactivate'), 'Must not be in a virtual environment for this test')
-    @destructiveTest
-    def test_system_pip3(self):
-        pip = salt.utils.path.which_bin(['pip3', 'pip3.7', 'pip3.6', 'pip2', 'pip2.7', 'pip'])
-        if not pip:
-            self.skipTest('System pip is not available')
-
-        self.run_function('pip.install', pkgs=['lazyimport==0.0.1'], bin_env=pip)
-        ret = self.run_function('cmd.run', [pip + ' -qqq freeze | grep lazyimport'])
-        self.assertNotIsInstance(ret, list)
-        self.assertNotIsInstance(ret, dict)
-        self.assertIn('lazyimport==0.0.1', ret)
-
-        self.run_function('pip.uninstall', pkgs=['lazyimport'], bin_env=pip)
-        ret = self.run_function('cmd.run', [pip + ' -qqq freeze | grep lazyimport'])
-        self.assertNotIsInstance(ret, list)
-        self.assertNotIsInstance(ret, dict)
-        self.assertNotIn('lazyimport', ret)
-
 
 @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipModuleVenvTest(ModuleCase):

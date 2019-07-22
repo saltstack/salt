@@ -124,6 +124,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         if 'pkg_targets' not in self.ctx:
             if self.ctx['os_family'] == 'Windows':
                 self.ctx['pkg_targets'] = ['curl', 'wingrep']
+            elif self.ctx['os_family'] == 'Redhat':
+                self.ctx['pkg_targets'] = ['units', 'zsh-html']
             else:
                 # figlet and sl are very small packages, with no new dependencies, that exist in all *nix repos
                 # but don't come pre-installed.  Perfect for our test
@@ -428,18 +430,19 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         WARNING: This test will pick a package with an available upgrade (if
         there is one) and upgrade it to the latest version.
         '''
+        if not self.ctx['os_family'] == 'Debian':
+            self.skipTest('Minion is not Debian/Ubuntu')
         target = self.ctx['pkg_targets'][0]
-        version = latest_version(self.ctx, self.run_function, target)
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test that the state fails when you try to run the state
         # with only_upgrade=True on a package which is not already installed,
         # so the targeted package needs to not be installed before we run the
         # state below.
+        version = latest_version(self.ctx, self.run_function, target)
         self.assertTrue(version)
 
-        ret = self.run_state('pkg.latest', name=target, refresh=False,
-                             only_upgrade=True)
+        ret = self.run_state('pkg.latest', name=target, refresh=False, only_upgrade=True)
         self.assertSaltFalseReturn(ret)
 
         # Now look for updates and try to run the state on a package which is
