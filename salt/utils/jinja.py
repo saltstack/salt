@@ -5,6 +5,7 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 
 # Import python libs
 from __future__ import absolute_import, unicode_literals
+import atexit
 import collections
 import logging
 import os.path
@@ -54,8 +55,20 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     '''
+
+    _cached_client = None
+
+    @classmethod
+    def shutdown(cls):
+        if cls._cached_client is None:
+            return
+        # PillarClient and LocalClient objects do not have a destroy method
+        if hasattr(cls._cached_client, 'destroy'):
+            cls._cached_client.destroy()
+        cls._cached_client = None
+
     def __init__(self, opts, saltenv='base', encoding='utf-8',
-                 pillar_rend=False):
+                 pillar_rend=False, _file_client=None):
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding
@@ -69,7 +82,7 @@ class SaltCacheLoader(BaseLoader):
             self.searchpath = [os.path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
         self.cached = []
-        self._file_client = None
+        self._file_client = _file_client
         # Instantiate the fileclient
         self.file_client()
 
@@ -77,9 +90,14 @@ class SaltCacheLoader(BaseLoader):
         '''
         Return a file client. Instantiates on first call.
         '''
-        if not self._file_client:
-            self._file_client = salt.fileclient.get_file_client(
-                self.opts, self.pillar_rend)
+        # If there was no file_client passed to the class, create a cache_client
+        # and use that. This avoids opening a new file_client every time this
+        # class is instantiated
+        if self._file_client is None:
+            if not SaltCacheLoader._cached_client:
+                SaltCacheLoader._cached_client = salt.fileclient.get_file_client(
+                    self.opts, self.pillar_rend)
+            self._file_client = SaltCacheLoader._cached_client
         return self._file_client
 
     def cache_file(self, template):
@@ -169,6 +187,9 @@ class SaltCacheLoader(BaseLoader):
 
         # there is no template file within searchpaths
         raise TemplateNotFound(template)
+
+
+atexit.register(SaltCacheLoader.shutdown)
 
 
 class PrintableDict(OrderedDict):

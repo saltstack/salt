@@ -1302,6 +1302,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
 
 
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

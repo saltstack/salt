@@ -106,6 +106,7 @@ def container_name(func):
     return wrapper
 
 
+@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
 @destructiveTest
 @skipIf(not salt.utils.path.which('dockerd'), 'Docker not installed')
 class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):

@@ -2666,7 +2666,7 @@ def _hw_data(osdata):
             ]
         ]
 
-        manufacture_regexes = [
+        manufacturer_regexes = [
             re.compile(r) for r in [
                 r'(?im)^\s*System\s+Configuration:\s*(.*)(?=sun)',  # prtdiag
             ]
@@ -2734,10 +2734,14 @@ def _hw_data(osdata):
                 grains['uuid'] = res.group(1).strip().replace("'", "")
                 break
 
-        for regex in manufacture_regexes:
+        for regex in manufacturer_regexes:
             res = regex.search(data)
             if res and len(res.groups()) >= 1:
-                grains['manufacture'] = res.group(1).strip().replace("'", "")
+                grains['manufacturer'] = res.group(1).strip().replace("'", "")
+                grains['manufacture'] = grains['manufacturer']  # Remove in Magnesium
+                salt.utils.versions.warn_until('Magnesium',
+                                               'manufacture has been replaced by manufacturer '
+                                               'and will be removed in verion {version}')
                 break
 
         for regex in product_regexes:
