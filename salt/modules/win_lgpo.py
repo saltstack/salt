@@ -71,6 +71,7 @@ __func_alias__ = {'set_': 'set'}
 
 UUID = uuid.uuid4().hex
 adm_policy_name_map = {True: {}, False: {}}
+adm_policy_key_map = {}
 HAS_WINDOWS_MODULES = False
 # define some global XPATH variables that we'll set assuming all our imports are
 # good
@@ -85,6 +86,7 @@ VALUE_XPATH = None
 TRUE_LIST_XPATH = None
 FALSE_LIST_XPATH = None
 REGKEY_XPATH = None
+REGKEY_XPATH_MAPPED = None
 POLICY_ANCESTOR_XPATH = None
 ALL_CLASS_POLICY_XPATH = None
 ADML_DISPLAY_NAME_XPATH = None
@@ -115,6 +117,7 @@ try:
     TRUE_LIST_XPATH = etree.XPath('.//*[local-name() = "trueList"]')
     FALSE_LIST_XPATH = etree.XPath('.//*[local-name() = "falseList"]')
     REGKEY_XPATH = etree.XPath('//*[translate(@*[local-name() = "key"], "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz") = $keyvalue]')
+    REGKEY_XPATH_MAPPED = etree.XPath('//*[@key = $keyvalue]')
     POLICY_ANCESTOR_XPATH = etree.XPath('ancestor::*[local-name() = "policy"]')
     ALL_CLASS_POLICY_XPATH = etree.XPath('//*[local-name() = "policy" and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class)]')
     ADML_DISPLAY_NAME_XPATH = etree.XPath('//*[local-name() = $displayNameType and @*[local-name() = "id"] = $displayNameId]')
@@ -4862,6 +4865,7 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                     temp_pol = _updateNamespace(temp_pol, this_namespace)
                     if 'key' in temp_pol.attrib:
                         temp_pol = _updatePolicyElements(temp_pol, temp_pol.attrib['key'])
+                        adm_policy_key_map[temp_pol.attrib['key'].lower()] = temp_pol.attrib['key']
                     policydefs_policies_xpath(t_policy_definitions)[0].append(temp_pol)
                 policy_namespaces = xmltree.xpath(
                         '/{0}policyDefinitions/{0}policyNamespaces/{0}*'.format(namespace_string),
@@ -6092,7 +6096,8 @@ def _checkAllAdmxPolicies(policy_class,
             policy_item_key = policy_item.split('{0};'.format(chr(0)).encode('utf-16-le'))[0].decode('utf-16-le').lower()
             if policy_item_key:
                 # Find the policy definitions with this key
-                for admx_item in REGKEY_XPATH(admx_policy_definitions, keyvalue=policy_item_key):
+                for admx_item in REGKEY_XPATH_MAPPED(admx_policy_definitions,
+                                                     keyvalue=adm_policy_key_map[policy_item_key]):
                     # If this is a policy, append it to admx_policies
                     if etree.QName(admx_item).localname == 'policy':
                         if admx_item not in admx_policies:
