@@ -1647,7 +1647,7 @@ def _get_policy_arn(name, region=None, key=None, keyid=None, profile=None):
     if name.startswith('arn:{0}:iam'.format(partition)):
         return name
 
-    return 'arn:{0}:iam::{1}:policy/{2}'.format(partition,account_id, name)
+    return 'arn:{0}:iam::{1}:policy/{2}'.format(partition, account_id, name)
 
 
 def policy_exists(policy_name,

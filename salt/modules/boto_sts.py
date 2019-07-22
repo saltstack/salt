@@ -33,7 +33,6 @@ try:
     import boto
     import boto3
     # pylint: enable=unused-import
-    from botocore.exceptions import ClientError
     from botocore import __version__ as found_botocore_version
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     logging.getLogger('boto3').setLevel(logging.CRITICAL)

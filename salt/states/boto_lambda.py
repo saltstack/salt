@@ -760,6 +760,7 @@ def _get_function_arn(name, region=None, key=None, keyid=None, profile=None):
         region = 'us-east-1'
     return 'arn:{0}:lambda:{1}:{2}:function:{3}'.format(partition, region, account_id, name)
 
+
 def event_source_mapping_present(name, EventSourceArn, FunctionName,
                                  StartingPosition, Enabled=True, BatchSize=100,
                                  region=None, key=None, keyid=None,
