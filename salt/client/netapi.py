@@ -74,7 +74,7 @@ class NetapiClient(object):
         if salt.utils.platform.is_windows():
             kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
             kwargs['log_queue_level'] = salt.log.setup.get_multiprocessing_logging_level()
-            
+
         for fun in self.netapi:
             if fun.endswith('.start'):
                 log.info('Starting %s netapi module', fun)

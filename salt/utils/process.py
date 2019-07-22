@@ -383,11 +383,9 @@ class ProcessManager(object):
             max_open_files = opts.get('max_open_files')
             if max_open_files:
                 try:
-                # https://docs.activestate.com/activepython/3.2/pywin32/win32file___setmaxstdio_meth.html
-                # describes that 2048 is the max
-                    if max_open_files > 2048:
-                        max_open_files = 2048
-                        log.error('max_open_files cannot be greater than 2048. Limit it to 2048.')
+                    if max_open_files > 8192:
+                        max_open_files = 8192
+                        log.warning('max_open_files ajusted to 8192, since that is maximum in C runtime.')
                     import win32file
                     count = win32file._setmaxstdio(max_open_files)  # pylint: disable=W0212
                     if count != max_open_files:
