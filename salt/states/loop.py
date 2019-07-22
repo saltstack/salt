@@ -26,12 +26,31 @@ Allows for looping over execution modules.
     This state allows arbitrary python code to be executed through the condition
     parameter which is literally evaluated within the state. Please use caution.
 
+.. versionchanged:: Neon
+
+.. code-block:: yaml
+
+    Wait for service to be healthy:
+      loop.until_no_eval:
+      - name: boto_elb.get_instance_health
+      - expected: '0:state:InService'
+      - compare_operator: data.subdict_match
+      - period: 5
+      - timeout: 20
+      - args:
+        - {{ elb }}
+      - kwargs:
+          keyid: {{ access_key }}
+          key: {{ secret_key }}
+          instances: "{{ instance }}"
 '''
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
+import operator
+import sys
 
 # Initialize logging
 log = logging.getLogger(__name__)
@@ -48,71 +67,128 @@ def until(name,
           m_args=None,
           m_kwargs=None,
           condition=None,
-          period=0,
-          timeout=604800):
+          period=1,
+          timeout=60):
     '''
     Loop over an execution module until a condition is met.
 
-    name
-        The name of the execution module
-
-    m_args
-        The execution module's positional arguments
-
-    m_kwargs
-        The execution module's keyword arguments
-
-    condition
-        The condition which must be met for the loop to break. This
-        should contain ``m_ret`` which is the return from the execution
-        module.
-
-    period
-        The number of seconds to wait between executions
-
-    timeout
-        The timeout in seconds
+    :param str name: The name of the execution module
+    :param list m_args: The execution module's positional arguments
+    :param dict m_kwargs: The execution module's keyword arguments
+    :param str condition: The condition which must be met for the loop to break.
+        This should contain ``m_ret`` which is the return from the execution module.
+    :param int period: The number of seconds to wait between executions
+    :param int timeout: The timeout in seconds
     '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     if name not in __salt__:
         ret['comment'] = 'Cannot find module {0}'.format(name)
-        return ret
-    if condition is None:
+    elif condition is None:
         ret['comment'] = 'An exit condition must be specified'
-        return ret
-    if not isinstance(period, int):
-        ret['comment'] = 'Period must be specified as an integer in seconds'
-        return ret
-    if not isinstance(timeout, int):
-        ret['comment'] = 'Timeout must be specified as an integer in seconds'
-        return ret
-    if __opts__['test']:
+    elif not isinstance(period, (int, float)):
+        ret['comment'] = 'Period must be specified as a float in seconds'
+    elif not isinstance(timeout, (int, float)):
+        ret['comment'] = 'Timeout must be specified as a float in seconds'
+    elif __opts__['test']:
         ret['comment'] = 'The execution module {0} will be run'.format(name)
         ret['result'] = None
+    else:
+        if m_args is None:
+            m_args = []
+        if m_kwargs is None:
+            m_kwargs = {}
+
+        timeout = time.time() + timeout
+        while time.time() < timeout:
+            m_ret = __salt__[name](*m_args, **m_kwargs)
+            if eval(condition):  # pylint: disable=W0123
+                ret['result'] = True
+                ret['comment'] = 'Condition {0} was met'.format(condition)
+                break
+            time.sleep(period)
+        else:
+            ret['comment'] = 'Timed out while waiting for condition {0}'.format(condition)
+    return ret
+
+
+def until_no_eval(
+        name,
+        expected,
+        compare_operator='eq',
+        timeout=60,
+        period=1,
+        init_wait=0,
+        args=None,
+        kwargs=None):
+    '''
+    Generic waiter state that waits for a specific salt function to produce an
+    expected result.
+    The state fails if the function does not exist or raises an exception,
+    or does not produce the expected result within the allotted retries.
+
+    :param str name: Name of the module.function to call
+    :param expected: Expected return value. This can be almost anything.
+    :param str compare_operator: Operator to use to compare the result of the
+        module.function call with the expected value. This can be anything present
+        in __salt__ or __utils__. Will be called with 2 args: result, expected.
+    :param int timeout: Abort after this amount of seconds (excluding init_wait).
+    :param float period: Time (in seconds) to wait between attempts.
+    :param float init_wait: Time (in seconds) to wait before trying anything.
+    :param list args: args to pass to the salt module.function.
+    :param dict kwargs: kwargs to pass to the salt module.function.
+    '''
+    ret = {'name': name, 'comment': '', 'changes': {}, 'result': False}
+    if name not in __salt__:
+        ret['comment'] = 'Module.function "{}" is unavailable.'.format(name)
+    elif compare_operator in __salt__:
+        comparator = __salt__[compare_operator]
+    elif compare_operator in __utils__:
+        comparator = __utils__[compare_operator]
+    elif not hasattr(operator, compare_operator):
+        ret['comment'] = 'Invalid operator "{}" supplied.'.format(compare_operator)
+    else:
+        comparator = getattr(operator, compare_operator)
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = ('Would have waited for "{}" to produce "{}".'
+                          ''.format(name, expected))
+    if ret['comment']:
         return ret
-    if not m_args:
-        m_args = []
-    if not m_kwargs:
-        m_kwargs = {}
 
-    def timed_out():
-        if time.time() >= timeout:
-            return True
-        return False
+    if init_wait:
+        time.sleep(init_wait)
+    if args is None:
+        args = []
+    if kwargs is None:
+        kwargs = {}
 
+    res_archive = []
+    current_attempt = 0
     timeout = time.time() + timeout
-
-    while not timed_out():
-        m_ret = __salt__[name](*m_args, **m_kwargs)
-        if eval(condition):  # pylint: disable=W0123
+    while time.time() < timeout:
+        current_attempt += 1
+        try:
+            res = __salt__[name](*args, **kwargs)
+        except Exception as exc:
+            (exc_type, exc_value, _) = sys.exc_info()
+            ret['comment'] = 'Exception occurred while executing {}: {}:{}'.format(name, exc_type, exc_value)
+            break
+        res_archive.append(res)
+        cmp_res = comparator(res, expected)
+        log.debug('%s:until_no_eval:\n'
+                  '\t\tAttempt %s, result: %s, expected: %s, compare result: %s',
+                  __name__, current_attempt, res, expected, cmp_res)
+        if cmp_res:
             ret['result'] = True
-            ret['comment'] = 'Condition {0} was met'.format(condition)
-            return ret
+            ret['comment'] = ('Call provided the expected results in {} attempts'
+                              ''.format(current_attempt))
+            break
         time.sleep(period)
-
-    ret['comment'] = 'Timed out while waiting for condition {0}'.format(condition)
+    else:
+        ret['comment'] = ('Call did not produce the expected result after {} attempts'
+                          ''.format(current_attempt))
+        log.debug('%s:until_no_eval:\n'
+                  '\t\tResults of all attempts: %s',
+                  __name__, res_archive)
     return ret
