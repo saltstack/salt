@@ -265,7 +265,6 @@ class TestDaemon(object):
             salt.utils.process.appendproctitle('{0}-{1}'.format(self.__class__.__name__, cls.__name__))
             daemon = cls(opts)
             getattr(daemon, start_fun)()
-        multiprocessing.log_to_stderr(logging.DEBUG)        ## DGM
         process = multiprocessing.Process(target=start,
                                           args=(cls, opts, start_fun))
         process.start()
@@ -304,7 +303,7 @@ class TestDaemon(object):
                 ' * {LIGHT_GREEN}Starting salt-master ... STARTED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError) as exc:
+        except (RuntimeWarning, RuntimeError):
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -312,9 +311,6 @@ class TestDaemon(object):
             )
             sys.stdout.write(
                 ' * {LIGHT_RED}Starting salt-master ... FAILED!\n{ENDC}'.format(**self.colors)
-            )
-            sys.stdout.write(
-                '\nexception {0}'.format(exc)
             )
             sys.stdout.flush()
 
@@ -343,7 +339,7 @@ class TestDaemon(object):
                 ' * {LIGHT_GREEN}Starting salt-minion ... STARTED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError) as exc:
+        except (RuntimeWarning, RuntimeError):
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -351,9 +347,6 @@ class TestDaemon(object):
             )
             sys.stdout.write(
                 ' * {LIGHT_RED}Starting salt-minion ... FAILED!\n{ENDC}'.format(**self.colors)
-            )
-            sys.stdout.write(
-                '\nexception {0}'.format(exc)
             )
             sys.stdout.flush()
 
@@ -382,7 +375,7 @@ class TestDaemon(object):
                 ' * {LIGHT_GREEN}Starting sub salt-minion ... STARTED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError) as exc:
+        except (RuntimeWarning, RuntimeError):
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -390,9 +383,6 @@ class TestDaemon(object):
             )
             sys.stdout.write(
                 ' * {LIGHT_RED}Starting sub salt-minion ... FAILED!\n{ENDC}'.format(**self.colors)
-            )
-            sys.stdout.write(
-                '\nexception {0}'.format(exc)
             )
             sys.stdout.flush()
 
@@ -422,7 +412,7 @@ class TestDaemon(object):
                 ' * {LIGHT_GREEN}Starting syndic salt-master ... STARTED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError) as exc:
+        except (RuntimeWarning, RuntimeError):
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -430,9 +420,6 @@ class TestDaemon(object):
             )
             sys.stdout.write(
                 ' * {LIGHT_RED}Starting syndic salt-master ... FAILED!\n{ENDC}'.format(**self.colors)
-            )
-            sys.stdout.write(
-                '\nexception {0}'.format(exc)
             )
             sys.stdout.flush()
 
@@ -461,7 +448,7 @@ class TestDaemon(object):
                 ' * {LIGHT_GREEN}Starting salt-syndic ... STARTED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError) as exc:
+        except (RuntimeWarning, RuntimeError):
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -469,9 +456,6 @@ class TestDaemon(object):
             )
             sys.stdout.write(
                 ' * {LIGHT_RED}Starting salt-syndic ... FAILED!\n{ENDC}'.format(**self.colors)
-            )
-            sys.stdout.write(
-                '\nexception {0}'.format(exc)
             )
             sys.stdout.flush()
 
@@ -502,7 +486,7 @@ class TestDaemon(object):
                     ' * {LIGHT_GREEN}Starting salt-proxy ... STARTED!\n{ENDC}'.format(**self.colors)
                 )
                 sys.stdout.flush()
-            except (RuntimeWarning, RuntimeError) as exc:
+            except (RuntimeWarning, RuntimeError):
                 sys.stdout.write(
                     '\r{0}\r'.format(
                         ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -510,9 +494,6 @@ class TestDaemon(object):
                 )
                 sys.stdout.write(
                     ' * {LIGHT_RED}Starting salt-proxy ... FAILED!\n{ENDC}'.format(**self.colors)
-                )
-                sys.stdout.write(
-                    '\nexception {0}'.format(exc)
                 )
                 sys.stdout.flush()
 
