@@ -55,11 +55,16 @@ def install(app_id, enable=True):
         salt '*' assistive.install com.smileonmymac.textexpander
     '''
     ge_el_capitan = True if _LooseVersion(__grains__['osrelease']) >= salt.utils.stringutils.to_str('10.11') else False
+    ge_mojave = True if _LooseVersion(__grains__['osrelease']) >= salt.utils.stringutils.to_str('10.14') else False
     client_type = _client_type(app_id)
     enable_str = '1' if enable else '0'
     cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" ' \
-          '"INSERT or REPLACE INTO access VALUES(\'kTCCServiceAccessibility\',\'{0}\',{1},{2},1,NULL{3})"'.\
-        format(app_id, client_type, enable_str, ',NULL' if ge_el_capitan else '')
+          '"INSERT or REPLACE INTO access VALUES(\'kTCCServiceAccessibility\',\'{0}\',{1},{2},1,NULL{3}{4})"'.\
+        format(app_id,
+               client_type,
+               enable_str,
+               ',NULL' if ge_el_capitan else '',
+               ",NULL,NULL,NULL,NULL,''" if ge_mojave else '')
 
     call = __salt__['cmd.run_all'](
         cmd,
