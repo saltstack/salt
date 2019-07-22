@@ -11,6 +11,7 @@ import os
 from tests.support.case import ShellCase
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.unit import skipIf
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
@@ -20,6 +21,7 @@ INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'joyent'
 
 
+@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
 @expensiveTest
 class JoyentTest(ShellCase):
     '''

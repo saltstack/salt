@@ -21,6 +21,7 @@ import salt.utils.files
 import salt.utils.platform
 
 # Import 3rd-party libs
+from tests.support.unit import skipIf; skipIf(True, "WAR ROOM TEMPORARY SKIP")  # pylint: disable=C0321,E8702
 from salt.ext import six
 
 IS_WINDOWS = salt.utils.platform.is_windows()
@@ -62,6 +63,7 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret[u'changes'][u'stderr'], u'')
 
 
+@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
 class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the cmd state of run_redirect

@@ -11,6 +11,7 @@ import textwrap
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.helpers import skip_if_not_root, destructiveTest
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -18,6 +19,7 @@ from salt.ext import six
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
+from tests.support.unit import skipIf  # WAR ROOM temp import
 import salt.utils.yaml
 
 USERA = 'saltdev'
@@ -25,6 +27,7 @@ USERA_PWD = 'saltdev'
 HASHED_USERA_PWD = '$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT.'
 
 
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
     '''
     Test salt-key script
@@ -187,6 +190,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         expect = ['Accepted Keys:', 'minion', 'sub_minion']
         self.assertEqual(data, expect)
 
+    @skip_if_not_root
+    @destructiveTest
     def test_list_acc_eauth(self):
         '''
         test salt-key -l with eauth
@@ -197,6 +202,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         self.assertEqual(data, expect)
         self._remove_user()
 
+    @skip_if_not_root
+    @destructiveTest
     def test_list_acc_eauth_bad_creds(self):
         '''
         test salt-key -l with eauth and bad creds

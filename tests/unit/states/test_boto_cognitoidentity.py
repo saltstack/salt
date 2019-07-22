@@ -182,6 +182,7 @@ class BotoCognitoIdentityStateTestCaseBase(TestCase, LoaderModuleMockMixin):
                                        ' or equal to version {0}'
         .format(required_boto3_version))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCognitoIdentityTestCaseMixin):
     '''
     TestCase for salt.states.boto_cognitoidentity state.module

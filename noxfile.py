@@ -15,6 +15,7 @@ import json
 import pprint
 import shutil
 import tempfile
+import datetime
 
 if __name__ == '__main__':
     sys.stderr.write('Do not execute this file directly. Use nox instead, it will know how to handle this file\n')
@@ -35,7 +36,10 @@ PIP_INSTALL_SILENT = (os.environ.get('JENKINS_URL') or os.environ.get('CI') or o
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
 SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, 'tests', 'support', 'coverage')
 IS_WINDOWS = sys.platform.lower().startswith('win')
-
+RUNTESTS_LOGFILE = os.path.join(
+    REPO_ROOT, 'artifacts', 'logs',
+    'runtests-{}.log'.format(datetime.datetime.now().strftime('%Y%m%d%H%M%S.%f'))
+)
 # Python versions to run against
 _PYTHON_VERSIONS = ('2', '2.7', '3', '3.4', '3.5', '3.6', '3.7')
 
@@ -297,7 +301,12 @@ def _run_with_coverage(session, *test_cmd):
         )
     finally:
         # Always combine and generate the XML coverage report
-        session.run('coverage', 'combine')
+        try:
+            session.run('coverage', 'combine')
+        except CommandFailed:
+            # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
+            # exception
+            pass
         session.run('coverage', 'xml', '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'coverage.xml'))
 
 
@@ -379,9 +388,7 @@ def runtests_parametrized(session, coverage, transport, crypto):
         session.install('--progress-bar=off', crypto, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
-        '--tests-logfile={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
+        '--tests-logfile={}'.format(RUNTESTS_LOGFILE),
         '--transport={}'.format(transport)
     ] + session.posargs
     _runtests(session, coverage, cmd_args)
@@ -525,9 +532,7 @@ def runtests_cloud(session, coverage):
     session.install('--progress-bar=off', '-r', cloud_requirements, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
-        '--tests-logfile={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
+        '--tests-logfile={}'.format(RUNTESTS_LOGFILE),
         '--cloud-provider-tests'
     ] + session.posargs
     _runtests(session, coverage, cmd_args)
@@ -542,9 +547,7 @@ def runtests_tornado(session, coverage):
     session.install('--progress-bar=off', 'pyzmq==17.0.0', silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
-        '--tests-logfile={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
+        '--tests-logfile={}'.format(RUNTESTS_LOGFILE)
     ] + session.posargs
     _runtests(session, coverage, cmd_args)
 
@@ -566,9 +569,8 @@ def pytest_parametrized(session, coverage, transport, crypto):
 
     cmd_args = [
         '--rootdir', REPO_ROOT,
-        '--log-file={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
+        '--log-file={}'.format(RUNTESTS_LOGFILE),
+        '--log-file-level=debug',
         '--no-print-logs',
         '-ra',
         '-s',
@@ -715,9 +717,8 @@ def pytest_cloud(session, coverage):
 
     cmd_args = [
         '--rootdir', REPO_ROOT,
-        '--log-file={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
+        '--log-file={}'.format(RUNTESTS_LOGFILE),
+        '--log-file-level=debug',
         '--no-print-logs',
         '-ra',
         '-s',
@@ -736,9 +737,8 @@ def pytest_tornado(session, coverage):
 
     cmd_args = [
         '--rootdir', REPO_ROOT,
-        '--log-file={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
+        '--log-file={}'.format(RUNTESTS_LOGFILE),
+        '--log-file-level=debug',
         '--no-print-logs',
         '-ra',
         '-s',
@@ -756,8 +756,14 @@ def _pytest(session, coverage, cmd_args):
         else:
             session.run('py.test', *cmd_args)
     except CommandFailed:
+        # Not rerunning failed tests for now
+        raise
         # Re-run failed tests
         session.log('Re-running failed tests')
+
+        for idx, parg in enumerate(cmd_args):
+            if parg.startswith('--junitxml='):
+                cmd_args[idx] = parg.replace('.xml', '-rerun-failed.xml')
         cmd_args.append('--lf')
         if coverage is True:
             _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
@@ -840,14 +846,20 @@ def lint_tests(session):
     _lint(session, '.testing.pylintrc', flags, paths)
 
 
-@nox.session(python='2.7')
+@nox.session(python='3')
 def docs(session):
     '''
     Build Salt's Documentation
     '''
-    session.install('--progress-bar=off', '-r', 'requirements/static/py2.7/docs.txt', silent=PIP_INSTALL_SILENT)
+    pydir = _get_pydir(session)
+    if pydir == 'py3.4':
+        session.error('Sphinx only runs on Python >= 3.5')
+    session.install(
+        '--progress-bar=off',
+        '-r', 'requirements/static/{}/docs.txt'.format(pydir),
+        silent=PIP_INSTALL_SILENT)
     os.chdir('doc/')
     session.run('make', 'clean', external=True)
-    session.run('make', 'html', external=True)
+    session.run('make', 'html', 'SPHINXOPTS=-W', external=True)
     session.run('tar', '-czvf', 'doc-archive.tar.gz', '_build/html')
     os.chdir('..')

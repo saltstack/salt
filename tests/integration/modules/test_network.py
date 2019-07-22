@@ -14,6 +14,7 @@ import salt.utils.platform
 URL = 'google-public-dns-a.google.com'
 
 
+@skipIf(True, "WAR ROOM TEMPORARY SKIP")
 class NetworkTest(ModuleCase):
     '''
     Validate network module
