@@ -30,7 +30,7 @@ def maint_fork(self):
 
     do salt raet maint fork at enter
     '''
-    self.proc_mgr.value.add_process(Maintenance, args=(self.opts.value,))
+    self.proc_mgr.value.add_process(Maintenance, args=(self.opts.value,), kwargs={'_opts': self.opts.value})
 
 
 class Maintenance(multiprocessing.Process):

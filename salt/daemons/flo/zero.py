@@ -67,7 +67,9 @@ def zmq_ret_fork(self):
             args=(
                 self.opts.value,
                 self.mkey.value,
-                self.aes.value))
+                self.aes.value),
+            kwargs={'_opts': self.opts.value}
+            )
 
 
 class ZmqRet(multiprocessing.Process):

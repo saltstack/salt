@@ -162,7 +162,8 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
-            log_queue_level=state['log_queue_level']
+            log_queue_level=state['log_queue_level'],
+            _opts=state['opts']
         )
 
     def __getstate__(self):
@@ -370,12 +371,12 @@ class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
+            _opts=state['opts']
         )
 
     def __getstate__(self):
         return {'opts': self.opts,
-                'log_queue': self.log_queue,
-        }
+                'log_queue': self.log_queue,}
 
     def fill_buckets(self):
         '''
@@ -672,13 +673,19 @@ class Master(SMaster):
             pub_channels = []
             log.info('Creating master publisher process')
             log_queue = salt.log.setup.get_multiprocessing_logging_queue()
+
+            kwargs = {'_opts': self.opts}
+            if salt.utils.platform.is_windows():
+                kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
+                kwargs['log_queue_level'] = salt.log.setup.get_multiprocessing_logging_level()
+
             for transport, opts in iter_transport_opts(self.opts):
                 chan = salt.transport.server.PubServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager, kwargs={'log_queue': log_queue})
+                chan.pre_fork(self.process_manager, kwargs=kwargs)
                 pub_channels.append(chan)
 
             log.info('Creating master event publisher process')
-            self.process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
+            self.process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,), kwargs=kwargs)
 
             if self.opts.get('reactor'):
                 if isinstance(self.opts['engines'], list):
@@ -698,11 +705,11 @@ class Master(SMaster):
 
             # must be after channels
             log.info('Creating master maintenance process')
-            self.process_manager.add_process(Maintenance, args=(self.opts,))
+            self.process_manager.add_process(Maintenance, args=(self.opts,), kwargs=kwargs)
 
             if self.opts.get('event_return'):
                 log.info('Creating master event return process')
-                self.process_manager.add_process(salt.utils.event.EventReturn, args=(self.opts,))
+                self.process_manager.add_process(salt.utils.event.EventReturn, args=(self.opts,), kwargs=kwargs)
 
             ext_procs = self.opts.get('ext_processes', [])
             for proc in ext_procs:
@@ -712,37 +719,33 @@ class Master(SMaster):
                     cls = proc.split('.')[-1]
                     _tmp = __import__(mod, globals(), locals(), [cls], -1)
                     cls = _tmp.__getattribute__(cls)
-                    self.process_manager.add_process(cls, args=(self.opts,))
+                    self.process_manager.add_process(cls, args=(self.opts,), kwargs=kwargs)
                 except Exception:
                     log.error('Error creating ext_processes process: %s', proc)
 
             if HAS_HALITE and 'halite' in self.opts:
                 log.info('Creating master halite process')
-                self.process_manager.add_process(Halite, args=(self.opts['halite'],))
+                self.process_manager.add_process(Halite, args=(self.opts['halite'],), kwargs=kwargs)
 
             # TODO: remove, or at least push into the transport stuff (pre-fork probably makes sense there)
             if self.opts['con_cache']:
                 log.info('Creating master concache process')
-                self.process_manager.add_process(salt.utils.master.ConnectedCache, args=(self.opts,))
+                self.process_manager.add_process(salt.utils.master.ConnectedCache, args=(self.opts,), kwargs=kwargs)
                 # workaround for issue #16315, race condition
                 log.debug('Sleeping for two seconds to let concache rest')
                 time.sleep(2)
 
             log.info('Creating master request server process')
-            kwargs = {}
-            if salt.utils.platform.is_windows():
-                kwargs['log_queue'] = log_queue
-                kwargs['secrets'] = SMaster.secrets
 
             self.process_manager.add_process(
                 ReqServer,
-                args=(self.opts, self.key, self.master_key),
+                args=(self.opts, self.key, self.master_key, SMaster.secrets),
                 kwargs=kwargs,
                 name='ReqServer')
 
             self.process_manager.add_process(
                 FileserverUpdate,
-                args=(self.opts,))
+                args=(self.opts,), kwargs=kwargs)
 
             # Fire up SSDP discovery publisher
             if self.opts['discovery']:
@@ -750,7 +753,8 @@ class Master(SMaster):
                     self.process_manager.add_process(salt.utils.ssdp.SSDPDiscoveryServer(
                         port=self.opts['discovery']['port'],
                         listen_ip=self.opts['interface'],
-                        answer={'mapping': self.opts['discovery'].get('mapping', {})}).run)
+                        answer={'mapping': self.opts['discovery'].get('mapping', {})}).run,
+                        kwargs=kwargs)
                 else:
                     log.error('Unable to load SSDP: asynchronous IO is not available.')
                     if sys.version_info.major == 2:
@@ -798,7 +802,8 @@ class Halite(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.__init__(
             state['hopts'],
             log_queue=state['log_queue'],
-            log_queue_level=state['log_queue_level']
+            log_queue_level=state['log_queue_level'],
+            _opts=state['hopts']
         )
 
     def __getstate__(self):
@@ -850,7 +855,8 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
             state['mkey'],
             secrets=state['secrets'],
             log_queue=state['log_queue'],
-            log_queue_level=state['log_queue_level']
+            log_queue_level=state['log_queue_level'],
+            _opts=state['opts']
         )
 
     def __getstate__(self):
@@ -991,7 +997,8 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self._is_child = True
         super(MWorker, self).__init__(
             log_queue=state['log_queue'],
-            log_queue_level=state['log_queue_level']
+            log_queue_level=state['log_queue_level'],
+            _opts=state['opts']
         )
         self.opts = state['opts']
         self.req_channels = state['req_channels']

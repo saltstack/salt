@@ -520,6 +520,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
 
     def __init__(self, opts):
         salt.transport.server.ReqServerChannel.__init__(self, opts)
+        self.opts = opts
         self._closing = False
 
     def zmq_device(self):
@@ -598,7 +599,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
         :param func process_manager: An instance of salt.utils.process.ProcessManager
         '''
         salt.transport.mixins.auth.AESReqServerMixin.pre_fork(self, process_manager)
-        process_manager.add_process(self.zmq_device)
+        process_manager.add_process(self.zmq_device, kwargs={'_opts': self.opts})
 
     def _start_zmq_monitor(self):
         '''

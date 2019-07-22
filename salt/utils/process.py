@@ -363,6 +363,36 @@ class ProcessManager(object):
         self._sigterm_handler = signal.getsignal(signal.SIGTERM)
         self._restart_processes = True
 
+
+    @staticmethod
+    def run_function(fun, opts, *args, **kwargs):
+        '''
+        Run a specified function in a new process, while providing the required setup
+        '''
+        ProcessManager._setup_process(opts)
+        return fun(*args, **kwargs)
+
+    @staticmethod
+    def _setup_process(opts):
+        '''
+        This function is supposed to set up the newly spawned process
+        '''
+        if not salt.utils.platform.is_windows():
+            return
+        if opts:
+            max_open_files = opts.get('max_open_files')
+            if max_open_files:
+                try:
+                    if max_open_files > 8192:
+                        max_open_files = 8192
+                        log.warning('max_open_files ajusted to 8192, since that is maximum in C runtime.')
+                    import win32file
+                    count = win32file._setmaxstdio(max_open_files)  # pylint: disable=W0212
+                    if count != max_open_files:
+                        log.error('Failed to set \'max_open_files\' on the process')
+                except ImportError:
+                    log.error('Failed to set \'max_open_files\' on the process')
+
     def add_process(self, tgt, args=None, kwargs=None, name=None):
         '''
         Create a processes and args + kwargs
@@ -415,10 +445,18 @@ class ProcessManager(object):
                     tgt.__name__,
                 )
 
+        _opts = kwargs.get('_opts', {})
         if type(multiprocessing.Process) is type(tgt) and issubclass(tgt, multiprocessing.Process):
             process = tgt(*args, **kwargs)
         else:
-            process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs, name=name)
+            kwargs.pop('_opts', {})
+            args = (tgt, _opts) if len(args) is 0 else (tgt, _opts) + args
+            process = multiprocessing.Process(
+                target=ProcessManager.run_function,
+                args=args,
+                kwargs=kwargs,
+                name=name
+                )
 
         if isinstance(process, SignalHandlingMultiprocessingProcess):
             with default_signals(signal.SIGINT, signal.SIGTERM):
@@ -429,7 +467,8 @@ class ProcessManager(object):
         self._process_map[process.pid] = {'tgt': tgt,
                                           'args': args,
                                           'kwargs': kwargs,
-                                          'Process': process}
+                                          'Process': process,
+                                          '_opts': _opts}
         return process
 
     def restart_process(self, pid):
@@ -447,9 +486,16 @@ class ProcessManager(object):
         # don't block, the process is already dead
         self._process_map[pid]['Process'].join(1)
 
+        kwargs = self._process_map[pid]['kwargs']
+        _opts = self._process_map[pid]['_opts']
+        if _opts:
+            if not kwargs:
+                kwargs = {}
+            kwargs['_opts'] = _opts
+            
         self.add_process(self._process_map[pid]['tgt'],
                          self._process_map[pid]['args'],
-                         self._process_map[pid]['kwargs'])
+                         kwargs=kwargs)
 
         del self._process_map[pid]
 
@@ -696,6 +742,8 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
             # salt.log.setup.get_multiprocessing_logging_queue().
             salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
 
+        self._opts = kwargs.pop('_opts', {})
+
         self.log_queue_level = kwargs.pop('log_queue_level', None)
         if self.log_queue_level is None:
             self.log_queue_level = salt.log.setup.get_multiprocessing_logging_level()
@@ -750,6 +798,8 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
             kwargs['log_queue'] = self.log_queue
         if 'log_queue_level' not in kwargs:
             kwargs['log_queue_level'] = self.log_queue_level
+        if '_opts' not in kwargs:
+            kwargs['_opts'] = self._opts
         # Remove the version of these in the parent process since
         # they are no longer needed.
         del self._args_for_getstate
@@ -762,6 +812,7 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
 
     def _run(self):
         try:
+            ProcessManager._setup_process(self._opts)
             return self._original_run()
         except SystemExit:
             # These are handled by multiprocessing.Process._bootstrap()
