@@ -163,6 +163,7 @@ class SSHDMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
                                    'master_user': self.master_opts['user'],
                                    'user': self.username}}
         )
+        self.assertSaltTrueReturn(ret)
 
         try:
             self.sshd_proc = self.wait_proc(name='sshd',
@@ -233,6 +234,7 @@ class WebserverMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
             'state.apply',
             mods='git_pillar.http',
             pillar=pillar)
+        self.assertSaltTrueReturn(ret)
 
         if not os.path.exists(pillar['git_pillar']['git-http-backend']):
             self.fail(
