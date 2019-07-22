@@ -163,7 +163,6 @@ class SSHDMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
                                    'master_user': self.master_opts['user'],
                                    'user': self.username}}
         )
-        self.assertSaltTrueReturn(ret)
 
         try:
             self.sshd_proc = self.wait_proc(name='sshd',
@@ -234,7 +233,6 @@ class WebserverMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
             'state.apply',
             mods='git_pillar.http',
             pillar=pillar)
-        self.assertSaltTrueReturn(ret)
 
         if not os.path.exists(pillar['git_pillar']['git-http-backend']):
             self.fail(
@@ -655,7 +653,9 @@ class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):
         for proc in (cls.case.nginx_proc, cls.case.uwsgi_proc):
             if proc is not None:
                 try:
-                    proc.send_signal(signal.SIGQUIT)
+                    proc.send_signal(signal.SIGTERM)
+                    if proc.is_running():
+                        proc.send_signal(signal.SIGQUIT)
                 except psutil.NoSuchProcess:
                     pass
         shutil.rmtree(cls.root_dir, ignore_errors=True)
