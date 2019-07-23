@@ -89,7 +89,7 @@ class MongodbUserTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(mongodb_user.present(name, passwd, port={}), ret)
 
         mock_t = MagicMock(return_value=True)
-        mock = MagicMock(return_value=[{'user': name, 'roles':[{'db':db,'role': current_role}]}])
+        mock = MagicMock(return_value=[{'user': name, 'roles':[{'db':db, 'role': current_role}]}])
         with patch.dict(mongodb_user.__salt__,
                         {
                          'mongodb.user_create': mock_t,
@@ -98,19 +98,19 @@ class MongodbUserTestCase(TestCase, LoaderModuleMockMixin):
             comt = ('User {0} is already present and should be updated if neccesary.'
                 ).format(name)
             ret.update({'comment': comt, 'result': None})
-            self.assertDictEqual(mongodb_user.present(name, passwd, database=db,roles=new_role), ret)
+            self.assertDictEqual(mongodb_user.present(name, passwd, database=db, roles=new_role), ret)
 
             with patch.dict(mongodb_user.__opts__, {'test': True}):
                 comt = ('User {0} is already present and should be updated if neccesary.'
                         .format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(mongodb_user.present(name, passwd, database=db,roles=new_role), ret)
+                self.assertDictEqual(mongodb_user.present(name, passwd, database=db, roles=new_role), ret)
 
             with patch.dict(mongodb_user.__opts__, {'test': False}):
                 comt = ('User {0} is already present'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: {'database': db, 'roles': {'old': current_role_as_dict, 'new': new_role}}}})
-                self.assertDictEqual(mongodb_user.present(name, passwd, database=db,roles=new_role), ret)
+                self.assertDictEqual(mongodb_user.present(name, passwd, database=db, roles=new_role), ret)
 
     # 'absent' function tests: 1
 
