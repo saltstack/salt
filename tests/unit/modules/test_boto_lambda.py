@@ -209,7 +209,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         tests True function created.
         '''
-        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+        with patch.dict(boto_lambda.__salt__, {
+            'boto_sts.get_partition': MagicMock(return_value='aws'),
+            'boto_sts.get_account_id': MagicMock(return_value='1234'),
+            'boto_iam.get_account_id': MagicMock(return_value='1234')
+            }):
             with TempZipFile() as zipfile:
                 self.conn.create_function.return_value = function_ret
                 lambda_creation_result = boto_lambda.create_function(
@@ -226,7 +230,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         tests True function created.
         '''
-        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+        with patch.dict(boto_lambda.__salt__, {
+            'boto_sts.get_partition': MagicMock(return_value='aws'),
+            'boto_sts.get_account_id': MagicMock(return_value='1234'),
+            'boto_iam.get_account_id': MagicMock(return_value='1234')
+            }):
             self.conn.create_function.return_value = function_ret
             lambda_creation_result = boto_lambda.create_function(
                 FunctionName='testfunction',
@@ -243,7 +251,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         tests Creating a function without code
         '''
-        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+        with patch.dict(boto_lambda.__salt__, {
+            'boto_sts.get_partition': MagicMock(return_value='aws'),
+            'boto_sts.get_account_id': MagicMock(return_value='1234'),
+            'boto_iam.get_account_id': MagicMock(return_value='1234')
+            }):
             with self.assertRaisesRegex(SaltInvocationError,
                                         'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
                 lambda_creation_result = boto_lambda.create_function(
@@ -257,7 +269,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         tests Creating a function without code
         '''
-        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+        with patch.dict(boto_lambda.__salt__, {
+            'boto_sts.get_partition': MagicMock(return_value='aws'),
+            'boto_sts.get_account_id': MagicMock(return_value='1234'),
+            'boto_iam.get_account_id': MagicMock(return_value='1234')
+            }):
             with self.assertRaisesRegex(SaltInvocationError,
                                         'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
                 with TempZipFile() as zipfile:
@@ -275,7 +291,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         tests False function not created.
         '''
-        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+        with patch.dict(boto_lambda.__salt__, {
+            'boto_sts.get_partition': MagicMock(return_value='aws'),
+            'boto_sts.get_account_id': MagicMock(return_value='1234'),
+            'boto_iam.get_account_id': MagicMock(return_value='1234')
+            }):
             self.conn.create_function.side_effect = ClientError(
                 error_content, 'create_function')
             with TempZipFile() as zipfile:
@@ -328,7 +348,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         Tests describing parameters if function does not exist
         '''
         self.conn.list_functions.return_value = {'Functions': []}
-        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+        with patch.dict(boto_lambda.__salt__, {
+            'boto_sts.get_partition': MagicMock(return_value='aws'),
+            'boto_sts.get_account_id': MagicMock(return_value='1234'),
+            'boto_iam.get_account_id': MagicMock(return_value='1234')
+            }):
             result = boto_lambda.describe_function(
                 FunctionName='testfunction', **conn_parameters)
 
@@ -348,7 +372,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         tests True function updated.
         '''
-        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+        with patch.dict(boto_lambda.__salt__, {
+            'boto_sts.get_partition': MagicMock(return_value='aws'),
+            'boto_sts.get_account_id': MagicMock(return_value='1234'),
+            'boto_iam.get_account_id': MagicMock(return_value='1234')
+            }):
             self.conn.update_function_config.return_value = function_ret
             result = boto_lambda.update_function_config(
                 FunctionName=function_ret['FunctionName'], Role='myrole', **conn_parameters)
@@ -359,7 +387,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         tests False function not updated.
         '''
-        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+        with patch.dict(boto_lambda.__salt__, {
+            'boto_sts.get_partition': MagicMock(return_value='aws'),
+            'boto_sts.get_account_id': MagicMock(return_value='1234'),
+            'boto_iam.get_account_id': MagicMock(return_value='1234')
+            }):
             self.conn.update_function_configuration.side_effect = ClientError(
                 error_content, 'update_function')
             result = boto_lambda.update_function_config(FunctionName='testfunction',

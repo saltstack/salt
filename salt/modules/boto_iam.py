@@ -1283,10 +1283,33 @@ def build_policy(region=None, key=None, keyid=None, profile=None):
 
 
 def get_account_id(region=None, key=None, keyid=None, profile=None):
+    '''
+    Wrap boto_sts.get_account_id for backwards compatability with modules that may call
+    boto_iam.get_account_id
+
+    .. versionadded:: 2017.7.9
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_sts.get_account_id
+    '''
     return __salt__['boto_sts.get_account_id'](region=region, key=key, keyid=keyid, profile=profile)
 
 
 def get_partition(region=None, key=None, keyid=None, profile=None):
+    '''
+    While this function didn't exist, expose it in boto_iam just incase.
+
+    .. versionadded:: 2017.7.9
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_sts.get_partition
+    '''
     return __salt__['boto_sts.get_partition'](region=region, key=key, keyid=keyid, profile=profile)
 
 
