@@ -19,6 +19,7 @@ except ImportError as import_error:
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
+    Mock,
     MagicMock,
     patch,
     mock_open,
@@ -1171,3 +1172,72 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = core._osx_memdata()
             assert ret['swap_total'] == 0
             assert ret['mem_total'] == 4096
+
+    @skipIf(not core._DATEUTIL_TZ, 'Missing dateutil.tz')
+    def test_locale_info_tzname(self):
+        # mock datetime.now().tzname()
+        # cant just mock now because it is read only
+        tzname = Mock(return_value='MDT_FAKE')
+        now_ret_object = Mock(tzname=tzname)
+        now = Mock(return_value=now_ret_object)
+        datetime = Mock(now=now)
+
+        with patch.object(core, 'datetime', datetime=datetime) as datetime_module:
+            with patch.object(core.dateutil.tz, 'tzlocal', return_value=object) as tzlocal:
+                with patch.object(salt.utils.platform, 'is_proxy', return_value=False) as is_proxy:
+                    ret = core.locale_info()
+
+                    tzname.assert_called_once_with()
+                    self.assertEqual(len(now_ret_object.method_calls), 1)
+                    now.assert_called_once_with(object)
+                    self.assertEqual(len(datetime.method_calls), 1)
+                    self.assertEqual(len(datetime_module.method_calls), 1)
+                    tzlocal.assert_called_once_with()
+                    is_proxy.assert_called_once_with()
+
+                    self.assertEqual(ret['locale_info']['timezone'], 'MDT_FAKE')
+
+    @skipIf(not core._DATEUTIL_TZ, 'Missing dateutil.tz')
+    def test_locale_info_unicode_error_tzname(self):
+        # UnicodeDecodeError most have the default string encoding
+        unicode_error = UnicodeDecodeError(str('fake'), b'\x00\x00', 1, 2, str('fake'))
+
+        # mock datetime.now().tzname()
+        # cant just mock now because it is read only
+        tzname = Mock(return_value='MDT_FAKE')
+        now_ret_object = Mock(tzname=tzname)
+        now = Mock(return_value=now_ret_object)
+        datetime = Mock(now=now)
+
+        # mock tzname[0].decode()
+        decode = Mock(return_value='CST_FAKE')
+        tzname2 = (Mock(decode=decode,),)
+
+        with patch.object(core, 'datetime', datetime=datetime) as datetime_module:
+            with patch.object(core.dateutil.tz, 'tzlocal', side_effect=unicode_error) as tzlocal:
+                with patch.object(salt.utils.platform, 'is_proxy', return_value=False) as is_proxy:
+                    with patch.object(core.salt.utils.platform, 'is_windows', return_value=True) as is_windows:
+                        with patch.object(core, 'time', tzname=tzname2):
+                            ret = core.locale_info()
+
+                            tzname.assert_not_called()
+                            self.assertEqual(len(now_ret_object.method_calls), 0)
+                            now.assert_not_called()
+                            self.assertEqual(len(datetime.method_calls), 0)
+                            decode.assert_called_once_with('mbcs')
+                            self.assertEqual(len(tzname2[0].method_calls), 1)
+                            self.assertEqual(len(datetime_module.method_calls), 0)
+                            tzlocal.assert_called_once_with()
+                            is_proxy.assert_called_once_with()
+                            is_windows.assert_called_once_with()
+
+                            self.assertEqual(ret['locale_info']['timezone'], 'CST_FAKE')
+
+    @skipIf(core._DATEUTIL_TZ, 'Not Missing dateutil.tz')
+    def test_locale_info_no_tz_tzname(self):
+        with patch.object(salt.utils.platform, 'is_proxy', return_value=False) as is_proxy:
+            with patch.object(core.salt.utils.platform, 'is_windows', return_value=True) as is_windows:
+                ret = core.locale_info()
+                is_proxy.assert_called_once_with()
+                is_windows.assert_not_called()
+                self.assertEqual(ret['locale_info']['timezone'], 'unknown')
