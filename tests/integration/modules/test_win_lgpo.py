@@ -670,20 +670,6 @@ class WinLgpoTest(ModuleCase):
                 'old': {'Computer Configuration': {}}}
             self.assertDictEqual(result[name]['changes'], expected)
 
-    def test_set_computer_policy_RemoteAssistance(self):
-        '''
-        Ensure RAUnsolicit is caught by the slower XPath function
-        '''
-        self._testAdmxPolicy(
-            'Configure Offer Remote Assistance',
-            'Disabled',
-            [
-                r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicited[\s]*DWORD:0',
-                r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicitedFullControl[\s]*DELETE',
-                r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*\*[\s]*DELETEALLVALUES'
-            ],
-            assert_true=True)
-
     def tearDown(self):
         '''
         tearDown method, runs after each test
