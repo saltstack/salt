@@ -64,6 +64,7 @@ def _user_mdata(mdata_list=None, mdata_get=None):
 
     for mdata_grain in __salt__['cmd.run'](mdata_list, ignore_retcode=True).splitlines():
         if mdata_grain.startswith("ERROR:"):
+            log.warning("mdata-list returned an error, skipping mdata grains.")
             continue
         mdata_value = __salt__['cmd.run']('{0} {1}'.format(mdata_get, mdata_grain), ignore_retcode=True)
 
@@ -111,6 +112,9 @@ def _sdc_mdata(mdata_list=None, mdata_get=None):
     for mdata_grain in sdc_text_keys+sdc_json_keys:
         mdata_value = __salt__['cmd.run']('{0} sdc:{1}'.format(mdata_get, mdata_grain), ignore_retcode=True)
         if mdata_value.startswith("ERROR:"):
+            log.warning("unable to read sdc:{0} via mdata-get, mdata grain may be incomplete.".format(
+                mdata_grain,
+            ))
             continue
 
         if not mdata_value.startswith('No metadata for '):
