@@ -26,7 +26,7 @@ Allows for looping over execution modules.
     This state allows arbitrary python code to be executed through the condition
     parameter which is literally evaluated within the state. Please use caution.
 
-.. versionchanged:: Neon
+.. versionchanged:: Natrium
 
 A version that does not use eval is now available. It uses either the python ``operator``
 to compare the result of the function called in ``name``, which can be one of the
@@ -148,6 +148,9 @@ def until_no_eval(
     :type init_wait: int or float
     :param list args: args to pass to the salt module.function.
     :param dict kwargs: kwargs to pass to the salt module.function.
+
+    .. versionadded:: Natrium
+
     '''
     ret = {'name': name, 'comment': '', 'changes': {}, 'result': False}
     if name not in __salt__:
