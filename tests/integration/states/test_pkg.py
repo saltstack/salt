@@ -100,7 +100,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         key = 'latest_version'
         if key not in self.ctx:
-            self.ctx[key] = {}
+            self.ctx[key] = dict()
         targets = [x for x in names if x not in self.ctx[key]]
         if targets:
             result = self.run_function('pkg.latest_version', targets, refresh=False)
@@ -305,7 +305,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(_PKG_EPOCH_TARGETS, 'No targets have been configured with "epoch" in the version for {}'.format(_OS_DISTRO))
+    @skipIf(not _PKG_EPOCH_TARGETS, 'No targets have been configured with "epoch" in the version for {}'.format(_OS_DISTRO))
     def test_pkg_008_epoch_in_version(self):
         '''
         This tests for the regression found in the following issue:
@@ -313,7 +313,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         This is a destructive test as it installs a package
         '''
-        target = _PKG_EPOCH_TARGETS
+        target = _PKG_EPOCH_TARGETS[0]
 
         version = self.latest_version(target)
         # If this assert fails, we need to find a new target. This test
