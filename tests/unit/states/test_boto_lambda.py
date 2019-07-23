@@ -162,7 +162,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         self.conn.list_functions.side_effect = [
             {'Functions': []}, {'Functions': [function_ret]}]
         self.conn.create_function.return_value = function_ret
-        with patch.dict(self.funcs, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+        with patch.dict(self.funcs, {
+            'boto_sts.get_partition': MagicMock(return_value='aws'),
+            'boto_sts.get_account_id': MagicMock(return_value='1234'),
+            'boto_iam.get_account_id': MagicMock(return_value='1234'),
+            }):
             with TempZipFile() as zipfile:
                 result = self.salt_states['boto_lambda.function_present'](
                     'function present',
@@ -180,7 +184,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         self.conn.list_functions.return_value = {'Functions': [function_ret]}
         self.conn.update_function_code.return_value = function_ret
 
-        with patch.dict(self.funcs, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+        with patch.dict(self.funcs, {
+            'boto_sts.get_partition': MagicMock(return_value='aws'),
+            'boto_sts.get_account_id': MagicMock(return_value='1234'),
+            'boto_iam.get_account_id': MagicMock(return_value='1234'),
+            }):
             with TempZipFile() as zipfile:
                 with patch('hashlib.sha256') as sha256:
                     with patch('os.path.getsize', return_value=199):
@@ -205,7 +213,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
             {'Functions': []}, {'Functions': [function_ret]}]
         self.conn.create_function.side_effect = ClientError(
             error_content, 'create_function')
-        with patch.dict(self.funcs, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+        with patch.dict(self.funcs, {
+            'boto_sts.get_partition': MagicMock(return_value='aws'),
+            'boto_sts.get_account_id': MagicMock(return_value='1234'),
+            'boto_iam.get_account_id': MagicMock(return_value='1234'),
+            }):
             with TempZipFile() as zipfile:
                 with patch('hashlib.sha256') as sha256:
                     with patch('os.path.getsize', return_value=199):
@@ -268,7 +280,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
                  "Id": "default"})
         }
 
-        with patch.dict(self.funcs, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+        with patch.dict(self.funcs, {
+            'boto_sts.get_partition': MagicMock(return_value='aws'),
+            'boto_sts.get_account_id': MagicMock(return_value='1234'),
+            'boto_iam.get_account_id': MagicMock(return_value='1234'),
+            }):
             with TempZipFile() as zipfile:
                 with patch('hashlib.sha256') as sha256:
                     with patch('os.path.getsize', return_value=199):
