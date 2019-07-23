@@ -139,6 +139,13 @@ def _smartos_zone_pkgsrc_data():
         'pkgsrcpath': 'Unknown',
     }
 
+    # NOTE: we are specifically interested in the SmartOS pkgsrc version and path
+    #       - PKG_PATH MAY be different on non-SmartOS systems, but they will not
+    #         use this grains module.
+    #       - A sysadmin with advanced needs COULD create a 'spin' with a totally
+    #         different URL. But at that point the value would be meaning less in
+    #         the context of the pkgsrcversion grain as it will not followed the
+    #         SmartOS pkgsrc versioning. So 'Unknown' would be appropriate.
     pkgsrcpath = re.compile('PKG_PATH=(.+)')
     pkgsrcversion = re.compile('^https?://pkgsrc.joyent.com/packages/SmartOS/(.+)/(.+)/All$')
     pkg_install_paths = [
