@@ -80,32 +80,6 @@ elif _OS_FAMILY == 'windows':
     _PKG_TARGETS = ['curl', 'wingrep']
 
 
-def latest_version(ctx, run_function, *names):
-    '''
-    Helper function which ensures that we don't make any unnecessary calls to
-    pkg.latest_version to figure out what version we need to install. This
-    won't stop pkg.latest_version from being run in a pkg.latest state, but it
-    will reduce the amount of times we check the latest version here in the
-    test suite.
-    '''
-    key = 'latest_version'
-    if key not in ctx:
-        ctx[key] = {}
-    targets = [x for x in names if x not in ctx[key]]
-    if targets:
-        result = run_function('pkg.latest_version', targets, refresh=False)
-        try:
-            ctx[key].update(result)
-        except ValueError:
-            # Only a single target, pkg.latest_version returned a string
-            ctx[key][targets[0]] = result
-
-    ret = dict([(x, ctx[key][x]) for x in names])
-    if len(names) == 1:
-        return ret[names[0]]
-    return ret
-
-
 @destructiveTest
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
@@ -115,6 +89,31 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def tearDownClass(cls):
         del cls.ctx
+
+    def latest_version(self, *names):
+        '''
+        Helper function which ensures that we don't make any unnecessary calls to
+        pkg.latest_version to figure out what version we need to install. This
+        won't stop pkg.latest_version from being run in a pkg.latest state, but it
+        will reduce the amount of times we check the latest version here in the
+        test suite.
+        '''
+        key = 'latest_version'
+        if key not in self.ctx:
+            self.ctx[key] = {}
+        targets = [x for x in names if x not in self.ctx[key]]
+        if targets:
+            result = self.run_function('pkg.latest_version', targets, refresh=False)
+            try:
+                self.ctx[key].update(result)
+            except ValueError:
+                # Only a single target, pkg.latest_version returned a string
+                self.ctx[key][targets[0]] = result
+
+        ret = dict([(x, self.ctx[key][x]) for x in names])
+        if len(names) == 1:
+            return ret[names[0]]
+        return ret
 
     def setUp(self):
         super(PkgTest, self).setUp()
@@ -155,7 +154,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 time.sleep(5)
 
         target = _PKG_TARGETS[0]
-        version = latest_version(self.ctx, self.run_function, target)
+        version = self.latest_version(target)
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
@@ -185,7 +184,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         try:
             ret = self.run_state('pkg.installed',
                                  name=None,
-                                 pkgs=self.ctx['pkg_targets'],
+                                 pkgs=_PKG_TARGETS,
                                  refresh=False)
             self.assertSaltTrueReturn(ret)
         finally:
@@ -206,7 +205,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                     break
                 time.sleep(5)
 
-        version = latest_version(self.ctx, self.run_function, self.ctx['pkg_targets'][0])
+        version = self.latest_version(_PKG_TARGETS[0])
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
@@ -269,7 +268,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                     break
                 time.sleep(5)
 
-        version = latest_version(self.ctx, self.run_function, target)
+        version = self.latest_version(target)
 
         # If this assert fails, we need to find a new target. This test
         # needs to be able to test successful installation of the package, so
@@ -295,7 +294,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         target = _PKG_DOT_TARGETS[0]
 
-        version = latest_version(self.ctx, self.run_function, target)
+        version = self.latest_version(target)
         # If this assert fails, we need to find a new target. This test
         # needs to be able to test successful installation of the package, so
         # the target needs to not be installed before we run the
@@ -316,7 +315,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         target = _PKG_EPOCH_TARGETS
 
-        version = latest_version(self.ctx, self.run_function, target)
+        version = self.latest_version(target)
         # If this assert fails, we need to find a new target. This test
         # needs to be able to test successful installation of the package, so
         # the target needs to not be installed before we run the
@@ -356,7 +355,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         epoch).
         '''
         target = _PKG_TARGETS[0]
-        version = latest_version(self.ctx, self.run_function, target)
+        version = self.latest_version(target)
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
@@ -381,7 +380,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # with only_upgrade=True on a package which is not already installed,
         # so the targeted package needs to not be installed before we run the
         # state below.
-        version = latest_version(self.ctx, self.run_function, target)
+        version = self.latest_version(target)
         self.assertTrue(version)
 
         ret = self.run_state('pkg.latest', name=target, refresh=False, only_upgrade=True)
@@ -581,7 +580,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_function('pkg.unhold', name=target)
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
-            if self.ctx['os_family'].lower() == 'redhat':
+            if _OS_FAMILY == 'redhat':
                 ret = self.run_state('pkg.removed',
                                      name='yum-plugin-versionlock')
                 self.assertSaltTrueReturn(ret)
@@ -659,8 +658,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 time.sleep(5)
 
         capability, realpkg = _PKG_CAP_TARGETS[0]
-        version = latest_version(self.ctx, self.run_function, capability)
-        realver = latest_version(self.ctx, self.run_function, realpkg)
+        version = self.latest_version(capability)
+        realver = self.latest_version(realpkg)
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
@@ -669,7 +668,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(realver)
 
         try:
-            pkgs = [{self.ctx['pkg_targets'][0]: version}, self.ctx['pkg_targets'][1], {capability: realver}]
+            pkgs = [{_PKG_TARGETS[0]: version}, _PKG_TARGETS[1], {capability: realver}]
             ret = self.run_state('pkg.installed',
                                  name='test_pkg_cap_003_installed_multipkg_with_version-install',
                                  pkgs=pkgs,
@@ -688,7 +687,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                                  pkgs=pkgs,
                                  refresh=False, resolve_capabilities=True)
             self.assertSaltTrueReturn(ret)
-            cleanup_pkgs = self.ctx['pkg_targets']
+            cleanup_pkgs = _PKG_TARGETS
             cleanup_pkgs.append(realpkg)
         finally:
             ret = self.run_state('pkg.removed',
