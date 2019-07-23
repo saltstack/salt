@@ -435,13 +435,18 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaStateTestCaseBase, BotoLamb
             'EventSourceMappings': [event_source_mapping_ret]}
         self.conn.get_event_source_mapping.return_value = event_source_mapping_ret
         self.conn.create_event_source_mapping.return_value = event_source_mapping_ret
-        result = self.salt_states['boto_lambda.event_source_mapping_present'](
-            'event source mapping present',
-            EventSourceArn=event_source_mapping_ret[
-                'EventSourceArn'],
-            FunctionName=event_source_mapping_ret['FunctionArn'],
-            StartingPosition='LATEST',
-            BatchSize=event_source_mapping_ret['BatchSize'])
+        with patch.dict(self.funcs, {
+            'boto_sts.get_partition': MagicMock(return_value='aws'),
+            'boto_sts.get_account_id': MagicMock(return_value='1234'),
+            'boto_iam.get_account_id': MagicMock(return_value='1234'),
+            }):
+            result = self.salt_states['boto_lambda.event_source_mapping_present'](
+                'event source mapping present',
+                EventSourceArn=event_source_mapping_ret[
+                    'EventSourceArn'],
+                FunctionName=event_source_mapping_ret['FunctionArn'],
+                StartingPosition='LATEST',
+                BatchSize=event_source_mapping_ret['BatchSize'])
         self.assertTrue(result['result'])
         self.assertEqual(result['changes'], {})
 
