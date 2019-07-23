@@ -39,7 +39,9 @@ _OS_FAMILY = _OS_DISTRO = _OS_MAJOR_VERSION = ''
 if salt.utils.platform.is_windows():
     _OS_FAMILY = _OS_DISTRO = 'windows'
 elif salt.utils.platform.is_linux():
-    _OS_FAMILY, _OS_MAJOR_VERSION, _ = linux_distribution(full_distribution_name=False)[0].lower()
+    _OS_FAMILY, _OS_MAJOR_VERSION, _ = linux_distribution(full_distribution_name=False)
+    _OS_FAMILY = _OS_FAMILY.lower()
+    _OS_MAJOR_VERSION = _OS_MAJOR_VERSION.lower()
     if _OS_DISTRO in ('ubuntu', 'debian'):
         _OS_FAMILY = 'debian'
     elif _OS_DISTRO in ('centos', 'fedora', 'redhat'):
