@@ -6,6 +6,10 @@ Allows for looping over execution modules.
 
 .. versionadded:: 2017.7.0
 
+In both examples below, the execution module function ``boto_elb.get_instance_health``
+returns a list of dicts. The condition checks the ``state``-key of the first dict
+in the returned list and compares its value to the string `InService`.
+
 .. code-block:: yaml
 
     wait_for_service_to_be_healthy:
@@ -32,7 +36,10 @@ A version that does not use eval is now available. It uses either the python ``o
 to compare the result of the function called in ``name``, which can be one of the
 following: lt, le, eq (default), ne, ge, gt.
 Alternatively, `compare_operator` can be filled with a function from an execution
-module in `__salt__` or `__utils__` like the example below.
+module in ``__salt__`` or ``__utils__`` like the example below.
+The function :py:func:`data.subdict_match <salt.utils.data.subdict_match>` checks if the
+``expected`` expression matches the data returned by calling the ``name`` function
+(with passed ``args`` and ``kwargs``).
 
 .. code-block:: yaml
 
