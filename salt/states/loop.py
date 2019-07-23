@@ -83,8 +83,10 @@ def until(name,
     :param dict m_kwargs: The execution module's keyword arguments
     :param str condition: The condition which must be met for the loop to break.
         This should contain ``m_ret`` which is the return from the execution module.
-    :param int period: The number of seconds to wait between executions
-    :param int timeout: The timeout in seconds
+    :param period: The number of seconds to wait between executions
+    :type period: int or float
+    :param timeout: The timeout in seconds
+    :type timeout: int or float
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
@@ -138,15 +140,22 @@ def until_no_eval(
     :param str compare_operator: Operator to use to compare the result of the
         module.function call with the expected value. This can be anything present
         in __salt__ or __utils__. Will be called with 2 args: result, expected.
-    :param int timeout: Abort after this amount of seconds (excluding init_wait).
-    :param float period: Time (in seconds) to wait between attempts.
-    :param float init_wait: Time (in seconds) to wait before trying anything.
+    :param timeout: Abort after this amount of seconds (excluding init_wait).
+    :type timeout: int or float
+    :param period: Time (in seconds) to wait between attempts.
+    :type period: int or float
+    :param init_wait: Time (in seconds) to wait before trying anything.
+    :type init_wait: int or float
     :param list args: args to pass to the salt module.function.
     :param dict kwargs: kwargs to pass to the salt module.function.
     '''
     ret = {'name': name, 'comment': '', 'changes': {}, 'result': False}
     if name not in __salt__:
         ret['comment'] = 'Module.function "{}" is unavailable.'.format(name)
+    elif not isinstance(period, (int, float)):
+        ret['comment'] = 'Period must be specified as a float in seconds'
+    elif not isinstance(timeout, (int, float)):
+        ret['comment'] = 'Timeout must be specified as a float in seconds'
     elif compare_operator in __salt__:
         comparator = __salt__[compare_operator]
     elif compare_operator in __utils__:
