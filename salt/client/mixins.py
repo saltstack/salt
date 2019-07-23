@@ -383,7 +383,11 @@ class SyncClientMixin(object):
 
                 # Initialize a context for executing the method.
                 with tornado.stack_context.StackContext(self.functions.context_dict.clone):
-                    data['return'] = self.functions[fun](*args, **kwargs)
+                    func = self.functions[fun]
+                    try:
+                        data['return'] = func(*args, **kwargs)
+                    except TypeError as exc:
+                        data['return'] = '\nPassed invalid arguments: {0}\n\nUsage:\n{1}'.format(exc, func.__doc__)
                     try:
                         data['success'] = self.context.get('retcode', 0) == 0
                     except AttributeError:

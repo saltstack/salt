@@ -10,7 +10,6 @@
 # Import python libs
 from __future__ import absolute_import
 import os
-import signal
 import shutil
 import logging
 
@@ -27,6 +26,9 @@ import salt.utils.yaml
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
+
+
+SIGKILL = 9
 
 
 class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
@@ -72,7 +74,7 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         if os.path.exists(pid_path):
             with salt.utils.files.fopen(pid_path) as fhr:
                 try:
-                    os.kill(int(fhr.read()), signal.SIGKILL)
+                    os.kill(int(fhr.read()), SIGKILL)
                 except OSError:
                     pass
         try:

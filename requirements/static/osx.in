@@ -1,5 +1,4 @@
 # This is a compilation of requirements installed on salt-jenkins git.salt state run
-apache-libcloud==2.0.0
 boto3
 boto>=2.46.0
 cffi
@@ -13,15 +12,17 @@ jsonschema<=2.6.0
 junos-eznc
 jxmlease
 keyring==5.7.1
-kubernetes<=4.0
-mock>=2.0.0; python_version < '3.0'
+kubernetes<4.0
+mock>=2.0.0; python_version < '3.6'
 more-itertools==5.0.0
 moto
 msgpack-python >= 0.4.2, != 0.5.5
 psutil
-# Let's install cryptodome instead of pycrupto because of it's ourstanding security issues
+# Let's install cryptodome instead of pycrypto because of pycrypto's outstanding security issues
 # PyCrypto, if pulled, will be removed from the generated static requirements
 pycryptodome
+# Not installing pygit2 for now since we need to have libgit2 installed first for OSX
+#pygit2
 pylxd>=2.2.5
 pyopenssl
 python-etcd>0.4.2

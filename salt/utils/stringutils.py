@@ -58,7 +58,7 @@ def to_bytes(s, encoding=None, errors='strict'):
             # raised, otherwise we would have already returned (or raised some
             # other exception).
             raise exc  # pylint: disable=raising-bad-type
-        raise TypeError('expected bytes, bytearray, or str')
+        raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         return to_str(s, encoding, errors)
 
@@ -115,7 +115,7 @@ def to_str(s, encoding=None, errors='strict', normalize=False):
             # raised, otherwise we would have already returned (or raised some
             # other exception).
             raise exc  # pylint: disable=raising-bad-type
-        raise TypeError('expected str, bytearray, or unicode')
+        raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
 
 
 def to_unicode(s, encoding=None, errors='strict', normalize=False):
@@ -140,7 +140,7 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
             return _normalize(s)
         elif isinstance(s, (bytes, bytearray)):
             return _normalize(to_str(s, encoding, errors))
-        raise TypeError('expected str, bytes, or bytearray')
+        raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         # This needs to be str and not six.string_types, since if the string is
         # already a unicode type, it does not need to be decoded (and doing so
@@ -158,7 +158,7 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
             # raised, otherwise we would have already returned (or raised some
             # other exception).
             raise exc  # pylint: disable=raising-bad-type
-        raise TypeError('expected str or bytearray')
+        raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
 
 
 @jinja_filter('str_to_num')  # Remove this for Neon
