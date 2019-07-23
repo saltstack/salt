@@ -92,7 +92,7 @@ def get_account_id(region=None, key=None, keyid=None, profile=None):
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         try:
             ret = conn.get_caller_identity()
-            # The get_user call returns an user ARN:
+            # The get_caller_identity call returns an user ARN:
             #    arn:aws:iam::027050522557:user/salt-test
             arn = ret['Arn']
             account_id = arn.split(':')[4]
@@ -137,7 +137,7 @@ def get_partition(region=None, key=None, keyid=None, profile=None):
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         try:
             ret = conn.get_caller_identity()
-            # The get_user call returns an user ARN:
+            # The get_caller_identity` call returns an user ARN:
             #    arn:aws:iam::027050522557:user/salt-test
             arn = ret['Arn']
             partition = arn.split(':')[1]
