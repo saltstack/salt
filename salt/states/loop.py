@@ -28,21 +28,27 @@ Allows for looping over execution modules.
 
 .. versionchanged:: Neon
 
+A version that does not use eval is now available. It uses either the python ``operator``
+to compare the result of the function called in ``name``, which can be one of the
+following: lt, le, eq (default), ne, ge, gt.
+Alternatively, `compare_operator` can be filled with a function from an execution
+module in `__salt__` or `__utils__` like the example below.
+
 .. code-block:: yaml
 
     Wait for service to be healthy:
       loop.until_no_eval:
-      - name: boto_elb.get_instance_health
-      - expected: '0:state:InService'
-      - compare_operator: data.subdict_match
-      - period: 5
-      - timeout: 20
-      - args:
-        - {{ elb }}
-      - kwargs:
-          keyid: {{ access_key }}
-          key: {{ secret_key }}
-          instances: "{{ instance }}"
+        - name: boto_elb.get_instance_health
+        - expected: '0:state:InService'
+        - compare_operator: data.subdict_match
+        - period: 5
+        - timeout: 20
+        - args:
+          - {{ elb }}
+        - kwargs:
+            keyid: {{ access_key }}
+            key: {{ secret_key }}
+            instances: "{{ instance }}"
 '''
 
 # Import python libs
