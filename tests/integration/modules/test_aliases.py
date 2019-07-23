@@ -8,7 +8,7 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf  # WAR ROOM temp import
 
 
-@skipIf(True, 'WAR ROOM TEMPORARY SKIP - 2019/07/23)
+@skipIf(True, 'WAR ROOM TEMPORARY SKIP - 2019/07/23')
 class AliasesTest(ModuleCase):
     '''
     Validate aliases module
