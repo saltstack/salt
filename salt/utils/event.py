@@ -351,6 +351,7 @@ class SaltEvent(object):
         if tag is None:
             return
         match_func = self._get_match_func(match_type)
+        log.info('DGM subscribe for tag %s', tag)
         self.pending_tags.append([tag, match_func])
 
     def unsubscribe(self, tag, match_type=None):
@@ -488,7 +489,8 @@ class SaltEvent(object):
             elif any(pmatch_func(evt['tag'], ptag) for ptag, pmatch_func in self.pending_tags):
                 self.pending_events.append(evt)
             else:
-                log.trace('get_event() discarding cached event that no longer has any subscriptions = %s', evt)
+                ## log.trace('get_event() discarding cached event that no longer has any subscriptions = %s', evt)
+                log.error('DGM get_event() discarding cached event that no longer has any subscriptions = %s, was checking tag %s', evt, tag)
         return ret
 
     @staticmethod
@@ -576,13 +578,14 @@ class SaltEvent(object):
             if not match_func(ret['tag'], tag):
                 # tag not match
                 if any(pmatch_func(ret['tag'], ptag) for ptag, pmatch_func in self.pending_tags):
-                    log.trace('get_event() caching unwanted event = %s', ret)
+                    ## log.trace('get_event() caching unwanted event = %s', ret)
+                    log.error('DGM _get_event() caching unwanted event = %s, was checking tag %s', ret, tag)
                     self.pending_events.append(ret)
                 if wait:  # only update the wait timeout if we had one
                     wait = timeout_at - time.time()
                 continue
 
-            log.trace('get_event() received = %s', ret)
+            log.trace('_get_event() received = %s', ret)
             return ret
         log.trace('_get_event() waited %s seconds and received nothing', wait)
         return None
@@ -1320,12 +1323,14 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
                         too_long_in_queue = False
 
                     if too_long_in_queue:
-                        log.debug('Oldest event has been in queue too long, will flush queue')
+                        ## log.debug('Oldest event has been in queue too long, will flush queue')
+                        log.error('DGM Oldest event has been in queue too long, will flush queue')
 
                 # If we are over the max queue size or the oldest item in the queue has been there too long
                 # then flush the queue
                 if len(self.event_queue) >= self.event_return_queue or too_long_in_queue:
-                    log.debug('Flushing %s events.', len(self.event_queue))
+                    ## log.debug('Flushing %s events.', len(self.event_queue))
+                    log.error('DGM Flushing %s events.', len(self.event_queue))
                     self.flush_events()
                     oldestevent = None
                 if self.stop:
@@ -1335,7 +1340,8 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
             # No matter what, make sure we flush the queue even when we are exiting
             # and there will be no more events.
             if self.event_queue:
-                log.debug('Flushing %s events.', len(self.event_queue))
+                ## log.debug('Flushing %s events.', len(self.event_queue))
+                log.error('DGM finally Flushing %s events.', len(self.event_queue))
 
                 self.flush_events()
 

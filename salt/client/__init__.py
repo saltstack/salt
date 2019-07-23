@@ -263,7 +263,8 @@ class LocalClient(object):
         # Failed to connect to the master and send the pub
         if 'error' in pub_data:
             print(pub_data['error'])
-            log.debug('_check_pub_data() error: %s', pub_data['error'])
+            ## log.debug('_check_pub_data() error: %s', pub_data['error'])
+            log.error('DGM _check_pub_data() error: %s', pub_data['error'])
             return {}
         elif 'jid' not in pub_data:
             return {}
