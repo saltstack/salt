@@ -6096,8 +6096,20 @@ def _checkAllAdmxPolicies(policy_class,
             policy_item_key = policy_item.split('{0};'.format(chr(0)).encode('utf-16-le'))[0].decode('utf-16-le').lower()
             if policy_item_key:
                 # Find the policy definitions with this key
-                for admx_item in REGKEY_XPATH_MAPPED(admx_policy_definitions,
-                                                     keyvalue=adm_policy_key_map[policy_item_key]):
+                if policy_item_key in adm_policy_key_map:
+                    # Use the faster method if possible
+                    admx_items = REGKEY_XPATH_MAPPED(admx_policy_definitions,
+                                                     keyvalue=adm_policy_key_map[policy_item_key])
+                    log.debug('Found %s policies using the mapped method',
+                              len(admx_items))
+                else:
+                    # Fall back to this when the faster method is not feasible
+                    admx_items = REGKEY_XPATH(admx_policy_definitions,
+                                              keyvalue=policy_item_key)
+                    log.warning('%s not mapped', policy_item_key)
+                    log.warning('Found %s policies using the original method',
+                                len(admx_items))
+                for admx_item in admx_items:
                     # If this is a policy, append it to admx_policies
                     if etree.QName(admx_item).localname == 'policy':
                         if admx_item not in admx_policies:
