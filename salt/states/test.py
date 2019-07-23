@@ -201,7 +201,7 @@ def configurable_test_state(name, changes=True, result=True, comment='', warning
 
     warnings:
         A string (or a list of strings) to fill the warnings field with.
-        Default is False
+        Default is None
     '''
     ret = {
         'name': name,
