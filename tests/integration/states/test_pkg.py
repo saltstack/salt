@@ -40,8 +40,8 @@ if salt.utils.platform.is_windows():
     _OS_FAMILY = _OS_DISTRO = 'windows'
 elif salt.utils.platform.is_linux():
     _OS_DISTRO, _OS_MAJOR_VERSION, _ = linux_distribution(full_distribution_name=False)
-    _OS_DISTRO = _OS_DISTRO.lower()
-    _OS_MAJOR_VERSION = _OS_MAJOR_VERSION.lower().strip()
+    _OS_DISTRO = _OS_FAMILY = _OS_DISTRO.lower()
+    _OS_MAJOR_VERSION = _OS_MAJOR_VERSION.lower()
     if _OS_DISTRO in ('ubuntu', 'debian'):
         _OS_FAMILY = 'debian'
     elif _OS_DISTRO in ('centos', 'fedora', 'redhat'):
@@ -77,7 +77,7 @@ elif _OS_FAMILY == 'redhat':
         _PKG_DOT_TARGETS.append('tomcat-el-2.2-api')
         _PKG_EPOCH_TARGETS.append('comps-extras')
 elif _OS_FAMILY == 'windows':
-    _PKG_TARGETS = ['curl', 'wingrep']
+    _PKG_TARGETS = ['putty', '7zip']
 
 
 @destructiveTest
@@ -110,7 +110,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 # Only a single target, pkg.latest_version returned a string
                 self.ctx[key][targets[0]] = result
 
-        ret = dict([(x, self.ctx[key][x]) for x in names])
+        ret = dict([(x, self.ctx[key].get(x, '')) for x in names])
         if len(names) == 1:
             return ret[names[0]]
         return ret
