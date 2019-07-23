@@ -35,7 +35,7 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 
 log = logging.getLogger(__name__)
 
-_OS_FAMILY = _OS_DISTRO, _OS_MAJOR_VERSION = ''
+_OS_FAMILY = _OS_DISTRO = _OS_MAJOR_VERSION = ''
 if salt.utils.platform.is_windows():
     _OS_FAMILY = _OS_DISTRO = 'windows'
 elif salt.utils.platform.is_linux():
@@ -58,7 +58,7 @@ elif _OS_FAMILY == 'debian':
 elif _OS_FAMILY == 'freebsd':
     _VERSION_SPEC_SUPPORTED = False
 elif _OS_FAMILY == 'suse':
-    _PKG_EPOCH_TARGETS.append(('perl(ZNC)', 'znc-perl'))
+    _PKG_CAP_TARGETS.append(('perl(ZNC)', 'znc-perl'))
 elif _OS_FAMILY == 'redhat':
     _PKG_TARGETS = ['units', 'zsh-html']
     _WILDCARDS_SUPPORTED = True
@@ -526,7 +526,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _OS_FAMILY in ('debian', 'redhat'), 'Test is not able to run on {}'.format(_OS_DISTRO))
+    @skipIf(_OS_FAMILY not in ('debian', 'redhat'), 'Test is not able to run on {}'.format(_OS_DISTRO))
     @requires_salt_modules('pkg.hold', 'pkg.unhold')
     def test_pkg_015_installed_held(self):
         '''
@@ -590,7 +590,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         This is a destructive test as it installs and then removes a package
         '''
 
-        target, realpkg = _PKG_CAP_TARGETS
+        target, realpkg = _PKG_CAP_TARGETS[0]
         version = self.run_function('pkg.version', [target])
         realver = self.run_function('pkg.version', [realpkg])
 
@@ -776,4 +776,3 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         finally:
             ret = self.run_state('pkg.removed', name=realpkg)
             self.assertSaltTrueReturn(ret)
-
