@@ -16,6 +16,7 @@ from tests.support.helpers import destructiveTest, skip_if_not_root, flaky
 # Import salt libs
 import salt.utils.path
 import salt.utils.platform
+import salt.ext.six as six
 from salt.ext.six.moves import range
 
 
@@ -128,6 +129,7 @@ class MacSystemModuleTest(ModuleCase):
             'Invalid String Value for Enabled',
             self.run_function('system.set_remote_events', ['spongebob']))
 
+    @skipIf(salt.utils.platform.is_darwin() and six.PY3, 'This test hangs on OS X on Py3.  Skipping until #53566 is merged.')
     @destructiveTest
     def test_get_set_computer_name(self):
         '''

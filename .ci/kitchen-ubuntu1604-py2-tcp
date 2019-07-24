@@ -1,18 +1,18 @@
 @Library('salt@1.1') _
 
 // Define the maximum time, in hours, that a test run should run for
-def testrun_timeout = 8
+def testrun_timeout = 6
 // Now define a global pipeline timeout. This is the test run timeout with one(1) additional
 // hour to allow for artifacts to be downloaded, if possible.
 def global_timeout = testrun_timeout + 1;
 
-def distro_name = 'windows'
-def distro_version = '2016'
-def python_version = 'py3'
-def test_transport = 'ZeroMQ'
+def distro_name = 'ubuntu'
+def distro_version = '1604'
+def python_version = 'py2'
+def test_transport = 'TCP'
 def salt_target_branch = '2019.2.1'
 def golden_images_branch = '2019.2'
-def nox_passthrough_opts = '--unit'
+def nox_passthrough_opts = '--ssh-tests'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),

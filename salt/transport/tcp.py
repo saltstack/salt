@@ -933,6 +933,10 @@ class SaltMessageClient(object):
         self._stream_return_future = tornado.concurrent.Future()
         self.io_loop.spawn_callback(self._stream_return)
 
+    def _stop_io_loop(self):
+        if self.io_loop is not None:
+            self.io_loop.stop()
+
     # TODO: timeout inflight sessions
     def close(self):
         if self._closing:
@@ -957,15 +961,20 @@ class SaltMessageClient(object):
                     # 'StreamClosedError' when the stream is closed.
                     if self._read_until_future.done():
                         self._read_until_future.exception()
-                    elif self.io_loop != tornado.ioloop.IOLoop.current(instance=False):
+                    if (self.io_loop != tornado.ioloop.IOLoop.current(instance=False)
+                            or not self._stream_return_future.done()):
                         self.io_loop.add_future(
                             self._stream_return_future,
-                            lambda future: self.io_loop.stop()
+                            lambda future: self._stop_io_loop()
                         )
                         self.io_loop.start()
+            except Exception as e:
+                log.info('Exception caught in SaltMessageClient.close: %s', str(e))
             finally:
                 orig_loop.make_current()
         self._tcp_client.close()
+        self.io_loop = None
+        self._read_until_future = None
         # Clear callback references to allow the object that they belong to
         # to be deleted.
         self.connect_callback = None
@@ -1021,7 +1030,8 @@ class SaltMessageClient(object):
                                                                   **kwargs)
                 self._connecting_future.set_result(True)
                 break
-            except Exception as e:
+            except Exception as exc:
+                log.warn('TCP Message Client encountered an exception %r', exc)
                 yield tornado.gen.sleep(1)  # TODO: backoff
                 #self._connecting_future.set_exception(e)
 
