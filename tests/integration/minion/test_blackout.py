@@ -13,7 +13,7 @@ import textwrap
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf  # WAR ROOM temp import
+from tests.support.unit import skipIf, WAR_ROOM_SKIP  # WAR ROOM temp import
 
 # Import Salt libs
 import salt.utils.files
@@ -21,7 +21,7 @@ import salt.utils.files
 log = logging.getLogger(__name__)
 
 
-@skipIf(True, 'WAR ROOM TEMPORARY SKIP - 2019/07/23')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP - 2019/07/23')
 class MinionBlackoutTestCase(ModuleCase):
     '''
     Test minion blackout functionality

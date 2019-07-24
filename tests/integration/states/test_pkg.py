@@ -189,7 +189,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_function('pkg.refresh_db')
             self.ctx['refresh'] = True
 
-    @skipIf(ON_SUSE, 'WAR ROOM SKIP FRIDAY')
+    @skipIf(ON_SUSE and WAR_ROOM_SKIP, 'WAR ROOM SKIP FRIDAY')
     @requires_system_grains
     def test_pkg_001_installed(self, grains):
         '''
@@ -291,7 +291,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(ON_SUSE, 'WAR ROOM SKIP FRIDAY')
+    @skipIf(ON_SUSE and WAR_ROOM_SKIP, 'WAR ROOM SKIP FRIDAY')
     @requires_system_grains
     def test_pkg_004_installed_multipkg_with_version(self, grains):
         '''
