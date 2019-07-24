@@ -110,6 +110,7 @@ def call(root, function, *args, **kwargs):
     .. code-block:: bash
 
         salt myminion chroot.call /chroot test.ping
+        salt myminion chroot.call /chroot ssh.set_auth_key user key=mykey
 
     '''
 
@@ -147,7 +148,7 @@ def call(root, function, *args, **kwargs):
             '-l', 'quiet',
             '--',
             function
-        ] + list(args) + ['{}={}'.format(k, v) for (k, v) in safe_kwargs]
+        ] + list(args) + ['{}={}'.format(k, v) for (k, v) in safe_kwargs.items()]
         ret = __salt__['cmd.run_chroot'](root, [str(x) for x in salt_argv])
         if ret['retcode'] != EX_OK:
             raise CommandExecutionError(ret['stderr'])
