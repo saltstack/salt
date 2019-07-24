@@ -1039,7 +1039,8 @@ class SaltMessageClient(object):
                                                                   **kwargs)
                 self._connecting_future.set_result(True)
                 break
-            except Exception as e:
+            except Exception as exc:
+                log.warn('TCP Message Client encountered an exception %r', exc)
                 yield tornado.gen.sleep(1)  # TODO: backoff
                 #self._connecting_future.set_exception(e)
 
