@@ -10,7 +10,7 @@ import os
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.runtests import RUNTIME_VARS, WAR_ROOM_SKIP
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import (
     destructiveTest,
     with_system_user,
@@ -18,7 +18,7 @@ from tests.support.helpers import (
 )
 
 # Import salt libs
-from tests.support.unit import skipIf  # WAR ROOM temp import
+from tests.support.unit import skipIf, WAR_ROOM_SKIP  # WAR ROOM temp import
 import salt.utils.files
 
 
