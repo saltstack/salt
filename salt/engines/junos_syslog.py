@@ -299,7 +299,7 @@ class _SyslogServerFactory(DatagramProtocol):
                  if the event is to be sent on the bus.
 
         '''
-        data = self.obj.parse(data)
+        data = self.obj.parse(data.decode())
         data['hostip'] = host
         log.debug(
             'Junos Syslog - received %s from %s, sent from port %s',
