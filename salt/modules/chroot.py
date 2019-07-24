@@ -56,7 +56,8 @@ def exist(name):
     '''
     dev = os.path.join(name, 'dev')
     proc = os.path.join(name, 'proc')
-    return all(os.path.isdir(i) for i in (name, dev, proc))
+    sys = os.path.join(name, 'sys')
+    return all(os.path.isdir(i) for i in (name, dev, proc, sys))
 
 
 def create(name):
@@ -80,9 +81,11 @@ def create(name):
     if not exist(name):
         dev = os.path.join(name, 'dev')
         proc = os.path.join(name, 'proc')
+        sys = os.path.join(name, 'sys')
         try:
             os.makedirs(dev, mode=0o755)
             os.makedirs(proc, mode=0o555)
+            os.makedirs(sys, mode=0o555)
         except OSError as e:
             log.error('Error when trying to create chroot directories: %s', e)
             return False
