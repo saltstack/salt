@@ -107,7 +107,48 @@ bymYbi0l2pWqQLA2sPoRHNw=
         'emailAddress': 'xyz@pdq.net',
         'digest': 'sha256',
         'replace': False
-    }
+    },
+    'unknown_extension_cert': '''-----BEGIN CERTIFICATE-----
+MIIHQjCCBSqgAwIBAgIUSYcqov/YB5q2NO2NhyZlZdwnFc0wDQYJKoZIhvcNAQEL
+BQAwWjELMAkGA1UEBhMCRlIxEzARBgNVBAoTCkNlcnRpbm9taXMxFzAVBgNVBAsT
+DjAwMDIgNDMzOTk4OTAzMR0wGwYDVQQDExRDZXJ0aW5vbWlzIC0gRWFzeSBDQTAe
+Fw0xNzEwMTkxNTA0MzdaFw0xOTEwMTkxNTA0MzdaMIGiMQswCQYDVQQGEwJGUjEg
+MB4GA1UEChMXTEEgUE9TVEUgLSBEU0kgQ0VOVFJBTEUxFzAVBgNVBGETDjAwMDIg
+MzU2MDAwMTE3MRcwFQYDVQQLEw4wMDAyIDM1NjAwMDExNzEPMA0GA1UEBxMGTmFu
+dGVzMRwwGgYDVQQDExNkYXRhbm92YS5sYXBvc3RlLmZyMRAwDgYDVQQFEwcxLTYw
+NTg2MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzwRN0Gr6qCHVcGGw
+1KOnq08d6zbl796hn82eQLGaR7DmtkSAYNYCAWqnFrtS880ewjXrmx/jNDVmWxg/
+VOgUrOLwynwqXStHc6Muu54B1OJ5mWtYQebmh20u1zDgysHWRu4MPevmAYppactd
+kAo1rK/Dl7HdSG2fNuf3rfI8U2JuSbnyG1kDTGDvcD5gBt8TIOQSfxUbXhW1j7Wf
+cYwI1N2sElJasmJEVcpaDH7fkwYpCB8waf0wjCwUcFcz5DKrkqXxowJqKmKE1mwg
+0q8JqZ+ctbetei3bhT+/LHHMOWcJ74ANo0OOru27M5ZhLWIT4aDSz9VLVBKA3uuQ
+a7dFLQIDAQABo4ICtTCCArEwDgYDVR0PAQH/BAQDAgWgMIHlBggrBgEFBQcBAwSB
+2DCB1TCBvwYGBACORgEFMIG0MFgWUmh0dHBzOi8vd3d3LmNlcnRpbm9taXMuZnIv
+ZG9jdW1lbnRzLWV0LWxpZW5zL25vcy1jb25kaXRpb25zLWdlbmVyYWxlcy1kdXRp
+bGlzYXRpb24TAmVuMFgWUmh0dHBzOi8vd3d3LmNlcnRpbm9taXMuZnIvZG9jdW1l
+bnRzLWV0LWxpZW5zL25vcy1jb25kaXRpb25zLWdlbmVyYWxlcy1kdXRpbGlzYXRp
+b24TAmZyMBEGBAQAAQYwCQYHBACORgEGAzAJBgNVHRMEAjAAMFUGCCsGAQUFBwEB
+BEkwRzBFBggrBgEFBQcwAYY5aHR0cDovL2lnYy1nMy5jZXJ0aW5vbWlzLmNvbS9J
+TlNUQU5DRV9TSEEyL29jc3AvT0NTUF9FQVNZMFEGA1UdEQRKMEiCE2RhdGFub3Zh
+LmxhcG9zdGUuZnKCE2RhdGFub3ZhLmxhcG9zdGUuZnKCHGRhdGFub3ZhLmxlZ3Jv
+dXBlLmxhcG9zdGUuZnIwHQYDVR0OBBYEFBvtLnlHY8IPlwlVg2vcwK0ooH0CMB0G
+A1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAfBgNVHSMEGDAWgBQsxeMgL6sK
+Edb3OtdRePRsj7EAWTAXBgNVHSAEEDAOMAwGCiqBegFWAgMBPAEwgYkGA1UdHwSB
+gTB/MEqgSKBGhkRodHRwOi8vY3JsLmlnYy1nMy5jZXJ0aW5vbWlzLmNvbS9JTlNU
+QU5DRV9TSEEyL2NybC9BQ19FQVNZLWNybC0xLmNybDAxoC+gLYYraHR0cDovL3d3
+dy5jZXJ0aW5vbWlzLmNvbS9jcmwvYWNnMy1FQVNZLmNybDANBgkqhkiG9w0BAQsF
+AAOCAgEAiYWvMMTgWZVEvd1ORME3jUMQ6ykcoQ6E2HorVhs9xnvCQjo/U0JwzcA/
+FKb93HF4d6+hymfeTLOOQ2i6sKws7LtQQz+ZPCt3+kvTp9V2iWHcxQsy2PMFajKS
+BSWPLQiGEgxw47VhLbRfGi+HJAQ7c8QFO3PPi1E84dqF/3BDXTHetb0SGIQAZ4Vh
+8C5DNNX2Vr4j4zzuRxisgdwIOkPU/bWLwFIw4RH/8a5ka5x4RdiovZ3NeabczsW8
+ey7iuBMPyt1KullVLdk+pfvLpoAZrIn6MNUm6qk0bzQ99cF7moKtEJIih5OhNyFu
+B61bLcXX4ituCrcGObRJf+UvYl/fIfYVvQ46rxWgy0QrWFqjkQMITDTHNo2F7KKw
+qrJ6mB02AaN3J2gNIbe0apV8R9XiHSnSDl3rYMW+vNc8auiSNKnPTLasuvg6txyN
+hnaKle6DRQVIYK4WDyGoRLj+RZV56CaXYAJHc9HsxJ9V49CBc3LMNSe3VbkkG9vC
+9TsB2/0vRnJ5/nprpsGaWFkgPrMnHTDIz4w0vEe09bI45+7Ms08TbDCixnn0680X
+HYU+XIrFkyHl8i8AtQsdg+/4TPrl+XQWfq8VAoVnMncziR26PIv1CvOz4KQO/fKB
+IdXnv4Tu99/knUjEy4g3AlwcuXfTdexrnFhBt37U3/HgIs28cow=
+-----END CERTIFICATE-----'''
 }
 
 # Skip this test case if we don't have access to mock or PyOpenSSL.
@@ -305,6 +346,14 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
 
             remove_not_in_result(ret, result)
             self.assertEqual(result, ret)
+
+    def test_unknown_extension(self):
+        with patch('os.path.exists', MagicMock(return_value=True)), \
+                patch('salt.modules.tls.maybe_fix_ssl_version',
+                      MagicMock(return_value=True)), \
+                patch('salt.utils.files.fopen',
+                      mock_open(read_data=_TLS_TEST_DATA['unknown_extension_cert'])):
+            tls.cert_info("dummy")
 
     @with_tempdir()
     def test_create_ca(self, ca_path):
