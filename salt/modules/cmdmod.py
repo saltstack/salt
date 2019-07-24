@@ -3264,13 +3264,19 @@ def run_chroot(root,
 
     if isinstance(cmd, (list, tuple)):
         cmd = ' '.join([six.text_type(i) for i in cmd])
-    cmd = 'chroot {0} {1} -c {2}'.format(root, sh_, _cmd_quote(cmd))
+
+    # If runas and group are provided, we expect that the user lives
+    # inside the chroot, not outside.
+    if runas:
+        userspec = '--userspec {}:{}'.format(runas, group if group else '')
+    else:
+        userspec = ''
+
+    cmd = 'chroot {} {} {} -c {}'.format(userspec, root, sh_, _cmd_quote(cmd))
 
     run_func = __context__.pop('cmd.run_chroot.func', run_all)
 
     ret = run_func(cmd,
-                   runas=runas,
-                   group=group,
                    cwd=cwd,
                    stdin=stdin,
                    shell=shell,
