@@ -347,6 +347,7 @@ class LoadAuth(object):
                 load["user"] == self.opts.get("user", "root") or load["user"] == "root"
             ):
                 if auth_key != key[self.opts.get("user", "root")]:
+                    log.warning('Master runs as "{}", but user in payload is "{}"'.format(self.opts.get('user', 'root'), load['user']))
                     log.warning(error_msg)
                     return False
             elif auth_user.is_running_user():
