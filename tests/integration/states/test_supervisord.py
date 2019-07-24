@@ -13,7 +13,7 @@ import subprocess
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
@@ -24,7 +24,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.ext import six
 
 
-@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(six.PY3, 'supervisor does not work under python 3')
 @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 @skipIf(salt.utils.path.which('supervisorctl') is None, 'supervisord not installed')

@@ -18,7 +18,7 @@ except ImportError:
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.helpers import (
     destructiveTest,
     requires_system_grains,
@@ -468,7 +468,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     def test_pkg_009_latest_with_epoch(self):
         '''
@@ -482,7 +482,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                              refresh=False)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @requires_salt_modules('pkg.info_installed')
     def test_pkg_010_latest_with_epoch_and_info_installed(self):
         '''
@@ -935,7 +935,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=realpkg)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_cap_005_downloaded(self, grains):
@@ -1002,7 +1002,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=realpkg)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')            # needs to be rewritten to allow for dnf on Fedora 30 and RHEL 8
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')            # needs to be rewritten to allow for dnf on Fedora 30 and RHEL 8
     @requires_salt_modules('pkg.hold', 'pkg.unhold')
     @requires_system_grains
     def test_pkg_015_installed_held(self, grains):

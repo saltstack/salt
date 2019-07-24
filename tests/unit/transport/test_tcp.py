@@ -25,7 +25,7 @@ from salt.ext.six.moves import range
 from salt.transport.tcp import SaltMessageClientPool, SaltMessageClient
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf, WAR_ROOM_SKIP
 from tests.support.helpers import get_unused_localhost_port, flaky
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch

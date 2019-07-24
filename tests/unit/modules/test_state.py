@@ -15,7 +15,7 @@ import time
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf, WAR_ROOM_SKIP
 from tests.support.mock import (
     Mock,
     MagicMock,
@@ -1302,7 +1302,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
 
 
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

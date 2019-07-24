@@ -14,7 +14,7 @@ import salt.utils.platform
 
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf, WAR_ROOM_SKIP
 from tests.support.mock import (
     patch,
     MagicMock,
@@ -242,7 +242,7 @@ class AutoKeyTest(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class LocalFuncsTestCase(TestCase):
     '''
     TestCase for salt.daemons.masterapi.LocalFuncs class

@@ -10,7 +10,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 from salt.cli.batch import Batch
 
 # Import Salt Testing Libs
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import skipIf, WAR_ROOM_SKIP, TestCase
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 
@@ -43,7 +43,7 @@ class BatchTestCase(TestCase):
         self.batch.minions = ['foo', 'bar']
         self.assertEqual(Batch.get_bnum(self.batch), 2)
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_get_bnum_int(self):
         '''
         Tests passing batch value as a number(int)

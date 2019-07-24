@@ -861,7 +861,7 @@ deep_init_base = '''
 from __future__ import absolute_import
 import {0}.top_lib
 import {0}.top_lib.mid_lib
-from tests.support.unit import skipIf; skipIf(True, "WAR ROOM TEMPORARY SKIP")  # pylint: disable=C0321,E8702
+from tests.support.unit import skipIf, WAR_ROOM_SKIP; skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')  # pylint: disable=C0321,E8702
 import {0}.top_lib.mid_lib.bot_lib
 
 def top():
