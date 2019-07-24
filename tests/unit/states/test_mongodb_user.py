@@ -95,15 +95,15 @@ class MongodbUserTestCase(TestCase, LoaderModuleMockMixin):
                          'mongodb.user_create': mock_t,
                          'mongodb.user_find': mock
                         }):
-            comt = ('User {0} is already present and should be updated if neccesary.'
+            comt = ('User {0} is already present'
                 ).format(name)
-            ret.update({'comment': comt, 'result': None})
+            ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(mongodb_user.present(name, passwd, database=db, roles=new_role), ret)
 
             with patch.dict(mongodb_user.__opts__, {'test': True}):
-                comt = ('User {0} is already present and should be updated if neccesary.'
+                comt = ('User {0} is already present'
                         .format(name))
-                ret.update({'comment': comt, 'result': None})
+                ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(mongodb_user.present(name, passwd, database=db, roles=new_role), ret)
 
             with patch.dict(mongodb_user.__opts__, {'test': False}):

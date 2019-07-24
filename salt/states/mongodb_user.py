@@ -106,9 +106,6 @@ def present(name,
             return ret
 
         if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = ('User {0} is already present and should be updated if neccesary.'
-                    ).format(name)
             return ret
 
         # check each user occurrence
