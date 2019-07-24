@@ -556,8 +556,11 @@ class SaltTestingParser(optparse.OptionParser):
         print(' * Test suite is running under PID {0}'.format(os.getpid()))
 
         self._setup_logging()
+
+        # This is temporary for the WAR ROOM
         if self.options.no_war_skips:
             tests.support.unit.WAR_ROOM_SKIP = False
+
         try:
             return (self.options, self.args)
         finally:
