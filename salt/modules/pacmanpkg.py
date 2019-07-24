@@ -40,7 +40,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
     '''
-    if __grains__['os_family'] == 'Arch':
+    if __grains__.get('os_family') == 'Arch':
         return __virtualname__
     return (False, 'The pacman module could not be loaded: unsupported OS family.')
 

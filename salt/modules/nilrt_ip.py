@@ -70,7 +70,7 @@ def __virtual__():
     '''
     try:
         msg = 'The nilrt_ip module could not be loaded: unsupported OS family'
-        _assume_condition(__grains__['os_family'] == 'NILinuxRT', msg)
+        _assume_condition(__grains__.get('os_family') == 'NILinuxRT', msg)
         _assume_condition(CaseInsensitiveDict, 'The python package request is not installed')
         _assume_condition(pyiface, 'The python pyiface package is not installed')
         if __grains__['lsb_distrib_id'] != 'nilrt':
