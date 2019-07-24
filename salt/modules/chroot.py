@@ -50,17 +50,17 @@ def __virtual__():
         return (False, 'Module chroot requires the command chroot')
 
 
-def exist(name):
+def exist(root):
     '''
     Return True if the chroot environment is present.
     '''
-    dev = os.path.join(name, 'dev')
-    proc = os.path.join(name, 'proc')
-    sys = os.path.join(name, 'sys')
-    return all(os.path.isdir(i) for i in (name, dev, proc, sys))
+    dev = os.path.join(root, 'dev')
+    proc = os.path.join(root, 'proc')
+    sys = os.path.join(root, 'sys')
+    return all(os.path.isdir(i) for i in (root, dev, proc, sys))
 
 
-def create(name):
+def create(root):
     '''
     Create a basic chroot environment.
 
@@ -68,7 +68,7 @@ def create(name):
     install the minimal required binaries, including Python if
     chroot.call is called.
 
-    name
+    root
         Path to the chroot environment
 
     CLI Example:
@@ -78,10 +78,10 @@ def create(name):
         salt myminion chroot.create /chroot
 
     '''
-    if not exist(name):
-        dev = os.path.join(name, 'dev')
-        proc = os.path.join(name, 'proc')
-        sys = os.path.join(name, 'sys')
+    if not exist(root):
+        dev = os.path.join(root, 'dev')
+        proc = os.path.join(root, 'proc')
+        sys = os.path.join(root, 'sys')
         try:
             os.makedirs(dev, mode=0o755)
             os.makedirs(proc, mode=0o555)
@@ -92,14 +92,14 @@ def create(name):
     return True
 
 
-def call(name, function, *args, **kwargs):
+def call(root, function, *args, **kwargs):
     '''
     Executes a Salt function inside a chroot environment.
 
     The chroot does not need to have Salt installed, but Python is
     required.
 
-    name
+    root
         Path to the chroot environment
 
     function
@@ -116,12 +116,12 @@ def call(name, function, *args, **kwargs):
     if not function:
         raise CommandExecutionError('Missing function parameter')
 
-    if not exist(name):
+    if not exist(root):
         raise CommandExecutionError('Chroot environment not found')
 
     # Create a temporary directory inside the chroot where we can
     # untar salt-thin
-    thin_dest_path = tempfile.mkdtemp(dir=name)
+    thin_dest_path = tempfile.mkdtemp(dir=root)
     thin_path = __utils__['thin.gen_thin'](
         __opts__['cachedir'],
         extra_mods=__salt__['config.option']('thin_extra_mods', ''),
@@ -133,7 +133,7 @@ def call(name, function, *args, **kwargs):
         return {'result': False, 'comment': stdout}
 
     chroot_path = os.path.join(os.path.sep,
-                               os.path.relpath(thin_dest_path, name))
+                               os.path.relpath(thin_dest_path, root))
     try:
         safe_kwargs = clean_kwargs(**kwargs)
         salt_argv = [
@@ -148,7 +148,7 @@ def call(name, function, *args, **kwargs):
             '--',
             function
         ] + list(args) + ['{}={}'.format(k, v) for (k, v) in safe_kwargs]
-        ret = __salt__['cmd.run_chroot'](name, [str(x) for x in salt_argv])
+        ret = __salt__['cmd.run_chroot'](root, [str(x) for x in salt_argv])
         if ret['retcode'] != EX_OK:
             raise CommandExecutionError(ret['stderr'])
 
