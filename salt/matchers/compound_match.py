@@ -19,13 +19,15 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def match(tgt):
+def match(tgt, opts=None):
     '''
     Runs the compound target check
     '''
-    nodegroups = __opts__.get('nodegroups', {})
-    matchers = salt.loader.matchers(__opts__)
-    minion_id = __opts__.get('minion_id', __opts__['id'])
+    if not opts:
+        opts = __opts__
+    nodegroups = opts.get('nodegroups', {})
+    matchers = salt.loader.matchers(opts)
+    minion_id = opts.get('minion_id', opts['id'])
 
     if not isinstance(tgt, six.string_types) and not isinstance(tgt, (list, tuple)):
         log.error('Compound target received that is neither string, list nor tuple')
@@ -90,7 +92,7 @@ def match(tgt):
                 return False
 
             engine_args = [target_info['pattern']]
-            engine_kwargs = {}
+            engine_kwargs = {'opts': opts}
             if target_info['delimiter']:
                 engine_kwargs['delimiter'] = target_info['delimiter']
 
@@ -100,7 +102,7 @@ def match(tgt):
 
         else:
             # The match is not explicitly defined, evaluate it as a glob
-            results.append(six.text_type(matchers['glob_match.match'](word)))
+            results.append(six.text_type(matchers['glob_match.match'](word, opts)))
 
     results = ' '.join(results)
     log.debug('compound_match %s ? "%s" => "%s"', minion_id, tgt, results)
