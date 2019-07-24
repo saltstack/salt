@@ -51,6 +51,7 @@ log = logging.getLogger(__name__)
 # process details when running in verbose mode
 # i.e. [CPU:15.1%|MEM:48.3%|Z:0]
 SHOW_PROC = 'NO_SHOW_PROC' not in os.environ
+WAR_ROOM_SKIP = os.environ.get('WAR_ROOM_SKIP', 'true').lower() == 'true'
 
 LOREM_IPSUM = '''\
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque eget urna a arcu lacinia sagittis.

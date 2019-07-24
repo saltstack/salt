@@ -11,7 +11,7 @@ import tempfile
 
 # Import Salt Testing libs
 import tests.integration as integration
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf, WAR_ROOM_SKIP
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -129,7 +129,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             run_num = ret['test_|-step_one_|-step_one_|-succeed_with_changes']['__run_num__']
             self.assertEqual(run_num, 0)
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_verify_onlyif_parse(self):
         low_data = {
             "onlyif": [
@@ -163,7 +163,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             return_result = state_obj._run_check_onlyif(low_data, '')
             self.assertEqual(expected_result, return_result)
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_verify_unless_parse(self):
         low_data = {
             "unless": [

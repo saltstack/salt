@@ -15,7 +15,7 @@ import time
 import shutil
 
 # Import Salt Testing libs
-from tests.support.unit import expectedFailure, skipIf, TestCase
+from tests.support.unit import expectedFailure, skipIf, WAR_ROOM_SKIP, TestCase
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.events import eventpublisher_process, eventsender_process
 
@@ -38,7 +38,7 @@ if getattr(zmq, 'IPC_PATH_MAX_LEN', 103) <= 103:
 
 
 @skipIf(NO_LONG_IPC, "This system does not support long IPC paths. Skipping event tests!")
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class TestSaltEvent(TestCase):
     def setUp(self):
         self.sock_dir = os.path.join(RUNTIME_VARS.TMP, 'test-socks')

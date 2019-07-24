@@ -25,7 +25,7 @@ from salt.ext.six.moves import builtins  # pylint: disable=import-error
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf, WAR_ROOM_SKIP
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import (
     mock_open,
@@ -355,7 +355,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         else:
             raise RuntimeError
 
-    @skipIf(True, 'WAR ROOM SKIP FRIDAY')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM SKIP FRIDAY')
     @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
     @skipIf(salt.utils.platform.is_darwin(), 'Do not run on MacOS')
     def test_run_cwd_in_combination_with_runas(self):

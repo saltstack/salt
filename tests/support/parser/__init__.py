@@ -32,6 +32,7 @@ from collections import namedtuple
 import tests.support.paths
 from tests.support import helpers
 from tests.support.unit import TestLoader, TextTestRunner
+import tests.support.unit  # Temporary WAR ROOM import
 from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
 
 # Import 3rd-party libs
@@ -232,6 +233,14 @@ class SaltTestingParser(optparse.OptionParser):
                   'of test names to run. See tests/filename_map.yml '
                   'for example usage (when --from-filenames is used, this '
                   'map file will be the default one used).')
+        )
+        # Temporary WAR ROOM option
+        self.test_selection_group.add_option(
+            '--no-war-room-skips',
+            dest='no_war_skips',
+            action='store_true',
+            default=False,
+            help='Do not skip war room tests'
         )
         self.add_option_group(self.test_selection_group)
 
@@ -547,6 +556,8 @@ class SaltTestingParser(optparse.OptionParser):
         print(' * Test suite is running under PID {0}'.format(os.getpid()))
 
         self._setup_logging()
+        if self.options.no_war_skips:
+            tests.support.unit.WAR_ROOM_SKIP = False
         try:
             return (self.options, self.args)
         finally:

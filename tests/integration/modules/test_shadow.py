@@ -11,7 +11,7 @@ import os
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.helpers import destructiveTest, flaky, skip_if_not_root
 
 # Import Salt libs
@@ -23,7 +23,7 @@ from salt.ext.six.moves import range
 
 @skip_if_not_root
 @skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class ShadowModuleTest(ModuleCase):
     '''
     Validate the linux shadow system module

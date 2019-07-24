@@ -11,12 +11,12 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import requires_salt_modules
 
 # Import Salt libs
-from tests.support.unit import skipIf  # WAR ROOM temp import
+from tests.support.unit import skipIf, WAR_ROOM_SKIP  # WAR ROOM temp import
 import salt.utils.args
 
 
 @requires_salt_modules('test.ping', 'test.arg')
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class ArgumentTestCase(ModuleCase):
     def test_unsupported_kwarg(self):
         '''

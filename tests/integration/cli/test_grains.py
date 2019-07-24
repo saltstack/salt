@@ -22,13 +22,13 @@ import salt.utils.files
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase, SSHCase
-from tests.support.unit import skipIf  # WAR ROOM temp import
+from tests.support.unit import skipIf, WAR_ROOM_SKIP  # WAR ROOM temp import
 from tests.support.helpers import flaky
 
 log = logging.getLogger(__name__)
 
 
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class GrainsTargetingTest(ShellCase):
     '''
     Integration tests for targeting with grains.

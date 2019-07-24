@@ -9,7 +9,7 @@ import copy
 import os
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf, WAR_ROOM_SKIP
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.helpers import skip_if_not_root
@@ -287,7 +287,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
-    @skipIf(salt.utils.platform.is_darwin(), 'WAR ROOM TEMPORARY SKIP - mac only july 19')
+    @skipIf(salt.utils.platform.is_darwin() and WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP - mac only july 19')
     def test_valid_ipv4_master_address_ipv6_enabled(self):
         '''
         Tests that the 'scheduler_before_connect' option causes the scheduler to be initialized before connect.
@@ -323,7 +323,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertRaises(SaltMasterUnresolvableError,
                               salt.minion.resolve_dns, self.opts)
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_minion_manage_schedule(self):
         '''
         Tests that the manage_schedule will call the add function, adding
