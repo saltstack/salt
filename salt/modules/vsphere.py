@@ -244,6 +244,13 @@ try:
     from com.vmware.cis.tagging_client import Tag, TagModel, TagAssociation
     from com.vmware.vcenter_client import Cluster
     from com.vmware.vapi.std_client import DynamicID
+
+    # Error Handling
+    from com.vmware.vapi.std.errors_client import (
+        AlreadyExists, InvalidArgument, NotFound, Unauthenticated, Unauthorized
+    )
+    vsphere_errors = (AlreadyExists, InvalidArgument,
+                      NotFound, Unauthenticated, Unauthorized,)
     HAS_VSPHERE_SDK = True
 
 except ImportError:
@@ -9084,7 +9091,6 @@ def list_tag_categories(server=None, username=None, password=None,
         list of str
     '''
     # Get salted vSphere Client
-
     if not (server and username and password):
         # User didn't provide CLI args so use proxy information
         details = __salt__['vcenter.get_details']()
@@ -9148,7 +9154,90 @@ def list_tags(server=None, username=None, password=None,
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
-def list_attached_tags(object_id,
+def attach_tags(object_id, tag_id,
+               managed_obj='ClusterComputeResource',
+               server=None, username=None, password=None,
+               service_instance=None):
+    '''
+    Attach an existing tag to an input object.
+
+    The tag needs to meet the cardinality (`CategoryModel.cardinality`) and
+    associability (`CategoryModel.associable_types`) criteria in order to be
+    eligible for attachment. If the tag is already attached to the object,
+    then this method is a no-op and an error will not be thrown. To invoke
+    this method, you need the attach tag privilege on the tag and the read
+    privilege on the object.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.attach_tag domain-c2283 \
+                urn:vmomi:InventoryServiceTag:b55ecc77-f4a5-49f8-ab52-38865467cfbe:GLOBAL
+
+    :param str object_id:
+        The identifier of the input object.
+    :param list tag_id:
+        The identifier of the tag object. This must be a list of string(s)
+        to be a legal parameter for this method.
+    :param str managed_obj:
+        Classes that contain methods for creating and deleting resources
+        typically contain a class attribute specifying the resource type
+        for the resources being created and deleted.
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
+    :return:
+        The list of all tag identifiers that correspond to the
+        tags attached to the given object.
+    :rtype:
+        list of tags
+    :raise: Unauthorized
+        if you do not have the privilege to read the object.
+    :raise: Unauthenticated
+        if the user can not be authenticated.
+    '''
+    # Get salted vSphere Client
+    if not (server and username and password):
+        # User didn't provide cli args so use proxy information
+        details = __salt__['vcenter.get_details']()
+        server = details['vcenter']
+        username = details['username']
+        password = details['password']
+
+    # Establish connection with client
+    client = salt.utils.vmware.get_vsphere_client(server=server,
+                                                  username=username,
+                                                  password=password)
+    attached_tags = False
+    if client:
+        # Create dynamic id object associated with a type and an id.
+        # .. Note, here the default is ClusterComputeResource, which
+        # infers a lazy loaded vim.ClusterComputerResource.
+        # The ClusterComputeResource data object aggregates the compute
+        # resources of associated HostSystem objects into a single compute
+        # resource for use by virtual machines.
+        dynamic_id = DynamicID(type=managed_obj,
+                               id=object_id)
+        for tags in tag_id:
+            try:
+                client.tagging.TagAssociation.attach(tag_id=tag_id,
+                                                     object_id=dynamic_id)
+            except vsphere_errors:
+                log.warning('Unable to attach tag. Check user privileges '
+                          'and object_id (must be a string).')
+            else:
+                attached_tags = True
+    return {'Tag(s) successfully attached': attached_tags}
+
+
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def list_attached_tags(object_id, managed_obj='ClusterComputeResource',
                        server=None, username=None, password=None,
                        service_instance=None):
     '''
@@ -9158,10 +9247,14 @@ def list_attached_tags(object_id,
 
     .. code-block:: bash
 
-            salt vm_minion vsphere.list_attached_tags object_id=''domain-c2283''
+            salt vm_minion vsphere.list_attached_tags domain-c2283
 
     :param str object_id:
         The identifier of the input object.
+    :param str managed_obj:
+        Classes that contain methods for creating and deleting resources
+        typically contain a class attribute specifying the resource type
+        for the resources being created and deleted.
     :param basestring server:
         Target DNS or IP of vCenter center.
     :param basestring username:
@@ -9193,11 +9286,19 @@ def list_attached_tags(object_id,
     attached_tags = None
     if client:
         # Create dynamic id object associated with a type and an id.
-        # Type refers to the type of resource being identified.
-        # ID refers to the identifier for a resources who's type
-        # is specified by dynamic id, in this case a virtual machine object.
-        dynamic_id = DynamicID(type=vim.VirtualMachine, id=object_id)
-        attached_tags = client.tagging.TagAssociation.list_attached_tags(dynamic_id)
+        # .. Note, here the default is ClusterComputeResource, which
+        # infers a lazy loaded vim.ClusterComputerResource.
+        # The ClusterComputeResource data object aggregates the compute
+        # resources of associated HostSystem objects into a single compute
+        # resource for use by virtual machines.
+        dynamic_id = DynamicID(type=managed_obj,
+                               id=object_id)
+        try:
+            attached_tags = client.tagging.TagAssociation.list_attached_tags(
+                dynamic_id)
+        except vsphere_errors:
+            log.warning('Unable to list attached tags. Check user privileges '
+                      'and object_id (must be a string).')
     return attached_tags
 
 
@@ -9268,7 +9369,11 @@ def create_tag_category(name, description, cardinality,
         create_spec.cardinality = cardinality
         associable_types = set()
         create_spec.associable_types = associable_types
-        identifier = client.tagging.Category.create(create_spec)
+        try:
+            identifier = client.tagging.Category.create(create_spec)
+        except vsphere_errors:
+            log.warning('Unable to create tag category. Check user privilege and '
+                      'see if category exists.')
     return identifier
 
 
@@ -9316,8 +9421,16 @@ def delete_tag_category(category_id,
     client = salt.utils.vmware.get_vsphere_client(server=server,
                                                   username=username,
                                                   password=password)
+    deleted = False
     if client:
-        client.tagging.Category.delete(category_id)
+        try:
+            client.tagging.Category.delete(category_id)
+        except vsphere_errors:
+            log.warning('Unable to delete tag category. Check user privilege and '
+                      'see if category exists.')
+        else:
+            deleted = True
+    return {'Successfully deleted category': deleted}
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
@@ -9380,7 +9493,11 @@ def create_tag(name, description, category_id,
         create_spec.name = name
         create_spec.description = description
         create_spec.category_id = category_id
-        identifier = client.tagging.Tag.create(create_spec)
+        try:
+            identifier = identifier = client.tagging.Tag.create(create_spec)
+        except vsphere_errors:
+            log.warning('Unable to create tag. Check user privilege and '
+                      'see if category exists.')
     return identifier
 
 
@@ -9429,8 +9546,16 @@ def delete_tag(tag_id,
     client = salt.utils.vmware.get_vsphere_client(server=server,
                                                   username=username,
                                                   password=password)
+    deleted = False
     if client:
-        client.tagging.Category.delete(tag_id)
+        try:
+            client.tagging.Category.delete(tag_id)
+        except vsphere_errors:
+            log.warning('Unable to delete category. Check user privileges '
+                      'and that category exists.')
+        else:
+            deleted = True
+    return {'Successfully deleted tag': deleted}
 
 
 @depends(HAS_PYVMOMI)
