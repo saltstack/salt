@@ -16,13 +16,15 @@ import salt.loader  # pylint: disable=3rd-party-module-not-gated
 log = logging.getLogger(__name__)
 
 
-def match(tgt, functions=None):
+def match(tgt, functions=None, opts=None):
     '''
     Match based on the local data store on the minion
     '''
+    if not opts:
+        opts = __opts__
     if functions is None:
-        utils = salt.loader.utils(__opts__)
-        functions = salt.loader.minion_mods(__opts__, utils=utils)
+        utils = salt.loader.utils(opts)
+        functions = salt.loader.minion_mods(opts, utils=utils)
     comps = tgt.split(':')
     if len(comps) < 2:
         return False
