@@ -63,10 +63,10 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if the chroot environment exist.
         '''
-        isdir.side_effect = (True, True, True)
+        isdir.side_effect = (True, True, True, True)
         self.assertTrue(chroot.exist('/chroot'))
 
-        isdir.side_effect = (True, True, False)
+        isdir.side_effect = (True, True, True, False)
         self.assertFalse(chroot.exist('/chroot'))
 
     @patch('os.makedirs')
