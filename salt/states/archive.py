@@ -528,7 +528,7 @@ def extracted(name,
         .. versionadded:: 2016.11.1
 
     clean_top : False
-        Set this to ``True`` to remove a top level directory defore the extration.
+        Set this to ``True`` to remove a top level directory before the extration.
 
     user
         The user to own each extracted file. Not available on Windows.
