@@ -351,7 +351,7 @@ class SaltEvent(object):
         if tag is None:
             return
         match_func = self._get_match_func(match_type)
-        log.info('DGM subscribe for tag %s', tag)
+        log.error('DGM subscribe for tag %s', tag)
         self.pending_tags.append([tag, match_func])
 
     def unsubscribe(self, tag, match_type=None):
