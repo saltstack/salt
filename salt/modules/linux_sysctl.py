@@ -32,7 +32,7 @@ def __virtual__():
     '''
     Only run on Linux systems
     '''
-    if __grains__['kernel'] != 'Linux':
+    if __grains__.get('kernel') != 'Linux':
         return (False, 'The linux_sysctl execution module cannot be loaded: only available on Linux systems.')
     return __virtualname__
 
