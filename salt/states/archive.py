@@ -1247,7 +1247,7 @@ def extracted(name,
                     'removed', "Directory {} was removed prior to the extraction".format(name))
             except OSError as exc:
                 if exc.errno != errno.ENOENT:
-                        errors.append(exc.__str__())
+                    errors.append(exc.__str__())
             if errors:
                 msg = (
                     'Unable to remove the directory {}. The following '
