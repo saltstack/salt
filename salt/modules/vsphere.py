@@ -9376,7 +9376,7 @@ def create_tag_category(name, description, cardinality,
         except vsphere_errors:
             log.warning('Unable to create tag category. Check user privilege and '
                       'see if category exists.')
-    return {'categories': identifier}
+    return {'category': identifier}
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
@@ -9497,7 +9497,7 @@ def create_tag(name, description, category_id,
         except vsphere_errors:
             log.warning('Unable to create tag. Check user privilege and '
                       'see if category exists.')
-    return identifier
+    return {'tag_created': identifier}
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
