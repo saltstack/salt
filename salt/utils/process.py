@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# ndle-*- coding: utf-8 -*-
 '''
 Functions for daemonizing and otherwise modifying running processes
 '''
@@ -807,11 +807,15 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
         msg += '. Exiting'
         log.debug(msg)
         if HAS_PSUTIL:
-            process = psutil.Process(self.pid)
-            if hasattr(process, 'children'):
-                for child in process.children(recursive=True):
-                    if child.is_running():
-                        child.terminate()
+            for process in psutil.process_iter():
+                if process == self.pid and hasattr(process, 'children'):
+                    try:
+                        for child in process.children(recursive=True):
+                            if child.is_running():
+                                child.terminate()
+                    except psutil.NoSuchProcess:
+                        pass
+                    break
         sys.exit(salt.defaults.exitcodes.EX_OK)
 
     def start(self):
