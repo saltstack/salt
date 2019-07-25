@@ -461,3 +461,37 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             ret = cmdmod.run_all('some command', output_encoding='latin1')
 
         self.assertEqual(ret['stdout'], stdout)
+
+    def test_run_chroot_runas(self):
+        '''
+        Test run_chroot when a runas parameter is provided
+        '''
+        with patch.dict(cmdmod.__salt__, {'mount.mount': MagicMock(),
+                                          'mount.umount': MagicMock()}):
+            with patch('salt.modules.cmdmod.run_all') as run_all_mock:
+                cmdmod.run_chroot('/mnt', 'ls', runas='foobar')
+        run_all_mock.assert_called_with(
+            'chroot --userspec foobar: /mnt /bin/sh -c ls',
+            bg=False,
+            clean_env=False,
+            cwd=None,
+            env=None,
+            ignore_retcode=False,
+            log_callback=None,
+            output_encoding=None,
+            output_loglevel='quiet',
+            pillar=None,
+            pillarenv=None,
+            python_shell=True,
+            reset_system_locale=True,
+            rstrip=True,
+            saltenv='base',
+            shell='/bin/bash',
+            stdin=None,
+            success_retcodes=None,
+            success_stderr=None,
+            success_stdout=None,
+            template=None,
+            timeout=None,
+            umask=None,
+            use_vt=False)
