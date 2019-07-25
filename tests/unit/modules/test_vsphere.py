@@ -1987,7 +1987,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
 
     dynamic_id = {
         key: None for key in [
-         'object_id', 'tag_id', 'name', 'description', 'cardinality']
+         'category_id', 'object_id', 'tag_id', 'name', 'description', 'cardinality']
     }
 
     class DynamicID(object):
@@ -2019,13 +2019,18 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
         'urn:vmomi:InventoryServiceTag:b55ecc77-f4a5-49f8-ab52-38865467cfbe:GLOBAL',
         'urn:vmomi:InventoryServiceTag:bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL'
     ]
-
+    list_create_category_return = [
+        'urn:vmomi:InventoryServiceCategory:0af54c2d-e8cd-4248-931e-2f5807d8c477:GLOBAL'
+    ]
+    list_create_tag_return = [
+        'urn:vmomi:InventoryServiceCategory:0af54c2d-e8cd-4248-931e-2f5807d8c477:GLOBAL'
+    ]
     attach_tags_return = {
         'Tag(s) successfully attached':
             'urn:vmomi:InventoryServiceTag:bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL'
     }
 
-    def test_create_tag_categories_client_none(self):
+    def test_create_tag_category_client_none(self):
         get_details = MagicMock(return_value=self.details)
 
         # Start patching each external API return with Mock Objects
@@ -2044,11 +2049,10 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'categories': None})
+                            self.assertEqual(ret, {'category': None})
 
-
-    # TODO Test Create Tag Categories - Client
-    def test_create_tag_categories_client(self):
+    # TODO fix me
+    def test_create_tag_category_client(self):
         get_details = MagicMock(return_value=self.details)
 
         # Start patching each external API return with Mock Objects
@@ -2058,7 +2062,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                     with patch.dict(vsphere.__salt__, {'vcenter.get_details': get_details}, clear=True) as get_vcenter_details:
                         with patch.object(salt.utils.vmware, 'get_vsphere_client',
                                           return_value=self.mock_vcenter_client(
-                                              list_ret=self.list_tag_categories_return)) as get_vsphere_client:
+                                              list_ret=self.list_create_category_return)) as get_vsphere_client:
 
                             ret = vsphere.create_tag_category(self.dynamic_id['name'],
                                                               self.dynamic_id['description'],
@@ -2068,11 +2072,9 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'categories': None})
+                            self.assertEqual(ret, {'category': None})
 
-
-    # TODO Test Create Tags - No Client
-    def test_create_tags_client_none(self):
+    def test_create_tag_client_none(self):
         get_details = MagicMock(return_value=self.details)
 
         # Start patching each external API return with Mock Objects
@@ -2092,11 +2094,10 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'categories': None})
+                            self.assertEqual(ret, {'tag_created': None})
 
-
-    # TODO Test Create Tags - Client
-    def test_create_tags_client(self):
+    # TODO Fix me
+    def test_create_tag_client(self):
         get_details = MagicMock(return_value=self.details)
 
         # Start patching each external API return with Mock Objects
@@ -2106,7 +2107,8 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                     with patch.dict(vsphere.__salt__, {'vcenter.get_details': get_details},
                                     clear=True) as get_vcenter_details:
                         with patch.object(salt.utils.vmware, 'get_vsphere_client',
-                                          return_value=None) as get_vsphere_client:
+                                          return_value=self.mock_vcenter_client(
+                                              list_ret=self.list_create_tag_return)) as get_vsphere_client:
 
                             ret = vsphere.create_tag(self.dynamic_id['name'],
                                                      self.dynamic_id['description'],
@@ -2116,10 +2118,8 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'categories': None})
+                            self.assertEqual(ret, {'tag_created': None})
 
-
-    # TODO Test Delete Tag Category - No Client
     def test_delete_tag_category_client_none(self):
         get_details = MagicMock(return_value=self.details)
 
@@ -2137,9 +2137,9 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'categories': None})
+                            self.assertEqual(ret, {'Successfully deleted category': None})
 
-    # TODO Test Delete Tag Category - Client
+    # TODO fix me - return_value
     def test_delete_tag_category_client(self):
         get_details = MagicMock(return_value=self.details)
 
@@ -2157,10 +2157,9 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'categories': None})
+                            self.assertEqual(ret, {'Successfully deleted category': None})
 
-    # TODO Test Delete Tag - No Client
-    def test_delete_tag_category_client_none(self):
+    def test_delete_tag_client_none(self):
         get_details = MagicMock(return_value=self.details)
 
         # Start patching each external API return with Mock Objects
@@ -2171,16 +2170,16 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                         with patch.object(salt.utils.vmware, 'get_vsphere_client',
                                           return_value=None) as get_vsphere_client:
 
-                            ret = vsphere.delete_tag()
+                            ret = vsphere.delete_tag(self.dynamic_id['tag_id'])
                             # Check function calls and return data
                             get_proxy_type.assert_called_once()
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'categories': None})
+                            self.assertEqual(ret, {'Successfully deleted tag': None})
 
-    # TODO Test Delete Tag - Client
-    def test_delete_tag_category_client(self):
+    # TODO Fix me - return_value
+    def test_delete_tag_client(self):
         get_details = MagicMock(return_value=self.details)
 
         # Start patching each external API return with Mock Objects
@@ -2191,13 +2190,13 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                         with patch.object(salt.utils.vmware, 'get_vsphere_client',
                                           return_value=None) as get_vsphere_client:
 
-                            ret = vsphere.delete_tag()
+                            ret = vsphere.delete_tag(self.dynamic_id['tag_id'])
                             # Check function calls and return data
                             get_proxy_type.assert_called_once()
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'categories': None})
+                            self.assertEqual(ret, {'Successfully deleted tag': None})
 
     def test_list_tag_categories_client_none(self):
         get_details = MagicMock(return_value=self.details)
@@ -2295,7 +2294,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                                 get_service_instance.assert_called_once()
                                 get_vsphere_client.assert_called_once()
                                 self.assertEqual(ret, None)
-
+    # TODO fix client
     def test_list_attached_tags_client(self):
         get_details = MagicMock(return_value=self.details)
 
@@ -2336,6 +2335,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_vsphere_client.assert_called_once()
                             self.assertEqual(ret, {'Tag(s) successfully attached': False})
 
+    # Todo fix me - return_value
     def test_attach_tags_client(self):
         get_details = MagicMock(return_value=self.details)
 
