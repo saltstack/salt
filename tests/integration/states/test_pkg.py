@@ -26,6 +26,7 @@ from tests.support.helpers import (
 )
 
 # Import Salt libs
+import salt.utils.files
 import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
@@ -42,18 +43,10 @@ if salt.utils.platform.is_windows():
 elif salt.utils.platform.is_linux():
     _OS_DISTRO, _OS_MAJOR_VERSION, _ = linux_distribution(full_distribution_name=False)
     _OS_DISTRO = _OS_FAMILY = _OS_DISTRO.lower()
-    _OS_MAJOR_VERSION = _OS_MAJOR_VERSION.lower()
     if _OS_DISTRO in ('ubuntu', 'debian'):
         _OS_FAMILY = 'debian'
     elif _OS_DISTRO in ('centos', 'fedora', 'redhat'):
         _OS_FAMILY = 'redhat'
-
-    # Get the release number of RedHat based OSes before grains are loaded
-    if not _OS_MAJOR_VERSION and os.path.exists('/etc/redhat-release'):
-        with open('/etc/redhat-release', 'r') as fp_:
-            version = re.findall('release\\s(\\d+)', fp_.read().strip())
-            if version:
-                _OS_MAJOR_VERSION = int(version[0])
 
 _PKG_EPOCH_TARGETS = []
 _PKG_TARGETS = ['figlet', 'sl']
@@ -78,11 +71,11 @@ elif _OS_FAMILY == 'redhat':
             _PKG_32_TARGETS.append('xz-devel.i386')
         else:
             _PKG_32_TARGETS.append('xz-devel.i686')
-    if _OS_MAJOR_VERSION == 5:
+    if _OS_MAJOR_VERSION.startswith('5.'):
         _PKG_DOT_TARGETS.append('python-migrate0.5')
-    elif _OS_MAJOR_VERSION == 6:
+    elif _OS_MAJOR_VERSION.startswith('6.'):
         _PKG_DOT_TARGETS.append('tomcat6-el-2.1-api')
-    elif _OS_MAJOR_VERSION == 7:
+    elif _OS_MAJOR_VERSION.startswith('7.'):
         _PKG_DOT_TARGETS.append('tomcat-el-2.2-api')
         _PKG_EPOCH_TARGETS.append('comps-extras')
 elif _OS_FAMILY == 'windows':
