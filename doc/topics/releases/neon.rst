@@ -396,6 +396,10 @@ Module Changes
 - The :py:func:`chocolatey.unbootstrap <salt.modules.chocolatey.unbootstrap>` function
   has been added to uninstall Chocolatey.
 
+- The :py:func:`freezer.restore <salt.modules.freezer.restore>` function provides a
+  new parameter, `clean`, that will remove the frozen data after a successful recovery.
+
+
 Runner Changes
 ==============
 

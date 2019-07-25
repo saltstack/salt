@@ -164,13 +164,13 @@ def freeze(name=None, force=False, **kwargs):
     safe_kwargs = clean_kwargs(**kwargs)
     pkgs = __salt__['pkg.list_pkgs'](**safe_kwargs)
     repos = __salt__['pkg.list_repos'](**safe_kwargs)
-    for name, content in zip(_paths(name), (pkgs, repos)):
-        with fopen(name, 'w') as fp:
+    for fname, content in zip(_paths(name), (pkgs, repos)):
+        with fopen(fname, 'w') as fp:
             json.dump(content, fp)
     return True
 
 
-def restore(name=None, **kwargs):
+def restore(name=None, clean=False, **kwargs):
     '''
     Make sure that the system contains the packages and repos from a
     frozen state.
@@ -191,6 +191,11 @@ def restore(name=None, **kwargs):
     name
         Name of the frozen state. Optional.
 
+    clean
+        If True remove the frozen information YAML from the cache
+
+        .. version-added:: Neon
+
     CLI Example:
 
     .. code-block:: bash
@@ -204,8 +209,8 @@ def restore(name=None, **kwargs):
 
     frozen_pkgs = {}
     frozen_repos = {}
-    for name, content in zip(_paths(name), (frozen_pkgs, frozen_repos)):
-        with fopen(name) as fp:
+    for fname, content in zip(_paths(name), (frozen_pkgs, frozen_repos)):
+        with fopen(fname) as fp:
             content.update(json.load(fp))
 
     # The ordering of removing or adding packages and repos can be
@@ -291,5 +296,10 @@ def restore(name=None, **kwargs):
             msg = 'Error removing %s repository: %s'
             log.error(msg, repo, e)
             res['comment'].append(msg % (repo, e))
+
+    # Clean the cached YAML files
+    if clean and not res['comment']:
+        for fname in _paths(name):
+            os.remove(fname)
 
     return res
