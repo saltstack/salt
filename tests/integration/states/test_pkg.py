@@ -7,6 +7,7 @@ tests for pkg state
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
+import re
 import time
 
 # linux_distribution deprecated in py3.7
@@ -46,6 +47,14 @@ elif salt.utils.platform.is_linux():
         _OS_FAMILY = 'debian'
     elif _OS_DISTRO in ('centos', 'fedora', 'redhat'):
         _OS_FAMILY = 'redhat'
+
+    # Get the release number of RedHat based OSes before grains are loaded
+    if not _OS_MAJOR_VERSION and os.path.exists('/etc/redhat-release'):
+        with open('/etc/redhat-release', 'r') as fp_:
+            version = re.findall('release\\s(\\d+)', fp_.read().strip())
+            if version:
+                _OS_MAJOR_VERSION = int(version[0])
+
 _PKG_EPOCH_TARGETS = []
 _PKG_TARGETS = ['figlet', 'sl']
 _PKG_32_TARGETS = []
@@ -284,7 +293,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _PKG_DOT_TARGETS, 'No packages with "." in their name have been configured for {}'.format(_OS_DISTRO))
+    @skipIf(not _PKG_DOT_TARGETS, 'No packages with "." in their name have been configured for {} {}'.format(_OS_DISTRO, _OS_MAJOR_VERSION))
     def test_pkg_007_with_dot_in_pkgname(self=None):
         '''
         This tests for the regression found in the following issue:
