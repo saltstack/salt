@@ -452,20 +452,19 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         else:
             raise RuntimeError
 
-    @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
-    @skipIf(salt.utils.platform.is_darwin(), 'Do not run on MacOS')
+    @skipIf(salt.utils.platform.is_windows(), "Do not run on Windows")
+    @skipIf(salt.utils.platform.is_darwin(), "Do not run on MacOS")
     def test_run_cwd_in_combination_with_runas(self):
-        '''
+        """
         cmd.run executes command in the cwd directory
         when the runas parameter is specified
-        '''
-        cmd = 'pwd'
-        cwd = '/tmp'
+        """
+        cmd = "pwd"
+        cwd = "/tmp"
         runas = os.getlogin()
 
-        with patch.dict(cmdmod.__grains__, {'os': 'Darwin',
-                                            'os_family': 'Solaris'}):
-            stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get('stdout')
+        with patch.dict(cmdmod.__grains__, {"os": "Darwin", "os_family": "Solaris"}):
+            stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get("stdout")
         self.assertEqual(stdout, cwd)
 
     def test_run_all_binary_replace(self):
@@ -621,3 +620,38 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                 cmdmod.run_chroot("/mnt", "cmd", binds=["/var"])
                 self.assertEqual(mock_mount.call_count, 4)
                 self.assertEqual(mock_umount.call_count, 4)
+
+    @skipIf(salt.utils.platform.is_windows(), "Skip test on Windows")
+    def test_run_chroot_runas(self):
+        """
+        Test run_chroot when a runas parameter is provided
+        """
+        with patch.dict(
+            cmdmod.__salt__, {"mount.mount": MagicMock(), "mount.umount": MagicMock()}
+        ):
+            with patch("salt.modules.cmdmod.run_all") as run_all_mock:
+                cmdmod.run_chroot("/mnt", "ls", runas="foobar")
+        run_all_mock.assert_called_with(
+            "chroot --userspec foobar: /mnt /bin/sh -c ls",
+            bg=False,
+            clean_env=False,
+            cwd=None,
+            env=None,
+            ignore_retcode=False,
+            log_callback=None,
+            output_encoding=None,
+            output_loglevel="quiet",
+            pillar=None,
+            pillarenv=None,
+            python_shell=True,
+            reset_system_locale=True,
+            rstrip=True,
+            saltenv="base",
+            shell="/bin/bash",
+            stdin=None,
+            success_retcodes=None,
+            template=None,
+            timeout=None,
+            umask=None,
+            use_vt=False,
+        )
