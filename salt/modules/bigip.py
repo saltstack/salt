@@ -175,6 +175,38 @@ def _add_partition_payload(payload, partition):
         payload['partition'] = partition
 
 
+def _add_api_anonymous_payload(payload, api_anonymous, saltenv='base'):
+    '''
+    A function that based on TCL code (api_anonymous) either load it from 
+    templated file if provided and/or store it into the payload
+    '''
+    if isinstance(api_anonymous, dict) and 'file' in api_anonymous:
+        contents = __salt__['cp.get_file_str'](api_anonymous['file'])
+        # Check parameters for apply_template_on_contents
+        if 'context' in api_anonymous:
+            context = api_anonymous['context']
+        else:
+            context = {}
+        if 'defaults' in api_anonymous:
+            defaults = api_anonymous['defaults']
+        else:
+            defaults = {}
+        if 'template' in api_anonymous:
+            template = api_anonymous['template']
+        else:
+            template = 'jinja'
+
+        tcl_code= __salt__['file.apply_template_on_contents'](
+            contents=contents,
+            template=template,
+            context=context,
+            defaults=defaults,
+            saltenv=saltenv)
+        payload["apiAnonymous"] = tcl_code
+    else:
+        payload["apiAnonymous"] = api_anonymous
+
+
 def _set_value(value):
     '''
     A function to detect if user is trying to pass a dictionary or list. Parse the value and return a
@@ -2449,24 +2481,7 @@ def list_irule(hostname, username, password, name=None, partition=None):
 
     return _load_response(response)
 
-
-def _add_api_anonymous_payload(payload ,api_anonymous):
-    if isinstance(api_anonymous, dict):
-        contents = __salt__['cp.get_file_str'](api_anonymous['file'])
-        context = api_anonymous['context'] if 'context' in api_anonymous else {}
-        defaults = api_anonymous['defaults'] if 'defaults' in api_anonymous else {}
-        template = api_anonymous['template'] if 'template' in api_anonymous else 'jinja'
-
-        payload["apiAnonymous"] = __salt__['file.apply_template_on_contents'](
-            contents=contents,
-            template=template,
-            context=context,
-            defaults=defaults,
-            saltenv='team')
-    else:
-        payload["apiAnonymous"] = api_anonymous
-
-def create_irule(hostname, username, password, name, api_anonymous, partition=None):
+def create_irule(hostname, username, password, name, api_anonymous, saltenv='base', partition=None):
     '''
     A function to connect to a bigip device and create an iRule.
 
@@ -2480,6 +2495,8 @@ def create_irule(hostname, username, password, name, api_anonymous, partition=No
         The name of the irules
     api_anonymous
         The code that defines the conditions, behavior, and actions of the iRule
+    saltenv
+        The name of the salt environment    
     partition
         The name of the partition to consider
 
@@ -2494,7 +2511,7 @@ def create_irule(hostname, username, password, name, api_anonymous, partition=No
     payload['name'] = name
     
     # Add TCL code to the payload
-    _add_api_anonymous_payload(payload ,api_anonymous)    
+    _add_api_anonymous_payload(payload ,api_anonymous, saltenv)    
 
     #add partition to the payload if partition exists
     _add_partition_payload(payload, partition)
@@ -2508,7 +2525,7 @@ def create_irule(hostname, username, password, name, api_anonymous, partition=No
     return _load_response(response)
 
 
-def modify_irule(hostname, username, password, name, api_anonymous, partition=None):
+def modify_irule(hostname, username, password, name, api_anonymous, partition=None, saltenv='base'):
     '''
     A function to connect to a bigip device and modify an iRule.
 
@@ -2522,6 +2539,8 @@ def modify_irule(hostname, username, password, name, api_anonymous, partition=No
         The name of the irules
     api_anonymous
         The code that defines the conditions, behavior, and actions of the iRule
+    saltenv
+        The name of the salt environment
     partition
         The name of the partition to consider
 
@@ -2536,7 +2555,7 @@ def modify_irule(hostname, username, password, name, api_anonymous, partition=No
     payload['name'] = name
     
     # Add TCL code to the payload
-    _add_api_anonymous_payload(payload ,api_anonymous)
+    _add_api_anonymous_payload(payload ,api_anonymous, saltenv)
 
     #add partition to the payload if partition exists
     _add_partition_payload(payload, partition)
