@@ -183,6 +183,7 @@ def extracted(name,
               force=False,
               overwrite=False,
               clean=False,
+              clean_top=False,
               user=None,
               group=None,
               if_missing=None,
@@ -525,6 +526,9 @@ def extracted(name,
             ``overwrite`` is set to ``True``.
 
         .. versionadded:: 2016.11.1
+
+    clean_top : False
+        Set this to ``True`` to remove a top level directory defore the extration.
 
     user
         The user to own each extracted file. Not available on Windows.
@@ -1080,6 +1084,11 @@ def extracted(name,
                           ))
         return ret
 
+    if clean and clean_top:
+        ret['comment'] = "You can't set both 'clean' and 'clean_top' to True."
+        ret['result'] = False
+        return ret
+
     extraction_needed = overwrite
     contents_missing = False
 
@@ -1152,6 +1161,15 @@ def extracted(name,
                         )
                     )
                     return ret
+                if __opts__['test'] and clean_top and contents is not None:
+                    ret['result'] = None
+                    ret['comment'] += (
+                        ' Since the \'clean_top\' option is enabled, the '
+                        'destination top directory would be removed first '
+                        'and than re-created and the archive would be '
+                        'extracted'
+                    )
+                    return ret
 
                 # Skip notices of incorrect types if we're cleaning
                 if not (clean and contents is not None):
@@ -1219,6 +1237,26 @@ def extracted(name,
                 ret['comment'] += ', after cleaning destination path(s)'
             _add_explanation(ret, source_hash_trigger, contents_missing)
             return ret
+
+        if clean_top and contents is not None:
+            errors = []
+            log.debug('Removing directory %s due to clean_top set to True', name)
+            try:
+                salt.utils.files.rm_rf(name.rstrip(os.sep))
+                ret['changes'].setdefault(
+                    'removed', "Directory {} was removed prior to the extraction".format(name))
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                        errors.append(exc.__str__())
+            if errors:
+                msg = (
+                    'Unable to remove the directory {}. The following '
+                    'errors were observed:\n'.format(name)
+                )
+                for error in errors:
+                    msg += '\n- {0}'.format(error)
+                ret['comment'] = msg
+                return ret
 
         if clean and contents is not None:
             errors = []
