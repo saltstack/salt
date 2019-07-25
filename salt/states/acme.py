@@ -53,7 +53,14 @@ def cert(name,
          owner='root',
          group='root',
          mode='0640',
-         certname=None):
+         certname=None,
+         preferred_challenges=None,
+         tls_sni_01_port=None,
+         tls_sni_01_address=None,
+         http_01_port=None,
+         http_01_address=None,
+         dns_plugin=None,
+         dns_plugin_credentials=None):
     '''
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
 
@@ -69,6 +76,20 @@ def cert(name,
     :param group: group of the private key file
     :param mode: mode of the private key file
     :param certname: Name of the certificate to save
+    :param preferred_challenges: A sorted, comma delimited list of the preferred
+                                 challenge to use during authorization with the
+                                 most preferred challenge listed first.
+    :param tls_sni_01_port: Port used during tls-sni-01 challenge. This only affects
+                            the port Certbot listens on. A conforming ACME server
+                            will still attempt to connect on port 443.
+    :param tls_sni_01_address: The address the server listens to during tls-sni-01
+                               challenge.
+    :param http_01_port: Port used in the http-01 challenge. This only affects
+                         the port Certbot listens on. A conforming ACME server
+                         will still attempt to connect on port 80.
+    :param https_01_address: The address the server listens to during http-01 challenge.
+    :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare')
+    :param dns_plugin_credentials: Path to the credentials file if required by the specified DNS plugin
     '''
     ret = {'name': name, 'result': 'changeme', 'comment': [], 'changes': {}}
     action = None
