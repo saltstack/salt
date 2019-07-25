@@ -296,3 +296,29 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             salt_mock['pkg.del_repo'].assert_called_once()
             fopen.assert_called()
             load.assert_called()
+
+    @patch('os.remove')
+    @patch('salt.utils.json.load')
+    @patch('salt.modules.freezer.fopen')
+    @patch('salt.modules.freezer.status')
+    def test_restore_clean_yml(self, status, fopen, load, remove):
+        '''
+        Test to restore an old state
+        '''
+        status.return_value = True
+        salt_mock = {
+            'pkg.list_pkgs': MagicMock(return_value={}),
+            'pkg.list_repos': MagicMock(return_value={}),
+            'pkg.install': MagicMock(),
+        }
+        with patch.dict(freezer.__salt__, salt_mock):
+            self.assertEqual(freezer.restore(clean=True), {
+                'pkgs': {'add': [], 'remove': []},
+                'repos': {'add': [], 'remove': []},
+                'comment': [],
+            })
+            salt_mock['pkg.list_pkgs'].assert_called()
+            salt_mock['pkg.list_repos'].assert_called()
+            fopen.assert_called()
+            load.assert_called()
+            self.assertEqual(remove.call_count, 2)
