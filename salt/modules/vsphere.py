@@ -252,7 +252,6 @@ try:
     vsphere_errors = (AlreadyExists, InvalidArgument,
                       NotFound, Unauthenticated, Unauthorized,)
     HAS_VSPHERE_SDK = True
-
 except ImportError:
     HAS_VSPHERE_SDK = False
 
@@ -9374,7 +9373,7 @@ def create_tag_category(name, description, cardinality,
         except vsphere_errors:
             log.warning('Unable to create tag category. Check user privilege and '
                       'see if category exists.')
-    return identifier
+    return {'categories': identifier}
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
@@ -9421,16 +9420,13 @@ def delete_tag_category(category_id,
     client = salt.utils.vmware.get_vsphere_client(server=server,
                                                   username=username,
                                                   password=password)
-    deleted = False
     if client:
         try:
             client.tagging.Category.delete(category_id)
         except vsphere_errors:
             log.warning('Unable to delete tag category. Check user privilege and '
                       'see if category exists.')
-        else:
-            deleted = True
-    return {'Successfully deleted category': deleted}
+    return {'Successfully deleted category': category_id}
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
@@ -9494,7 +9490,7 @@ def create_tag(name, description, category_id,
         create_spec.description = description
         create_spec.category_id = category_id
         try:
-            identifier = identifier = client.tagging.Tag.create(create_spec)
+            identifier = client.tagging.Tag.create(create_spec)
         except vsphere_errors:
             log.warning('Unable to create tag. Check user privilege and '
                       'see if category exists.')
@@ -9546,16 +9542,13 @@ def delete_tag(tag_id,
     client = salt.utils.vmware.get_vsphere_client(server=server,
                                                   username=username,
                                                   password=password)
-    deleted = False
     if client:
         try:
             client.tagging.Category.delete(tag_id)
         except vsphere_errors:
             log.warning('Unable to delete category. Check user privileges '
                       'and that category exists.')
-        else:
-            deleted = True
-    return {'Successfully deleted tag': deleted}
+    return {'Successfully deleted tag': tag_id}
 
 
 @depends(HAS_PYVMOMI)
