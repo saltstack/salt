@@ -50,7 +50,7 @@ class PipModuleTest(ModuleCase):
             self.assertIn('could not find a pip binary', ret)
 
 
-@skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+@skipIf(not salt.utils.path.which_bin(KNOWN_BINARY_NAMES), 'virtualenv not installed')
 class PipModuleVenvTest(ModuleCase):
 
     def setUp(self):

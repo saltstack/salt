@@ -21,7 +21,7 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.helpers import flaky, expensiveTest
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 # Import Salt Libs
 import salt.exceptions
@@ -39,7 +39,7 @@ from salt.ext.six.moves import queue
 log = logging.getLogger(__name__)
 
 
-@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @flaky
 class StateRunnerTest(ShellCase):
     '''
@@ -381,7 +381,7 @@ class StateRunnerTest(ShellCase):
         )
 
 
-@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(salt.utils.platform.is_windows(), '*NIX-only test')
 @flaky
 class OrchEventTest(ShellCase):

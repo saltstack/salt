@@ -21,7 +21,7 @@ import logging
 import tests.integration.utils
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.integration.utils import testprogram
 
@@ -38,7 +38,7 @@ log = logging.getLogger(__name__)
 DEBUG = True
 
 
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     '''
     Various integration tests for the salt-minion executable.
