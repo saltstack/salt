@@ -232,7 +232,7 @@ def info(name):
     cert_file = _cert_file(name, 'cert')
     # Use the tls salt module if available
     if 'tls.cert_info' in __salt__:
-        info = __salt__['tls.cert_info'](cert_file)
+        cert_info = __salt__['tls.cert_info'](cert_file)
         # Strip out the extensions object contents;
         # these trip over our poor state output
         # and they serve no real purpose here anyway
