@@ -151,7 +151,8 @@ def freeze(name=None, force=False, **kwargs):
     states_path = _states_path()
 
     try:
-        os.makedirs(states_path)
+        if not os.path.exists(states_path):
+            os.makedirs(states_path)
     except OSError as e:
         msg = 'Error when trying to create the freezer storage %s: %s'
         log.error(msg, states_path, e)

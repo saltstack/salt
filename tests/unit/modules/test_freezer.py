@@ -116,6 +116,30 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
     @patch('salt.modules.freezer.fopen')
     @patch('salt.modules.freezer.status')
     @patch('os.makedirs')
+    def test_freeze_success_two_freeze(self, makedirs, status, fopen, dump):
+        '''
+        Test to freeze a current installation
+        '''
+        # Freeze the current new state
+        status.return_value = False
+        salt_mock = {
+            'pkg.list_pkgs': MagicMock(return_value={}),
+            'pkg.list_repos': MagicMock(return_value={}),
+        }
+        with patch.dict(freezer.__salt__, salt_mock):
+            self.assertTrue(freezer.freeze('one'))
+            self.assertTrue(freezer.freeze('two'))
+
+            self.assertEqual(makedirs.call_count, 2)
+            self.assertEqual(salt_mock['pkg.list_pkgs'].call_count, 2)
+            self.assertEqual(salt_mock['pkg.list_repos'].call_count, 2)
+            fopen.assert_called()
+            dump.assert_called()
+
+    @patch('salt.utils.json.dump')
+    @patch('salt.modules.freezer.fopen')
+    @patch('salt.modules.freezer.status')
+    @patch('os.makedirs')
     def test_freeze_success_new_state(self, makedirs, status, fopen, dump):
         '''
         Test to freeze a current installation
@@ -132,7 +156,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             salt_mock['pkg.list_pkgs'].assert_called_once()
             salt_mock['pkg.list_repos'].assert_called_once()
             fopen.assert_called()
-            dump.asster_called()
+            dump.assert_called()
 
     @patch('salt.utils.json.dump')
     @patch('salt.modules.freezer.fopen')
@@ -154,7 +178,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             salt_mock['pkg.list_pkgs'].assert_called_once()
             salt_mock['pkg.list_repos'].assert_called_once()
             fopen.assert_called()
-            dump.asster_called()
+            dump.assert_called()
 
     @patch('salt.modules.freezer.status')
     def test_restore_fails_missing_state(self, status):
@@ -190,7 +214,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             salt_mock['pkg.list_repos'].assert_called()
             salt_mock['pkg.mod_repo'].assert_called_once()
             fopen.assert_called()
-            load.asster_called()
+            load.assert_called()
 
     @patch('salt.utils.json.load')
     @patch('salt.modules.freezer.fopen')
@@ -217,7 +241,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             salt_mock['pkg.list_repos'].assert_called()
             salt_mock['pkg.install'].assert_called_once()
             fopen.assert_called()
-            load.asster_called()
+            load.assert_called()
 
     @patch('salt.utils.json.load')
     @patch('salt.modules.freezer.fopen')
@@ -244,7 +268,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             salt_mock['pkg.list_repos'].assert_called()
             salt_mock['pkg.remove'].assert_called_once()
             fopen.assert_called()
-            load.asster_called()
+            load.assert_called()
 
     @patch('salt.utils.json.load')
     @patch('salt.modules.freezer.fopen')
@@ -271,4 +295,4 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             salt_mock['pkg.list_repos'].assert_called()
             salt_mock['pkg.del_repo'].assert_called_once()
             fopen.assert_called()
-            load.asster_called()
+            load.assert_called()
