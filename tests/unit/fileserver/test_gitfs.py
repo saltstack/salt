@@ -63,8 +63,10 @@ log = logging.getLogger(__name__)
 
 TMP_SOCK_DIR = tempfile.mkdtemp(dir=TMP)
 TMP_REPO_DIR = os.path.join(TMP, 'gitfs_root')
+TMP_FILE_URI = 'file://'
 if salt.utils.platform.is_windows():
     TMP_REPO_DIR = TMP_REPO_DIR.replace('\\', '/')
+    TMP_FILE_URI = TMP_FILE_URI + '/'
 INTEGRATION_BASE_FILES = os.path.join(FILES, 'file', 'base')
 UNICODE_FILENAME = 'питон.txt'
 UNICODE_DIRNAME = UNICODE_ENVNAME = 'соль'
@@ -72,7 +74,7 @@ TAG_NAME = 'mytag'
 
 OPTS = {
     'sock_dir': TMP_SOCK_DIR,
-    'gitfs_remotes': ['file://' + TMP_REPO_DIR],
+    'gitfs_remotes': [TMP_FILE_URI + TMP_REPO_DIR],
     'gitfs_root': '',
     'fileserver_backend': ['gitfs'],
     'gitfs_base': 'master',
@@ -164,18 +166,18 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
 
             gitfs_remotes:
 
-              - file://tmp/repo1:
+              - {0}tmp/repo1:
                 - saltenv:
                   - foo:
                     - ref: foo_branch
                     - root: foo_root
 
-              - file://tmp/repo2:
+              - {0}tmp/repo2:
                 - mountpoint: repo2
                 - saltenv:
                   - baz:
                     - mountpoint: abc
-        ''')
+        '''.format(TMP_FILE_URI))
         with patch.dict(gitfs.__opts__, salt.utils.yaml.safe_load(opts_override)):
             git_fs = salt.utils.gitfs.GitFS(
                 gitfs.__opts__,
@@ -291,7 +293,7 @@ class GitFSTestFuncs(object):
         Test the per_remote ref_types config option, using a different
         ref_types setting than the global test.
         '''
-        remotes = [{'file://' + TMP_REPO_DIR: [{'ref_types': ['tag']}]}]
+        remotes = [{TMP_FILE_URI + TMP_REPO_DIR: [{'ref_types': ['tag']}]}]
         with patch.dict(gitfs.__opts__, {'gitfs_remotes': remotes}):
             gitfs.update()
             ret = gitfs.envs(ignore_cache=True)
@@ -329,11 +331,11 @@ class GitFSTestFuncs(object):
         opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             gitfs_disable_saltenv_mapping: True
             gitfs_remotes:
-              - file://{0}:
+              - {0}:
                 - saltenv:
                   - bar:
                     - ref: somebranch
-            '''.format(TMP_REPO_DIR)))
+            '''.format(TMP_FILE_URI + TMP_REPO_DIR)))
         with patch.dict(gitfs.__opts__, opts):
             gitfs.update()
             ret = gitfs.envs(ignore_cache=True)
@@ -349,13 +351,13 @@ class GitFSTestFuncs(object):
         '''
         opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             gitfs_remotes:
-              - file://{0}:
+              - {0}:
                 - disable_saltenv_mapping: True
 
             gitfs_saltenv:
               - hello:
                 - ref: somebranch
-            '''.format(TMP_REPO_DIR)))
+            '''.format(TMP_FILE_URI + TMP_REPO_DIR)))
         with patch.dict(gitfs.__opts__, opts):
             gitfs.update()
             ret = gitfs.envs(ignore_cache=True)
@@ -371,12 +373,12 @@ class GitFSTestFuncs(object):
         '''
         opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             gitfs_remotes:
-              - file://{0}:
+              - {0}:
                 - disable_saltenv_mapping: True
                 - saltenv:
                   - world:
                     - ref: somebranch
-            '''.format(TMP_REPO_DIR)))
+            '''.format(TMP_FILE_URI + TMP_REPO_DIR)))
         with patch.dict(gitfs.__opts__, opts):
             gitfs.update()
             ret = gitfs.envs(ignore_cache=True)
