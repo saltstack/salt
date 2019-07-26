@@ -51,12 +51,6 @@ try:
 except ImportError:
     HAS_TIMELIB = False
 
-try:
-    import jmespath  # pylint: disable=W0611
-    HAS_JMESPATH = True
-except ImportError:
-    HAS_JMESPATH = False
-
 CACHEDIR = os.path.join(TMP, 'jinja-template-cache')
 BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
 
@@ -1382,17 +1376,6 @@ class TestCustomExtensions(TestCase):
         rendered = render_jinja_tmpl("{{ 'cmFuZG9t' | base64_decode }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, 'random')
-
-    @skipIf(HAS_JMESPATH is False, 'The `jmespath` library is not installed.')
-    def test_json_query(self):
-        '''
-        Test the `json_query` Jinja filter.
-        '''
-        rendered = render_jinja_tmpl(
-            "{{ [1, 2, 3] | json_query('[1]')}}",
-            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
-        )
-        self.assertEqual(rendered, '2')
 
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])
