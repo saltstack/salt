@@ -60,7 +60,8 @@ def _expires(name):
     '''
     Return the expiry date of a cert
 
-    :return datetime object of expiry date
+    :rtype: datetime
+    :return: Expiry date
     '''
     cert_file = _cert_file(name, 'cert')
     # Use the salt module if available
@@ -82,7 +83,8 @@ def _renew_by(name, window=None):
 
     :param str name: Common Name of the certificate (DNS name of certificate)
     :param int window: days before expiry date to renew
-    :return datetime object of first renewal date
+    :rtype: datetime
+    :return: First renewal date
     '''
     expiry = _expires(name)
     if window is not None:
@@ -110,15 +112,37 @@ def cert(name,
     :param aliases: subjectAltNames (Additional DNS names on certificate)
     :param email: e-mail address for interaction with ACME provider
     :param webroot: True or a full path to use to use webroot. Otherwise use standalone mode
-    :param test_cert: Request a certificate from the Happy Hacker Fake CA (mutually exclusive with 'server')
-    :param renew: True/'force' to force a renewal, or a window of renewal before expiry in days
+    :param test_cert: Request a certificate from the Happy Hacker Fake CA (mutually
+        exclusive with 'server')
+    :param renew: True/'force' to force a renewal, or a window of renewal before
+        expiry in days
     :param keysize: RSA key bits
     :param server: API endpoint to talk to
     :param owner: owner of the private key file
     :param group: group of the private key file
     :param mode: mode of the private key file
     :param certname: Name of the certificate to save
-    :return: dict with 'result' True/False/None, 'comment' and certificate's expiry date ('not_after')
+    :param preferred_challenges: A sorted, comma delimited list of the preferred
+        challenge to use during authorization with the most preferred challenge
+        listed first.
+    :param tls_sni_01_port: Port used during tls-sni-01 challenge. This only affects
+        the port Certbot listens on. A conforming ACME server will still attempt
+        to connect on port 443.
+    :param tls_sni_01_address: The address the server listens to during tls-sni-01
+        challenge.
+    :param http_01_port: Port used in the http-01 challenge. This only affects
+        the port Certbot listens on. A conforming ACME server will still attempt
+        to connect on port 80.
+    :param https_01_address: The address the server listens to during http-01 challenge.
+    :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare'
+        or 'digitalocean')
+    :param dns_plugin_credentials: Path to the credentials file if required by
+        the specified DNS plugin
+    :param dns_plugin_propagate_seconds: Number of seconds to wait for DNS propogations
+        before asking ACME servers to verify the DNS record. (default 10)
+    :rtype: dict
+    :return: Dictionary with 'result' True/False/None, 'comment' and certificate's
+        expiry date ('not_after')
 
     CLI example:
 
@@ -215,11 +239,12 @@ def info(name):
     '''
     Return information about a certificate
 
-    .. note::
-        Will output tls.cert_info if that's available, or OpenSSL text if not
-
     :param str name: CommonName of certificate
-    :return dict
+    :rtype: dict
+    :return: Dictionary with information about the certificate.
+        If neither the ``tls`` nor the ``x509`` module can be used to determine
+        the certificate information, the information will be retrieved as one
+        big text block under the key ``text`` using the openssl cli.
 
     CLI example:
 
@@ -251,6 +276,8 @@ def expires(name):
     The expiry date of a certificate in ISO format
 
     :param str name: CommonName of certificate
+    :rtype: str
+    :return: Expiry date in ISO format.
 
     CLI example:
 
@@ -266,6 +293,7 @@ def has(name):
     Test if a certificate is in the Let's Encrypt Live directory
 
     :param str name: CommonName of certificate
+    :rtype: bool
 
     Code example:
 
@@ -283,6 +311,8 @@ def renew_by(name, window=None):
 
     :param str name: CommonName of certificate
     :param int window: number of days before expiry when renewal should take place
+    :rtype: str
+    :return: Date of certificate renewal in ISO format.
     '''
     return _renew_by(name, window).isoformat()
 
@@ -293,6 +323,8 @@ def needs_renewal(name, window=None):
 
     :param str name: CommonName of certificate
     :param bool/str/int window: Window in days to renew earlier or True/force to just return True
+    :rtype: bool
+    :return: Whether or not the certificate needs to be renewed.
 
     Code example:
 
@@ -303,16 +335,14 @@ def needs_renewal(name, window=None):
         else:
             log.info('Your certificate is still good')
     '''
-    if window is not None and window in ('force', 'Force', True):
-        return True
-
     if window:
+        if str(window).lower in ('force', 'true'):
+            return True
         if not (isinstance(window, int) or (hasattr(window, 'isdigit') and window.isdigit())):
             raise SaltInvocationError(
                 'The argument "window", if provided, must be one of the following : '
                 'True (boolean), "force" or "Force" (str) or a numerical value in days.'
             )
-        else:
-            window = int(window)
+        window = int(window)
 
     return _renew_by(name, window) <= datetime.datetime.today()
