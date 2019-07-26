@@ -18,6 +18,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.win_service as win_service
+import salt.utils.path
 
 # Import 3rd Party Libs
 try:
@@ -213,9 +214,22 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             Test to create a task in Windows task
             scheduler to enable restarting the salt-minion
         '''
-        mock_true = MagicMock(return_value=True)
-        with patch.dict(win_service.__salt__, {'task.create_task': mock_true}):
-            self.assertTrue(win_service.create_win_salt_restart_task())
+        cmd = salt.utils.path.which('cmd')
+        mock = MagicMock()
+        with patch.dict(win_service.__salt__, {'task.create_task': mock}):
+            win_service.create_win_salt_restart_task()
+            mock.assert_called_once_with(
+                action_type='Execute',
+                arguments='/c ping -n 3 127.0.0.1 && net stop salt-minion && '
+                          'net start salt-minion',
+                cmd=cmd,
+                force=True,
+                name='restart-salt-minion',
+                start_date='1975-01-01',
+                start_time='01:00',
+                trigger_type='Once',
+                user_name='System'
+            )
 
     def test_execute_salt_restart_task(self):
         '''
