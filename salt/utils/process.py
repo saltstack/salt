@@ -1,4 +1,4 @@
-# ndle-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 '''
 Functions for daemonizing and otherwise modifying running processes
 '''
