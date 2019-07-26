@@ -5,6 +5,7 @@ apache-libcloud>=1.0.0
 boto>=2.32.1
 boto3>=1.2.1
 moto>=0.3.6
+distro
 docker; sys.platform != 'win32'
 docker==2.7.0; sys.platform == 'win32'
 virtualenv

@@ -7,14 +7,7 @@ tests for pkg state
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
-import re
 import time
-
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution
-except ImportError:
-    from distro import linux_distribution
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -32,26 +25,12 @@ import salt.utils.pkg.rpm
 import salt.utils.platform
 
 # Import 3rd-party libs
+from distro import LinuxDistribution
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
-
-_OS_FAMILY = _OS_DISTRO = _OS_MAJOR_VERSION = ''
-if salt.utils.platform.is_windows():
-    _OS_FAMILY = _OS_DISTRO = 'windows'
-elif salt.utils.platform.is_linux():
-    _OS_DISTRO, version, _ = linux_distribution(full_distribution_name=False)
-    _OS_DISTRO = _OS_FAMILY = _OS_DISTRO.lower()
-    if _OS_DISTRO in ('ubuntu', 'debian'):
-        _OS_FAMILY = 'debian'
-    elif _OS_DISTRO in ('centos', 'fedora', 'redhat'):
-        _OS_FAMILY = 'redhat'
-
-    # Get the OS major version before grains are loaded
-    version = re.findall('\\d+', version)
-    if version:
-        _OS_MAJOR_VERSION = int(version[0])
+pre_grains = LinuxDistribution()
 
 _PKG_EPOCH_TARGETS = []
 _PKG_TARGETS = ['figlet', 'sl']
@@ -60,30 +39,30 @@ _PKG_CAP_TARGETS = []
 _PKG_DOT_TARGETS = []
 _WILDCARDS_SUPPORTED = False
 _VERSION_SPEC_SUPPORTED = True
-if _OS_FAMILY == 'arch':
+if 'arch' in pre_grains.like():
     _WILDCARDS_SUPPORTED = True
-elif _OS_FAMILY == 'debian':
+elif 'debian' in pre_grains.like():
     _WILDCARDS_SUPPORTED = True
-elif _OS_FAMILY == 'freebsd':
+elif 'freebsd' in pre_grains.like():
     _VERSION_SPEC_SUPPORTED = False
-elif _OS_FAMILY == 'suse':
-    _PKG_CAP_TARGETS.append(('perl(ZNC)', 'znc-perl'))
-elif _OS_FAMILY == 'redhat':
+elif 'rhel' in pre_grains.like():
     _PKG_TARGETS = ['units', 'zsh-html']
     _WILDCARDS_SUPPORTED = True
-    if _OS_DISTRO == 'centos':
-        if _OS_MAJOR_VERSION == 5:
+    if pre_grains.id() == 'centos':
+        if pre_grains.major_version() == 5:
             _PKG_32_TARGETS.append('xz-devel.i386')
         else:
             _PKG_32_TARGETS.append('xz-devel.i686')
-    if _OS_MAJOR_VERSION == 5:
+    if pre_grains.major_version() == 5:
         _PKG_DOT_TARGETS.append('python-migrate0.5')
-    elif _OS_MAJOR_VERSION == 6:
+    elif pre_grains.major_version() == 6:
         _PKG_DOT_TARGETS.append('tomcat6-el-2.1-api')
-    elif _OS_MAJOR_VERSION == 7:
+    elif pre_grains.major_version() == 7:
         _PKG_DOT_TARGETS.append('tomcat-el-2.2-api')
         _PKG_EPOCH_TARGETS.append('comps-extras')
-elif _OS_FAMILY == 'windows':
+elif 'sles' in pre_grains.like():
+    _PKG_CAP_TARGETS.append(('perl(ZNC)', 'znc-perl'))
+elif salt.utils.platform.is_windows():
     _PKG_TARGETS = ['putty', '7zip']
 
 
@@ -146,12 +125,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _VERSION_SPEC_SUPPORTED, 'Version specification not supported on {}'.format(_OS_FAMILY))
+    @skipIf(not _VERSION_SPEC_SUPPORTED, 'Version specification not supported on {}'.format(pre_grains.id()))
     def test_pkg_002_installed_with_version(self):
         '''
         This is a destructive test as it installs and then removes a package
         '''
-        if _OS_FAMILY == 'arch':
+        if 'arch' in pre_grains.like():
             for idx in range(13):
                 if idx == 12:
                     raise Exception('Package database locked after 60 seconds, '
@@ -198,12 +177,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=None, pkgs=_PKG_TARGETS)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _VERSION_SPEC_SUPPORTED, 'Version specification not supported on {}'.format(_OS_FAMILY))
+    @skipIf(not _VERSION_SPEC_SUPPORTED, 'Version specification not supported on {}'.format(pre_grains.id()))
     def test_pkg_004_installed_multipkg_with_version(self):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
-        if _OS_FAMILY == 'arch':
+        if 'arch' in pre_grains.like():
             for idx in range(13):
                 if idx == 12:
                     raise Exception('Package database locked after 60 seconds, '
@@ -231,7 +210,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=None, pkgs=_PKG_TARGETS)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _PKG_32_TARGETS, 'No 32 bit packages have been specified for testing on {}'.format(_OS_FAMILY))
+    @skipIf(not _PKG_32_TARGETS, 'No 32 bit packages have been specified for testing on {}'.format(pre_grains.id()))
     def test_pkg_005_installed_32bit(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -256,7 +235,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _PKG_32_TARGETS, 'No 32 bit packages have been specified for testing on {}'.format(_OS_FAMILY))
+    @skipIf(not _PKG_32_TARGETS, 'No 32 bit packages have been specified for testing on {}'.format(pre_grains.id()))
     def test_pkg_006_installed_32bit_with_version(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -266,7 +245,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # _PKG_TARGETS_32 is only populated for platforms for which Salt has to
         # munge package names for 32-bit-on-x86_64 (Currently only Ubuntu and
         # RHEL-based). Don't actually perform this test on other platforms.
-        if _OS_FAMILY == 'arch':
+        if 'arch' in pre_grains.like():
             for idx in range(13):
                 if idx == 12:
                     raise Exception('Package database locked after 60 seconds, '
@@ -291,7 +270,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _PKG_DOT_TARGETS, 'No packages with "." in their name have been configured for {} {}'.format(_OS_DISTRO, _OS_MAJOR_VERSION))
+    @skipIf(not _PKG_DOT_TARGETS, 'No packages with "." in their name have been configured for {} {}'.format(pre_grains.id(), pre_grains.major_version()))
     def test_pkg_007_with_dot_in_pkgname(self=None):
         '''
         This tests for the regression found in the following issue:
@@ -312,7 +291,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _PKG_EPOCH_TARGETS, 'No targets have been configured with "epoch" in the version for {}'.format(_OS_DISTRO))
+    @skipIf(not _PKG_EPOCH_TARGETS, 'No targets have been configured with "epoch" in the version for {}'.format(pre_grains.id()))
     def test_pkg_008_epoch_in_version(self):
         '''
         This tests for the regression found in the following issue:
@@ -374,7 +353,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _OS_FAMILY == 'debian', 'This test only runs on debian based distributions')
+    @skipIf('debian' not in pre_grains.like(), 'This test only runs on debian based distributions')
     def test_pkg_011_latest_only_upgrade(self):
         '''
         WARNING: This test will pick a package with an available upgrade (if
@@ -424,7 +403,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 'Package {0} is already up-to-date'.format(target)
             )
 
-    @skipIf(not _WILDCARDS_SUPPORTED, 'Wildcards in pkg.install are not supported on {}'.format(_OS_DISTRO))
+    @skipIf(not _WILDCARDS_SUPPORTED, 'Wildcards in pkg.install are not supported on {}'.format(pre_grains.id()))
     def test_pkg_012_installed_with_wildcard_version(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -473,7 +452,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(_OS_FAMILY not in ('debian', 'redhat'), 'Comparison operator not specially implemented on {}'.format(_OS_DISTRO))
+    @skipIf(not any(x in pre_grains.like() for x in ('debian', 'redhat')), 'Comparison operator not specially implemented on {}'.format(pre_grains.id()))
     def test_pkg_013_installed_with_comparison_operator(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -508,7 +487,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _OS_FAMILY == 'redhat', 'This test only runs on RedHat based distributions')
+    @skipIf('redhat' not in pre_grains.like(), 'Comparison operator not specially implemented on {}'.format(pre_grains.id()))
     def test_pkg_014_installed_missing_release(self):
         '''
         Tests that a version number missing the release portion still resolves
@@ -534,14 +513,14 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(_OS_FAMILY not in ('debian', 'redhat'), 'Test is not able to run on {}'.format(_OS_DISTRO))
+    @skipIf(not any(x in pre_grains.like() for x in ('debian', 'redhat')), 'Test is not able to run on {}'.format(pre_grains.id()))
     @requires_salt_modules('pkg.hold', 'pkg.unhold')
     def test_pkg_015_installed_held(self):
         '''
         Tests that a package can be held even when the package is already installed.
         '''
 
-        if _OS_FAMILY == 'redhat':
+        if 'redhat' in pre_grains.like():
             # If we're in the Red Hat family first we ensure that
             # the yum-plugin-versionlock package is installed
             ret = self.run_state(
@@ -570,9 +549,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         # changes from pkg.hold for Red Hat family are different
-        if _OS_FAMILY == 'redhat':
+        if 'redhat' in pre_grains.like():
             target_changes = {'new': 'hold', 'old': ''}
-        elif _OS_FAMILY == 'debian':
+        elif 'debian' in pre_grains.like():
             target_changes = {'new': 'hold', 'old': 'install'}
 
         try:
@@ -587,12 +566,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_function('pkg.unhold', name=target)
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
-            if _OS_FAMILY == 'redhat':
+            if 'redhat' in pre_grains.like():
                 ret = self.run_state('pkg.removed',
                                      name='yum-plugin-versionlock')
                 self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _PKG_CAP_TARGETS, 'Capability not provided on {}'.format(_OS_FAMILY))
+    @skipIf(not _PKG_CAP_TARGETS, 'Capability not provided on {}'.format(pre_grains.id()))
     def test_pkg_cap_001_installed(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -617,7 +596,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=realpkg)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _PKG_CAP_TARGETS, 'Capability not available on {}'.format(_OS_FAMILY))
+    @skipIf(not _PKG_CAP_TARGETS, 'Capability not available on {}'.format(pre_grains.id()))
     def test_pkg_cap_002_already_installed(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -649,13 +628,13 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=realpkg)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _PKG_CAP_TARGETS, 'Capability not available on {}'.format(_OS_FAMILY))
-    @skipIf(not _VERSION_SPEC_SUPPORTED, 'Version specification not supported on {}'.format(_OS_FAMILY))
+    @skipIf(not _PKG_CAP_TARGETS, 'Capability not available on {}'.format(pre_grains.id()))
+    @skipIf(not _VERSION_SPEC_SUPPORTED, 'Version specification not supported on {}'.format(pre_grains.id()))
     def test_pkg_cap_003_installed_multipkg_with_version(self):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
-        if _OS_FAMILY == 'arch':
+        if 'arch' in pre_grains.like():
             for idx in range(13):
                 if idx == 12:
                     raise Exception('Package database locked after 60 seconds, '
@@ -702,7 +681,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                                  pkgs=cleanup_pkgs)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _PKG_CAP_TARGETS, 'Capability not available on {}'.format(_OS_FAMILY))
+    @skipIf(not _PKG_CAP_TARGETS, 'Capability not available on {}'.format(pre_grains.id()))
     def test_pkg_cap_004_latest(self):
         '''
         This tests pkg.latest with a package that has no epoch (or a zero
@@ -731,7 +710,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=realpkg)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _PKG_CAP_TARGETS, 'Capability not available on {}'.format(_OS_FAMILY))
+    @skipIf(not _PKG_CAP_TARGETS, 'Capability not available on {}'.format(pre_grains.id()))
     def test_pkg_cap_005_downloaded(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -755,7 +734,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.downloaded', name=target, refresh=False, resolve_capabilities=True)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _PKG_CAP_TARGETS, 'Capability not available on {}'.format(_OS_FAMILY))
+    @skipIf(not _PKG_CAP_TARGETS, 'Capability not available on {}'.format(pre_grains.id()))
     def test_pkg_cap_006_uptodate(self):
         '''
         This is a destructive test as it installs and then removes a package
