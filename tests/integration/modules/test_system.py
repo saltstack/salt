@@ -413,14 +413,14 @@ class WinSystemModuleTest(ModuleCase):
         '''
         Test getting the system time
         '''
+        time_now = datetime.datetime.now()
         # We have to do some datetime fu to account for the possibility that the
         # system time will be obtained just before the minutes increment
-        ret = self.run_function('system.get_system_time')
+        ret = self.run_function('system.get_system_time', timeout=300)
         # Split out time and AM/PM
         sys_time, meridian = ret.split(' ')
         h, m, s = sys_time.split(':')
         # Get the current time
-        time_now = datetime.datetime.now()
         # Use the system time to generate a datetime object for the system time
         # with the same date
         time_sys = time_now.replace(hour=int(h), minute=int(m), second=int(s))
@@ -428,8 +428,9 @@ class WinSystemModuleTest(ModuleCase):
         # Lets make it 24 hour time
         if meridian == 'PM':
             time_sys = time_sys + datetime.timedelta(hours=12)
-        diff = time_now - time_sys
-        self.assertTrue(diff.seconds < 60)
+        diff = time_sys - time_now
+        # Timeouts are set to 300 seconds. We're adding a 30 second buffer
+        self.assertTrue(diff.seconds < 330)
 
     @skipIf(True, 'WAR ROOM 7/18/2019, unit test?')
     @destructiveTest
