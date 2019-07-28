@@ -9107,7 +9107,7 @@ def list_tag_categories(server=None, username=None, password=None,
     categories = None
     if client:
         categories = client.tagging.Category.list()
-    return {"Categories": categories}
+    return {'Categories': categories}
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
@@ -9296,8 +9296,8 @@ def list_attached_tags(object_id,
             attached_tags = client.tagging.TagAssociation.list_attached_tags(
                 dynamic_id)
         except vsphere_errors:
-            log.warning('Unable to list attached tags. Check user privileges '
-                        'and object_id (must be a string).')
+            log.warning('Unable to list attached tags. Check user privileges'
+                        ' and object_id (must be a string).')
     return {'Attached tags': attached_tags}
 
 
@@ -9548,8 +9548,8 @@ def delete_tag(tag_id,
         try:
             tag_deleted = client.tagging.Tag.delete(tag_id)
         except vsphere_errors:
-            log.warning('Unable to delete category. Check user privileges '
-                      'and that category exists.')
+            log.warning('Unable to delete category. Check user privileges'
+                        ' and that category exists.')
     return {'Tag deleted': tag_deleted}
 
 
