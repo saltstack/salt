@@ -1081,19 +1081,22 @@ class TestDaemon(object):
         Kill the minion and master processes
         '''
         if hasattr(self.sub_minion_process, 'terminate'):
-            log.error('self.sub_minion_process can\'t be terminate.')
             self.sub_minion_process.terminate()
+        else:
+            log.error('self.sub_minion_process can\'t be terminate.')
 
         if hasattr(self.minion_process, 'terminate'):
-            log.error('self.minion_process can\'t be terminate.')
             self.minion_process.terminate()
+        else:
+            log.error('self.minion_process can\'t be terminate.')
 
         if hasattr(self, 'proxy_process'):
             self.proxy_process.terminate()
 
         if hasattr(self.master_process, 'terminate'):
-            log.error('self.master_process can\'t be terminate.')
             self.master_process.terminate()
+        else:
+            log.error('self.master_process can\'t be terminate.')
 
         try:
             self.syndic_process.terminate()
