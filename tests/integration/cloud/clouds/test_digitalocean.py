@@ -18,6 +18,7 @@ from tests.support.helpers import expensiveTest, generate_random_name
 # Import Salt Libs
 from salt.config import cloud_providers_config
 from salt.ext.six.moves import range
+import salt.utils.stringutils
 
 
 # Create the cloud instance name to be used throughout the tests
@@ -107,7 +108,7 @@ class DigitalOceanTest(ShellCase):
 
         # generate key and fingerprint
         ssh_key = RSA.generate(4096)
-        pub = ssh_key.publickey().exportKey("OpenSSH")
+        pub = salt.utils.stringutils.to_str(ssh_key.publickey().exportKey("OpenSSH"))
         key_hex = hashlib.md5(base64.b64decode(pub.strip().split()[1].encode())).hexdigest()
         finger_print = ':'.join([key_hex[x:x+2] for x in range(0, len(key_hex), 2)])
 
