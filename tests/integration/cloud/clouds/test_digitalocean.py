@@ -5,7 +5,10 @@ Integration tests for DigitalOcean APIv2
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import base64
+import hashlib
 import os
+from Crypto.PublicKey import RSA
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
@@ -14,6 +17,8 @@ from tests.support.helpers import expensiveTest, generate_random_name
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
+from salt.ext.six.moves import range
+import salt.utils.stringutils
 
 
 # Create the cloud instance name to be used throughout the tests
@@ -99,11 +104,16 @@ class DigitalOceanTest(ShellCase):
         '''
         Test key management
         '''
-        pub = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQDDHr/jh2Jy4yALcK4JyWbVkPRaWmhck3IgCoeOO3z1e2dBowLh64QAM+Qb72pxekALga2oi4GvT+TlWNhzPH4V example'
-        finger_print = '3b:16:bf:e4:8b:00:8b:b8:59:8c:a9:d3:f0:19:45:fa'
+        do_key_name = INSTANCE_NAME + '-key'
+
+        # generate key and fingerprint
+        ssh_key = RSA.generate(4096)
+        pub = salt.utils.stringutils.to_str(ssh_key.publickey().exportKey("OpenSSH"))
+        key_hex = hashlib.md5(base64.b64decode(pub.strip().split()[1].encode())).hexdigest()
+        finger_print = ':'.join([key_hex[x:x+2] for x in range(0, len(key_hex), 2)])
 
         try:
-            _key = self.run_cloud('-f create_key {0} name="MyPubKey" public_key="{1}"'.format(PROVIDER_NAME, pub))
+            _key = self.run_cloud('-f create_key {0} name="{1}" public_key="{2}"'.format(PROVIDER_NAME, do_key_name, pub))
 
             # Upload public key
             self.assertIn(
@@ -120,8 +130,8 @@ class DigitalOceanTest(ShellCase):
             )
 
             # List key
-            show_keypair = self.run_cloud('-f show_keypair {0} keyname={1}'.format(PROVIDER_NAME, 'MyPubKey'))
-
+            show_keypair = self.run_cloud('-f show_keypair {0} keyname={1}'.format(PROVIDER_NAME,
+                                                                                   do_key_name))
             self.assertIn(
                 finger_print,
                 [i.strip() for i in show_keypair]
