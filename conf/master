@@ -599,11 +599,19 @@
 # failure detected in the state execution, defaults to False
 #failhard: False
 
-# The state_verbose and state_output settings can be used to change the way
+# The state_verbose, state_verbose_warning and state_output settings can be used to change the way
 # state system data is printed to the display. By default all data is printed.
 # The state_verbose setting can be set to True or False, when set to False
 # all data that has a result of True and no changes will be suppressed.
 #state_verbose: True
+
+# The state_verbose_warnings can be used to change the way
+# state system data is printed to the display.
+# By default 'state_verbose_warnings' is set to `True`, setting this to `False` will
+# instruct the highstate outputter to omit displaying anything in green with no warnings, this
+# means that nothing with a result of True, no warning and no changes will not be printed.
+# If 'state_varbose' is 'False' 'state_verbose_warnings' will be ignored.
+# state_verbose_warnings: True
 
 # The state_output setting controls which results will be output full multi line
 # full, terse - each state will be full/terse

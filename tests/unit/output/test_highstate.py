@@ -8,7 +8,12 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
 
 # Import Salt Libs
 import salt.utils.stringutils
@@ -108,3 +113,97 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn('Succeeded: 1 (changed=1)', ret)
         self.assertIn('Failed:    0', ret)
         self.assertIn('Total states run:     1', ret)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class OutputTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            highstate: {
+                '__opts__': {
+                    'extension_modules': '',
+                    'optimization_order': [0, 1, 2],
+                    'color': False,
+                    'state_verbose': True
+                }
+            }
+        }
+
+    def setUp(self):
+        self.data = {
+            'data': {
+                'master': {
+                    'salt_|-call_sleep_state_|-call_sleep_state_|-state': {
+                        '__id__': 'call_sleep_state',
+                        '__jid__': '20170418153529810135',
+                        '__run_num__': 0,
+                        '__sls__': 'orch.simple',
+                        'changes': {
+                            'out': 'highstate',
+                            'ret': {
+                                'minion': {
+                                    'module_|-simple-ping_|-test.ping_|-run': {
+                                        '__id__': 'simple-ping',
+                                        '__run_num__': 0,
+                                        '__sls__': 'simple-ping',
+                                        'changes': {},
+                                        'comment': 'Module function test.ping executed',
+                                        'duration': 56.179,
+                                        'name': 'test.ping',
+                                        'result': True,
+                                        'start_time': '15:35:31.282099',
+                                    }
+                                },
+                                'sub_minion': {
+                                    'module_|-simple-ping_|-test.ping_|-run': {
+                                        '__id__': 'simple-ping',
+                                        '__run_num__': 0,
+                                        '__sls__': 'simple-ping',
+                                        'changes': {},
+                                        'comment': 'Module function test.ping executed',
+                                        'duration': 54.103,
+                                        'name': 'test.ping',
+                                        'result': True,
+                                        'start_time': '15:35:31.005606'
+                                    }
+                                }
+                            }
+                        },
+                        'comment': 'States ran successfully. Updating sub_minion, minion.',
+                        'duration': 1638.047,
+                        'name': 'call_sleep_state',
+                        'result': True,
+                        'start_time': '15:35:29.762657',
+                        'warnings': 'salt is cool'
+                    }
+                }
+            },
+            'outputter': 'highstate',
+            'retcode': 0
+        }
+        self.addCleanup(delattr, self, 'data')
+
+    def test_state_verbose_warnings_True(self):
+        with patch.dict(highstate.__opts__, {'state_verbose_warnings': True}):
+            ret = highstate.output(self.data)
+            self.assertIn('Succeeded: 1', ret)
+            self.assertIn('Failed:    0', ret)
+            self.assertIn('Total states run:     1', ret)
+            self.assertIn('Warnings:  1', ret)
+
+    def test_state_verbose_warnings_False(self):
+        with patch.dict(highstate.__opts__, {'state_verbose_warnings': False}):
+            ret = highstate.output(self.data)
+            self.assertIn('Succeeded: 1', ret)
+            self.assertIn('Failed:    0', ret)
+            self.assertIn('Total states run:     1', ret)
+            self.assertIn('Warnings:  1', ret)
+
+    def test_state_verbose_warnings_False_no_warnings(self):
+        with patch.dict(highstate.__opts__, {'state_verbose_warnings': False}):
+            del self.data['data']['master']['salt_|-call_sleep_state_|-call_sleep_state_|-state']['warnings']
+            ret = highstate.output(self.data)
+            self.assertIn('Succeeded: 1', ret)
+            self.assertIn('Failed:    0', ret)
+            self.assertIn('Total states run:     1', ret)
+            self.assertTrue('Warnings:  1' not in ret)

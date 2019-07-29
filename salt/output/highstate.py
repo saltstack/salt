@@ -14,7 +14,15 @@ set in the minion config to change the output of the ``salt-call`` command.
 state_verbose
     By default `state_verbose` is set to `True`, setting this to `False` will
     instruct the highstate outputter to omit displaying anything in green, this
-    means that nothing with a result of True and no changes will not be printed
+    means that nothing with a result of True and no changes will not be printed.
+    Warnings can be omitted.
+
+state_verbose_warnings
+    By default `state_verbose_warnings` is set to `True`, setting this to `False` will
+    instruct the highstate outputter to omit displaying anything in green with no warnings, this
+    means that nothing with a result of True, no warning and no changes will not be printed.
+    If 'state_varbose' is 'False' 'state_verbose_warnings' will be ignored.
+
 state_output:
     The highstate outputter has six output modes,
     ``full``, ``terse``, ``mixed``, ``changes`` and ``filter``
@@ -241,6 +249,14 @@ def _format_host(host, data):
             # Skip this state if it was successful & diff output was requested
             if __opts__.get('state_output_diff', False) and \
                ret['result'] and not schanged:
+                continue
+
+            # Skip this state if state_verbose_warnings is False and
+            # there were no changes made with no warnings
+            # Note: __opts__.get('state_verbose_warnings', True) gives True by default to keep backwards compatibility
+            # with old config files.
+            if not __opts__.get('state_verbose_warnings', True) and \
+                ret['result'] and not schanged and 'warnings' not in ret:
                 continue
 
             # Skip this state if state_verbose is False, the result is True and
