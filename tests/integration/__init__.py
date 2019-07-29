@@ -183,7 +183,7 @@ class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
     '''
-    MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 500
+    MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 600
 
     def __init__(self, parser):
         self.parser = parser
@@ -1080,11 +1080,21 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        self.sub_minion_process.terminate()
-        self.minion_process.terminate()
+        if hasattr(self.sub_minion_process, 'terminate'):
+            log.error('self.sub_minion_process can\'t be terminate.')
+            self.sub_minion_process.terminate()
+
+        if hasattr(self.minion_process, 'terminate'):
+            log.error('self.minion_process can\'t be terminate.')
+            self.minion_process.terminate()
+
         if hasattr(self, 'proxy_process'):
             self.proxy_process.terminate()
-        self.master_process.terminate()
+
+        if hasattr(self.master_process, 'terminate'):
+            log.error('self.master_process can\'t be terminate.')
+            self.master_process.terminate()
+
         try:
             self.syndic_process.terminate()
         except AttributeError:
