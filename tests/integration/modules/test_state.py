@@ -15,7 +15,7 @@ import time
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir, flaky
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
@@ -63,7 +63,7 @@ def reline(source, dest, force=False, ending=DEFAULT_ENDING):
     os.rename(tmp, dest)
 
 
-@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the state module

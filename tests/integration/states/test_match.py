@@ -18,11 +18,11 @@ from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.utils.files
-from tests.support.unit import skipIf  # WAR ROOM temp import
+from tests.support.unit import skipIf, WAR_ROOM_SKIP  # WAR ROOM temp import
 import salt.utils.stringutils
 
 
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class StateMatchTest(ModuleCase):
     '''
     Validate the file state

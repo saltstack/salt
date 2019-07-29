@@ -15,7 +15,7 @@ import tempfile
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import skipIf, WAR_ROOM_SKIP, TestCase
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, Mock
@@ -319,7 +319,7 @@ class TestGetTemplate(TestCase):
             )
         self.assertEqual(out, 'world' + os.linesep)
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_fallback_noloader(self):
         '''
         A Template with a filesystem loader is returned as fallback

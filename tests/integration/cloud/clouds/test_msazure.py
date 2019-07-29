@@ -10,9 +10,8 @@ import os
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 from tests.support.helpers import expensiveTest, generate_random_name
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
@@ -51,7 +50,7 @@ def __has_required_azure():
     return False
 
 
-@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(HAS_AZURE is False, 'These tests require the Azure Python SDK to be installed.')
 @skipIf(__has_required_azure() is False, 'The Azure Python SDK must be >= 0.11.1.')
 @expensiveTest

@@ -35,7 +35,7 @@ from tests.support.helpers import (
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 # Import salt libs
 import salt.utils.files
@@ -71,7 +71,7 @@ class VirtualEnv(object):
         pass
 
 
-@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
@@ -122,7 +122,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pip.removed', name=name, bin_env=venv_dir)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     # This is an issue with installing into a virtual environment
     def test_pip_installed_user_install_true(self):
         # TODO: Do we have a salt simple test package? If not, let's make one! -W. Werner, 2019-03-15

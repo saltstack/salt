@@ -39,6 +39,7 @@ except ImportError:
 
 # Import test libs
 from tests.support.runtests import RUNTIME_VARS
+import tests.support.unit
 
 # Import pytest libs
 import pytest
@@ -201,6 +202,13 @@ def pytest_addoption(parser):
         '--test-group', dest='test-group', type=int,
         help='The group of tests that should be executed'
     )
+    # This option is temporary for the WAR ROOM
+    test_selection_group.addoption(
+        '--no-war-room-skips',
+        action='store_true',
+        default=False,
+        help='Do not skip war room tests'
+    )
     # <---- Test Groups ----------------------------------------------------------------------------------------------
 # <---- CLI Options Setup --------------------------------------------------------------------------------------------
 
@@ -212,6 +220,9 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     '''
+    # This is temporary for the WAR ROOM
+    if config.getoption('--no-war-room-skips'):
+        tests.support.unit.WAR_ROOM_SKIP = False
     for dirname in os.listdir(CODE_DIR):
         if not os.path.isdir(dirname):
             continue
