@@ -45,7 +45,7 @@ _WILDCARDS_SUPPORTED = False
 _VERSION_SPEC_SUPPORTED = True
 
 if salt.utils.platform.is_windows():
-    _PKG_TARGETS = ['putty', '7zip']
+    _PKG_TARGETS = ['windirstat', 'curl']
 if pre_grains:
     if 'arch' in pre_grains.like():
         _WILDCARDS_SUPPORTED = True
