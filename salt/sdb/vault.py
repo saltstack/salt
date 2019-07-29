@@ -68,6 +68,10 @@ def set_(key, value, profile=None):
     else:
         path, key = key.rsplit('/', 1)
 
+    version2 = __utils__['vault.is_v2'](path)
+    if version2['v2']:
+        path = version2['data']
+
     try:
         url = 'v1/{0}'.format(path)
         data = {key: value}
@@ -100,6 +104,10 @@ def get(key, profile=None):
         path, key = key.split('?')
     else:
         path, key = key.rsplit('/', 1)
+
+    version2 = __utils__['vault.is_v2'](path)
+    if version2['v2']:
+        path = version2['data']
 
     try:
         url = 'v1/{0}'.format(path)

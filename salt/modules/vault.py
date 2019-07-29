@@ -156,7 +156,7 @@ def read_secret(path, key=None):
             first: {{ supersecret.first }}
             second: {{ supersecret.second }}
     '''
-    version2 = is_v2(path)
+    version2 = __utils__['vault.is_v2'](path)
     if version2['v2']:
         path = version2['data']
     log.debug('Reading Vault secret for %s at %s', __grains__['id'], path)
@@ -187,7 +187,7 @@ def write_secret(path, **kwargs):
     '''
     log.debug('Writing vault secrets for %s at %s', __grains__['id'], path)
     data = dict([(x, y) for x, y in kwargs.items() if not x.startswith('__')])
-    version2 = is_v2(path)
+    version2 = __utils__['vault.is_v2'](path)
     if version2['v2']:
         path = version2['data']
         data = {'data': data}
@@ -215,7 +215,7 @@ def write_raw(path, raw):
             salt '*' vault.write_raw "secret/my/secret" '{"user":"foo","password": "bar"}'
     '''
     log.debug('Writing vault secrets for %s at %s', __grains__['id'], path)
-    version2 = is_v2(path)
+    version2 = __utils__['vault.is_v2'](path)
     if version2['v2']:
         path = version2['data']
         raw = {'data': raw}
@@ -243,7 +243,7 @@ def delete_secret(path):
         salt '*' vault.delete_secret "secret/my/secret"
     '''
     log.debug('Deleting vault secrets for %s in %s', __grains__['id'], path)
-    version2 = is_v2(path)
+    version2 = __utils__['vault.is_v2'](path)
     if version2['v2']:
         path = version2['data']
     try:
@@ -269,7 +269,7 @@ def list_secrets(path):
             salt '*' vault.list_secrets "secret/my/"
     '''
     log.debug('Listing vault secret keys for %s in %s', __grains__['id'], path)
-    version2 = is_v2(path)
+    version2 = __utils__['vault.is_v2'](path)
     if version2['v2']:
         path = version2['metadata']
     try:
@@ -281,80 +281,3 @@ def list_secrets(path):
     except Exception as err:
         log.error('Failed to list secrets! %s: %s', type(err).__name__, err)
         return None
-
-
-def is_v2(path):
-    '''
-    Determines if a given secret path is kv version 1 or 2
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' vault.is_v2 "secret/my/secret"
-    '''
-    ret = {'v2': False, 'data': path, 'metadata': path, 'type': 'kv'}
-    path_metadata = _get_secret_path_metadata(path)
-    if path_metadata.get('options', {}).get('version', '1') in ['2']:
-        ret['v2'] = True
-        ret['data'] = _v2_the_path(path, path_metadata.get('path', path))
-        ret['metadata'] = _v2_the_path(path, path_metadata.get('path', path), 'metadata')
-    return ret
-
-
-def _v2_the_path(path, pfilter, ptype='data'):
-    '''
-    Given a path, a filter, and a path type, properly inject 'data' or 'metadata' into the path
-
-    CLI Example:
-
-    .. code-block:: python
-
-        _v2_the_path('dev/secrets/fu/bar', 'dev/secrets', 'data') => 'dev/secrets/data/fu/bar'
-    '''
-    possible_types = ['data', 'metadata']
-    assert ptype in possible_types
-    msg = "Path {} already contains {} in the right place - saltstack duct tape?".format(path, ptype)
-
-    path = path.rstrip('/').lstrip('/')
-    pfilter = pfilter.rstrip('/').lstrip('/')
-
-    together = pfilter + '/' + ptype
-
-    otype = possible_types[0] if possible_types[0] != ptype else possible_types[1]
-    other = pfilter + '/' + otype
-    if other in path:
-        path = path.replace(other, together, 1)
-        msg = 'Path is a "{}" type but "{}" type requested - Flipping: {}'.format(otype, ptype, path)
-    elif together not in path:
-        msg = "Converting path to v2 {} => {}".format(path, path.replace(pfilter, together, 1))
-        path = path.replace(pfilter, together, 1)
-
-    log.debug(msg)
-    return path
-
-
-def _get_secret_path_metadata(path):
-    '''
-    Given a path query vault to determine where the mount point is, it's type and version
-
-    CLI Example:
-
-    .. code-block:: python
-
-        _get_secret_path_metadata('dev/secrets/fu/bar')
-    '''
-    ret = None
-    log.debug('Fetching metadata for %s in %s', __grains__['id'], path)
-    try:
-        url = 'v1/sys/internal/ui/mounts/{0}'.format(path)
-        response = __utils__['vault.make_request']('GET', url)
-        if response.ok:
-            response.raise_for_status()
-        if response.json().get('data', False):
-            ret = response.json()['data']
-        else:
-            raise response.json()
-    except Exception as err:
-        log.error('Failed to list secrets! %s: %s', type(err).__name__, err)
-    return ret

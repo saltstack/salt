@@ -204,3 +204,91 @@ def _wrapped_token_valid():
         raise salt.exceptions.CommandExecutionError(
             'Error while looking up wrapped token : {0}'.format(e)
         )
+
+
+def is_v2(path):
+    '''
+    Determines if a given secret path is kv version 1 or 2
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vault.is_v2 "secret/my/secret"
+    '''
+    ret = {'v2': False, 'data': path, 'metadata': path, 'type': None}
+    path_metadata = _get_secret_path_metadata(path)
+    ret['type'] = path_metadata.get('type', 'kv')
+    if ret['type'] == 'kv' and path_metadata.get('options', {}).get('version', '1') in ['2']:
+        ret['v2'] = True
+        ret['data'] = _v2_the_path(path, path_metadata.get('path', path))
+        ret['metadata'] = _v2_the_path(path, path_metadata.get('path', path), 'metadata')
+    return ret
+
+
+def _v2_the_path(path, pfilter, ptype='data'):
+    '''
+    Given a path, a filter, and a path type, properly inject 'data' or 'metadata' into the path
+
+    CLI Example:
+
+    .. code-block:: python
+
+        _v2_the_path('dev/secrets/fu/bar', 'dev/secrets', 'data') => 'dev/secrets/data/fu/bar'
+    '''
+    possible_types = ['data', 'metadata']
+    assert ptype in possible_types
+    msg = "Path {} already contains {} in the right place - saltstack duct tape?".format(path, ptype)
+
+    path = path.rstrip('/').lstrip('/')
+    pfilter = pfilter.rstrip('/').lstrip('/')
+
+    together = pfilter + '/' + ptype
+
+    otype = possible_types[0] if possible_types[0] != ptype else possible_types[1]
+    other = pfilter + '/' + otype
+    if path.startswith(other):
+        path = path.replace(other, together, 1)
+        msg = 'Path is a "{}" type but "{}" type requested - Flipping: {}'.format(otype, ptype, path)
+    elif not path.startswith(together):
+        msg = "Converting path to v2 {} => {}".format(path, path.replace(pfilter, together, 1))
+        path = path.replace(pfilter, together, 1)
+
+    log.debug(msg)
+    return path
+
+
+def _get_secret_path_metadata(path):
+    '''
+    Given a path query vault to determine where the mount point is, it's type and version
+
+    CLI Example:
+
+    .. code-block:: python
+
+        _get_secret_path_metadata('dev/secrets/fu/bar')
+    '''
+    ckey = 'vault_secret_path_metadata'
+    if ckey not in __context__:
+        __context__[ckey] = {}
+
+    ret = None
+    if path.startswith(tuple(__context__[ckey].keys())):
+        log.debug('Found cached metadata for %s in %s', __grains__['id'], path)
+        ret = next(v for k, v in __context__[ckey].items() if path.startswith(k))
+    else:
+        log.debug('Fetching metadata for %s in %s', __grains__['id'], path)
+        try:
+            url = 'v1/sys/internal/ui/mounts/{0}'.format(path)
+            response = make_request('GET', url)
+            if response.ok:
+                response.raise_for_status()
+            if response.json().get('data', False):
+                log.debug('Got metadata for %s in %s', __grains__['id'], path)
+                ret = response.json()['data']
+                __context__[ckey][path] = ret
+            else:
+                raise response.json()
+        except Exception as err:
+            log.error('Failed to list secrets! %s: %s', type(err).__name__, err)
+    return ret
