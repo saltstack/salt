@@ -653,7 +653,10 @@ class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):
         for proc in (cls.case.nginx_proc, cls.case.uwsgi_proc):
             if proc is not None:
                 try:
-                    proc.send_signal(signal.SIGQUIT)
+                    proc.send_signal(signal.SIGTERM)
+                    time.sleep(1)
+                    if proc.is_running():
+                        proc.send_signal(signal.SIGKILL)
                 except psutil.NoSuchProcess:
                     pass
         shutil.rmtree(cls.root_dir, ignore_errors=True)
