@@ -9,12 +9,11 @@
 
 # Import python libs
 from __future__ import absolute_import
+import logging
 import os
-import sys
 import re
 import shutil
-from datetime import datetime
-import logging
+import sys
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -150,137 +149,6 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             a for a in self.run_run('jobs.lookup_jid {0}'.format(jid))
         ]
         self.assertTrue(True in ['returnTOmaster' in a for a in master_out])
-
-    # This test was skipped because it is consistantly failing on centos 7 tcp builds (2019.2.1)
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP 7/24/2019')
-    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
-    @flaky
-    def test_issue_2731_masterless(self):
-        root_dir = os.path.join(TMP, 'issue-2731')
-        config_dir = os.path.join(root_dir, 'conf')
-        minion_config_file = os.path.join(config_dir, 'minion')
-        logfile = os.path.join(root_dir, 'minion_test_issue_2731')
-
-        if not os.path.isdir(config_dir):
-            os.makedirs(config_dir)
-
-        with salt.utils.files.fopen(self.get_config_file_path('master')) as fhr:
-            master_config = salt.utils.yaml.safe_load(fhr)
-
-        master_root_dir = master_config['root_dir']
-        this_minion_key = os.path.join(
-            master_root_dir, 'pki', 'master', 'minions', 'minion_test_issue_2731'
-        )
-
-        minion_config = {
-            'id': 'minion_test_issue_2731',
-            'master': 'localhost',
-            'master_port': 64506,
-            'root_dir': master_root_dir,
-            'pki_dir': 'pki',
-            'cachedir': 'cachedir',
-            'sock_dir': 'minion_sock',
-            'open_mode': True,
-            'log_file': logfile,
-            'log_level': 'quiet',
-            'log_level_logfile': 'info',
-            'transport': self.master_opts['transport'],
-        }
-        try:
-            # Remove existing logfile
-            if os.path.isfile(logfile):
-                os.unlink(logfile)
-
-            start = datetime.now()
-            # Let's first test with a master running
-
-            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
-                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
-            ret = self.run_script(
-                'salt-call',
-                '--config-dir {0} cmd.run "echo foo"'.format(
-                    config_dir
-                )
-            )
-            try:
-                self.assertIn('local:', ret)
-            except AssertionError:
-                if os.path.isfile(minion_config_file):
-                    os.unlink(minion_config_file)
-                # Let's remove our key from the master
-                if os.path.isfile(this_minion_key):
-                    os.unlink(this_minion_key)
-
-                raise
-
-            # Calculate the required timeout, since next will fail.
-            # I needed this because after many attempts, I was unable to catch:
-            #   WARNING: Master hostname: salt not found. Retrying in 30 seconds
-            ellapsed = datetime.now() - start
-            timeout = ellapsed.seconds + 3
-
-            # Now let's remove the master configuration
-            minion_config.pop('master')
-            minion_config.pop('master_port')
-            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
-                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
-
-            _, timed_out = self.run_script(
-                'salt-call',
-                '--config-dir {0} cmd.run "echo foo"'.format(
-                    config_dir
-                ),
-                timeout=timeout,
-                catch_timeout=True,
-            )
-
-            try:
-                self.assertTrue(timed_out)
-            except AssertionError:
-                if os.path.isfile(minion_config_file):
-                    os.unlink(minion_config_file)
-                # Let's remove our key from the master
-                if os.path.isfile(this_minion_key):
-                    os.unlink(this_minion_key)
-
-                raise
-
-            # Should work with --local
-            ret = self.run_script(
-                'salt-call',
-                '--config-dir {0} --local cmd.run "echo foo"'.format(
-                    config_dir
-                ),
-                timeout=60
-            )
-            try:
-                self.assertIn('local:', ret)
-            except AssertionError:
-                if os.path.isfile(minion_config_file):
-                    os.unlink(minion_config_file)
-                # Let's remove our key from the master
-                if os.path.isfile(this_minion_key):
-                    os.unlink(this_minion_key)
-                raise
-
-            # Should work with local file client
-            minion_config['file_client'] = 'local'
-            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
-                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
-            ret = self.run_script(
-                'salt-call',
-                '--config-dir {0} cmd.run "echo foo"'.format(
-                    config_dir
-                ),
-                timeout=60
-            )
-            self.assertIn('local:', ret)
-        finally:
-            if os.path.isfile(minion_config_file):
-                os.unlink(minion_config_file)
-            # Let's remove our key from the master
-            if os.path.isfile(this_minion_key):
-                os.unlink(this_minion_key)
 
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_issue_7754(self):
