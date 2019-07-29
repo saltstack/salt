@@ -568,7 +568,7 @@ def query(url,
             ret['status'] = exc.code
             ret['error'] = six.text_type(exc)
             return ret
-        except socket.gaierror as exc:
+        except (socket.herror, socket.error, socket.timeout, socket.gaierror) as exc:
             if status is True:
                 ret['status'] = 0
             ret['error'] = six.text_type(exc)
