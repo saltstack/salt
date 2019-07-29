@@ -808,14 +808,14 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
         log.debug(msg)
         if HAS_PSUTIL:
             if psutil.pid_exists(self.pid):
-                process = psutil.Process(self.pid)
-                if hasattr(process, 'children'):
-                    try:
+                try:
+                    process = psutil.Process(self.pid)
+                    if hasattr(process, 'children'):
                         for child in process.children(recursive=True):
                             if child.is_running():
                                 child.terminate()
-                    except psutil.NoSuchProcess:
-                        pass
+                except psutil.NoSuchProcess:
+                    pass
         sys.exit(salt.defaults.exitcodes.EX_OK)
 
     def start(self):
