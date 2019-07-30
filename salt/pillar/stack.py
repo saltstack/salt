@@ -438,6 +438,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             },
         "minion_id": minion_id,
         "pillar": pillar,
+        "fetch": salt.utils.data.traverse_dict_and_list,
         })
     for item in _parse_stack_cfg(
             jenv.get_template(filename).render(stack=stack)):
