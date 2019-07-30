@@ -8,6 +8,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 import sys
 
 # Import Salt Libs
+import salt.utils.platform
 import salt.states.win_iis as win_iis
 
 # Import Salt Testing Libs
@@ -22,6 +23,7 @@ from tests.support.mock import (
 )
 
 
+@skipIf(not salt.utils.platform.is_windows(), 'windows test only')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinIisTestCase(TestCase, LoaderModuleMockMixin):
     '''
