@@ -89,7 +89,7 @@ class MongodbUserTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(mongodb_user.present(name, passwd, port={}), ret)
 
         mock_t = MagicMock(return_value=True)
-        mock = MagicMock(return_value=[{'user': name, 'roles':[{'db':db, 'role': current_role_string}]}])
+        mock = MagicMock(return_value=[{'user': name, 'roles': [{'db': db, 'role': current_role_string}]}])
         with patch.dict(mongodb_user.__salt__,
                         {
                          'mongodb.user_create': mock_t,
