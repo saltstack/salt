@@ -547,27 +547,26 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                                                  'processModel.password': 'TestPassword',
                                                  'processModel.identityType': 4})
 
-                settings = ['managedPipelineMode',
+                settings = {'managedPipelineMode',
                             'processModel.maxProcesses',
                             'processModel.userName',
                             'processModel.password',
-                            'processModel.identityType']
+                            'processModel.identityType'}
 
                 self.assertEqual(get_container_setting.call_count, 2)
                 if sys.version_info[0] >= 3:
                     self.assertEqual(get_container_setting.mock_calls[0], call(container='AppPools',
                                                                                name='test0',
-                                                                               settings=set(settings)))
+                                                                               settings=settings))
                     self.assertEqual(get_container_setting.mock_calls[1], call(container='AppPools',
                                                                                name='test0',
-                                                                               settings=set(settings)))
+                                                                               settings=settings))
                 else:
-                    settings.sort()
                     for get_container_setting_call in get_container_setting.mock_calls:
                         self.assertEqual(get_container_setting_call.kwargs.get('container'), 'AppPools')
                         self.assertEqual(get_container_setting_call.kwargs.get('name'), 'test0')
-                        get_container_setting_call.kwargs.get('settings').sort()
-                        self.assertEqual(get_container_setting_call.kwargs.get('settings'), settings)
+                        self.assertIsInstance(get_container_setting_call.kwargs.get('settings'), list)
+                        self.assertEqual(set(get_container_setting_call.kwargs.get('settings')), settings)
 
                 set_container_setting.assert_called_once_with(container='AppPools',
                                                               name='test0',
@@ -614,27 +613,26 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                                                  'processModel.password': 'TestPassword',
                                                  'processModel.identityType': 4})
 
-                settings = ['managedPipelineMode',
+                settings = {'managedPipelineMode',
                             'processModel.maxProcesses',
                             'processModel.userName',
                             'processModel.password',
-                            'processModel.identityType']
+                            'processModel.identityType'}
 
                 self.assertEqual(get_container_setting.call_count, 2)
                 if sys.version_info[0] >= 3:
                     self.assertEqual(get_container_setting.mock_calls[0], call(container='AppPools',
                                                                                name='test0',
-                                                                               settings=set(settings)))
+                                                                               settings=settings))
                     self.assertEqual(get_container_setting.mock_calls[1], call(container='AppPools',
                                                                                name='test0',
-                                                                               settings=set(settings)))
+                                                                               settings=settings))
                 else:
-                    settings.sort()
                     for get_container_setting_call in get_container_setting.mock_calls:
                         self.assertEqual(get_container_setting_call.kwargs.get('container'), 'AppPools')
                         self.assertEqual(get_container_setting_call.kwargs.get('name'), 'test0')
-                        get_container_setting_call.kwargs.get('settings').sort()
-                        self.assertEqual(get_container_setting_call.kwargs.get('settings'), settings)
+                        self.assertIsInstance(get_container_setting_call.kwargs.get('settings'), list)
+                        self.assertEqual(set(get_container_setting_call.kwargs.get('settings')), settings)
 
                 set_container_setting.assert_called_once_with(container='AppPools',
                                                               name='test0',
@@ -679,26 +677,24 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                                                  'processModel.password': 'TestPassword',
                                                  'processModel.identityType': 4})
 
-                settings = ['managedPipelineMode',
+                settings = {'managedPipelineMode',
                             'processModel.maxProcesses',
                             'processModel.userName',
                             'processModel.password',
-                            'processModel.identityType']
+                            'processModel.identityType'}
 
                 if sys.version_info[0] >= 3:
                     # python 3 settings type is a set
                     get_container_setting.assert_called_with(container='AppPools',
                                                              name='test0',
-                                                             settings=set(settings))
+                                                             settings=settings)
                 else:
-                    # python 2 settings type is a list that changes order due to hashing
-                    settings.sort()
                     get_container_setting.assert_called_once()
                     get_container_setting_call = get_container_setting.mock_calls[0]
                     self.assertEqual(get_container_setting_call.kwargs.get('container'), 'AppPools')
                     self.assertEqual(get_container_setting_call.kwargs.get('name'), 'test0')
-                    get_container_setting_call.kwargs.get('settings').sort()
-                    self.assertEqual(get_container_setting_call.kwargs.get('settings'), settings)
+                    self.assertIsInstance(get_container_setting_call.kwargs.get('settings'), list)
+                    self.assertEqual(set(get_container_setting_call.kwargs.get('settings')), settings)
                 set_container_setting.assert_not_called()
 
                 self.assertDictEqual(ret, {'changes': {'changes': {'managedPipelineMode': {'new': 'Integrated',
@@ -734,23 +730,22 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                                                  'processModel.password': 'TestPassword',
                                                  'processModel.identityType': 4})
 
-                settings = ['managedPipelineMode',
+                settings = {'managedPipelineMode',
                             'processModel.maxProcesses',
                             'processModel.userName',
                             'processModel.password',
-                            'processModel.identityType']
+                            'processModel.identityType'}
                 if sys.version_info[0] >= 3:
                     get_container_setting.assert_called_once_with(container='AppPools',
                                                                   name='test0',
-                                                                  settings=set(settings))
+                                                                  settings=settings)
                 else:
-                    settings.sort()
                     get_container_setting.assert_called_once()
                     get_container_setting_call = get_container_setting.mock_calls[0]
                     self.assertEqual(get_container_setting_call.kwargs.get('container'), 'AppPools')
                     self.assertEqual(get_container_setting_call.kwargs.get('name'), 'test0')
-                    get_container_setting_call.kwargs.get('settings').sort()
-                    self.assertEqual(get_container_setting_call.kwargs.get('settings'), settings)
+                    self.assertIsInstance(get_container_setting_call.kwargs.get('settings'), list)
+                    self.assertEqual(set(get_container_setting_call.kwargs.get('settings')), settings)
 
                 set_container_setting.assert_not_called()
 
@@ -1025,32 +1020,25 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                                                          'physicalPath': 'C:\\User\\Person\\Folder',
                                                          'applicationPool': 'appPool0'})
 
-                settings = ['userName',
+                settings = {'userName',
                             'password',
                             'physicalPath',
-                            'applicationPool']
+                            'applicationPool'}
                 self.assertEqual(get_webapp_settings.call_count, 2)
                 if sys.version_info[0] >= 3:
                     self.assertEqual(get_webapp_settings.mock_calls[0], call(name='test0',
                                                                              site='site0',
-                                                                             settings={'userName',
-                                                                                       'password',
-                                                                                       'physicalPath',
-                                                                                       'applicationPool'}))
+                                                                             settings=settings))
 
                     self.assertEqual(get_webapp_settings.mock_calls[1], call(name='test0',
                                                                              site='site0',
-                                                                             settings={'userName',
-                                                                                       'password',
-                                                                                       'physicalPath',
-                                                                                       'applicationPool'}))
+                                                                             settings=settings))
                 else:
-                    settings.sort()
                     for get_webapp_call in get_webapp_settings.mock_calls:
                         self.assertEqual(get_webapp_call.kwargs.get('name'), 'test0')
                         self.assertEqual(get_webapp_call.kwargs.get('site'), 'site0')
-                        get_webapp_call.kwargs.get('settings').sort()
-                        self.assertEqual(get_webapp_call.kwargs.get('settings'), settings)
+                        self.assertIsInstance(get_webapp_call.kwargs.get('settings'), list)
+                        self.assertEqual(set(get_webapp_call.kwargs.get('settings')), settings)
 
                 set_webapp_settings.assert_called_with(name='test0',
                                                        site='site0',
@@ -1089,27 +1077,26 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                                                          'physicalPath': 'C:\\User\\Person\\Folder',
                                                          'applicationPool': 'appPool0'})
 
-                settings = ['userName',
+                settings = {'userName',
                             'password',
                             'physicalPath',
-                            'applicationPool']
+                            'applicationPool'}
 
                 self.assertEqual(get_webapp_settings.call_count, 2)
                 if sys.version_info[0] >= 3:
                     self.assertEqual(get_webapp_settings.mock_calls[0], call(name='test0',
                                                                              site='site0',
-                                                                             settings=set(settings)))
+                                                                             settings=settings))
 
                     self.assertEqual(get_webapp_settings.mock_calls[1], call(name='test0',
                                                                              site='site0',
-                                                                             settings=set(settings)))
+                                                                             settings=settings))
                 else:
-                    settings.sort()
                     for get_webapp_call in get_webapp_settings.mock_calls:
                         self.assertEqual(get_webapp_call.kwargs.get('name'), 'test0')
                         self.assertEqual(get_webapp_call.kwargs.get('site'), 'site0')
-                        get_webapp_call.kwargs.get('settings').sort()
-                        self.assertEqual(get_webapp_call.kwargs.get('settings'), settings)
+                        self.assertIsInstance(get_webapp_call.kwargs.get('settings'), list)
+                        self.assertEqual(set(get_webapp_call.kwargs.get('settings')), settings)
 
                 set_webapp_settings.assert_called_with(name='test0',
                                                        site='site0',
@@ -1145,24 +1132,22 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                                                          'physicalPath': 'C:\\User\\Person\\Folder',
                                                          'applicationPool': 'appPool0'})
 
-                settings = ['userName',
+                settings = {'userName',
                             'password',
                             'physicalPath',
-                            'applicationPool']
+                            'applicationPool'}
                 if sys.version_info[0] >= 3:
                     # python 3 settings type is a set
                     get_webapp_settings.assert_called_with(name='test0',
                                                            site='site0',
-                                                           settings=set(settings))
+                                                           settings=settings)
                 else:
-                    # python 2 settings type is a list that changes order due to hashing
-                    settings.sort()
                     get_webapp_settings.assert_called_once()
                     get_webapp_call = get_webapp_settings.mock_calls[0]
                     self.assertEqual(get_webapp_call.kwargs.get('name'), 'test0')
                     self.assertEqual(get_webapp_call.kwargs.get('site'), 'site0')
-                    get_webapp_call.kwargs.get('settings').sort()
-                    self.assertEqual(get_webapp_call.kwargs.get('settings'), settings)
+                    self.assertIsInstance(get_webapp_call.kwargs.get('settings'), list)
+                    self.assertEqual(set(get_webapp_call.kwargs.get('settings')), settings)
 
                 set_webapp_settings.assert_not_called()
 
@@ -1193,24 +1178,22 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                                                          'physicalPath': 'C:\\User\\Person\\Folder',
                                                          'applicationPool': 'appPool0'})
 
-                settings = ['userName',
+                settings = {'userName',
                             'password',
                             'physicalPath',
-                            'applicationPool']
+                            'applicationPool'}
                 if sys.version_info[0] >= 3:
                     # python 3 settings type is a set
                     get_webapp_settings.assert_called_with(name='test0',
                                                            site='site0',
-                                                           settings=set(settings))
+                                                           settings=settings)
                 else:
-                    # python 2 settings type is a list that changes order due to hashing
-                    settings.sort()
                     get_webapp_settings.assert_called_once()
                     get_webapp_call = get_webapp_settings.mock_calls[0]
                     self.assertEqual(get_webapp_call.kwargs.get('name'), 'test0')
                     self.assertEqual(get_webapp_call.kwargs.get('site'), 'site0')
-                    get_webapp_call.kwargs.get('settings').sort()
-                    self.assertEqual(get_webapp_call.kwargs.get('settings'), settings)
+                    self.assertIsInstance(get_webapp_call.kwargs.get('settings'), list)
+                    self.assertEqual(set(get_webapp_call.kwargs.get('settings')), settings)
 
                 set_webapp_settings.assert_not_called()
 
