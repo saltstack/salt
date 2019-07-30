@@ -5,7 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.helpers import (
     requires_salt_modules,
     destructiveTest,
@@ -24,6 +24,7 @@ def _find_new_locale(current_locale):
 @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
 @skipIf(salt.utils.platform.is_darwin(), 'locale method is not supported on mac')
 @requires_salt_modules('locale')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class LocaleModuleTest(ModuleCase):
     def test_get_locale(self):
         locale = self.run_function('locale.get_locale')

@@ -35,7 +35,7 @@ from tests.support.helpers import (
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 # Import salt libs
 import salt.utils.files
@@ -71,7 +71,7 @@ class VirtualEnv(object):
         pass
 
 
-@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
@@ -122,17 +122,18 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pip.removed', name=name, bin_env=venv_dir)
             self.assertSaltTrueReturn(ret)
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
+    # This is an issue with installing into a virtual environment
     def test_pip_installed_user_install_true(self):
         # TODO: Do we have a salt simple test package? If not, let's make one! -W. Werner, 2019-03-15
         pkg = 'nose'
-        self.run_state('pip.removed', name=pkg)
-        self.run_state('pip.installed', user_install=True, name=pkg)
+        self.assertSaltTrueReturn(self.run_state('pip.removed', name=pkg))
+        self.assertSaltTrueReturn(self.run_state('pip.installed', user_install=True, name=pkg))
 
         # Check if the path exists instead of adding to sys.paths
         path = os.path.join(site.USER_SITE, pkg)
-        location = os.path.lexists(path)
-        if location:
-            location = os.path.dirname(path)
+        self.assertTrue(os.path.lexists(path), '"{}" does not exist'.format(path))
+        location = os.path.dirname(path)
 
         # Check the USER_SITE location outside of a virtualenv
         # pip list --user has non-expected behavior inside a virtualenv
@@ -140,19 +141,23 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     def test_pip_installed_user_install_false(self):
         venv_dir = os.path.join(
-            RUNTIME_VARS.TMP, 'pip_installed_removed'
+            RUNTIME_VARS.TMP, 'pip_installed_user_install_false'
         )
-        site_pkg = os.path.join(venv_dir, 'lib', 'site-packages')
+
+        # Use glob to handle an intermediary "Python.x.x" directory that may exist with later versions of pip
         with VirtualEnv(self, venv_dir):
             pkg = 'nose'
-            self.run_state('pip.removed', name=pkg, bin_env=venv_dir)
-            self.run_state('pip.installed', user_install=False, name=pkg, bin_env=venv_dir)
+            self.assertSaltTrueReturn(self.run_state('pip.removed', name=pkg, bin_env=venv_dir))
+            self.assertSaltTrueReturn(self.run_state('pip.installed', user_install=False, name=pkg, bin_env=venv_dir))
+
+            pkg_dirs = glob.glob(os.path.join(venv_dir, 'lib', '**', 'site-packages'))
+            self.assertEqual(len(pkg_dirs), 1)
+            site_pkg = pkg_dirs[0]
 
             # Check if the path exists instead of adding to sys.paths
             path = os.path.join(site_pkg, pkg)
-            location = os.path.lexists(path)
-            if location:
-                location = os.path.dirname(path)
+            self.assertTrue(os.path.lexists(path), '"{}" does not exist'.format(path))
+            location = os.path.dirname(path)
 
             # Check the USER_SITE relative to the virtualenv location
             # pip list without a user flag behaves as expected

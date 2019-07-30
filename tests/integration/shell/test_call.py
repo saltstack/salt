@@ -19,7 +19,7 @@ import logging
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import flaky, with_tempfile
 from tests.integration.utils import testprogram
@@ -34,6 +34,7 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-call'
@@ -150,7 +151,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         ]
         self.assertTrue(True in ['returnTOmaster' in a for a in master_out])
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     @flaky
     def test_issue_2731_masterless(self):

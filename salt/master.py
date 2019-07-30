@@ -983,7 +983,6 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.mkey = mkey
         self.key = key
         self.k_mtime = 0
-        self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
         self.stat_clock = time.time()
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.

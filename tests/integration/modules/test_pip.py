@@ -16,7 +16,7 @@ import tempfile
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.helpers import patched_environ
 
 # Import salt libs
@@ -26,12 +26,19 @@ import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
-@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipModuleTest(ModuleCase):
 
     def setUp(self):
         super(PipModuleTest, self).setUp()
+
+        # Restore the environ
+        def cleanup_environ(environ):
+            os.environ.clear()
+            os.environ.update(environ)
+
+        self.addCleanup(cleanup_environ, os.environ.copy())
 
         self.venv_test_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         # Remove the venv test directory

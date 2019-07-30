@@ -7,7 +7,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf, WAR_ROOM_SKIP
 from tests.support.mock import patch, call, NO_MOCK, NO_MOCK_REASON, MagicMock
 
 # Import Salt libraries
@@ -73,7 +73,7 @@ class LoadAuthTestCase(TestCase):
             format_call_mock.assert_has_calls((expected_ret,), any_order=True)
 
 
-@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class MasterACLTestCase(ModuleCase):
     '''
     A class to check various aspects of the publisher ACL system
@@ -583,7 +583,7 @@ class AuthACLTestCase(ModuleCase):
                                  }
         self.addCleanup(delattr, self, 'valid_clear_load')
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(salt.utils.platform.is_windows(), 'PAM eauth not available on Windows')
     def test_acl_simple_allow(self):
         self.clear.publish(self.valid_clear_load)

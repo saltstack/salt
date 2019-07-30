@@ -14,9 +14,11 @@ from tests.support.case import ShellCase
 
 # Import Salt libs
 import salt.utils.files
+from tests.support.unit import skipIf, WAR_ROOM_SKIP  # WAR ROOM temp import
 import salt.utils.stringutils
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class AutosignGrainsTest(ShellCase):
     '''
     Test autosigning minions based on grain values.

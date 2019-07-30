@@ -80,15 +80,14 @@ pycparser==2.19
 pycryptodome==3.8.1
 pycryptodomex==3.8.1 ; sys_platform == "win32"
 pycurl==7.43.0.2
-pygit2==0.28.1
 pylxd==2.2.9
 pymysql==0.9.3
 pyopenssl==19.0.0
 pyparsing==2.4.0          # via packaging
 pytest-helpers-namespace==2019.1.8
-pytest-salt-runtests-bridge==2019.6.14
-pytest-salt==2019.6.13
-pytest-tempdir==2018.8.11
+pytest-salt-runtests-bridge==2019.7.10
+pytest-salt==2019.7.20
+pytest-tempdir==2019.7.18
 pytest==4.6.4
 python-dateutil==2.8.0
 python-etcd==0.4.5
@@ -112,7 +111,7 @@ scandir==1.10.0           # via pathlib2
 sed==0.3.1
 setproctitle==1.1.10
 singledispatch==3.4.0.3
-six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, packaging, pathlib2, pygit2, pylxd, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
+six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, packaging, pathlib2, pylxd, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
 smmap2==2.0.5             # via gitdb2
 smmap==0.9.0
 strict-rfc3339==0.7

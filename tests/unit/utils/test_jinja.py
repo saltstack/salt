@@ -15,7 +15,7 @@ import tempfile
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import skipIf, WAR_ROOM_SKIP, TestCase
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, Mock
@@ -124,17 +124,27 @@ class TestSaltCacheLoader(TestCase):
         )
         self.opts = {
             'cachedir': self.tempdir,
+            'master_uri': 'localhost',
+            'file_client': 'local',
+            'file_ignore_regex': None,
+            'file_ignore_glob': None,
             'file_roots': {
                 'test': [self.template_dir]
             },
             'pillar_roots': {
                 'test': [self.template_dir]
-            }
+            },
+            'fileserver_backend': ['roots'],
+            'hash_type': 'md5',
+            'extension_modules': os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                'extmods'),
         }
         super(TestSaltCacheLoader, self).setUp()
 
     def tearDown(self):
         salt.utils.files.rm_rf(self.tempdir)
+        del self.opts
 
     def test_searchpath(self):
         '''
@@ -230,6 +240,36 @@ class TestSaltCacheLoader(TestCase):
         result = jinja.get_template('hello_include').render(a='Hi', b='Salt')
         self.assertEqual(result, 'Hey world !Hi Salt !')
 
+    def test_cached_file_client(self):
+        '''
+        Multiple instantiations of SaltCacheLoader use the cached file client
+        '''
+        with patch('salt.transport.client.ReqChannel.factory', Mock()):
+            loader_a = SaltCacheLoader(self.opts)
+            loader_b = SaltCacheLoader(self.opts)
+        assert loader_a._file_client is loader_b._file_client
+
+    def test_file_client_kwarg(self):
+        '''
+        A file client can be passed to SaltCacheLoader overriding the any
+        cached file client
+        '''
+        mfc = MockFileClient()
+        loader = SaltCacheLoader(self.opts, _file_client=mfc)
+        assert loader._file_client is mfc
+
+    def test_cache_loader_shutdown(self):
+        '''
+        The shudown method can be called without raising an exception when the
+        file_client does not have a destroy method
+        '''
+        mfc = MockFileClient()
+        assert not hasattr(mfc, 'destroy')
+        loader = SaltCacheLoader(self.opts, _file_client=mfc)
+        assert loader._file_client is mfc
+        # Shutdown method should not raise any exceptions
+        loader.shutdown()
+
 
 class TestGetTemplate(TestCase):
 
@@ -242,6 +282,7 @@ class TestGetTemplate(TestCase):
         )
         self.local_opts = {
             'cachedir': self.tempdir,
+            'master_uri': 'localhost',
             'file_client': 'local',
             'file_ignore_regex': None,
             'file_ignore_glob': None,
@@ -262,6 +303,8 @@ class TestGetTemplate(TestCase):
 
     def tearDown(self):
         salt.utils.files.rm_rf(self.tempdir)
+        del self.local_opts
+        del self.local_salt
 
     def test_fallback(self):
         '''
@@ -276,6 +319,7 @@ class TestGetTemplate(TestCase):
             )
         self.assertEqual(out, 'world' + os.linesep)
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_fallback_noloader(self):
         '''
         A Template with a filesystem loader is returned as fallback

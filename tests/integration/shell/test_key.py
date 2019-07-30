@@ -19,6 +19,7 @@ from salt.ext import six
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
+from tests.support.unit import skipIf, WAR_ROOM_SKIP  # WAR ROOM temp import
 import salt.utils.yaml
 
 USERA = 'saltdev'
@@ -26,6 +27,7 @@ USERA_PWD = 'saltdev'
 HASHED_USERA_PWD = '$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT.'
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
     '''
     Test salt-key script

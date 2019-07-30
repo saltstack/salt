@@ -7,7 +7,7 @@ import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
@@ -15,16 +15,17 @@ import salt.utils.platform
 import salt.utils.files
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class EnabledTest(ModuleCase):
     '''
     validate the use of shell processing for cmd.run on the salt command line
     and in templating
     '''
-    cmd = ("printf '%s\n' first second third | wc -l ; "
+    cmd = ("echo -e 'first\\nsecond\\nthird' | wc -l ; "
            "export SALTY_VARIABLE='saltines' && echo $SALTY_VARIABLE ; "
            "echo duh &> /dev/null")
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_shell_default_enabled(self):
         '''
@@ -34,14 +35,13 @@ class EnabledTest(ModuleCase):
         ret = self.run_function('cmd.run', [self.cmd])
         self.assertEqual(ret.strip(), enabled_ret)
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_shell_disabled(self):
         '''
         test shell disabled output for cmd.run
         '''
-        disabled_ret = ('first\nsecond\nthird\n|\nwc\n-l\n;\nexport\nSALTY_VARIABLE=saltines'
-                        '\n&&\necho\n$SALTY_VARIABLE\n;\necho\nduh\n&>\n/dev/null')
+        disabled_ret = ('first\nsecond\nthird | wc -l ; export SALTY_VARIABLE=saltines && echo $SALTY_VARIABLE ; echo duh &> /dev/null')
         ret = self.run_function('cmd.run', [self.cmd], python_shell=False)
         self.assertEqual(ret, disabled_ret)
 

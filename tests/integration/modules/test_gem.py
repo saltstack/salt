@@ -8,7 +8,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.helpers import destructiveTest
 
 # Import salt libs
@@ -30,6 +30,7 @@ def check_status():
 
 @destructiveTest
 @skipIf(not salt.utils.path.which('gem'), 'Gem is not available')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class GemModuleTest(ModuleCase):
     '''
     Validate gem module

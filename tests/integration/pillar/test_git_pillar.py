@@ -82,7 +82,7 @@ from tests.support.helpers import (
     skip_if_not_root
 )
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 # Import Salt libs
 import salt.utils.path
@@ -125,6 +125,7 @@ def _windows_or_mac():
     return salt.utils.platform.is_windows() or salt.utils.platform.is_darwin()
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class GitPythonMixin(object):
     '''
     GitPython doesn't support anything fancy in terms of authentication
@@ -545,6 +546,7 @@ class GitPythonMixin(object):
         )
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @destructiveTest
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
@@ -561,6 +563,7 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     passphrase = PASSWORD
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
@@ -574,6 +577,7 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
     pass
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
@@ -609,6 +613,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
         cls.ext_opts['password'] = cls.password
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @destructiveTest
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
@@ -2001,6 +2006,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
@@ -2434,6 +2440,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
