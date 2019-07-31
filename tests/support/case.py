@@ -255,6 +255,29 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         log.debug("Result of run_call for command '%s': %s", arg_str, ret)
         return ret
 
+    def run_function(
+        self,
+        function,
+        arg=(),
+        with_retcode=False,
+        catch_stderr=False,
+        local=False,
+        timeout=RUN_TIMEOUT,
+        **kwargs
+    ):
+        """
+        Execute function with salt-call.
+
+        This function is added for compatibility with ModuleCase. This makes it possible to use
+        decorators like @with_system_user.
+        """
+        arg_str = "{0} {1} {2}".format(
+            function,
+            " ".join((str(arg_) for arg_ in arg)),
+            " ".join(("{0}={1}".format(*item) for item in kwargs.items())),
+        )
+        return self.run_call(arg_str, with_retcode, catch_stderr, local, timeout)
+
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         """
         Execute salt-cloud
@@ -896,6 +919,7 @@ class SSHCase(ShellCase):
     def _arg_str(self, function, arg):
         return "{0} {1}".format(function, " ".join(arg))
 
+    # pylint: disable=arguments-differ
     def run_function(
         self, function, arg=(), timeout=180, wipe=True, raw=False, **kwargs
     ):
@@ -921,6 +945,7 @@ class SSHCase(ShellCase):
         except Exception:  # pylint: disable=broad-except
             return ret
 
+    # pylint: enable=arguments-differ
     def custom_roster(self, new_roster, data):
         """
         helper method to create a custom roster to use for a ssh test
