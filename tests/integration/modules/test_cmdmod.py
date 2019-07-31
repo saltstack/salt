@@ -287,14 +287,12 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(result, expected_result)
 
     @skip_if_not_root
-    @skipIf(salt.utils.platform.is_windows, 'skip windows, requires password')
+    @skipIf(salt.utils.platform.is_windows(), 'skip windows, requires password')
     def test_quotes_runas(self):
         '''
         cmd.run with quoted command
         '''
         cmd = '''echo 'SELECT * FROM foo WHERE bar="baz"' '''
-        if salt.utils.platform.is_darwin():
-            cmd = '''echo 'SELECT * FROM foo WHERE bar=\\"baz\\"' '''
 
         expected_result = 'SELECT * FROM foo WHERE bar="baz"'
 
@@ -303,6 +301,52 @@ class CMDModuleTest(ModuleCase):
         result = self.run_function('cmd.run_stdout', [cmd],
                                    runas=runas).strip()
         self.assertEqual(result, expected_result)
+
+    @skip_if_not_root
+    @skipIf(salt.utils.platform.is_windows(), 'skip windows, uses unix commands')
+    def test_avoid_injecting_shell_code_as_root(self):
+        '''
+        cmd.run should execute the whole command as the "runas" user, not
+        running substitutions as root.
+        '''
+        cmd = 'echo $(id -u)'
+
+        root_id = self.run_function('cmd.run_stdout', [cmd])
+        runas_root_id = self.run_function('cmd.run_stdout', [cmd], runas=this_user())
+        user_id = self.run_function('cmd.run_stdout', [cmd], runas=self.runas_usr)
+
+        self.assertNotEqual(user_id, root_id)
+        self.assertNotEqual(user_id, runas_root_id)
+        self.assertEqual(root_id, runas_root_id)
+
+    @skip_if_not_root
+    @skipIf(salt.utils.platform.is_windows(), 'skip windows, uses unix commands')
+    def test_cwd_runas(self):
+        '''
+        cmd.run should be able to change working directory correctly, whether
+        or not runas is in use.
+        '''
+        cmd = 'pwd'
+        tmp_cwd = tempfile.mkdtemp(dir=TMP)
+
+        cwd_normal = self.run_function('cmd.run_stdout', [cmd], cwd=tmp_cwd).rstrip('\n')
+        self.assertEqual(tmp_cwd, cwd_normal)
+
+        cwd_runas = self.run_function('cmd.run_stdout', [cmd], cwd=tmp_cwd, runas=self.runas_usr).rstrip('\n')
+        self.assertEqual(tmp_cwd, cwd_runas)
+
+    @skip_if_not_root
+    @skipIf(not salt.utils.platform.is_darwin(), 'applicable to MacOS only')
+    def test_runas_env(self):
+        '''
+        cmd.run should be able to change working directory correctly, whether
+        or not runas is in use.
+        '''
+        user_path = self.run_function('cmd.run_stdout', ['printf %s "$PATH"'], runas=self.runas_usr)
+        # XXX: Not sure of a better way. Environment starts out with
+        # /bin:/usr/bin and should be populated by path helper and the bash
+        # profile.
+        self.assertNotEqual("/bin:/usr/bin", user_path)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @skip_if_not_root
