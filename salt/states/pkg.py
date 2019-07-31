@@ -203,6 +203,10 @@ def _fulfills_version_string(installed_versions, version_conditions_string, igno
         the repository without enforcing a re-installation of the package.
         (Only applicable if only one strict version condition is specified E.G. version: 2.0.6~ubuntu3)
     '''
+    # stripping "with_origin" dict wrapper
+    if salt.utils.platform.is_freebsd():
+        if isinstance(installed_versions, dict) and 'version' in installed_versions:
+            installed_versions = installed_versions['version']
     version_conditions = _parse_version_string(version_conditions_string)
     for installed_version in installed_versions:
         fullfills_all = True
