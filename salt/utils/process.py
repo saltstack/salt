@@ -807,15 +807,17 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
         msg += '. Exiting'
         log.debug(msg)
         if HAS_PSUTIL:
-            if psutil.pid_exists(self.pid):
-                try:
-                    process = psutil.Process(self.pid)
-                    if hasattr(process, 'children'):
-                        for child in process.children(recursive=True):
+            try:
+                process = psutil.Process(self.pid)
+                if hasattr(process, 'children'):
+                    for child in process.children(recursive=True):
+                        try:
                             if child.is_running():
                                 child.terminate()
-                except psutil.NoSuchProcess:
-                    pass
+                        except psutil.NoSuchProcess:
+                            pass
+            except psutil.NoSuchProcess:
+                pass
         sys.exit(salt.defaults.exitcodes.EX_OK)
 
     def start(self):
