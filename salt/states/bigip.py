@@ -3351,36 +3351,32 @@ def create_irule(hostname, username, password, name, api_anonymous, partition=No
 
     # get the existing one
     existing = __salt__['bigip.list_irule'](hostname, username, password, name, partition)
+    return existing
+    # print(existing)
+    # # if it exists
+    # if existing["code"] == 200:
+    #     ret['result'] = True
+    #     ret['comment'] = 'An iRule by this name currently exists. No change made.'
 
-    # if it exists
-    if existing["code"] == 200:
-        modified = __salt__['bigip.modify_irule'](hostname, username, password, name, api_anonymous, partition)
-        # was the modification successful?
-        if modified['code'] == 200:
-            ret = _check_for_changes('iRule', ret, existing, modified)
-        # unable to update it
-        else:
-            ret = _load_result(modified, ret)
+    # # if it doesn't exist
+    # elif existing['code'] == 404:
+    #     response = __salt__['bigip.create_irule'](hostname, username, password, name, api_anonymous, partition)
 
-    # if it doesn't exist
-    elif existing['code'] == 404:
-        response = __salt__['bigip.create_irule'](hostname, username, password, name, api_anonymous, partition)
+    #     # check if successful
+    #     if response['code'] == 200:
+    #         ret['result'] = True
+    #         ret['changes']['old'] = {}
+    #         ret['changes']['new'] = response['content']
+    #         ret['comment'] = 'Monitor was successfully created.'
 
-        # check if successful
-        if response['code'] == 200:
-            ret['result'] = True
-            ret['changes']['old'] = {}
-            ret['changes']['new'] = response['content']
-            ret['comment'] = 'Monitor was successfully created.'
+    #     # unable to create it
+    #     else:
+    #         ret = _load_result(response, ret)
 
-        # unable to create it
-        else:
-            ret = _load_result(response, ret)
-
-    # an error occurred
-    else:
-        ret = _load_result(response, ret)
-    return ret
+    # # an error occurred
+    # else:
+    #     ret = _load_result(response, ret)
+    # return ret
 
 
 def delete_irule(hostname, username, password, name, partition=None):
