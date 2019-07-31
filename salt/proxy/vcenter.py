@@ -191,7 +191,6 @@ import os
 import salt.exceptions
 from salt.config.schemas.vcenter import VCenterProxySchema
 from salt.utils.dictupdate import merge
-from salt.utils.vmware import get_vsphere_client
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ['vcenter']
@@ -202,7 +201,6 @@ try:
     HAS_JSONSCHEMA = True
 except ImportError:
     HAS_JSONSCHEMA = False
-
 
 # Variables are scoped to this module so we can have persistent data
 # across calls to fns in here.
@@ -280,11 +278,10 @@ def init(opts):
                  'mehchanism \'userpass\'')
         try:
             username, password = find_credentials()
+            DETAILS['password'] = password
         except salt.exceptions.SaltSystemExit as err:
             log.critical('Error: %s', err)
             return False
-        else:
-            DETAILS['password'] = password
     return True
 
 
