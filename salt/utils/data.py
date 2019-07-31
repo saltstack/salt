@@ -384,7 +384,7 @@ def encode(data, encoding=None, errors='strict', keep=False,
     can be useful for cases where the data passed to this function is likely to
     contain binary blobs.
     '''
-    # Clean data object before decoding to avoid circular references
+    # Clean data object before encoding to avoid circular references
     data = _remove_circular_refs(data)
 
     if isinstance(data, Mapping):
@@ -419,7 +419,7 @@ def encode_dict(data, encoding=None, errors='strict', keep=False,
     '''
     Encode all string values to bytes
     '''
-    # Clean data object before decoding to avoid circular references
+    # Clean data object before encoding to avoid circular references
     data = _remove_circular_refs(data)
 
     rv = data.__class__() if preserve_dict_class else {}
@@ -475,7 +475,7 @@ def encode_list(data, encoding=None, errors='strict', keep=False,
     '''
     Encode all string values to bytes
     '''
-    # Clean data object before decoding to avoid circular references
+    # Clean data object before encoding to avoid circular references
     data = _remove_circular_refs(data)
 
     rv = []
