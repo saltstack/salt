@@ -38,6 +38,7 @@ import salt.ext.tornado.ioloop
 import salt.ext.tornado.web
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.pycrypto
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.ext import six
@@ -747,6 +748,17 @@ def with_system_user(
                                 username
                             )
                         )
+            if not salt.utils.platform.is_windows() and password is not None:
+                if salt.utils.platform.is_darwin():
+                    hashed_password = password
+                else:
+                    hashed_password = salt.utils.pycrypto.gen_hash(
+                        crypt_salt="SALTsalt", password=password
+                    )
+                hashed_password = "'{0}'".format(hashed_password)
+                add_pwd = cls.run_function(
+                    "shadow.set_password", [username, hashed_password]
+                )
 
             failure = None
             try:
