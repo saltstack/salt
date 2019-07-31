@@ -265,7 +265,12 @@ class IPCClient(object):
             encoding = None
         else:
             encoding = 'utf-8'
-        self.unpacker = msgpack.Unpacker(encoding=encoding)
+        unpack_args = {}
+        if msgpack.version >= (0, 5, 2):
+            unpack_args['raw'] = False
+        else:
+            unpack_args['encoding'] = encoding
+        self.unpacker = msgpack.Unpacker(**unpack_args)
 
     def connected(self):
         return self.stream is not None and not self.stream.closed()
