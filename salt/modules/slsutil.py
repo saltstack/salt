@@ -323,18 +323,18 @@ def banner(
 
     .. code-block:: jinja
 
-        {{ set copyright='This file may not be copied or distributed without the express permission of ACME Corp.' }}
-        {{ salt['slsutil.banner'](title='Copyright 2019 ACME Corp', text=copyright) }}
+        {{ set copyright='This file may not be copied or distributed without permission of SaltStack, Inc.' }}
+        {{ salt['slsutil.banner'](title='Copyright 2019 SaltStack, Inc.', text=copyright, width=60) }}
 
     .. code-block:: none
 
-        ########################################################################
-        #                                                                      #
-        #                       Copyright 2019 ACME Corp                       #
-        #                                                                      #
-        # This file may not be copied or distributed without the express       #
-        # permission of ACME Corp.                                             #
-        ########################################################################
+        ############################################################
+        #                                                          #
+        #              Copyright 2019 SaltStack, Inc.              #
+        #                                                          #
+        # This file may not be copied or distributed without       #
+        # permission of SaltStack, Inc.                            #
+        ############################################################
 
     """
 
