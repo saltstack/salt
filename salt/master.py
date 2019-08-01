@@ -1765,11 +1765,9 @@ class AESFuncs(TransportMethods):
         data = pillar.compile_pillar()
         self.fs_.update_opts()
         if self.opts.get("minion_data_cache", False):
-            self.masterapi.cache.store(
-                "minions/{}".format(load["id"]),
-                "data",
-                {"grains": load["grains"], "pillar": data},
-            )
+            self.masterapi.cache.store("grains", load["id"], load["grains"])
+            self.masterapi.cache.store("pillar", load["id"], data)
+
             if self.opts.get("minion_data_cache_events") is True:
                 self.event.fire_event(
                     {"Minion data cache refresh": load["id"]},
