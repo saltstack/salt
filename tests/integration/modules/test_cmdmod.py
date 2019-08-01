@@ -2,6 +2,7 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+from contextlib import contextmanager
 import os
 import sys
 import tempfile
@@ -43,11 +44,18 @@ class CMDModuleTest(ModuleCase):
         if salt.utils.platform.is_darwin():
             self.runas_usr = 'macsalttest'
 
-    def tearDown(self):
-        if self._testMethodName == 'test_runas':
-            if salt.utils.platform.is_darwin():
-                if self.runas_usr in self.run_function('user.info', [self.runas_usr]).values():
-                    self.run_function('user.delete', [self.runas_usr], remove=True)
+    @contextmanager
+    def _ensure_user_exists(self, name):
+        if name in self.run_function('user.info', [name]).values():
+            # User already exists; don't touch
+            yield
+        else:
+            # Need to create user for test
+            self.run_function('user.add', [name])
+            try:
+                yield
+            finally:
+                self.run_function('user.delete', [name], remove=True)
 
     def test_run(self):
         '''
@@ -302,6 +310,7 @@ class CMDModuleTest(ModuleCase):
                                    runas=runas).strip()
         self.assertEqual(result, expected_result)
 
+    @destructiveTest
     @skip_if_not_root
     @skipIf(salt.utils.platform.is_windows(), 'skip windows, uses unix commands')
     def test_avoid_injecting_shell_code_as_root(self):
@@ -313,12 +322,14 @@ class CMDModuleTest(ModuleCase):
 
         root_id = self.run_function('cmd.run_stdout', [cmd])
         runas_root_id = self.run_function('cmd.run_stdout', [cmd], runas=this_user())
-        user_id = self.run_function('cmd.run_stdout', [cmd], runas=self.runas_usr)
+        with self._ensure_user_exists(self.runas_usr):
+            user_id = self.run_function('cmd.run_stdout', [cmd], runas=self.runas_usr)
 
         self.assertNotEqual(user_id, root_id)
         self.assertNotEqual(user_id, runas_root_id)
         self.assertEqual(root_id, runas_root_id)
 
+    @destructiveTest
     @skip_if_not_root
     @skipIf(salt.utils.platform.is_windows(), 'skip windows, uses unix commands')
     def test_cwd_runas(self):
@@ -328,13 +339,16 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd = 'pwd'
         tmp_cwd = tempfile.mkdtemp(dir=TMP)
+        os.chmod(tmp_cwd, 0o711)
 
         cwd_normal = self.run_function('cmd.run_stdout', [cmd], cwd=tmp_cwd).rstrip('\n')
         self.assertEqual(tmp_cwd, cwd_normal)
 
-        cwd_runas = self.run_function('cmd.run_stdout', [cmd], cwd=tmp_cwd, runas=self.runas_usr).rstrip('\n')
+        with self._ensure_user_exists(self.runas_usr):
+            cwd_runas = self.run_function('cmd.run_stdout', [cmd], cwd=tmp_cwd, runas=self.runas_usr).rstrip('\n')
         self.assertEqual(tmp_cwd, cwd_runas)
 
+    @destructiveTest
     @skip_if_not_root
     @skipIf(not salt.utils.platform.is_darwin(), 'applicable to MacOS only')
     def test_runas_env(self):
@@ -342,7 +356,8 @@ class CMDModuleTest(ModuleCase):
         cmd.run should be able to change working directory correctly, whether
         or not runas is in use.
         '''
-        user_path = self.run_function('cmd.run_stdout', ['printf %s "$PATH"'], runas=self.runas_usr)
+        with self._ensure_user_exists(self.runas_usr):
+            user_path = self.run_function('cmd.run_stdout', ['printf %s "$PATH"'], runas=self.runas_usr)
         # XXX: Not sure of a better way. Environment starts out with
         # /bin:/usr/bin and should be populated by path helper and the bash
         # profile.
@@ -355,11 +370,8 @@ class CMDModuleTest(ModuleCase):
         '''
         Ensure that the env is the runas user's
         '''
-        if salt.utils.platform.is_darwin():
-            if self.runas_usr not in self.run_function('user.info', [self.runas_usr]).values():
-                self.run_function('user.add', [self.runas_usr])
-
-        out = self.run_function('cmd.run', ['env'], runas=self.runas_usr).splitlines()
+        with self._ensure_user_exists(self.runas_usr):
+            out = self.run_function('cmd.run', ['env'], runas=self.runas_usr).splitlines()
         self.assertIn('USER={0}'.format(self.runas_usr), out)
 
     @skipIf(not salt.utils.path.which_bin('sleep'), 'sleep cmd not installed')
