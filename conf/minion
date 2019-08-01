@@ -548,6 +548,11 @@
 #  - edit.vim
 #  - hyper
 #
+# List of grains to pass in start event when minion starts up:
+#start_event_grains:
+#  - machine_id
+#  - uuid
+#
 # Top file to execute if startup_states is 'top':
 #top_file: ''
 

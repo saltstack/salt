@@ -1253,6 +1253,7 @@ DEFAULT_MINION_OPTS = {
     'state_top_saltenv': None,
     'startup_states': '',
     'sls_list': [],
+    'start_event_grains': [],
     'top_file': '',
     'thoriumenv': None,
     'thorium_top': 'top.sls',
