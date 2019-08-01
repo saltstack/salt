@@ -26,6 +26,7 @@ from tests.support.unit import TestCase, skipIf
 # Import Salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.platform
 import salt.modules.zcbuildout as buildout
 import salt.modules.cmdmod as cmd
 
@@ -85,20 +86,36 @@ class Base(TestCase, LoaderModuleMockMixin):
                 log.debug('Failed to download %s', url)
         # creating a new setuptools install
         cls.ppy_st = os.path.join(cls.rdir, 'psetuptools')
-        cls.py_st = os.path.join(cls.ppy_st, 'bin', 'python')
+        if salt.utils.platform.is_windows():
+            cls.bin_st = os.path.join(cls.ppy_st, 'Scripts')
+            cls.py_st = os.path.join(cls.bin_st, 'python')
+        else:
+            cls.bin_st = os.path.join(cls.ppy_st, 'bin')
+            cls.py_st = os.path.join(cls.bin_st, 'python')
+        # `--no-site-packages` has been deprecated
+        # https://virtualenv.pypa.io/en/stable/reference/#cmdoption-no-site-packages
         subprocess.check_call([
             salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
-            '--no-site-packages',
             cls.ppy_st
         ])
         subprocess.check_call([
-            '{0}/bin/pip'.format(cls.ppy_st),
+            os.path.join(cls.bin_st, 'pip'),
             'install',
             '-U',
             'setuptools',
         ])
+        # distribute has been merged back in to setuptools as of v0.7. So, no
+        # need to upgrade distribute, but this seems to be the only way to get
+        # the binary in the right place
+        # https://packaging.python.org/key_projects/#setuptools
+        # Additionally, this part may fail if the certificate store is outdated
+        # on Windows, as it would be in a fresh installation for example. The
+        # following commands will fix that. This should be part of the golden
+        # images. (https://github.com/saltstack/salt-jenkins/pull/1479)
+        # certutil -generateSSTFromWU roots.sst
+        # powershell "(Get-ChildItem -Path .\roots.sst) | Import-Certificate -CertStoreLocation Cert:\LocalMachine\Root"
         subprocess.check_call([
-            '{0}/bin/easy_install'.format(cls.ppy_st),
+            os.path.join(cls.bin_st, 'easy_install'),
             '-U',
             'distribute',
         ])
@@ -131,7 +148,6 @@ class Base(TestCase, LoaderModuleMockMixin):
 
 @skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         "The 'virtualenv' packaged needs to be installed")
-@skip_if_binaries_missing(['tar'])
 class BuildoutTestCase(Base):
 
     @requires_network()
@@ -240,16 +256,16 @@ class BuildoutTestCase(Base):
         self.assertEqual(
             '',
             buildout._get_bootstrap_content(
-                os.path.join(self.tdir, '/non/existing'))
+                os.path.join(self.tdir, 'non', 'existing'))
         )
         self.assertEqual(
             '',
             buildout._get_bootstrap_content(
-                os.path.join(self.tdir, 'var/tb/1')))
+                os.path.join(self.tdir, 'var', 'tb', '1')))
         self.assertEqual(
-            'foo\n',
+            'foo{0}'.format(os.linesep),
             buildout._get_bootstrap_content(
-                os.path.join(self.tdir, 'var/tb/2')))
+                os.path.join(self.tdir, 'var', 'tb', '2')))
 
     @requires_network()
     def test_logger_clean(self):
@@ -287,14 +303,14 @@ class BuildoutTestCase(Base):
         result = sorted(
             [a.replace(ROOT, '') for a in buildout._find_cfgs(ROOT)])
         assertlist = sorted(
-            ['/buildout.cfg',
-             '/c/buildout.cfg',
-             '/etc/buildout.cfg',
-             '/e/buildout.cfg',
-             '/b/buildout.cfg',
-             '/b/bdistribute/buildout.cfg',
-             '/b/b2/buildout.cfg',
-             '/foo/buildout.cfg'])
+            [os.path.join(os.sep, 'buildout.cfg'),
+             os.path.join(os.sep, 'c', 'buildout.cfg'),
+             os.path.join(os.sep, 'etc', 'buildout.cfg'),
+             os.path.join(os.sep, 'e', 'buildout.cfg'),
+             os.path.join(os.sep, 'b', 'buildout.cfg'),
+             os.path.join(os.sep, 'b', 'bdistribute', 'buildout.cfg'),
+             os.path.join(os.sep, 'b', 'b2', 'buildout.cfg'),
+             os.path.join(os.sep, 'foo', 'buildout.cfg')])
         self.assertEqual(result, assertlist)
 
     @requires_network()
@@ -328,15 +344,16 @@ class BuildoutOnlineTestCase(Base):
     @classmethod
     def setUpClass(cls):
         super(BuildoutOnlineTestCase, cls).setUpClass()
-        cls.ppy_dis = os.path.join(cls.rdir, 'pdistibute')
+        cls.ppy_dis = os.path.join(cls.rdir, 'pdistribute')
         cls.ppy_blank = os.path.join(cls.rdir, 'pblank')
         cls.py_dis = os.path.join(cls.ppy_dis, 'bin', 'python')
         cls.py_blank = os.path.join(cls.ppy_blank, 'bin', 'python')
         # creating a distribute based install
         try:
+            # `--no-site-packages` has been deprecated
+            # https://virtualenv.pypa.io/en/stable/reference/#cmdoption-no-site-packages
             subprocess.check_call([
                 salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
-                '--no-site-packages',
                 '--no-setuptools',
                 '--no-pip',
                 cls.ppy_dis,
@@ -344,7 +361,6 @@ class BuildoutOnlineTestCase(Base):
         except subprocess.CalledProcessError:
             subprocess.check_call([
                 salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
-                '--no-site-packages',
                 cls.ppy.dis,
             ])
 
@@ -371,21 +387,19 @@ class BuildoutOnlineTestCase(Base):
                 'install',
             ])
 
-            # creating a blank based install
-            try:
-                subprocess.check_call([
-                    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
-                    '--no-site-packages',
-                    '--no-setuptools',
-                    '--no-pip',
-                    cls.ppy_blank,
-                ])
-            except subprocess.CalledProcessError:
-                subprocess.check_call([
-                    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
-                    '--no-site-packages',
-                    cls.ppy_blank,
-                ])
+        # creating a blank based install
+        try:
+            subprocess.check_call([
+                salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                '--no-setuptools',
+                '--no-pip',
+                cls.ppy_blank,
+            ])
+        except subprocess.CalledProcessError:
+            subprocess.check_call([
+                salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                cls.ppy_blank,
+            ])
 
     @requires_network()
     @skipIf(True, 'TODO this test should probably be fixed')
@@ -464,7 +478,7 @@ class BuildoutOnlineTestCase(Base):
         self.assertTrue(ret['status'])
         self.assertTrue('Creating directory' in out)
         self.assertTrue('Installing a.' in out)
-        self.assertTrue('psetuptools/bin/python bootstrap.py' in comment)
+        self.assertTrue('{0} bootstrap.py'.format(self.py_st) in comment)
         self.assertTrue('buildout -c buildout.cfg' in comment)
         ret = buildout.buildout(b_dir,
                                 parts=['a', 'b', 'c'],

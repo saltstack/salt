@@ -55,6 +55,7 @@ import multiprocessing
 
 import salt.utils.json
 import salt.utils.path
+import salt.utils.platform
 
 # Import tests support libs
 import tests.support.paths as paths
@@ -221,7 +222,7 @@ RUNTIME_VARS = RuntimeVars(
     TMP_PRODENV_STATE_TREE=paths.TMP_PRODENV_STATE_TREE,
     RUNNING_TESTS_USER=RUNNING_TESTS_USER,
     RUNTIME_CONFIGS={},
-    SHELL_TRUE_PATH=salt.utils.path.which('true'),
-    SHELL_FALSE_PATH=salt.utils.path.which('false'),
+    SHELL_TRUE_PATH=salt.utils.path.which('true') if not salt.utils.platform.is_windows() else 'cmd /c exit 0 > nul',
+    SHELL_FALSE_PATH=salt.utils.path.which('false') if not salt.utils.platform.is_windows() else 'cmd /c exit 1 > nul',
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------
