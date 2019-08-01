@@ -1283,6 +1283,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'state_top_saltenv': None,
     'startup_states': '',
     'sls_list': [],
+    'start_event_grains': [],
     'top_file': '',
     'thoriumenv': None,
     'thorium_top': 'top.sls',

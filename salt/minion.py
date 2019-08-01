@@ -1475,6 +1475,11 @@ class Minion(MinionBase):
         else:
             return
 
+        if self.opts['start_event_grains']:
+            grains_to_add = dict(
+                [(k, v) for k, v in six.iteritems(self.opts.get('grains', {})) if k in self.opts['start_event_grains']])
+            load['grains'] = grains_to_add
+
         if sync:
             try:
                 self._send_req_sync(load, timeout)
