@@ -242,8 +242,10 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
     def test_process_does_not_exist(self):
         def Process(pid):
             raise psutil.NoSuchProcess(pid)
+
         def target():
             os.kill(os.getpid(), signal.SIGTERM)
+
         try:
             with patch('psutil.Process', Process):
                 proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=target)
@@ -255,8 +257,10 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
     def test_process_children_do_not_exist(self):
         def children(*args, **kwargs):
             raise psutil.NoSuchProcess(1)
+
         def target():
             os.kill(os.getpid(), signal.SIGTERM)
+
         try:
             with patch('psutil.Process.children', children):
                 proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=target)
