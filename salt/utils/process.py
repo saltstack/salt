@@ -815,9 +815,17 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
                             if child.is_running():
                                 child.terminate()
                         except psutil.NoSuchProcess:
-                            pass
+                            log.warn(
+                                'Unable to kill child of process %d, it does '
+                                'not exist. My pid is %d',
+                                self.pid, os.getpid()
+                            )
             except psutil.NoSuchProcess:
-                pass
+                log.warn(
+                    'Unable to kill children of process %d, it does not exist.'
+                    'My pid is %d',
+                    self.pid, os.getpid()
+                )
         sys.exit(salt.defaults.exitcodes.EX_OK)
 
     def start(self):
