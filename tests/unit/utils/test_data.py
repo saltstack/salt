@@ -275,7 +275,7 @@ class DataTestCase(TestCase):
         self.assertDictEqual(ret, {'key': 'value', 'type': 'test1', 'self': None})
 
     def test_circular_refs_lists(self):
-        test_list = {'foo': [],}
+        test_list = {'foo': [], }
         test_list['foo'].append((test_list,))
         ret = salt.utils.data._remove_circular_refs(ob=test_list)
         self.assertDictEqual(ret, {'foo': [(None,)]})

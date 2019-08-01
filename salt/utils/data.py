@@ -12,6 +12,7 @@ import fnmatch
 import logging
 import re
 import functools
+import traceback
 
 try:
     from collections.abc import Mapping, MutableMapping, Sequence
@@ -176,10 +177,15 @@ def _remove_circular_refs(ob, _seen=None):
     :rtype:
         type(ob)
     '''
+
     if _seen is None:
         _seen = set()
     if id(ob) in _seen:
-        # circular reference, remove it.
+        # Here we caught a circular reference.
+        # Alert user and cleanup to continue.
+        msg = ('Caught a circular reference in data structure below. '
+               'Cleaning and continuing execution.\n')
+        log.exception(msg + '{}'.format(ob))
         return None
     _seen.add(id(ob))
     res = ob
