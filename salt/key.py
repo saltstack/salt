@@ -461,11 +461,12 @@ class Key:
                             )
                             continue
             cache = salt.cache.factory(self.opts)
-            clist = cache.list(self.ACC)
-            if clist:
-                for minion in clist:
-                    if minion not in minions and minion not in preserve_minions:
-                        cache.flush(f"{self.ACC}/{minion}")
+            for bank in ["grains", "pillar"]:
+                clist = cache.list(bank)
+                if clist:
+                    for minion in clist:
+                        if minion not in minions and minion not in preserve_minions:
+                            cache.flush(bank, minion)
 
     def check_master(self):
         """
