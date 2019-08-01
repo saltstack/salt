@@ -363,6 +363,30 @@ class CMDModuleTest(ModuleCase):
         # profile.
         self.assertNotEqual("/bin:/usr/bin", user_path)
 
+    @destructiveTest
+    @skip_if_not_root
+    @skipIf(not salt.utils.platform.is_darwin(), 'applicable to MacOS only')
+    def test_runas_complex_command_bad_cwd(self):
+        '''
+        cmd.run should not accidentally run parts of a complex command when
+        given a cwd which cannot be used by the user the command is run as.
+
+        Due to the need to use `su -l` to login to another user on MacOS, we
+        cannot cd into directories that the target user themselves does not
+        have execute permission for. To an extent, this test is testing that
+        buggy behaviour, but its purpose is to ensure that the greater bug of
+        running commands after failing to cd does not occur.
+        '''
+        tmp_cwd = tempfile.mkdtemp(dir=TMP)
+        os.chmod(tmp_cwd, 0o700)
+
+        with self._ensure_user_exists(self.runas_usr):
+            cmd_result = self.run_function('cmd.run_all', ['pwd; pwd; : $(echo "You have failed the test" >&2)'], cwd=tmp_cwd, runas=self.runas_usr)
+
+        self.assertEqual("", cmd_result['stdout'])
+        self.assertNotIn("You have failed the test", cmd_result['stderr'])
+        self.assertNotEqual(0, cmd_result['retcode'])
+
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @skip_if_not_root
     @destructiveTest
