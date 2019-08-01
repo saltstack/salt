@@ -10,7 +10,7 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class SyncRunnerTest(ShellCase):
         # Clean up?
         os.unlink(os.path.join(self.master_opts['root_dir'], 'extension_modules', 'auth', 'nullauth.py'))
 
-    @skipIf(True, 'WAR ROOM - this test is causing slow downs, skip until we find out why')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM - this test is causing slow downs, skip until we find out why')
     def test_sync_all_includes_auth(self):
         '''
         '''
