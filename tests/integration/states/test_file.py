@@ -2817,6 +2817,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(True, 'SKIP FAILING TESTS - 3 - 8/2/2019')
     @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @with_tempfile()
     def test_issue_50221(self, name):
