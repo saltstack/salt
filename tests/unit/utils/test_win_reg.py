@@ -638,7 +638,7 @@ class WinFunctionsTestCase(TestCase):
         vdata = 1
         result = win_reg.cast_vdata(vdata=vdata, vtype='REG_QWORD')
         if six.PY2:
-            self.assertTrue(isinstance(result, long))
+            self.assertTrue(isinstance(result, long))  # pylint: disable=incompatible-py3-code
         else:
             self.assertTrue(isinstance(result, int))
 
@@ -878,7 +878,7 @@ class WinFunctionsTestCase(TestCase):
             expected = {
                 'Deleted': [],
                 'Failed': ['\\'.join(['HKLM', FAKE_KEY]) + ' Unknown error']}
-            mock_error = MagicMock(side_effect=WindowsError('Unknown error'))
+            mock_error = MagicMock(side_effect=WindowsError('Unknown error'))  # pylint: disable=undefined-variable
             with patch('salt.utils.win_reg.win32api.RegDeleteKey', mock_error):
                 self.assertDictEqual(
                     win_reg.delete_key_recursive(
