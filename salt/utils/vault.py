@@ -16,6 +16,7 @@ import requests
 import salt.crypt
 import salt.exceptions
 import salt.utils.versions
+import time
 
 log = logging.getLogger(__name__)
 logging.getLogger("requests").setLevel(logging.WARNING)
@@ -43,6 +44,9 @@ def _get_token_and_url_from_master():
     '''
     minion_id = __grains__['id']
     pki_dir = __opts__['pki_dir']
+    # Allow us to over ride salt-master settings/defaults
+    uses = __opts__.get('vault', {}).get('auth', {}).get('uses', None)
+    ttl = __opts__.get('vault', {}).get('auth', {}).get('ttl', None
 
     # When rendering pillars, the module executes on the master, but the token
     # should be issued for the minion, so that the correct policies are applied
@@ -56,7 +60,7 @@ def _get_token_and_url_from_master():
         ))
         result = __salt__['publish.runner'](
             'vault.generate_token',
-            arg=[minion_id, signature]
+            arg=[minion_id, signature, False, ttl, uses]
         )
     else:
         private_key = '{0}/master.pem'.format(pki_dir)
@@ -70,7 +74,9 @@ def _get_token_and_url_from_master():
             'vault.generate_token',
             minion_id=minion_id,
             signature=signature,
-            impersonated_by_master=True
+            impersonated_by_master=True,
+            ttl=ttl,
+            uses=uses
         )
 
     if not result:
@@ -127,7 +133,9 @@ def get_vault_connection():
             return {
                 'url': __opts__['vault']['url'],
                 'token': __opts__['vault']['auth']['token'],
-                'verify': __opts__['vault'].get('verify', None)
+                'verify': __opts__['vault'].get('verify', None),
+                'issued': int(round(time.time())),
+                'ttl': 3600
             }
         except KeyError as err:
             errmsg = 'Minion has "vault" config section, but could not find key "{0}" within'.format(err.message)
@@ -150,15 +158,41 @@ def make_request(method, resource, token=None, vault_url=None, get_token_url=Fal
     '''
     Make a request to Vault
     '''
-    if not token or not vault_url:
-        connection = get_vault_connection()
-        token, vault_url = connection['token'], connection['url']
-        if 'verify' not in args:
-            args['verify'] = connection['verify']
+    cache_key = 'salt_vault_token'
+    if cache_key in __context__:
+        log.debug('Found cached token')
+
+        # We drop 10 seconds just be safe
+        tee10 = __context__[cache_key]['issued'] + __context__[cache_key]['lease_duration'] - 10
+        tee0 = int(round(time.time()))
+
+        if __context__[cache_key].get('uses', 1) <= 0:
+            log.debug('Cached token has no more uses left {}: DELETING'.format(__context__[cache_key]['uses']))
+            del(__context__[cache_key])
+        else:
+            log.debug('Token has {} uses left'.format(__context__[cache_key].get('uses','infinity')))
+
+        if __context__.get(cache_key, False) and tee10 < tee0:
+            log.debug('Cached token has expired {} < {}: DELETING'.format(tee10, tee0))
+            del(__context__[cache_key])
+        elif __context__.get(cache_key, False):
+            log.debug('Token has not expired {} > {}'.format(tee10, tee0))
+
+    if cache_key not in __context__:
+        log.debug('Getting new token')
+        __context__[cache_key] = _get_vault_connection()
+
+    token = __context__[cache_key]['token'] if not token else token
+    vault_url = __context__[cache_key]['url'] if not vault_url else vault_url
+    args['verify'] = connection['verify'] if 'verify' not in args else arg['verify']
 
     url = "{0}/{1}".format(vault_url, resource)
     headers = {'X-Vault-Token': token, 'Content-Type': 'application/json'}
     response = requests.request(method, url, headers=headers, **args)
+
+    if __context__[cache_key].get('uses', None):
+        log.debug('Decrementing use limited token')
+        __context__[cache_key]['uses'] -= 1
 
     if get_token_url:
         return response, token, vault_url
