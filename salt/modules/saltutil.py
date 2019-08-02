@@ -998,7 +998,13 @@ def is_running(fun):
     run = running()
     ret = []
     for data in run:
-        if fnmatch.fnmatch(data.get('fun', ''), fun):
+        functionData = data.get('fun', '')
+        if isinstance(functionData, list):
+            for functionItem in functionData:
+                if fnmatch.fnmatch(functionItem, fun):
+                    ret.append(data)
+                    break
+        elif fnmatch.fnmatch(data.get('fun', ''), fun):
             ret.append(data)
     return ret
 
