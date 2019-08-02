@@ -14,6 +14,10 @@ from tests.support.unit import TestCase
 # Import Salt Libs
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.win_pkg as win_pkg
+import salt.utils.win_reg as win_reg
+
+# Import 3rd Party Libs
+from salt.ext import six
 
 
 class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
@@ -52,6 +56,12 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                     'pkg_resource.sort_pkglist': pkg_resource.sort_pkglist,
                     'pkg_resource.stringify': pkg_resource.stringify,
                 },
+                '__utils__': {
+                    'reg.key_exists': win_reg.key_exists,
+                    'reg.list_keys': win_reg.list_keys,
+                    'reg.read_value': win_reg.read_value,
+                    'reg.value_exists': win_reg.value_exists,
+                },
             },
             pkg_resource: {
                 '__grains__': {
@@ -59,6 +69,16 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                 }
             },
         }
+
+    def test_pkg__get_reg_software(self):
+        result = win_pkg._get_reg_software()
+        self.assertTrue(isinstance(result, dict))
+        found_python = False
+        search = 'Python 2' if six.PY2 else 'Python 3'
+        for key in result:
+            if search in key:
+                found_python = True
+        self.assertTrue(found_python)
 
     def test_pkg_install_not_found(self):
         '''
