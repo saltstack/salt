@@ -361,13 +361,9 @@ def list_keys(hive, key=None, use_32bit_registry=False):
     return subkeys
 
 
-def list_values(hive, key=None, use_32bit_registry=False):
+def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
     '''
     Enumerates the values in a registry key or hive.
-
-    .. note::
-        The ``(Default)`` value will only be returned if it is set, otherwise it
-        will not be returned in the list of values.
 
     Args:
 
@@ -387,6 +383,9 @@ def list_values(hive, key=None, use_32bit_registry=False):
         use_32bit_registry (bool):
             Accesses the 32bit portion of the registry on 64 bit installations.
             On 32bit machines this is ignored.
+
+        include_default (bool):
+            Toggle whether to include the '(Default)' value.
 
     Returns:
         list: A list of values under the hive or key.
