@@ -50,6 +50,7 @@ def __has_required_azure():
     return False
 
 
+@skipIf(True, 'WAR ROOM 8/1/2019, flaky cloud test')
 @skipIf(HAS_AZURE is False, 'These tests require the Azure Python SDK to be installed.')
 @skipIf(__has_required_azure() is False, 'The Azure Python SDK must be >= 0.11.1.')
 class AzureTest(ShellCase):
