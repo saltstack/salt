@@ -415,6 +415,7 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
         # If masterless, fetch the remotes. We'll need to remove this once
         # we make the minion daemon able to run standalone.
         git_pillar.fetch_remotes()
+    git_pillar.global_lock()
     git_pillar.checkout()
     ret = {}
     merge_strategy = __opts__.get(

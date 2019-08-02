@@ -3045,6 +3045,61 @@ class GitPillar(GitBase):
                 else:
                     self.pillar_dirs[cachedir] = env
 
+    @contextlib.contextmanager
+    def global_lock(self, timeout=0, poll_interval=0.5):
+        '''
+        Set and automatically clear a lock on all the repos
+        '''
+        if not isinstance(lock_type, six.string_types):
+            raise GitLockError(
+                errno.EINVAL,
+                'Invalid lock_type \'{0}\''.format(lock_type)
+            )
+
+        # Make sure that we have a positive integer timeout, otherwise just set
+        # it to zero.
+        try:
+            timeout = int(timeout)
+        except ValueError:
+            timeout = 0
+        else:
+            if timeout < 0:
+                timeout = 0
+
+        if not isinstance(poll_interval, (six.integer_types, float)) \
+                or poll_interval < 0:
+            poll_interval = 0.5
+
+        if poll_interval > timeout:
+            poll_interval = timeout
+
+        locked_repo = []
+        try:
+            time_start = time.time()
+            for repo in self.remotes:
+                while True:
+                    try:
+                        repo._lock(lock_type='global', failhard=True)
+                        locked_repo.append(repo)
+                        yield
+                        # Break out of his loop once we've yielded the lock, to
+                        # avoid continued attempts to iterate and establish lock
+                        break
+                    except (OSError, IOError, GitLockError) as exc:
+                        if not timeout or time.time() - time_start > timeout:
+                            raise GitLockError(exc.errno, exc.strerror)
+                        else:
+                            log.debug(
+                                'A %s lock is already present for %s remote '
+                                '\'%s\', sleeping %f second(s)',
+                                lock_type, self.role, self.id, poll_interval
+                            )
+                            time.sleep(poll_interval)
+                            continue
+        finally:
+            for repo in locked_repo:
+                repo.clear_lock(lock_type='global')
+
     def link_mountpoint(self, repo):
         '''
         Ensure that the mountpoint is present in the correct location and
