@@ -65,6 +65,7 @@ class EC2Test(ShellCase):
             return name
         return self._fetch_latest_installer()
 
+    @skipIf(True, 'WAR ROOM 8/1/2019, flaky cloud test')
     @expensiveTest
     def setUp(self):
         '''
