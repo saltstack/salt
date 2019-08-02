@@ -740,6 +740,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             self.send_error(401)
             # return since we don't want to execute any more
             return
+        self.set_cookie(AUTH_COOKIE_NAME, token['token'])
 
         # Grab eauth config for the current backend for the current user
         try:

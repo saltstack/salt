@@ -536,6 +536,8 @@ class TestSaltAuthHandler(SaltnadoTestCase):
 
         self.assertEqual(response.code, 200)
         response_obj = salt.utils.json.loads(response.body)['return'][0]
+        token = response_obj['token']
+        self.assertEqual(response.cookies['session_id'], token)
         self.assertEqual(sorted(response_obj['perms']), sorted(self.opts['external_auth']['auto'][self.auth_creds_dict['username']]))
         self.assertIn('token', response_obj)  # TODO: verify that its valid?
         self.assertEqual(response_obj['user'], self.auth_creds_dict['username'])
@@ -549,6 +551,8 @@ class TestSaltAuthHandler(SaltnadoTestCase):
 
         self.assertEqual(response.code, 200)
         response_obj = salt.utils.json.loads(response.body)['return'][0]
+        token = response_obj['token']
+        self.assertEqual(response.cookies['session_id'], token)
         self.assertEqual(sorted(response_obj['perms']), sorted(self.opts['external_auth']['auto'][self.auth_creds_dict['username']]))
         self.assertIn('token', response_obj)  # TODO: verify that its valid?
         self.assertEqual(response_obj['user'], self.auth_creds_dict['username'])
@@ -562,6 +566,8 @@ class TestSaltAuthHandler(SaltnadoTestCase):
 
         self.assertEqual(response.code, 200)
         response_obj = salt.utils.json.loads(response.body)['return'][0]
+        token = response_obj['token']
+        self.assertEqual(response.cookies['session_id'], token)
         self.assertEqual(sorted(response_obj['perms']), sorted(self.opts['external_auth']['auto'][self.auth_creds_dict['username']]))
         self.assertIn('token', response_obj)  # TODO: verify that its valid?
         self.assertEqual(response_obj['user'], self.auth_creds_dict['username'])
