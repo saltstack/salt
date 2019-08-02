@@ -5,7 +5,6 @@ The function cache system allows for data to be stored on the master so it can b
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import copy
 import logging
 import time
 import traceback
@@ -17,6 +16,9 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.network
 import salt.transport.client
+import salt.utils.mine
+import salt.utils.minions
+import salt.utils.dictupdate
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
@@ -83,6 +85,36 @@ def _mine_get(load, opts):
     return ret
 
 
+def _mine_store(
+        mine_data,
+        clear=False):
+    '''
+    Helper function to store the provided mine data.
+    This will store either locally in the cache (for masterless setups), or in
+    the master's cache.
+
+    :param dict mine_data: Dictionary with function_name: function_data to store.
+    :param bool clear: Whether or not to clear (`True`) the mine data for the
+        function names present in ``mine_data``, or update it (`False`).
+    '''
+    # Store in the salt-minion's local cache
+    if __opts__['file_client'] == 'local':
+        if not clear:
+            old = __salt__['data.get']('mine_cache')
+            if isinstance(old, dict):
+                old.update(mine_data)
+                mine_data = old
+        return __salt__['data.update']('mine_cache', mine_data)
+    # Store on the salt master
+    load = {
+        'cmd': '_mine',
+        'data': mine_data,
+        'id': __opts__['id'],
+        'clear': clear,
+    }
+    return _mine_send(load, __opts__)
+
+
 def update(clear=False, mine_functions=None):
     '''
     Execute the configured functions and send the data back up to the master.
@@ -98,12 +130,15 @@ def update(clear=False, mine_functions=None):
 
     This function accepts the following arguments:
 
-    clear: False
-        Boolean flag specifying whether updating will clear the existing
-        mines, or will update. Default: `False` (update).
+    :param bool clear: Default: ``False``
+        Specifies whether updating will clear the existing values (``True``), or
+        whether it will update them (``False``).
 
-    mine_functions
-        Update the mine data on certain functions only.
+    :param dict mine_functions:
+        Update (or clear, see ``clear``) the mine data on these functions only.
+        This will need to have the structure as defined on
+        https://docs.saltstack.com/en/latest/topics/mine/index.html#mine-functions
+
         This feature can be used when updating the mine for functions
         that require refresh at different intervals than the rest of
         the functions specified under `mine_functions` in the
@@ -133,64 +168,66 @@ def update(clear=False, mine_functions=None):
 
         salt '*' mine.update
     '''
-    m_data = {}
     if not mine_functions:
-        m_data = __salt__['config.merge']('mine_functions', {})
+        mine_functions = __salt__['config.merge']('mine_functions', {})
         # If we don't have any mine functions configured, then we should just bail out
-        if not m_data:
+        if not mine_functions:
             return
-    elif mine_functions and isinstance(mine_functions, list):
-        m_data = dict((fun, {}) for fun in mine_functions)
-    elif mine_functions and isinstance(mine_functions, dict):
-        m_data = mine_functions
+    elif isinstance(mine_functions, list):
+        mine_functions = dict((fun, {}) for fun in mine_functions)
+    elif isinstance(mine_functions, dict):
+        pass
     else:
         return
 
-    data = {}
-    for func in m_data:
+    mine_data = {}
+    for function_alias, function_data in six.iteritems(mine_functions):
+        function_name, function_args, function_kwargs, minion_acl = \
+            salt.utils.mine.parse_function_definition(function_data)
+        if not _mine_function_available(function_name or function_alias):
+            continue
         try:
-            if m_data[func] and isinstance(m_data[func], dict):
-                mine_func = m_data[func].pop('mine_function', func)
-                if not _mine_function_available(mine_func):
-                    continue
-                data[func] = __salt__[mine_func](**m_data[func])
-            elif m_data[func] and isinstance(m_data[func], list):
-                mine_func = func
-                if isinstance(m_data[func][0], dict) and 'mine_function' in m_data[func][0]:
-                    mine_func = m_data[func][0]['mine_function']
-                    m_data[func].pop(0)
-
-                if not _mine_function_available(mine_func):
-                    continue
-                data[func] = __salt__[mine_func](*m_data[func])
-            else:
-                if not _mine_function_available(func):
-                    continue
-                data[func] = __salt__[func]()
+            res = salt.utils.functools.call_function(
+                __salt__[function_name or function_alias],
+                func_args=function_args,
+                **function_kwargs
+            )
         except Exception:
             trace = traceback.format_exc()
-            log.error('Function %s in mine_functions failed to execute', func)
+            log.error('Function %s in mine.update failed to execute', function_name or function_alias)
             log.debug('Error: %s', trace)
             continue
-    if __opts__['file_client'] == 'local':
-        if not clear:
-            old = __salt__['data.get']('mine_cache')
-            if isinstance(old, dict):
-                old.update(data)
-                data = old
-        return __salt__['data.update']('mine_cache', data)
-    load = {
-            'cmd': '_mine',
-            'data': data,
-            'id': __opts__['id'],
-            'clear': clear,
-    }
-    return _mine_send(load, __opts__)
+        mine_data[function_alias] = salt.utils.mine.wrap_acl_structure(
+            res,
+            **minion_acl
+        )
+    return _mine_store(mine_data, clear)
 
 
-def send(func, *args, **kwargs):
+def send(name, mine_function=None, allow_tgt=None, allow_tgt_type=None, *args, **kwargs):  # pylint: disable=W1113
     '''
-    Send a specific function to the mine.
+    Send a specific function and its result to the salt mine.
+    This gets stored in either the local cache, or the salt master's cache.
+
+    :param str name: Name of the function to add to the mine.
+    :param str mine_function: The name of the execution_module.function to run
+        and whose value will be stored in the salt mine. Defaults to ``name``.
+    :param str allow_tgt: Targeting specification for ACL. Specifies which minions
+        are allowed to access this function.
+    :param str allow_tgt_type: Type of the targeting specification. This value will
+        be ignored if ``allow_tgt`` is not specified.
+    :param list args: args to pass to the function.
+    :param dict kwargs: kwargs to pass to the function.
+
+    :rtype: bool
+    :return: Whether executing the function and storing the information was succesful.
+
+    .. versionchanged:: Sodium
+
+        Added ``allow_tgt``- and ``allow_tgt_type``-parameters to specify which
+        minions are allowed to access this function.
+        See https://docs.saltstack.com/en/latest/topics/targeting/ for more information
+        about targeting.
 
     CLI Example:
 
@@ -198,48 +235,27 @@ def send(func, *args, **kwargs):
 
         salt '*' mine.send network.ip_addrs eth0
         salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0
+        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0 allow_tgt='G@grain:value' allow_tgt_type=compound
     '''
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    mine_func = kwargs.pop('mine_function', func)
-    if mine_func not in __salt__:
-        return False
-    data = {}
-    arg_data = salt.utils.args.arg_lookup(__salt__[mine_func])
-    func_data = copy.deepcopy(kwargs)
-    for ind, _ in enumerate(arg_data.get('args', [])):
-        try:
-            func_data[arg_data['args'][ind]] = args[ind]
-        except IndexError:
-            # Safe error, arg may be in kwargs
-            pass
-    f_call = salt.utils.args.format_call(
-        __salt__[mine_func],
-        func_data,
-        expected_extra_kws=MINE_INTERNAL_KEYWORDS)
-    for arg in args:
-        if arg not in f_call['args']:
-            f_call['args'].append(arg)
+    mine_data = {}
     try:
-        if 'kwargs' in f_call:
-            data[func] = __salt__[mine_func](*f_call['args'], **f_call['kwargs'])
-        else:
-            data[func] = __salt__[mine_func](*f_call['args'])
+        res = salt.utils.functools.call_function(
+            __salt__[mine_function or name],
+            func_args=args,
+            **kwargs
+        )
     except Exception as exc:
-        log.error('Function %s in mine.send failed to execute: %s',
-                  mine_func, exc)
+        trace = traceback.format_exc()
+        log.error('Function %s in mine.send failed to execute', mine_function or name)
+        log.debug('Error: %s', trace)
         return False
-    if __opts__['file_client'] == 'local':
-        old = __salt__['data.get']('mine_cache')
-        if isinstance(old, dict):
-            old.update(data)
-            data = old
-        return __salt__['data.update']('mine_cache', data)
-    load = {
-            'cmd': '_mine',
-            'data': data,
-            'id': __opts__['id'],
-    }
-    return _mine_send(load, __opts__)
+    mine_data[name] = salt.utils.mine.wrap_acl_structure(
+        res,
+        allow_tgt=allow_tgt,
+        allow_tgt_type=allow_tgt_type
+    )
+    return _mine_store(mine_data)
 
 
 def get(tgt,
@@ -292,6 +308,7 @@ def get(tgt,
                 fun='network.ip_addrs',
                 tgt_type='glob') %}
     '''
+    # Load from local minion's cache
     if __opts__['file_client'] == 'local':
         ret = {}
         is_target = {'glob': __salt__['match.glob'],
@@ -304,44 +321,58 @@ def get(tgt,
                      'pillar': __salt__['match.pillar'],
                      'pillar_pcre': __salt__['match.pillar_pcre'],
                      }[tgt_type](tgt)
-        if is_target:
-            data = __salt__['data.get']('mine_cache')
+        if not is_target:
+            return ret
 
-            if isinstance(data, dict):
-                if isinstance(fun, six.string_types):
-                    functions = list(set(fun.split(',')))
-                    _ret_dict = len(functions) > 1
-                elif isinstance(fun, list):
-                    functions = fun
-                    _ret_dict = True
-                else:
-                    return {}
+        data = __salt__['data.get']('mine_cache')
+        if not isinstance(data, dict):
+            return ret
 
-                if not _ret_dict and functions and functions[0] in data:
-                    ret[__opts__['id']] = data.get(functions)
-                elif _ret_dict:
-                    for fun in functions:
-                        if fun in data:
-                            ret.setdefault(fun, {})[__opts__['id']] = data.get(fun)
+        if isinstance(fun, six.string_types):
+            functions = list(set(fun.split(',')))
+            _ret_dict = len(functions) > 1
+        elif isinstance(fun, list):
+            functions = fun
+            _ret_dict = True
+        else:
+            return ret
 
+        for function in functions:
+            if function not in data:
+                continue
+            # If this is a mine item with minion_side_ACL, get its data
+            if salt.utils.mine.MINE_ITEM_ACL_ID in data[function]:
+                res = data[function][salt.utils.mine.MINE_ITEM_ACL_DATA]
+            else:
+                # Backwards compatibility with non-ACL mine data.
+                res = data[function]
+            if _ret_dict:
+                ret.setdefault(function, {})[__opts__['id']] = res
+            else:
+                ret[__opts__['id']] = res
         return ret
+
+    # Load from master
     load = {
-            'cmd': '_mine_get',
-            'id': __opts__['id'],
-            'tgt': tgt,
-            'fun': fun,
-            'tgt_type': tgt_type,
+        'cmd': '_mine_get',
+        'id': __opts__['id'],
+        'tgt': tgt,
+        'fun': fun,
+        'tgt_type': tgt_type,
     }
     ret = _mine_get(load, __opts__)
-    if exclude_minion:
-        if __opts__['id'] in ret:
-            del ret[__opts__['id']]
+    if exclude_minion and __opts__['id'] in ret:
+        del ret[__opts__['id']]
     return ret
 
 
 def delete(fun):
     '''
-    Remove specific function contents of minion. Returns True on success.
+    Remove specific function contents of minion.
+
+    :param str fun: The name of the function.
+    :rtype: bool
+    :return: True on success.
 
     CLI Example:
 
@@ -355,16 +386,19 @@ def delete(fun):
             del data[fun]
         return __salt__['data.update']('mine_cache', data)
     load = {
-            'cmd': '_mine_delete',
-            'id': __opts__['id'],
-            'fun': fun,
+        'cmd': '_mine_delete',
+        'id': __opts__['id'],
+        'fun': fun,
     }
     return _mine_send(load, __opts__)
 
 
 def flush():
     '''
-    Remove all mine contents of minion. Returns True on success.
+    Remove all mine contents of minion.
+
+    :rtype: bool
+    :return: True on success
 
     CLI Example:
 
@@ -375,8 +409,8 @@ def flush():
     if __opts__['file_client'] == 'local':
         return __salt__['data.update']('mine_cache', {})
     load = {
-            'cmd': '_mine_flush',
-            'id': __opts__['id'],
+        'cmd': '_mine_flush',
+        'id': __opts__['id'],
     }
     return _mine_send(load, __opts__)
 
@@ -499,30 +533,21 @@ def valid():
 
         salt '*' mine.valid
     '''
-    m_data = __salt__['config.merge']('mine_functions', {})
+    mine_functions = __salt__['config.merge']('mine_functions', {})
     # If we don't have any mine functions configured, then we should just bail out
-    if not m_data:
+    if not mine_functions:
         return
 
-    data = {}
-    for func in m_data:
-        if m_data[func] and isinstance(m_data[func], dict):
-            mine_func = m_data[func].pop('mine_function', func)
-            if not _mine_function_available(mine_func):
-                continue
-            data[func] = {mine_func: m_data[func]}
-        elif m_data[func] and isinstance(m_data[func], list):
-            mine_func = func
-            if isinstance(m_data[func][0], dict) and 'mine_function' in m_data[func][0]:
-                mine_func = m_data[func][0]['mine_function']
-                m_data[func].pop(0)
-
-            if not _mine_function_available(mine_func):
-                continue
-            data[func] = {mine_func: m_data[func]}
+    mine_data = {}
+    for function_alias, function_data in six.iteritems(mine_functions):
+        function_name, function_args, function_kwargs, minion_acl = \
+            salt.utils.mine.parse_function_definition(function_data)
+        if not _mine_function_available(function_name or function_alias):
+            continue
+        if function_name:
+            mine_data[function_alias] = {
+                function_name: function_args + [{key, value} for key, value in six.iteritems(function_kwargs)]
+            }
         else:
-            if not _mine_function_available(func):
-                continue
-            data[func] = m_data[func]
-
-    return data
+            mine_data[function_alias] = function_data
+    return mine_data
