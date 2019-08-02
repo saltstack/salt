@@ -35,6 +35,7 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.gitfs
 import salt.utils.verify
+import salt.utils.mine
 import salt.utils.minions
 import salt.utils.gzip_util
 import salt.utils.jid
@@ -643,23 +644,43 @@ class RemoteFuncs(object):
                 greedy=False
                 )
         minions = _res['minions']
+        minion_side_acl = {}  # Cache minion-side ACL
         for minion in minions:
-            fdata = self.cache.fetch('minions/{0}'.format(minion), 'mine')
-
-            if not isinstance(fdata, dict):
+            mine_data = self.cache.fetch('minions/{0}'.format(minion), 'mine')
+            if not isinstance(mine_data, dict):
                 continue
-
-            if not _ret_dict and functions_allowed and functions_allowed[0] in fdata:
-                ret[minion] = fdata.get(functions_allowed[0])
-            elif _ret_dict:
-                for fun in list(set(functions_allowed) & set(fdata.keys())):
-                    ret.setdefault(fun, {})[minion] = fdata.get(fun)
-
+            for function in functions_allowed:
+                if function not in mine_data:
+                    continue
+                mine_entry = mine_data[function]
+                mine_result = mine_data[function]
+                if isinstance(mine_entry, dict) and salt.utils.mine.MINE_ITEM_ACL_ID in mine_entry:
+                    mine_result = mine_entry[salt.utils.mine.MINE_ITEM_ACL_DATA]
+                    # Check and fill minion-side ACL cache
+                    if function not in minion_side_acl.get(minion, {}):
+                        if 'allow_tgt' in mine_entry:
+                            # Only determine allowed targets if any have been specified.
+                            # This prevents having to add a list of all minions as allowed targets.
+                            salt.utils.dictupdate.set_dict_key_value(
+                                minion_side_acl,
+                                '{}:{}'.format(minion, function),
+                                checker.check_minions(
+                                    mine_entry['allow_tgt'],
+                                    mine_entry.get('allow_tgt_type', 'glob')
+                                )['minions']
+                            )
+                if salt.utils.mine.minion_side_acl_denied(minion_side_acl, minion, function, load['id']):
+                    continue
+                if _ret_dict:
+                    ret.setdefault(function, {})[minion] = mine_result
+                else:
+                    # There is only one function in functions_allowed.
+                    ret[minion] = mine_result
         return ret
 
     def _mine(self, load, skip_verify=False):
         '''
-        Return the mine data
+        Store/update the mine data in cache.
         '''
         if not skip_verify:
             if 'id' not in load or 'data' not in load:
@@ -667,12 +688,13 @@ class RemoteFuncs(object):
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cbank = 'minions/{0}'.format(load['id'])
             ckey = 'mine'
+            new_data = load['data']
             if not load.get('clear', False):
-                data = self.cache.fetch(cbank, ckey)
-                if isinstance(data, dict):
-                    data.update(load['data'])
-                    load['data'] = data
-            self.cache.store(cbank, ckey, load['data'])
+                current_data = self.cache.fetch(cbank, ckey)
+                if isinstance(current_data, dict):
+                    current_data.update(new_data)
+                    new_ddata = current_data
+            self.cache.store(cbank, ckey, new_data)
         return True
 
     def _mine_delete(self, load):
@@ -772,7 +794,6 @@ class RemoteFuncs(object):
         '''
         if any(key not in load for key in ('id', 'grains')):
             return False
-#        pillar = salt.pillar.Pillar(
         log.debug('Master _pillar using ext: %s', load.get('ext'))
         pillar = salt.pillar.get_pillar(
                 self.opts,
