@@ -24,7 +24,6 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.helpers import (
-    destructiveTest,
     skip_if_not_root,
     with_system_user_and_group,
     with_tempdir,
@@ -962,7 +961,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 self.run_function('file.remove', [sym_dir])
 
     @skip_if_not_root
-    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
+    @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
     def test_directory_max_depth(self):
         '''
         file.directory
@@ -2474,6 +2473,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 pass
 
     @skip_if_not_root
+    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('user12209', 'group12209',
@@ -2510,6 +2510,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, root_group)
 
     @skip_if_not_root
+    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('user12209', 'group12209',
@@ -2637,6 +2638,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @skip_if_not_root
+    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('test_setuid_user', 'test_setuid_group',
@@ -2694,6 +2696,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 pass
 
     @skip_if_not_root
+    @skipIf(IS_WINDOWS, 'Mode not available in Windows')
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group('user12209', 'group12209',
@@ -2852,6 +2855,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
 
+@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = '# start'
     marker_end = '# end'
