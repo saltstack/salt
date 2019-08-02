@@ -57,7 +57,7 @@ _zonecfg_info_resources_calculated = [
 
 _zonecfg_resource_setters = {
     'fs': ['dir', 'special', 'raw', 'type', 'options'],
-    'net': ['address', 'allowed-address', 'global-nic', 'mac-addr', 'physical', 'property', 'vlan-id defrouter'],
+    'net': ['address', 'allowed-address', 'global-nic', 'mac-addr', 'physical', 'property', 'vlan-id', 'defrouter'],
     'device': ['match', 'property'],
     'rctl': ['name', 'value'],
     'attr': ['name', 'type', 'value'],
