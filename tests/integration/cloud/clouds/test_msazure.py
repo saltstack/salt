@@ -18,6 +18,7 @@ from tests.support.helpers import expensiveTest, generate_random_name
 # Import Salt Libs
 from salt.config import cloud_providers_config
 from salt.utils.versions import LooseVersion
+from salt.ext.six.moves import range
 
 TIMEOUT = 500
 
