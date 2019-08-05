@@ -21,6 +21,14 @@ class GCETest(CloudTest):
     Integration tests for the GCE cloud provider in Salt-Cloud
     '''
 
+    def _instance_exists(self):
+        query = self.run_cloud('--query')
+        ret_str = '        {0}:'.format(self.INSTANCE_NAME)
+
+        if ret_str in query:
+            return True
+        return False
+
     @expensiveTest
     def setUp(self):
         '''
@@ -68,12 +76,8 @@ class GCETest(CloudTest):
                     .format(provider)
             )
 
-        self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
-
-    def _instance_exists(self):
-        # salt-cloud -a show_instance myinstance
-        return '        {0}:'.format(INSTANCE_NAME) in self.run_cloud('--query')
+        self.assertEquals(self._instance_exists(), False,
+                          'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
 
     def test_instance(self):
         '''
@@ -86,9 +90,8 @@ class GCETest(CloudTest):
 
         # check if instance returned with salt installed
         self.assertIn(ret_str, instance)
-        self.assertEqual(self._instance_exists(), True)
+        self.assertEquals(self._instance_exists(), True)
 
-    @flaky
     def test_instance_extra(self):
         '''
         Tests creating and deleting an instance on GCE
@@ -102,17 +105,22 @@ class GCETest(CloudTest):
 
         # check if instance returned with salt installed
         self.assertIn(ret_str, instance)
-        self.assertEqual(self._instance_exists(), True)
+        self.assertEquals(self._instance_exists(), True)
 
     def tearDown(self):
         '''
         Clean up after tests
         '''
-        # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-        delete_str = ''.join(delete)
+        # salt-cloud -a show_instance myinstance
+        if self._instance_exists():
+            # delete the instance
+            delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
+            # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
+            delete_str = ''.join(delete)
 
-        # check if deletion was performed appropriately
-        self.assertIn(INSTANCE_NAME, delete_str)
-        self.assertIn('True', delete_str)
+            # check if deletion was performed appropriately
+            try:
+                self.assertIn(self.INSTANCE_NAME, delete_str)
+                self.assertIn('True', delete_str)
+            except AssertionError:
+                raise
