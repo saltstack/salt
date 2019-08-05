@@ -118,8 +118,8 @@ def _mine_store(
 
 def update(clear=False, mine_functions=None):
     '''
-    Execute the configured functions and send the data back up to the master.
-    The functions to be executed are merged from the master config, pillar and
+    Call the configured functions and send the data back up to the master.
+    The functions to be called are merged from the master config, pillar and
     minion config under the option `mine_functions`:
 
     .. code-block:: yaml
@@ -141,7 +141,7 @@ def update(clear=False, mine_functions=None):
         https://docs.saltstack.com/en/latest/topics/mine/index.html#mine-functions
 
         This feature can be used when updating the mine for functions
-        that require refresh at different intervals than the rest of
+        that require a refresh at different intervals than the rest of
         the functions specified under `mine_functions` in the
         minion/master config or pillar.
         A potential use would be together with the `scheduler`, for example:
@@ -213,6 +213,7 @@ def send(name, *args, **kwargs):
     :param str name: Name of the function to add to the mine.
 
     The following pameters are extracted from kwargs if present:
+
     :param str mine_function: The name of the execution_module.function to run
         and whose value will be stored in the salt mine. Defaults to ``name``.
     :param str allow_tgt: Targeting specification for ACL. Specifies which minions
@@ -229,8 +230,7 @@ def send(name, *args, **kwargs):
 
         Added ``allow_tgt``- and ``allow_tgt_type``-parameters to specify which
         minions are allowed to access this function.
-        See https://docs.saltstack.com/en/latest/topics/targeting/ for more information
-        about targeting.
+        See :ref:`targeting` for more information about targeting.
 
     CLI Example:
 
@@ -269,24 +269,17 @@ def get(tgt,
         tgt_type='glob',
         exclude_minion=False):
     '''
-    Get data from the mine based on the target, function and tgt_type
+    Get data from the mine.
 
-    Targets can be matched based on any standard matching system that can be
-    matched on the master via these keywords:
-
-    - glob
-    - pcre
-    - grain
-    - grain_pcre
-    - compound
-    - pillar
-    - pillar_pcre
-
-    Note that all pillar matches, whether using the compound matching system or
-    the pillar matching system, will be exact matches, with globbing disabled.
-
-    exclude_minion
-        Excludes the current minion from the result set
+    :param str tgt: Target whose mine data to get.
+    :param fun: Function to get the mine data of. You can specify multiple functions
+        to retrieve using either a list or a comma-separated string of functions.
+    :type fun: str or list
+    :param str tgt_type: Default ``glob``. Target type to use with ``tgt``.
+        See :ref:`targeting` for more information.
+        Note that all pillar matches, whether using the compound matching system or
+        the pillar matching system, will be exact matches, with globbing disabled.
+    :param bool exclude_minion: Excludes the current minion from the result set.
 
     CLI Example:
 
