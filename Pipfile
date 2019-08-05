@@ -10,7 +10,7 @@ PyYAML = "*"
 MarkupSafe = "*"
 requests = ">=1.0.0"
 tornado = ">=4.2.1,<5.0"
-pycrypto = ">=2.6.1"
+pycryptodomex = "*"
 pyzmq = ">=2.2.0"
 
 [dev-packages]
