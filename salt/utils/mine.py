@@ -42,7 +42,13 @@ def minion_side_acl_denied(
         True if an ACL has been defined and does not grant access.
     '''
     minion_acl_entry = minion_acl_cache.get(mine_minion, {}).get(mine_function, [])
-    return minion_acl_entry and req_minion not in minion_acl_entry
+    ret = minion_acl_entry and req_minion not in minion_acl_entry
+    if ret:
+        log.debug('Salt mine request from %s for function %s on minion %s denied.',
+                  req_minion,
+                  mine_function,
+                  mine_minion)
+    return ret
 
 
 def wrap_acl_structure(
