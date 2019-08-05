@@ -74,7 +74,7 @@ BuildRequires:  python-ioflo >= 1.1.7
 BuildRequires:  python-raet >= 0.6.0
 %endif
 # requirements/zeromq.txt
-BuildRequires:  python-pycrypto >= 2.6.1
+BuildRequires:  python-pycryptodomex
 BuildRequires:  python-pyzmq >= 2.2.0
 %if %{with test}
 # requirements/dev_python27.txt
@@ -121,7 +121,7 @@ Recommends:     python-gnupg
 # Recommends:     salt-raet
 # requirements/zeromq.txt
 %endif
-Requires:       python-pycrypto >= 2.6.1
+Requires:       python-pycryptodomex
 Requires:       python-pyzmq >= 2.2.0
 #
 %if 0%{?suse_version}
