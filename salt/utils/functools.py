@@ -7,6 +7,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import types
+import logging
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
@@ -15,6 +16,8 @@ from salt.ext.six.moves import zip
 
 # Import 3rd-party libs
 from salt.ext import six
+
+log = logging.getLogger(__name__)
 
 
 def namespaced_function(function, global_dict, defaults=None, preserve_context=False):
@@ -66,54 +69,74 @@ def alias_function(fun, name, doc=None):
     return alias_fun
 
 
-def call_function(salt_function, **kwargs):
+def parse_function(function_arguments):
+    '''
+    Helper function to parse function_arguments (module.run format)
+    into args and kwargs.
+    This function is similar to salt.utils.data.repack_dictlist, except that this
+    only handles non-dict arguments in the input list.
+
+    :param list function_arguments: List of items and dicts with kwargs.
+
+    :rtype: dict
+    :return: Dictionary with ``args`` and ``kwargs`` keyword.
+    '''
+    function_args = []
+    function_kwargs = {}
+    for item in function_arguments:
+        if isinstance(item, dict):
+            function_kwargs.update(item)
+        else:
+            function_args.append(item)
+    return {'args': function_args, 'kwargs': function_kwargs}
+
+
+def call_function(salt_function, *args, **kwargs):
     '''
     Calls a function from the specified module.
 
     :param function salt_function: Function reference to call
-    :param kwargs: args'n kwargs to pass to the function
     :return: The result of the function call
     '''
     argspec = salt.utils.args.get_function_argspec(salt_function)
-
-    # func_kw is initialized to a dictionary of keyword arguments the function to be run accepts
-    func_kw = dict(zip(argspec.args[-len(argspec.defaults or []):],  # pylint: disable=incompatible-py3-code
-                   argspec.defaults or []))
-
-    # func_args is initialized to a list of positional arguments that the function to be run accepts
-    func_args = argspec.args[:len(argspec.args or []) - len(argspec.defaults or [])]
-    arg_type, kw_to_arg_type, na_type, kw_type = [], {}, {}, False
-    for funcset in reversed(kwargs.get('func_args') or []):
+    # function_kwargs is initialized to a dictionary of keyword arguments the function to be run accepts
+    function_kwargs = dict(zip(argspec.args[-len(argspec.defaults or []):],  # pylint: disable=incompatible-py3-code
+                               argspec.defaults or []))
+    # expected_args is initialized to a list of positional arguments that the function to be run accepts
+    expected_args = argspec.args[:len(argspec.args or []) - len(argspec.defaults or [])]
+    function_args, kw_to_arg_type = [], {}
+    for funcset in reversed(args or []):
         if not isinstance(funcset, dict):
             # We are just receiving a list of args to the function to be run, so just append
             # those to the arg list that we will pass to the func.
-            arg_type.append(funcset)
+            function_args.append(funcset)
         else:
             for kwarg_key in six.iterkeys(funcset):
                 # We are going to pass in a keyword argument. The trick here is to make certain
                 # that if we find that in the *args* list that we pass it there and not as a kwarg
-                if kwarg_key in func_args:
+                if kwarg_key in expected_args:
                     kw_to_arg_type[kwarg_key] = funcset[kwarg_key]
-                    continue
                 else:
                     # Otherwise, we're good and just go ahead and pass the keyword/value pair into
                     # the kwargs list to be run.
-                    func_kw.update(funcset)
-    arg_type.reverse()
-    for arg in func_args:
+                    function_kwargs.update(funcset)
+    function_args.reverse()
+    # Add kwargs passed as kwargs :)
+    function_kwargs.update(kwargs)
+    for arg in expected_args:
         if arg in kw_to_arg_type:
-            arg_type.append(kw_to_arg_type[arg])
+            function_args.append(kw_to_arg_type[arg])
     _exp_prm = len(argspec.args or []) - len(argspec.defaults or [])
-    _passed_prm = len(arg_type)
+    _passed_prm = len(function_args)
     missing = []
-    if na_type and _exp_prm > _passed_prm:
+    if _exp_prm > _passed_prm:
         for arg in argspec.args:
-            if arg not in func_kw:
+            if arg not in function_kwargs:
                 missing.append(arg)
     if missing:
         raise SaltInvocationError('Missing arguments: {0}'.format(', '.join(missing)))
     elif _exp_prm > _passed_prm:
-        raise SaltInvocationError('Function expects {0} parameters, got only {1}'.format(
-            _exp_prm, _passed_prm))
+        raise SaltInvocationError('Function expects {0} positional parameters, '
+                                  'got only {1}'.format(_exp_prm, _passed_prm))
 
-    return salt_function(*arg_type, **func_kw)
+    return salt_function(*function_args, **function_kwargs)
