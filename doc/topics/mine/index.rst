@@ -69,6 +69,8 @@ version Aluminium.
         - this: that
         - salt: stack
 
+.. _mine_minion-side-acl:
+
 Minion-side Access Control
 --------------------------
 
