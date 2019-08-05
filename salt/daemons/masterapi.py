@@ -690,11 +690,10 @@ class RemoteFuncs(object):
             ckey = 'mine'
             new_data = load['data']
             if not load.get('clear', False):
-                current_data = self.cache.fetch(cbank, ckey)
-                if isinstance(current_data, dict):
-                    current_data.update(new_data)
-                    new_ddata = current_data
-            self.cache.store(cbank, ckey, new_data)
+                data = self.cache.fetch(cbank, ckey)
+                if isinstance(data, dict):
+                    data.update(new_data)
+            self.cache.store(cbank, ckey, data)
         return True
 
     def _mine_delete(self, load):
