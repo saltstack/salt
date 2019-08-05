@@ -182,9 +182,11 @@ def _remove_circular_refs(ob, _seen=None):
     if id(ob) in _seen:
         # Here we caught a circular reference.
         # Alert user and cleanup to continue.
-        msg = ('Caught a circular reference in data structure below. '
-               'Cleaning and continuing execution.\n{}\n'.format(ob))
-        log.exception(msg)
+        log.exception(
+            'Caught a circular reference in data structure below.'
+            'Cleaning and continuing execution.\n%r\n',
+            ob,
+        )
         return None
     _seen.add(id(ob))
     res = ob
