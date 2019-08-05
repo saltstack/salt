@@ -158,14 +158,25 @@ class DigitalOceanTest(ShellCase):
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
             raise
 
-        # delete the instance
-        try:
-            self.assertIn(
-                'True',
-                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)]
-            )
-        except AssertionError:
-            raise
+        # Try up to 10 times to delete the instance since it might not be
+        # available for deletion right away.
+        for num_try in range(10):
+            # delete the instance
+            try:
+                self.assertIn(
+                    'True',
+                    [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)]
+                )
+            except AssertionError:
+                # The deletion did not succeed, wait 10s and try again
+                if num_try < 9:
+                    log.warning('Unable to delete azure instance on try %d', num_try)
+                    time.sleep(10)
+                else:
+                    raise
+            else:
+                # The deletion succeeded
+                break
 
         # Final clean-up of created instance, in case something went wrong.
         # This was originally in a tearDown function, but that didn't make sense
