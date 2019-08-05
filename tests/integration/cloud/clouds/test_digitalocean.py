@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import hashlib
 import os
+import logging
 from Crypto.PublicKey import RSA
 
 # Import Salt Testing Libs
@@ -20,6 +21,7 @@ from salt.config import cloud_providers_config
 from salt.ext.six.moves import range
 import salt.utils.stringutils
 
+log = logging.getLogger(__name__)
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
