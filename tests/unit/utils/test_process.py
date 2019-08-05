@@ -24,6 +24,7 @@ import salt.utils.process
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+import psutil
 
 
 def die(func):
@@ -233,3 +234,37 @@ class TestProcess(TestCase):
             salt.utils.process.daemonize_if({})
             self.assertTrue(salt.utils.process.daemonize.called)
         # pylint: enable=assignment-from-none
+
+
+@skipIf(sys.platform.startswith('win'), 'pickling nested function errors on Windows')
+class TestSignalHandlingMultiprocessingProcess(TestCase):
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_process_does_not_exist(self):
+        def Process(pid):
+            raise psutil.NoSuchProcess(pid)
+
+        def target():
+            os.kill(os.getpid(), signal.SIGTERM)
+
+        try:
+            with patch('psutil.Process', Process):
+                proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=target)
+                proc.start()
+        except psutil.NoSuchProcess:
+            assert False, "psutil.NoSuchProcess raised"
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_process_children_do_not_exist(self):
+        def children(*args, **kwargs):
+            raise psutil.NoSuchProcess(1)
+
+        def target():
+            os.kill(os.getpid(), signal.SIGTERM)
+
+        try:
+            with patch('psutil.Process.children', children):
+                proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=target)
+                proc.start()
+        except psutil.NoSuchProcess:
+            assert False, "psutil.NoSuchProcess raised"
