@@ -40,9 +40,8 @@ class CloudTest(ShellCase):
                 delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
                 # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
                 delete_str = ''.join(delete)
-                self.assertIn(self.INSTANCE_NAME, delete_str)
 
-                if 'shutting-down' in ''.join(delete):
+                if 'shutting-down' in delete_str:
                     log.debug('Instance "{}" was deleted properly'.format(self.INSTANCE_NAME))
                     break
                 else:
