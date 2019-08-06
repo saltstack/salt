@@ -362,7 +362,7 @@ import salt.utils.gitfs
 import salt.utils.dictupdate
 import salt.utils.stringutils
 import salt.utils.versions
-from salt.exceptions import ( FileserverConfigError, GitLockError )
+from salt.exceptions import (FileserverConfigError, GitLockError)
 from salt.pillar import Pillar
 
 # Import third party libs
@@ -481,6 +481,7 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
     except GitLockError:
         log.error("Could not obtain the global lock for pillar procssing")
     return False
+
 
 def _extract_key_val(kv, delimiter='='):
     '''Extract key and value from key=val string.
