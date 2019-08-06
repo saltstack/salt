@@ -12,10 +12,11 @@ from salt.ext import six
 
 # Import Salt Testing LIbs
 from tests.support.paths import FILES
-from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.helpers import expensiveTest
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('cloud-test-').lower()
+from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
+
 PROVIDER_NAME = 'vmware'
 
 
@@ -73,9 +74,6 @@ class VMWareTest(CloudTest):
         self.assertEqual(self._instance_exists(), False,
                          'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
 
-    def _instance_exists(self):
-        return '        {0}:'.format(INSTANCE_NAME) in self.run_cloud('--query')
-
     def test_instance(self):
         '''
         Tests creating and deleting an instance on vmware and installing salt
@@ -121,14 +119,3 @@ class VMWareTest(CloudTest):
         s_ret_str = 'Snapshot created successfully'
 
         self.assertIn(s_ret_str, six.text_type(create_snapshot))
-
-    def tearDown(self):
-        '''
-        Clean up after tests
-        '''
-        # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        ret_str = '{0}:\', \'            True'.format(INSTANCE_NAME)
-
-        # check if deletion was performed appropriately
-        self.assertIn(ret_str, six.text_type(delete))

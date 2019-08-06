@@ -26,10 +26,8 @@ except ImportError:
     HAS_PROFITBRICKS = False
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('cloud-test-').lower()
 PROVIDER_NAME = 'profitbricks'
 DRIVER_NAME = 'profitbricks'
-TIMEOUT = 500
 
 
 @skipIf(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 4.1.0')
@@ -79,9 +77,6 @@ class ProfitBricksTest(CloudTest):
 
         self.assertEqual(self._instance_exists(), False,
                          'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
-
-    def _instance_exists(self):
-        return '        {0}:'.format(INSTANCE_NAME) in self.run_cloud('--query')
 
     def test_list_images(self):
         '''
@@ -193,22 +188,9 @@ class ProfitBricksTest(CloudTest):
         '''
         # check if instance with salt installed returned
         self.assertIn(
-            INSTANCE_NAME,
+            self.INSTANCE_NAME,
             [i.strip() for i in self.run_cloud(
-                '-p profitbricks-test {0}'.format(INSTANCE_NAME),
+                '-p profitbricks-test {0}'.format(self.INSTANCE_NAME),
                 timeout=TIMEOUT
             )]
         )
-
-    def tearDown(self):
-        '''
-        Clean up after tests
-        '''
-        if self._instance_exists():
-            delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-            # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-            delete_str = ''.join(delete)
-
-            # check if deletion was performed appropriately
-            self.assertIn(INSTANCE_NAME, delete_str)
-            self.assertIn('True', delete_str)
