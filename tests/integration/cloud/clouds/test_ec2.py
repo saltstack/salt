@@ -13,7 +13,6 @@ from salt.config import cloud_providers_config
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.yaml
-
 # Import Salt Testing Libs
 from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
@@ -247,3 +246,6 @@ class EC2Test(CloudTest):
 
         )
         self._test_instance('ec2-win2016-test', debug=True)
+
+    def tearDown(self):
+        self._destroy_instance()

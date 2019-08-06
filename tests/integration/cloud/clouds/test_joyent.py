@@ -77,3 +77,6 @@ class JoyentTest(CloudTest):
             [i.strip() for i in self.run_cloud('-p joyent-test {0}'.format(self.INSTANCE_NAME), timeout=500)]
         )
         self.assertEqual(self._instance_exists(), True)
+
+    def tearDown(self):
+        self._destroy_instance()
