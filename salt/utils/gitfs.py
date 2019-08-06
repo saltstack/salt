@@ -3046,7 +3046,7 @@ class GitPillar(GitBase):
                     self.pillar_dirs[cachedir] = env
 
     @contextlib.contextmanager
-    def global_lock(self, timeout=0, poll_interval=0.5):
+    def global_lock(self, timeout=60, poll_interval=0.5):
         '''
         Set and automatically clear a lock on all the repos
         '''
@@ -3087,7 +3087,7 @@ class GitPillar(GitBase):
                             log.debug(
                                 'A global lock is already present for %s remote '
                                 '\'%s\', sleeping %f second(s)',
-                                self.role, self.id, poll_interval
+                                self.role, remote.id, poll_interval
                             )
                             time.sleep(poll_interval)
                             continue
