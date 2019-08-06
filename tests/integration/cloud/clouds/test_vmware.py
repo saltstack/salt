@@ -118,6 +118,6 @@ class VMWareTest(ShellCase):
         s_ret_str = 'Snapshot created successfully'
 
         self.assertIn(s_ret_str, six.text_type(create_snapshot))
-        self.assertEqual(self._instance_exists(), True)
 
+    def tearDown(self):
         self._destroy_instance()

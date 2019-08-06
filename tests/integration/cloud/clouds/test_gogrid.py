@@ -72,4 +72,6 @@ class GoGridTest(ShellCase):
             [i.strip() for i in self.run_cloud('-p gogrid-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
         )
         self.assertEqual(self._instance_exists(), True)
+
+    def tearDown(self):
         self._destroy_instance()

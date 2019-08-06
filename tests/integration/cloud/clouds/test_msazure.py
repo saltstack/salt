@@ -11,6 +11,7 @@ import logging
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 from tests.support.paths import FILES
 from tests.support.unit import skipIf
+from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
 from salt.utils.versions import LooseVersion
@@ -127,5 +128,6 @@ class AzureTest(CloudTest):
                 ), timeout=TIMEOUT
             )]
         )
-        self.assertEqual(self._instance_exists(), True)
+
+    def tearDown(self):
         self._destroy_instance()

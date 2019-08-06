@@ -185,6 +185,5 @@ class ProfitBricksTest(ShellCase):
                 timeout=TIMEOUT
             )]
         )
-        self.assertEqual(self._instance_exists(), True)
 
-        self.assertDestroyInstance()
+        self._destroy_instance()
