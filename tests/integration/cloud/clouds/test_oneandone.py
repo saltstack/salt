@@ -14,6 +14,7 @@ from tests.support.unit import skipIf
 # Import Third-Party Libs
 try:
     from oneandone.client import OneAndOneService  # pylint: disable=unused-import
+
     HAS_ONEANDONE = True
 except ImportError:
     HAS_ONEANDONE = False
@@ -22,6 +23,7 @@ except ImportError:
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'oneandone'
 DRIVER_NAME = 'oneandone'
+TIMEOUT = 500
 
 
 @skipIf(HAS_ONEANDONE is False, 'salt-cloud requires >= 1and1 1.2.0')
@@ -66,8 +68,11 @@ class OneAndOneTest(CloudTest):
                     .format(PROVIDER_NAME)
             )
 
-        self.assertFalse(self._instance_exists(),
+        self.assertEqual(self._instance_exists(), False,
                          'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
+
+    def _instance_exists(self):
+        return '        {0}:'.format(INSTANCE_NAME) in self.run_cloud('--query')
 
     def test_list_images(self):
         '''
@@ -84,12 +89,26 @@ class OneAndOneTest(CloudTest):
         Test creating an instance on 1and1
         '''
         # check if instance with salt installed returned
-        self.assertIn(
-            INSTANCE_NAME,
-            [i.strip() for i in self.run_cloud(
-                '-p oneandone-test {0}'.format(INSTANCE_NAME), timeout=TIMEOUT
-            )]
-        )
-        self.assertEqual(self._instance_exists(), True)
+        try:
+            self.assertIn(
+                INSTANCE_NAME,
+                [i.strip() for i in self.run_cloud(
+                    '-p oneandone-test {0}'.format(INSTANCE_NAME), timeout=500
+                )]
+            )
+        except AssertionError:
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+            raise
 
-        self._destroy_instance()
+    def tearDown(self):
+        '''
+        Clean up after tests
+        '''
+        if self._instance_exists():
+            delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
+            # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
+            delete_str = ''.join(delete)
+
+            # check if deletion was performed appropriately
+            self.assertIn(INSTANCE_NAME, delete_str)
+            self.assertIn('True', delete_str)
