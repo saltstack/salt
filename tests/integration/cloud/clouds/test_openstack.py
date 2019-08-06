@@ -9,14 +9,15 @@ import logging
 import os
 
 # Import Salt Testing libs
-from tests.support.case import ModuleCase, ShellCase
+from tests.support.case import ModuleCase
 from tests.support.paths import FILES
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, expensiveTest, generate_random_name
+from tests.support.helpers import destructiveTest, expensiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
+from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
 
 log = logging.getLogger(__name__)
 
@@ -38,10 +39,8 @@ except ImportError:
     HAS_SHADE = False
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('cloud-test-').lower()
 PROVIDER_NAME = 'openstack'
 DRIVER_NAME = 'openstack'
-TIMEOUT = 500
 
 
 @skipIf(
@@ -179,7 +178,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
 
 
 @skipIf(not HAS_SHADE, 'openstack driver requires `shade`')
-class RackspaceTest(ShellCase):
+class RackspaceTest(CloudTest):
     '''
     Integration tests for the Rackspace cloud provider using the Openstack driver
     '''
@@ -222,10 +221,7 @@ class RackspaceTest(ShellCase):
             )
 
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
-
-    def _instance_exists(self):
-        return '        {0}:'.format(INSTANCE_NAME) in self.run_cloud('--query')
+                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
 
     def test_instance(self):
         '''
@@ -233,19 +229,6 @@ class RackspaceTest(ShellCase):
         '''
         # check if instance with salt installed returned
         self.assertIn(
-            INSTANCE_NAME,
-            [i.strip() for i in self.run_cloud('-p rackspace-test {0}'.format(INSTANCE_NAME), timeout=500)]
+            self.INSTANCE_NAME,
+            [i.strip() for i in self.run_cloud('-p rackspace-test {0}'.format(self.INSTANCE_NAME), timeout=500)]
         )
-
-    def tearDown(self):
-        '''
-        Clean up after tests
-        '''
-        # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-        delete_str = ''.join(delete)
-
-        # check if deletion was performed appropriately
-        self.assertIn(INSTANCE_NAME, delete_str)
-        self.assertIn('True', delete_str)
