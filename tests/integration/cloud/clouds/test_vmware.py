@@ -73,7 +73,7 @@ class VMWareTest(CloudTest):
             )
 
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
+                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
 
     def test_instance(self):
         '''

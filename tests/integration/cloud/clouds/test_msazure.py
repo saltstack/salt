@@ -7,10 +7,9 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
-import time
 
 # Import Salt Testing Libs
-from tests.support.case import ShellCase
+from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
 from tests.support.paths import FILES
 from tests.support.unit import skipIf
 from tests.support.helpers import expensiveTest, generate_random_name
@@ -18,9 +17,6 @@ from tests.support.helpers import expensiveTest, generate_random_name
 # Import Salt Libs
 from salt.config import cloud_providers_config
 from salt.utils.versions import LooseVersion
-from salt.ext.six.moves import range
-
-TIMEOUT = 500
 
 try:
     import azure  # pylint: disable=unused-import
@@ -33,7 +29,6 @@ if HAS_AZURE and not hasattr(azure, '__version__'):
     import azure.common
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'azure'
 PROFILE_NAME = 'azure-test'
 REQUIRED_AZURE = '0.11.1'
@@ -58,7 +53,7 @@ def __has_required_azure():
 
 @skipIf(HAS_AZURE is False, 'These tests require the Azure Python SDK to be installed.')
 @skipIf(__has_required_azure() is False, 'The Azure Python SDK must be >= 0.11.1.')
-class AzureTest(ShellCase):
+class AzureTest(CloudTest):
     '''
     Integration tests for the Azure cloud provider in Salt-Cloud
     '''
@@ -116,11 +111,11 @@ class AzureTest(ShellCase):
             )
 
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
+                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
 
     def _instance_exists(self):
         # salt-cloud -a show_instance myinstance
-        return '        {0}:'.format(INSTANCE_NAME) in self.run_cloud('--query')
+        return '        {0}:'.format(self.INSTANCE_NAME) in self.run_cloud('--query')
 
     def test_instance(self):
         '''
@@ -128,24 +123,11 @@ class AzureTest(ShellCase):
         '''
         # check if instance with salt installed returned
         self.assertIn(
-            INSTANCE_NAME,
+            self.INSTANCE_NAME,
             [i.strip() for i in self.run_cloud(
                 '-p {0} {1}'.format(
                     PROFILE_NAME,
-                    INSTANCE_NAME
+                    self.INSTANCE_NAME
                 ), timeout=TIMEOUT
             )]
         )
-
-    def tearDown(self):
-        '''
-        Clean up after tests
-        '''
-        # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-        delete_str = ''.join(delete)
-
-        # check if deletion was performed appropriately
-        self.assertIn(INSTANCE_NAME, delete_str)
-        self.assertIn('True', delete_str)
