@@ -9,17 +9,19 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.win_pkg as win_pkg
+import salt.utils.platform
 import salt.utils.win_reg as win_reg
 
 # Import 3rd Party Libs
 from salt.ext import six
 
 
+@skipIf(not salt.utils.platform.is_windows(), "Must be on Windows!")
 class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_pkg
