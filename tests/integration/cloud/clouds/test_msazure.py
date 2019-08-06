@@ -8,15 +8,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Testing Libs
-from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
+from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
 from tests.support.paths import FILES
 from tests.support.unit import skipIf
 from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
 from salt.utils.versions import LooseVersion
-
-TIMEOUT = 500
 
 try:
     import azure  # pylint: disable=unused-import
@@ -28,6 +26,8 @@ if HAS_AZURE and not hasattr(azure, '__version__'):
     import azure.common
 
 # Create the cloud instance name to be used throughout the tests
+PROVIDER_NAME = 'azure'
+PROFILE_NAME = 'azure-test'
 REQUIRED_AZURE = '0.11.1'
 
 log = logging.getLogger(__name__)
@@ -114,20 +114,21 @@ class AzureTest(CloudTest):
         self.assertEqual(self._instance_exists(), False,
                          'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
 
+    def _instance_exists(self):
+        # salt-cloud -a show_instance myinstance
+        return '        {0}:'.format(self.INSTANCE_NAME) in self.run_cloud('--query')
+
     def test_instance(self):
         '''
         Clean up after tests
         '''
         # check if instance with salt installed returned
         self.assertIn(
-            self.instance_name,
+            self.INSTANCE_NAME,
             [i.strip() for i in self.run_cloud(
                 '-p {0} {1}'.format(
                     PROFILE_NAME,
-                    self.instance_name
+                    self.INSTANCE_NAME
                 ), timeout=TIMEOUT
             )]
         )
-
-    def tearDown(self):
-        self._destroy_instance()

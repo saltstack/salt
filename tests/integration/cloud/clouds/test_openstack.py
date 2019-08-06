@@ -222,8 +222,8 @@ class RackspaceTest(ShellCase):
         '''
         # check if instance with salt installed returned
         self.assertIn(
-            self.instance_name,
-            [i.strip() for i in self.run_cloud('-p rackspace-test {0}'.format(self.instance_name), timeout=TIMEOUT)]
+            self.INSTANCE_NAME,
+            [i.strip() for i in self.run_cloud('-p rackspace-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
         )
 
     def tearDown(self):

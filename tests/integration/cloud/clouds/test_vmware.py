@@ -71,7 +71,7 @@ class VMWareTest(ShellCase):
             )
 
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
+                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
 
     def test_instance(self):
         '''
