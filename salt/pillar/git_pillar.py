@@ -415,69 +415,72 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
         # If masterless, fetch the remotes. We'll need to remove this once
         # we make the minion daemon able to run standalone.
         git_pillar.fetch_remotes()
-    git_pillar.global_lock()
-    git_pillar.checkout()
-    ret = {}
-    merge_strategy = __opts__.get(
-        'pillar_source_merging_strategy',
-        'smart'
-    )
-    merge_lists = __opts__.get(
-        'pillar_merge_lists',
-        False
-    )
-    for pillar_dir, env in six.iteritems(git_pillar.pillar_dirs):
-        # Map env if env == '__env__' before checking the env value
-        if env == '__env__':
-            env = opts.get('pillarenv') \
-                or opts.get('saltenv') \
-                or opts.get('git_pillar_base')
-            log.debug('__env__ maps to %s', env)
-
-        # If pillarenv is set, only grab pillars with that match pillarenv
-        if opts['pillarenv'] and env != opts['pillarenv']:
-            log.debug(
-                'env \'%s\' for pillar dir \'%s\' does not match '
-                'pillarenv \'%s\', skipping',
-                env, pillar_dir, opts['pillarenv']
+    try:
+        with git_pillar.global_lock():
+            git_pillar.checkout()
+            ret = {}
+            merge_strategy = __opts__.get(
+                'pillar_source_merging_strategy',
+                'smart'
             )
-            continue
-        if pillar_dir in git_pillar.pillar_linked_dirs:
-            log.debug(
-                'git_pillar is skipping processing on %s as it is a '
-                'mounted repo', pillar_dir
+            merge_lists = __opts__.get(
+                'pillar_merge_lists',
+                False
             )
-            continue
-        else:
-            log.debug(
-                'git_pillar is processing pillar SLS from %s for pillar '
-                'env \'%s\'', pillar_dir, env
-            )
+            for pillar_dir, env in six.iteritems(git_pillar.pillar_dirs):
+                # Map env if env == '__env__' before checking the env value
+                if env == '__env__':
+                    env = opts.get('pillarenv') \
+                        or opts.get('saltenv') \
+                        or opts.get('git_pillar_base')
+                    log.debug('__env__ maps to %s', env)
 
-        pillar_roots = [pillar_dir]
+                # If pillarenv is set, only grab pillars with that match pillarenv
+                if opts['pillarenv'] and env != opts['pillarenv']:
+                    log.debug(
+                        'env \'%s\' for pillar dir \'%s\' does not match '
+                        'pillarenv \'%s\', skipping',
+                        env, pillar_dir, opts['pillarenv']
+                    )
+                    continue
+                if pillar_dir in git_pillar.pillar_linked_dirs:
+                    log.debug(
+                        'git_pillar is skipping processing on %s as it is a '
+                        'mounted repo', pillar_dir
+                    )
+                    continue
+                else:
+                    log.debug(
+                        'git_pillar is processing pillar SLS from %s for pillar '
+                        'env \'%s\'', pillar_dir, env
+                    )
 
-        if __opts__['git_pillar_includes']:
-            # Add the rest of the pillar_dirs in this environment to the
-            # list, excluding the current pillar_dir being processed. This
-            # is because it was already specified above as the first in the
-            # list, so that its top file is sourced from the correct
-            # location and not from another git_pillar remote.
-            pillar_roots.extend(
-                [d for (d, e) in six.iteritems(git_pillar.pillar_dirs)
-                 if env == e and d != pillar_dir]
-            )
+                pillar_roots = [pillar_dir]
 
-        opts['pillar_roots'] = {env: pillar_roots}
+                if __opts__['git_pillar_includes']:
+                    # Add the rest of the pillar_dirs in this environment to the
+                    # list, excluding the current pillar_dir being processed. This
+                    # is because it was already specified above as the first in the
+                    # list, so that its top file is sourced from the correct
+                    # location and not from another git_pillar remote.
+                    pillar_roots.extend(
+                        [d for (d, e) in six.iteritems(git_pillar.pillar_dirs)
+                         if env == e and d != pillar_dir]
+                    )
 
-        local_pillar = Pillar(opts, __grains__, minion_id, env)
-        ret = salt.utils.dictupdate.merge(
-            ret,
-            local_pillar.compile_pillar(ext=False),
-            strategy=merge_strategy,
-            merge_lists=merge_lists
-        )
-    return ret
+                opts['pillar_roots'] = {env: pillar_roots}
 
+                local_pillar = Pillar(opts, __grains__, minion_id, env)
+                ret = salt.utils.dictupdate.merge(
+                    ret,
+                    local_pillar.compile_pillar(ext=False),
+                    strategy=merge_strategy,
+                    merge_lists=merge_lists
+                )
+            return ret
+    except GitLockError:
+        log.error("Could not obtain the global lock for pillar procssing")
+    return False
 
 def _extract_key_val(kv, delimiter='='):
     '''Extract key and value from key=val string.
