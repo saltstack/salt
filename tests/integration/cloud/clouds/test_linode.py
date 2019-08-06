@@ -14,7 +14,7 @@ from tests.support.helpers import expensiveTest
 from salt.config import cloud_providers_config
 
 # Create the cloud instance name to be used throughout the tests
-from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
+from tests.integration.cloud.cloud_test_helpers import CloudTest
 
 PROVIDER_NAME = 'linode'
 

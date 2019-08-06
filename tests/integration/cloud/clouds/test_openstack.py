@@ -229,5 +229,5 @@ class RackspaceTest(CloudTest):
         # check if instance with salt installed returned
         self.assertIn(
             self.INSTANCE_NAME,
-            [i.strip() for i in self.run_cloud('-p rackspace-test {0}'.format(self.INSTANCE_NAME), timeout=500)]
+            [i.strip() for i in self.run_cloud('-p rackspace-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
         )
