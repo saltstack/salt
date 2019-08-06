@@ -119,3 +119,6 @@ class VMWareTest(CloudTest):
         s_ret_str = 'Snapshot created successfully'
 
         self.assertIn(s_ret_str, six.text_type(create_snapshot))
+
+    def tearDown(self):
+        self._destroy_instance()

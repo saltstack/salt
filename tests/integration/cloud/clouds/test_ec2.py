@@ -241,3 +241,6 @@ class EC2Test(CloudTest):
 
         )
         self._test_instance('ec2-win2016-test', debug=True)
+
+    def tearDown(self):
+        self._destroy_instance()

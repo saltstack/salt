@@ -131,3 +131,6 @@ class AzureTest(CloudTest):
                 ), timeout=TIMEOUT
             )]
         )
+
+    def tearDown(self):
+        self._destroy_instance()
