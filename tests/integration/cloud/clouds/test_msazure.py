@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import logging
+import time
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
@@ -16,6 +18,7 @@ from tests.support.helpers import expensiveTest, generate_random_name
 # Import Salt Libs
 from salt.config import cloud_providers_config
 from salt.utils.versions import LooseVersion
+from salt.ext.six.moves import range
 
 TIMEOUT = 500
 
@@ -34,6 +37,8 @@ INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'azure'
 PROFILE_NAME = 'azure-test'
 REQUIRED_AZURE = '0.11.1'
+
+log = logging.getLogger(__name__)
 
 
 def __has_required_azure():
