@@ -7,17 +7,18 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
+from tests.support.paths import FILES
+from tests.support.helpers import expensiveTest
 from tests.support.unit import skipIf
 
 # Create the cloud instance name to be used throughout the tests
-from tests.integration.cloud.cloud_test_helpers import CloudTest
+from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
 
 PROVIDER_NAME = 'gogrid'
 
 
 @skipIf(True, 'waiting on bug report fixes from #13365')
-@expensiveTest
-class GoGridTest(ShellCase):
+class GoGridTest(CloudTest):
     '''
     Integration tests for the GoGrid cloud provider in Salt-Cloud
     '''
@@ -60,7 +61,7 @@ class GoGridTest(ShellCase):
             )
 
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
+                         'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
 
     def test_instance(self):
         '''
@@ -69,9 +70,6 @@ class GoGridTest(ShellCase):
         # check if instance with salt installed returned
         self.assertIn(
             self.INSTANCE_NAME,
-            [i.strip() for i in self.run_cloud('-p gogrid-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
+            [i.strip() for i in self.run_cloud('-p gogrid-test {0}'.format(self.INSTANCE_NAME), timeout=500)]
         )
         self.assertEqual(self._instance_exists(), True)
-
-    def tearDown(self):
-        self._destroy_instance()

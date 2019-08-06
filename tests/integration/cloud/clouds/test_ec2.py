@@ -14,18 +14,16 @@ import salt.utils.cloud
 import salt.utils.files
 import salt.utils.yaml
 # Import Salt Testing Libs
-from tests.support.case import ShellCase
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.helpers import expensiveTest, generate_random_name
-from tests.support.unit import skipIf, WAR_ROOM_SKIP
+from tests.support.paths import FILES
+from tests.support.helpers import expensiveTest
+from tests.support.unit import skipIf
 from tests.support import win_installer
 
 # Create the cloud instance name to be used throughout the tests
-from tests.integration.cloud.cloud_test_helpers import CloudTest
+from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
 
+PROVIDER_NAME = 'ec2'
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
-# THis test needs a longer timeout than other cloud tests
-TIMEOUT = 1200
 
 
 def _fetch_installer():
@@ -76,7 +74,7 @@ class EC2Test(CloudTest):
             )
 
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
+                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
 
     def override_profile_config(self, name, data):
         conf_path = os.path.join(self.config_dir, 'cloud.profiles.d', 'ec2.conf')
@@ -107,9 +105,9 @@ class EC2Test(CloudTest):
         # create the instance
         cmd = ['-p', profile]
         if debug:
-            cmd.extend(['-l', 'debug'])
-        cmd.append(self.INSTANCE_NAME)
-        instance = self.run_cloud(' '.join(cmd), timeout=TIMEOUT)
+            cmd += ' -l debug'
+        cmd += ' {0}'.format(self.INSTANCE_NAME)
+        instance = self.run_cloud(cmd, timeout=TIMEOUT)
         ret_str = '{0}:'.format(self.INSTANCE_NAME)
 
         # check if instance returned with salt installed
@@ -124,18 +122,18 @@ class EC2Test(CloudTest):
         Tests creating and renaming an instance on EC2 (classic)
         '''
         # Start with a name that is different from usual so that it will get deleted normally after the test
-        changed_name = self.instance_name + '-changed'
+        changed_name = self.INSTANCE_NAME + '-changed'
         # create the instance
         ret_val = self.run_cloud('-p ec2-test {0} --no-deploy'.format(changed_name), timeout=TIMEOUT)
 
         # check if instance returned
         self.assertInstanceExists(ret_val)
 
-        change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(changed_name, self.instance_name),
+        change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(changed_name, self.INSTANCE_NAME),
                                      timeout=TIMEOUT)
 
-        check_rename = self.run_cloud('-a show_instance {0} --assume-yes'.format(self.instance_name), [self.instance_name])
-        exp_results = ['        {0}:'.format(self.instance_name), '            size:',
+        check_rename = self.run_cloud('-a show_instance {0} --assume-yes'.format(self.INSTANCE_NAME), [self.INSTANCE_NAME])
+        exp_results = ['        {0}:'.format(self.INSTANCE_NAME), '            size:',
                        '            architecture:']
         try:
             for result in exp_results:
@@ -223,6 +221,3 @@ class EC2Test(CloudTest):
 
         )
         self._test_instance('ec2-win2016-test', debug=True)
-
-    def tearDown(self):
-        self._destroy_instance()

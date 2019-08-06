@@ -7,10 +7,15 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
+from tests.support.paths import FILES
 from tests.support.unit import skipIf
+from tests.support.helpers import expensiveTest
+
+# Import Salt Libs
+from salt.config import cloud_providers_config
 
 # Import Third-Party Libs
-from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
+from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
 
 try:
     # pylint: disable=unused-import
@@ -19,10 +24,13 @@ try:
 except ImportError:
     HAS_PROFITBRICKS = False
 
+# Create the cloud instance name to be used throughout the tests
+PROVIDER_NAME = 'profitbricks'
+DRIVER_NAME = 'profitbricks'
+
 
 @skipIf(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 4.1.0')
-@expensiveTest
-class ProfitBricksTest(ShellCase):
+class ProfitBricksTest(CloudTest):
     '''
     Integration tests for the ProfitBricks cloud provider
     '''
@@ -67,7 +75,7 @@ class ProfitBricksTest(ShellCase):
             )
 
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
+                         'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
 
     def test_list_images(self):
         '''
@@ -179,11 +187,9 @@ class ProfitBricksTest(ShellCase):
         '''
         # check if instance with salt installed returned
         self.assertIn(
-            self.instance_name,
+            self.INSTANCE_NAME,
             [i.strip() for i in self.run_cloud(
-                '-p profitbricks-test {0}'.format(self.instance_name),
+                '-p profitbricks-test {0}'.format(self.INSTANCE_NAME),
                 timeout=TIMEOUT
             )]
         )
-
-        self._destroy_instance()

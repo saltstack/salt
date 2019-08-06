@@ -9,13 +9,14 @@ import logging
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.paths import FILES
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, expensiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
-from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
+from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +34,10 @@ try:
     HAS_SHADE = True
 except ImportError:
     HAS_SHADE = False
+
+# Create the cloud instance name to be used throughout the tests
+PROVIDER_NAME = 'openstack'
+DRIVER_NAME = 'openstack'
 
 
 @skipIf(
@@ -170,8 +175,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
 
 
 @skipIf(not HAS_SHADE, 'openstack driver requires `shade`')
-@expensiveTest
-class RackspaceTest(ShellCase):
+class RackspaceTest(CloudTest):
     '''
     Integration tests for the Rackspace cloud provider using the Openstack driver
     '''
@@ -214,7 +218,7 @@ class RackspaceTest(ShellCase):
             )
 
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
+                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
 
     def test_instance(self):
         '''
@@ -223,8 +227,5 @@ class RackspaceTest(ShellCase):
         # check if instance with salt installed returned
         self.assertIn(
             self.INSTANCE_NAME,
-            [i.strip() for i in self.run_cloud('-p rackspace-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
+            [i.strip() for i in self.run_cloud('-p rackspace-test {0}'.format(self.INSTANCE_NAME), timeout=500)]
         )
-
-    def tearDown(self):
-        self._destroy_instance()
