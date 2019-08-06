@@ -9,9 +9,9 @@ import os
 import time
 
 # Import Salt Testing Libs
-from tests.support.case import ShellCase
+from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
 from tests.support.paths import FILES
-from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.helpers import expensiveTest
 from tests.support.unit import skipIf
 
 # Import Salt Libs
@@ -19,12 +19,10 @@ from salt.config import cloud_providers_config
 from salt.ext import six
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'vultr'
-TIMEOUT = 500
 
 
-class VultrTest(ShellCase):
+class VultrTest(CloudTest):
     '''
     Integration tests for the Vultr cloud provider in Salt-Cloud
     '''
@@ -67,6 +65,9 @@ class VultrTest(ShellCase):
                 'tests/integration/files/conf/cloud.providers.d/{0}.conf'
                 .format(PROVIDER_NAME)
             )
+
+        self.assertEqual(self._instance_exists(), False,
+                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
 
     def test_list_images(self):
         '''
@@ -145,36 +146,14 @@ class VultrTest(ShellCase):
         Test creating an instance on Vultr
         '''
         # check if instance with salt installed returned
-        try:
-            create_vm = self.run_cloud('-p vultr-test {0}'.format(INSTANCE_NAME), timeout=800)
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in create_vm]
-            )
-            self.assertNotIn('Failed to start', six.text_type(create_vm))
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-            raise
+        create_vm = self.run_cloud('-p vultr-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT + 300)
+        self.assertIn(
+            self.INSTANCE_NAME,
+            [i.strip() for i in create_vm]
+        )
+        self.assertNotIn('Failed to start', six.text_type(create_vm))
+        self.assertEqual(self._instance_exists(), True)
 
         # Vultr won't let us delete an instance less than 5 minutes old.
-        time.sleep(420)
-        # delete the instance
-        results = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        try:
-            self.assertIn(
-                'True',
-                [i.strip() for i in results]
-            )
-        except AssertionError:
-            raise
-
-        # Final clean-up of created instance, in case something went wrong.
-        # This was originally in a tearDown function, but that didn't make sense
-        # To run this for each test when not all tests create instances.
-        # Also, Vultr won't let instances be deleted unless they have been alive for 5 minutes.
-        # If we exceed 6 minutes and the instance is still there, quit
-        ct = 0
-        while ct < 12 and INSTANCE_NAME in [i.strip() for i in self.run_cloud('--query')]:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-            time.sleep(30)
-            ct = ct + 1
+        time.sleep(300)
+        self._destroy_instance()

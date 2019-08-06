@@ -15,7 +15,7 @@ from tests.support.helpers import expensiveTest
 from salt.config import cloud_providers_config
 
 # Create the cloud instance name to be used throughout the tests
-from tests.integration.cloud.cloud_test_helpers import CloudTest
+from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
 
 PROVIDER_NAME = 'linode'
 
@@ -72,6 +72,7 @@ class LinodeTest(CloudTest):
         # check if instance with salt installed returned
         self.assertIn(
             self.INSTANCE_NAME,
-            [i.strip() for i in self.run_cloud('-p linode-test {0}'.format(self.INSTANCE_NAME), timeout=500)]
+            [i.strip() for i in self.run_cloud('-p linode-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
         )
         self.assertEqual(self._instance_exists(), True)
+        self._destroy_instance()
