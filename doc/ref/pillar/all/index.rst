@@ -16,6 +16,7 @@ pillar modules
     cobbler
     confidant
     consul_pillar
+    couchdb
     csvpillar
     digicert
     django_orm
