@@ -12,7 +12,7 @@ import logging
 from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
 from tests.support.paths import FILES
 from tests.support.unit import skipIf
-from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
@@ -129,3 +129,6 @@ class AzureTest(CloudTest):
                 ), timeout=TIMEOUT
             )]
         )
+
+    def tearDown(self):
+        self._destroy_instance()

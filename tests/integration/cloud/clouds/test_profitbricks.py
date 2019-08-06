@@ -195,3 +195,5 @@ class ProfitBricksTest(CloudTest):
                 timeout=TIMEOUT
             )]
         )
+
+        self._destroy_instance()
