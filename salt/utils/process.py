@@ -778,7 +778,7 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
         log.debug(msg)
         if HAS_PSUTIL:
             try:
-                process = psutil.Process(os.getpid())
+                process = psutil.Process(self.pid)
                 if hasattr(process, 'children'):
                     for child in process.children(recursive=True):
                         try:

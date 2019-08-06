@@ -5,7 +5,9 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 import logging
+import time
 
 # Import Salt Testing Libs
 from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
@@ -15,6 +17,7 @@ from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
 from salt.utils.versions import LooseVersion
+from salt.ext.six.moves import range
 
 try:
     import azure  # pylint: disable=unused-import
@@ -31,9 +34,6 @@ PROFILE_NAME = 'azure-test'
 REQUIRED_AZURE = '0.11.1'
 
 log = logging.getLogger(__name__)
-
-TIMEOUT = CLOUD_TIMEOUT * 2
-REQUIRED_AZURE = '0.11.1'
 
 
 def __has_required_azure():

@@ -24,6 +24,7 @@ import salt.utils.process
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+import psutil
 
 
 def die(func):
@@ -235,166 +236,35 @@ class TestProcess(TestCase):
         # pylint: enable=assignment-from-none
 
 
+@skipIf(sys.platform.startswith('win'), 'pickling nested function errors on Windows')
 class TestSignalHandlingMultiprocessingProcess(TestCase):
-
-    @classmethod
-    def Process(cls, pid):
-        raise psutil.NoSuchProcess(pid)
-
-    @classmethod
-    def target(cls):
-        os.kill(os.getpid(), signal.SIGTERM)
-
-    @classmethod
-    def children(cls, *args, **kwargs):
-        raise psutil.NoSuchProcess(1)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_process_does_not_exist(self):
+        def Process(pid):
+            raise psutil.NoSuchProcess(pid)
+
+        def target():
+            os.kill(os.getpid(), signal.SIGTERM)
+
         try:
-            with patch('psutil.Process', self.Process):
-                proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.target)
+            with patch('psutil.Process', Process):
+                proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=target)
                 proc.start()
         except psutil.NoSuchProcess:
             assert False, "psutil.NoSuchProcess raised"
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_process_children_do_not_exist(self):
+        def children(*args, **kwargs):
+            raise psutil.NoSuchProcess(1)
+
+        def target():
+            os.kill(os.getpid(), signal.SIGTERM)
+
         try:
-            with patch('psutil.Process.children', self.children):
-                proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.target)
+            with patch('psutil.Process.children', children):
+                proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=target)
                 proc.start()
         except psutil.NoSuchProcess:
             assert False, "psutil.NoSuchProcess raised"
-
-    @staticmethod
-    def run_forever_sub_target(evt):
-        'Used by run_forever_target to create a sub-process'
-        while not evt.is_set():
-            time.sleep(1)
-
-    @staticmethod
-    def run_forever_target(sub_target, evt):
-        'A target that will run forever or until an event is set'
-        p = multiprocessing.Process(target=sub_target, args=(evt,))
-        p.start()
-        p.join()
-
-    @staticmethod
-    def kill_target_sub_proc():
-        pid = os.fork()
-        if pid == 0:
-            return
-        pid = os.fork()
-        if pid == 0:
-            return
-        time.sleep(.1)
-        try:
-            os.kill(os.getpid(), signal.SIGINT)
-        except KeyboardInterrupt:
-            pass
-
-    @skipIf(sys.platform.startswith('win'), 'No os.fork on Windows')
-    def test_signal_processing_regression_test(self):
-        evt = multiprocessing.Event()
-        sh_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
-            target=self.run_forever_target,
-            args=(self.run_forever_sub_target, evt)
-        )
-        sh_proc.start()
-        proc = multiprocessing.Process(target=self.kill_target_sub_proc)
-        proc.start()
-        proc.join()
-        # When the bug exists, the kill_target_sub_proc signal will kill both
-        # processes. sh_proc will be alive if the bug is fixed
-        try:
-            assert sh_proc.is_alive()
-        finally:
-            evt.set()
-            sh_proc.join()
-
-    @staticmethod
-    def no_op_target():
-        pass
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_signal_processing_test_after_fork_called(self):
-        'Validate MultiprocessingProcess and sub classes call after fork methods'
-        evt = multiprocessing.Event()
-        sig_to_mock = 'salt.utils.process.SignalHandlingMultiprocessingProcess._setup_signals'
-        log_to_mock = 'salt.utils.process.MultiprocessingProcess._setup_process_logging'
-        with patch(sig_to_mock) as ma, patch(log_to_mock) as mb:
-            self.sh_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.no_op_target)
-            self.sh_proc._run()
-        ma.assert_called()
-        mb.assert_called()
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_signal_processing_test_final_methods_called(self):
-        'Validate MultiprocessingProcess and sub classes call finalize methods'
-        evt = multiprocessing.Event()
-        teardown_to_mock = 'salt.log.setup.shutdown_multiprocessing_logging'
-        log_to_mock = 'salt.utils.process.MultiprocessingProcess._setup_process_logging'
-        sig_to_mock = 'salt.utils.process.SignalHandlingMultiprocessingProcess._setup_signals'
-        # Mock _setup_signals so we do not register one for this process.
-        with patch(sig_to_mock):
-            with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
-                self.sh_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.no_op_target)
-                self.sh_proc._run()
-        ma.assert_called()
-        mb.assert_called()
-
-    @staticmethod
-    def pid_setting_target(sub_target, val, evt):
-        val.value = os.getpid()
-        p = multiprocessing.Process(target=sub_target, args=(evt,))
-        p.start()
-        p.join()
-
-    @skipIf(sys.platform.startswith('win'), 'Required signals not supported on windows')
-    def test_signal_processing_handle_signals_called(self):
-        'Validate SignalHandlingMultiprocessingProcess handles signals'
-        # Gloobal event to stop all processes we're creating
-        evt = multiprocessing.Event()
-
-        # Create a process to test signal handler
-        val = multiprocessing.Value('i', 0)
-        proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
-            target=self.pid_setting_target,
-            args=(self.run_forever_sub_target, val, evt),
-        )
-        proc.start()
-
-        # Create a second process that should not respond to SIGINT or SIGTERM
-        proc2 = multiprocessing.Process(
-            target=self.run_forever_target,
-            args=(self.run_forever_sub_target, evt),
-        )
-        proc2.start()
-
-        # Wait for the sub process to set it's pid
-        while not val.value:
-            time.sleep(.3)
-
-        assert not proc.signal_handled()
-
-        # Send a signal that should get handled by the subprocess
-        os.kill(val.value, signal.SIGTERM)
-
-        # wait up to 10 seconds for signal handler:
-        start = time.time()
-        while time.time() - start < 10:
-            if proc.signal_handled():
-                break
-            time.sleep(.3)
-
-        try:
-            # Allow some time for the signal handler to do it's thing
-            assert proc.signal_handled()
-            # Reap the signaled process
-            proc.join(1)
-            assert proc2.is_alive()
-        finally:
-            evt.set()
-            proc2.join(30)
-            proc.join(30)
