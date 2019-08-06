@@ -16,7 +16,7 @@ from salt.config import cloud_providers_config
 
 
 # Create the cloud instance name to be used throughout the tests
-from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
+from tests.integration.cloud.cloud_test_helpers import CloudTest
 
 PROVIDER_NAME = 'joyent'
 
@@ -67,7 +67,7 @@ class JoyentTest(CloudTest):
             )
 
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
+                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
 
     def test_instance(self):
         '''
