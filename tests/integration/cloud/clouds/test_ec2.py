@@ -21,10 +21,32 @@ from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support import win_installer
 
 # Create the cloud instance name to be used throughout the tests
-from tests.integration.cloud.helpers.cloud_test_base import CloudTest
+from tests.integration.cloud.cloud_test_helpers import CloudTest
 
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
+# THis test needs a longer timeout than other cloud tests
 TIMEOUT = 1200
+
+
+def _fetch_installer():
+    '''
+    Make sure the testing environment has a Windows installer executable.
+    '''
+    # Determine the downloaded installer name by searching the files
+    # directory for the first file that looks like an installer.
+    for path, dirs, files in os.walk(FILES):
+        for file in files:
+            if file.startswith(win_installer.PREFIX):
+                return file
+    # Download the latest Windows installer executable
+    name = win_installer.latest_installer_name()
+    path = os.path.join(FILES, name)
+    with salt.utils.files.fopen(path, 'wb') as fp:
+        win_installer.download_and_verify(fp, name)
+    return name
+
+
+INSTALLER = _fetch_installer()
 
 
 class EC2Test(CloudTest):
@@ -83,12 +105,12 @@ class EC2Test(CloudTest):
         '''
 
         # create the instance
-        cmd = '-p {0}'.format(profile)
+        cmd = ['-p', profile]
         if debug:
             cmd.extend(['-l', 'debug'])
-        cmd.append(self.instance_name)
+        cmd.append(self.INSTANCE_NAME)
         instance = self.run_cloud(' '.join(cmd), timeout=TIMEOUT)
-        ret_str = '{0}:'.format(self.instance_name)
+        ret_str = '{0}:'.format(self.INSTANCE_NAME)
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)

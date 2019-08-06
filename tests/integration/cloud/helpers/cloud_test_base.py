@@ -43,5 +43,16 @@ class CloudTest(ShellCase):
         '''
         Clean up after tests, If the instance still exists for any reason, delete it
         '''
-        if self._instance_exists():
-            self._destroy_instance()
+        for _ in range(4):
+            if self._instance_exists():
+                delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
+                # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
+                delete_str = ''.join(delete)
+
+                if 'shutting-down' in delete_str:
+                    log.debug('Instance "{}" was deleted properly'.format(self.INSTANCE_NAME))
+                    break
+                else:
+                    log.warning('Instance "{}" was not deleted'.format(self.INSTANCE_NAME))
+                    sleep(10)
+        self.assertEqual(self._instance_exists(), False)
