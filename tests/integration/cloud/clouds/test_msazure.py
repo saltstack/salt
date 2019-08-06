@@ -126,8 +126,24 @@ class AzureTest(CloudTest):
         Test creating an instance on Azure
         '''
         # check if instance with salt installed returned
-        ret_val = self.run_cloud('-p azure-test {0}'.format(self.instance_name), timeout=TIMEOUT)
-        self.assertInstanceExists(ret_val)
+        self.assertIn(
+            INSTANCE_NAME,
+            [i.strip() for i in self.run_cloud(
+                '-p {0} {1}'.format(
+                    PROFILE_NAME,
+                    INSTANCE_NAME
+                ), timeout=TIMEOUT
+            )]
+        )
+
+    def tearDown(self):
+        '''
+        Clean up after tests
+        '''
+        # delete the instance
+        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
+        # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
+        delete_str = ''.join(delete)
 
         # check if deletion was performed appropriately
         self.assertIn(INSTANCE_NAME, delete_str)

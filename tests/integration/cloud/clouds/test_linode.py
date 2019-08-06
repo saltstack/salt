@@ -8,7 +8,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.paths import FILES
-from tests.support.helpers import expensiveTest
+from tests.support.helpers import expensiveTest, generate_random_name
+
+# Import Salt Libs
+from salt.config import cloud_providers_config
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('cloud-test-').lower()

@@ -140,9 +140,8 @@ class EC2Test(ShellCase):
         ret_str = '{0}:'.format(INSTANCE_NAME)
 
         # check if instance returned with salt installed
-        self.assertInstanceExists(ret_val)
-
-        self.assertDestroyInstance()
+        self.assertIn(ret_str, instance)
+        self.assertEqual(self._instance_exists(), True)
 
     def test_instance_rename(self):
         '''
