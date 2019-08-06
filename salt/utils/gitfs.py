@@ -3050,11 +3050,6 @@ class GitPillar(GitBase):
         '''
         Set and automatically clear a lock on all the repos
         '''
-        if not isinstance(lock_type, six.string_types):
-            raise GitLockError(
-                errno.EINVAL,
-                'Invalid lock_type \'{0}\''.format(lock_type)
-            )
 
         # Make sure that we have a positive integer timeout, otherwise just set
         # it to zero.
@@ -3090,9 +3085,9 @@ class GitPillar(GitBase):
                             raise GitLockError(exc.errno, exc.strerror)
                         else:
                             log.debug(
-                                'A %s lock is already present for %s remote '
+                                'A global lock is already present for %s remote '
                                 '\'%s\', sleeping %f second(s)',
-                                lock_type, self.role, self.id, poll_interval
+                                self.role, self.id, poll_interval
                             )
                             time.sleep(poll_interval)
                             continue
