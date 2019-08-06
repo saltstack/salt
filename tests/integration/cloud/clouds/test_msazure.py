@@ -21,6 +21,7 @@ TIMEOUT = 500
 
 try:
     import azure  # pylint: disable=unused-import
+
     HAS_AZURE = True
 except ImportError:
     HAS_AZURE = False
@@ -71,7 +72,7 @@ class AzureTest(ShellCase):
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(PROVIDER_NAME)
+                    .format(PROVIDER_NAME)
             )
 
         # check if subscription_id and certificate_path are present in provider file
@@ -109,47 +110,37 @@ class AzureTest(ShellCase):
                 )
             )
 
+        self.assertEqual(self._instance_exists(), False,
+                         'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
+
+    def _instance_exists(self):
+        # salt-cloud -a show_instance myinstance
+        return '        {0}:'.format(INSTANCE_NAME) in self.run_cloud('--query')
+
     def test_instance(self):
         '''
         Test creating an instance on Azure
         '''
         # check if instance with salt installed returned
-        try:
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud(
-                    '-p {0} {1}'.format(
-                        PROFILE_NAME,
-                        INSTANCE_NAME
-                    ), timeout=TIMEOUT
-                )]
-            )
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
-                           timeout=TIMEOUT)
-            raise
-
-        # delete the instance
-        try:
-            self.assertIn(
-                INSTANCE_NAME + ':',
-                [i.strip() for i in self.run_cloud(
-                    '-d {0} --assume-yes'.format(
-                        INSTANCE_NAME
-                    ), timeout=TIMEOUT
-                )]
-            )
-        except AssertionError:
-            raise
+        self.assertIn(
+            INSTANCE_NAME,
+            [i.strip() for i in self.run_cloud(
+                '-p {0} {1}'.format(
+                    PROFILE_NAME,
+                    INSTANCE_NAME
+                ), timeout=TIMEOUT
+            )]
+        )
 
     def tearDown(self):
         '''
         Clean up after tests
         '''
-        query = self.run_cloud('--query')
-        ret_str = '        {0}:'.format(INSTANCE_NAME)
+        # delete the instance
+        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
+        # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
+        delete_str = ''.join(delete)
 
-        # if test instance is still present, delete it
-        if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
-                           timeout=TIMEOUT)
+        # check if deletion was performed appropriately
+        self.assertIn(INSTANCE_NAME, delete_str)
+        self.assertIn('True', delete_str)

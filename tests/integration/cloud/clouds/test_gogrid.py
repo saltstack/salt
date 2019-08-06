@@ -17,8 +17,9 @@ from tests.support.unit import skipIf
 from salt.config import cloud_providers_config
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
+INSTANCE_NAME = generate_random_name('cloud-test-').lower()
 PROVIDER_NAME = 'gogrid'
+TIMEOUT = 500
 
 
 @skipIf(True, 'waiting on bug report fixes from #13365')
@@ -41,7 +42,7 @@ class GoGridTest(ShellCase):
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(PROVIDER_NAME)
+                    .format(PROVIDER_NAME)
             )
 
         # check if client_key and api_key are present
@@ -61,39 +62,35 @@ class GoGridTest(ShellCase):
             self.skipTest(
                 'An api key and shared secret must be provided to run these tests. '
                 'Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                .format(PROVIDER_NAME)
+                    .format(PROVIDER_NAME)
             )
+
+        self.assertEqual(self._instance_exists(), False,
+                         'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
+
+    def _instance_exists(self):
+        return '        {0}:'.format(INSTANCE_NAME) in self.run_cloud('--query')
 
     def test_instance(self):
         '''
         Test creating an instance on GoGrid
         '''
         # check if instance with salt installed returned
-        try:
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p gogrid-test {0}'.format(INSTANCE_NAME), timeout=500)]
-            )
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
-            raise
-
-        # delete the instance
-        try:
-            self.assertIn(
-                INSTANCE_NAME + ':',
-                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)]
-            )
-        except AssertionError:
-            raise
+        self.assertIn(
+            INSTANCE_NAME,
+            [i.strip() for i in self.run_cloud('-p gogrid-test {0}'.format(INSTANCE_NAME), timeout=500)]
+        )
+        self.assertEqual(self._instance_exists(), True)
 
     def tearDown(self):
         '''
         Clean up after tests
         '''
-        query = self.run_cloud('--query')
-        ret_str = '        {0}:'.format(INSTANCE_NAME)
+        # delete the instance
+        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
+        # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
+        delete_str = ''.join(delete)
 
-        # if test instance is still present, delete it
-        if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+        # check if deletion was performed appropriately
+        self.assertIn(INSTANCE_NAME, delete_str)
+        self.assertIn('True', delete_str)
