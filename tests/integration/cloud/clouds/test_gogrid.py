@@ -16,7 +16,7 @@ from tests.support.unit import skipIf
 from salt.config import cloud_providers_config
 
 # Create the cloud instance name to be used throughout the tests
-from tests.integration.cloud.cloud_test_helpers import CloudTest
+from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
 
 PROVIDER_NAME = 'gogrid'
 
@@ -74,9 +74,7 @@ class GoGridTest(CloudTest):
         # check if instance with salt installed returned
         self.assertIn(
             self.INSTANCE_NAME,
-            [i.strip() for i in self.run_cloud('-p gogrid-test {0}'.format(self.INSTANCE_NAME), timeout=500)]
+            [i.strip() for i in self.run_cloud('-p gogrid-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
         )
         self.assertEqual(self._instance_exists(), True)
-
-    def tearDown(self):
         self._destroy_instance()

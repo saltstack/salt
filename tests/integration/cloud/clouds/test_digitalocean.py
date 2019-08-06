@@ -11,9 +11,9 @@ import os
 from Crypto.PublicKey import RSA
 
 # Import Salt Testing Libs
-from tests.support.case import ShellCase
+from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
 from tests.support.paths import FILES
-from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
@@ -22,11 +22,10 @@ import salt.utils.stringutils
 
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'digitalocean'
 
 
-class DigitalOceanTest(ShellCase):
+class DigitalOceanTest(CloudTest):
     '''
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud
     '''
@@ -70,6 +69,9 @@ class DigitalOceanTest(ShellCase):
                 .format(PROVIDER_NAME)
             )
 
+        self.assertEqual(self._instance_exists(), False,
+                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
+
     def test_list_images(self):
         '''
         Tests the return of running the --list-images command for digitalocean
@@ -104,7 +106,7 @@ class DigitalOceanTest(ShellCase):
         '''
         Test key management
         '''
-        do_key_name = INSTANCE_NAME + '-key'
+        do_key_name = self.INSTANCE_NAME + '-key'
 
         # generate key and fingerprint
         ssh_key = RSA.generate(4096)
@@ -149,26 +151,9 @@ class DigitalOceanTest(ShellCase):
         Test creating an instance on DigitalOcean
         '''
         # check if instance with salt installed returned
-        try:
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p digitalocean-test {0}'.format(INSTANCE_NAME), timeout=500)]
-            )
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
-            raise
-
-        # delete the instance
-        try:
-            self.assertIn(
-                'True',
-                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)]
-            )
-        except AssertionError:
-            raise
-
-        # Final clean-up of created instance, in case something went wrong.
-        # This was originally in a tearDown function, but that didn't make sense
-        # To run this for each test when not all tests create instances.
-        if INSTANCE_NAME in [i.strip() for i in self.run_cloud('--query')]:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+        self.assertIn(
+            self.INSTANCE_NAME,
+            [i.strip() for i in self.run_cloud('-p digitalocean-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
+        )
+        self.assertEqual(self._instance_exists(), True)
+        self._destroy_instance()

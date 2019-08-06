@@ -16,7 +16,7 @@ from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
 
 # Create the cloud instance name to be used throughout the tests
-from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
+from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
 PROVIDER_NAME = 'vmware'
 
@@ -100,6 +100,8 @@ class VMWareTest(CloudTest):
         self.assertIn(disk_datastore_str, instance,
                       msg='Hard Disk 2 did not use the Datastore {0} '.format(disk_datastore))
 
+        self._destroy_instance()
+
     def test_snapshot(self):
         '''
         Tests creating snapshot and creating vm with --no-deploy
@@ -120,6 +122,6 @@ class VMWareTest(CloudTest):
         s_ret_str = 'Snapshot created successfully'
 
         self.assertIn(s_ret_str, six.text_type(create_snapshot))
+        self.assertEqual(self._instance_exists(), True)
 
-    def tearDown(self):
         self._destroy_instance()

@@ -41,7 +41,7 @@ class CloudTest(ShellCase):
 
     def tearDown(self):
         '''
-        Clean up after tests, share this between all the cloud tests
+        Clean up after tests, If the instance still exists for any reason, delete it
         '''
         if self._instance_exists():
             self._destroy_instance()
