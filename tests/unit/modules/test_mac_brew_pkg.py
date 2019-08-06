@@ -178,3 +178,135 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_brew.__salt__,
                         {'pkg_resource.parse_targets': mock_params}):
             self.assertEqual(mac_brew.install('name=foo'), {})
+
+    # 'hold' function tests: 2
+    # Only tested a few basics
+    # Full functionality should be tested in integration phase
+
+    def test_hold(self):
+        '''
+        Tests holding if package is installed
+        '''
+        mock_user = MagicMock(return_value='foo')
+        mock_cmd = MagicMock(return_value='')
+        mock_cmd_all = MagicMock(return_value={'pid': 12345, 'retcode': 0, 'stderr': '', u'stdout': ''})
+        _expected = {'foo': {'changes': {'new': 'hold', 'old': 'install'},
+                     'comment': 'Package foo is now being held.',
+                     'name': 'foo',
+                     'result': True}}
+
+        mock_params = MagicMock(return_value=({'foo': None}, 'repository'))
+        with patch('salt.modules.mac_brew_pkg.list_pkgs', return_value={'foo': '0.1.5'}), \
+                patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
+                                               'pkg_resource.parse_targets': mock_params,
+                                               'cmd.run_all': mock_cmd_all,
+                                               'cmd.run': mock_cmd}):
+            self.assertEqual(mac_brew.hold('foo'), _expected)
+
+    def test_hold_not_installed(self):
+        '''
+        Tests holding if package is not installed
+        '''
+        mock_user = MagicMock(return_value='foo')
+        mock_cmd = MagicMock(return_value='')
+        mock_cmd_all = MagicMock(return_value={'pid': 12345, 'retcode': 0, 'stderr': '', u'stdout': ''})
+        _expected = {'foo': {'changes': {},
+                     'comment': 'Package foo does not have a state.',
+                     'name': 'foo',
+                     'result': False}}
+
+        mock_params = MagicMock(return_value=({'foo': None}, 'repository'))
+        with patch('salt.modules.mac_brew_pkg.list_pkgs', return_value={}), \
+                patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
+                                               'pkg_resource.parse_targets': mock_params,
+                                               'cmd.run_all': mock_cmd_all,
+                                               'cmd.run': mock_cmd}):
+            self.assertEqual(mac_brew.hold('foo'), _expected)
+
+    def test_hold_pinned(self):
+        '''
+        Tests holding if package is already pinned
+        '''
+        mock_user = MagicMock(return_value='foo')
+        mock_cmd = MagicMock(return_value='')
+        mock_cmd_all = MagicMock(return_value={'pid': 12345, 'retcode': 0, 'stderr': '', u'stdout': ''})
+        _expected = {'foo': {'changes': {},
+                     'comment': 'Package foo is already set to be held.',
+                     'name': 'foo',
+                     'result': True}}
+
+        mock_params = MagicMock(return_value=({'foo': None}, 'repository'))
+        with patch('salt.modules.mac_brew_pkg.list_pkgs', return_value={'foo': '0.1.5'}), \
+                patch('salt.modules.mac_brew_pkg._list_pinned', return_value=['foo']), \
+                patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
+                                               'pkg_resource.parse_targets': mock_params,
+                                               'cmd.run_all': mock_cmd_all,
+                                               'cmd.run': mock_cmd}):
+            self.assertEqual(mac_brew.hold('foo'), _expected)
+
+    # 'unhold' function tests: 2
+    # Only tested a few basics
+    # Full functionality should be tested in integration phase
+
+    def test_unhold(self):
+        '''
+        Tests unholding if package is installed
+        '''
+        mock_user = MagicMock(return_value='foo')
+        mock_cmd = MagicMock(return_value='')
+        mock_cmd_all = MagicMock(return_value={'pid': 12345, 'retcode': 0, 'stderr': '', u'stdout': ''})
+        _expected = {'foo': {'changes': {'new': 'install', 'old': 'hold'},
+                     'comment': 'Package foo is no longer being held.',
+                     'name': 'foo',
+                     'result': True}}
+
+        mock_params = MagicMock(return_value=({'foo': None}, 'repository'))
+        with patch('salt.modules.mac_brew_pkg.list_pkgs', return_value={'foo': '0.1.5'}), \
+                patch('salt.modules.mac_brew_pkg._list_pinned', return_value=['foo']), \
+                patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
+                                               'pkg_resource.parse_targets': mock_params,
+                                               'cmd.run_all': mock_cmd_all,
+                                               'cmd.run': mock_cmd}):
+            self.assertEqual(mac_brew.unhold('foo'), _expected)
+
+    def test_unhold_not_installed(self):
+        '''
+        Tests unholding if package is not installed
+        '''
+        mock_user = MagicMock(return_value='foo')
+        mock_cmd = MagicMock(return_value='')
+        mock_cmd_all = MagicMock(return_value={'pid': 12345, 'retcode': 0, 'stderr': '', u'stdout': ''})
+        _expected = {'foo': {'changes': {},
+                     'comment': 'Package foo does not have a state.',
+                     'name': 'foo',
+                     'result': False}}
+
+        mock_params = MagicMock(return_value=({'foo': None}, 'repository'))
+        with patch('salt.modules.mac_brew_pkg.list_pkgs', return_value={}), \
+                patch('salt.modules.mac_brew_pkg._list_pinned', return_value=['foo']), \
+                patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
+                                               'pkg_resource.parse_targets': mock_params,
+                                               'cmd.run_all': mock_cmd_all,
+                                               'cmd.run': mock_cmd}):
+            self.assertEqual(mac_brew.unhold('foo'), _expected)
+
+    def test_unhold_not_pinned(self):
+        '''
+        Tests unholding if package is not installed
+        '''
+        mock_user = MagicMock(return_value='foo')
+        mock_cmd = MagicMock(return_value='')
+        mock_cmd_all = MagicMock(return_value={'pid': 12345, 'retcode': 0, 'stderr': '', u'stdout': ''})
+        _expected = {'foo': {'changes': {},
+                     'comment': 'Package foo is already set not to be held.',
+                     'name': 'foo',
+                     'result': True}}
+
+        mock_params = MagicMock(return_value=({'foo': None}, 'repository'))
+        with patch('salt.modules.mac_brew_pkg.list_pkgs', return_value={'foo': '0.1.5'}), \
+                patch('salt.modules.mac_brew_pkg._list_pinned', return_value=[]), \
+                patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
+                                               'pkg_resource.parse_targets': mock_params,
+                                               'cmd.run_all': mock_cmd_all,
+                                               'cmd.run': mock_cmd}):
+            self.assertEqual(mac_brew.unhold('foo'), _expected)

@@ -52,6 +52,39 @@ def _list_taps():
     return _call_brew(cmd)['stdout'].splitlines()
 
 
+def _list_pinned():
+    '''
+    List currently pinned formulas
+    '''
+    cmd = 'list --pinned'
+    return _call_brew(cmd)['stdout'].splitlines()
+
+def _pin(pkg, runas=None):
+    '''
+    Pin pkg
+    '''
+    cmd = 'pin {0}'.format(pkg)
+    try:
+        _call_brew(cmd)
+    except CommandExecutionError:
+        log.error('Failed to pin "%s"', tap)
+        return False
+
+    return True
+
+def _unpin(pkg, runas=None):
+    '''
+    Pin pkg
+    '''
+    cmd = 'unpin {0}'.format(pkg)
+    try:
+        _call_brew(cmd)
+    except CommandExecutionError:
+        log.error('Failed to unpin "%s"', tap)
+        return False
+
+    return True
+
 def _tap(tap, runas=None):
     '''
     Add unofficial GitHub repos to the list of formulas that brew tracks,
@@ -534,3 +567,164 @@ def info_installed(*names, **kwargs):
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
     '''
     return _info(*names)
+
+
+def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
+    '''
+    .. versionadded:: Sodium
+
+    Set package in 'hold' state, meaning it will not be upgraded.
+
+    name
+        The name of the package, e.g., 'tmux'
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.hold <package name>
+
+    pkgs
+        A list of packages to hold. Must be passed as a python list.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.hold pkgs='["foo", "bar"]'
+    '''
+    if not name and not pkgs and not sources:
+        raise SaltInvocationError(
+            'One of name, pkgs, or sources must be specified.'
+        )
+    if pkgs and sources:
+        raise SaltInvocationError(
+            'Only one of pkgs or sources can be specified.'
+        )
+
+    targets = []
+    if pkgs:
+        targets.extend(pkgs)
+    elif sources:
+        for source in sources:
+            targets.append(next(iter(source)))
+    else:
+        targets.append(name)
+
+    ret = {}
+    pinned = _list_pinned()
+    installed = list_pkgs()
+    for target in targets:
+        if isinstance(target, dict):
+            target = next(iter(target))
+
+        ret[target] = {'name': target,
+                       'changes': {},
+                       'result': False,
+                       'comment': ''}
+
+        if target not in installed:
+            ret[target]['comment'] = ('Package {0} does not have a state.'
+                                      .format(target))
+        elif target not in pinned:
+            if 'test' in __opts__ and __opts__['test']:
+                ret[target].update(result=None)
+                ret[target]['comment'] = ('Package {0} is set to be held.'
+                                          .format(target))
+            else:
+                result = _pin(target)
+                if result:
+                  changes = {'old': 'install', 'new': 'hold'}
+                  ret[target].update(changes=changes, result=True)
+                  ret[target]['comment'] = ('Package {0} is now being held.'
+                                            .format(target))
+                else:
+                  ret[target].update(result=False)
+                  ret[target]['comment'] = ('Unable to hold package {0}.'.format(target))
+        else:
+            ret[target].update(result=True)
+            ret[target]['comment'] = ('Package {0} is already set to be held.'
+                                      .format(target))
+    return ret
+pin = hold
+
+
+def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
+    '''
+    .. versionadded:: Sodium
+
+    Set package current in 'hold' state to install state,
+    meaning it will be upgraded.
+
+    name
+        The name of the package, e.g., 'tmux'
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.unhold <package name>
+
+    pkgs
+        A list of packages to unhold. Must be passed as a python list.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.unhold pkgs='["foo", "bar"]'
+    '''
+    if not name and not pkgs and not sources:
+        raise SaltInvocationError(
+            'One of name, pkgs, or sources must be specified.'
+        )
+    if pkgs and sources:
+        raise SaltInvocationError(
+            'Only one of pkgs or sources can be specified.'
+        )
+
+    targets = []
+    if pkgs:
+        targets.extend(pkgs)
+    elif sources:
+        for source in sources:
+            targets.append(next(iter(source)))
+    else:
+        targets.append(name)
+
+    ret = {}
+    pinned = _list_pinned()
+    installed = list_pkgs()
+    for target in targets:
+        if isinstance(target, dict):
+            target = next(iter(target))
+
+        ret[target] = {'name': target,
+                       'changes': {},
+                       'result': False,
+                       'comment': ''}
+
+        if target not in installed:
+            ret[target]['comment'] = ('Package {0} does not have a state.'
+                                      .format(target))
+        elif target in pinned:
+            if 'test' in __opts__ and __opts__['test']:
+                ret[target].update(result=None)
+                ret[target]['comment'] = ('Package {0} is set to be unheld.'
+                                          .format(target))
+            else:
+                result = _unpin(target)
+                if result:
+                  changes = {'old': 'hold', 'new': 'install'}
+                  ret[target].update(changes=changes, result=True)
+                  ret[target]['comment'] = ('Package {0} is no longer being held.'
+                                            .format(target))
+                else:
+                  ret[target].update(result=False)
+                  ret[target]['comment'] = ('Unable to unhold package {0}.'.format(target))
+        else:
+            ret[target].update(result=True)
+            ret[target]['comment'] = ('Package {0} is already set not to be held.'
+                                      .format(target))
+    return ret
+unpin = unhold
