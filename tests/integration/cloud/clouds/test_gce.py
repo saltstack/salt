@@ -12,15 +12,12 @@ import os
 from salt.config import cloud_providers_config
 
 # Import Salt Testing Libs
-from tests.support.case import ShellCase
+from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
 from tests.support.paths import FILES
-from tests.support.helpers import expensiveTest, generate_random_name
-
-INSTANCE_NAME = generate_random_name('cloud-test-').lower()
-TIMEOUT = 500
+from tests.support.helpers import expensiveTest
 
 
-class GCETest(ShellCase):
+class GCETest(CloudTest):
     '''
     Integration tests for the GCE cloud provider in Salt-Cloud
     '''
@@ -72,21 +69,14 @@ class GCETest(ShellCase):
                     .format(provider)
             )
 
-        self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
-
-    def _instance_exists(self):
-        # salt-cloud -a show_instance myinstance
-        return '        {0}:'.format(INSTANCE_NAME) in self.run_cloud('--query')
-
     def test_instance(self):
         '''
         Tests creating and deleting an instance on GCE
         '''
 
         # create the instance
-        instance = self.run_cloud('-p gce-test {0}'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        ret_str = '{0}:'.format(INSTANCE_NAME)
+        instance = self.run_cloud('-p gce-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
+        ret_str = '{0}:'.format(self.INSTANCE_NAME)
 
         # check if instance returned with salt installed
         self.assertIn(ret_str, instance)
@@ -99,23 +89,10 @@ class GCETest(ShellCase):
 
         # create the instance
         instance = self.run_cloud('-p gce-test-extra \
-                                  {0}'.format(INSTANCE_NAME),
+                                  {0}'.format(self.INSTANCE_NAME),
                                   timeout=TIMEOUT)
-        ret_str = '{0}:'.format(INSTANCE_NAME)
+        ret_str = '{0}:'.format(self.INSTANCE_NAME)
 
         # check if instance returned with salt installed
         self.assertIn(ret_str, instance)
         self.assertEqual(self._instance_exists(), True)
-
-    def tearDown(self):
-        '''
-        Clean up after tests
-        '''
-        # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-        delete_str = ''.join(delete)
-
-        # check if deletion was performed appropriately
-        self.assertIn(INSTANCE_NAME, delete_str)
-        self.assertIn('True', delete_str)

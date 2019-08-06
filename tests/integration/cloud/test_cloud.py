@@ -75,9 +75,7 @@ class CloudClientTestCase(ShellCase):
             provider=self.provider_name,
             names=[INSTANCE_NAME],
             image=self.image_name,
-            location='sfo1',
-            size='512mb',
-            vm_size='512mb'
+            location='sfo1', size='512mb', vm_size='512mb'
         )
 
         # Check that the VM was created correctly
