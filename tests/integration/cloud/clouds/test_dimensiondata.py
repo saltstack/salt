@@ -6,35 +6,21 @@ Integration tests for the Dimension Data cloud provider
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
-import random
-import string
 
 # Import Salt Testing Libs
-from tests.support.case import ShellCase
+from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
 from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-
-def _random_name(size=6):
-    '''
-    Generates a random cloud instance name
-    '''
-    return 'cloud-test-' + ''.join(
-        random.choice(string.ascii_lowercase + string.digits)
-        for x in range(size)
-    )
 
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = _random_name()
 PROVIDER_NAME = 'dimensiondata'
 
 
-class DimensionDataTest(ShellCase):
+class DimensionDataTest(CloudTest):
     '''
     Integration tests for the Dimension Data cloud provider in Salt-Cloud
     '''
@@ -78,6 +64,9 @@ class DimensionDataTest(ShellCase):
                 .format(PROVIDER_NAME)
             )
 
+        self.assertEqual(self._instance_exists(), False,
+                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
+
     def test_list_images(self):
         '''
         Tests the return of running the --list-images command for the dimensiondata cloud provider
@@ -113,26 +102,10 @@ class DimensionDataTest(ShellCase):
         Test creating an instance on Dimension Data's cloud
         '''
         # check if instance with salt installed returned
-        try:
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p dimensiondata-test {0}'.format(INSTANCE_NAME), timeout=500)]
-            )
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
-            raise
+        self.assertIn(
+            self.INSTANCE_NAME,
+            [i.strip() for i in self.run_cloud('-p dimensiondata-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
+        )
 
-        # delete the instance
-        try:
-            self.assertIn(
-                'True',
-                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)]
-            )
-        except AssertionError:
-            raise
+        self._destroy_instance()
 
-        # Final clean-up of created instance, in case something went wrong.
-        # This was originally in a tearDown function, but that didn't make sense
-        # To run this for each test when not all tests create instances.
-        if INSTANCE_NAME in [i.strip() for i in self.run_cloud('--query')]:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)

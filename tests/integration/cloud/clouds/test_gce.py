@@ -12,7 +12,7 @@ import os
 from salt.config import cloud_providers_config
 
 # Import Salt Testing Libs
-from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
+from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
 
@@ -81,6 +81,7 @@ class GCETest(CloudTest):
         # check if instance returned with salt installed
         self.assertIn(ret_str, instance)
         self.assertEqual(self._instance_exists(), True)
+        self._destroy_instance()
 
     def test_instance_extra(self):
         '''
@@ -96,3 +97,4 @@ class GCETest(CloudTest):
         # check if instance returned with salt installed
         self.assertIn(ret_str, instance)
         self.assertEqual(self._instance_exists(), True)
+        self._destroy_instance()
