@@ -22,7 +22,9 @@ import salt.utils.json
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.versions
-from salt.exceptions import CommandExecutionError, MinionError
+from salt.exceptions import (
+    CommandExecutionError, MinionError, SaltInvocationError
+)
 
 # Import third party libs
 from salt.ext import six
@@ -59,6 +61,7 @@ def _list_pinned():
     cmd = 'list --pinned'
     return _call_brew(cmd)['stdout'].splitlines()
 
+
 def _pin(pkg, runas=None):
     '''
     Pin pkg
@@ -67,10 +70,11 @@ def _pin(pkg, runas=None):
     try:
         _call_brew(cmd)
     except CommandExecutionError:
-        log.error('Failed to pin "%s"', tap)
+        log.error('Failed to pin "%s"', pkg)
         return False
 
     return True
+
 
 def _unpin(pkg, runas=None):
     '''
@@ -80,10 +84,11 @@ def _unpin(pkg, runas=None):
     try:
         _call_brew(cmd)
     except CommandExecutionError:
-        log.error('Failed to unpin "%s"', tap)
+        log.error('Failed to unpin "%s"', pkg)
         return False
 
     return True
+
 
 def _tap(tap, runas=None):
     '''
@@ -634,18 +639,20 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
             else:
                 result = _pin(target)
                 if result:
-                  changes = {'old': 'install', 'new': 'hold'}
-                  ret[target].update(changes=changes, result=True)
-                  ret[target]['comment'] = ('Package {0} is now being held.'
-                                            .format(target))
+                    changes = {'old': 'install', 'new': 'hold'}
+                    ret[target].update(changes=changes, result=True)
+                    ret[target]['comment'] = ('Package {0} is now being held.'
+                                        .format(target))
                 else:
-                  ret[target].update(result=False)
-                  ret[target]['comment'] = ('Unable to hold package {0}.'.format(target))
+                    ret[target].update(result=False)
+                    ret[target]['comment'] = ('Unable to hold package {0}.'.format(target))
         else:
             ret[target].update(result=True)
             ret[target]['comment'] = ('Package {0} is already set to be held.'
                                       .format(target))
     return ret
+
+
 pin = hold
 
 
@@ -715,16 +722,18 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
             else:
                 result = _unpin(target)
                 if result:
-                  changes = {'old': 'hold', 'new': 'install'}
-                  ret[target].update(changes=changes, result=True)
-                  ret[target]['comment'] = ('Package {0} is no longer being held.'
-                                            .format(target))
+                    changes = {'old': 'hold', 'new': 'install'}
+                    ret[target].update(changes=changes, result=True)
+                    ret[target]['comment'] = ('Package {0} is no longer being held.'
+                                              .format(target))
                 else:
-                  ret[target].update(result=False)
-                  ret[target]['comment'] = ('Unable to unhold package {0}.'.format(target))
+                    ret[target].update(result=False)
+                    ret[target]['comment'] = ('Unable to unhold package {0}.'.format(target))
         else:
             ret[target].update(result=True)
             ret[target]['comment'] = ('Package {0} is already set not to be held.'
                                       .format(target))
     return ret
+
+
 unpin = unhold
