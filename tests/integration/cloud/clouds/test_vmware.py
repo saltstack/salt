@@ -12,17 +12,16 @@ from salt.config import cloud_providers_config, cloud_config
 from salt.ext import six
 
 # Import Salt Testing LIbs
-from tests.support.case import ShellCase
 from tests.support.paths import FILES
-from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.helpers import expensiveTest
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('cloud-test-').lower()
+from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
+
 PROVIDER_NAME = 'vmware'
-TIMEOUT = 500
 
 
-class VMWareTest(ShellCase):
+class VMWareTest(CloudTest):
     '''
     Integration tests for the vmware cloud provider in Salt-Cloud
     '''
@@ -76,9 +75,6 @@ class VMWareTest(ShellCase):
         self.assertEqual(self._instance_exists(), False,
                          'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
 
-    def _instance_exists(self):
-        return '        {0}:'.format(INSTANCE_NAME) in self.run_cloud('--query')
-
     def test_instance(self):
         '''
         Tests creating and deleting an instance on vmware and installing salt
@@ -94,13 +90,9 @@ class VMWareTest(ShellCase):
         profile_config = cloud_config(profile)
         disk_datastore = profile_config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
 
-        for key, value in six.iteritems(profile_config.get('vmware-test', {})):
-            assert value, "Instance config incomplete; missing '{}'".format(key)
-
-        instance = self.run_cloud('-p vmware-test {0}'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        assert instance, "Instance not found, are the '{}' provider credentials active?".format(PROVIDER_NAME)
-        ret_str = '{0}:'.format(INSTANCE_NAME)
-        disk_datastore_str = '                [{0}] {1}/Hard disk 2-flat.vmdk'.format(disk_datastore, INSTANCE_NAME)
+        instance = self.run_cloud('-p vmware-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
+        ret_str = '{0}:'.format(self.INSTANCE_NAME)
+        disk_datastore_str = '                [{0}] {1}/Hard disk 2-flat.vmdk'.format(disk_datastore, self.INSTANCE_NAME)
 
         # check if instance returned with salt installed
         self.assertIn(ret_str, instance)
@@ -113,10 +105,9 @@ class VMWareTest(ShellCase):
         Tests creating snapshot and creating vm with --no-deploy
         '''
         # create the instance
-        instance = self.run_cloud('-p vmware-test {0} --no-deploy'.format(INSTANCE_NAME),
+        instance = self.run_cloud('-p vmware-test {0} --no-deploy'.format(self.INSTANCE_NAME),
                                   timeout=TIMEOUT)
-        assert instance, "Instance not found, are the '{}' provider credentials active?".format(PROVIDER_NAME)
-        ret_str = '{0}:'.format(INSTANCE_NAME)
+        ret_str = '{0}:'.format(self.INSTANCE_NAME)
 
         # check if instance returned with salt installed
         self.assertIn(ret_str, instance)
@@ -124,19 +115,8 @@ class VMWareTest(ShellCase):
 
         create_snapshot = self.run_cloud('-a create_snapshot {0} \
                                          snapshot_name=\'Test Cloud\' \
-                                         memdump=True -y'.format(INSTANCE_NAME),
+                                         memdump=True -y'.format(self.INSTANCE_NAME),
                                          timeout=TIMEOUT)
         s_ret_str = 'Snapshot created successfully'
 
         self.assertIn(s_ret_str, six.text_type(create_snapshot))
-
-    def tearDown(self):
-        '''
-        Clean up after tests
-        '''
-        # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        ret_str = '{0}:\', \'            True'.format(INSTANCE_NAME)
-
-        # check if deletion was performed appropriately
-        self.assertIn(ret_str, six.text_type(delete))

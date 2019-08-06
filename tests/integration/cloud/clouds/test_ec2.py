@@ -15,17 +15,16 @@ import salt.utils.files
 import salt.utils.yaml
 
 # Import Salt Testing Libs
-from tests.support.case import ShellCase
 from tests.support.paths import FILES
-from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.helpers import expensiveTest
 from tests.support.unit import skipIf
 from tests.support import win_installer
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('cloud-test-').lower()
+from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
+
 PROVIDER_NAME = 'ec2'
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
-TIMEOUT = 1200
 
 
 def _fetch_installer():
@@ -49,7 +48,7 @@ def _fetch_installer():
 INSTALLER = _fetch_installer()
 
 
-class EC2Test(ShellCase):
+class EC2Test(CloudTest):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
@@ -108,10 +107,7 @@ class EC2Test(ShellCase):
             )
 
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
-
-    def _instance_exists(self):
-        return '        {0}:'.format(INSTANCE_NAME) in self.run_cloud('--query')
+                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
 
     def override_profile_config(self, name, data):
         conf_path = os.path.join(self.config_dir, 'cloud.profiles.d', 'ec2.conf')
@@ -143,9 +139,9 @@ class EC2Test(ShellCase):
         cmd = '-p {0}'.format(profile)
         if debug:
             cmd += ' -l debug'
-        cmd += ' {0}'.format(INSTANCE_NAME)
+        cmd += ' {0}'.format(self.INSTANCE_NAME)
         instance = self.run_cloud(cmd, timeout=TIMEOUT)
-        ret_str = '{0}:'.format(INSTANCE_NAME)
+        ret_str = '{0}:'.format(self.INSTANCE_NAME)
 
         # check if instance returned with salt installed
         self.assertIn(ret_str, instance)
@@ -156,7 +152,7 @@ class EC2Test(ShellCase):
         Tests creating and renaming an instance on EC2 (classic)
         '''
         # Start with a name that is different from usual so that it will get deleted normally after the test
-        changed_name = INSTANCE_NAME + '-changed'
+        changed_name = self.INSTANCE_NAME + '-changed'
         # create the instance
         instance = self.run_cloud('-p ec2-test {0} --no-deploy'.format(changed_name), timeout=TIMEOUT)
         ret_str = '{0}:'.format(changed_name)
@@ -164,11 +160,11 @@ class EC2Test(ShellCase):
         # check if instance returned
         self.assertIn(ret_str, instance)
 
-        change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(changed_name, INSTANCE_NAME),
+        change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(changed_name, self.INSTANCE_NAME),
                                      timeout=TIMEOUT)
 
-        check_rename = self.run_cloud('-a show_instance {0} --assume-yes'.format(INSTANCE_NAME), [INSTANCE_NAME])
-        exp_results = ['        {0}:'.format(INSTANCE_NAME), '            size:',
+        check_rename = self.run_cloud('-a show_instance {0} --assume-yes'.format(self.INSTANCE_NAME), [self.INSTANCE_NAME])
+        exp_results = ['        {0}:'.format(self.INSTANCE_NAME), '            size:',
                        '            architecture:']
         for result in exp_results:
             self.assertIn(result, check_rename[0])
@@ -249,15 +245,3 @@ class EC2Test(ShellCase):
 
         )
         self._test_instance('ec2-win2016-test', debug=True)
-
-    def tearDown(self):
-        '''
-        Clean up after tests
-        '''
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-        delete_str = ''.join(delete)
-
-        # check if deletion was `performed appropriately
-        self.assertIn(INSTANCE_NAME, delete_str)
-        self.assertIn('True', delete_str)
