@@ -16,9 +16,8 @@ from tests.support.case import ShellCase
 from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest, generate_random_name
 
-
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
+INSTANCE_NAME = generate_random_name('cloud-test-').lower()
 PROVIDER_NAME = 'vmware'
 TIMEOUT = 500
 
@@ -42,7 +41,7 @@ class VMWareTest(ShellCase):
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(PROVIDER_NAME)
+                    .format(PROVIDER_NAME)
             )
 
         # check if user, password, url and provider are present
@@ -71,8 +70,14 @@ class VMWareTest(ShellCase):
                 'A user, password, and url must be provided to run these tests.'
                 'One or more of these elements is missing. Check'
                 'tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                .format(PROVIDER_NAME)
+                    .format(PROVIDER_NAME)
             )
+
+        self.assertEqual(self._instance_exists(), False,
+                         'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
+
+    def _instance_exists(self):
+        return '        {0}:'.format(INSTANCE_NAME) in self.run_cloud('--query')
 
     def test_instance(self):
         '''
@@ -80,11 +85,11 @@ class VMWareTest(ShellCase):
         '''
         # create the instance
         profile = os.path.join(
-                FILES,
-                'conf',
-                'cloud.profiles.d',
-                PROVIDER_NAME + '.conf'
-            )
+            FILES,
+            'conf',
+            'cloud.profiles.d',
+            PROVIDER_NAME + '.conf'
+        )
 
         profile_config = cloud_config(profile)
         disk_datastore = profile_config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
@@ -94,20 +99,10 @@ class VMWareTest(ShellCase):
         disk_datastore_str = '                [{0}] {1}/Hard disk 2-flat.vmdk'.format(disk_datastore, INSTANCE_NAME)
 
         # check if instance returned with salt installed
-        try:
-            self.assertIn(ret_str, instance)
-            self.assertIn(disk_datastore_str, instance,
-                          msg='Hard Disk 2 did not use the Datastore {0} '.format(disk_datastore))
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-            raise
-
-        # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        ret_str = '{0}:\', \'            True'.format(INSTANCE_NAME)
-
-        # check if deletion was performed appropriately
-        self.assertIn(ret_str, six.text_type(delete))
+        self.assertIn(ret_str, instance)
+        self.assertEqual(self._instance_exists(), True)
+        self.assertIn(disk_datastore_str, instance,
+                      msg='Hard Disk 2 did not use the Datastore {0} '.format(disk_datastore))
 
     def test_snapshot(self):
         '''
@@ -119,11 +114,8 @@ class VMWareTest(ShellCase):
         ret_str = '{0}:'.format(INSTANCE_NAME)
 
         # check if instance returned with salt installed
-        try:
-            self.assertIn(ret_str, instance)
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-            raise
+        self.assertIn(ret_str, instance)
+        self.assertEqual(self._instance_exists(), True)
 
         create_snapshot = self.run_cloud('-a create_snapshot {0} \
                                          snapshot_name=\'Test Cloud\' \
@@ -133,19 +125,13 @@ class VMWareTest(ShellCase):
 
         self.assertIn(s_ret_str, six.text_type(create_snapshot))
 
-        # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        ret_str = '{0}:\', \'            True'.format(INSTANCE_NAME)
-
-        self.assertIn(ret_str, six.text_type(delete))
-
     def tearDown(self):
         '''
         Clean up after tests
         '''
-        query = self.run_cloud('--query')
-        ret_str = '        {0}:'.format(INSTANCE_NAME)
+        # delete the instance
+        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
+        ret_str = '{0}:\', \'            True'.format(INSTANCE_NAME)
 
-        # if test instance is still present, delete it
-        if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
+        # check if deletion was performed appropriately
+        self.assertIn(ret_str, six.text_type(delete))

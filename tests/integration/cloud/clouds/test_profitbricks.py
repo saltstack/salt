@@ -20,14 +20,16 @@ from salt.config import cloud_providers_config
 try:
     # pylint: disable=unused-import
     from profitbricks.client import ProfitBricksService
+
     HAS_PROFITBRICKS = True
 except ImportError:
     HAS_PROFITBRICKS = False
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
+INSTANCE_NAME = generate_random_name('cloud-test-').lower()
 PROVIDER_NAME = 'profitbricks'
 DRIVER_NAME = 'profitbricks'
+TIMEOUT = 500
 
 
 @skipIf(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 4.1.0')
@@ -72,8 +74,14 @@ class ProfitBricksTest(ShellCase):
                 'A username, password, and an datacenter must be provided to '
                 'run these tests. Check '
                 'tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                .format(PROVIDER_NAME)
+                    .format(PROVIDER_NAME)
             )
+
+        self.assertEqual(self._instance_exists(), False,
+                         'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
+
+    def _instance_exists(self):
+        return '        {0}:'.format(INSTANCE_NAME) in self.run_cloud('--query')
 
     def test_list_images(self):
         '''
@@ -184,42 +192,23 @@ class ProfitBricksTest(ShellCase):
         Test creating an instance on ProfitBricks
         '''
         # check if instance with salt installed returned
-        try:
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud(
-                    '-p profitbricks-test {0}'.format(INSTANCE_NAME),
-                    timeout=500
-                )]
-            )
-        except AssertionError:
-            self.run_cloud(
-                '-d {0} --assume-yes'.format(INSTANCE_NAME),
-                timeout=500
-            )
-            raise
-
-        # delete the instance
-        try:
-            self.assertIn(
-                INSTANCE_NAME + ':',
-                [i.strip() for i in self.run_cloud(
-                    '-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500
-                )]
-            )
-        except AssertionError:
-            raise
+        self.assertIn(
+            INSTANCE_NAME,
+            [i.strip() for i in self.run_cloud(
+                '-p profitbricks-test {0}'.format(INSTANCE_NAME),
+                timeout=TIMEOUT
+            )]
+        )
 
     def tearDown(self):
         '''
         Clean up after tests
         '''
-        query = self.run_cloud('--query')
-        ret = '        {0}:'.format(INSTANCE_NAME)
+        if self._instance_exists():
+            delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
+            # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
+            delete_str = ''.join(delete)
 
-        # if test instance is still present, delete it
-        if ret in query:
-            self.run_cloud(
-                '-d {0} --assume-yes'.format(INSTANCE_NAME),
-                timeout=500
-            )
+            # check if deletion was performed appropriately
+            self.assertIn(INSTANCE_NAME, delete_str)
+            self.assertIn('True', delete_str)
