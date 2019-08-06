@@ -5,13 +5,22 @@ Integration tests for the Dimension Data cloud provider
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 
 # Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
+from tests.support.paths import FILES
+from tests.support.helpers import expensiveTest
+
+# Import Salt Libs
+from salt.config import cloud_providers_config
 
 
-@expensiveTest
-class DimensionDataTest(ShellCase):
+# Create the cloud instance name to be used throughout the tests
+PROVIDER_NAME = 'dimensiondata'
+
+
+class DimensionDataTest(CloudTest):
     '''
     Integration tests for the Dimension Data cloud provider in Salt-Cloud
     '''
@@ -56,7 +65,7 @@ class DimensionDataTest(ShellCase):
             )
 
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
+                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
 
     def test_list_images(self):
         '''
@@ -94,8 +103,9 @@ class DimensionDataTest(ShellCase):
         '''
         # check if instance with salt installed returned
         self.assertIn(
-            self.instance_name,
-            [i.strip() for i in self.run_cloud('-p dimensiondata-test {0}'.format(self.instance_name), timeout=TIMEOUT)]
+            self.INSTANCE_NAME,
+            [i.strip() for i in self.run_cloud('-p dimensiondata-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
         )
 
         self._destroy_instance()
+

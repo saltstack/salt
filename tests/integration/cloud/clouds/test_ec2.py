@@ -21,6 +21,8 @@ from tests.support.helpers import expensiveTest, generate_random_name
 from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support import win_installer
 
+# Create the cloud instance name to be used throughout the tests
+from tests.integration.cloud.helpers.cloud_test_base import CloudTest
 
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
 TIMEOUT = 1200
@@ -94,6 +96,8 @@ class EC2Test(CloudTest):
 
         self.assertDestroyInstance()
 
+        self._destroy_instance()
+
     def test_instance_rename(self):
         '''
         Tests creating and renaming an instance on EC2 (classic)
@@ -120,6 +124,8 @@ class EC2Test(CloudTest):
             raise
 
         self.assertDestroyInstance()
+
+        self._destroy_instance()
 
     def test_instance(self):
         '''
@@ -195,15 +201,4 @@ class EC2Test(CloudTest):
             }
 
         )
-        self._test_instance('ec2-win2016-test', debug=True, timeout=TIMEOUT)
-
-    def tearDown(self):
-        '''
-        Clean up after tests
-        '''
-        query = self.run_cloud('--query')
-        ret_str = '        {0}:'.format(INSTANCE_NAME)
-
-        # if test instance is still present, delete it
-        if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
+        self._test_instance('ec2-win2016-test', debug=True)

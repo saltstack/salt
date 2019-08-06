@@ -10,6 +10,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 from tests.support.unit import skipIf
 
 # Import Third-Party Libs
+from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
+
 try:
     # pylint: disable=unused-import
     from profitbricks.client import ProfitBricksService

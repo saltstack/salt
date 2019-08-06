@@ -5,31 +5,17 @@ Integration tests for functions located in the salt.cloud.__init__.py file.
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 
 # Import Salt Testing libs
-from tests.support.case import ShellCase
+from tests.integration.cloud.helpers.cloud_test_base import CloudTest
 from tests.support.helpers import expensiveTest
 
 # Import Salt libs
 import salt.cloud
-from salt.ext.six.moves import range
 
 
-def __random_name(size=6):
-    '''
-    Generates a random cloud instance name
-    '''
-    return 'CLOUD-TEST-' + ''.join(
-        random.choice(string.ascii_uppercase + string.digits)
-        for x in range(size)
-    )
-
-
-# Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = __random_name()
-
-
-class CloudClientTestCase(ShellCase):
+class CloudClientTestCase(CloudTest):
     '''
     Integration tests for the CloudClient class. Uses DigitalOcean as a salt-cloud provider.
     '''
@@ -68,17 +54,17 @@ class CloudClientTestCase(ShellCase):
         # Create the VM using salt.cloud.CloudClient.create() instead of calling salt-cloud
         ret_val = cloud_client.create(
             provider=self.provider_name,
-            names=[self.instance_name],
+            names=[self.INSTANCE_NAME],
             image=self.image_name,
             location='sfo1', size='512mb', vm_size='512mb'
         )
 
         # Check that the VM was created correctly
-        self.assertIn(self.instance_name, created)
+        self.assertIn(self.INSTANCE_NAME, created)
         self.assertEqual(self._instance_exists(), True)
 
         # Clean up after ourselves and delete the VM
-        deleted = cloud_client.destroy(names=[self.instance_name])
+        deleted = cloud_client.destroy(names=[self.INSTANCE_NAME])
 
         # Check that the VM was deleted correctly
-        self.assertIn(self.instance_name, deleted)
+        self.assertIn(self.INSTANCE_NAME, deleted)

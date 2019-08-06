@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
+from tests.support.paths import FILES
 from tests.support.unit import skipIf
 
 # Import Third-Party Libs
@@ -17,10 +18,14 @@ try:
 except ImportError:
     HAS_ONEANDONE = False
 
+# Create the cloud instance name to be used throughout the tests
+INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
+PROVIDER_NAME = 'oneandone'
+DRIVER_NAME = 'oneandone'
+
 
 @skipIf(HAS_ONEANDONE is False, 'salt-cloud requires >= 1and1 1.2.0')
-@expensiveTest
-class OneAndOneTest(ShellCase):
+class OneAndOneTest(CloudTest):
     '''
     Integration tests for the 1and1 cloud provider
     '''
@@ -79,7 +84,12 @@ class OneAndOneTest(ShellCase):
         Test creating an instance on 1and1
         '''
         # check if instance with salt installed returned
-        ret_str = self.run_cloud('-p oneandone-test {0}'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        self.assertInstanceExists(ret_str)
+        self.assertIn(
+            INSTANCE_NAME,
+            [i.strip() for i in self.run_cloud(
+                '-p oneandone-test {0}'.format(INSTANCE_NAME), timeout=TIMEOUT
+            )]
+        )
+        self.assertEqual(self._instance_exists(), True)
 
-        self.assertDestroyInstance()
+        self._destroy_instance()

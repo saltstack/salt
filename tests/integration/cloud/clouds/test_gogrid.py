@@ -12,6 +12,8 @@ from tests.support.unit import skipIf
 # Create the cloud instance name to be used throughout the tests
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
 
+PROVIDER_NAME = 'gogrid'
+
 
 @skipIf(True, 'waiting on bug report fixes from #13365')
 @expensiveTest
@@ -66,8 +68,8 @@ class GoGridTest(ShellCase):
         '''
         # check if instance with salt installed returned
         self.assertIn(
-            self.instance_name,
-            [i.strip() for i in self.run_cloud('-p gogrid-test {0}'.format(self.instance_name), timeout=TIMEOUT)]
+            self.INSTANCE_NAME,
+            [i.strip() for i in self.run_cloud('-p gogrid-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
         )
         self.assertEqual(self._instance_exists(), True)
         self._destroy_instance()

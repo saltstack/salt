@@ -97,7 +97,7 @@ class VMWareTest(ShellCase):
         self.assertIn(disk_datastore_str, ret_val,
                       msg='Hard Disk 2 did not use the Datastore {0} '.format(disk_datastore))
 
-        self.assertDestroyInstance()
+        self._destroy_instance()
 
     def test_snapshot(self):
         '''
@@ -118,5 +118,6 @@ class VMWareTest(ShellCase):
         s_ret_str = 'Snapshot created successfully'
 
         self.assertIn(s_ret_str, six.text_type(create_snapshot))
+        self.assertEqual(self._instance_exists(), True)
 
-        self.assertDestroyInstance()
+        self._destroy_instance()

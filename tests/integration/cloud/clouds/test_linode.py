@@ -8,9 +8,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 
 
-@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
-@expensiveTest
-class LinodeTest(ShellCase):
+# Create the cloud instance name to be used throughout the tests
+from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
+
+PROVIDER_NAME = 'linode'
+
+
+class LinodeTest(CloudTest):
     '''
     Integration tests for the Linode cloud provider in Salt-Cloud
     '''
@@ -61,8 +65,8 @@ class LinodeTest(ShellCase):
         '''
         # check if instance with salt installed returned
         self.assertIn(
-            self.instance_name,
-            [i.strip() for i in self.run_cloud('-p linode-test {0}'.format(self.instance_name), timeout=TIMEOUT)]
+            self.INSTANCE_NAME,
+            [i.strip() for i in self.run_cloud('-p linode-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
         )
         self.assertEqual(self._instance_exists(), True)
         self._destroy_instance()
