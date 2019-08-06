@@ -362,7 +362,7 @@ import salt.utils.gitfs
 import salt.utils.dictupdate
 import salt.utils.stringutils
 import salt.utils.versions
-from salt.exceptions import FileserverConfigError
+from salt.exceptions import ( FileserverConfigError, GitLockError )
 from salt.pillar import Pillar
 
 # Import third party libs
