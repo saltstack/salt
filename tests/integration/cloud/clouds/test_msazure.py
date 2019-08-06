@@ -9,7 +9,7 @@ import os
 import logging
 
 # Import Salt Testing Libs
-from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
+from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 from tests.support.paths import FILES
 from tests.support.unit import skipIf
 from tests.support.helpers import expensiveTest
@@ -113,10 +113,6 @@ class AzureTest(CloudTest):
         self.assertEqual(self._instance_exists(), False,
                          'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
 
-    def _instance_exists(self):
-        # salt-cloud -a show_instance myinstance
-        return '        {0}:'.format(self.INSTANCE_NAME) in self.run_cloud('--query')
-
     def test_instance(self):
         '''
         Test creating an instance on Azure
@@ -131,6 +127,5 @@ class AzureTest(CloudTest):
                 ), timeout=TIMEOUT
             )]
         )
-
-    def tearDown(self):
+        self.assertEqual(self._instance_exists(), True)
         self._destroy_instance()

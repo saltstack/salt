@@ -16,7 +16,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
-from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
+from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
 log = logging.getLogger(__name__)
 
@@ -232,5 +232,5 @@ class RackspaceTest(CloudTest):
             [i.strip() for i in self.run_cloud('-p rackspace-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
         )
 
-    def tearDown(self):
+        self.assertEqual(self._instance_exists(), True)
         self._destroy_instance()

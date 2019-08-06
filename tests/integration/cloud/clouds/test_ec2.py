@@ -20,7 +20,7 @@ from tests.support.unit import skipIf
 from tests.support import win_installer
 
 # Create the cloud instance name to be used throughout the tests
-from tests.integration.cloud.cloud_test_helpers import CloudTest
+from tests.integration.cloud.helpers.cloud_test_base import CloudTest
 
 PROVIDER_NAME = 'ec2'
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
@@ -143,6 +143,8 @@ class EC2Test(CloudTest):
         self.assertIn(ret_str, instance)
         self.assertEqual(self._instance_exists(), True)
 
+        self._destroy_instance()
+
     def test_instance_rename(self):
         '''
         Tests creating and renaming an instance on EC2 (classic)
@@ -164,6 +166,8 @@ class EC2Test(CloudTest):
                        '            architecture:']
         for result in exp_results:
             self.assertIn(result, check_rename[0])
+
+        self._destroy_instance()
 
     def test_instance(self):
         '''
@@ -241,6 +245,3 @@ class EC2Test(CloudTest):
 
         )
         self._test_instance('ec2-win2016-test', debug=True)
-
-    def tearDown(self):
-        self._destroy_instance()

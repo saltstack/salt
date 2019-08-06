@@ -15,7 +15,7 @@ from tests.support.helpers import expensiveTest
 from salt.config import cloud_providers_config
 
 # Import Third-Party Libs
-from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
+from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
 try:
     # pylint: disable=unused-import
@@ -194,5 +194,6 @@ class ProfitBricksTest(CloudTest):
                 timeout=TIMEOUT
             )]
         )
+        self.assertEqual(self._instance_exists(), True)
 
         self._destroy_instance()
