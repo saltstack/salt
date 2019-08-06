@@ -74,7 +74,7 @@ def parse_function(function_arguments):
     Helper function to parse function_arguments (module.run format)
     into args and kwargs.
     This function is similar to salt.utils.data.repack_dictlist, except that this
-    only handles non-dict arguments in the input list.
+    handles mixed (i.e. dict and non-dict) arguments in the input list.
 
     :param list function_arguments: List of items and dicts with kwargs.
 
@@ -130,7 +130,7 @@ def call_function(salt_function, *args, **kwargs):
     _passed_prm = len(function_args)
     missing = []
     if _exp_prm > _passed_prm:
-        for arg in argspec.args:
+        for arg in argspec.args[_passed_prm:]:
             if arg not in function_kwargs:
                 missing.append(arg)
     if missing:
