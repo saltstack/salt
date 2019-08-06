@@ -20,10 +20,12 @@ from tests.support.unit import skipIf
 from tests.support import win_installer
 
 # Create the cloud instance name to be used throughout the tests
-from tests.integration.cloud.cloud_test_helpers import TIMEOUT, CloudTest
+from tests.integration.cloud.cloud_test_helpers import CloudTest
 
 PROVIDER_NAME = 'ec2'
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
+# THis test needs a longer timeout than other cloud tests
+TIMEOUT = 1200
 
 
 def _fetch_installer():
@@ -132,9 +134,9 @@ class EC2Test(CloudTest):
         # create the instance
         cmd = ['-p', profile]
         if debug:
-            cmd += ' -l debug'
-        cmd += ' {0}'.format(self.INSTANCE_NAME)
-        instance = self.run_cloud(cmd, timeout=TIMEOUT)
+            cmd.extend(['-l', 'debug'])
+        cmd.append(self.INSTANCE_NAME)
+        instance = self.run_cloud(' '.join(cmd), timeout=TIMEOUT)
         ret_str = '{0}:'.format(self.INSTANCE_NAME)
 
         # check if instance returned with salt installed
