@@ -26,6 +26,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.mac_brew module
     '''
+
     def setup_loader_modules(self):
         return {mac_brew: {'__opts__': {'user': MagicMock(return_value='bar')}}}
 
@@ -63,8 +64,8 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         mock_user = MagicMock(return_value='foo')
         mock_cmd = MagicMock(return_value='')
         with patch.dict(mac_brew.__salt__, {'cmd.run_all': mock_failure,
-                                        'file.get_user': mock_user,
-                                        'cmd.run': mock_cmd}), \
+                                            'file.get_user': mock_user,
+                                            'cmd.run': mock_cmd}), \
                 patch('salt.modules.mac_brew_pkg._list_taps', MagicMock(return_value={})):
             self.assertFalse(mac_brew._tap('homebrew/test'))
 
@@ -217,7 +218,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         mock_user = MagicMock(return_value='foo')
         mock_success = MagicMock(return_value={'retcode': 0})
         with patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
-                                        'cmd.run_all': mock_success}), \
+                                            'cmd.run_all': mock_success}), \
                 patch('salt.modules.mac_brew_pkg._homebrew_bin',
                       MagicMock(return_value=HOMEBREW_BIN)):
             with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
