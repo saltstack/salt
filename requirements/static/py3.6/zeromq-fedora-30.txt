@@ -100,7 +100,7 @@ salttesting==2017.6.1
 scp==0.13.2               # via junos-eznc
 setproctitle==1.1.10
 singledispatch==3.4.0.3   # via tornado
-six==1.12.0               # via bcrypt, cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kubernetes, mock, more-itertools, moto, ncclient, pynacl, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
+six==1.12.0               # via bcrypt, cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kubernetes, mock, more-itertools, moto, ncclient, pygit2, pynacl, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
 smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
