@@ -38,11 +38,9 @@ class CloudTest(ShellCase):
 
     def _instance_exists(self, instance_name=None):
         # salt-cloud -a show_instance myinstance
-        if not instance_name:
-            instance_name = self.instance_name
         query = self.run_cloud('--query')
-        log.debug('INSTANCE EXISTS? {}: {}'.format(self.instance_name, query))
-        return '        {0}:'.format(self.instance_name) in query
+        log.debug('INSTANCE EXISTS? {}: {}'.format(self.INSTANCE_NAME, query))
+        return '        {0}:'.format(self.INSTANCE_NAME) in query
 
     def _destroy_instance(self):
         print('Deleting instance "{}"'.format(self.instance_name))
@@ -55,19 +53,19 @@ class CloudTest(ShellCase):
             'True',
             'was successfully deleted'
         )]):
-            print('Instance "{}" was successfully deleted'.format(self.instance_name))
+            log.debug('Instance "{}" was successfully deleted'.format(self.INSTANCE_NAME))
         elif any([x in delete_str for x in (
             'shutting-down',
             '.delete',
         )]):
-            print('Instance "{}" is cleaning up'.format(self.instance_name))
+            log.debug('Instance "{}" is cleaning up'.format(self.INSTANCE_NAME))
             sleep(60)
         else:
-            log.error('Instance "{}" may not have been deleted properly'.format(self.instance_name))
+            log.error('Instance "{}" may not have been deleted properly'.format(self.INSTANCE_NAME))
 
         # By now it should all be over
         self.assertEqual(self._instance_exists(), False)
-        print('Instance "{}" no longer exists'.format(self.instance_name))
+        log.debug('Instance "{}" no longer exists'.format(self.INSTANCE_NAME))
 
     def tearDown(self):
         '''
@@ -76,21 +74,7 @@ class CloudTest(ShellCase):
         one time in a test for each instance created.  This is a failSafe and something went wrong
         if the tearDown is where an instance is destroyed.
         '''
-        instance_deleted = True
-        for tries in range(12):
-            if self._instance_exists():
-                instance_deleted = False
-                try:
-                    self._destroy_instance()
-                    log.debug('Instance "{}" destroyed after {} tries'.format(self.instance_name, tries))
-                except AssertionError as e:
-                    log.error(e)
-                    sleep(30)
-            else:
-                break
-        self.assertEqual(self._instance_exists(), False, 'Instance exists after multiple attempts to delete: {}'
-                         .format(self.instance_name))
-        # Complain if the instance was destroyed in this tearDown.
-        # Destroying instances in the tearDown is a contingency, not the way things should work by default.
-        self.assertEqual(instance_deleted, True, 'The Instance "{}" was not deleted properly at the end of the test'
-                         .format(self.instance_name))
+        if self._instance_exists():
+            log.warning('Destroying instance from CloudTest tearDown conditional.  This shouldn\'t happen.  '
+                        'Make sure the instance is explicitly destroyed at the end of the test case')
+            self._destroy_instance()
