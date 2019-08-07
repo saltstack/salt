@@ -449,8 +449,14 @@ def _clean_cache():
     '''
     Clean cached results
     '''
+    keys = []
     for cache_name in ['pkg.list_pkgs', 'pkg.list_provides']:
-        __context__.pop(cache_name, None)
+        for contextkey in __context__:
+            if contextkey.startswith(cache_name):
+                keys.append(contextkey)
+
+    for key in keys:
+        __context__.pop(key, None)
 
 
 def list_upgrades(refresh=True, root=None, **kwargs):
@@ -809,9 +815,10 @@ def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
 
     includes = includes if includes else []
 
-    contextkey = 'pkg.list_pkgs'
+    # Results can be different if a different root or a different
+    # inclusion types are passed
+    contextkey = 'pkg.list_pkgs_{}_{}'.format(root, includes)
 
-    # TODO(aplanas): this cached value depends on the parameters
     if contextkey not in __context__:
         ret = {}
         cmd = ['rpm']
