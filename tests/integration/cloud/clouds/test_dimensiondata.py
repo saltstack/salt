@@ -108,4 +108,3 @@ class DimensionDataTest(CloudTest):
         )
 
         self._destroy_instance()
-
