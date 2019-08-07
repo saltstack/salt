@@ -831,7 +831,7 @@ class GitProvider(object):
                                     'using multi-master with shared gitfs '
                                     'cache, the lock may have been obtained '
                                     'by another master.')
-                    log.warning(msg)
+                    log.debug(msg)
                     if failhard:
                         six.reraise(*sys.exc_info())
                     return
