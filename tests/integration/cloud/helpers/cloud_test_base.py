@@ -32,11 +32,13 @@ class CloudTest(ShellCase):
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
         delete_str = ''.join(delete)
 
+        print('e' * 100)
+        print(delete_str)
         # TODO assert that 'shutting-down' will be in the delete_str?
         if 'shutting-down' in delete_str:
-            log.debug('Instance "{}" was deleted properly'.format(self.INSTANCE_NAME))
+            print('Instance "{}" was deleted properly'.format(self.INSTANCE_NAME))
         else:
-            log.warning('Instance "{}" was not deleted'.format(self.INSTANCE_NAME))
+            print('Instance "{}" was not deleted'.format(self.INSTANCE_NAME))
         self.assertEqual(self._instance_exists(), False)
 
     def tearDown(self):
