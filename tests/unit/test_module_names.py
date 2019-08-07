@@ -115,6 +115,7 @@ class BadTestModuleNamesTestCase(TestCase):
             'unit.test_virtualname',
             'unit.test_simple',
             'unit.test_zypp_plugins',
+            'unit.test_proxy_minion',
             'unit.cache.test_cache',
             'unit.serializers.test_serializers',
             'unit.states.test_postgres',
