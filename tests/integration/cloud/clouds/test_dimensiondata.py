@@ -98,4 +98,4 @@ class DimensionDataTest(ShellCase):
             [i.strip() for i in self.run_cloud('-p dimensiondata-test {0}'.format(self.instance_name), timeout=TIMEOUT)]
         )
 
-        self.assertDestroyInstance()
+        self._destroy_instance()

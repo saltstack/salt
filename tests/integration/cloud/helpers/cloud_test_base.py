@@ -48,13 +48,13 @@ class CloudTest(ShellCase):
         delete_str = ''.join(delete)
         log.debug('Deletion status: {}'.format(delete_str))
 
+        print('e' * 100)
+        print(delete_str)
+        # TODO assert that 'shutting-down' will be in the delete_str?
         if 'shutting-down' in delete_str:
-            log.debug('Instance "{}" is shutting down'.format(self.INSTANCE_NAME))
-            sleep(180)
-        elif 'True' in delete_str:
-            log.debug('Instance "{}" was deleted successfully'.format(self.INSTANCE_NAME))
+            print('Instance "{}" was deleted properly'.format(self.INSTANCE_NAME))
         else:
-            log.error('Instance "{}" was not deleted properly'.format(self.INSTANCE_NAME))
+            print('Instance "{}" was not deleted'.format(self.INSTANCE_NAME))
         self.assertEqual(self._instance_exists(), False)
         log.debug('Instance "{}" no longer exists'.format(self.INSTANCE_NAME))
 
