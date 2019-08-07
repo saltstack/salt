@@ -6,7 +6,6 @@ Tests for the Openstack Cloud Provider
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import re
 from time import sleep
 
 # Import Salt Testing libs
@@ -43,27 +42,19 @@ class CloudTest(ShellCase):
         return '        {0}:'.format(self.INSTANCE_NAME) in query
 
     def _destroy_instance(self):
-        print('Deleting instance "{}"'.format(self.instance_name))
-        delete = self.run_cloud('-d {0} --assume-yes'.format(self.instance_name), timeout=TIMEOUT)
+        log.debug('Deleting instance "{}"'.format(self.INSTANCE_NAME))
+        delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
         delete_str = ''.join(delete)
-        print('Deletion status: {}'.format(delete_str))
+        log.debug('Deletion status: {}'.format(delete_str))
 
-        if any([x in delete_str for x in (
-            'True',
-            'was successfully deleted'
-        )]):
-            log.debug('Instance "{}" was successfully deleted'.format(self.INSTANCE_NAME))
-        elif any([x in delete_str for x in (
-            'shutting-down',
-            '.delete',
-        )]):
-            log.debug('Instance "{}" is cleaning up'.format(self.INSTANCE_NAME))
-            sleep(60)
+        if 'shutting-down' in delete_str:
+            log.debug('Instance "{}" is shutting down'.format(self.INSTANCE_NAME))
+            sleep(180)
+        elif 'True' in delete_str:
+            log.debug('Instance "{}" was deleted successfully'.format(self.INSTANCE_NAME))
         else:
-            log.error('Instance "{}" may not have been deleted properly'.format(self.INSTANCE_NAME))
-
-        # By now it should all be over
+            log.error('Instance "{}" was not deleted properly'.format(self.INSTANCE_NAME))
         self.assertEqual(self._instance_exists(), False)
         log.debug('Instance "{}" no longer exists'.format(self.INSTANCE_NAME))
 
