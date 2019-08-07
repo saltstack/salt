@@ -26,7 +26,9 @@ class CloudTest(ShellCase):
 
     def _instance_exists(self):
         # salt-cloud -a show_instance myinstance
-        return '        {0}:'.format(self.INSTANCE_NAME) in self.run_cloud('--query')
+        query = self.run_cloud('--query')
+        log.debug('INSTANCE EXISTS? {}: {}'.format(self.INSTANCE_NAME, query))
+        return '        {0}:'.format(self.INSTANCE_NAME) in query
 
     def _destroy_instance(self):
         log.debug('Deleting instance "{}"'.format(self.INSTANCE_NAME))
@@ -35,18 +37,29 @@ class CloudTest(ShellCase):
         delete_str = ''.join(delete)
         log.debug('Deletion status: {}'.format(delete_str))
 
-        if 'shutting-down' in delete_str:
-            log.debug('Instance "{}" is shutting down'.format(self.INSTANCE_NAME))
-            sleep(180)
-        elif 'True' in delete_str:
-            log.debug('Instance "{}" was deleted successfully'.format(self.INSTANCE_NAME))
+        if any([x in delete_str for x in (
+            'True',
+            'was successfully deleted'
+        )]):
+            log.debug('Instance "{}" was successfully deleted'.format(self.INSTANCE_NAME))
+        elif any([x in delete_str for x in (
+            'shutting-down',
+            '.delete',
+        )]):
+            log.debug('Instance "{}" is cleaning up'.format(self.INSTANCE_NAME))
+            sleep(60)
         else:
-            log.error('Instance "{}" was not deleted properly'.format(self.INSTANCE_NAME))
+            log.error('Instance "{}" may not have been deleted properly'.format(self.INSTANCE_NAME))
+
+        # By now it should all be over
         self.assertEqual(self._instance_exists(), False)
+        log.debug('Instance "{}" no longer exists'.format(self.INSTANCE_NAME))
 
     def tearDown(self):
         '''
         Clean up after tests, If the instance still exists for any reason, delete it
         '''
         if self._instance_exists():
+            log.warning('Destroying instance from CloudTest tearDown conditional.  This shouldn\'t happen.  '
+                        'Make sure the instance is explicitly destroyed at the end of the test case')
             self._destroy_instance()
