@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON, MagicMock
 
 # Import Salt libs
 from salt import client
@@ -22,6 +22,47 @@ from salt.exceptions import (
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalClientTestCase(TestCase,
                           integration.SaltClientTestCaseMixin):
+
+    def test_job_result_return_success(self):
+        """
+        Should return the `expected_return`, since there is a job with the right jid.
+        """
+        minions = ()
+        jid = '0815'
+        raw_return = {
+            'id': 'fake-id',
+            'jid': jid,
+            'data': '',
+            'return': 'fake-return'
+        }
+        expected_return = {'fake-id': {'ret': 'fake-return'}}
+        local_client = client.LocalClient(mopts=self.get_temp_config('master'))
+        local_client.event.get_event = MagicMock(return_value=raw_return)
+        local_client.returners = MagicMock()
+        ret = local_client.get_event_iter_returns(jid, minions)
+        val = next(ret)
+        self.assertEqual(val, expected_return)
+
+    def test_job_result_return_failure(self):
+        """
+        We are _not_ getting a job return, because the jid is different. Instead we should
+        get a StopIteration exception.
+        """
+        minions = ()
+        jid = '0815'
+        raw_return = {
+            'id': 'fake-id',
+            'jid': '0816',
+            'data': '',
+            'return': 'fake-return'
+        }
+        local_client = client.LocalClient(mopts=self.get_temp_config('master'))
+        local_client.event.get_event = MagicMock()
+        local_client.event.get_event.side_effect = [raw_return, None]
+        local_client.returners = MagicMock()
+        ret = local_client.get_event_iter_returns(jid, minions)
+        with self.assertRaises(StopIteration):
+            next(ret)
 
     def test_create_local_client(self):
         local_client = client.LocalClient(mopts=self.get_temp_config('master'))
