@@ -6,6 +6,7 @@ Tests for the Openstack Cloud Provider
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+from time import sleep
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -28,17 +29,19 @@ class CloudTest(ShellCase):
         return '        {0}:'.format(self.INSTANCE_NAME) in self.run_cloud('--query')
 
     def _destroy_instance(self):
+        log.debug('Deleting instance "{}"'.format(self.INSTANCE_NAME))
         delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
         delete_str = ''.join(delete)
+        log.debug('Deletion status: {}'.format(delete_str))
 
-        print('e' * 100)
-        print(delete_str)
-        # TODO assert that 'shutting-down' will be in the delete_str?
         if 'shutting-down' in delete_str:
-            print('Instance "{}" was deleted properly'.format(self.INSTANCE_NAME))
+            log.debug('Instance "{}" is shutting down'.format(self.INSTANCE_NAME))
+            sleep(180)
+        elif 'True' in delete_str:
+            log.debug('Instance "{}" was deleted successfully'.format(self.INSTANCE_NAME))
         else:
-            print('Instance "{}" was not deleted'.format(self.INSTANCE_NAME))
+            log.error('Instance "{}" was not deleted properly'.format(self.INSTANCE_NAME))
         self.assertEqual(self._instance_exists(), False)
 
     def tearDown(self):
