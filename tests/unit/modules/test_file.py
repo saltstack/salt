@@ -2217,6 +2217,10 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
             actual = filemod._chattr_has_extended_attrs()
             assert actual, actual
 
+    # We're skipping this on Windows as it tests the check_perms function in
+    # file.py which is specifically for Linux. The Windows version resides in
+    # win_file.py
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_check_perms_should_report_no_attr_changes_if_there_are_none(self):
         filename = '/path/to/fnord'
         attrs = 'aAcCdDeijPsStTu'
@@ -2254,6 +2258,10 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
             )
             assert actual_ret.get('changes', {}).get('attrs')is None, actual_ret
 
+    # We're skipping this on Windows as it tests the check_perms function in
+    # file.py which is specifically for Linux. The Windows version resides in
+    # win_file.py
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_check_perms_should_report_attrs_new_and_old_if_they_changed(self):
         filename = '/path/to/fnord'
         attrs = 'aAcCdDeijPsStTu'
