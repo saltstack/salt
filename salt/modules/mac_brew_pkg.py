@@ -14,6 +14,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import functools
 import logging
+import re
 
 # Import salt libs
 import salt.utils.data
@@ -149,7 +150,19 @@ def list_pkgs(versions_as_list=False, **kwargs):
         for line in out.splitlines():
             try:
                 name_and_versions = line.split(' ')
-                name = '/'.join(('caskroom/cask', name_and_versions[0]))
+                pkg_name = name_and_versions[0]
+
+                # Get cask namespace
+                info_cmd = 'cask info {}'.format(pkg_name)
+                match = re.search(r'^From: .*/(.+?)/homebrew-(.+?)/.*$',
+                                  _call_brew(info_cmd)['stdout'], re.MULTILINE)
+                if match:
+                    namespace = '/'.join((match.group(1).lower(),
+                                          match.group(2).lower()))
+                else:
+                    namespace = 'homebrew/cask'
+
+                name = '/'.join((namespace, pkg_name))
                 installed_versions = name_and_versions[1:]
                 key_func = functools.cmp_to_key(salt.utils.versions.version_cmp)
                 newest_version = sorted(installed_versions, key=key_func).pop()
