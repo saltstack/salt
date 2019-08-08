@@ -6,6 +6,7 @@ Tests for the Openstack Cloud Provider
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import re
 from time import sleep
 
 # Import Salt Testing libs
@@ -21,8 +22,9 @@ class CloudTest(ShellCase):
     def instance_name(self):
         if not hasattr(self, '_instance_name'):
             # Create the cloud instance name to be used throughout the tests
-            subclass = type(self).split('.').pop()
-            self._instance_name = generate_random_name('cloud-test-{}-'.format(subclass).lower())
+            re_subclass = re.compile('\'\w+\.?(\w+)\'')
+            subclass = re_subclass.findall(str(type(self))).pop()
+            self._instance_name = generate_random_name('CLOUD-TEST-{}-'.format(subclass)).upper()
             print('Created instance for {}: {}'.format(subclass, self.instance_name))
         return self._instance_name
 
