@@ -65,7 +65,7 @@ class DigitalOceanTest(CloudTest):
             )
 
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
+                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_list_images(self):
         '''
@@ -101,7 +101,7 @@ class DigitalOceanTest(CloudTest):
         '''
         Test key management
         '''
-        do_key_name = self.INSTANCE_NAME + '-key'
+        do_key_name = self.instance_name + '-key'
 
         _key = self.run_cloud('-f create_key {0} name="MyPubKey" public_key="{1}"'.format(PROVIDER_NAME, pub))
 
@@ -141,8 +141,8 @@ class DigitalOceanTest(CloudTest):
         '''
         # check if instance with salt installed returned
         self.assertIn(
-            self.INSTANCE_NAME,
-            [i.strip() for i in self.run_cloud('-p digitalocean-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
+            self.instance_name,
+            [i.strip() for i in self.run_cloud('-p digitalocean-test {0}'.format(self.instance_name), timeout=TIMEOUT)]
         )
         self.assertEqual(self._instance_exists(), True)
         self._destroy_instance()
