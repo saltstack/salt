@@ -65,7 +65,6 @@ class JoyentTest(CloudTest):
                 'tests/integration/files/conf/cloud.providers.d/{0}.conf'
                     .format(PROVIDER_NAME)
             )
-        print('Joyent_test created instance: {}'.format(self.instance_name))
         self.assertEqual(self._instance_exists(), False,
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
