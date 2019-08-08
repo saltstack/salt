@@ -6,7 +6,6 @@ Tests for the Openstack Cloud Provider
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
-from os import path
 from time import sleep
 
 # Import Salt Testing libs
@@ -31,7 +30,7 @@ class CloudTest(ShellCase):
     def instance_name(self):
         if not hasattr(self, '_instance_name'):
             # Create the cloud instance name to be used throughout the tests
-            self._instance_name = generate_random_name('cloud-test-').lower()
+            self._instance_name = generate_random_name('CLOUD-TEST-').upper()
         return self._instance_name
 
     def _instance_exists(self, instance_name=None):
@@ -43,29 +42,29 @@ class CloudTest(ShellCase):
         return '        {0}:'.format(self.instance_name) in query
 
     def _destroy_instance(self):
-        print('Deleting instance "{}"'.format(self.instance_name))
+        log.debug('Deleting instance "{}"'.format(self.instance_name))
         delete = self.run_cloud('-d {0} --assume-yes'.format(self.instance_name), timeout=TIMEOUT)
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
         delete_str = ''.join(delete)
-        print('Deletion status: {}'.format(delete_str))
+        log.debug('Deletion status: {}'.format(delete_str))
 
         if any([x in delete_str for x in (
             'True',
             'was successfully deleted'
         )]):
-            print('Instance "{}" was successfully deleted'.format(self.instance_name))
+            log.debug('Instance "{}" was successfully deleted'.format(self.instance_name))
         elif any([x in delete_str for x in (
             'shutting-down',
             '.delete',
         )]):
-            print('Instance "{}" is cleaning up'.format(self.instance_name))
+            log.debug('Instance "{}" is cleaning up'.format(self.instance_name))
             sleep(30)
         else:
             print('Instance "{}" may not have been deleted properly'.format(self.instance_name))
 
         # By now it should all be over
-        self.assertEqual(self._instance_exists(), False, 'Could not destroy "{}"'.format(self.instance_name))
-        print('Instance "{}" no longer exists'.format(self.instance_name))
+        self.assertEqual(self._instance_exists(), False)
+        log.debug('Instance "{}" no longer exists'.format(self.instance_name))
 
     def tearDown(self):
         '''
