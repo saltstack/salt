@@ -64,17 +64,17 @@ class JoyentTest(CloudTest):
                 'tests/integration/files/conf/cloud.providers.d/{0}.conf'
                     .format(PROVIDER_NAME)
             )
-
+        print('Joyent_test created instance: {}'.format(self.instance_name))
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
+                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_instance(self):
         '''
         Test creating and deleting instance on Joyent
         '''
         self.assertIn(
-            self.INSTANCE_NAME,
-            [i.strip() for i in self.run_cloud('-p joyent-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
+            self.instance_name,
+            [i.strip() for i in self.run_cloud('-p joyent-test {0}'.format(self.instance_name), timeout=TIMEOUT)]
         )
         self.assertEqual(self._instance_exists(), True)
         self._destroy_instance()

@@ -73,7 +73,7 @@ class VMWareTest(CloudTest):
             )
 
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
+                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_instance(self):
         '''
@@ -90,9 +90,9 @@ class VMWareTest(CloudTest):
         profile_config = cloud_config(profile)
         disk_datastore = profile_config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
 
-        instance = self.run_cloud('-p vmware-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
-        ret_str = '{0}:'.format(self.INSTANCE_NAME)
-        disk_datastore_str = '                [{0}] {1}/Hard disk 2-flat.vmdk'.format(disk_datastore, self.INSTANCE_NAME)
+        instance = self.run_cloud('-p vmware-test {0}'.format(self.instance_name), timeout=TIMEOUT)
+        ret_str = '{0}:'.format(self.instance_name)
+        disk_datastore_str = '                [{0}] {1}/Hard disk 2-flat.vmdk'.format(disk_datastore, self.instance_name)
 
         # check if instance returned with salt installed
         self.assertIn(ret_str, instance)
@@ -107,9 +107,9 @@ class VMWareTest(CloudTest):
         Tests creating snapshot and creating vm with --no-deploy
         '''
         # create the instance
-        instance = self.run_cloud('-p vmware-test {0} --no-deploy'.format(self.INSTANCE_NAME),
+        instance = self.run_cloud('-p vmware-test {0} --no-deploy'.format(self.instance_name),
                                   timeout=TIMEOUT)
-        ret_str = '{0}:'.format(self.INSTANCE_NAME)
+        ret_str = '{0}:'.format(self.instance_name)
 
         # check if instance returned with salt installed
         self.assertIn(ret_str, instance)
@@ -117,7 +117,7 @@ class VMWareTest(CloudTest):
 
         create_snapshot = self.run_cloud('-a create_snapshot {0} \
                                          snapshot_name=\'Test Cloud\' \
-                                         memdump=True -y'.format(self.INSTANCE_NAME),
+                                         memdump=True -y'.format(self.instance_name),
                                          timeout=TIMEOUT)
         s_ret_str = 'Snapshot created successfully'
 
