@@ -31,9 +31,8 @@ class CloudTest(ShellCase):
     def instance_name(self):
         if not hasattr(self, '_instance_name'):
             # Create the cloud instance name to be used throughout the tests
-            re_subclass = re.compile('\'\w+\.?(\w+)\'')
-            subclass = re_subclass.findall(str(type(self))).pop()
-            self._instance_name = generate_random_name('CLOUD-TEST-{}-'.format(subclass)).upper()
+            subclass = type(self).split('.').pop()
+            self._instance_name = generate_random_name('cloud-test-{}-'.format(subclass).lower())
             print('Created instance for {}: {}'.format(subclass, self.instance_name))
         return self._instance_name
 
