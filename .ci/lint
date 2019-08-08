@@ -6,8 +6,6 @@ properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
 ])
 
-def shell_header
-
 // Be sure to cancel any previously running builds
 def buildNumber = env.BUILD_NUMBER as int
 if (buildNumber > 1) {
@@ -24,19 +22,6 @@ node('lint') {
         ansiColor('xterm') {
             timestamps {
                 try {
-                    // Set the GH status even before cloning the repo
-                    if (env.NODE_NAME.startsWith('jenkins-pr-')) {
-                        stage('github-pending') {
-                            githubNotify credentialsId: 'test-jenkins-credentials',
-                                description: 'Python lint begins...',
-                                status: 'PENDING',
-                                context: "jenkins/pr/lint"
-                        }
-                        shell_header = 'export PYENV_ROOT="/usr/local/pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"'
-                    } else {
-                        shell_header = ''
-                    }
-
                     withEnv(["SALT_TARGET_BRANCH=${salt_target_branch}"]) {
                         // Checkout the repo
                         stage('checkout-scm') {
@@ -47,7 +32,7 @@ node('lint') {
 
                         // Setup the kitchen required bundle
                         stage('Setup') {
-                            sh shell_header + '''
+                            sh '''
                             # Need -M to detect renames otherwise they are reported as Delete and Add, need -C to detect copies, -C includes -M
                             # -M is on by default in git 2.9+
                             git diff --name-status -l99999 -C "origin/${SALT_TARGET_BRANCH}" > file-list-status.log
@@ -79,7 +64,7 @@ node('lint') {
                                 lintSalt: {
                                     stage('Lint Salt Changes') {
                                         if (readFile('file-list-changed.log') =~ /(?i)(^|\n)(salt\/.*\.py|setup\.py)\n/) {
-                                            sh shell_header + '''
+                                            sh '''
                                             eval "$(pyenv init - --no-rehash)"
                                             pyenv shell 3.6.8
                                             EC=254
@@ -94,7 +79,7 @@ node('lint') {
                                 lintTests: {
                                     stage('Lint Test Changes') {
                                         if (readFile('file-list-changed.log') =~ /(?i)(^|\n)tests\/.*\.py\n/) {
-                                            sh shell_header + '''
+                                            sh '''
                                             eval "$(pyenv init - --no-rehash)"
                                             pyenv shell 3.6.8
                                             EC=254
@@ -113,40 +98,21 @@ node('lint') {
                                 artifacts: changed_logs_pattern,
                                 allowEmptyArchive: true
                             )
-                            if (env.NODE_NAME.startsWith('jenkins-pr-')) {
-                                step([$class: 'WarningsPublisher',
-                                    parserConfigurations: [[
-                                        parserName: 'PyLint',
-                                        pattern: changed_logs_pattern
-                                    ]],
-                                    failedTotalAll: '0',
-                                    useDeltaValues: false,
-                                    canRunOnFailed: true,
-                                    usePreviousBuildAsReference: true
-                                ])
-                            } else {
-                                lint_report_issues.add(
-                                    scanForIssues(
-                                        tool: pyLint(pattern: changed_logs_pattern, reportEncoding: 'UTF-8')
-                                    )
+                            lint_report_issues.add(
+                                scanForIssues(
+                                    tool: pyLint(pattern: changed_logs_pattern, reportEncoding: 'UTF-8')
                                 )
-                            }
+                            )
                         }
                     }
                     stage('Lint Full') {
                         if (env.CHANGE_BRANCH =~ /(?i)^merge[._-]/) {
                             // perform a full linit if this is a merge forward and the change only lint passed.
                             try {
-                                if (env.NODE_NAME.startsWith('jenkins-pr-')) {
-                                    githubNotify credentialsId: 'test-jenkins-credentials',
-                                        description: 'Python lint on everything begins...',
-                                        status: 'PENDING',
-                                        context: "jenkins/pr/lint"
-                                }
                                 parallel(
                                     lintSaltFull: {
                                         stage('Lint Salt Full') {
-                                            sh shell_header + '''
+                                            sh '''
                                             eval "$(pyenv init - --no-rehash)"
                                             pyenv shell 3.6.8
                                             EC=254
@@ -159,7 +125,7 @@ node('lint') {
                                     },
                                     lintTestsFull: {
                                         stage('Lint Tests Full') {
-                                            sh shell_header + '''
+                                            sh '''
                                             eval "$(pyenv init - --no-rehash)"
                                             pyenv shell 3.6.8
                                             EC=254
@@ -177,64 +143,34 @@ node('lint') {
                                     artifacts: full_logs_pattern,
                                     allowEmptyArchive: true
                                 )
-                                if (env.NODE_NAME.startsWith('jenkins-pr-')) {
-                                    step([$class: 'WarningsPublisher',
-                                        parserConfigurations: [[
-                                            parserName: 'PyLint',
-                                            pattern: full_logs_pattern
-                                        ]],
-                                        failedTotalAll: '0',
-                                        useDeltaValues: false,
-                                        canRunOnFailed: true,
-                                        usePreviousBuildAsReference: true
-                                    ])
-                                } else {
-                                    lint_report_issues.add(
-                                        scanForIssues(
-                                            tool: pyLint(pattern: full_logs_pattern, reportEncoding: 'UTF-8')
-                                        )
+                                lint_report_issues.add(
+                                    scanForIssues(
+                                        tool: pyLint(pattern: full_logs_pattern, reportEncoding: 'UTF-8')
                                     )
-                                }
+                                )
                             }
                         }
                     }
                 } catch (Exception e) {
                     currentBuild.result = 'FAILURE'
+                    try {
+                        slackSend channel: "#jenkins-prod-pr",
+                            color: '#FF0000',
+                            message: "*${currentBuild.currentResult}*: ${currentBuild.getFullDisplayName()} (<${env.BUILD_URL}|open>)"
+                    } catch (Exception e2) {
+                        sh 'echo Failed to send the Slack notification'
+                    }
                 } finally {
-                    if (!env.NODE_NAME.startsWith('jenkins-pr-')) {
-                        publishIssues(
-                            enabledForFailure: true,
-                            aggregatingResults: true,
-                            referenceJobName: "${salt_target_branch}/salt-${salt_target_branch}-lint",
-                            qualityGates: [
-                                [threshold: 1, type: 'TOTAL', unstable: false]
-                            ],
-                            issues: lint_report_issues
-                        )
-                    }
+                    publishIssues(
+                        enabledForFailure: true,
+                        aggregatingResults: true,
+                        referenceJobName: "${salt_target_branch}/salt-${salt_target_branch}-lint",
+                        qualityGates: [
+                            [threshold: 1, type: 'TOTAL', unstable: false]
+                        ],
+                        issues: lint_report_issues
+                    )
                     cleanWs notFailBuild: true
-                    if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
-                        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
-                            githubNotify credentialsId: 'test-jenkins-credentials',
-                                description: 'The lint test passed',
-                                status: 'SUCCESS',
-                                context: "jenkins/pr/lint"
-                        }
-                    } else {
-                        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
-                            githubNotify credentialsId: 'test-jenkins-credentials',
-                                description: 'The lint test failed',
-                                status: 'FAILURE',
-                                context: "jenkins/pr/lint"
-                        }
-                        try {
-                            slackSend channel: "#jenkins-prod-pr",
-                                color: '#FF0000',
-                                message: "*${currentBuild.currentResult}*: ${currentBuild.getFullDisplayName()} (<${env.BUILD_URL}|open>)"
-                        } catch (Exception e) {
-                            sh 'echo Failed to send the Slack notification'
-                        }
-                    }
                 }
             }
         }
