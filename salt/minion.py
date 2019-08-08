@@ -3455,16 +3455,15 @@ class ProxyMinionManager(MinionManager):
 
 
 def _metaproxy_call(opts, fn_name):
+    log.debug('=== here ====')
     metaproxy = salt.loader.metaproxy(opts)
     try:
         metaproxy_name = opts['metaproxy']
     except KeyError:
         metaproxy_name = 'proxy'
-        log.trace(
-            'No metaproxy key found in opts for id %s. '
-            'Defaulting to standard proxy minion.',
-            opts['id']
-        )
+        errmsg = 'No metaproxy key found in opts for id ' + opts['id'] + '. ' + \
+                 'Defaulting to standard proxy minion'
+        log.trace(errmsg)
 
     metaproxy_fn = metaproxy_name + '.' + fn_name
     return metaproxy[metaproxy_fn]

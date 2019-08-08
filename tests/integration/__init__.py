@@ -704,7 +704,8 @@ class TestDaemon(object):
         os.makedirs(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR)
-
+        if not os.path.exists(RUNTIME_VARS.TMP):
+            os.makedirs(RUNTIME_VARS.TMP)
         print(' * Transplanting configuration files to \'{0}\''.format(RUNTIME_VARS.TMP_CONF_DIR))
         tests_known_hosts_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'salt_ssh_known_hosts')
         with salt.utils.files.fopen(tests_known_hosts_file, 'w') as known_hosts:
@@ -803,10 +804,14 @@ class TestDaemon(object):
 
         # This proxy connects to master
         proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'proxy'))
-        proxy_opts['cachedir'] = 'cache'
+        proxy_opts['cachedir'] = os.path.join(TMP, 'rootdir-proxy', 'cache')
+        if not os.path.exists(proxy_opts['cachedir']):
+            os.makedirs(proxy_opts['cachedir'])
         # proxy_opts['user'] = running_tests_user
         proxy_opts['root_dir'] = os.path.join(TMP, 'rootdir-proxy')
-        proxy_opts['pki_dir'] = 'pki'
+        proxy_opts['pki_dir'] = os.path.join(TMP, 'rootdir-proxy', 'pki')
+        if not os.path.exists(proxy_opts['pki_dir']):
+            os.makedirs(proxy_opts['pki_dir'])
         proxy_opts['hosts.file'] = os.path.join(TMP, 'rootdir-proxy', 'hosts')
         proxy_opts['aliases.file'] = os.path.join(TMP, 'rootdir-proxy', 'aliases')
 
